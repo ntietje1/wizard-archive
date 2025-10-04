@@ -210,7 +210,6 @@ export async function ensureDefaultTagCategories(
           campaignId,
           kind: d.kind,
           displayName: d.displayName,
-          createdBy: campaignWithMembership.member._id,
         },
         true,
       )
@@ -278,7 +277,10 @@ export async function getTagsByCategory(
 
 export async function insertTagCategory(
   ctx: MutationCtx,
-  input: Omit<TagCategory, '_id' | '_creationTime' | 'updatedAt' | 'name'>,
+  input: Omit<
+    TagCategory,
+    '_id' | '_creationTime' | 'updatedAt' | 'name' | 'createdBy'
+  >,
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
   const { campaignWithMembership } = await requireCampaignMembership(

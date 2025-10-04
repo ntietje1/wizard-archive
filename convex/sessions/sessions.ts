@@ -24,7 +24,14 @@ export const getCurrentSession = async (
   if (!currentSessionId) {
     return null
   }
-  const session = await ctx.db.get(currentSessionId)
+  return getSession(ctx, currentSessionId)
+}
+
+export const getSession = async (
+  ctx: QueryCtx,
+  sessionId: Id<'sessions'>,
+): Promise<Session | null> => {
+  const session = await ctx.db.get(sessionId)
   if (!session) {
     return null
   }
@@ -48,7 +55,7 @@ export const endCurrentSession = async (
     .withIndex('by_campaign_tag_endedAt', (q) =>
       q
         .eq('campaignId', campaignId)
-        .eq('tagId', currentSession._id)
+        .eq('tagId', currentSession.tagId)
         .eq('endedAt', undefined),
     )
     .unique()

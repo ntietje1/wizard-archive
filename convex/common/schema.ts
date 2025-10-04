@@ -1,8 +1,6 @@
 import { v } from 'convex/values'
 
-export const commonMetaFields = (tableName: string) => ({
-  _id: v.id(tableName),
-  _creationTime: v.number(),
+export const commonMetaFields = {
   updatedAt: v.number(),
   createdBy: v.id('campaignMembers'),
-})
+}

@@ -24,12 +24,13 @@ export const createCharacter = mutation({
     noteId: Id<'notes'>
     characterId: Id<'characters'>
   }> => {
-    const { tagId, noteId } = await insertTagAndNote(ctx, args)
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
+
+    const { tagId, noteId } = await insertTagAndNote(ctx, args)
 
     if (args.playerId) {
       const player = await ctx.db.get(args.playerId)

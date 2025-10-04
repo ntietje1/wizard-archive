@@ -27,12 +27,12 @@ export const createLocation = mutation({
     noteId: Id<'notes'>
     locationId: Id<'locations'>
   }> => {
-    const { tagId, noteId } = await insertTagAndNote(ctx, args)
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
+    const { tagId, noteId } = await insertTagAndNote(ctx, args)
 
     const locationId = await ctx.db.insert('locations', {
       campaignId: args.campaignId,

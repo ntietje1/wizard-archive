@@ -38,6 +38,11 @@ export const getSessionsByCampaign = query({
       args.campaignId,
       SYSTEM_TAG_CATEGORY_NAMES.Session,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_TAG_CATEGORY_NAMES.Session}" not found`,
+      )
+    }
     const tags = await getTagsByCategory(ctx, category._id)
     const sessions = await ctx.db
       .query('sessions')

@@ -3,7 +3,13 @@ import { mutation } from '../_generated/server'
 import { Id } from '../_generated/dataModel'
 import { insertTagAndNote } from '../tags/tags'
 import { createTagAndNoteArgs } from '../tags/schema'
-import { endCurrentSession as endCurrentSessionHandler } from './sessions'
+import {
+  endCurrentSession as endCurrentSessionHandler,
+  getCurrentSession,
+  getSession,
+} from './sessions'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 
 export const startSession = mutation({
   args: {
@@ -23,6 +29,17 @@ export const startSession = mutation({
     noteId: Id<'notes'>
     sessionId: Id<'sessions'>
   }> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+    const { campaign } = campaignWithMembership
+
+    if (campaign.currentSessionId) {
+      await ctx.db.patch(campaign.currentSessionId, { endedAt: Date.now() })
+    }
+
     const { tagId, noteId } = await insertTagAndNote(ctx, args)
     const sessionId = await ctx.db.insert('sessions', {
       campaignId: args.campaignId,
@@ -51,19 +68,21 @@ export const setCurrentSession = mutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    const session = await ctx.db.get(args.sessionId)
-    if (!session || session.campaignId !== args.campaignId) {
+    const newSession = await getSession(ctx, args.sessionId)
+    if (!newSession || newSession.campaignId !== args.campaignId) {
       throw new Error('Session not found')
     }
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
 
-    // End existing current session if different
-    const currentSessionId = (await ctx.db.get(args.campaignId))
-      ?.currentSessionId
-    if (currentSessionId && currentSessionId !== args.sessionId) {
-      await ctx.db.patch(currentSessionId, { endedAt: Date.now() })
+    const currentSession = await getCurrentSession(ctx, args.campaignId)
+    if (currentSession && currentSession.sessionId !== args.sessionId) {
+      await ctx.db.patch(currentSession.sessionId, { endedAt: Date.now() })
     }
 
-    // Reactivate the selected session
     await ctx.db.patch(args.sessionId, { endedAt: undefined })
     await ctx.db.patch(args.campaignId, { currentSessionId: args.sessionId })
     return args.sessionId

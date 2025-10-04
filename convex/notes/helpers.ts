@@ -94,10 +94,10 @@ export async function deleteNote(
   )
 
   await deleteNoteBlocks(ctx, noteId, note.campaignId)
-  await ctx.db.delete(noteId)
   if (note.tagId) {
     await deleteTagAndCleanupContent(ctx, note.tagId)
   }
+  await ctx.db.delete(noteId)
 
   return noteId
 }
