@@ -1,21 +1,33 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { getTag } from '../tags/tags'
+import { insertTagAndNote } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
+import { createTagAndNoteArgs } from '../tags/schema'
 
 export const createCharacter = mutation({
   args: {
-    tagId: v.id('tags'),
+    ...createTagAndNoteArgs,
     playerId: v.optional(v.id('campaignMembers')),
   },
-  returns: v.id('characters'),
-  handler: async (ctx, args): Promise<Id<'characters'>> => {
-    const tag = await getTag(ctx, args.tagId)
+  returns: v.object({
+    tagId: v.id('tags'),
+    noteId: v.id('notes'),
+    characterId: v.id('characters'),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    tagId: Id<'tags'>
+    noteId: Id<'notes'>
+    characterId: Id<'characters'>
+  }> => {
+    const { tagId, noteId } = await insertTagAndNote(ctx, args)
     await requireCampaignMembership(
       ctx,
-      { campaignId: tag.campaignId },
+      { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
@@ -24,18 +36,18 @@ export const createCharacter = mutation({
       if (!player) {
         throw new Error('Player not found')
       }
-      if (player.campaignId !== tag.campaignId) {
+      if (player.campaignId !== args.campaignId) {
         throw new Error('Player not found in campaign')
       }
     }
 
     const characterId = await ctx.db.insert('characters', {
-      campaignId: tag.campaignId,
-      tagId: tag._id,
+      campaignId: args.campaignId,
+      tagId,
       playerId: args.playerId,
     })
 
-    return characterId
+    return { tagId, noteId, characterId }
   },
 })
 

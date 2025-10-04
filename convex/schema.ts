@@ -6,6 +6,7 @@ import { userTables } from './users/schema'
 import { characterTables } from './characters/schema'
 import { locationTables } from './locations/schema'
 import { tagTables } from './tags/schema'
+import { sessionTables } from './sessions/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -15,4 +16,5 @@ export default defineSchema({
   ...characterTables,
   ...locationTables,
   ...tagTables,
+  ...sessionTables,
 })

@@ -56,9 +56,6 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
     ),
   )
 
-  const createTagMutation = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.createTag),
-  })
   const createLocationMutation = useMutation({
     mutationFn: useConvexMutation(api.locations.mutations.createLocation),
   })
@@ -97,17 +94,14 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
 
     try {
       if (mode === 'create') {
-        const tagResult = await createTagMutation.mutateAsync({
+        const tagResult = await createLocationMutation.mutateAsync({
           displayName: values.name.trim(),
+          name: values.name.trim(),
           description: values.description.trim() || undefined,
           color: values.color,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
           parentFolderId,
-        })
-
-        await createLocationMutation.mutateAsync({
-          tagId: tagResult.tagId,
         })
 
         toast.success(`${config.singular} created successfully`)

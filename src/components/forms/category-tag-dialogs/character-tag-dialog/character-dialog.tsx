@@ -68,9 +68,6 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
     ),
   )
 
-  const createTagMutation = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.createTag),
-  })
   const createCharacterMutation = useMutation({
     mutationFn: useConvexMutation(api.characters.mutations.createCharacter),
   })
@@ -110,18 +107,14 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
 
     try {
       if (mode === 'create') {
-        const tagResult = await createTagMutation.mutateAsync({
+        const tagResult = await createCharacterMutation.mutateAsync({
           displayName: values.name.trim(),
+          name: values.name.trim(),
           description: values.description.trim() || undefined,
           color: values.color,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
           parentFolderId,
-        })
-
-        await createCharacterMutation.mutateAsync({
-          tagId: tagResult.tagId,
-          playerId: values.playerId || undefined,
         })
 
         toast.success(`${config.singular} created successfully`)

@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { Tag, TagCategory } from './types'
 import { query } from '../_generated/server'
-import { Id } from '../_generated/dataModel'
 import { getPlayerSharedTags, getSharedAllTag } from './shared'
 import {
   getTag as getTagFn,

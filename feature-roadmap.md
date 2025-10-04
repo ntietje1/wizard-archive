@@ -20,16 +20,16 @@ Current features
   - All tagged content viewable as a read-only document
 - Character/location creation
   - Tags created automatically, with automatic pages to view all tags for a specific character/location
+- Generic Categories (character, location, etc.)
+  - Folders under categories
 
 Dev to-do list:
 
-- Tag system schema/backend re-work to accomodate custom tag types and sessions
 - File upload (including sidebar integration)
 - Linking system ("#" syntax, allowing "mentioning" a note or note section by header)
 
 Planned user features road map
 
-- Folders under categories (more generic handling of tagged folders/notes)
 - Sessions
   - Is a type of tag (system tag?)
   - Automatically tag all blocks made during a session

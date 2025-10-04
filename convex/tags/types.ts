@@ -27,6 +27,7 @@ export type TagCategory = {
   kind: CategoryKind
   campaignId: Id<'campaigns'>
   updatedAt: number
+  createdBy: Id<'campaignMembers'>
 }
 
 export type Tag = {
@@ -41,8 +42,8 @@ export type Tag = {
   categoryId: Id<'tagCategories'>
   category?: TagCategory
   memberId?: Id<'campaignMembers'>
-  createdBy: string
   updatedAt: number
+  createdBy: Id<'campaignMembers'>
 }
 
 export type TagWithNote = Tag & {

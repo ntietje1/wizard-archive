@@ -26,6 +26,7 @@ const campaignTableFields = {
   dmUserId: v.string(),
   slug: v.string(),
   status: campaignStatusValidator,
+  currentSessionId: v.optional(v.id('sessions')),
 }
 
 const campaignMemberTableFields = {

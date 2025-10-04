@@ -3,6 +3,7 @@ import { Id } from '../_generated/dataModel'
 import { Block } from './types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
+import { deleteTagAndCleanupContent } from '../tags/tags'
 
 export async function getBlocksByNote(
   ctx: QueryCtx | MutationCtx,
@@ -94,6 +95,9 @@ export async function deleteNote(
 
   await deleteNoteBlocks(ctx, noteId, note.campaignId)
   await ctx.db.delete(noteId)
+  if (note.tagId) {
+    await deleteTagAndCleanupContent(ctx, note.tagId)
+  }
 
   return noteId
 }

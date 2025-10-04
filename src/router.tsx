@@ -33,8 +33,9 @@ export function createRouter() {
     createTanStackRouter({
       routeTree,
       defaultPreload: 'intent',
+      defaultPreloadDelay: 50,
       scrollRestoration: true,
-      defaultPreloadStaleTime: 0, // Let React Query handle all caching
+      defaultPreloadStaleTime: 30_000,
       defaultErrorComponent: (err) => <ErrorPage error={err.error.message} />,
       defaultNotFoundComponent: () => <NotFoundPage />,
       context: { queryClient, convexClient: convex, convexQueryClient },

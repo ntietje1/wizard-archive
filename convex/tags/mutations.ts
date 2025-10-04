@@ -10,16 +10,12 @@ import {
   deleteTagAndCleanupContent as deleteTagFn,
   deleteTagCategory as deleteTagCategoryFn,
 } from './tags'
+import { createTagAndNoteArgs } from './schema'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 
 export const createTag = mutation({
-  args: {
-    displayName: v.string(),
-    categoryId: v.id('tagCategories'),
-    color: v.string(),
-    description: v.optional(v.string()),
-    campaignId: v.id('campaigns'),
-    parentFolderId: v.optional(v.id('folders')),
-  },
+  args: createTagAndNoteArgs,
   returns: v.object({
     tagId: v.id('tags'),
     noteId: v.id('notes'),
@@ -68,10 +64,17 @@ export const createTagCategory = mutation({
   },
   returns: v.id('tagCategories'),
   handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
     return await insertTagCategory(ctx, {
       campaignId: args.campaignId,
       kind: CATEGORY_KIND.User,
       displayName: args.displayName,
+      createdBy: campaignWithMembership.member._id,
     })
   },
 })

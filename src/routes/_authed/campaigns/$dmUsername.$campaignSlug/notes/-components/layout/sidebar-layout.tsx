@@ -6,6 +6,7 @@ import {
 import { FileSidebar } from '../editor/file-sidebar/sidebar'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
+import { SessionPanel } from '../editor/session-panel/session-panel'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,11 +16,36 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         className="flex-1"
         autoSaveId="notes-sidebar-layout"
       >
-        <ResizablePanel defaultSize={20} minSize={10} className="flex flex-col">
-          <FileSidebarProvider>
-            <SidebarHeader />
-            <FileSidebar />
-          </FileSidebarProvider>
+        <ResizablePanel
+          defaultSize={10}
+          minSize={10}
+          className="flex flex-col min-w-56"
+        >
+          <ResizablePanelGroup
+            direction="vertical"
+            className="flex-1"
+            autoSaveId="notes-sidebar-layout-vertical"
+          >
+            <ResizablePanel
+              defaultSize={75}
+              minSize={50}
+              className="flex flex-col min-h-0"
+            >
+              <FileSidebarProvider>
+                <SidebarHeader />
+                <FileSidebar />
+              </FileSidebarProvider>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel
+              defaultSize={12}
+              // minSize={10}
+              maxSize={16}
+              className="min-h-28"
+            >
+              <SessionPanel />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={80} minSize={25}>

@@ -46,7 +46,7 @@ export const Route = createRootRouteWithContext<{
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: "Wizard's Archive",
       },
     ],
     links: [
@@ -109,7 +109,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="flex flex-col min-h-screen">
         {children}
         <Toaster />
         <TanStackRouterDevtools position="bottom-right" />

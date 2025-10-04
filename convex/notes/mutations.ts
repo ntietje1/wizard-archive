@@ -163,8 +163,7 @@ export const deleteFolder = mutation({
       }
 
       for (const note of notesInFolder) {
-        await deleteNoteBlocks(ctx, note._id, note.campaignId)
-        await ctx.db.delete(note._id)
+        await deleteNoteFn(ctx, note._id)
       }
 
       await ctx.db.delete(folderId)

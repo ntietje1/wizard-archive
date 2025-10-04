@@ -1,29 +1,45 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { deleteTagAndCleanupContent, getTag } from '../tags/tags'
+import {
+  deleteTagAndCleanupContent,
+  getTag,
+  insertTagAndNote,
+} from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
+import { createTagAndNoteArgs } from '../tags/schema'
 
 export const createLocation = mutation({
   args: {
-    tagId: v.id('tags'),
+    ...createTagAndNoteArgs,
   },
-  returns: v.id('locations'),
-  handler: async (ctx, args): Promise<Id<'locations'>> => {
-    const tag = await getTag(ctx, args.tagId)
+  returns: v.object({
+    tagId: v.id('tags'),
+    noteId: v.id('notes'),
+    locationId: v.id('locations'),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    tagId: Id<'tags'>
+    noteId: Id<'notes'>
+    locationId: Id<'locations'>
+  }> => {
+    const { tagId, noteId } = await insertTagAndNote(ctx, args)
     await requireCampaignMembership(
       ctx,
-      { campaignId: tag.campaignId },
+      { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     const locationId = await ctx.db.insert('locations', {
-      campaignId: tag.campaignId,
-      tagId: tag._id,
+      campaignId: args.campaignId,
+      tagId: tagId,
     })
 
-    return locationId
+    return { tagId, noteId, locationId }
   },
 })
 

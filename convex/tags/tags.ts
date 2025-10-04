@@ -86,10 +86,10 @@ export const insertTagAndNote = async (
     | '_id'
     | '_creationTime'
     | 'updatedAt'
-    | 'createdBy'
     | 'name'
     | 'noteId'
     | 'category'
+    | 'createdBy'
   >,
   parentFolderId?: Id<'folders'>,
 ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
@@ -119,7 +119,7 @@ export const insertTag = async (
   ctx: MutationCtx,
   newTag: Omit<
     Tag,
-    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name' | 'category'
+    '_id' | '_creationTime' | 'updatedAt' | 'name' | 'category' | 'createdBy'
   >,
   allowManaged: boolean = false,
 ): Promise<Id<'tags'>> => {
@@ -130,12 +130,11 @@ export const insertTag = async (
   if (!allowManaged && category.kind === CATEGORY_KIND.SystemManaged) {
     throw new Error('Managed-category tags cannot be created by users')
   }
-  const { identityWithProfile } = await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: newTag.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  const { profile } = identityWithProfile
 
   const existing = await ctx.db
     .query('tags')
@@ -157,8 +156,8 @@ export const insertTag = async (
     description: newTag.description,
     campaignId: newTag.campaignId,
     memberId: newTag.memberId,
-    createdBy: profile.userId,
     updatedAt: Date.now(),
+    createdBy: campaignWithMembership.member._id,
   })
 
   return tagId
@@ -168,6 +167,12 @@ export async function ensureDefaultTagCategories(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Id<'tagCategories'>[]> {
+  const { campaignWithMembership } = await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
   const defaults = [
     {
       displayName: SYSTEM_TAG_CATEGORY_NAMES.Character,
@@ -201,7 +206,12 @@ export async function ensureDefaultTagCategories(
     } else {
       const id = await insertTagCategory(
         ctx,
-        { campaignId, kind: d.kind, displayName: d.displayName },
+        {
+          campaignId,
+          kind: d.kind,
+          displayName: d.displayName,
+          createdBy: campaignWithMembership.member._id,
+        },
         true,
       )
       ids.push(id)
@@ -268,10 +278,7 @@ export async function getTagsByCategory(
 
 export async function insertTagCategory(
   ctx: MutationCtx,
-  input: Omit<
-    TagCategory,
-    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name'
-  >,
+  input: Omit<TagCategory, '_id' | '_creationTime' | 'updatedAt' | 'name'>,
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
   const { campaignWithMembership } = await requireCampaignMembership(
@@ -309,6 +316,7 @@ export async function insertTagCategory(
     name: input.displayName.toLowerCase(),
     displayName: input.displayName,
     kind: input.kind,
+    createdBy: campaignWithMembership.member._id,
   })
   return id
 }
