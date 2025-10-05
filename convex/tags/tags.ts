@@ -1,5 +1,5 @@
 import { CustomBlock } from '../notes/editorSpecs'
-import { Id } from '../_generated/dataModel'
+import { Id, TableNames } from '../_generated/dataModel'
 import { MutationCtx } from '../_generated/server'
 import {
   Tag,
@@ -12,6 +12,21 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
+
+export function combineTagEntity<TCombined>(
+  idKey: string,
+  entity: { _id: Id<TableNames> },
+  tag: { _id: Id<'tags'>; category?: { _id: Id<'tagCategories'> } },
+  category?: { _id: Id<'tagCategories'> },
+): TCombined {
+return {
+  ...entity,
+  ...tag,
+  category: category ?? tag.category,
+  tagId: tag._id,
+  [idKey]: entity._id,
+} as unknown as TCombined
+}
 
 export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
   const tag = await ctx.db.get(tagId)

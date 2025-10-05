@@ -1,20 +1,13 @@
 import { Character } from './types'
 import { Id } from '../_generated/dataModel'
 import { QueryCtx } from '../_generated/server'
+import { combineTagEntity } from '../common/tagEntity'
 
 export const combineCharacterAndTag = (
   character: { _id: Id<'characters'> },
   tag: { _id: Id<'tags'> },
   category?: { _id: Id<'tagCategories'> },
-): Character => {
-  return {
-    ...character,
-    ...tag,
-    category,
-    tagId: tag._id,
-    characterId: character._id,
-  } as Character
-}
+): Character => combineTagEntity<Character>('characters', character, tag, category)
 
 export const getCharacter = async (
   ctx: QueryCtx,

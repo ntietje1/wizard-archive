@@ -5,6 +5,7 @@ import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { MutationCtx } from '../_generated/server'
 import { getCampaignMember, requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
+import { combineTagEntity } from '../common/tagEntity'
 import {
   getEffectiveTagIdsForBlock,
   getTagCategoryByName,
@@ -16,15 +17,7 @@ export const combineSharesAndTag = (
   share: { _id: Id<'shares'> },
   tag: { _id: Id<'tags'> },
   category?: { _id: Id<'tagCategories'> },
-): Share => {
-  return {
-    ...share,
-    ...tag,
-    category,
-    tagId: tag._id,
-    shareId: share._id,
-  } as Share
-}
+): Share => combineTagEntity<Share>('shareId', share, tag, category)
 
 export const getShare = async (
   ctx: Ctx,

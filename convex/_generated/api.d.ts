@@ -17,6 +17,7 @@ import type * as characters_mutations from "../characters/mutations.js";
 import type * as characters_queries from "../characters/queries.js";
 import type * as characters_types from "../characters/types.js";
 import type * as common_identity from "../common/identity.js";
+import type * as common_tagEntity from "../common/tagEntity.js";
 import type * as common_types from "../common/types.js";
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   "characters/queries": typeof characters_queries;
   "characters/types": typeof characters_types;
   "common/identity": typeof common_identity;
+  "common/tagEntity": typeof common_tagEntity;
   "common/types": typeof common_types;
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;

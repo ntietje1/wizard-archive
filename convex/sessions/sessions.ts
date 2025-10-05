@@ -1,20 +1,13 @@
 import { Session } from './types'
 import { Id } from '../_generated/dataModel'
 import { MutationCtx, QueryCtx } from '../_generated/server'
+import { combineTagEntity } from '../common/tagEntity'
 
 export const combineSessionAndTag = (
   session: { _id: Id<'sessions'> },
   tag: { _id: Id<'tags'> },
   category?: { _id: Id<'tagCategories'> },
-): Session => {
-  return {
-    ...session,
-    ...tag,
-    category,
-    tagId: tag._id,
-    sessionId: session._id,
-  } as Session
-}
+): Session => combineTagEntity<Session>('sessionId', session, tag, category)
 
 export const getCurrentSession = async (
   ctx: QueryCtx,

@@ -58,3 +58,9 @@ export const tagValidatorFields = {
 export const tagCategoryValidator = v.object(tagCategoryValidatorFields)
 
 export const tagValidator = v.object(tagValidatorFields)
+
+export const tagBackedEntityFields = {
+  campaignId: v.id('campaigns'),
+  tagId: v.id('tags'),
+} as const
+
