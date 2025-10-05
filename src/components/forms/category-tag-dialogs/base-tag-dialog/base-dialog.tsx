@@ -25,7 +25,7 @@ type BaseTagDialogProps<
         mode: 'create' | 'edit'
         values: TFormValues
       }) => Promise<void>
-      children: (args: { form: any; isSubmitting: boolean }) => ReactNode
+      children: (args: { form: unknown; isSubmitting: boolean }) => ReactNode
     }
   | {
       mode: 'edit'

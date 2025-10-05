@@ -14,14 +14,13 @@ export function DraggableCategoryFolder({
   children,
 }: DraggableCategoryFolderProps) {
   if (!folder) return children
-  const id = folder?._id || 'unknown'
   const dragData = {
     ...folder,
     ancestorIds,
   }
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: id,
+    id: folder._id,
     data: dragData,
   })
 
