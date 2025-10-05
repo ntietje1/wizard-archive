@@ -5,7 +5,7 @@ import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { MutationCtx } from '../_generated/server'
 import { getCampaignMember, requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
-import { combineTagEntity } from '../common/tagEntity'
+import { combineTagEntity } from '../tags/tags'
 import {
   getEffectiveTagIdsForBlock,
   getTagCategoryByName,

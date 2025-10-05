@@ -1,7 +1,7 @@
 import { Session } from './types'
 import { Id } from '../_generated/dataModel'
 import { MutationCtx, QueryCtx } from '../_generated/server'
-import { combineTagEntity } from '../common/tagEntity'
+import { combineTagEntity } from '../tags/tags'
 
 export const combineSessionAndTag = (
   session: { _id: Id<'sessions'> },

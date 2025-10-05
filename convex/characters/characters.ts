@@ -1,7 +1,7 @@
 import { Character } from './types'
 import { Id } from '../_generated/dataModel'
 import { QueryCtx } from '../_generated/server'
-import { combineTagEntity } from '../common/tagEntity'
+import { combineTagEntity } from '../tags/tags'
 
 export const combineCharacterAndTag = (
   character: { _id: Id<'characters'> },
