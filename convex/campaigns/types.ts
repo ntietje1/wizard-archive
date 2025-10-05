@@ -47,9 +47,11 @@ export type CampaignMember = {
   _creationTime: number
 
   userProfile: UserProfile
+  userId: string
   campaignId: Id<'campaigns'>
   role: CampaignMemberRole
   status: CampaignMemberStatus
+  updatedAt: number
 }
 
 export type CampaignWithMembership = {

@@ -7,6 +7,7 @@ import { characterTables } from './characters/schema'
 import { locationTables } from './locations/schema'
 import { tagTables } from './tags/schema'
 import { sessionTables } from './sessions/schema'
+import { shareTables } from './shares/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -17,4 +18,5 @@ export default defineSchema({
   ...locationTables,
   ...tagTables,
   ...sessionTables,
+  ...shareTables,
 })

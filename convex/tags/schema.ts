@@ -23,7 +23,6 @@ export const tagTableFields = {
   description: v.optional(v.string()),
   campaignId: v.id('campaigns'),
   categoryId: v.id('tagCategories'),
-  memberId: v.optional(v.id('campaignMembers')), //TODO: remove this and make separate category for player shared tags
 }
 
 export const createTagAndNoteArgs = {
@@ -33,12 +32,12 @@ export const createTagAndNoteArgs = {
 
 export const tagTables = {
   tagCategories: defineTable({
-    ...commonMetaFields,
+    ...commonMetaFields('tagCategories'),
     ...tagCategoryTableFields,
   }).index('by_campaign_name', ['campaignId', 'name']),
 
   tags: defineTable({
-    ...commonMetaFields,
+    ...commonMetaFields('tags'),
     ...tagTableFields,
   })
     .index('by_campaign_categoryId', ['campaignId', 'categoryId'])
@@ -46,12 +45,12 @@ export const tagTables = {
 }
 
 const tagCategoryValidatorFields = {
-  ...commonMetaFields,
+  ...commonMetaFields('tagCategories'),
   ...tagCategoryTableFields,
 } as const
 
 export const tagValidatorFields = {
-  ...commonMetaFields,
+  ...commonMetaFields('tags'),
   ...tagTableFields,
   category: v.optional(v.object(tagCategoryValidatorFields)),
 } as const
@@ -59,3 +58,8 @@ export const tagValidatorFields = {
 export const tagCategoryValidator = v.object(tagCategoryValidatorFields)
 
 export const tagValidator = v.object(tagValidatorFields)
+
+export const tagBackedEntityFields = {
+  campaignId: v.id('campaigns'),
+  tagId: v.id('tags'),
+} as const

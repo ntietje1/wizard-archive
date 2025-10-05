@@ -60,7 +60,7 @@ export const getSessionsByCampaign = query({
           console.warn(`Session not found for tag ${t._id}`)
           return null
         }
-        return combineSessionAndTag(session, t)
+        return combineSessionAndTag(session, t, category)
       })
       .filter((s) => s !== null)
       .sort((a, b) => b._creationTime - a._creationTime)

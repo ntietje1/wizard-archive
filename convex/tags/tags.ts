@@ -1,5 +1,5 @@
 import { CustomBlock } from '../notes/editorSpecs'
-import { Id } from '../_generated/dataModel'
+import { Id, TableNames } from '../_generated/dataModel'
 import { MutationCtx } from '../_generated/server'
 import {
   Tag,
@@ -12,6 +12,25 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
+
+export function combineTagEntity<TCombined>(
+  idKey: string,
+  entity: { _id: Id<TableNames> },
+  tag: { _id: Id<'tags'>; category?: { _id: Id<'tagCategories'> } },
+  category?: { _id: Id<'tagCategories'> },
+): TCombined {
+  const combined = {
+    ...entity,
+    ...tag,
+    _id: tag._id,
+    category: category ?? tag.category,
+    tagId: tag._id,
+  };
+  return {
+    ...combined,
+    [idKey]: entity._id,
+  } as TCombined;
+}
 
 export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
   const tag = await ctx.db.get(tagId)
@@ -92,6 +111,7 @@ export const insertTagAndNote = async (
     | 'createdBy'
   >,
   parentFolderId?: Id<'folders'>,
+  allowManagedTags: boolean = false,
 ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
   const { identityWithProfile } = await requireCampaignMembership(
     ctx,
@@ -100,7 +120,7 @@ export const insertTagAndNote = async (
   )
   const { profile } = identityWithProfile
 
-  const tagId = await insertTag(ctx, newTag)
+  const tagId = await insertTag(ctx, newTag, allowManagedTags)
 
   const noteId = await ctx.db.insert('notes', {
     userId: profile.userId,
@@ -155,7 +175,6 @@ export const insertTag = async (
     color: newTag.color,
     description: newTag.description,
     campaignId: newTag.campaignId,
-    memberId: newTag.memberId,
     updatedAt: Date.now(),
     createdBy: campaignWithMembership.member._id,
   })

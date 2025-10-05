@@ -12,7 +12,7 @@ import {
   ensureAllPlayerSharedTags,
   ensurePlayerSharedTag,
   ensureSharedAllTag,
-} from '../tags/shared'
+} from '../shares/shares'
 import { requireCampaignMembership } from './campaigns'
 import { Id } from '../_generated/dataModel'
 import { getUserProfileByUsernameHandler } from '../users/users'
@@ -114,7 +114,7 @@ export const joinCampaign = mutation({
       updatedAt: now,
     })
 
-    await ensurePlayerSharedTag(ctx, campaign._id, memberId).catch((_) => {})
+    await ensurePlayerSharedTag(ctx, campaign._id, memberId).catch()
 
     return CAMPAIGN_MEMBER_STATUS.Pending
   },

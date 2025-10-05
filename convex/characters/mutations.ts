@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { insertTagAndNote } from '../tags/tags'
+import { insertTagAndNote, deleteTagAndCleanupContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
@@ -104,6 +104,8 @@ export const deleteCharacter = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    await deleteTagAndCleanupContent(ctx, character.tagId)
+    await ctx.db.delete(args.characterId)
     return args.characterId
   },
 })

@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { userProfileValidator } from '../users/schema'
 
 export const campaignStatusValidator = v.union(
   v.literal('Active'),
@@ -63,4 +64,7 @@ const campaignMemberValidatorFields = {
 
 export const campaignValidator = v.object(campaignValidatorFields)
 
-export const campaignMemberValidator = v.object(campaignMemberValidatorFields)
+export const campaignMemberValidator = v.object({
+  ...campaignMemberValidatorFields,
+  userProfile: v.optional(userProfileValidator),
+})

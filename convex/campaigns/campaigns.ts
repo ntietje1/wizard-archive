@@ -1,6 +1,7 @@
 import { Id } from '../_generated/dataModel'
 import { getUserIdentity, UserIdentityWithProfile } from '../common/identity'
 import { Ctx } from '../common/types'
+import { UserProfile } from '../users/types'
 import {
   getUserProfileByUserIdHandler,
   getUserProfileByUsernameHandler,
@@ -12,6 +13,7 @@ import {
   CampaignMemberRole,
   CampaignWithMembership,
   CAMPAIGN_MEMBER_STATUS,
+  CampaignMember,
 } from './types'
 
 export type CampaignIdentifier =
@@ -55,6 +57,58 @@ export async function getCampaign(
     throw new Error('Invalid campaign identifier')
   }
   return campaign
+}
+
+export async function getCampaignMember(
+  ctx: Ctx,
+  memberId: Id<'campaignMembers'>,
+): Promise<CampaignMember | null> {
+  const member = await ctx.db.get(memberId)
+  if (!member) {
+    return null
+  }
+  const userProfile = await ctx.db
+    .query('userProfiles')
+    .withIndex('by_user', (q) => q.eq('userId', member.userId))
+    .unique()
+
+  if (!userProfile) {
+    throw new Error('User profile not found')
+  }
+  return {
+    ...member,
+    userProfile,
+  }
+}
+
+export async function getCampaignMembers(
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+): Promise<CampaignMember[]> {
+  const members = await ctx.db
+    .query('campaignMembers')
+    .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+    .collect()
+  const profilesByUserId = new Map<string, UserProfile>()
+  await Promise.all(
+    members.map(async (member) => {
+      const profile = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('userId', member.userId))
+        .unique()
+      if (profile) profilesByUserId.set(member.userId, profile)
+    }),
+  )
+  return members.map((member) => {
+    const profile = profilesByUserId.get(member.userId)
+    if (!profile) {
+      throw new Error('User profile not found')
+    }
+    return {
+      ...member,
+      userProfile: profile,
+    }
+  })
 }
 
 export async function getCampaignMembership(
