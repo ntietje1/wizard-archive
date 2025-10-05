@@ -58,11 +58,16 @@ export default function ShareSideMenuButton({
 
   const sharedTagQueryResult = useQuery(
     convexQuery(
-      api.tags.queries.getSharedTags,
+      api.shares.queries.getSharesByCampaign,
       campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
-  const { sharedAllTag, playerSharedTags } = sharedTagQueryResult.data || {}
+  const sharedAllTag = sharedTagQueryResult.data?.find(
+    (s) => s.memberId === null,
+  )
+  const playerSharedTags = sharedTagQueryResult.data?.filter(
+    (s) => s.memberId !== null,
+  )
 
   const playersResult = useQuery(
     convexQuery(

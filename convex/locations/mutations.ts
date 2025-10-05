@@ -9,6 +9,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
 import { createTagAndNoteArgs } from '../tags/schema'
+import { getLocation } from './locations'
 
 export const createLocation = mutation({
   args: {
@@ -49,7 +50,7 @@ export const updateLocation = mutation({
   },
   returns: v.id('locations'),
   handler: async (ctx, args): Promise<Id<'locations'>> => {
-    const location = await ctx.db.get(args.locationId)
+    const location = await getLocation(ctx, args.locationId)
     if (!location) {
       throw new Error('Location not found')
     }
@@ -74,9 +75,9 @@ export const deleteLocation = mutation({
   },
   returns: v.id('locations'),
   handler: async (ctx, args): Promise<Id<'locations'>> => {
-    const location = await ctx.db.get(args.locationId)
+    const location = await getLocation(ctx, args.locationId)
     if (!location) {
-      throw new Error('Character not found')
+      throw new Error('Location not found')
     }
 
     await requireCampaignMembership(

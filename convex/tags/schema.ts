@@ -33,12 +33,12 @@ export const createTagAndNoteArgs = {
 
 export const tagTables = {
   tagCategories: defineTable({
-    ...commonMetaFields,
+    ...commonMetaFields('tagCategories'),
     ...tagCategoryTableFields,
   }).index('by_campaign_name', ['campaignId', 'name']),
 
   tags: defineTable({
-    ...commonMetaFields,
+    ...commonMetaFields('tags'),
     ...tagTableFields,
   })
     .index('by_campaign_categoryId', ['campaignId', 'categoryId'])
@@ -46,12 +46,12 @@ export const tagTables = {
 }
 
 const tagCategoryValidatorFields = {
-  ...commonMetaFields,
+  ...commonMetaFields('tagCategories'),
   ...tagCategoryTableFields,
 } as const
 
 export const tagValidatorFields = {
-  ...commonMetaFields,
+  ...commonMetaFields('tags'),
   ...tagTableFields,
   category: v.optional(v.object(tagCategoryValidatorFields)),
 } as const

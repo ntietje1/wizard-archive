@@ -74,7 +74,6 @@ export const createTagCategory = mutation({
       campaignId: args.campaignId,
       kind: CATEGORY_KIND.User,
       displayName: args.displayName,
-      createdBy: campaignWithMembership.member._id,
     })
   },
 })

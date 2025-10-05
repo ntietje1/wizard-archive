@@ -5,7 +5,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTag, getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Character } from './types'
-import { combineCharacterAndTag } from './characters'
+import { combineCharacterAndTag, getCharacter } from './characters'
 import { characterValidator } from './schema'
 
 export const getCharactersByCampaign = query({
@@ -40,7 +40,7 @@ export const getCharactersByCampaign = query({
           console.warn(`Character not found for tag ${t._id}`)
           return null
         }
-        return combineCharacterAndTag(character, t)
+        return combineCharacterAndTag(character, t, category)
       })
       .filter((c) => c !== null)
       .sort((a, b) => b._creationTime - a._creationTime)
@@ -53,20 +53,18 @@ export const getCharacterById = query({
   },
   returns: characterValidator,
   handler: async (ctx, args): Promise<Character> => {
-    const character = await ctx.db.get(args.characterId)
+    const character = await getCharacter(ctx, args.characterId)
     if (!character) {
       throw new Error(`Character not found: ${args.characterId}`)
     }
 
-    const tag = await getTag(ctx, character.tagId)
-
     await requireCampaignMembership(
       ctx,
-      { campaignId: tag.campaignId },
+      { campaignId: character.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     ) //TODO: allow players to see characters that have been "introduced" to them
 
-    return combineCharacterAndTag(character, tag)
+    return character
   },
 })
 
@@ -84,6 +82,12 @@ export const getCharacterByTagId = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    const category = await getTagCategoryByName(
+      ctx,
+      tag.campaignId,
+      SYSTEM_TAG_CATEGORY_NAMES.Character,
+    )
+
     const character = await ctx.db
       .query('characters')
       .withIndex('by_campaign_tag', (q) =>
@@ -95,6 +99,6 @@ export const getCharacterByTagId = query({
       throw new Error(`Character not found: ${args.tagId}`)
     }
 
-    return combineCharacterAndTag(character, tag)
+    return combineCharacterAndTag(character, tag, category)
   },
 })

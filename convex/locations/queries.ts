@@ -5,7 +5,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTag, getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Location } from './types'
-import { combineLocationAndTag } from './locations'
+import { combineLocationAndTag, getLocation } from './locations'
 import { locationValidator } from './schema'
 
 export const getLocationsByCampaign = query({
@@ -40,7 +40,7 @@ export const getLocationsByCampaign = query({
           console.warn(`Location not found for tag ${t._id}`)
           return null
         }
-        return combineLocationAndTag(location, t)
+        return combineLocationAndTag(location, t, category)
       })
       .filter((l) => l !== null)
       .sort((a, b) => b._creationTime - a._creationTime)
@@ -53,20 +53,18 @@ export const getLocationById = query({
   },
   returns: locationValidator,
   handler: async (ctx, args): Promise<Location> => {
-    const location = await ctx.db.get(args.locationId)
+    const location = await getLocation(ctx, args.locationId)
     if (!location) {
       throw new Error(`Location not found: ${args.locationId}`)
     }
 
-    const tag = await getTag(ctx, location.tagId)
-
     await requireCampaignMembership(
       ctx,
-      { campaignId: tag.campaignId },
+      { campaignId: location.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     ) //TODO: allow players to see locations that have been "introduced" to them
 
-    return combineLocationAndTag(location, tag)
+    return location
   },
 })
 
@@ -84,6 +82,12 @@ export const getLocationByTagId = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     ) // TODO: allow players to see locations that have been "introduced" to them
 
+    const category = await getTagCategoryByName(
+      ctx,
+      tag.campaignId,
+      SYSTEM_TAG_CATEGORY_NAMES.Location,
+    )
+
     const location = await ctx.db
       .query('locations')
       .withIndex('by_campaign_tag', (q) =>
@@ -95,6 +99,6 @@ export const getLocationByTagId = query({
       throw new Error(`Location not found: ${args.tagId}`)
     }
 
-    return combineLocationAndTag(location, tag)
+    return combineLocationAndTag(location, tag, category)
   },
 })
