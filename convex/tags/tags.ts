@@ -92,6 +92,7 @@ export const insertTagAndNote = async (
     | 'createdBy'
   >,
   parentFolderId?: Id<'folders'>,
+  allowManagedTags: boolean = false,
 ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
   const { identityWithProfile } = await requireCampaignMembership(
     ctx,
@@ -100,7 +101,7 @@ export const insertTagAndNote = async (
   )
   const { profile } = identityWithProfile
 
-  const tagId = await insertTag(ctx, newTag)
+  const tagId = await insertTag(ctx, newTag, allowManagedTags)
 
   const noteId = await ctx.db.insert('notes', {
     userId: profile.userId,
@@ -155,7 +156,6 @@ export const insertTag = async (
     color: newTag.color,
     description: newTag.description,
     campaignId: newTag.campaignId,
-    memberId: newTag.memberId,
     updatedAt: Date.now(),
     createdBy: campaignWithMembership.member._id,
   })

@@ -8,7 +8,6 @@ import type { CustomBlock } from '~/lib/editor-schema'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useCampaign } from '~/contexts/CampaignContext'
 import type { Tag } from 'convex/tags/types'
-import type { CampaignMember } from 'convex/campaigns/types'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,6 +16,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
+import type { Share } from 'convex/shares/types'
 
 interface ShareSideMenuButtonProps {
   block: CustomBlock
@@ -58,27 +58,18 @@ export default function ShareSideMenuButton({
 
   const sharedTagQueryResult = useQuery(
     convexQuery(
-      api.shares.queries.getSharesByCampaign,
+      api.shares.queries.getShareTagsByCampaign,
       campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
   const sharedAllTag = sharedTagQueryResult.data?.find(
-    (s) => s.memberId === null,
+    (s: Share) => s.memberId == null,
   )
   const playerSharedTags = sharedTagQueryResult.data?.filter(
-    (s) => s.memberId !== null,
+    (s: Share) => s.memberId != null,
   )
 
-  const playersResult = useQuery(
-    convexQuery(
-      api.campaigns.queries.getPlayersByCampaign,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
-    ),
-  )
-
-  const getUserByMemberId = (memberId: string): CampaignMember | undefined => {
-    return playersResult.data?.find((m) => m._id === memberId)
-  }
+  // member details are now included on each share from the backend
 
   const appliedTagIds = blockTagState.data?.allTagIds || []
   const isShared = useMemo(() => {
@@ -125,14 +116,14 @@ export default function ShareSideMenuButton({
     key: string
     name?: string
     username?: string
-    tag: Tag
+    tag: Share
     applied: boolean
   }[] = useMemo(() => {
     const list: {
       key: string
       name?: string
       username?: string
-      tag: Tag
+      tag: Share
       applied: boolean
     }[] = []
     if (sharedAllTag) {
@@ -143,9 +134,8 @@ export default function ShareSideMenuButton({
         applied: appliedTagIds.includes(sharedAllTag._id),
       })
     }
-    ;(playerSharedTags || []).forEach((t: Tag) => {
-      const member = t.memberId ? getUserByMemberId(t.memberId) : undefined
-      const profile = member?.userProfile
+    ;(playerSharedTags || []).forEach((t: Share) => {
+      const profile = t.member?.userProfile
       const fullName = profile?.name || undefined
       const username = profile?.username
       list.push({

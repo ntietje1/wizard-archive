@@ -5,13 +5,11 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CampaignMember,
-  CampaignMemberRole,
-  CampaignMemberStatus,
   CampaignWithMembership,
 } from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
 import { Note, SIDEBAR_ITEM_TYPES } from '../notes/types'
-import { getCampaign, requireCampaignMembership } from './campaigns'
+import { getCampaign, getCampaignMember, requireCampaignMembership } from './campaigns'
 import { getUserProfileByUsernameHandler } from '../users/users'
 
 export const getUserCampaigns = query({
@@ -196,20 +194,9 @@ export const getPlayersByCampaign = query({
 
     const membersWithProfiles = await Promise.all(
       members.map(async (member) => {
-        const userProfile = await ctx.db
-          .query('userProfiles')
-          .withIndex('by_user', (q) => q.eq('userId', member.userId))
-          .unique()
-
-        if (!userProfile) {
-          throw new Error('User profile not found')
-        }
-        return {
-          ...member,
-          userProfile,
-        }
+        return getCampaignMember(ctx, member._id)
       }),
-    )
+    ).then((members) => members.filter((member) => member !== null))
 
     return membersWithProfiles
   },

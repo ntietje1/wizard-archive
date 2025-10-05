@@ -12,7 +12,7 @@ import {
 } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { hasAccessToBlock } from '../tags/shared'
+import { hasAccessToBlock } from '../shares/shares'
 import {
   getSidebarItems as getSidebarItemsFn,
   getFolder as getFolderFn,
@@ -112,7 +112,6 @@ export const getBlocksByTags = query({
           const [hasSharedTag, matchesRequired] = await Promise.all([
             hasAccessToBlock(
               ctx,
-              args.campaignId!,
               campaignWithMembership.member._id,
               block._id,
             ),

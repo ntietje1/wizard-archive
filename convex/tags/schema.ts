@@ -23,7 +23,6 @@ export const tagTableFields = {
   description: v.optional(v.string()),
   campaignId: v.id('campaigns'),
   categoryId: v.id('tagCategories'),
-  memberId: v.optional(v.id('campaignMembers')), //TODO: remove this and make separate category for player shared tags
 }
 
 export const createTagAndNoteArgs = {

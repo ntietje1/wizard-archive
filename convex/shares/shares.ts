@@ -3,8 +3,8 @@ import { Id } from '../_generated/dataModel'
 import { Ctx } from '../common/types'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { MutationCtx } from '../_generated/server'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getCampaignMember, requireCampaignMembership } from '../campaigns/campaigns'
+import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
 import {
   getEffectiveTagIdsForBlock,
   getTagCategoryByName,
@@ -34,6 +34,10 @@ export const getShare = async (
   if (!share) {
     return null
   }
+  let member: CampaignMember | undefined
+  if (share.memberId) {
+    member = await getCampaignMember(ctx, share.memberId) || undefined
+  }
   const tag = await ctx.db.get(share.tagId)
   if (!tag) {
     return null
@@ -42,7 +46,7 @@ export const getShare = async (
   if (!category) {
     return null
   }
-  return combineSharesAndTag(share, tag, category)
+  return {...combineSharesAndTag(share, tag, category), member}
 }
 
 export const createShare = async (
@@ -75,7 +79,6 @@ export const createShare = async (
           color: '#F59E0B',
           description: 'Visible to a specific player',
           campaignId,
-          memberId,
           categoryId: category._id,
         }
       : {
@@ -85,6 +88,8 @@ export const createShare = async (
           campaignId,
           categoryId: category._id,
         },
+    undefined,
+    true,
   )
 
   const shareId = await ctx.db.insert('shares', {
@@ -107,12 +112,10 @@ export async function getSharedAllTag(
     )
     .unique()
   if (!allShare) {
-    console.error('All shared tag should exist but was not found')
     throw new Error('All shared tag should exist but was not found')
   }
   const share = await getShare(ctx, allShare._id)
   if (!share) {
-    console.error('All shared tag should exist but was not found')
     throw new Error('All shared tag should exist but was not found')
   }
   return share
@@ -129,7 +132,7 @@ export async function ensureSharedAllTag(
   }
 }
 
-async function getPlayerSharedTags(
+export async function getPlayerSharedTags(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
 ): Promise<Share[]> {
@@ -177,12 +180,10 @@ export async function getPlayerSharedTag(
     )
     .unique()
   if (!playerShare) {
-    console.error('Player shared tag should exist but was not found')
     throw new Error('Player shared tag should exist but was not found')
   }
   const playerSharedTag = await ctx.db.get(playerShare.tagId)
   if (!playerSharedTag) {
-    console.error('Player shared tag should exist but was not found')
     throw new Error('Player shared tag should exist but was not found')
   }
   return combineSharesAndTag(playerShare, playerSharedTag, category)

@@ -1,6 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { tagValidatorFields } from '../tags/schema'
+import { campaignMemberValidator } from '../campaigns/schema'
 
 const shareTableFields = {
   campaignId: v.id('campaigns'),
@@ -24,4 +25,5 @@ const shareValidatorFields = {
 export const shareValidator = v.object({
   ...shareValidatorFields,
   shareId: v.id('shares'), // additional field to be explicit about which field is the id
+  member: v.optional(campaignMemberValidator),
 })

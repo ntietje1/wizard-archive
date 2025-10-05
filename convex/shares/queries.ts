@@ -1,14 +1,15 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import { getCampaignMembers, requireCampaignMembership } from '../campaigns/campaigns'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Share } from './types'
 import { shareValidator } from './schema'
 import { combineSharesAndTag } from './shares'
+import { getCampaignMember } from '../campaigns/campaigns'
 
-export const getSharesByCampaign = query({
+export const getShareTagsByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
   },
@@ -32,6 +33,7 @@ export const getSharesByCampaign = query({
       .collect()
 
     const sharesByTagId = new Map(shares.map((c) => [c.tagId, c]))
+    const members = await getCampaignMembers(ctx, args.campaignId)
 
     return tags
       .map((t) => {
@@ -40,7 +42,7 @@ export const getSharesByCampaign = query({
           console.warn(`Share not found for tag ${t._id}`)
           return null
         }
-        return combineSharesAndTag(share, t, category)
+        return {...combineSharesAndTag(share, t, category), member: members.find((m) => m._id === share.memberId)}
       })
       .filter((s) => s !== null)
       .sort((a, b) => b._creationTime - a._creationTime)
