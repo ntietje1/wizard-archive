@@ -3,21 +3,14 @@ import { v } from 'convex/values'
 import { Doc } from '../_generated/dataModel'
 import { Id } from '../_generated/dataModel'
 import {
-  addTagToBlock,
-  removeTagFromBlock,
   saveTopLevelBlocks,
-  findBlockById,
-  extractTagIdsFromBlockContent,
   updateTagAndContent,
-  findBlock,
 } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getFolder as getFolderFn } from './notes'
-import { blockNoteIdValidator, customBlockValidator } from './schema'
+import { customBlockValidator } from './schema'
 import {
-  deleteNoteBlocks,
-  getTopLevelBlocksByNote,
   deleteNote as deleteNoteFn,
 } from './helpers'
 
@@ -268,112 +261,5 @@ export const createNote = mutation({
     })
 
     return noteId
-  },
-})
-
-export const addTagToBlockMutation = mutation({
-  args: {
-    noteId: v.id('notes'),
-    blockId: blockNoteIdValidator,
-    tagId: v.id('tags'),
-  },
-  returns: blockNoteIdValidator,
-  handler: async (ctx, args): Promise<string> => {
-    const note = await ctx.db.get(args.noteId)
-    if (!note) {
-      throw new Error('Note not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const existingBlock = await findBlock(ctx, args.noteId, args.blockId)
-
-    if (existingBlock) {
-      const inlineTagIds = extractTagIdsFromBlockContent(existingBlock.content)
-      if (inlineTagIds.includes(args.tagId)) {
-        throw new Error(
-          'Cannot manually add tag that already exists as inline tag in block content',
-        )
-      }
-
-      await addTagToBlock(ctx, existingBlock._id, args.tagId)
-    } else {
-      const topLevelBlocks = await getTopLevelBlocksByNote(
-        ctx,
-        args.noteId,
-        note.campaignId,
-      )
-
-      const currentContent = topLevelBlocks.map((block) => block.content)
-
-      const targetBlock = findBlockById(currentContent, args.blockId)
-
-      if (targetBlock) {
-        const inlineTagIds = extractTagIdsFromBlockContent(targetBlock)
-        if (inlineTagIds.includes(args.tagId)) {
-          throw new Error(
-            'Cannot manually add tag that already exists as inline tag in block content',
-          )
-        }
-
-        const newBlockDbId = await ctx.db.insert('blocks', {
-          noteId: args.noteId,
-          blockId: args.blockId,
-          position: undefined,
-          content: targetBlock,
-          isTopLevel: false,
-          campaignId: note.campaignId,
-          updatedAt: Date.now(),
-        })
-
-        await ctx.db.insert('blockTags', {
-          campaignId: note.campaignId,
-          blockId: newBlockDbId,
-          tagId: args.tagId,
-        })
-      }
-    }
-
-    return args.blockId
-  },
-})
-
-export const removeTagFromBlockMutation = mutation({
-  args: {
-    noteId: v.id('notes'),
-    blockId: blockNoteIdValidator,
-    tagId: v.id('tags'),
-  },
-  returns: blockNoteIdValidator,
-  handler: async (ctx, args): Promise<string> => {
-    const note = await ctx.db.get(args.noteId)
-    if (!note) {
-      throw new Error('Note not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const block = await findBlock(ctx, args.noteId, args.blockId)
-
-    if (block) {
-      const inlineTagIds = extractTagIdsFromBlockContent(block.content)
-      if (inlineTagIds.includes(args.tagId)) {
-        throw new Error(
-          'Cannot manually remove tag that exists as inline tag in block content',
-        )
-      }
-
-      await removeTagFromBlock(ctx, block._id, args.tagId, block.isTopLevel)
-    }
-
-    return args.blockId
   },
 })

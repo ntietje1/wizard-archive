@@ -10,7 +10,6 @@ import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Share } from './types'
 import { shareValidator } from './schema'
 import { combineSharesAndTag } from './shares'
-import { getCampaignMember } from '../campaigns/campaigns'
 
 export const getShareTagsByCampaign = query({
   args: {

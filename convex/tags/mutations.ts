@@ -9,10 +9,13 @@ import {
   updateTagCategory as updateTagCategoryFn,
   deleteTagAndCleanupContent as deleteTagFn,
   deleteTagCategory as deleteTagCategoryFn,
+  removeTagFromBlockHandler,
+  addTagToBlockHandler,
 } from './tags'
 import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
+import { blockNoteIdValidator } from '../notes/schema'
 
 export const createTag = mutation({
   args: createTagAndNoteArgs,
@@ -64,7 +67,7 @@ export const createTagCategory = mutation({
   },
   returns: v.id('tagCategories'),
   handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
+    await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
@@ -98,3 +101,28 @@ export const deleteTagCategory = mutation({
     return await deleteTagCategoryFn(ctx, args.categoryId)
   },
 })
+
+export const addTagToBlock = mutation({
+  args: {
+    noteId: v.id('notes'),
+    blockId: blockNoteIdValidator,
+    tagId: v.id('tags'),
+  },
+  returns: blockNoteIdValidator,
+  handler: async (ctx, args): Promise<string> => {
+    return await addTagToBlockHandler(ctx, args.noteId, args.blockId, args.tagId)
+  }
+})
+
+export const removeTagFromBlock = mutation({
+  args: {
+    noteId: v.id('notes'),
+    blockId: blockNoteIdValidator,
+    tagId: v.id('tags'),
+  },
+  returns: blockNoteIdValidator,
+  handler: async (ctx, args): Promise<string> => {
+    return await removeTagFromBlockHandler(ctx, args.noteId, args.blockId, args.tagId)
+  },
+})
+

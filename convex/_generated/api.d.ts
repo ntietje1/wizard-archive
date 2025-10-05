@@ -35,6 +35,7 @@ import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_sessions from "../sessions/sessions.js";
 import type * as sessions_types from "../sessions/types.js";
+import type * as shares_mutations from "../shares/mutations.js";
 import type * as shares_queries from "../shares/queries.js";
 import type * as shares_shares from "../shares/shares.js";
 import type * as shares_types from "../shares/types.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   "sessions/queries": typeof sessions_queries;
   "sessions/sessions": typeof sessions_sessions;
   "sessions/types": typeof sessions_types;
+  "shares/mutations": typeof shares_mutations;
   "shares/queries": typeof shares_queries;
   "shares/shares": typeof shares_shares;
   "shares/types": typeof shares_types;

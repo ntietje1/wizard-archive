@@ -12,6 +12,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
+import { findBlockByBlockNoteId, getNote } from '../notes/notes'
 
 export function combineTagEntity<TCombined>(
   idKey: string,
@@ -737,22 +738,17 @@ export async function doesBlockMatchRequiredTags(
   return requiredTagIds.every((tagId) => effectiveTagIds.includes(tagId))
 }
 
-export async function addTagToBlock(
+async function addTagToBlock(
   ctx: MutationCtx,
-  blockDbId: Id<'blocks'>,
+  block: Block,
   tagId: Id<'tags'>,
 ) {
-  const block = await ctx.db.get(blockDbId)
-  if (!block) {
-    throw new Error('Block not found')
-  }
-
   const existing = await ctx.db
     .query('blockTags')
     .withIndex('by_campaign_block_tag', (q) =>
       q
         .eq('campaignId', block.campaignId)
-        .eq('blockId', blockDbId)
+        .eq('blockId', block._id)
         .eq('tagId', tagId),
     )
     .unique()
@@ -760,40 +756,91 @@ export async function addTagToBlock(
   if (!existing) {
     await ctx.db.insert('blockTags', {
       campaignId: block.campaignId,
-      blockId: blockDbId,
+      blockId: block._id,
       tagId: tagId,
     })
 
-    await ctx.db.patch(blockDbId, {
+    await ctx.db.patch(block._id, {
       updatedAt: Date.now(),
     })
   }
-  return blockDbId
+  return block._id
 }
 
-export async function removeTagFromBlock(
+// handles the automatic insertion of blocks that dont already exist in the db
+export async function addTagToBlockHandler(
   ctx: MutationCtx,
-  blockDbId: Id<'blocks'>,
-  tagIdToRemove: Id<'tags'>,
-  isTopLevel: boolean,
-): Promise<Id<'blocks'> | null> {
-  const block = await ctx.db.get(blockDbId)
-  if (!block) {
-    return null
+  noteId: Id<'notes'>,
+  blockId: string,
+  tagId: Id<'tags'>,
+) {
+  const note = await getNote(ctx, noteId)
+  if (!note) {
+    throw new Error('Note not found')
   }
 
   await requireCampaignMembership(
     ctx,
-    { campaignId: block.campaignId },
+    { campaignId: note.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
+  const existingBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
+
+  if (existingBlock) {
+    const inlineTagIds = extractTagIdsFromBlockContent(existingBlock.content)
+    if (inlineTagIds.includes(tagId)) {
+      throw new Error(
+        'Cannot manually add tag that already exists as inline tag in block content',
+      )
+    }
+
+    await addTagToBlock(ctx, existingBlock, tagId)
+  } else {
+    const targetBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
+
+    if (targetBlock) {
+      const inlineTagIds = extractTagIdsFromBlockContent(targetBlock)
+      if (inlineTagIds.includes(tagId)) {
+        throw new Error(
+          'Cannot manually add tag that already exists as inline tag in block content',
+        )
+      }
+
+      const blockDbId = await ctx.db.insert('blocks', {
+        noteId: noteId,
+        blockId: blockId,
+        position: undefined,
+        content: targetBlock,
+        isTopLevel: false,
+        campaignId: note.campaignId,
+        updatedAt: Date.now(),
+      })
+
+      const block = await ctx.db.get(blockDbId)
+      if (!block) {
+        throw new Error('Block not found')
+      }
+
+      await addTagToBlock(ctx, block, tagId)
+    }
+  }
+
+  return blockId
+}
+
+
+async function removeTagFromBlock(
+  ctx: MutationCtx,
+  block: Block,
+  tagIdToRemove: Id<'tags'>,
+): Promise<Id<'blocks'>> {
   const blockTag = await ctx.db
     .query('blockTags')
     .withIndex('by_campaign_block_tag', (q) =>
       q
         .eq('campaignId', block.campaignId)
-        .eq('blockId', blockDbId)
+        .eq('blockId', block._id)
         .eq('tagId', tagIdToRemove),
     )
     .unique()
@@ -802,18 +849,53 @@ export async function removeTagFromBlock(
     await ctx.db.delete(blockTag._id)
   }
 
-  const remainingTags = await getBlockLevelTags(ctx, blockDbId)
-  if (remainingTags.length === 0 && !isTopLevel) {
-    await ctx.db.delete(blockDbId)
-    return null
+  return block._id
+}
+
+// handles the automatic removal of blocks that dont have any tags left
+export async function removeTagFromBlockHandler(
+  ctx: MutationCtx,
+  noteId: Id<'notes'>,
+  blockId: string,
+  tagId: Id<'tags'>,
+) {
+  const note = await getNote(ctx, noteId)
+  if (!note) {
+    throw new Error('Note not found')
+  }
+
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: note.campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const block = await findBlockByBlockNoteId(ctx, noteId, blockId)
+  if (!block) {
+    throw new Error('Block not found')
+  }
+
+  const inlineTagIds = extractTagIdsFromBlockContent(block.content)
+  if (inlineTagIds.includes(tagId)) {
+    throw new Error(
+      'Cannot manually remove tag that exists as inline tag in block content',
+    )
+  }
+
+  await removeTagFromBlock(ctx, block, tagId)
+
+  const remainingTags = await getBlockLevelTags(ctx, block._id)
+  if (remainingTags.length === 0 && !block.isTopLevel) {
+    await ctx.db.delete(block._id)
   } else {
-    await ctx.db.patch(blockDbId, {
+    await ctx.db.patch(block._id, {
       updatedAt: Date.now(),
     })
   }
 
-  return blockDbId
+  return blockId
 }
+
 
 export function extractAllBlocksWithTags(
   content: CustomBlock[],

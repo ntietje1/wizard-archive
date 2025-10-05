@@ -32,11 +32,11 @@ export default function TagSideMenuButton({
   const { nonSystemManagedTags } = useTags()
   const { note } = useCurrentNote()
   const addTagToBlock = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.addTagToBlockMutation),
+    mutationFn: useConvexMutation(api.tags.mutations.addTagToBlock),
   })
   const removeTagFromBlock = useMutation({
     mutationFn: useConvexMutation(
-      api.notes.mutations.removeTagFromBlockMutation,
+      api.tags.mutations.removeTagFromBlock,
     ),
   })
   const isMutating = addTagToBlock.isPending || removeTagFromBlock.isPending

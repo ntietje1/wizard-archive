@@ -4,6 +4,7 @@ import { Ctx } from '../common/types'
 import { Id } from '../_generated/dataModel'
 import {
   AnySidebarItem,
+  Block,
   Folder,
   Note,
   NoteWithContent,
@@ -43,25 +44,16 @@ export const getNoteWithContent = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
 ): Promise<NoteWithContent | null> => {
-  const note = await getNote(ctx, noteId)
+  const note: Note | null = await getNote(ctx, noteId)
   if (!note) {
     return null
   }
 
   const [topLevelBlocks] = await Promise.all([
     getTopLevelBlocksByNote(ctx, note._id, note.campaignId),
-    // getBlocksByNote(ctx, note._id, note.campaignId),
   ])
 
-  // const blocksMap = new Map(
-  //   allBlocks.map((block) => [block.blockId, block.content]),
-  // )
-
-  const content = topLevelBlocks.map(
-    (block) =>
-      // reconstructBlockContent(block.content, blocksMap),
-      block.content,
-  )
+  const content = topLevelBlocks.map((block) => block.content)
 
   return {
     ...note,
@@ -158,4 +150,25 @@ export const getSidebarItems = async (
   ])
 
   return [...folders, ...notes] as AnySidebarItem[]
+}
+
+
+export const findBlockByBlockNoteId = async (
+  ctx: Ctx,
+  noteId: Id<'notes'>,
+  blockId: string
+): Promise<Block | null> => {
+  const note = await getNote(ctx, noteId)
+  if (!note) {
+    throw new Error('Note not found')
+  }
+
+  const block = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_block', (q) =>
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('blockId', blockId),
+    )
+    .unique()
+
+  return block
 }

@@ -46,15 +46,15 @@ export default function ShareSideMenuButton({
     ),
   )
 
-  const addTagToBlock = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.addTagToBlockMutation),
+  const addShareToBlock = useMutation({
+    mutationFn: useConvexMutation(api.shares.mutations.addShareBlock),
   })
-  const removeTagFromBlock = useMutation({
+  const removeShareFromBlock = useMutation({
     mutationFn: useConvexMutation(
-      api.notes.mutations.removeTagFromBlockMutation,
+      api.shares.mutations.removeShareFromBlock,
     ),
   })
-  const isMutating = addTagToBlock.isPending || removeTagFromBlock.isPending
+  const isMutating = addShareToBlock.isPending || removeShareFromBlock.isPending
 
   const sharedTagQueryResult = useQuery(
     convexQuery(
@@ -75,25 +75,25 @@ export default function ShareSideMenuButton({
   const isShared = useMemo(() => {
     if (!sharedAllTag || !playerSharedTags) return false
     if (appliedTagIds.includes(sharedAllTag._id)) return true
-    return playerSharedTags.some((t: Tag) => appliedTagIds.includes(t._id))
+    return playerSharedTags.some((share: Share) => appliedTagIds.includes(share.tagId))
   }, [appliedTagIds, sharedAllTag, playerSharedTags])
 
-  const toggleShareTag = async (tag: Tag) => {
+  const toggleShareTag = async (share: Share) => {
     if (!note.data) return
     if (isMutating) return
-    const isApplied = appliedTagIds.includes(tag._id)
+    const isApplied = appliedTagIds.includes(share.tagId)
     try {
       if (isApplied) {
-        await removeTagFromBlock.mutateAsync({
+        await removeShareFromBlock.mutateAsync({
           noteId: note.data._id,
           blockId: block.id,
-          tagId: tag._id,
+          shareId: share.shareId,
         })
       } else {
-        await addTagToBlock.mutateAsync({
+        await addShareToBlock.mutateAsync({
           noteId: note.data._id,
           blockId: block.id,
-          tagId: tag._id,
+          shareId: share.shareId,
         })
       }
     } catch (error) {
