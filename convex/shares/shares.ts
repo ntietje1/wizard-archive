@@ -64,9 +64,6 @@ export const createShare = async (
     { campaignId: campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  if (campaignId !== campaignWithMembership.campaign._id) {
-    throw new Error('Campaign not found')
-  }
   const { tagId, noteId } = await insertTagAndNote(
     ctx,
     memberId

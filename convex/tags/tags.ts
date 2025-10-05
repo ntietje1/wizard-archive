@@ -19,13 +19,17 @@ export function combineTagEntity<TCombined>(
   tag: { _id: Id<'tags'>; category?: { _id: Id<'tagCategories'> } },
   category?: { _id: Id<'tagCategories'> },
 ): TCombined {
-  return {
+  const combined = {
     ...entity,
     ...tag,
+    _id: tag._id,
     category: category ?? tag.category,
     tagId: tag._id,
+  };
+  return {
+    ...combined,
     [idKey]: entity._id,
-  } as unknown as TCombined
+  } as TCombined;
 }
 
 export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
