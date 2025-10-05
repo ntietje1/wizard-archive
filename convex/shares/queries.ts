@@ -1,7 +1,10 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getCampaignMembers, requireCampaignMembership } from '../campaigns/campaigns'
+import {
+  getCampaignMembers,
+  requireCampaignMembership,
+} from '../campaigns/campaigns'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Share } from './types'
@@ -42,7 +45,10 @@ export const getShareTagsByCampaign = query({
           console.warn(`Share not found for tag ${t._id}`)
           return null
         }
-        return {...combineSharesAndTag(share, t, category), member: members.find((m) => m._id === share.memberId)}
+        return {
+          ...combineSharesAndTag(share, t, category),
+          member: members.find((m) => m._id === share.memberId),
+        }
       })
       .filter((s) => s !== null)
       .sort((a, b) => b._creationTime - a._creationTime)

@@ -105,8 +105,8 @@ export async function getCampaignMembers(
       throw new Error('User profile not found')
     }
     return {
-    ...member,
-    userProfile: profile,
+      ...member,
+      userProfile: profile,
     }
   })
 }

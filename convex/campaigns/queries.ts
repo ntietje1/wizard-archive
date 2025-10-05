@@ -9,7 +9,11 @@ import {
 } from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
 import { Note, SIDEBAR_ITEM_TYPES } from '../notes/types'
-import { getCampaign, getCampaignMember, requireCampaignMembership } from './campaigns'
+import {
+  getCampaign,
+  getCampaignMember,
+  requireCampaignMembership,
+} from './campaigns'
 import { getUserProfileByUsernameHandler } from '../users/users'
 
 export const getUserCampaigns = query({

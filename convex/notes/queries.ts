@@ -110,11 +110,7 @@ export const getBlocksByTags = query({
       allBlocks.map(async (block) => {
         try {
           const [hasSharedTag, matchesRequired] = await Promise.all([
-            hasAccessToBlock(
-              ctx,
-              campaignWithMembership.member._id,
-              block._id,
-            ),
+            hasAccessToBlock(ctx, campaignWithMembership.member._id, block._id),
             doesBlockMatchRequiredTags(ctx, block._id, args.tagIds),
           ])
           return hasSharedTag && matchesRequired ? block : null

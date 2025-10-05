@@ -63,4 +63,3 @@ export const tagBackedEntityFields = {
   campaignId: v.id('campaigns'),
   tagId: v.id('tags'),
 } as const
-

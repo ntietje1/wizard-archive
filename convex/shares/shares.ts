@@ -3,7 +3,10 @@ import { Id } from '../_generated/dataModel'
 import { Ctx } from '../common/types'
 import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { MutationCtx } from '../_generated/server'
-import { getCampaignMember, requireCampaignMembership } from '../campaigns/campaigns'
+import {
+  getCampaignMember,
+  requireCampaignMembership,
+} from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
 import { combineTagEntity } from '../tags/tags'
 import {
@@ -29,7 +32,7 @@ export const getShare = async (
   }
   let member: CampaignMember | undefined
   if (share.memberId) {
-    member = await getCampaignMember(ctx, share.memberId) || undefined
+    member = (await getCampaignMember(ctx, share.memberId)) || undefined
   }
   const tag = await ctx.db.get(share.tagId)
   if (!tag) {
@@ -39,7 +42,7 @@ export const getShare = async (
   if (!category) {
     return null
   }
-  return {...combineSharesAndTag(share, tag, category), member}
+  return { ...combineSharesAndTag(share, tag, category), member }
 }
 
 export const createShare = async (
