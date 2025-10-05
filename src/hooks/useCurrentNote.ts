@@ -8,12 +8,14 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useNoteActions } from './useNoteActions'
 import { debounce } from 'lodash-es'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
+import { useAuth } from '@clerk/tanstack-react-start'
 
 export const useCurrentNote = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
   const { updateNoteContent } = useNoteActions()
+  const { isLoaded, isSignedIn } = useAuth()
 
   const pathNoteId =
     location.pathname.includes('/notes/') &&
@@ -24,7 +26,9 @@ export const useCurrentNote = () => {
   const note = useQuery(
     convexQuery(
       api.notes.queries.getNote,
-      pathNoteId ? { noteId: pathNoteId as Id<'notes'> } : 'skip',
+      isLoaded && isSignedIn && pathNoteId
+        ? { noteId: pathNoteId as Id<'notes'> }
+        : 'skip',
     ),
   )
 

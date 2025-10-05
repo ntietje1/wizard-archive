@@ -4,6 +4,7 @@ import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { type CampaignWithMembership } from 'convex/campaigns/types'
 import { createContext, useContext } from 'react'
+import { useAuth } from '@clerk/tanstack-react-start'
 
 type CampaignContextType = {
   dmUsername: string
@@ -17,12 +18,18 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug',
   })
+  const { isLoaded, isSignedIn } = useAuth()
 
   const campaignWithMembership = useQuery(
-    convexQuery(api.campaigns.queries.getCampaignBySlug, {
-      dmUsername,
-      slug: campaignSlug,
-    }),
+    convexQuery(
+      api.campaigns.queries.getCampaignBySlug,
+      isLoaded && isSignedIn
+        ? {
+            dmUsername,
+            slug: campaignSlug,
+          }
+        : 'skip',
+    ),
   )
 
   const value: CampaignContextType = {
