@@ -8,7 +8,7 @@ export const combineCharacterAndTag = (
   tag: { _id: Id<'tags'> },
   category?: { _id: Id<'tagCategories'> },
 ): Character =>
-  combineTagEntity<Character>('characters', character, tag, category)
+  combineTagEntity<Character>('characterId', character, tag, category)
 
 export const getCharacter = async (
   ctx: QueryCtx,
