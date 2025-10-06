@@ -1,7 +1,6 @@
 import { Share } from './types'
 import { Id } from '../_generated/dataModel'
 import { Ctx } from '../common/types'
-import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { MutationCtx } from '../_generated/server'
 import {
   getCampaignMember,
@@ -15,6 +14,7 @@ import {
   getTagsByCategory,
   insertTagAndNote,
 } from '../tags/tags'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 
 export const combineSharesAndTag = (
   share: { _id: Id<'shares'> },
@@ -57,9 +57,9 @@ export const createShare = async (
   const category = await getTagCategoryByName(
     ctx,
     campaignId,
-    SYSTEM_TAG_CATEGORY_NAMES.Shared,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
   )
-  const { campaignWithMembership } = await requireCampaignMembership(
+  await requireCampaignMembership(
     ctx,
     { campaignId: campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
@@ -132,7 +132,7 @@ export async function getPlayerSharedTags(
   const category = await getTagCategoryByName(
     ctx,
     campaignId,
-    SYSTEM_TAG_CATEGORY_NAMES.Shared,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
   )
   const tags = await getTagsByCategory(ctx, category._id)
   const shares = await ctx.db
@@ -164,7 +164,7 @@ export async function getPlayerSharedTag(
   const category = await getTagCategoryByName(
     ctx,
     campaignId,
-    SYSTEM_TAG_CATEGORY_NAMES.Shared,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
   )
   const playerShare = await ctx.db
     .query('shares')

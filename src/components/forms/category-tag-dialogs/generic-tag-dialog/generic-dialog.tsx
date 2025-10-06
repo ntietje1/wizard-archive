@@ -72,7 +72,10 @@ export default function GenericTagDialog(props: TagDialogProps) {
         color: tag.color,
       }
     }
-    return defaultBaseFormValues
+    return {
+      ...defaultBaseFormValues,
+      color: getCategory.data?.defaultColor || defaultBaseFormValues.color,
+    }
   }
 
   async function handleSubmit(value: BaseTagFormValues) {
@@ -90,6 +93,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
       if (mode === 'create') {
         const result = await createMutation.mutateAsync({
           displayName: value.name.trim(),
+          name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color,
           campaignId: campaign._id,
@@ -139,7 +143,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
       getInitialValues={getInitialValues}
       onSubmit={async ({ values }) => handleSubmit(values)}
     >
-      {({ form, isSubmitting }) => (
+      {({ form, isSubmitting }: { form: any; isSubmitting: boolean }) => (
         <>
           {/* Name */}
           <form.Field

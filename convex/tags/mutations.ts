@@ -64,6 +64,9 @@ export const createTagCategory = mutation({
   args: {
     campaignId: v.id('campaigns'),
     displayName: v.string(),
+    pluralDisplayName: v.string(),
+    iconName: v.string(),
+    defaultColor: v.optional(v.string()),
   },
   returns: v.id('tagCategories'),
   handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
@@ -77,18 +80,23 @@ export const createTagCategory = mutation({
       campaignId: args.campaignId,
       kind: CATEGORY_KIND.User,
       displayName: args.displayName,
+      iconName: args.iconName,
+      pluralDisplayName: args.pluralDisplayName,
+      defaultColor: args.defaultColor,
     })
   },
 })
 export const updateTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),
-    displayName: v.string(),
+    displayName: v.optional(v.string()),
+    pluralDisplayName: v.optional(v.string()),
   },
   returns: v.id('tagCategories'),
   handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
     return await updateTagCategoryFn(ctx, args.categoryId, {
       displayName: args.displayName,
+      pluralDisplayName: args.pluralDisplayName,
     })
   },
 })
@@ -110,8 +118,13 @@ export const addTagToBlock = mutation({
   },
   returns: blockNoteIdValidator,
   handler: async (ctx, args): Promise<string> => {
-    return await addTagToBlockHandler(ctx, args.noteId, args.blockId, args.tagId)
-  }
+    return await addTagToBlockHandler(
+      ctx,
+      args.noteId,
+      args.blockId,
+      args.tagId,
+    )
+  },
 })
 
 export const removeTagFromBlock = mutation({
@@ -122,7 +135,11 @@ export const removeTagFromBlock = mutation({
   },
   returns: blockNoteIdValidator,
   handler: async (ctx, args): Promise<string> => {
-    return await removeTagFromBlockHandler(ctx, args.noteId, args.blockId, args.tagId)
+    return await removeTagFromBlockHandler(
+      ctx,
+      args.noteId,
+      args.blockId,
+      args.tagId,
+    )
   },
 })
-

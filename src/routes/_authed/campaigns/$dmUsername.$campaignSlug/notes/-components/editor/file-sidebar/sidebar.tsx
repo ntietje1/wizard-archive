@@ -8,10 +8,25 @@ import { DragOverlay } from '@dnd-kit/core'
 import { ClientOnly } from '@tanstack/react-router'
 import { DragOverlayItem } from './sidebar-item/drag-overlays'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
+import { useNoteActions } from '~/hooks/useNoteActions'
+import { useFolderActions } from '~/hooks/useFolderActions'
+import { Button } from '~/components/shadcn/ui/button'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItems()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
   const { activeDragItem } = useFileSidebar()
+  const { createNote } = useNoteActions()
+  const { createFolder } = useFolderActions()
+
+  const handleCreateNote = () => {
+    createNote.mutateAsync({ campaignId: campaignId })
+  }
+  const handleCreateFolder = () => {
+    createFolder.mutateAsync({ campaignId: campaignId })
+  }
 
   if (sidebarItems.status === 'pending') {
     return <SidebarLoading />
@@ -27,6 +42,17 @@ function FileSidebarContent() {
         {sidebarItems.data?.map((item) => (
           <SidebarItem key={item._id} item={item} />
         ))}
+
+        {sidebarItems.data?.length === 0 && (
+          <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
+            <Button className="max-w-24" variant="outline" onClick={handleCreateNote}>
+              New note
+            </Button>
+            <Button className="max-w-24" variant="outline" onClick={handleCreateFolder}>
+              New folder
+            </Button>
+          </div>
+        )}
 
         <DragOverlay dropAnimation={null}>
           {activeDragItem && <DragOverlayItem item={activeDragItem} />}

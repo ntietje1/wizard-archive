@@ -7,12 +7,40 @@ export const CATEGORY_KIND = {
   User: 'user', // both category and tags under it are user mutable
 } as const
 
-export const SYSTEM_TAG_CATEGORY_NAMES = {
-  Character: 'Character',
-  Location: 'Location',
-  Session: 'Session',
-  Shared: 'Shared',
-} as const
+export const SYSTEM_DEFAULT_CATEGORIES = {
+  Character: {
+    displayName: 'Character',
+    pluralDisplayName: 'Characters',
+    name: 'characters',
+    iconName: 'User',
+    kind: CATEGORY_KIND.SystemCore,
+    defaultColor: '#ef4444',
+  },
+  Location: {
+    displayName: 'Location',
+    pluralDisplayName: 'Locations',
+    name: 'locations',
+    iconName: 'MapPin',
+    kind: CATEGORY_KIND.SystemCore,
+    defaultColor: '#3B82F6',
+  },
+  Session: {
+    displayName: 'Session',
+    pluralDisplayName: 'Sessions',
+    name: 'sessions',
+    iconName: 'Calendar',
+    kind: CATEGORY_KIND.SystemCore,
+    defaultColor: '#22C55E',
+  },
+  Shared: {
+    displayName: 'Shares',
+    pluralDisplayName: 'Shares',
+    name: 'shares',
+    iconName: 'Share2',
+    kind: CATEGORY_KIND.SystemManaged,
+    defaultColor: '#F59E0B',
+  },
+}
 
 export const SHARED_TAG_COLOR = '#F59E0B'
 
@@ -22,10 +50,13 @@ export type TagCategory = {
   _id: Id<'tagCategories'>
   _creationTime: number
 
-  displayName: string
   name: string
+  displayName: string
+  pluralDisplayName: string
   kind: CategoryKind
   campaignId: Id<'campaigns'>
+  iconName: string
+  defaultColor?: string
   updatedAt: number
   createdBy: Id<'campaignMembers'>
 }

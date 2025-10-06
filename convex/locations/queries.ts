@@ -2,11 +2,11 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTag, getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Location } from './types'
 import { combineLocationAndTag, getLocation } from './locations'
 import { locationValidator } from './schema'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 
 export const getLocationsByCampaign = query({
   args: {
@@ -23,7 +23,7 @@ export const getLocationsByCampaign = query({
     const category = await getTagCategoryByName(
       ctx,
       args.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Location,
+      SYSTEM_DEFAULT_CATEGORIES.Location.name,
     )
     const tags = await getTagsByCategory(ctx, category._id)
     const locations = await ctx.db
@@ -85,7 +85,7 @@ export const getLocationByTagId = query({
     const category = await getTagCategoryByName(
       ctx,
       tag.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Location,
+      SYSTEM_DEFAULT_CATEGORIES.Location.name,
     )
 
     const location = await ctx.db

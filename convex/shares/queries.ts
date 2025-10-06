@@ -5,11 +5,11 @@ import {
   getCampaignMembers,
   requireCampaignMembership,
 } from '../campaigns/campaigns'
-import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Share } from './types'
 import { shareValidator } from './schema'
 import { combineSharesAndTag } from './shares'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 
 export const getShareTagsByCampaign = query({
   args: {
@@ -26,7 +26,7 @@ export const getShareTagsByCampaign = query({
     const category = await getTagCategoryByName(
       ctx,
       args.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Shared,
+      SYSTEM_DEFAULT_CATEGORIES.Shared.name,
     )
     const tags = await getTagsByCategory(ctx, category._id)
     const shares = await ctx.db

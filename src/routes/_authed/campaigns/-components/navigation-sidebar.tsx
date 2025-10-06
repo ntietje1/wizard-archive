@@ -1,9 +1,18 @@
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { MapPin, Home, Users, Settings, FileText, User } from '~/lib/icons'
+import { Home, Users, Settings, FileText, Plus } from '~/lib/icons'
 import { cn } from '~/lib/utils'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
+import { CreateCategoryForm } from './create-category-form'
+import { CATEGORY_KIND, type TagCategory } from 'convex/tags/types'
+import { getCategoryIcon } from '~/lib/category-icons'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
-const navigationItems = [
+const navigationItemsSection1 = [
   {
     name: 'Overview',
     to: '/campaigns/$dmUsername/$campaignSlug',
@@ -16,20 +25,13 @@ const navigationItems = [
     icon: FileText,
   },
   {
-    name: 'Characters',
-    to: '/campaigns/$dmUsername/$campaignSlug/characters',
-    icon: User,
-  },
-  {
-    name: 'Locations',
-    to: '/campaigns/$dmUsername/$campaignSlug/locations',
-    icon: MapPin,
-  },
-  {
     name: 'Players',
     to: '/campaigns/$dmUsername/$campaignSlug/players',
     icon: Users,
   },
+]
+
+const navigationItemsSection2 = [
   {
     name: 'Settings',
     to: '/campaigns/$dmUsername/$campaignSlug/settings',
@@ -39,45 +41,118 @@ const navigationItems = [
 
 export const NavigationSidebar = () => {
   const { dmUsername, campaignSlug } = useCampaign()
-  const { pathname } = useLocation()
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
 
-  const isActive = (item: (typeof navigationItems)[number]) => {
-    const resolvedPath = item.to
-      .replace('$dmUsername', dmUsername)
-      .replace('$campaignSlug', campaignSlug)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
 
-    if (item.exact) {
-      return pathname === resolvedPath || pathname === resolvedPath + '/'
-    } else {
-      return pathname.startsWith(resolvedPath)
-    }
-  }
+
+  const categories = useQuery(
+    convexQuery(
+      api.tags.queries.getTagCategoriesByCampaign,
+      campaign?._id ? { campaignId: campaign._id } : 'skip',
+    ),
+  )
+
 
   return (
-    <div className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 space-y-2">
-      {navigationItems.map((item) => {
-        return (
+    <div className="w-16 h-full min-h-0 bg-white border-r border-slate-200 flex flex-col items-center py-4">
+      <ScrollArea className="flex-1 w-full h-full pl-1">
+        <div className="flex flex-col items-center space-y-2">
+        {/* Overview, Players, Notes */}
+        {navigationItemsSection1.map((item) => {
+          return (
+            <Link
+              key={item.name}
+              to={item.to}
+              params={{ dmUsername, campaignSlug }}
+              className={cn(
+                'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
+                'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+              )}
+              title={item.name}
+            >
+              <item.icon className="h-5 w-5" />
+            </Link>
+          )
+        })}
+
+        {/* Divider */}
+        <div className="my-2 h-px w-10 bg-slate-200" />
+
+        {/* Categories */}
+        {categories.data
+          ?.sort((a: TagCategory, b: TagCategory) =>
+            a.kind.localeCompare(b.kind),
+          )
+          .filter((c: TagCategory) => c.kind !== CATEGORY_KIND.SystemManaged)
+          .map((c: TagCategory) => {
+            const to = `/campaigns/$dmUsername/$campaignSlug/${c.name}`
+            return (
+              <Link
+                key={c._id}
+                to={to}
+                params={{ dmUsername, campaignSlug }}
+                className={cn(
+                  'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
+                  'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                )}
+                title={c.pluralDisplayName || c.displayName}
+              >
+                {(() => {
+                  const IconComp = getCategoryIcon(c.iconName)
+                  return <IconComp className="h-5 w-5" />
+                })()}
+              </Link>
+            )
+          })}
+
+        {/* Create Category button */}
+        <button
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          title="New Category"
+          onClick={() => setIsCreateOpen(true)}
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+
+        {/* Divider */}
+        <div className="my-2 h-px w-10 bg-slate-200" />
+
+        {/* Settings */}
+        {navigationItemsSection2.map((item) => (
           <Link
             key={item.name}
             to={item.to}
             params={{ dmUsername, campaignSlug }}
             className={cn(
-              'w-10 h-10 rounded-lg flex items-center justify-center transition-colors group relative',
-              isActive(item)
-                ? 'bg-amber-100 text-amber-700'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+              'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
+              'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
             )}
             title={item.name}
           >
             <item.icon className="h-5 w-5" />
-
-            {/* Tooltip */}
-            <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-              {item.name}
-            </div>
           </Link>
-        )
-      })}
+        ))}
+        </div>
+      </ScrollArea>
+
+      {/* Create Category Dialog */}
+      <FormDialog
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="New Category"
+        description="Create a user-defined category."
+        icon={Plus}
+        maxWidth="max-w-2xl"
+      >
+        {campaign && (
+          <CreateCategoryForm
+            campaignId={campaign._id as any}
+            onClose={() => setIsCreateOpen(false)}
+          />
+        )}
+      </FormDialog>
     </div>
   )
 }

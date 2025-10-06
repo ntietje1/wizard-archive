@@ -45,7 +45,7 @@ export const Route = createFileRoute('/_authed')({
   component: () => {
     useEnsureProfile()
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-col h-screen">
         <Header />
         <Outlet />
       </div>

@@ -3,8 +3,8 @@ import type {
   BaseTagFormValues,
   TagCategoryConfig,
 } from '../base-tag-dialog/types'
-import { Users } from '~/lib/icons'
-import { SYSTEM_TAG_CATEGORY_NAMES } from 'convex/tags/types'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 export interface CharacterFormValues extends BaseTagFormValues {
   playerId?: Id<'campaignMembers'> | ''
@@ -18,8 +18,8 @@ export const defaultCharacterFormValues: CharacterFormValues = {
 }
 
 export const CHARACTER_CONFIG: TagCategoryConfig = {
-  singular: 'Character',
-  plural: 'Characters',
-  icon: Users,
-  categoryName: SYSTEM_TAG_CATEGORY_NAMES.Character,
+  singular: SYSTEM_DEFAULT_CATEGORIES.Character.displayName,
+  plural: SYSTEM_DEFAULT_CATEGORIES.Character.pluralDisplayName,
+  icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Character.iconName),
+  categoryName: SYSTEM_DEFAULT_CATEGORIES.Character.name,
 }

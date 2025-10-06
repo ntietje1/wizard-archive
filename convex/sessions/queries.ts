@@ -8,8 +8,8 @@ import {
 } from './sessions'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 
 export const getCurrentSession = query({
   args: {
@@ -36,11 +36,11 @@ export const getSessionsByCampaign = query({
     const category = await getTagCategoryByName(
       ctx,
       args.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Session,
+      SYSTEM_DEFAULT_CATEGORIES.Session.name,
     )
     if (!category) {
       throw new Error(
-        `System tag category "${SYSTEM_TAG_CATEGORY_NAMES.Session}" not found`,
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Session.name}" not found`,
       )
     }
     const tags = await getTagsByCategory(ctx, category._id)

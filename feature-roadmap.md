@@ -18,26 +18,25 @@ Current features
 - Note tagging system
   - Block-level tagging
   - All tagged content viewable as a read-only document
-- Character/location creation
-  - Tags created automatically, with automatic pages to view all tags for a specific character/location
-- Generic Categories (character, location, etc.)
-  - Folders under categories
+- Note sharing
+  - Allows selectively sharing individual blocks within a note
+  - Implemented as tag category
+  - Sharing to specific players or all players at once
+- Tag Categories
+  - Characters, Locations, and Sessions
+  - Tags created automatically, with automatic pages to view all tags for a specific category
+  - Can make custom categories / tags
+  - Folders under categories for organization
+  - Sessions have custom auto-tagging on share, based on the current session
 
 Dev to-do list:
-
+- disallow certain category names that would conflict with current paths
+- Folder view or flat view for category pages
 - File upload (including sidebar integration)
 - Linking system ("#" syntax, allowing "mentioning" a note or note section by header)
 
 Planned user features road map
 
-- Sessions
-  - Is a type of tag (system tag?)
-  - Automatically tag all blocks made during a session
-  - Need to figure out how the DM controls look like for this
-    - Alert if no session is active
-    - Give the campaign a specific "state" so players know a session is active or not
-- Custom tag creation (category of tag like character/location)
-  - Where will the user create tags under these custom categories?
 - "Cover art" for campaigns, characters, locations, etc.
   - Shows on cards on relevant pages
   - Shows on hover cards

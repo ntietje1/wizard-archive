@@ -2,17 +2,12 @@ import { mutation } from '../_generated/server'
 import { v } from 'convex/values'
 import { Doc } from '../_generated/dataModel'
 import { Id } from '../_generated/dataModel'
-import {
-  saveTopLevelBlocks,
-  updateTagAndContent,
-} from '../tags/tags'
+import { saveTopLevelBlocks, updateTagAndContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getFolder as getFolderFn } from './notes'
 import { customBlockValidator } from './schema'
-import {
-  deleteNote as deleteNoteFn,
-} from './helpers'
+import { deleteNote as deleteNoteFn } from './helpers'
 
 export const updateNote = mutation({
   args: {

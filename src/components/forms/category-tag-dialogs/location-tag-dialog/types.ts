@@ -1,9 +1,9 @@
-import { MapPin } from '~/lib/icons'
 import type {
   BaseTagFormValues,
   TagCategoryConfig,
 } from '../base-tag-dialog/types'
-import { SYSTEM_TAG_CATEGORY_NAMES } from 'convex/tags/types'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 export interface LocationFormValues extends BaseTagFormValues {}
 
@@ -14,8 +14,8 @@ export const defaultLocationFormValues: LocationFormValues = {
 }
 
 export const LOCATION_CONFIG: TagCategoryConfig = {
-  singular: 'Location',
-  plural: 'Locations',
-  icon: MapPin,
-  categoryName: SYSTEM_TAG_CATEGORY_NAMES.Location,
+  singular: SYSTEM_DEFAULT_CATEGORIES.Location.displayName,
+  plural: SYSTEM_DEFAULT_CATEGORIES.Location.pluralDisplayName,
+  icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Location.iconName),
+  categoryName: SYSTEM_DEFAULT_CATEGORIES.Location.name,
 }

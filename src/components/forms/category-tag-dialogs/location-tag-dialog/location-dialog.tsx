@@ -74,7 +74,10 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
         color: location.color,
       }
     }
-    return defaultLocationFormValues
+    return {
+      ...defaultLocationFormValues,
+      color: getCategory.data?.defaultColor || defaultLocationFormValues.color,
+    }
   }
 
   async function handleSubmit(args: {
@@ -148,7 +151,7 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
       getInitialValues={getInitialValues}
       onSubmit={handleSubmit}
     >
-      {({ form, isSubmitting }) => (
+      {({ form, isSubmitting }: { form: any; isSubmitting: boolean }) => (
         <>
           {/* Name */}
           <form.Field

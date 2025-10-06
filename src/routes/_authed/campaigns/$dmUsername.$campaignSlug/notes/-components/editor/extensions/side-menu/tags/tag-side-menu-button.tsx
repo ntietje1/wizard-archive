@@ -35,9 +35,7 @@ export default function TagSideMenuButton({
     mutationFn: useConvexMutation(api.tags.mutations.addTagToBlock),
   })
   const removeTagFromBlock = useMutation({
-    mutationFn: useConvexMutation(
-      api.tags.mutations.removeTagFromBlock,
-    ),
+    mutationFn: useConvexMutation(api.tags.mutations.removeTagFromBlock),
   })
   const isMutating = addTagToBlock.isPending || removeTagFromBlock.isPending
   const [query, setQuery] = useState('')

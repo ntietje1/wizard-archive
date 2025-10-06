@@ -32,9 +32,14 @@ export default function CharactersContent() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const characters = useQuery(
-    convexQuery(api.characters.queries.getCharactersByCampaign, {
-      campaignId: campaign?._id as Id<'campaigns'>,
-    }),
+    convexQuery(
+      api.characters.queries.getCharactersByCampaign,
+      campaign?._id
+        ? {
+            campaignId: campaign?._id,
+          }
+        : 'skip',
+    ),
   )
 
   const deleteCharacter = useMutation({

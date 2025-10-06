@@ -4,7 +4,6 @@ import { useSession } from '~/hooks/useSession'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { SYSTEM_TAG_CATEGORY_NAMES } from 'convex/tags/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
@@ -17,6 +16,7 @@ import {
 } from '~/components/shadcn/ui/dropdown-menu'
 import { EllipsisIcon } from 'lucide-react'
 import type { Session } from 'convex/sessions/types'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 
 export function SessionPanel() {
   const { campaignWithMembership } = useCampaign()
@@ -37,7 +37,7 @@ export function SessionPanel() {
       campaignId
         ? {
             campaignId,
-            categoryName: SYSTEM_TAG_CATEGORY_NAMES.Session,
+            categoryName: SYSTEM_DEFAULT_CATEGORIES.Session.name,
           }
         : 'skip',
     ),

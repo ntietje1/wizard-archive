@@ -5,7 +5,7 @@ import {
   Tag,
   CATEGORY_KIND,
   TagCategory,
-  SYSTEM_TAG_CATEGORY_NAMES,
+  SYSTEM_DEFAULT_CATEGORIES,
 } from './types'
 import { Block } from '../notes/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -26,11 +26,11 @@ export function combineTagEntity<TCombined>(
     _id: tag._id,
     category: category ?? tag.category,
     tagId: tag._id,
-  };
+  }
   return {
     ...combined,
     [idKey]: entity._id,
-  } as TCombined;
+  } as TCombined
 }
 
 export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
@@ -187,40 +187,20 @@ export async function ensureDefaultTagCategories(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Id<'tagCategories'>[]> {
-  const { campaignWithMembership } = await requireCampaignMembership(
+  await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-
-  const defaults = [
-    {
-      displayName: SYSTEM_TAG_CATEGORY_NAMES.Character,
-      kind: CATEGORY_KIND.SystemCore,
-    },
-    {
-      displayName: SYSTEM_TAG_CATEGORY_NAMES.Location,
-      kind: CATEGORY_KIND.SystemCore,
-    },
-    {
-      displayName: SYSTEM_TAG_CATEGORY_NAMES.Session,
-      kind: CATEGORY_KIND.SystemCore,
-    },
-    {
-      displayName: SYSTEM_TAG_CATEGORY_NAMES.Shared,
-      kind: CATEGORY_KIND.SystemManaged,
-    },
-  ]
 
   const existing = await ctx.db
     .query('tagCategories')
     .withIndex('by_campaign_name', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const existingByName = new Map(existing.map((c) => [c.displayName, c]))
   const ids: Id<'tagCategories'>[] = []
-  for (const d of defaults) {
-    const found = existingByName.get(d.displayName)
+  for (const d of Object.values(SYSTEM_DEFAULT_CATEGORIES)) {
+    const found = existing.find((c) => c.name === d.name)
     if (found) {
       ids.push(found._id)
     } else {
@@ -230,6 +210,9 @@ export async function ensureDefaultTagCategories(
           campaignId,
           kind: d.kind,
           displayName: d.displayName,
+          pluralDisplayName: d.pluralDisplayName,
+          iconName: d.iconName,
+          defaultColor: d.defaultColor,
         },
         true,
       )
@@ -299,7 +282,7 @@ export async function insertTagCategory(
   ctx: MutationCtx,
   input: Omit<
     TagCategory,
-    '_id' | '_creationTime' | 'updatedAt' | 'name' | 'createdBy'
+    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name'
   >,
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
@@ -321,7 +304,7 @@ export async function insertTagCategory(
     .withIndex('by_campaign_name', (q) =>
       q
         .eq('campaignId', input.campaignId)
-        .eq('name', input.displayName.toLowerCase()),
+        .eq('name', input.pluralDisplayName.toLowerCase()),
     )
     .unique()
   if (existing) {
@@ -335,9 +318,12 @@ export async function insertTagCategory(
   const id = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
     campaignId: input.campaignId,
-    name: input.displayName.toLowerCase(),
+    name: input.pluralDisplayName.toLowerCase(),
     displayName: input.displayName,
+    pluralDisplayName: input.pluralDisplayName,
     kind: input.kind,
+    iconName: input.iconName,
+    defaultColor: input.defaultColor,
     createdBy: campaignWithMembership.member._id,
   })
   return id
@@ -348,6 +334,7 @@ export const updateTagCategory = async (
   categoryId: Id<'tagCategories'>,
   input: {
     displayName?: string
+    pluralDisplayName?: string
   },
 ) => {
   const category = await ctx.db.get(categoryId)
@@ -370,7 +357,11 @@ export const updateTagCategory = async (
   }
 
   if (input.displayName !== undefined) {
-    const next = input.displayName.toLowerCase()
+    updates.displayName = input.displayName
+  }
+
+  if (input.pluralDisplayName !== undefined) {
+    const next = input.pluralDisplayName.toLowerCase()
     const existing = await ctx.db
       .query('tagCategories')
       .withIndex('by_campaign_name', (q) =>
@@ -381,7 +372,7 @@ export const updateTagCategory = async (
       throw new Error('Category already exists')
     }
     updates.name = next
-    updates.displayName = input.displayName
+    updates.pluralDisplayName = input.pluralDisplayName
   }
 
   await ctx.db.patch(categoryId, updates)
@@ -551,7 +542,7 @@ export const deleteTagAndCleanupContent = async (
     .unique()
 
   if (note) {
-    await deleteNote(ctx, note._id)
+    await deleteNote(ctx, note._id, { cascadeTag: false })
   }
   //TODO: modify all tags in content to just be text without being an actual tag inline content
   await ctx.db.delete(tagId)
@@ -829,7 +820,6 @@ export async function addTagToBlockHandler(
   return blockId
 }
 
-
 async function removeTagFromBlock(
   ctx: MutationCtx,
   block: Block,
@@ -895,7 +885,6 @@ export async function removeTagFromBlockHandler(
 
   return blockId
 }
-
 
 export function extractAllBlocksWithTags(
   content: CustomBlock[],

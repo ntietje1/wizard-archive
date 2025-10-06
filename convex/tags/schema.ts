@@ -10,10 +10,13 @@ export const categoryKindValidator = v.union(
 )
 
 export const tagCategoryTableFields = {
+  pluralDisplayName: v.string(),
   displayName: v.string(),
   name: v.string(),
   kind: categoryKindValidator,
   campaignId: v.id('campaigns'),
+  iconName: v.string(),
+  defaultColor: v.optional(v.string()),
 }
 
 export const tagTableFields = {

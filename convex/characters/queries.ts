@@ -2,11 +2,11 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { SYSTEM_TAG_CATEGORY_NAMES } from '../tags/types'
 import { getTag, getTagCategoryByName, getTagsByCategory } from '../tags/tags'
 import { Character } from './types'
 import { combineCharacterAndTag, getCharacter } from './characters'
 import { characterValidator } from './schema'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 
 export const getCharactersByCampaign = query({
   args: {
@@ -23,7 +23,7 @@ export const getCharactersByCampaign = query({
     const category = await getTagCategoryByName(
       ctx,
       args.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Character,
+      SYSTEM_DEFAULT_CATEGORIES.Character.name,
     )
     const tags = await getTagsByCategory(ctx, category._id)
     const characters = await ctx.db
@@ -85,7 +85,7 @@ export const getCharacterByTagId = query({
     const category = await getTagCategoryByName(
       ctx,
       tag.campaignId,
-      SYSTEM_TAG_CATEGORY_NAMES.Character,
+      SYSTEM_DEFAULT_CATEGORIES.Character.name,
     )
 
     const character = await ctx.db

@@ -81,6 +81,7 @@ export async function deleteNoteBlocks(
 export async function deleteNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
+  options?: { cascadeTag?: boolean },
 ): Promise<Id<'notes'>> {
   const note = await ctx.db.get(noteId)
   if (!note) {
@@ -94,7 +95,8 @@ export async function deleteNote(
   )
 
   await deleteNoteBlocks(ctx, noteId, note.campaignId)
-  if (note.tagId) {
+  const shouldCascadeTag = options?.cascadeTag !== false
+  if (shouldCascadeTag && note.tagId) {
     await deleteTagAndCleanupContent(ctx, note.tagId)
   }
   await ctx.db.delete(noteId)

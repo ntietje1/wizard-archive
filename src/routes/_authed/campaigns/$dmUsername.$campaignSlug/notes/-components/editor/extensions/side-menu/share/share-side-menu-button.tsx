@@ -50,9 +50,7 @@ export default function ShareSideMenuButton({
     mutationFn: useConvexMutation(api.shares.mutations.addShareBlock),
   })
   const removeShareFromBlock = useMutation({
-    mutationFn: useConvexMutation(
-      api.shares.mutations.removeShareFromBlock,
-    ),
+    mutationFn: useConvexMutation(api.shares.mutations.removeShareFromBlock),
   })
   const isMutating = addShareToBlock.isPending || removeShareFromBlock.isPending
 
@@ -75,7 +73,9 @@ export default function ShareSideMenuButton({
   const isShared = useMemo(() => {
     if (!sharedAllTag || !playerSharedTags) return false
     if (appliedTagIds.includes(sharedAllTag._id)) return true
-    return playerSharedTags.some((share: Share) => appliedTagIds.includes(share.tagId))
+    return playerSharedTags.some((share: Share) =>
+      appliedTagIds.includes(share.tagId),
+    )
   }, [appliedTagIds, sharedAllTag, playerSharedTags])
 
   const toggleShareTag = async (share: Share) => {

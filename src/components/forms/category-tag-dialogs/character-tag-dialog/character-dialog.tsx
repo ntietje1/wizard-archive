@@ -87,7 +87,10 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
         playerId: character.playerId || undefined,
       }
     }
-    return defaultCharacterFormValues
+    return {
+      ...defaultCharacterFormValues,
+      color: getCategory.data?.defaultColor || defaultCharacterFormValues.color,
+    }
   }
 
   async function handleSubmit(args: {
@@ -161,7 +164,7 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
       getInitialValues={getInitialValues}
       onSubmit={handleSubmit}
     >
-      {({ form, isSubmitting }) => (
+      {({ form, isSubmitting }: { form: any; isSubmitting: boolean }) => (
         <>
           {/* Name */}
           <form.Field
