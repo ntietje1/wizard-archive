@@ -9,6 +9,7 @@ import {
 } from './types'
 import { Block } from '../notes/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { slugify, appendSuffix, findUniqueSlug } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
@@ -74,10 +75,10 @@ export async function getTagCategory(
   return category
 }
 
-export async function getTagCategoryByName(
+export async function getTagCategoryBySlug(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  name: string,
+  slug: string,
 ): Promise<TagCategory> {
   await requireCampaignMembership(
     ctx,
@@ -87,8 +88,8 @@ export async function getTagCategoryByName(
 
   const existing = await ctx.db
     .query('tagCategories')
-    .withIndex('by_campaign_name', (q) =>
-      q.eq('campaignId', campaignId).eq('name', name.toLowerCase()),
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
     )
     .unique()
 
@@ -195,12 +196,12 @@ export async function ensureDefaultTagCategories(
 
   const existing = await ctx.db
     .query('tagCategories')
-    .withIndex('by_campaign_name', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId))
     .collect()
 
   const ids: Id<'tagCategories'>[] = []
   for (const d of Object.values(SYSTEM_DEFAULT_CATEGORIES)) {
-    const found = existing.find((c) => c.name === d.name)
+    const found = existing.find((c) => c.slug === d.slug)
     if (found) {
       ids.push(found._id)
     } else {
@@ -234,7 +235,7 @@ export async function getTagsByCampaign(
 
   const categories = await ctx.db
     .query('tagCategories')
-    .withIndex('by_campaign_name', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId))
     .collect()
 
   const tags = await ctx.db
@@ -278,11 +279,18 @@ export async function getTagsByCategory(
   return tags.map((t) => ({ ...t, category }))
 }
 
+async function findUniqueTagCategorySlug(ctx: MutationCtx, campaignId: Id<'campaigns'>, name: string): Promise<string> {
+  return await findUniqueSlug(name, async (slug) => {
+    const conflict = await ctx.db.query('tagCategories').withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug)).unique()
+    return conflict !== null
+  })
+}
+
 export async function insertTagCategory(
   ctx: MutationCtx,
   input: Omit<
     TagCategory,
-    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name'
+    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name' | 'slug'
   >,
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
@@ -299,26 +307,15 @@ export async function insertTagCategory(
     throw new Error('Invalid campaign')
   }
 
-  const existing = await ctx.db
-    .query('tagCategories')
-    .withIndex('by_campaign_name', (q) =>
-      q
-        .eq('campaignId', input.campaignId)
-        .eq('name', input.pluralDisplayName.toLowerCase()),
-    )
-    .unique()
-  if (existing) {
-    throw new Error('Category already exists')
-  }
-
   if (!allowSystem && input.kind !== CATEGORY_KIND.User) {
     throw new Error('Invalid kind')
   }
-
+  const uniqueSlug = await findUniqueTagCategorySlug(ctx, input.campaignId, input.pluralDisplayName)
+  
   const id = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
     campaignId: input.campaignId,
-    name: input.pluralDisplayName.toLowerCase(),
+    slug: uniqueSlug,
     displayName: input.displayName,
     pluralDisplayName: input.pluralDisplayName,
     kind: input.kind,
@@ -361,18 +358,9 @@ export const updateTagCategory = async (
   }
 
   if (input.pluralDisplayName !== undefined) {
-    const next = input.pluralDisplayName.toLowerCase()
-    const existing = await ctx.db
-      .query('tagCategories')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', category.campaignId).eq('name', next),
-      )
-      .unique()
-    if (existing && existing._id !== categoryId) {
-      throw new Error('Category already exists')
-    }
-    updates.name = next
     updates.pluralDisplayName = input.pluralDisplayName
+    const uniqueSlug = await findUniqueTagCategorySlug(ctx, category.campaignId, input.pluralDisplayName)
+    updates.slug = uniqueSlug
   }
 
   await ctx.db.patch(categoryId, updates)

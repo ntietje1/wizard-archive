@@ -157,7 +157,7 @@ export const findBlockByBlockNoteId = async (
   noteId: Id<'notes'>,
   blockId: string,
 ): Promise<Block | null> => {
-  const note = await getNote(ctx, noteId)
+  const note: Note | null = await getNote(ctx, noteId)
   if (!note) {
     throw new Error('Note not found')
   }

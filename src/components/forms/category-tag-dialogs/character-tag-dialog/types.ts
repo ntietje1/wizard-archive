@@ -21,5 +21,5 @@ export const CHARACTER_CONFIG: TagCategoryConfig = {
   singular: SYSTEM_DEFAULT_CATEGORIES.Character.displayName,
   plural: SYSTEM_DEFAULT_CATEGORIES.Character.pluralDisplayName,
   icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Character.iconName),
-  categoryName: SYSTEM_DEFAULT_CATEGORIES.Character.name,
+  categorySlug: SYSTEM_DEFAULT_CATEGORIES.Character.slug,
 }

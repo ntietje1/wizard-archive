@@ -44,25 +44,28 @@ export const CategoryContextMenu = forwardRef<
     const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] =
       useState(false)
     const { openFolder } = useFolderState(
-      folder?._id || categoryConfig.categoryName,
+      folder?._id || categoryConfig.categorySlug,
     )
     const { campaignWithMembership } = useCampaign()
     const campaign = campaignWithMembership?.data?.campaign
     const { createFolder, deleteFolder } = useFolderActions()
     const { setRenamingId } = useFileSidebar()
+    const sidebarItems = useSidebarItems(
+      folder?.categoryId,
+      folder?._id,
+      folder !== undefined,
+    )
 
-    const hasDirectChildren =
-      folder &&
-      (useSidebarItems(folder.categoryId, folder._id).data?.length || 0) > 0
+    const hasDirectChildren = folder && (sidebarItems.data?.length || 0) > 0
 
     // Get the category ID for this folder
     const getCategory = useQuery(
       convexQuery(
-        api.tags.queries.getTagCategoryByName,
+        api.tags.queries.getTagCategoryBySlug,
         campaign?._id
           ? {
               campaignId: campaign._id,
-              categoryName: categoryConfig.categoryName,
+              slug: categoryConfig.categorySlug,
             }
           : 'skip',
       ),

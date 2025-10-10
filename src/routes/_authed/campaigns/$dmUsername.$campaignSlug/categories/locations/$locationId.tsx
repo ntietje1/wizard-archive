@@ -5,14 +5,14 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const Route = createFileRoute(
-  '/_authed/campaigns/$dmUsername/$campaignSlug/locations/$locationId',
+  '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations/$locationId',
 )({
   component: LocationDetailPage,
 })
 
 function LocationDetailPage() {
   const locationId = useParams({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/locations/$locationId',
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations/$locationId',
   })?.locationId
 
   const location = useQuery(

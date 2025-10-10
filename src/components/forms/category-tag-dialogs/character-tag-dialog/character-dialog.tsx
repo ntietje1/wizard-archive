@@ -38,7 +38,7 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
   // Extract properties based on discriminated union
   const isEditMode = props.mode === 'edit'
   const character = isEditMode ? props.tag : undefined
-  const config = props.config ?? CHARACTER_CONFIG
+  const config = props.config
   const navigateToNote = props.navigateToNote ?? false
   const parentFolderId = !isEditMode ? props.parentFolderId : undefined
   const mode = props.mode
@@ -58,11 +58,11 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
 
   const getCategory = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
+      api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
             campaignId: campaign?._id,
-            categoryName: config.categoryName,
+            slug: config.categorySlug,
           }
         : 'skip',
     ),
@@ -104,7 +104,7 @@ export default function CharacterDialog(props: TagDialogProps<Character>) {
     }
 
     if (!getCategory.data) {
-      toast.error(`Category "${config.categoryName}" not found`)
+      toast.error(`Category not found`)
       return
     }
 

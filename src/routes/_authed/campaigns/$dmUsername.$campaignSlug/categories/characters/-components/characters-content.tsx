@@ -7,7 +7,7 @@ import { CreateActionCard } from '~/components/content-grid-page/create-action-c
 import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { Users, Edit, Plus, Trash2 } from '~/lib/icons'
-import CharacterDialog from '../../../../../../components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
+import CharacterDialog from '../../../../../../../components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
@@ -100,7 +100,7 @@ export default function CharactersContent() {
             ]}
             onClick={() =>
               router.navigate({
-                to: '/campaigns/$dmUsername/$campaignSlug/characters/$characterId',
+                to: '/campaigns/$dmUsername/$campaignSlug/categories/characters/$characterId',
                 params: {
                   dmUsername,
                   campaignSlug,

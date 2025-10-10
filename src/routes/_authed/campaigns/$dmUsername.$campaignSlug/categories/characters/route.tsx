@@ -1,11 +1,11 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute(
-  '/_authed/campaigns/$dmUsername/$campaignSlug/locations/routes',
+  '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters',
 )({
-  component: LocationsLayout,
+  component: CharactersLayout,
 })
 
-function LocationsLayout() {
+function CharactersLayout() {
   return <Outlet />
 }

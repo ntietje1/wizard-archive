@@ -5,7 +5,7 @@ import {
   getCampaignMembers,
   requireCampaignMembership,
 } from '../campaigns/campaigns'
-import { getTagCategoryByName, getTagsByCategory } from '../tags/tags'
+import { getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
 import { Share } from './types'
 import { shareValidator } from './schema'
 import { combineSharesAndTag } from './shares'
@@ -23,10 +23,10 @@ export const getShareTagsByCampaign = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const category = await getTagCategoryByName(
+    const category = await getTagCategoryBySlug(
       ctx,
       args.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Shared.name,
+      SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
     )
     const tags = await getTagsByCategory(ctx, category._id)
     const shares = await ctx.db

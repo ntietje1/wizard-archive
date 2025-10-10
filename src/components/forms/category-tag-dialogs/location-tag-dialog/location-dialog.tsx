@@ -25,7 +25,6 @@ import {
 } from '../base-tag-dialog/types.ts'
 import {
   defaultLocationFormValues,
-  LOCATION_CONFIG,
   type LocationFormValues,
 } from './types.ts'
 
@@ -33,7 +32,7 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
   // Extract properties based on discriminated union
   const isEditMode = props.mode === 'edit'
   const location = isEditMode ? props.tag : undefined
-  const config = props.config ?? LOCATION_CONFIG
+  const config = props.config
   const navigateToNote = props.navigateToNote ?? false
   const parentFolderId = !isEditMode ? props.parentFolderId : undefined
   const mode = props.mode
@@ -44,13 +43,15 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
   const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
 
+  console.log('config', config)
+
   const getCategory = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
+      api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
             campaignId: campaign?._id,
-            categoryName: config.categoryName,
+            slug: config.categorySlug,
           }
         : 'skip',
     ),
@@ -91,7 +92,7 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
     }
 
     if (!getCategory.data) {
-      toast.error(`Category "${config.categoryName}" not found`)
+      toast.error(`Category not found`)
       return
     }
 

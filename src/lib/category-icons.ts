@@ -31,8 +31,9 @@ import {
   Sun,
   Star,
 } from '~/lib/icons'
+import type { LucideIcon } from 'lucide-react'
 
-const categoryIconsMap = {
+const categoryIconsMap: Record<string, LucideIcon> = {
   [SYSTEM_DEFAULT_CATEGORIES.Character.iconName]: User,
   [SYSTEM_DEFAULT_CATEGORIES.Location.iconName]: MapPin,
   [SYSTEM_DEFAULT_CATEGORIES.Session.iconName]: Calendar,

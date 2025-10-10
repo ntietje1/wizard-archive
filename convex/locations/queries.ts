@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { getTag, getTagCategoryByName, getTagsByCategory } from '../tags/tags'
+import { getTag, getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
 import { Location } from './types'
 import { combineLocationAndTag, getLocation } from './locations'
 import { locationValidator } from './schema'
@@ -20,10 +20,10 @@ export const getLocationsByCampaign = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     ) //TODO: allow players to see locations that have been "introduced" to them
 
-    const category = await getTagCategoryByName(
+    const category = await getTagCategoryBySlug(
       ctx,
       args.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Location.name,
+      SYSTEM_DEFAULT_CATEGORIES.Location.slug,
     )
     const tags = await getTagsByCategory(ctx, category._id)
     const locations = await ctx.db
@@ -82,10 +82,10 @@ export const getLocationByTagId = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     ) // TODO: allow players to see locations that have been "introduced" to them
 
-    const category = await getTagCategoryByName(
+    const category = await getTagCategoryBySlug(
       ctx,
       tag.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Location.name,
+      SYSTEM_DEFAULT_CATEGORIES.Location.slug,
     )
 
     const location = await ctx.db

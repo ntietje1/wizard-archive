@@ -15,9 +15,10 @@ import type { Tag } from 'convex/tags/types'
 import { TagIcon, Edit, Plus, Trash2 } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { PageHeader } from '~/components/content-grid-page/page-header'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute(
-  '/_authed/campaigns/$dmUsername/$campaignSlug/$categoryName/',
+  '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
 )({
   component: GenericCategoryPage,
 })
@@ -25,9 +26,10 @@ export const Route = createFileRoute(
 function GenericCategoryPage() {
   const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
-  const categoryName = useParams({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/$categoryName/',
-  })?.categoryName as string
+  const params = useParams({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
+  })
+  const categorySlug = params?.categorySlug
   const router = useRouter()
 
   const [creating, setCreating] = useState(false)
@@ -35,37 +37,31 @@ function GenericCategoryPage() {
   const [deleting, setDeleting] = useState<Tag | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const titleCase = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1)
-
   const categoryQuery = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
-      campaign?._id ? { campaignId: campaign._id, categoryName } : 'skip',
+      api.tags.queries.getTagCategoryBySlug,
+      campaign?._id ? {
+        campaignId: campaign._id,
+        slug: categorySlug,
+      } : 'skip',
     ),
   )
 
   const tags = useQuery(
     convexQuery(
-      api.tags.queries.getTagsByCategoryName,
-      campaign?._id ? { campaignId: campaign._id, categoryName } : 'skip',
+      api.tags.queries.getTagsByCategory,
+      campaign?._id && categoryQuery.data?._id
+        ? { campaignId: campaign._id, categoryId: categoryQuery.data._id }
+        : 'skip',
     ),
   )
 
-  const config: TagCategoryConfig = useMemo(() => {
-    const singular = categoryQuery.data?.displayName || titleCase(categoryName)
-    const plural = categoryQuery.data?.pluralDisplayName || `${singular}s`
-    return {
-      singular,
-      plural,
-      icon: TagIcon,
-      categoryName,
-    }
-  }, [
-    categoryQuery.data?._id,
-    categoryQuery.data?.displayName,
-    categoryQuery.data?.pluralDisplayName,
-    categoryName,
-  ])
+  const config: TagCategoryConfig = {
+    singular: categoryQuery.data?.displayName || '',
+    plural: categoryQuery.data?.pluralDisplayName || '',
+    categorySlug,
+    icon: TagIcon,
+  }
 
   const deleteTag = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.deleteTag),
@@ -77,6 +73,8 @@ function GenericCategoryPage() {
     try {
       await deleteTag.mutateAsync({ tagId: deleting._id })
       setDeleting(null)
+    } catch (_) {
+      toast.error('Failed to delete tag')
     } finally {
       setIsDeleting(false)
     }
@@ -198,7 +196,7 @@ function GenericCategoryPage() {
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
         title={`Delete ${config.singular}`}
-        description={`Are you sure you want to delete "${deleting?.displayName}"? This will also remove references in your notes. This action cannot be undone.`}
+        description={`Are you sure you want to delete ${deleting?.displayName}? This will also remove references in your notes. This action cannot be undone.`}
         confirmLabel={`Delete ${config.singular}`}
         isLoading={isDeleting}
         icon={TagIcon}

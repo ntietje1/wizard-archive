@@ -28,7 +28,7 @@ export const SystemFolders = ({ className }: SystemFoldersProps) => {
     ),
   )
 
-  const userCategories = (categories.data || []).filter(
+  const userCategories: Array<TagCategory> = (categories.data || []).filter(
     (c: TagCategory) => c.kind === CATEGORY_KIND.User,
   )
 

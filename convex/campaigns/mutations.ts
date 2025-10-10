@@ -222,7 +222,7 @@ export const deleteCampaign = mutation({
 
     const tagCategories = await ctx.db
       .query('tagCategories')
-      .withIndex('by_campaign_name', (q) => q.eq('campaignId', args.campaignId))
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))
       .collect()
 
     for (const category of tagCategories) {

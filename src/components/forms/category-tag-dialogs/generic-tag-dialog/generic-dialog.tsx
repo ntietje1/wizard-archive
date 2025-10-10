@@ -50,11 +50,11 @@ export default function GenericTagDialog(props: TagDialogProps) {
 
   const getCategory = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
+      api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
             campaignId: campaign?._id,
-            categoryName: config.categoryName,
+            slug: config.categorySlug,
           }
         : 'skip',
     ),
@@ -85,7 +85,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
     }
 
     if (!getCategory.data) {
-      toast.error(`Category "${config.categoryName}" not found`)
+      toast.error(`Category not found`)
       return
     }
 

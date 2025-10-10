@@ -9,7 +9,7 @@ export interface TagCategoryConfig {
   singular: string
   plural: string
   icon: LucideIcon
-  categoryName: string
+  categorySlug: string
 }
 
 export interface BaseTagFormValues {

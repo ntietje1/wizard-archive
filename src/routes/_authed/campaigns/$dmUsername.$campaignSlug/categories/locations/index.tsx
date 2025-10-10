@@ -3,7 +3,7 @@ import LocationsContent from './-components/locations-content'
 import LocationsHeader from './-components/locations-header'
 
 export const Route = createFileRoute(
-  '/_authed/campaigns/$dmUsername/$campaignSlug/locations/',
+  '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations/',
 )({
   component: LocationsIndexPage,
 })

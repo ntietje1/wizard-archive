@@ -8,9 +8,10 @@ import { Button } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/utils'
 import { ColorPicker } from '~/components/forms/category-tag-dialogs/base-tag-dialog/color-picker'
 import { getCategoryIcon, getNonDefaultCategoryIcons } from '~/lib/category-icons'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface CreateCategoryFormProps {
-  campaignId: string
+  campaignId: Id<'campaigns'>
   onClose: () => void
 }
 
@@ -18,7 +19,6 @@ export function CreateCategoryForm({ campaignId, onClose }: CreateCategoryFormPr
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
-
   const iconOptions = getNonDefaultCategoryIcons()
 
   const form = useForm({
@@ -31,7 +31,7 @@ export function CreateCategoryForm({ campaignId, onClose }: CreateCategoryFormPr
     onSubmit: async ({ value }) => {
       if (!value.displayName.trim() || !value.pluralDisplayName.trim()) return
       await createCategory.mutateAsync({
-        campaignId: campaignId as any,
+        campaignId: campaignId,
         displayName: value.displayName.trim(),
         pluralDisplayName: value.pluralDisplayName.trim(),
         iconName: value.iconName,
@@ -127,7 +127,8 @@ export function CreateCategoryForm({ campaignId, onClose }: CreateCategoryFormPr
         })}
       >
         {({ displayName, pluralDisplayName }) => {
-          const isDisabled = !displayName.trim() || !pluralDisplayName.trim()
+          const isDisabled =
+            !displayName.trim() || !pluralDisplayName.trim()
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose}>

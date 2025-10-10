@@ -11,7 +11,7 @@ export const SYSTEM_DEFAULT_CATEGORIES = {
   Character: {
     displayName: 'Character',
     pluralDisplayName: 'Characters',
-    name: 'characters',
+    slug: 'characters',
     iconName: 'User',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#ef4444',
@@ -19,7 +19,7 @@ export const SYSTEM_DEFAULT_CATEGORIES = {
   Location: {
     displayName: 'Location',
     pluralDisplayName: 'Locations',
-    name: 'locations',
+    slug: 'locations',
     iconName: 'MapPin',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#3B82F6',
@@ -27,7 +27,7 @@ export const SYSTEM_DEFAULT_CATEGORIES = {
   Session: {
     displayName: 'Session',
     pluralDisplayName: 'Sessions',
-    name: 'sessions',
+    slug: 'sessions',
     iconName: 'Calendar',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#22C55E',
@@ -35,7 +35,7 @@ export const SYSTEM_DEFAULT_CATEGORIES = {
   Shared: {
     displayName: 'Shares',
     pluralDisplayName: 'Shares',
-    name: 'shares',
+    slug: 'shares',
     iconName: 'Share2',
     kind: CATEGORY_KIND.SystemManaged,
     defaultColor: '#F59E0B',
@@ -50,7 +50,7 @@ export type TagCategory = {
   _id: Id<'tagCategories'>
   _creationTime: number
 
-  name: string
+  slug: string
   displayName: string
   pluralDisplayName: string
   kind: CategoryKind

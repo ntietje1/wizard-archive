@@ -7,7 +7,7 @@ import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { MapPin, Plus, Edit, Trash2 } from '~/lib/icons'
 import { useState } from 'react'
 import type { Location } from 'convex/locations/types'
-import LocationDialog from '../../../../../../components/forms/category-tag-dialogs/location-tag-dialog/location-dialog'
+import LocationDialog from '../../../../../../../components/forms/category-tag-dialogs/location-tag-dialog/location-dialog'
 import { toast } from 'sonner'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 import { useCampaign } from '~/contexts/CampaignContext'
@@ -41,7 +41,7 @@ export default function LocationsContent() {
 
   const handleViewLocationNotes = (location: Location) => {
     router.navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/locations/$locationId',
+      to: '/campaigns/$dmUsername/$campaignSlug/categories/locations/$locationId',
       params: {
         dmUsername,
         campaignSlug,

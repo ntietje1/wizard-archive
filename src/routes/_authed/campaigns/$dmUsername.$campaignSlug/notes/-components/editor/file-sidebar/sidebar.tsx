@@ -22,9 +22,11 @@ function FileSidebarContent() {
   const { createFolder } = useFolderActions()
 
   const handleCreateNote = () => {
+    if (!campaignId) return
     createNote.mutateAsync({ campaignId: campaignId })
   }
   const handleCreateFolder = () => {
+    if (!campaignId) return
     createFolder.mutateAsync({ campaignId: campaignId })
   }
 

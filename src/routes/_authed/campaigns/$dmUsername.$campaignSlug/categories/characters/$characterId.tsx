@@ -5,14 +5,14 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const Route = createFileRoute(
-  '/_authed/campaigns/$dmUsername/$campaignSlug/characters/$characterId',
+  '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters/$characterId',
 )({
   component: CharacterDetailPage,
 })
 
 function CharacterDetailPage() {
   const characterId = useParams({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/characters/$characterId',
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters/$characterId',
   })?.characterId
 
   const character = useQuery(

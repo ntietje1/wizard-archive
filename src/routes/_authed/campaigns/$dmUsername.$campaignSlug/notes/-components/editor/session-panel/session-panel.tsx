@@ -33,11 +33,11 @@ export function SessionPanel() {
 
   const category = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
+      api.tags.queries.getTagCategoryBySlug,
       campaignId
         ? {
             campaignId,
-            categoryName: SYSTEM_DEFAULT_CATEGORIES.Session.name,
+            slug: SYSTEM_DEFAULT_CATEGORIES.Session.slug,
           }
         : 'skip',
     ),

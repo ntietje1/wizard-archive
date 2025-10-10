@@ -12,7 +12,7 @@ export const categoryKindValidator = v.union(
 export const tagCategoryTableFields = {
   pluralDisplayName: v.string(),
   displayName: v.string(),
-  name: v.string(),
+  slug: v.string(),
   kind: categoryKindValidator,
   campaignId: v.id('campaigns'),
   iconName: v.string(),
@@ -37,7 +37,8 @@ export const tagTables = {
   tagCategories: defineTable({
     ...commonMetaFields('tagCategories'),
     ...tagCategoryTableFields,
-  }).index('by_campaign_name', ['campaignId', 'name']),
+  })
+    .index('by_campaign_slug', ['campaignId', 'slug']),
 
   tags: defineTable({
     ...commonMetaFields('tags'),

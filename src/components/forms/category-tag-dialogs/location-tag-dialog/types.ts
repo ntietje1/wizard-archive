@@ -17,5 +17,5 @@ export const LOCATION_CONFIG: TagCategoryConfig = {
   singular: SYSTEM_DEFAULT_CATEGORIES.Location.displayName,
   plural: SYSTEM_DEFAULT_CATEGORIES.Location.pluralDisplayName,
   icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Location.iconName),
-  categoryName: SYSTEM_DEFAULT_CATEGORIES.Location.name,
+  categorySlug: SYSTEM_DEFAULT_CATEGORIES.Location.slug,
 }

@@ -48,17 +48,17 @@ export const CategoryFolderButton = ({
   const campaign = campaignWithMembership?.data?.campaign
   const getCategory = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryByName,
+      api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
             campaignId: campaign._id,
-            categoryName: categoryConfig.categoryName,
+            slug: categoryConfig.categorySlug,
           }
         : 'skip',
     ),
   )
   const { isExpanded, toggleExpanded } = useFolderState(
-    folder?._id || categoryConfig.categoryName,
+    folder?._id || categoryConfig.categorySlug,
   )
   const categoryContextMenuRef = useRef<ContextMenuRef>(null)
 

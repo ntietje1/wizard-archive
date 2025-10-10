@@ -7,6 +7,6 @@ export const createConfig = (category: TagCategory): TagCategoryConfig => {
     singular: category.displayName,
     plural: category.pluralDisplayName,
     icon: getCategoryIcon(category.iconName),
-    categoryName: category.name,
+    categorySlug: category.slug,
   }
 }

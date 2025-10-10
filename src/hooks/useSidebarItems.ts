@@ -14,6 +14,7 @@ import { useSortOptions } from './useSortOptions'
 export const useSidebarItems = (
   categoryId?: Id<'tagCategories'>,
   parentId?: Id<'folders'>,
+  enabled = true,
 ) => {
   const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
@@ -21,7 +22,7 @@ export const useSidebarItems = (
   const sidebarItems = useQuery(
     convexQuery(
       api.notes.queries.getSidebarItems,
-      campaign?._id
+      campaign?._id && enabled
         ? {
             campaignId: campaign._id,
             categoryId: categoryId,

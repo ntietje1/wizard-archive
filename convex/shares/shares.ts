@@ -10,7 +10,7 @@ import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
 import { combineTagEntity } from '../tags/tags'
 import {
   getEffectiveTagIdsForBlock,
-  getTagCategoryByName,
+  getTagCategoryBySlug,
   getTagsByCategory,
   insertTagAndNote,
 } from '../tags/tags'
@@ -54,10 +54,10 @@ export const createShare = async (
   noteId: Id<'notes'>
   shareId: Id<'shares'>
 }> => {
-  const category = await getTagCategoryByName(
+  const category = await getTagCategoryBySlug(
     ctx,
     campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
   await requireCampaignMembership(
     ctx,
@@ -129,10 +129,10 @@ export async function getPlayerSharedTags(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
 ): Promise<Share[]> {
-  const category = await getTagCategoryByName(
+  const category = await getTagCategoryBySlug(
     ctx,
     campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
   const tags = await getTagsByCategory(ctx, category._id)
   const shares = await ctx.db
@@ -161,10 +161,10 @@ export async function getPlayerSharedTag(
   campaignId: Id<'campaigns'>,
   memberId: Id<'campaignMembers'>,
 ): Promise<Share> {
-  const category = await getTagCategoryByName(
+  const category = await getTagCategoryBySlug(
     ctx,
     campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.name,
+    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
   const playerShare = await ctx.db
     .query('shares')

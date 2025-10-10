@@ -20,7 +20,6 @@ Current features
   - All tagged content viewable as a read-only document
 - Note sharing
   - Allows selectively sharing individual blocks within a note
-  - Implemented as tag category
   - Sharing to specific players or all players at once
 - Tag Categories
   - Characters, Locations, and Sessions

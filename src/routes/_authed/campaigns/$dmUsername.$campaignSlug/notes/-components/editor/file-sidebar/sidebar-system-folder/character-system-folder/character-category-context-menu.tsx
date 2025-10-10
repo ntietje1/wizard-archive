@@ -21,7 +21,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   const { dmUsername, campaignSlug } = useCampaign()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
-    props.folder?._id || categoryConfig.categoryName,
+    props.folder?._id || categoryConfig.categorySlug,
   )
 
   const handleCreateItem = () => {
@@ -30,7 +30,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   }
 
   const itemsTransformation = (baseItems: ContextMenuItem[]) => {
-    const items = [...baseItems]
+    const items: Array<ContextMenuItem> = [...baseItems]
 
     if (items[0] && items[0].type === 'action') {
       items[0] = {
@@ -47,7 +47,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
           router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/characters',
+            to: '/campaigns/$dmUsername/$campaignSlug/categories/characters',
             params: {
               dmUsername,
               campaignSlug,

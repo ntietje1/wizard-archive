@@ -40,8 +40,7 @@ const navigationItemsSection2 = [
 ]
 
 export const NavigationSidebar = () => {
-  const { dmUsername, campaignSlug } = useCampaign()
-  const { campaignWithMembership } = useCampaign()
+  const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -87,7 +86,7 @@ export const NavigationSidebar = () => {
           )
           .filter((c: TagCategory) => c.kind !== CATEGORY_KIND.SystemManaged)
           .map((c: TagCategory) => {
-            const to = `/campaigns/$dmUsername/$campaignSlug/${c.name}`
+            const to = `/campaigns/$dmUsername/$campaignSlug/categories/${c.slug}`
             return (
               <Link
                 key={c._id}
@@ -148,7 +147,7 @@ export const NavigationSidebar = () => {
       >
         {campaign && (
           <CreateCategoryForm
-            campaignId={campaign._id as any}
+            campaignId={campaign._id}
             onClose={() => setIsCreateOpen(false)}
           />
         )}
