@@ -14,6 +14,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
 import { findBlockByBlockNoteId, getNote } from '../notes/notes'
+import pluralize from 'pluralize'
 
 export function combineTagEntity<TCombined>(
   idKey: string,
@@ -221,13 +222,13 @@ export async function ensureDefaultTagCategories(
     if (found) {
       ids.push(found._id)
     } else {
+      // Use pluralDisplayName as the categoryName since it's the primary form
       const id = await insertTagCategory(
         ctx,
         {
           campaignId,
           kind: d.kind,
-          displayName: d.displayName,
-          pluralDisplayName: d.pluralDisplayName,
+          categoryName: d.pluralDisplayName,
           iconName: d.iconName,
           defaultColor: d.defaultColor,
         },
@@ -315,8 +316,19 @@ export async function insertTagCategory(
   ctx: MutationCtx,
   input: Omit<
     TagCategory,
-    '_id' | '_creationTime' | 'updatedAt' | 'createdBy' | 'name' | 'slug'
-  >,
+    | '_id'
+    | '_creationTime'
+    | 'updatedAt'
+    | 'createdBy'
+    | 'name'
+    | 'slug'
+    | 'displayName'
+    | 'pluralDisplayName'
+  > &
+    (
+      | { categoryName: string }
+      | { displayName: string; pluralDisplayName: string }
+    ),
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
   const { campaignWithMembership } = await requireCampaignMembership(
@@ -335,18 +347,38 @@ export async function insertTagCategory(
   if (!allowSystem && input.kind !== CATEGORY_KIND.User) {
     throw new Error('Invalid kind')
   }
+
+  let displayName: string
+  let pluralDisplayName: string
+
+  // Handle both auto-pluralize mode and manual mode
+  if ('categoryName' in input) {
+    // Auto-pluralize: detect whether the input is singular or plural and derive both forms
+    const isPlural = pluralize.isPlural(input.categoryName)
+    displayName = isPlural
+      ? pluralize.singular(input.categoryName)
+      : input.categoryName
+    pluralDisplayName = isPlural
+      ? input.categoryName
+      : pluralize.plural(input.categoryName)
+  } else {
+    // Manual mode: use the provided displayName and pluralDisplayName
+    displayName = input.displayName
+    pluralDisplayName = input.pluralDisplayName
+  }
+
   const uniqueSlug = await findUniqueTagCategorySlug(
     ctx,
     input.campaignId,
-    input.pluralDisplayName,
+    pluralDisplayName,
   )
 
   const id = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
     campaignId: input.campaignId,
     slug: uniqueSlug,
-    displayName: input.displayName,
-    pluralDisplayName: input.pluralDisplayName,
+    displayName: displayName,
+    pluralDisplayName: pluralDisplayName,
     kind: input.kind,
     iconName: input.iconName,
     defaultColor: input.defaultColor,
@@ -359,6 +391,7 @@ export const updateTagCategory = async (
   ctx: MutationCtx,
   categoryId: Id<'tagCategories'>,
   input: {
+    categoryName?: string
     displayName?: string
     pluralDisplayName?: string
   },
@@ -382,11 +415,42 @@ export const updateTagCategory = async (
     updatedAt: Date.now(),
   }
 
-  if (input.displayName !== undefined) {
-    updates.displayName = input.displayName
-  }
+  if (input.categoryName !== undefined) {
+    // Auto-pluralize mode: detect whether the input is singular or plural and derive both forms
+    const isPlural = pluralize.isPlural(input.categoryName)
+    const displayName = isPlural
+      ? pluralize.singular(input.categoryName)
+      : input.categoryName
+    const pluralDisplayName = isPlural
+      ? input.categoryName
+      : pluralize.plural(input.categoryName)
 
-  if (input.pluralDisplayName !== undefined) {
+    updates.displayName = displayName
+    updates.pluralDisplayName = pluralDisplayName
+
+    const uniqueSlug = await findUniqueTagCategorySlug(
+      ctx,
+      category.campaignId,
+      pluralDisplayName,
+    )
+    updates.slug = uniqueSlug
+  } else if (
+    input.displayName !== undefined &&
+    input.pluralDisplayName !== undefined
+  ) {
+    // Manual mode: use the provided displayName and pluralDisplayName
+    updates.displayName = input.displayName
+    updates.pluralDisplayName = input.pluralDisplayName
+
+    const uniqueSlug = await findUniqueTagCategorySlug(
+      ctx,
+      category.campaignId,
+      input.pluralDisplayName,
+    )
+    updates.slug = uniqueSlug
+  } else if (input.displayName !== undefined) {
+    updates.displayName = input.displayName
+  } else if (input.pluralDisplayName !== undefined) {
     updates.pluralDisplayName = input.pluralDisplayName
     const uniqueSlug = await findUniqueTagCategorySlug(
       ctx,

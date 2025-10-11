@@ -63,8 +63,9 @@ export const deleteTag = mutation({
 export const createTagCategory = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    displayName: v.string(),
-    pluralDisplayName: v.string(),
+    categoryName: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    pluralDisplayName: v.optional(v.string()),
     iconName: v.string(),
     defaultColor: v.optional(v.string()),
   },
@@ -76,25 +77,42 @@ export const createTagCategory = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    return await insertTagCategory(ctx, {
-      campaignId: args.campaignId,
-      kind: CATEGORY_KIND.User,
-      displayName: args.displayName,
-      iconName: args.iconName,
-      pluralDisplayName: args.pluralDisplayName,
-      defaultColor: args.defaultColor,
-    })
+    // Either categoryName (auto-pluralize) or both displayName and pluralDisplayName (manual) must be provided
+    if (args.categoryName) {
+      return await insertTagCategory(ctx, {
+        campaignId: args.campaignId,
+        kind: CATEGORY_KIND.User,
+        categoryName: args.categoryName,
+        iconName: args.iconName,
+        defaultColor: args.defaultColor,
+      })
+    } else if (args.displayName && args.pluralDisplayName) {
+      return await insertTagCategory(ctx, {
+        campaignId: args.campaignId,
+        kind: CATEGORY_KIND.User,
+        displayName: args.displayName,
+        pluralDisplayName: args.pluralDisplayName,
+        iconName: args.iconName,
+        defaultColor: args.defaultColor,
+      })
+    } else {
+      throw new Error(
+        'Must provide either categoryName or both displayName and pluralDisplayName',
+      )
+    }
   },
 })
 export const updateTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),
+    categoryName: v.optional(v.string()),
     displayName: v.optional(v.string()),
     pluralDisplayName: v.optional(v.string()),
   },
   returns: v.id('tagCategories'),
   handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
     return await updateTagCategoryFn(ctx, args.categoryId, {
+      categoryName: args.categoryName,
       displayName: args.displayName,
       pluralDisplayName: args.pluralDisplayName,
     })
