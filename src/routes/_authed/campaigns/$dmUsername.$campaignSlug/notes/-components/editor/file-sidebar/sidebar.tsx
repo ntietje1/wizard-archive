@@ -47,10 +47,18 @@ function FileSidebarContent() {
 
         {sidebarItems.data?.length === 0 && (
           <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
-            <Button className="max-w-24" variant="outline" onClick={handleCreateNote}>
+            <Button
+              className="max-w-24"
+              variant="outline"
+              onClick={handleCreateNote}
+            >
               New note
             </Button>
-            <Button className="max-w-24" variant="outline" onClick={handleCreateFolder}>
+            <Button
+              className="max-w-24"
+              variant="outline"
+              onClick={handleCreateFolder}
+            >
               New folder
             </Button>
           </div>

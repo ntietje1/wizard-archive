@@ -47,10 +47,7 @@ export const SystemFolders = ({ className }: SystemFoldersProps) => {
       <SessionSystemFolder />
 
       {userCategories.map((c) => (
-        <CategoryFolderButton
-          key={c._id}
-          categoryConfig={createConfig(c)}
-        />
+        <CategoryFolderButton key={c._id} categoryConfig={createConfig(c)} />
       ))}
     </div>
   )

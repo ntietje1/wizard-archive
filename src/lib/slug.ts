@@ -9,5 +9,3 @@ export function slugify(input: string): string {
 export function appendSuffix(base: string, n: number): string {
   return n <= 1 ? base : `${base}-${n}`
 }
-
-

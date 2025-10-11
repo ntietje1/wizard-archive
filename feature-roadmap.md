@@ -29,6 +29,7 @@ Current features
   - Sessions have custom auto-tagging on share, based on the current session
 
 Dev to-do list:
+
 - disallow certain category names that would conflict with current paths
 - Folder view or flat view for category pages
 - File upload (including sidebar integration)

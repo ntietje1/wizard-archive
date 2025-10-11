@@ -40,10 +40,12 @@ function GenericCategoryPage() {
   const categoryQuery = useQuery(
     convexQuery(
       api.tags.queries.getTagCategoryBySlug,
-      campaign?._id ? {
-        campaignId: campaign._id,
-        slug: categorySlug,
-      } : 'skip',
+      campaign?._id
+        ? {
+            campaignId: campaign._id,
+            slug: categorySlug,
+          }
+        : 'skip',
     ),
   )
 

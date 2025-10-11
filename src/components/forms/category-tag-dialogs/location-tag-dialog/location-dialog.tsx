@@ -23,10 +23,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
 } from '../base-tag-dialog/types.ts'
-import {
-  defaultLocationFormValues,
-  type LocationFormValues,
-} from './types.ts'
+import { defaultLocationFormValues, type LocationFormValues } from './types.ts'
 
 export default function LocationDialog(props: TagDialogProps<Location>) {
   // Extract properties based on discriminated union

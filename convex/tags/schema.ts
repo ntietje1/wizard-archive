@@ -37,8 +37,7 @@ export const tagTables = {
   tagCategories: defineTable({
     ...commonMetaFields('tagCategories'),
     ...tagCategoryTableFields,
-  })
-    .index('by_campaign_slug', ['campaignId', 'slug']),
+  }).index('by_campaign_slug', ['campaignId', 'slug']),
 
   tags: defineTable({
     ...commonMetaFields('tags'),
