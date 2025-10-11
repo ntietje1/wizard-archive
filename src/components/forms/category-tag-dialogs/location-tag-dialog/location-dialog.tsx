@@ -112,14 +112,20 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
         onClose()
 
         if (navigateToNote && tagResult.noteId) {
-          router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteId',
-            params: {
-              dmUsername,
-              campaignSlug,
-              noteId: tagResult.noteId,
-            },
+          // Fetch the note to get its slug
+          const note = await convex.query(api.notes.queries.getNote, {
+            noteId: tagResult.noteId,
           })
+          if (note?.slug) {
+            router.navigate({
+              to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
+              params: {
+                dmUsername,
+                campaignSlug,
+                noteSlug: note.slug,
+              },
+            })
+          }
         }
       } else if (mode === 'edit' && location) {
         await updateTagMutation.mutateAsync({

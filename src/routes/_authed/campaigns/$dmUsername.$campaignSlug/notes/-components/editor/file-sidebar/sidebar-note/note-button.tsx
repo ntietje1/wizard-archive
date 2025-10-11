@@ -36,7 +36,7 @@ export function NoteButton({ note }: NoteButtonProps) {
           isSelected={isSelected}
           isRenaming={renamingId === note._id}
           showChevron={false}
-          onSelect={() => selectNote(note._id)}
+          onSelect={() => selectNote(note.slug)}
           onMoreOptions={handleMoreOptions}
           onFinishRename={handleFinishRename}
         />

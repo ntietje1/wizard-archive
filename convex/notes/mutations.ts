@@ -8,6 +8,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getFolder as getFolderFn } from './notes'
 import { customBlockValidator } from './schema'
 import { deleteNote as deleteNoteFn } from './helpers'
+import { findUniqueSlug, slugify, shortenId } from '../common/slug'
 
 export const updateNote = mutation({
   args: {
@@ -39,6 +40,24 @@ export const updateNote = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
+
+      // Regenerate slug when name changes
+      const slugBasis =
+        args.name && args.name.trim() !== ''
+          ? args.name
+          : shortenId(args.noteId)
+
+      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('notes')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', note.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== args.noteId
+      })
+
+      updates.slug = uniqueSlug
 
       if (note.tagId) {
         await updateTagAndContent(ctx, note.tagId, { displayName: args.name })
@@ -246,14 +265,33 @@ export const createNote = mutation({
     )
     const { profile } = identityWithProfile
 
+    // First, insert the note with a temporary slug to get the noteId
     const noteId = await ctx.db.insert('notes', {
       userId: profile.userId,
       name: args.name || '',
+      slug: 'temp', // Temporary slug
       categoryId: args.categoryId,
       parentFolderId: args.parentFolderId,
       updatedAt: Date.now(),
       campaignId: args.campaignId,
     })
+
+    // Generate slug based on name or noteId
+    const slugBasis =
+      args.name && args.name.trim() !== '' ? args.name : shortenId(noteId)
+
+    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+      const conflict = await ctx.db
+        .query('notes')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', args.campaignId).eq('slug', slug),
+        )
+        .unique()
+      return conflict !== null && conflict._id !== noteId
+    })
+
+    // Update the note with the unique slug
+    await ctx.db.patch(noteId, { slug: uniqueSlug })
 
     return noteId
   },

@@ -124,15 +124,31 @@ export const insertTagAndNote = async (
 
   const tagId = await insertTag(ctx, newTag, allowManagedTags)
 
+  // First insert with temporary slug
   const noteId = await ctx.db.insert('notes', {
     userId: profile.userId,
     name: newTag.displayName,
+    slug: 'temp',
     campaignId: newTag.campaignId,
     updatedAt: Date.now(),
     categoryId: newTag.categoryId,
     tagId: tagId,
     parentFolderId: parentFolderId,
   })
+
+  // Generate unique slug based on displayName
+  const uniqueSlug = await findUniqueSlug(newTag.displayName, async (slug) => {
+    const conflict = await ctx.db
+      .query('notes')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', newTag.campaignId).eq('slug', slug),
+      )
+      .unique()
+    return conflict !== null && conflict._id !== noteId
+  })
+
+  // Update with the unique slug
+  await ctx.db.patch(noteId, { slug: uniqueSlug })
 
   return { tagId, noteId }
 }
@@ -279,9 +295,18 @@ export async function getTagsByCategory(
   return tags.map((t) => ({ ...t, category }))
 }
 
-async function findUniqueTagCategorySlug(ctx: MutationCtx, campaignId: Id<'campaigns'>, name: string): Promise<string> {
+async function findUniqueTagCategorySlug(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  name: string,
+): Promise<string> {
   return await findUniqueSlug(name, async (slug) => {
-    const conflict = await ctx.db.query('tagCategories').withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug)).unique()
+    const conflict = await ctx.db
+      .query('tagCategories')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
     return conflict !== null
   })
 }
@@ -310,8 +335,12 @@ export async function insertTagCategory(
   if (!allowSystem && input.kind !== CATEGORY_KIND.User) {
     throw new Error('Invalid kind')
   }
-  const uniqueSlug = await findUniqueTagCategorySlug(ctx, input.campaignId, input.pluralDisplayName)
-  
+  const uniqueSlug = await findUniqueTagCategorySlug(
+    ctx,
+    input.campaignId,
+    input.pluralDisplayName,
+  )
+
   const id = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
     campaignId: input.campaignId,
@@ -359,7 +388,11 @@ export const updateTagCategory = async (
 
   if (input.pluralDisplayName !== undefined) {
     updates.pluralDisplayName = input.pluralDisplayName
-    const uniqueSlug = await findUniqueTagCategorySlug(ctx, category.campaignId, input.pluralDisplayName)
+    const uniqueSlug = await findUniqueTagCategorySlug(
+      ctx,
+      category.campaignId,
+      input.pluralDisplayName,
+    )
     updates.slug = uniqueSlug
   }
 

@@ -105,14 +105,20 @@ export default function GenericTagDialog(props: TagDialogProps) {
         onClose()
 
         if (navigateToNote && result.noteId) {
-          router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteId',
-            params: {
-              dmUsername,
-              campaignSlug,
-              noteId: result.noteId,
-            },
+          // Fetch the note to get its slug
+          const note = await convex.query(api.notes.queries.getNote, {
+            noteId: result.noteId,
           })
+          if (note?.slug) {
+            router.navigate({
+              to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
+              params: {
+                dmUsername,
+                campaignSlug,
+                noteSlug: note.slug,
+              },
+            })
+          }
         }
       } else if (mode === 'edit' && tag) {
         await updateMutation.mutateAsync({

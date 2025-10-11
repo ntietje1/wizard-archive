@@ -13,6 +13,8 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { ClientOnly } from '@tanstack/react-router'
 import type { Id } from 'convex/_generated/dataModel'
 import { toast } from 'sonner'
+import { useConvex } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 
 const schema = BlockNoteSchema.create({
   inlineContentSpecs: customInlineContentSpecs,
@@ -26,7 +28,7 @@ export function NotesEditor() {
   )
 }
 function NotesEditorBase() {
-  const { note, noteId, updateCurrentNoteContent } = useCurrentNote()
+  const { note, noteSlug, updateCurrentNoteContent } = useCurrentNote()
 
   const hasContent =
     note?.data && note?.data?.content && note?.data?.content.length > 0
@@ -43,7 +45,7 @@ function NotesEditorBase() {
     [note?.data?._id],
   )
 
-  if (!noteId) {
+  if (!noteSlug) {
     return <NotesEditorEmptyContent />
   }
 
@@ -75,13 +77,18 @@ export function NotesEditorEmptyContent() {
   const { selectNote } = useCurrentNote()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const convex = useConvex()
 
   const handleCreateNote = async () => {
     if (!campaignId) return
     await createNote
       .mutateAsync({ campaignId: campaignId })
-      .then((noteId: Id<'notes'>) => {
-        selectNote(noteId)
+      .then(async (noteId: Id<'notes'>) => {
+        // Fetch the note to get its slug
+        const note = await convex.query(api.notes.queries.getNote, { noteId })
+        if (note?.slug) {
+          selectNote(note.slug)
+        }
       })
       .catch((error: Error) => {
         console.error(error)

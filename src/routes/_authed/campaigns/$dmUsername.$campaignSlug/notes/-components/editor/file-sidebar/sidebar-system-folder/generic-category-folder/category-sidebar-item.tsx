@@ -99,7 +99,7 @@ export function TagNoteButton({
           isSelected={isSelected}
           isRenaming={renamingId === noteWithTag._id}
           showChevron={false}
-          onSelect={() => selectNote(noteWithTag._id)}
+          onSelect={() => selectNote(noteWithTag.slug)}
           onMoreOptions={handleMoreOptions}
           onFinishRename={handleFinishRename}
         />

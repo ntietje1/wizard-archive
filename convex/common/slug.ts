@@ -14,11 +14,19 @@ export function appendSuffix(base: string, n: number): string {
   return n <= 1 ? base : `${base}-${n}`
 }
 
-export async function findUniqueSlug(name: string, checkFn: (slug: string) => Promise<boolean>): Promise<string> {
+export function shortenId(id: string, length: number = 8): string {
+  return id.slice(0, length)
+}
+
+export async function findUniqueSlug(
+  name: string,
+  checkFn: (slug: string) => Promise<boolean>,
+): Promise<string> {
   const normalized = slugify(name)
   let uniqueSlug = normalized
   let suffix = 1
-  for (let i = 0; i < 100; i++) { // 100 max checks
+  for (let i = 0; i < 100; i++) {
+    // 100 max checks
     const conflict = await checkFn(uniqueSlug)
     if (!conflict) break
     suffix += 1
@@ -30,4 +38,3 @@ export async function findUniqueSlug(name: string, checkFn: (slug: string) => Pr
   }
   return uniqueSlug
 }
-

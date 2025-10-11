@@ -17,6 +17,7 @@ import {
   getSidebarItems as getSidebarItemsFn,
   getFolder as getFolderFn,
   getNoteWithContent,
+  getNoteBySlug as getNoteBySlugFn,
 } from './notes'
 import {
   blockValidator,
@@ -61,6 +62,21 @@ export const getNote = query({
   returns: noteWithContentValidator,
   handler: async (ctx, args): Promise<NoteWithContent> => {
     const note = await getNoteWithContent(ctx, args.noteId)
+    if (!note) {
+      throw new Error('Note not found')
+    }
+    return note
+  },
+})
+
+export const getNoteBySlug = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    slug: v.string(),
+  },
+  returns: noteWithContentValidator,
+  handler: async (ctx, args): Promise<NoteWithContent> => {
+    const note = await getNoteBySlugFn(ctx, args.campaignId, args.slug)
     if (!note) {
       throw new Error('Note not found')
     }

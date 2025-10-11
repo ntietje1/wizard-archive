@@ -4,6 +4,7 @@ import { requireUserIdentity } from '../common/identity'
 import { Ctx } from '../common/types'
 import { UserProfile } from './types'
 import { Id } from '../_generated/dataModel'
+import { findUniqueSlug } from '../common/slug'
 
 export async function getUserProfileByUserIdHandler(ctx: Ctx, userId: string) {
   const profile = await ctx.db
@@ -24,8 +25,6 @@ export async function getUserProfileByUsernameHandler(
   return profile
 }
 
-const MAX_USERNAME_TRIES = 10
-
 export async function createUserProfileHandler(
   ctx: MutationCtx,
   identity: UserIdentity,
@@ -36,26 +35,21 @@ export async function createUserProfileHandler(
     identity.email?.split('@')[0] ||
     `user${identity.subject.slice(-8)}`
 
-  let username = baseUsername
-  let counter = 1
-
-  while (true) {
-    const existingUsername = await ctx.db
-      .query('userProfiles')
-      .withIndex('by_username', (q) => q.eq('username', username))
-      .unique()
-
-    if (!existingUsername || counter > MAX_USERNAME_TRIES) {
-      break
-    }
-
-    username = `${baseUsername}${counter}`
-    counter++
-  }
+  // Use findUniqueSlug to ensure username uniqueness
+  const uniqueUsername = await findUniqueSlug(
+    baseUsername,
+    async (username) => {
+      const conflict = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_username', (q) => q.eq('username', username))
+        .unique()
+      return conflict !== null
+    },
+  )
 
   return await ctx.db.insert('userProfiles', {
     userId: identity.subject,
-    username: username,
+    username: uniqueUsername,
     email: identity.email,
     name: identity.name,
     firstName: identity.givenName,
@@ -74,15 +68,15 @@ export async function updateUserProfileHandler(
   const username = identity.username as string
 
   if (username && username !== profile.username) {
-    const existingUser = await ctx.db
-      .query('userProfiles')
-      .withIndex('by_username', (q) => q.eq('username', username))
-      .unique()
-
-    if (existingUser) {
-      throw new Error('Username already taken')
-    }
-    updates.username = username
+    // Use findUniqueSlug to ensure username uniqueness
+    const uniqueUsername = await findUniqueSlug(username, async (name) => {
+      const conflict = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_username', (q) => q.eq('username', name))
+        .unique()
+      return conflict !== null && conflict._id !== profile._id
+    })
+    updates.username = uniqueUsername
   }
 
   if (identity.name && identity.name !== profile.name) {

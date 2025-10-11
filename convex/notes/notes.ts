@@ -61,6 +61,31 @@ export const getNoteWithContent = async (
   }
 }
 
+export const getNoteBySlug = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  slug: string,
+): Promise<NoteWithContent | null> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const note = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+
+  if (!note) {
+    return null
+  }
+
+  return getNoteWithContent(ctx, note._id)
+}
+
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,

@@ -27,6 +27,7 @@ export type SidebarItem<T extends SidebarItemType> = {
 }
 
 export type Note = SidebarItem<typeof SIDEBAR_ITEM_TYPES.notes> & {
+  slug: string
   tagId?: Id<'tags'>
   tag?: Tag
 }

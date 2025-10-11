@@ -26,6 +26,7 @@ const noteTableFields = {
   userId: v.string(),
   campaignId: v.id('campaigns'),
   name: v.optional(v.string()),
+  slug: v.string(),
   updatedAt: v.number(),
   categoryId: v.optional(v.id('tagCategories')),
   tagId: v.optional(v.id('tags')),
@@ -50,7 +51,8 @@ export const notesTables = {
       'categoryId',
       'parentFolderId',
     ])
-    .index('by_campaign_category_tag', ['campaignId', 'categoryId', 'tagId']),
+    .index('by_campaign_category_tag', ['campaignId', 'categoryId', 'tagId'])
+    .index('by_campaign_slug', ['campaignId', 'slug']),
 
   folders: defineTable({
     ...folderTableFields,

@@ -17,6 +17,7 @@ import { requireCampaignMembership } from './campaigns'
 import { Id } from '../_generated/dataModel'
 import { getUserProfileByUsernameHandler } from '../users/users'
 import { campaignMemberStatusValidator } from './schema'
+import { findUniqueSlug } from '../common/slug'
 
 export const createCampaign = mutation({
   args: {
@@ -30,16 +31,16 @@ export const createCampaign = mutation({
 
     const now = Date.now()
 
-    const existingCampaign = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', profile.userId),
-      )
-      .unique()
-
-    if (existingCampaign) {
-      throw new Error('Slug already exists')
-    }
+    // Use findUniqueSlug to ensure slug uniqueness for this DM
+    const uniqueSlug = await findUniqueSlug(args.slug, async (slug) => {
+      const conflict = await ctx.db
+        .query('campaigns')
+        .withIndex('by_slug_dm', (q) =>
+          q.eq('slug', slug).eq('dmUserId', profile.userId),
+        )
+        .unique()
+      return conflict !== null
+    })
 
     const campaignId = await ctx.db.insert('campaigns', {
       name: args.name,
@@ -47,7 +48,7 @@ export const createCampaign = mutation({
       updatedAt: now,
       playerCount: 0,
       dmUserId: profile.userId,
-      slug: args.slug,
+      slug: uniqueSlug,
       status: CAMPAIGN_STATUS.Active,
     })
 
@@ -156,17 +157,18 @@ export const updateCampaign = mutation({
       campaignUpdates.description = args.description
     }
 
-    if (args.slug !== undefined) {
-      const existingCampaign = await ctx.db
-        .query('campaigns')
-        .withIndex('by_slug_dm', (q) =>
-          q.eq('slug', args.slug!).eq('dmUserId', profile.userId),
-        )
-        .unique()
-
-      if (existingCampaign && existingCampaign._id !== campaign._id) {
-        throw new Error('Slug already exists')
-      }
+    if (args.slug !== undefined && args.slug !== campaign.slug) {
+      // Use findUniqueSlug to ensure slug uniqueness for this DM
+      const uniqueSlug = await findUniqueSlug(args.slug, async (slug) => {
+        const conflict = await ctx.db
+          .query('campaigns')
+          .withIndex('by_slug_dm', (q) =>
+            q.eq('slug', slug).eq('dmUserId', profile.userId),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== campaign._id
+      })
+      campaignUpdates.slug = uniqueSlug
     }
 
     await ctx.db.patch(campaign._id, campaignUpdates)

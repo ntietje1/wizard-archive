@@ -2,7 +2,6 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useNoteActions } from './useNoteActions'
@@ -13,11 +12,12 @@ import { useAuth } from '@clerk/tanstack-react-start'
 export const useCurrentNote = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
   const { updateNoteContent } = useNoteActions()
   const { isLoaded, isSignedIn } = useAuth()
+  const campaignId = campaignWithMembership.data?.campaign._id
 
-  const pathNoteId =
+  const pathNoteSlug =
     location.pathname.includes('/notes/') &&
     !location.pathname.endsWith('/notes')
       ? location.pathname.split('/notes/')[1]
@@ -25,16 +25,16 @@ export const useCurrentNote = () => {
 
   const note = useQuery(
     convexQuery(
-      api.notes.queries.getNote,
-      isLoaded && isSignedIn && pathNoteId
-        ? { noteId: pathNoteId as Id<'notes'> }
+      api.notes.queries.getNoteBySlug,
+      isLoaded && isSignedIn && pathNoteSlug && campaignId
+        ? { campaignId, slug: pathNoteSlug }
         : 'skip',
     ),
   )
 
   const selectNote = useCallback(
-    (noteId: Id<'notes'> | null) => {
-      if (!noteId) {
+    (noteSlug: string | null) => {
+      if (!noteSlug) {
         navigate({
           to: '/campaigns/$dmUsername/$campaignSlug/notes',
           params: { dmUsername, campaignSlug },
@@ -42,8 +42,8 @@ export const useCurrentNote = () => {
         return
       }
       navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteId',
-        params: { dmUsername, campaignSlug, noteId },
+        to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
+        params: { dmUsername, campaignSlug, noteSlug },
       })
     },
     [dmUsername, campaignSlug, navigate],
@@ -62,10 +62,10 @@ export const useCurrentNote = () => {
     return () => {
       updateCurrentNoteContent.flush()
     }
-  }, [pathNoteId, updateCurrentNoteContent])
+  }, [pathNoteSlug, updateCurrentNoteContent])
   return {
     note,
-    noteId: pathNoteId,
+    noteSlug: pathNoteSlug,
     selectNote,
     updateCurrentNoteContent,
   }
