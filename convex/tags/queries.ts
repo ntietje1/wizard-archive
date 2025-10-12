@@ -112,30 +112,6 @@ export const checkTagNameExists = query({
   },
 })
 
-// export const getTagCategoryByName = query({
-//   args: {
-//     campaignId: v.id('campaigns'),
-//     categoryName: v.string(),
-//   },
-//   returns: tagCategoryValidator,
-//   handler: async (ctx, args): Promise<TagCategory> => {
-//     const category = await ctx.db
-//       .query('tagCategories')
-//       .withIndex('by_campaign_name', (q) =>
-//         q
-//           .eq('campaignId', args.campaignId)
-//           .eq('name', args.categoryName.toLowerCase()),
-//       )
-//       .unique()
-
-//     if (!category) {
-//       throw new Error(`Category not found: ${args.categoryName}`)
-//     }
-
-//     return category
-//   },
-// })
-
 export const getTagCategoriesByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),

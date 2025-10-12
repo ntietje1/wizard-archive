@@ -77,18 +77,13 @@ export function NotesEditorEmptyContent() {
   const { selectNote } = useCurrentNote()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const convex = useConvex()
 
   const handleCreateNote = async () => {
     if (!campaignId) return
     await createNote
       .mutateAsync({ campaignId: campaignId })
-      .then(async (noteId: Id<'notes'>) => {
-        // Fetch the note to get its slug
-        const note = await convex.query(api.notes.queries.getNote, { noteId })
-        if (note?.slug) {
-          selectNote(note.slug)
-        }
+      .then(({ slug }) => {
+        selectNote(slug)
       })
       .catch((error: Error) => {
         console.error(error)

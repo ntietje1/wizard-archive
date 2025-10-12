@@ -46,7 +46,7 @@ export const FolderContextMenu = forwardRef<
   const handleNewPage = async () => {
     await createNote
       .mutateAsync({ parentFolderId: folder._id, campaignId: campaignId })
-      .then((noteId: Id<'notes'>) => {
+      .then(({ noteId }) => {
         openFolder()
         setRenamingId(noteId)
       })

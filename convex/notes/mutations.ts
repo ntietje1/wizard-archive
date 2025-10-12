@@ -41,7 +41,6 @@ export const updateNote = mutation({
     if (args.name !== undefined) {
       updates.name = args.name
 
-      // Regenerate slug when name changes
       const slugBasis =
         args.name && args.name.trim() !== ''
           ? args.name
@@ -256,8 +255,14 @@ export const createNote = mutation({
     parentFolderId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
   },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
+  returns: v.object({
+    noteId: v.id('notes'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     const { identityWithProfile } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -265,20 +270,8 @@ export const createNote = mutation({
     )
     const { profile } = identityWithProfile
 
-    // First, insert the note with a temporary slug to get the noteId
-    const noteId = await ctx.db.insert('notes', {
-      userId: profile.userId,
-      name: args.name || '',
-      slug: 'temp', // Temporary slug
-      categoryId: args.categoryId,
-      parentFolderId: args.parentFolderId,
-      updatedAt: Date.now(),
-      campaignId: args.campaignId,
-    })
-
-    // Generate slug based on name or noteId
     const slugBasis =
-      args.name && args.name.trim() !== '' ? args.name : shortenId(noteId)
+      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID() // use a uuid if the name is blank
 
     const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
       const conflict = await ctx.db
@@ -287,12 +280,19 @@ export const createNote = mutation({
           q.eq('campaignId', args.campaignId).eq('slug', slug),
         )
         .unique()
-      return conflict !== null && conflict._id !== noteId
+      return conflict !== null
     })
 
-    // Update the note with the unique slug
-    await ctx.db.patch(noteId, { slug: uniqueSlug })
+    const noteId = await ctx.db.insert('notes', {
+      userId: profile.userId,
+      name: args.name || '',
+      slug: uniqueSlug,
+      categoryId: args.categoryId,
+      parentFolderId: args.parentFolderId,
+      updatedAt: Date.now(),
+      campaignId: args.campaignId,
+    })
 
-    return noteId
+    return { noteId: noteId, slug: uniqueSlug }
   },
 })

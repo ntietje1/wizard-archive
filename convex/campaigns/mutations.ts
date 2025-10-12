@@ -31,7 +31,6 @@ export const createCampaign = mutation({
 
     const now = Date.now()
 
-    // Use findUniqueSlug to ensure slug uniqueness for this DM
     const uniqueSlug = await findUniqueSlug(args.slug, async (slug) => {
       const conflict = await ctx.db
         .query('campaigns')
@@ -158,7 +157,6 @@ export const updateCampaign = mutation({
     }
 
     if (args.slug !== undefined && args.slug !== campaign.slug) {
-      // Use findUniqueSlug to ensure slug uniqueness for this DM
       const uniqueSlug = await findUniqueSlug(args.slug, async (slug) => {
         const conflict = await ctx.db
           .query('campaigns')

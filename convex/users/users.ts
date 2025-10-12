@@ -29,13 +29,11 @@ export async function createUserProfileHandler(
   ctx: MutationCtx,
   identity: UserIdentity,
 ): Promise<Id<'userProfiles'>> {
-  // Generate a unique username
   const baseUsername =
     identity.preferredUsername ||
     identity.email?.split('@')[0] ||
     `user${identity.subject.slice(-8)}`
 
-  // Use findUniqueSlug to ensure username uniqueness
   const uniqueUsername = await findUniqueSlug(
     baseUsername,
     async (username) => {
@@ -68,7 +66,6 @@ export async function updateUserProfileHandler(
   const username = identity.username as string
 
   if (username && username !== profile.username) {
-    // Use findUniqueSlug to ensure username uniqueness
     const uniqueUsername = await findUniqueSlug(username, async (name) => {
       const conflict = await ctx.db
         .query('userProfiles')

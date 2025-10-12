@@ -27,7 +27,7 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
   const handleNewNote = () => {
     createNote
       .mutateAsync({ campaignId: campaignId })
-      .then((noteId: Id<'notes'>) => {
+      .then(({ noteId }) => {
         setRenamingId(noteId)
       })
       .catch((error: Error) => {

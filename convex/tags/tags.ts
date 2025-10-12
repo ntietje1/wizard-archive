@@ -9,7 +9,7 @@ import {
 } from './types'
 import { Block } from '../notes/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { slugify, appendSuffix, findUniqueSlug } from '../common/slug'
+import { findUniqueSlug } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/helpers'
@@ -125,19 +125,6 @@ export const insertTagAndNote = async (
 
   const tagId = await insertTag(ctx, newTag, allowManagedTags)
 
-  // First insert with temporary slug
-  const noteId = await ctx.db.insert('notes', {
-    userId: profile.userId,
-    name: newTag.displayName,
-    slug: 'temp',
-    campaignId: newTag.campaignId,
-    updatedAt: Date.now(),
-    categoryId: newTag.categoryId,
-    tagId: tagId,
-    parentFolderId: parentFolderId,
-  })
-
-  // Generate unique slug based on displayName
   const uniqueSlug = await findUniqueSlug(newTag.displayName, async (slug) => {
     const conflict = await ctx.db
       .query('notes')
@@ -145,11 +132,19 @@ export const insertTagAndNote = async (
         q.eq('campaignId', newTag.campaignId).eq('slug', slug),
       )
       .unique()
-    return conflict !== null && conflict._id !== noteId
+    return conflict !== null
   })
 
-  // Update with the unique slug
-  await ctx.db.patch(noteId, { slug: uniqueSlug })
+  const noteId = await ctx.db.insert('notes', {
+    userId: profile.userId,
+    name: newTag.displayName,
+    slug: uniqueSlug,
+    campaignId: newTag.campaignId,
+    updatedAt: Date.now(),
+    categoryId: newTag.categoryId,
+    tagId: tagId,
+    parentFolderId: parentFolderId,
+  })
 
   return { tagId, noteId }
 }
@@ -296,22 +291,6 @@ export async function getTagsByCategory(
   return tags.map((t) => ({ ...t, category }))
 }
 
-async function findUniqueTagCategorySlug(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  name: string,
-): Promise<string> {
-  return await findUniqueSlug(name, async (slug) => {
-    const conflict = await ctx.db
-      .query('tagCategories')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null
-  })
-}
-
 export async function insertTagCategory(
   ctx: MutationCtx,
   input: Omit<
@@ -351,9 +330,8 @@ export async function insertTagCategory(
   let displayName: string
   let pluralDisplayName: string
 
-  // Handle both auto-pluralize mode and manual mode
   if ('categoryName' in input) {
-    // Auto-pluralize: detect whether the input is singular or plural and derive both forms
+    // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
     displayName = isPlural
       ? pluralize.singular(input.categoryName)
@@ -362,16 +340,20 @@ export async function insertTagCategory(
       ? input.categoryName
       : pluralize.plural(input.categoryName)
   } else {
-    // Manual mode: use the provided displayName and pluralDisplayName
+    // manual mode (plural and singular specified)
     displayName = input.displayName
     pluralDisplayName = input.pluralDisplayName
   }
 
-  const uniqueSlug = await findUniqueTagCategorySlug(
-    ctx,
-    input.campaignId,
-    pluralDisplayName,
-  )
+  const uniqueSlug = await findUniqueSlug(pluralDisplayName, async (slug) => {
+    const conflict = await ctx.db
+      .query('tagCategories')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', input.campaignId).eq('slug', slug),
+      )
+      .unique()
+    return conflict !== null
+  })
 
   const id = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
@@ -416,46 +398,36 @@ export const updateTagCategory = async (
   }
 
   if (input.categoryName !== undefined) {
-    // Auto-pluralize mode: detect whether the input is singular or plural and derive both forms
+    // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
-    const displayName = isPlural
+    updates.displayName = isPlural
       ? pluralize.singular(input.categoryName)
       : input.categoryName
-    const pluralDisplayName = isPlural
+    updates.pluralDisplayName = isPlural
       ? input.categoryName
       : pluralize.plural(input.categoryName)
+  } else {
+    // manual mode
+    if (input.displayName !== undefined) {
+      updates.displayName = input.displayName
+    }
+    if (input.pluralDisplayName !== undefined) {
+      updates.pluralDisplayName = input.pluralDisplayName
+    }
+  }
 
-    updates.displayName = displayName
-    updates.pluralDisplayName = pluralDisplayName
-
-    const uniqueSlug = await findUniqueTagCategorySlug(
-      ctx,
-      category.campaignId,
-      pluralDisplayName,
-    )
-    updates.slug = uniqueSlug
-  } else if (
-    input.displayName !== undefined &&
-    input.pluralDisplayName !== undefined
-  ) {
-    // Manual mode: use the provided displayName and pluralDisplayName
-    updates.displayName = input.displayName
-    updates.pluralDisplayName = input.pluralDisplayName
-
-    const uniqueSlug = await findUniqueTagCategorySlug(
-      ctx,
-      category.campaignId,
-      input.pluralDisplayName,
-    )
-    updates.slug = uniqueSlug
-  } else if (input.displayName !== undefined) {
-    updates.displayName = input.displayName
-  } else if (input.pluralDisplayName !== undefined) {
-    updates.pluralDisplayName = input.pluralDisplayName
-    const uniqueSlug = await findUniqueTagCategorySlug(
-      ctx,
-      category.campaignId,
-      input.pluralDisplayName,
+  if (updates.pluralDisplayName !== undefined) {
+    const uniqueSlug = await findUniqueSlug(
+      updates.pluralDisplayName,
+      async (slug) => {
+        const conflict = await ctx.db
+          .query('tagCategories')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', category.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== categoryId
+      },
     )
     updates.slug = uniqueSlug
   }

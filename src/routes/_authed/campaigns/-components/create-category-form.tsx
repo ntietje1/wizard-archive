@@ -13,6 +13,19 @@ import {
 } from '~/lib/category-icons'
 import type { Id } from 'convex/_generated/dataModel'
 import { useState } from 'react'
+import { toast } from 'sonner'
+
+function isFormValid(
+  autoPluralize: boolean,
+  categoryName: string,
+  displayName: string,
+  pluralDisplayName: string,
+): boolean {
+  if (autoPluralize) {
+    return !!categoryName.trim()
+  }
+  return !!displayName.trim() && !!pluralDisplayName.trim()
+}
 
 interface CreateCategoryFormProps {
   campaignId: Id<'campaigns'>
@@ -29,6 +42,16 @@ export function CreateCategoryForm({
   const iconOptions = getNonDefaultCategoryIcons()
   const [autoPluralize, setAutoPluralize] = useState(true)
 
+  const handleAutoPluralizeToggle = (checked: boolean) => {
+    setAutoPluralize(checked)
+    if (checked) {
+      form.setFieldValue('displayName', '')
+      form.setFieldValue('pluralDisplayName', '')
+    } else {
+      form.setFieldValue('categoryName', '')
+    }
+  }
+
   const form = useForm({
     defaultValues: {
       categoryName: '',
@@ -38,23 +61,37 @@ export function CreateCategoryForm({
       defaultColor: '#ef4444',
     },
     onSubmit: async ({ value }) => {
-      if (autoPluralize) {
-        if (!value.categoryName.trim()) return
-        await createCategory.mutateAsync({
-          campaignId: campaignId,
-          categoryName: value.categoryName.trim(),
-          iconName: value.iconName,
-          defaultColor: value.defaultColor,
-        })
-      } else {
-        if (!value.displayName.trim() || !value.pluralDisplayName.trim()) return
-        await createCategory.mutateAsync({
-          campaignId: campaignId,
-          displayName: value.displayName.trim(),
-          pluralDisplayName: value.pluralDisplayName.trim(),
-          iconName: value.iconName,
-          defaultColor: value.defaultColor,
-        })
+      if (
+        !isFormValid(
+          autoPluralize,
+          value.categoryName,
+          value.displayName,
+          value.pluralDisplayName,
+        )
+      ) {
+        return
+      }
+
+      try {
+        if (autoPluralize) {
+          await createCategory.mutateAsync({
+            campaignId: campaignId,
+            categoryName: value.categoryName.trim(),
+            iconName: value.iconName,
+            defaultColor: value.defaultColor,
+          })
+        } else {
+          await createCategory.mutateAsync({
+            campaignId: campaignId,
+            displayName: value.displayName.trim(),
+            pluralDisplayName: value.pluralDisplayName.trim(),
+            iconName: value.iconName,
+            defaultColor: value.defaultColor,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to create category:', error)
+        toast.error('Failed to create category')
       }
       onClose()
     },
@@ -123,7 +160,7 @@ export function CreateCategoryForm({
           type="checkbox"
           id="auto-pluralize"
           checked={autoPluralize}
-          onChange={(e) => setAutoPluralize(e.target.checked)}
+          onChange={(e) => handleAutoPluralizeToggle(e.target.checked)}
           className="w-3 h-3 rounded border-slate-300"
         />
         <Label
@@ -182,9 +219,12 @@ export function CreateCategoryForm({
         })}
       >
         {({ categoryName, displayName, pluralDisplayName }) => {
-          const isDisabled = autoPluralize
-            ? !categoryName.trim()
-            : !displayName.trim() || !pluralDisplayName.trim()
+          const isDisabled = !isFormValid(
+            autoPluralize,
+            categoryName,
+            displayName,
+            pluralDisplayName,
+          )
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose}>

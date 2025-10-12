@@ -118,6 +118,7 @@ export default [
         console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
+        crypto: 'readonly',
         // Browser globals
         window: 'readonly',
         document: 'readonly',
