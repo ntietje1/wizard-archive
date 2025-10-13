@@ -110,7 +110,7 @@ export function CreateCategoryForm({
         <form.Field name="categoryName">
           {(field) => (
             <div className="space-y-2">
-              <Label htmlFor="category-name">Category Name</Label>
+              <Label htmlFor="category-name">Category Name*</Label>
               <Input
                 id="category-name"
                 value={field.state.value}
@@ -126,7 +126,7 @@ export function CreateCategoryForm({
           <form.Field name="displayName">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="category-singular">Singular Name</Label>
+                <Label htmlFor="category-singular">Singular Name*</Label>
                 <Input
                   id="category-singular"
                   value={field.state.value}
@@ -141,7 +141,7 @@ export function CreateCategoryForm({
           <form.Field name="pluralDisplayName">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="category-plural">Plural Name</Label>
+                <Label htmlFor="category-plural">Plural Name*</Label>
                 <Input
                   id="category-plural"
                   value={field.state.value}
