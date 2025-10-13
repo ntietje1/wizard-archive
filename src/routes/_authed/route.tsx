@@ -44,12 +44,14 @@ export const Route = createFileRoute('/_authed')({
   // },
   component: () => {
     useEnsureProfile()
+    const forceRedirectUrl =
+      typeof window !== 'undefined' ? window.location.href : '/'
     return (
       <div className="flex flex-col h-screen">
         <Header />
         <SignedOut>
           <div className="flex items-center justify-center p-24">
-            <SignIn routing="hash" forceRedirectUrl={window.location.href} />
+            <SignIn routing="hash" forceRedirectUrl={forceRedirectUrl} />
           </div>
         </SignedOut>
         <SignedIn>
