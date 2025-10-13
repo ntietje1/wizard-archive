@@ -74,10 +74,9 @@ export const NavigationSidebar = () => {
           {/* Overview, Players, Notes */}
           {navigationItemsSection1.map((item) => {
             return (
-              <Tooltip>
+              <Tooltip key={item.name}>
                 <TooltipTrigger asChild>
                   <Link
-                    key={item.name}
                     to={item.to}
                     params={{ dmUsername, campaignSlug }}
                     className={cn(
@@ -102,10 +101,9 @@ export const NavigationSidebar = () => {
             const to = `/campaigns/$dmUsername/$campaignSlug/categories/${c.slug}`
             const IconComp = getCategoryIcon(c.iconName)
             return (
-              <Tooltip>
+              <Tooltip key={c.slug}>
                 <TooltipTrigger asChild>
                   <Link
-                    key={c.slug}
                     to={to}
                     params={{ dmUsername, campaignSlug }}
                     className={cn(
@@ -125,7 +123,7 @@ export const NavigationSidebar = () => {
           })}
 
           {categories.isError && (
-            <Tooltip>
+            <Tooltip key="retry-categories">
               <TooltipTrigger asChild>
                 <button
                   className={cn(
@@ -157,10 +155,9 @@ export const NavigationSidebar = () => {
             .map((c: TagCategory) => {
               const to = `/campaigns/$dmUsername/$campaignSlug/categories/${c.slug}`
               return (
-                <Tooltip>
+                <Tooltip key={c._id}>
                   <TooltipTrigger asChild>
                     <Link
-                      key={c._id}
                       to={to}
                       params={{ dmUsername, campaignSlug }}
                       className={cn(
@@ -183,7 +180,7 @@ export const NavigationSidebar = () => {
             })}
 
           {/* Create Category button */}
-          <Tooltip>
+          <Tooltip key="create-category">
             <TooltipTrigger asChild>
               <button
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -201,10 +198,9 @@ export const NavigationSidebar = () => {
 
           {/* Settings */}
           {navigationItemsSection2.map((item) => (
-            <Tooltip>
+            <Tooltip key={item.name}>
               <TooltipTrigger asChild>
                 <Link
-                  key={item.name}
                   to={item.to}
                   params={{ dmUsername, campaignSlug }}
                   className={cn(
