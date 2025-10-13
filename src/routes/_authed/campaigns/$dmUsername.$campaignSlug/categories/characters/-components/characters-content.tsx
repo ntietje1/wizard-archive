@@ -7,15 +7,14 @@ import { CreateActionCard } from '~/components/content-grid-page/create-action-c
 import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { Users, Edit, Plus, Trash2 } from '~/lib/icons'
-import CharacterDialog from '../../../../../../../components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import type { Id } from 'convex/_generated/dataModel'
 import type { Character } from 'convex/characters/types'
 import { CHARACTER_CONFIG } from '~/components/forms/category-tag-dialogs/character-tag-dialog/types'
+import CharacterDialog from '~/components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
 
 export default function CharactersContent() {
   const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
@@ -94,7 +93,7 @@ export default function CharactersContent() {
             badges={[
               {
                 text: 'Character',
-                icon: <Users className="w-3 h-3" />,
+                icon: Users,
                 variant: 'secondary',
               },
             ]}
@@ -110,7 +109,7 @@ export default function CharactersContent() {
             }
             actionButtons={[
               {
-                icon: <Edit className="w-4 h-4" />,
+                icon: Edit,
                 onClick: (e) => {
                   e.stopPropagation()
                   setEditingCharacter(character)
@@ -118,7 +117,7 @@ export default function CharactersContent() {
                 'aria-label': 'Edit character',
               },
               {
-                icon: <Trash2 className="w-4 h-4" />,
+                icon: Trash2,
                 onClick: (e) => {
                   e.stopPropagation()
                   setDeletingCharacter(character)

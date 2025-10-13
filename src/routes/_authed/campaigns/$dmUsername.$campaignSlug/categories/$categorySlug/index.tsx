@@ -112,8 +112,7 @@ function GenericCategoryPage() {
   const showBreadcrumbs =
     viewMode === VIEW_MODE.folderized && breadcrumbs.length > 0
   const isAtRoot = breadcrumbs.length === 0
-  const hasContent =
-    tags?.length && folders?.length && (tags.length > 0 || folders.length > 0)
+  const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
 
   if (isLoading || !config) {
     return (
