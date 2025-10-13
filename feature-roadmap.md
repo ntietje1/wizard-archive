@@ -27,11 +27,11 @@ Current features
   - Can make custom categories / tags
   - Folders under categories for organization
   - Sessions have custom auto-tagging on share, based on the current session
+  - Folder view or flat view toggle for category pages with breadcrumb navigation
 
 Dev to-do list:
 
 - disallow certain category names that would conflict with current paths
-- Folder view or flat view for category pages
 - File upload (including sidebar integration)
 - Linking system ("#" syntax, allowing "mentioning" a note or note section by header)
 

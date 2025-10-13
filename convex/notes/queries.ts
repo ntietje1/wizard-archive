@@ -21,11 +21,43 @@ import {
 } from './notes'
 import {
   blockValidator,
+  folderValidator,
   folderWithChildrenValidator,
   noteWithContentValidator,
   sidebarItemValidator,
 } from './schema'
 import { getBlocksByCampaign } from './helpers'
+
+export const getFolderAncestors = query({
+  args: {
+    folderId: v.id('folders'),
+  },
+  returns: v.array(folderValidator),
+  handler: async (ctx, args) => {
+    const folder = await ctx.db.get(args.folderId)
+    if (!folder) {
+      return []
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: folder.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const ancestors: Folder[] = []
+    let currentFolderId = folder.parentFolderId
+
+    // Walk up the parent chain
+    while (currentFolderId) {
+      const parentFolder = await getFolderFn(ctx, currentFolderId)
+      ancestors.unshift(parentFolder)
+      currentFolderId = parentFolder.parentFolderId
+    }
+
+    return ancestors
+  },
+})
 
 export const getFolder = query({
   args: {

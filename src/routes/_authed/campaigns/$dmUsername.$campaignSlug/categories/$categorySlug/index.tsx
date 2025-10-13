@@ -1,10 +1,17 @@
-import { createFileRoute, useParams, useRouter } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import {
+  createFileRoute,
+  useParams,
+  useRouter,
+  useNavigate,
+  useSearch,
+} from '@tanstack/react-router'
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ContentCard } from '~/components/content-grid-page/content-card'
+import { FolderCard } from '~/components/content-grid-page/folder-card'
 import { CreateActionCard } from '~/components/content-grid-page/create-action-card'
 import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
@@ -12,15 +19,43 @@ import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skele
 import { useCampaign } from '~/contexts/CampaignContext'
 import GenericTagDialog from '~/components/forms/category-tag-dialogs/generic-tag-dialog/generic-dialog'
 import type { Tag } from 'convex/tags/types'
-import { TagIcon, Edit, Plus, Trash2 } from '~/lib/icons'
+import {
+  TagIcon,
+  Edit,
+  Plus,
+  Trash2,
+  Folder as FolderIcon,
+  FolderPlus,
+} from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { PageHeader } from '~/components/content-grid-page/page-header'
 import { toast } from 'sonner'
+import { Button } from '~/components/shadcn/ui/button'
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from '~/components/shadcn/ui/breadcrumb'
+import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
+import { useFolderActions } from '~/hooks/useFolderActions'
+
+type CategorySearch = {
+  folderId?: string
+}
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
 )({
   component: GenericCategoryPage,
+  validateSearch: (search: Record<string, unknown>): CategorySearch => {
+    return {
+      folderId:
+        typeof search.folderId === 'string' ? search.folderId : undefined,
+    }
+  },
 })
 
 function GenericCategoryPage() {
@@ -31,36 +66,46 @@ function GenericCategoryPage() {
   })
   const categorySlug = params?.categorySlug
   const router = useRouter()
+  const navigate = useNavigate()
+  const search = useSearch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
+  })
 
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Tag | null>(null)
   const [deleting, setDeleting] = useState<Tag | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const categoryQuery = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaign?._id
-        ? {
-            campaignId: campaign._id,
-            slug: categorySlug,
-          }
-        : 'skip',
-    ),
-  )
+  const handleFolderNavigation = (folderId: string | undefined) => {
+    navigate({
+      to: '.',
+      search: {
+        folderId,
+      },
+    })
+  }
 
-  const tags = useQuery(
-    convexQuery(
-      api.tags.queries.getTagsByCategory,
-      campaign?._id && categoryQuery.data?._id
-        ? { campaignId: campaign._id, categoryId: categoryQuery.data._id }
-        : 'skip',
-    ),
-  )
+  const {
+    viewMode,
+    toggleViewMode,
+    tags,
+    folders,
+    categoryData,
+    breadcrumbs,
+    navigateToFolder,
+    navigateToBreadcrumb,
+    isLoading,
+  } = useCategoryView({
+    categorySlug,
+    currentFolderId: search.folderId,
+    onNavigate: handleFolderNavigation,
+  })
+
+  const { createFolder } = useFolderActions()
 
   const config: TagCategoryConfig = {
-    singular: categoryQuery.data?.displayName || '',
-    plural: categoryQuery.data?.pluralDisplayName || '',
+    singular: categoryData?.displayName || '',
+    plural: categoryData?.pluralDisplayName || '',
     categorySlug,
     icon: TagIcon,
   }
@@ -82,12 +127,27 @@ function GenericCategoryPage() {
     }
   }
 
-  if (
-    campaignWithMembership.status === 'pending' ||
-    categoryQuery.status === 'pending' ||
-    tags.status === 'pending' ||
-    !tags.data
-  ) {
+  const handleCreateFolder = async () => {
+    if (!campaign || !categoryData) return
+
+    try {
+      await createFolder.mutateAsync({
+        campaignId: campaign._id,
+        categoryId: categoryData._id,
+        parentFolderId: search.folderId as any,
+      })
+      toast.success('Folder created')
+    } catch (error) {
+      toast.error('Failed to create folder')
+    }
+  }
+
+  const showBreadcrumbs =
+    viewMode === VIEW_MODE.folderized && breadcrumbs.length > 0
+  const isAtRoot = breadcrumbs.length === 0
+  const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
+
+  if (isLoading) {
     return (
       <div className="flex-1 p-6">
         <PageHeader
@@ -108,9 +168,58 @@ function GenericCategoryPage() {
       <PageHeader
         title={config.plural}
         description={`Manage ${config.plural.toLowerCase()} for your campaign. Each ${config.singular.toLowerCase()} automatically creates a tag that can be used in your notes.`}
+        actions={
+          <div className="flex gap-2">
+            {viewMode === VIEW_MODE.folderized && (
+              <Button variant="outline" onClick={handleCreateFolder}>
+                <FolderPlus className="w-4 h-4 mr-2" />
+                New Folder
+              </Button>
+            )}
+            <Button variant="outline" onClick={toggleViewMode}>
+              {viewMode === VIEW_MODE.flat ? 'Show Folders' : 'Hide Folders'}
+            </Button>
+          </div>
+        }
       />
+
+      {showBreadcrumbs && (
+        <div className="mb-4">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  onClick={() => navigateToBreadcrumb(-1)}
+                  className="cursor-pointer"
+                >
+                  {config.plural}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {breadcrumbs.map((ancestor, index) => (
+                <div key={ancestor.id} className="flex items-center gap-1.5">
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    {index === breadcrumbs.length - 1 ? (
+                      <BreadcrumbPage>{ancestor.name}</BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink
+                        onClick={() => navigateToBreadcrumb(index)}
+                        className="cursor-pointer"
+                      >
+                        {ancestor.name}
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                </div>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      )}
+
       <ContentGrid>
-        {tags.data.length > 0 && (
+        {/* Create Action Card */}
+        {hasContent && (
           <CreateActionCard
             onClick={() => setCreating(true)}
             title={`New ${config.singular}`}
@@ -119,7 +228,19 @@ function GenericCategoryPage() {
           />
         )}
 
-        {tags.data.map((tag) => (
+        {/* Folder Cards */}
+        {viewMode === VIEW_MODE.folderized &&
+          folders?.map((folder) => (
+            <FolderCard
+              key={folder._id}
+              name={folder.name || 'Untitled Folder'}
+              hasContent={true}
+              onClick={() => navigateToFolder(folder)}
+            />
+          ))}
+
+        {/* Tag Cards */}
+        {tags?.map((tag) => (
           <ContentCard
             key={tag._id}
             title={tag.displayName}
@@ -160,13 +281,40 @@ function GenericCategoryPage() {
           />
         ))}
 
-        {tags.data.length === 0 && (
+        {/* Empty State */}
+        {!hasContent && viewMode === VIEW_MODE.flat && (
           <EmptyState
             icon={TagIcon}
             title={`No ${config.plural.toLowerCase()} yet`}
             description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
             action={{
               label: `Create First ${config.singular}`,
+              onClick: () => setCreating(true),
+              icon: Plus,
+            }}
+          />
+        )}
+
+        {!hasContent && viewMode === VIEW_MODE.folderized && isAtRoot && (
+          <EmptyState
+            icon={TagIcon}
+            title={`No ${config.plural.toLowerCase()} yet`}
+            description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
+            action={{
+              label: `Create First ${config.singular}`,
+              onClick: () => setCreating(true),
+              icon: Plus,
+            }}
+          />
+        )}
+
+        {!hasContent && viewMode === VIEW_MODE.folderized && !isAtRoot && (
+          <EmptyState
+            icon={FolderIcon}
+            title="No content in this folder"
+            description={`This folder is empty. Create a ${config.singular.toLowerCase()} to get started.`}
+            action={{
+              label: `Create ${config.singular}`,
               onClick: () => setCreating(true),
               icon: Plus,
             }}
@@ -180,6 +328,7 @@ function GenericCategoryPage() {
           isOpen={creating}
           onClose={() => setCreating(false)}
           config={config}
+          parentFolderId={search.folderId as any}
         />
       )}
 
