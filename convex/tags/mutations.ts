@@ -108,13 +108,23 @@ export const updateTagCategory = mutation({
     categoryName: v.optional(v.string()),
     displayName: v.optional(v.string()),
     pluralDisplayName: v.optional(v.string()),
+    iconName: v.optional(v.string()),
+    defaultColor: v.optional(v.string()),
   },
-  returns: v.id('tagCategories'),
-  handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
+  returns: v.object({
+    categoryId: v.id('tagCategories'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
     return await updateTagCategoryFn(ctx, args.categoryId, {
       categoryName: args.categoryName,
       displayName: args.displayName,
       pluralDisplayName: args.pluralDisplayName,
+      iconName: args.iconName,
+      defaultColor: args.defaultColor,
     })
   },
 })

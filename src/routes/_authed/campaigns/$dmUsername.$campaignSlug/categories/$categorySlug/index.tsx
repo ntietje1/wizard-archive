@@ -11,7 +11,7 @@ import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 import { useCampaign } from '~/contexts/CampaignContext'
 import GenericTagDialog from '~/components/forms/category-tag-dialogs/generic-tag-dialog/generic-dialog'
-import { TagIcon, Plus, Folder as FolderIcon } from '~/lib/icons'
+import { Plus, Edit } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { toast } from 'sonner'
 import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
@@ -24,6 +24,9 @@ import {
   FolderDialog,
   type FolderFormValues,
 } from '~/components/forms/folder-dialog/folder-dialog'
+import { CreateCategoryForm } from '~/components/forms/category-form/category-form'
+import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
+import { CATEGORY_KIND } from 'convex/tags/types'
 
 type CategorySearch = {
   folderId?: string
@@ -42,7 +45,7 @@ export const Route = createFileRoute(
 })
 
 function GenericCategoryPage() {
-  const { campaignWithMembership } = useCampaign()
+  const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const params = useParams({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
@@ -56,6 +59,23 @@ function GenericCategoryPage() {
 
   const [creatingTag, setCreatingTag] = useState(false)
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [editingCategory, setEditingCategory] = useState(false)
+
+  const handleCategoryUpdated = (newSlug: string) => {
+    if (newSlug !== categorySlug) {
+      navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug',
+        params: {
+          dmUsername,
+          campaignSlug,
+          categorySlug: newSlug,
+        },
+        search: {
+          folderId: search.folderId,
+        },
+      })
+    }
+  }
 
   const handleFolderNavigation = (folderId: string | undefined) => {
     navigate({
@@ -113,6 +133,7 @@ function GenericCategoryPage() {
     viewMode === VIEW_MODE.folderized && breadcrumbs.length > 0
   const isAtRoot = breadcrumbs.length === 0
   const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
+  const canEditCategory = categoryData?.kind === CATEGORY_KIND.User
 
   if (isLoading || !config) {
     return (
@@ -142,6 +163,9 @@ function GenericCategoryPage() {
         onNavigateBreadcrumb={navigateToBreadcrumb}
         onCreateFolder={() => setCreatingFolder(true)}
         onCreateTag={() => setCreatingTag(true)}
+        onEditCategory={
+          canEditCategory ? () => setEditingCategory(true) : undefined
+        }
         onToggleViewMode={toggleViewMode}
         viewMode={viewMode}
       />
@@ -221,6 +245,24 @@ function GenericCategoryPage() {
           onClose={() => setCreatingFolder(false)}
           onSubmit={handleCreateFolder}
         />
+      )}
+
+      {editingCategory && categoryData && (
+        <FormDialog
+          isOpen={editingCategory}
+          onClose={() => setEditingCategory(false)}
+          title="Edit Category"
+          description="Update the category name, icon, and default color."
+          icon={Edit}
+          maxWidth="max-w-2xl"
+        >
+          <CreateCategoryForm
+            mode="edit"
+            category={categoryData}
+            onClose={() => setEditingCategory(false)}
+            onSuccess={handleCategoryUpdated}
+          />
+        </FormDialog>
       )}
     </div>
   )

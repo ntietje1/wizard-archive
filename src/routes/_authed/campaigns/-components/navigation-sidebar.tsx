@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
-import { CreateCategoryForm } from './create-category-form'
+import { CreateCategoryForm } from '../../../../components/forms/category-form/category-form'
 import {
   CATEGORY_KIND,
   SYSTEM_DEFAULT_CATEGORIES,
@@ -229,6 +229,7 @@ export const NavigationSidebar = () => {
       >
         {campaign && (
           <CreateCategoryForm
+            mode="create"
             campaignId={campaign._id}
             onClose={() => setIsCreateOpen(false)}
           />

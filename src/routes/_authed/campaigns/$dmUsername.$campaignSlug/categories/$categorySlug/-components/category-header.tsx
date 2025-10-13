@@ -1,5 +1,5 @@
 import { Button } from '~/components/shadcn/ui/button'
-import { FolderPlus, Plus } from '~/lib/icons'
+import { FolderPlus, Plus, Edit } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { CategoryBreadcrumb } from './category-breadcrumb'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
@@ -15,6 +15,7 @@ interface CategoryHeaderProps {
   onToggleViewMode?: () => void
   viewMode?: ViewMode
   onCreateTag?: () => void
+  onEditCategory?: () => void
   isLoading?: boolean
 }
 
@@ -27,6 +28,7 @@ export function CategoryHeader({
   onToggleViewMode,
   viewMode,
   onCreateTag,
+  onEditCategory,
   isLoading,
 }: CategoryHeaderProps) {
   if (!config || isLoading) {
@@ -71,6 +73,12 @@ export function CategoryHeader({
           be used in your notes.
         </p>
         <div className="flex gap-2 shrink-0">
+          {onEditCategory && (
+            <Button variant="outline" onClick={onEditCategory}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Category
+            </Button>
+          )}
           {onCreateTag && (
             <Button variant="outline" onClick={onCreateTag}>
               <Plus className="w-4 h-4 mr-2" />

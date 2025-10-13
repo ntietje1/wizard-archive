@@ -14,6 +14,7 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import type { TagCategory } from 'convex/tags/types'
 
 function isFormValid(
   autoPluralize: boolean,
@@ -27,39 +28,76 @@ function isFormValid(
   return !!displayName.trim() && !!pluralDisplayName.trim()
 }
 
-interface CreateCategoryFormProps {
+type CreateCategoryFormProps = {
+  mode: 'create'
   campaignId: Id<'campaigns'>
   onClose: () => void
 }
 
-export function CreateCategoryForm({
-  campaignId,
-  onClose,
-}: CreateCategoryFormProps) {
+type EditCategoryFormProps = {
+  mode: 'edit'
+  category: TagCategory
+  onClose: () => void
+  onSuccess?: (newSlug: string) => void
+}
+
+type CategoryFormProps = CreateCategoryFormProps | EditCategoryFormProps
+
+export function CreateCategoryForm(props: CategoryFormProps) {
+  const { mode, onClose } = props
+  const isEditMode = mode === 'edit'
+  const category = isEditMode ? props.category : undefined
+  const campaignId = isEditMode ? props.category.campaignId : props.campaignId
+  const onSuccess = isEditMode ? props.onSuccess : undefined
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
+
+  const updateCategory = useMutation({
+    mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
+  })
+
   const iconOptions = getNonDefaultCategoryIcons()
   const [autoPluralize, setAutoPluralize] = useState(true)
 
   const handleAutoPluralizeToggle = (checked: boolean) => {
     setAutoPluralize(checked)
     if (checked) {
+      if (mode === 'edit' && category) {
+        form.setFieldValue('categoryName', category.pluralDisplayName)
+      }
       form.setFieldValue('displayName', '')
       form.setFieldValue('pluralDisplayName', '')
     } else {
+      if (mode === 'edit' && category) {
+        form.setFieldValue('displayName', category.displayName)
+        form.setFieldValue('pluralDisplayName', category.pluralDisplayName)
+      }
       form.setFieldValue('categoryName', '')
     }
   }
 
-  const form = useForm({
-    defaultValues: {
+  const getInitialValues = () => {
+    if (mode === 'edit' && category) {
+      return {
+        categoryName: category.pluralDisplayName,
+        displayName: category.displayName,
+        pluralDisplayName: category.pluralDisplayName,
+        iconName: category.iconName,
+        defaultColor: category.defaultColor || '#ef4444',
+      }
+    }
+    return {
       categoryName: '',
       displayName: '',
       pluralDisplayName: '',
       iconName: 'TagIcon',
       defaultColor: '#ef4444',
-    },
+    }
+  }
+
+  const form = useForm({
+    defaultValues: getInitialValues(),
     onSubmit: async ({ value }) => {
       if (
         !isFormValid(
@@ -73,27 +111,58 @@ export function CreateCategoryForm({
       }
 
       try {
-        if (autoPluralize) {
-          await createCategory.mutateAsync({
-            campaignId: campaignId,
-            categoryName: value.categoryName.trim(),
-            iconName: value.iconName,
-            defaultColor: value.defaultColor,
-          })
-        } else {
-          await createCategory.mutateAsync({
-            campaignId: campaignId,
-            displayName: value.displayName.trim(),
-            pluralDisplayName: value.pluralDisplayName.trim(),
-            iconName: value.iconName,
-            defaultColor: value.defaultColor,
-          })
+        if (mode === 'create') {
+          if (autoPluralize) {
+            await createCategory.mutateAsync({
+              campaignId: campaignId,
+              categoryName: value.categoryName.trim(),
+              iconName: value.iconName,
+              defaultColor: value.defaultColor,
+            })
+          } else {
+            await createCategory.mutateAsync({
+              campaignId: campaignId,
+              displayName: value.displayName.trim(),
+              pluralDisplayName: value.pluralDisplayName.trim(),
+              iconName: value.iconName,
+              defaultColor: value.defaultColor,
+            })
+          }
+          toast.success('Category created successfully')
+        } else if (mode === 'edit' && category) {
+          if (autoPluralize) {
+            const result = await updateCategory.mutateAsync({
+              categoryId: category._id,
+              categoryName: value.categoryName.trim(),
+              iconName: value.iconName,
+              defaultColor: value.defaultColor,
+            })
+            toast.success('Category updated successfully')
+            onClose()
+            if (onSuccess && result.slug) {
+              onSuccess(result.slug)
+            }
+          } else {
+            const result = await updateCategory.mutateAsync({
+              categoryId: category._id,
+              displayName: value.displayName.trim(),
+              pluralDisplayName: value.pluralDisplayName.trim(),
+              iconName: value.iconName,
+              defaultColor: value.defaultColor,
+            })
+            toast.success('Category updated successfully')
+            onClose()
+            if (onSuccess && result.slug) {
+              onSuccess(result.slug)
+            }
+          }
+          return
         }
+        onClose()
       } catch (error) {
-        console.error('Failed to create category:', error)
-        toast.error('Failed to create category')
+        console.error(`Failed to ${mode} category:`, error)
+        toast.error(`Failed to ${mode} category`)
       }
-      onClose()
     },
   })
 
@@ -231,7 +300,7 @@ export function CreateCategoryForm({
                 Cancel
               </Button>
               <Button type="submit" disabled={isDisabled}>
-                Create
+                {mode === 'create' ? 'Create' : 'Update'}
               </Button>
             </div>
           )

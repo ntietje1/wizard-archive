@@ -376,8 +376,10 @@ export const updateTagCategory = async (
     categoryName?: string
     displayName?: string
     pluralDisplayName?: string
+    iconName?: string
+    defaultColor?: string
   },
-) => {
+): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
   const category = await ctx.db.get(categoryId)
   if (!category) {
     throw new Error('Category not found')
@@ -416,6 +418,14 @@ export const updateTagCategory = async (
     }
   }
 
+  if (input.iconName !== undefined) {
+    updates.iconName = input.iconName
+  }
+
+  if (input.defaultColor !== undefined) {
+    updates.defaultColor = input.defaultColor
+  }
+
   if (updates.pluralDisplayName !== undefined) {
     const uniqueSlug = await findUniqueSlug(
       updates.pluralDisplayName,
@@ -433,7 +443,13 @@ export const updateTagCategory = async (
   }
 
   await ctx.db.patch(categoryId, updates)
-  return categoryId
+
+  const updatedCategory = await ctx.db.get(categoryId)
+  if (!updatedCategory) {
+    throw new Error('Category not found after update')
+  }
+
+  return { categoryId, slug: updatedCategory.slug }
 }
 
 export const updateTagAndContent = async (
