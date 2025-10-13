@@ -51,7 +51,7 @@ export function useCategoryView({
 
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     `${CATEGORY_VIEW_MODE_STORAGE_KEY}-${categorySlug}`,
-    VIEW_MODE.flat,
+    VIEW_MODE.folderized,
   )
 
   const ancestorsQuery = useQuery(

@@ -166,7 +166,7 @@ function GenericCategoryPage() {
         {/* Empty State */}
         {!hasContent && viewMode === VIEW_MODE.flat && (
           <EmptyState
-            icon={TagIcon}
+            icon={config.icon}
             title={`No ${config.plural.toLowerCase()} yet`}
             description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
             action={{
@@ -179,7 +179,7 @@ function GenericCategoryPage() {
 
         {!hasContent && viewMode === VIEW_MODE.folderized && isAtRoot && (
           <EmptyState
-            icon={TagIcon}
+            icon={config.icon}
             title={`No ${config.plural.toLowerCase()} yet`}
             description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
             action={{
@@ -192,7 +192,7 @@ function GenericCategoryPage() {
 
         {!hasContent && viewMode === VIEW_MODE.folderized && !isAtRoot && (
           <EmptyState
-            icon={FolderIcon}
+            icon={config.icon}
             title="No content in this folder"
             description={`This folder is empty. Create a ${config.singular.toLowerCase()} to get started.`}
             action={{
