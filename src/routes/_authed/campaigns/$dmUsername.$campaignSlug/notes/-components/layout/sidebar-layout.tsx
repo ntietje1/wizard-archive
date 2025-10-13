@@ -37,14 +37,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               </FileSidebarProvider>
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel
-              defaultSize={12}
-              // minSize={10}
-              maxSize={16}
-              className="min-h-28"
-            >
-              <SessionPanel />
-            </ResizablePanel>
+            <SessionPanel />
           </ResizablePanelGroup>
         </ResizablePanel>
         <ResizableHandle />

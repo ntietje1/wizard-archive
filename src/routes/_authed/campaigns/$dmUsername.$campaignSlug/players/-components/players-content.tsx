@@ -130,7 +130,7 @@ export default function PlayersContent() {
               badges={[
                 {
                   text: player.role,
-                  icon: <User className="w-3 h-3" />,
+                  icon: User,
                   variant: 'secondary',
                 },
               ]}
@@ -138,7 +138,7 @@ export default function PlayersContent() {
                 isDm && player.role !== CAMPAIGN_MEMBER_ROLE.DM
                   ? [
                       {
-                        icon: <Trash2 className="w-4 h-4" />,
+                        icon: Trash2,
                         onClick: (e: React.MouseEvent) => {
                           e.stopPropagation()
                           setDeletingMemberId(player._id)

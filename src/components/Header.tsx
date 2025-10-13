@@ -1,11 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  UserButton,
-} from '@clerk/tanstack-react-start'
+import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
 
 type HeaderProps = {
   children?: ReactNode
@@ -27,9 +22,6 @@ export function Header({ children }: HeaderProps) {
           <SignedIn>
             <UserButton />
           </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal" />
-          </SignedOut>
         </div>
       </div>
     </div>

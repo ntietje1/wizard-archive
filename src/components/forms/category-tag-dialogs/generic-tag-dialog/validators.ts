@@ -6,24 +6,22 @@ import { MAX_NAME_LENGTH } from '../base-tag-dialog/types'
 export function validateTagDescription(
   value: string,
   maxLength: number,
-  singular: string,
 ): string | undefined {
   const v = value.trim()
   if (!v) return undefined
   if (v.length > maxLength)
-    return `${singular} description must be ${maxLength} characters or fewer`
+    return `Description must be ${maxLength} characters or fewer`
   return undefined
 }
 
 export function validateTagName(
   value: string,
   maxLength: number,
-  singular: string,
 ): string | undefined {
   const v = value.trim()
-  if (!v) return `${singular} name is required`
+  if (!v) return `Name is required`
   if (v.length > maxLength)
-    return `${singular} name must be ${maxLength} characters or fewer`
+    return `Name must be ${maxLength} characters or fewer`
   return undefined
 }
 
@@ -33,7 +31,7 @@ export async function validateTagNameAsync(
   displayName: string,
   excludeTagId?: Id<'tags'>,
 ): Promise<string | undefined> {
-  const syncErr = validateTagName(displayName, MAX_NAME_LENGTH, 'Tag')
+  const syncErr = validateTagName(displayName, MAX_NAME_LENGTH)
   if (syncErr) return syncErr
 
   const exists = await convex.query(api.tags.queries.checkTagNameExists, {

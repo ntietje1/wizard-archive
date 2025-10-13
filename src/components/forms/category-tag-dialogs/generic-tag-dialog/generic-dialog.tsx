@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { Label } from '~/components/shadcn/ui/label'
 import { Input } from '~/components/shadcn/ui/input'
 import { ColorPicker } from '../base-tag-dialog/color-picker.tsx'
+import { Button } from '~/components/shadcn/ui/button.tsx'
 import {
   type TagDialogProps,
   defaultBaseFormValues,
@@ -155,8 +156,10 @@ export default function GenericTagDialog(props: TagDialogProps) {
           <form.Field
             name="name"
             validators={{
+              onMount: ({ value }: { value: string }) =>
+                validateTagName(value, MAX_NAME_LENGTH),
               onChange: ({ value }: { value: string }) =>
-                validateTagName(value, MAX_NAME_LENGTH, config.singular),
+                validateTagName(value, MAX_NAME_LENGTH),
               onChangeAsync: async ({ value }: { value: string }) => {
                 if (!campaign) return undefined
                 return validateTagNameAsync(
@@ -172,7 +175,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
             {(field: any) => (
               <div className="space-y-2 px-px">
                 <Label htmlFor={`${config.singular.toLowerCase()}-name`}>
-                  {config.singular} Name
+                  {config.singular} Name*
                 </Label>
                 <Input
                   id={`${config.singular.toLowerCase()}-name`}
@@ -183,7 +186,8 @@ export default function GenericTagDialog(props: TagDialogProps) {
                   maxLength={MAX_NAME_LENGTH}
                   disabled={isSubmitting}
                 />
-                {field.state.meta.errors?.length ? (
+                {field.state.meta.errors?.length &&
+                field.state.meta.isTouched ? (
                   <p className="text-sm text-red-500">
                     {field.state.meta.errors[0]}
                   </p>
@@ -197,11 +201,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
             name="description"
             validators={{
               onChange: ({ value }: { value: string }) =>
-                validateTagDescription(
-                  value,
-                  MAX_DESCRIPTION_LENGTH,
-                  config.singular,
-                ),
+                validateTagDescription(value, MAX_DESCRIPTION_LENGTH),
             }}
           >
             {(field: any) => (
@@ -240,6 +240,32 @@ export default function GenericTagDialog(props: TagDialogProps) {
               </div>
             )}
           </form.Field>
+
+          <form.Subscribe
+            selector={(s: any) => ({
+              canSubmit: s.canSubmit,
+              isSubmitting: s.isSubmitting,
+            })}
+          >
+            {({
+              canSubmit,
+              isSubmitting,
+            }: {
+              canSubmit: boolean
+              isSubmitting: boolean
+            }) => {
+              return (
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                    {mode === 'create' ? 'Create' : 'Update'}
+                  </Button>
+                </div>
+              )
+            }}
+          </form.Subscribe>
         </>
       )}
     </BaseTagDialog>

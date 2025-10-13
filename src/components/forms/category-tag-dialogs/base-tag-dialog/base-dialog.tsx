@@ -2,8 +2,6 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { FormDialog } from './form-dialog'
-import { FormActions } from './form-actions'
-import { Plus } from '~/lib/icons'
 import type { Tag } from 'convex/tags/types'
 import type { TagCategoryConfig } from './types'
 
@@ -102,28 +100,6 @@ export default function BaseTagDialog<
         className="space-y-4"
       >
         {children({ form, isSubmitting: form.state.isSubmitting })}
-
-        <FormActions
-          actions={[
-            {
-              label: 'Cancel',
-              onClick: handleClose,
-              variant: 'outline',
-              disabled: form.state.isSubmitting,
-            },
-            {
-              label:
-                mode === 'create'
-                  ? `Create ${config.singular}`
-                  : `Update ${config.singular}`,
-              type: 'submit',
-              disabled: form.state.isSubmitting,
-              loading: form.state.isSubmitting,
-              loadingText: mode === 'create' ? 'Creating...' : 'Updating...',
-              icon: mode === 'create' ? Plus : undefined,
-            },
-          ]}
-        />
       </form>
     </FormDialog>
   )

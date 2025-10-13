@@ -36,9 +36,8 @@ export const getFolderAncestors = query({
   handler: async (ctx, args) => {
     const folder = await ctx.db.get(args.folderId)
     if (!folder) {
-      return []
+      throw new Error('Folder not found')
     }
-
     await requireCampaignMembership(
       ctx,
       { campaignId: folder.campaignId },
@@ -46,15 +45,18 @@ export const getFolderAncestors = query({
     )
 
     const ancestors: Folder[] = []
+    const visited = new Set<Id<'folders'>>([args.folderId])
     let currentFolderId = folder.parentFolderId
 
-    // Walk up the parent chain
     while (currentFolderId) {
+      if (visited.has(currentFolderId)) {
+        throw new Error('Circular folder reference detected')
+      }
+      visited.add(currentFolderId)
       const parentFolder = await getFolderFn(ctx, currentFolderId)
       ancestors.unshift(parentFolder)
       currentFolderId = parentFolder.parentFolderId
     }
-
     return ancestors
   },
 })

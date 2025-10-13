@@ -9,6 +9,7 @@ import { api } from 'convex/_generated/api'
 import { Label } from '~/components/shadcn/ui/label'
 import { Input } from '~/components/shadcn/ui/input'
 import { ColorPicker } from '../base-tag-dialog/color-picker'
+import { Button } from '~/components/shadcn/ui/button.tsx'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -161,8 +162,10 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
           <form.Field
             name="name"
             validators={{
+              onMount: ({ value }: { value: string }) =>
+                validateTagName(value, MAX_NAME_LENGTH),
               onChange: ({ value }: { value: string }) =>
-                validateTagName(value, MAX_NAME_LENGTH, config.singular),
+                validateTagName(value, MAX_NAME_LENGTH),
               onChangeAsync: async ({ value }: { value: string }) => {
                 if (!campaign) return undefined
                 return validateTagNameAsync(
@@ -189,7 +192,8 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
                   maxLength={MAX_NAME_LENGTH}
                   disabled={isSubmitting}
                 />
-                {field.state.meta.errors?.length ? (
+                {field.state.meta.errors?.length &&
+                field.state.meta.isTouched ? (
                   <p className="text-sm text-red-500">
                     {field.state.meta.errors[0]}
                   </p>
@@ -203,11 +207,7 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
             name="description"
             validators={{
               onChange: ({ value }: { value: string }) =>
-                validateTagDescription(
-                  value,
-                  MAX_DESCRIPTION_LENGTH,
-                  config.singular,
-                ),
+                validateTagDescription(value, MAX_DESCRIPTION_LENGTH),
             }}
           >
             {(field: any) => (
@@ -246,6 +246,32 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
               </div>
             )}
           </form.Field>
+
+          <form.Subscribe
+            selector={(s: any) => ({
+              canSubmit: s.canSubmit,
+              isSubmitting: s.isSubmitting,
+            })}
+          >
+            {({
+              canSubmit,
+              isSubmitting,
+            }: {
+              canSubmit: boolean
+              isSubmitting: boolean
+            }) => {
+              return (
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                    {mode === 'create' ? 'Create' : 'Update'}
+                  </Button>
+                </div>
+              )
+            }}
+          </form.Subscribe>
         </>
       )}
     </BaseTagDialog>

@@ -6,8 +6,9 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useSidebarItems } from './useSidebarItems'
 import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Tag } from 'convex/tags/types'
+import type { Tag, TagCategory } from 'convex/tags/types'
 import type { Folder } from 'convex/notes/types'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import usePersistedState from './usePersistedState'
 
 export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
@@ -15,9 +16,10 @@ export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
 export const VIEW_MODE = {
   flat: 'flat',
   folderized: 'folderized',
-}
+} as const
 
-type ViewMode = (typeof VIEW_MODE)[keyof typeof VIEW_MODE]
+export type ViewMode = (typeof VIEW_MODE)[keyof typeof VIEW_MODE]
+export type FolderAncestor = { id: Id<'folders'>; name: string }
 
 interface UseCategoryViewOptions {
   categorySlug: string
@@ -29,14 +31,9 @@ interface UseCategoryViewReturn {
   viewMode: ViewMode
   toggleViewMode: () => void
 
-  tags: Tag[] | undefined
-  folders: Folder[] | undefined
-  categoryData: {
-    _id: Id<'tagCategories'>
-    displayName: string
-    pluralDisplayName: string
-    slug: string
-  } | null
+  tags?: Tag[]
+  folders?: Folder[]
+  categoryData?: TagCategory
   isLoading: boolean
 
   breadcrumbs: Array<{ id: Id<'folders'>; name: string }>
@@ -60,7 +57,7 @@ export function useCategoryView({
   const ancestorsQuery = useQuery(
     convexQuery(
       api.notes.queries.getFolderAncestors,
-      currentFolderId
+      currentFolderId && campaign?._id
         ? {
             folderId: currentFolderId as Id<'folders'>,
           }
@@ -71,7 +68,7 @@ export function useCategoryView({
   const currentFolderQuery = useQuery(
     convexQuery(
       api.notes.queries.getFolder,
-      currentFolderId
+      currentFolderId && campaign?._id
         ? {
             folderId: currentFolderId as Id<'folders'>,
           }
@@ -175,28 +172,18 @@ export function useCategoryView({
     campaignWithMembership.status === 'pending' ||
     categoryQuery.status === 'pending' ||
     tagsQuery.status === 'pending' ||
-    !tagsQuery.data ||
     (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
     (viewMode === VIEW_MODE.folderized &&
       !!currentFolderId &&
       (ancestorsQuery.status === 'pending' ||
         currentFolderQuery.status === 'pending'))
 
-  const categoryData = categoryQuery.data
-    ? {
-        _id: categoryQuery.data._id,
-        displayName: categoryQuery.data.displayName,
-        pluralDisplayName: categoryQuery.data.pluralDisplayName,
-        slug: categoryQuery.data.slug,
-      }
-    : null
-
   return {
     viewMode,
     toggleViewMode,
     tags: filteredTags,
     folders: viewMode === VIEW_MODE.folderized ? folders : undefined,
-    categoryData,
+    categoryData: categoryQuery.data,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,

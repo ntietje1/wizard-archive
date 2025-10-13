@@ -35,7 +35,7 @@ export function createRouter() {
       defaultPreload: 'intent',
       defaultPreloadDelay: 50,
       scrollRestoration: true,
-      defaultPreloadStaleTime: 5000,
+      defaultPreloadStaleTime: 0,
       defaultErrorComponent: (err) => <ErrorPage error={err.error.message} />,
       defaultNotFoundComponent: () => <NotFoundPage />,
       context: { queryClient, convexClient: convex, convexQueryClient },

@@ -123,17 +123,17 @@ export function CampaignsContent() {
                 badges={[
                   {
                     text: campaign.status,
-                    icon: <Users className="w-3 h-3" />,
+                    icon: Users,
                     variant: 'secondary',
                   },
                   {
                     text: campaignMember.role,
-                    icon: <User className="w-3 h-3" />,
+                    icon: User,
                     variant: 'secondary',
                   },
                   {
                     text: campaign.noteCount?.toString() ?? '0' + ' notes',
-                    icon: <Notebook className="w-3 h-3" />,
+                    icon: Notebook,
                     variant: 'secondary',
                   },
                 ]}
@@ -141,7 +141,7 @@ export function CampaignsContent() {
                   campaignMember.role === 'DM'
                     ? [
                         {
-                          icon: <Edit className="w-4 h-4" />,
+                          icon: Edit,
                           onClick: (e: React.MouseEvent) => {
                             e.stopPropagation()
                             setEditingCampaignId(campaign._id)
@@ -149,7 +149,7 @@ export function CampaignsContent() {
                           'aria-label': 'Edit campaign',
                         },
                         {
-                          icon: <Trash2 className="w-4 h-4" />,
+                          icon: Trash2,
                           onClick: (e: React.MouseEvent) => {
                             e.stopPropagation()
                             setDeletingCampaignId(campaign._id)

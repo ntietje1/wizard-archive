@@ -1,11 +1,19 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { SignIn, useUser } from '@clerk/tanstack-react-start'
+import {
+  SignedIn,
+  SignedOut,
+  SignIn,
+  useAuth,
+  useUser,
+} from '@clerk/tanstack-react-start'
 import { Header } from '~/components/Header'
 import { useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { Authenticated } from 'convex/react'
+import ErrorPage from '~/components/error/error-page'
 
 const useEnsureProfile = () => {
   const { user } = useUser()
@@ -26,28 +34,27 @@ const useEnsureProfile = () => {
 }
 
 export const Route = createFileRoute('/_authed')({
-  beforeLoad: ({ context }) => {
-    if (!context.userId) {
-      throw new Error('Not authenticated')
-    }
-  },
-  errorComponent: ({ error }) => {
-    if (error.message === 'Not authenticated') {
-      return (
-        <div className="flex items-center justify-center p-12">
-          <SignIn routing="hash" forceRedirectUrl={window.location.href} />
-        </div>
-      )
-    }
-
-    throw error
-  },
+  // beforeLoad: ({ context }) => {
+  //   if (!context.userId) {
+  //     throw new Error('Not authenticated')
+  //   }
+  // },
+  // errorComponent: ({ error }) => {
+  //   return <ErrorPage error={error.message} />
+  // },
   component: () => {
     useEnsureProfile()
     return (
       <div className="flex flex-col h-screen">
         <Header />
-        <Outlet />
+        <SignedOut>
+          <div className="flex items-center justify-center p-24">
+            <SignIn routing="hash" forceRedirectUrl={window.location.href} />
+          </div>
+        </SignedOut>
+        <SignedIn>
+          <Outlet />
+        </SignedIn>
       </div>
     )
   },

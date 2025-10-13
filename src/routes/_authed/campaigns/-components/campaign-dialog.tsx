@@ -3,11 +3,11 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import type { CampaignWithMembership } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
-import { FormActions } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-actions'
 import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
-import { Plus, Sword, Link } from '~/lib/icons'
+import { Button } from '~/components/shadcn/ui/button'
+import { Sword, Link } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   convexQuery,
@@ -148,13 +148,13 @@ export function CampaignDialog({
         <form.Field
           name="name"
           validators={{
-            onChange: () => undefined,
+            onMount: ({ value }) => validateCampaignName(value),
             onBlur: ({ value }) => validateCampaignName(value),
           }}
         >
           {(field) => (
             <div className="space-y-2 px-px">
-              <Label htmlFor="campaign-name">Campaign Name</Label>
+              <Label htmlFor="campaign-name">Campaign Name*</Label>
               <Input
                 id="campaign-name"
                 value={field.state.value}
@@ -164,7 +164,7 @@ export function CampaignDialog({
                 disabled={form.state.isSubmitting}
                 required
               />
-              {field.state.meta.errors?.length ? (
+              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>
@@ -194,20 +194,18 @@ export function CampaignDialog({
         <form.Field
           name="slug"
           validators={{
-            onChange: () => undefined,
+            onMount: ({ value }) => {
+              return validateCampaignSlugSync(value)
+            },
             onBlur: ({ value }) => {
-              const trimmed = value.trim()
-              const normalized = removeInvalidCharacters(trimmed)
-              return validateCampaignSlugSync(normalized)
+              return validateCampaignSlugSync(value)
             },
             onChangeAsync: async ({ value }) => {
-              const trimmed = value.trim()
-              const normalized = removeInvalidCharacters(trimmed)
-              const syncError = validateCampaignSlugSync(normalized)
+              const syncError = validateCampaignSlugSync(value)
               if (syncError) return syncError
               return validateCampaignSlugAsync(
                 convex,
-                normalized,
+                value,
                 mode === 'edit' && campaign ? campaign._id : undefined,
               )
             },
@@ -221,7 +219,7 @@ export function CampaignDialog({
                 className="flex items-center gap-2"
               >
                 <Link className="h-4 w-4" />
-                Custom Link
+                Custom Link*
               </Label>
               <div className="relative">
                 <Input
@@ -244,7 +242,7 @@ export function CampaignDialog({
                   />
                 )}
               </div>
-              {field.state.meta.errors?.length ? (
+              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>
@@ -257,25 +255,31 @@ export function CampaignDialog({
           )}
         </form.Field>
 
-        <FormActions
-          actions={[
-            {
-              label: 'Cancel',
-              onClick: handleClose,
-              variant: 'outline',
-              disabled: form.state.isSubmitting,
-            },
-            {
-              label: mode === 'create' ? 'Create Campaign' : 'Update Campaign',
-              onClick: () => {},
-              type: 'submit',
-              disabled: form.state.isSubmitting,
-              loading: form.state.isSubmitting,
-              loadingText: mode === 'create' ? 'Creating...' : 'Updating...',
-              icon: mode === 'create' ? Plus : undefined,
-            },
-          ]}
-        />
+        <form.Subscribe
+          selector={(s: any) => ({
+            canSubmit: s.canSubmit,
+            isSubmitting: s.isSubmitting,
+          })}
+        >
+          {({
+            canSubmit,
+            isSubmitting,
+          }: {
+            canSubmit: boolean
+            isSubmitting: boolean
+          }) => {
+            return (
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                  {mode === 'create' ? 'Create Campaign' : 'Update Campaign'}
+                </Button>
+              </div>
+            )
+          }}
+        </form.Subscribe>
       </form>
     </FormDialog>
   )
