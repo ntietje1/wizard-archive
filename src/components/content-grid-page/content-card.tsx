@@ -29,6 +29,7 @@ interface BaseContentCardProps {
     icon: LucideIcon
     onClick: (e: React.MouseEvent) => void
     'aria-label'?: string
+    disabled?: boolean
     variant?:
       | 'default'
       | 'secondary'
@@ -38,6 +39,10 @@ interface BaseContentCardProps {
   }[]
   footer?: ReactNode
   className?: string
+  hoverEffect?: {
+    enabled?: boolean
+    className?: string
+  }
 }
 
 type ContentCardProps = BaseContentCardProps &
@@ -63,11 +68,14 @@ export function ContentCard({
   onClick,
   className = '',
   linkWrapper,
+  hoverEffect,
 }: ContentCardProps) {
   const Icon = icon
   const cardContent = (
     <Card
-      className={`hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-slate-50 border border-slate-200 hover:border-amber-300 w-full h-full ${linkWrapper ? '' : className}`}
+      className={`hover:shadow-lg transition-all duration-200 bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className : ''} ${
+        linkWrapper ? '' : className
+      }`}
       onClick={!linkWrapper ? onClick : undefined}
     >
       <CardHeader className="pb-3">
@@ -116,18 +124,21 @@ export function ContentCard({
       {wrappedCard}
       {actionButtons && (
         <div className="absolute top-4 right-4 flex gap-1 z-10">
-          {actionButtons.map((button, index) => (
-            <Button
-              key={index}
-              variant={button.variant || 'ghost'}
-              size="sm"
-              onClick={button.onClick}
-              className={`opacity-0 group-hover:opacity-100 transition-opacity`}
-              aria-label={button['aria-label']}
-            >
-              {button.icon && <button.icon className="w-4 h-4" />}
-            </Button>
-          ))}
+          {actionButtons.map(
+            (button, index) =>
+              !button.disabled && (
+                <Button
+                  key={index}
+                  variant={button.variant || 'ghost'}
+                  size="sm"
+                  onClick={button.onClick}
+                  className={`opacity-0 group-hover:opacity-100 transition-opacity`}
+                  aria-label={button['aria-label']}
+                >
+                  {button.icon && <button.icon className="w-4 h-4" />}
+                </Button>
+              ),
+          )}
         </div>
       )}
     </div>

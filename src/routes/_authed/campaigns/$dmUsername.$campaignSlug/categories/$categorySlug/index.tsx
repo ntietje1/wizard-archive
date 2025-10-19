@@ -27,6 +27,7 @@ import {
 import { CreateCategoryForm } from '~/components/forms/category-form/category-form'
 import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
 import { CATEGORY_KIND } from 'convex/tags/types'
+import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
 type CategorySearch = {
   folderId?: string
@@ -44,7 +45,7 @@ export const Route = createFileRoute(
   },
 })
 
-function GenericCategoryPage() {
+function GenericCategoryPageContent() {
   const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const params = useParams({
@@ -135,6 +136,9 @@ function GenericCategoryPage() {
   const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
   const canEditCategory = categoryData?.kind === CATEGORY_KIND.User
 
+  // Only enable drag/drop in folderized view
+  const isDragEnabled = viewMode === VIEW_MODE.folderized
+
   if (isLoading || !config) {
     return (
       <div className="flex-1 p-6">
@@ -155,115 +159,136 @@ function GenericCategoryPage() {
   }
 
   return (
-    <div className="flex-1 p-6">
-      <CategoryHeader
-        config={config}
-        showBreadcrumbs={showBreadcrumbs}
-        breadcrumbs={breadcrumbs}
-        onNavigateBreadcrumb={navigateToBreadcrumb}
-        onCreateFolder={() => setCreatingFolder(true)}
-        onCreateTag={() => setCreatingTag(true)}
-        onEditCategory={
-          canEditCategory ? () => setEditingCategory(true) : undefined
-        }
-        onToggleViewMode={toggleViewMode}
-        viewMode={viewMode}
-      />
+    <CategoryDragProvider isEnabled={isDragEnabled}>
+      <div className="flex-1 p-6">
+        <CategoryHeader
+          config={config}
+          showBreadcrumbs={showBreadcrumbs}
+          breadcrumbs={breadcrumbs}
+          onNavigateBreadcrumb={navigateToBreadcrumb}
+          onCreateFolder={() => setCreatingFolder(true)}
+          onCreateTag={() => setCreatingTag(true)}
+          onEditCategory={
+            canEditCategory ? () => setEditingCategory(true) : undefined
+          }
+          onToggleViewMode={toggleViewMode}
+          viewMode={viewMode}
+          categoryId={categoryData?._id}
+        />
 
-      <ContentGrid>
-        {/* Folder Cards */}
-        {viewMode === VIEW_MODE.folderized &&
-          folders?.map((folder) => (
-            <FolderCard
-              key={folder._id}
-              id={folder._id}
-              name={folder.name || ''}
-              onClick={() => navigateToFolder(folder)}
+        <ContentGrid>
+          {/* Folder Cards */}
+          {viewMode === VIEW_MODE.folderized &&
+            folders?.map((folder) => {
+              // Build ancestorIds from breadcrumbs for the current folders
+              const ancestorIds = breadcrumbs.slice(0, -1).map((b) => b.id)
+              return (
+                <FolderCard
+                  key={folder._id}
+                  folder={
+                    {
+                      ...folder,
+                      ancestorIds: ancestorIds,
+                    } as any
+                  }
+                  categoryId={categoryData?._id || ('' as any)}
+                  onClick={() => navigateToFolder(folder)}
+                />
+              )
+            })}
+
+          {/* Tag Cards */}
+          {tags?.map((tag) => (
+            <TagCard
+              key={tag._id}
+              tag={tag}
+              config={config}
+              parentFolderId={parentFolderId}
             />
           ))}
 
-        {/* Tag Cards */}
-        {tags?.map((tag) => (
-          <TagCard key={tag._id} tag={tag} config={config} />
-        ))}
+          {/* Empty State */}
+          {!hasContent && viewMode === VIEW_MODE.flat && (
+            <EmptyState
+              icon={config.icon}
+              title={`No ${config.plural.toLowerCase()} yet`}
+              description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
+              action={{
+                label: `Create First ${config.singular}`,
+                onClick: () => setCreatingTag(true),
+                icon: Plus,
+              }}
+            />
+          )}
 
-        {/* Empty State */}
-        {!hasContent && viewMode === VIEW_MODE.flat && (
-          <EmptyState
-            icon={config.icon}
-            title={`No ${config.plural.toLowerCase()} yet`}
-            description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
-            action={{
-              label: `Create First ${config.singular}`,
-              onClick: () => setCreatingTag(true),
-              icon: Plus,
-            }}
+          {!hasContent && viewMode === VIEW_MODE.folderized && isAtRoot && (
+            <EmptyState
+              icon={config.icon}
+              title={`No ${config.plural.toLowerCase()} yet`}
+              description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
+              action={{
+                label: `Create First ${config.singular}`,
+                onClick: () => setCreatingTag(true),
+                icon: Plus,
+              }}
+            />
+          )}
+
+          {!hasContent && viewMode === VIEW_MODE.folderized && !isAtRoot && (
+            <EmptyState
+              icon={config.icon}
+              title="No content in this folder"
+              description={`This folder is empty. Create a ${config.singular.toLowerCase()} to get started.`}
+              action={{
+                label: `Create ${config.singular}`,
+                onClick: () => setCreatingTag(true),
+                icon: Plus,
+              }}
+            />
+          )}
+        </ContentGrid>
+
+        {creatingTag && (
+          <GenericTagDialog
+            mode="create"
+            isOpen={creatingTag}
+            onClose={() => setCreatingTag(false)}
+            config={config}
+            parentFolderId={parentFolderId}
           />
         )}
 
-        {!hasContent && viewMode === VIEW_MODE.folderized && isAtRoot && (
-          <EmptyState
-            icon={config.icon}
-            title={`No ${config.plural.toLowerCase()} yet`}
-            description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
-            action={{
-              label: `Create First ${config.singular}`,
-              onClick: () => setCreatingTag(true),
-              icon: Plus,
-            }}
+        {creatingFolder && (
+          <FolderDialog
+            mode="create"
+            isOpen={creatingFolder}
+            onClose={() => setCreatingFolder(false)}
+            onSubmit={handleCreateFolder}
           />
         )}
 
-        {!hasContent && viewMode === VIEW_MODE.folderized && !isAtRoot && (
-          <EmptyState
-            icon={config.icon}
-            title="No content in this folder"
-            description={`This folder is empty. Create a ${config.singular.toLowerCase()} to get started.`}
-            action={{
-              label: `Create ${config.singular}`,
-              onClick: () => setCreatingTag(true),
-              icon: Plus,
-            }}
-          />
-        )}
-      </ContentGrid>
-
-      {creatingTag && (
-        <GenericTagDialog
-          mode="create"
-          isOpen={creatingTag}
-          onClose={() => setCreatingTag(false)}
-          config={config}
-          parentFolderId={parentFolderId}
-        />
-      )}
-
-      {creatingFolder && (
-        <FolderDialog
-          mode="create"
-          isOpen={creatingFolder}
-          onClose={() => setCreatingFolder(false)}
-          onSubmit={handleCreateFolder}
-        />
-      )}
-
-      {editingCategory && categoryData && (
-        <FormDialog
-          isOpen={editingCategory}
-          onClose={() => setEditingCategory(false)}
-          title="Edit Category"
-          description="Update the category name, icon, and default color."
-          icon={Edit}
-          maxWidth="max-w-2xl"
-        >
-          <CreateCategoryForm
-            mode="edit"
-            category={categoryData}
+        {editingCategory && categoryData && (
+          <FormDialog
+            isOpen={editingCategory}
             onClose={() => setEditingCategory(false)}
-            onSuccess={handleCategoryUpdated}
-          />
-        </FormDialog>
-      )}
-    </div>
+            title="Edit Category"
+            description="Update the category name, icon, and default color."
+            icon={Edit}
+            maxWidth="max-w-2xl"
+          >
+            <CreateCategoryForm
+              mode="edit"
+              category={categoryData}
+              onClose={() => setEditingCategory(false)}
+              onSuccess={handleCategoryUpdated}
+            />
+          </FormDialog>
+        )}
+      </div>
+    </CategoryDragProvider>
   )
+}
+
+function GenericCategoryPage() {
+  return <GenericCategoryPageContent />
 }

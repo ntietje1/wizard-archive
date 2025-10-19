@@ -288,7 +288,19 @@ export async function getTagsByCategory(
       q.eq('campaignId', category.campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  return tags.map((t) => ({ ...t, category }))
+
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_category_tag', (q) =>
+      q.eq('campaignId', category.campaignId).eq('categoryId', categoryId),
+    )
+    .collect()
+
+  return tags.map((t) => ({
+    ...t,
+    category,
+    noteId: notes.find((n) => n.tagId === t._id)?._id,
+  }))
 }
 
 export async function insertTagCategory(

@@ -3,6 +3,7 @@ import { FolderPlus, Plus, Edit } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { CategoryBreadcrumb } from './category-breadcrumb'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
+import type { Id } from 'convex/_generated/dataModel'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 
 interface CategoryHeaderProps {
@@ -17,6 +18,7 @@ interface CategoryHeaderProps {
   onCreateTag?: () => void
   onEditCategory?: () => void
   isLoading?: boolean
+  categoryId?: Id<'tagCategories'>
 }
 
 export function CategoryHeader({
@@ -30,6 +32,7 @@ export function CategoryHeader({
   onCreateTag,
   onEditCategory,
   isLoading,
+  categoryId,
 }: CategoryHeaderProps) {
   if (!config || isLoading) {
     return (
@@ -42,6 +45,7 @@ export function CategoryHeader({
           isLoading={true}
           viewMode={viewMode}
           onToggleViewMode={onToggleViewMode}
+          categoryId={categoryId}
         />
         <div className="flex items-start justify-between gap-4">
           <Skeleton className="h-[36px] w-[600px]" />
@@ -64,6 +68,7 @@ export function CategoryHeader({
         isLoading={isLoading}
         viewMode={viewMode}
         onToggleViewMode={onToggleViewMode}
+        categoryId={categoryId}
       />
 
       <div className="flex items-start justify-between gap-4">

@@ -11,6 +11,8 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Switch } from '~/components/shadcn/ui/switch'
+import type { Id } from 'convex/_generated/dataModel'
+import { BreadcrumbDropZone } from './breadcrumb-drop-zone'
 
 interface CategoryBreadcrumbProps {
   config?: TagCategoryConfig
@@ -20,6 +22,7 @@ interface CategoryBreadcrumbProps {
   isLoading?: boolean
   viewMode?: ViewMode
   onToggleViewMode?: () => void
+  categoryId?: Id<'tagCategories'>
 }
 
 export function CategoryBreadcrumb({
@@ -30,6 +33,7 @@ export function CategoryBreadcrumb({
   isLoading,
   viewMode,
   onToggleViewMode,
+  categoryId,
 }: CategoryBreadcrumbProps) {
   if (isLoading || !config) {
     return (
@@ -58,44 +62,49 @@ export function CategoryBreadcrumb({
     <div className="mb-2 flex items-center justify-between gap-4">
       <Breadcrumb>
         <BreadcrumbList className="text-lg text-foreground">
-          <BreadcrumbItem>
-            {showBreadcrumbs ? (
-              <BreadcrumbLink asChild>
-                <button
-                  type="button"
-                  onClick={() => onNavigate(-1)}
-                  className="cursor-pointer font-medium text-foreground hover:!text-amber-600 transition-colors"
-                >
+          <BreadcrumbDropZone id="category-root" categoryId={categoryId} isRoot>
+            <BreadcrumbItem>
+              {showBreadcrumbs ? (
+                <BreadcrumbLink asChild>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(-1)}
+                    className="cursor-pointer font-medium text-foreground group-hover:!text-amber-600 transition-colors"
+                  >
+                    {config.plural}
+                  </button>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage className="font-bold text-foreground">
                   {config.plural}
-                </button>
-              </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage className="font-bold text-foreground">
-                {config.plural}
-              </BreadcrumbPage>
-            )}
-          </BreadcrumbItem>
+                </BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </BreadcrumbDropZone>
+
           {showBreadcrumbs &&
             breadcrumbs.map((ancestor, index) => (
               <React.Fragment key={ancestor.id}>
-                <BreadcrumbSeparator className="[&>svg]:!size-5" />
-                <BreadcrumbItem>
-                  {index === breadcrumbs.length - 1 ? (
-                    <BreadcrumbPage className="font-bold text-foreground">
-                      {ancestor.name}
-                    </BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink asChild>
-                      <button
-                        type="button"
-                        onClick={() => onNavigate(index)}
-                        className="cursor-pointer font-medium text-foreground hover:!text-amber-600 transition-colors"
-                      >
+                <BreadcrumbSeparator className="[&>svg]:!size-5 -mx-2 mt-1" />
+                <BreadcrumbDropZone id={ancestor.id} categoryId={categoryId}>
+                  <BreadcrumbItem>
+                    {index === breadcrumbs.length - 1 ? (
+                      <BreadcrumbPage className="font-bold text-foreground">
                         {ancestor.name}
-                      </button>
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
+                      </BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink asChild>
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(index)}
+                          className="cursor-pointer font-medium text-foreground group-hover:!text-amber-600 transition-colors"
+                        >
+                          {ancestor.name}
+                        </button>
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                </BreadcrumbDropZone>
               </React.Fragment>
             ))}
         </BreadcrumbList>
