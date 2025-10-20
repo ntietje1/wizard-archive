@@ -40,7 +40,7 @@ export function FolderCard({
   const { active } = useDndContext()
 
   const dropData: CategoryDropData = {
-    id: folder._id,
+    _id: folder._id,
     type: CATEGORY_ITEM_TYPES.folders,
     categoryId,
   }

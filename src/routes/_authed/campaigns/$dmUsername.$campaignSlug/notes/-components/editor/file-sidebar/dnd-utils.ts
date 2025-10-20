@@ -104,8 +104,10 @@ export function validateItemDrop(
 export function canDropItem(active: Active | null, over: Over | null): boolean {
   if (!active || !over) return false
 
-  const draggedItem = active.data.current as DragData
-  const targetData = over.data.current as DropData
+  const draggedItem = active.data.current as DragData | undefined
+  const targetData = over.data.current as DropData | undefined
+
+  if (!draggedItem || !targetData) return false
 
   return validateItemDrop(draggedItem, targetData)
 }

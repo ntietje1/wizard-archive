@@ -82,11 +82,14 @@ export function TagCard({ tag, config, parentFolderId }: TagCardProps) {
               variant: 'secondary',
             },
           ]}
-          onClick={() =>
-            router.navigate({
-              to: '/campaigns/$dmUsername/$campaignSlug/notes',
-              params: { dmUsername, campaignSlug },
-            })
+          onClick={
+            isDragging
+              ? () => {}
+              : () =>
+                  router.navigate({
+                    to: '/campaigns/$dmUsername/$campaignSlug/notes',
+                    params: { dmUsername, campaignSlug },
+                  })
           }
           actionButtons={[
             {

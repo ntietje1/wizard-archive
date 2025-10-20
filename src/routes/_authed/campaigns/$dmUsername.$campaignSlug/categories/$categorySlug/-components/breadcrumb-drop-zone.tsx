@@ -24,7 +24,7 @@ export function BreadcrumbDropZone({
   const { active } = useDndContext()
 
   const dropData: CategoryDropData = {
-    id,
+    _id: id,
     type: isRoot ? 'category-root' : CATEGORY_ITEM_TYPES.folders,
     categoryId,
     isBreadcrumbTarget: true,

@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useState, useRef } from 'react'
 import {
   DndContext,
   MouseSensor,
@@ -41,6 +41,7 @@ export function CategoryDragProvider({
     null,
   )
   const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
+  const pointerListenerRef = useRef<(() => void) | null>(null)
 
   const { moveFolder } = useFolderActions()
 
@@ -68,12 +69,17 @@ export function CategoryDragProvider({
     if (data && data.type) {
       setActiveDragData(data)
 
+      if (pointerListenerRef.current) {
+        pointerListenerRef.current()
+      }
+
       const handlePointerMove = (e: globalThis.PointerEvent) => {
         setPointerOffset({ x: e.clientX, y: e.clientY })
       }
 
       document.addEventListener('pointermove', handlePointerMove)
-      return () => {
+
+      pointerListenerRef.current = () => {
         document.removeEventListener('pointermove', handlePointerMove)
       }
     }
@@ -84,6 +90,11 @@ export function CategoryDragProvider({
       const { active, over } = event
       setActiveDragData(null)
       setPointerOffset({ x: 0, y: 0 })
+
+      if (pointerListenerRef.current) {
+        pointerListenerRef.current()
+        pointerListenerRef.current = null
+      }
 
       if (!isEnabled || !active.data.current || !over) {
         return
@@ -132,6 +143,11 @@ export function CategoryDragProvider({
   )
 
   const handleDragCancel = useCallback(() => {
+    // Clean up pointer listener
+    if (pointerListenerRef.current) {
+      pointerListenerRef.current()
+      pointerListenerRef.current = null
+    }
     setActiveDragData(null)
     setPointerOffset({ x: 0, y: 0 })
   }, [])

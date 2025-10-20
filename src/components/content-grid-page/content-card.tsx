@@ -73,7 +73,7 @@ export function ContentCard({
   const Icon = icon
   const cardContent = (
     <Card
-      className={`bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className : ''} ${
+      className={`bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className || '' : ''} ${
         linkWrapper ? '' : className
       }`}
       onClick={!linkWrapper ? onClick : undefined}

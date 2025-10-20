@@ -22,13 +22,14 @@ export interface CategoryDragData {
 }
 
 export interface CategoryDropData {
-  id: string
+  _id: string
   type:
     | (typeof CATEGORY_ITEM_TYPES)[keyof typeof CATEGORY_ITEM_TYPES]
     | typeof CATEGORY_ROOT_TYPE
   [key: string]: any
 }
 
+// does not need to check for cycles, as the UI only shows the current level and the parent hierarchy
 export function validateFolderDrop(
   draggedItem: CategoryDragData | null,
   targetData: CategoryDropData | null,
@@ -63,9 +64,9 @@ export function validateCategoryItemDrop(
 ): boolean {
   if (!draggedItem || !targetData) return false
 
-  if (targetData.id === draggedItem._id) return false
+  if (targetData._id === draggedItem._id) return false
 
-  if (draggedItem.parentFolderId === targetData.id) return false
+  if (draggedItem.parentFolderId === targetData._id) return false
 
   if (targetData.type === CATEGORY_ROOT_TYPE && !draggedItem.parentFolderId) {
     return false
@@ -81,15 +82,16 @@ export function validateCategoryItemDrop(
 
   return false
 }
-
 export function canDropCategoryItem(
   active: Active | null,
   over: Over | null,
 ): boolean {
   if (!active || !over) return false
 
-  const draggedItem = active.data.current as CategoryDragData
-  const targetData = over.data.current as CategoryDropData
+  const draggedItem = active.data.current as CategoryDragData | undefined
+  const targetData = over.data.current as CategoryDropData | undefined
+
+  if (!draggedItem || !targetData) return false
 
   return validateCategoryItemDrop(draggedItem, targetData)
 }

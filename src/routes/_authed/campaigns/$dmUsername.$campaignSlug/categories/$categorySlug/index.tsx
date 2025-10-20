@@ -136,7 +136,6 @@ function GenericCategoryPageContent() {
   const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
   const canEditCategory = categoryData?.kind === CATEGORY_KIND.User
 
-  // Only enable drag/drop in folderized view
   const isDragEnabled = viewMode === VIEW_MODE.folderized
 
   if (isLoading || !config) {
@@ -179,23 +178,15 @@ function GenericCategoryPageContent() {
         <ContentGrid>
           {/* Folder Cards */}
           {viewMode === VIEW_MODE.folderized &&
-            folders?.map((folder) => {
-              // Build ancestorIds from breadcrumbs for the current folders
-              const ancestorIds = breadcrumbs.slice(0, -1).map((b) => b.id)
-              return (
-                <FolderCard
-                  key={folder._id}
-                  folder={
-                    {
-                      ...folder,
-                      ancestorIds: ancestorIds,
-                    } as any
-                  }
-                  categoryId={categoryData?._id || ('' as any)}
-                  onClick={() => navigateToFolder(folder)}
-                />
-              )
-            })}
+            categoryData?._id &&
+            folders?.map((folder) => (
+              <FolderCard
+                key={folder._id}
+                folder={folder}
+                categoryId={categoryData?._id}
+                onClick={() => navigateToFolder(folder)}
+              />
+            ))}
 
           {/* Tag Cards */}
           {tags?.map((tag) => (
