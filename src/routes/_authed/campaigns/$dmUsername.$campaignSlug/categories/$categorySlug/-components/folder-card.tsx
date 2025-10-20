@@ -10,13 +10,14 @@ import { ContentCard } from '~/components/content-grid-page/content-card'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import { Edit, Trash2, Folder as FolderIcon } from '~/lib/icons'
-import { useCategoryDrag } from '~/contexts/CategoryDragContext'
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import {
   CATEGORY_ITEM_TYPES,
+  validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
 } from './dnd-utils'
+import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 
 interface FolderCardProps {
   folder: Folder
@@ -36,6 +37,7 @@ export function FolderCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
+  const { active } = useDndContext()
 
   const dropData: CategoryDropData = {
     id: folder._id,
@@ -47,13 +49,18 @@ export function FolderCard({
     data: dropData,
   })
 
+  const isValidDropTarget =
+    isOver &&
+    validateCategoryItemDrop(
+      active?.data?.current as CategoryDragData | null,
+      dropData,
+    )
+
   const dragData: CategoryDragData = {
     _id: folder._id,
     type: CATEGORY_ITEM_TYPES.folders,
     name: folder.name || UNTITLED_FOLDER_NAME,
-    // categoryId,
     parentFolderId: folder.parentFolderId,
-    // folderName: folder.name || UNTITLED_FOLDER_NAME,
     icon: FolderIcon,
   }
   const {
@@ -123,8 +130,8 @@ export function FolderCard({
           ]}
           hoverEffect={{
             enabled: true,
-            className: isOver
-              ? 'hover:border-amber-300 hover:bg-amber-300/10'
+            className: isValidDropTarget
+              ? 'hover:border-amber-300 hover:bg-amber-300/10 hover:shadow-lg hover:scale-101 transition-all duration-100 hover:duration-200'
               : '',
           }}
         />

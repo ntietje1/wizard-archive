@@ -73,7 +73,7 @@ export function ContentCard({
   const Icon = icon
   const cardContent = (
     <Card
-      className={`hover:shadow-lg transition-all duration-200 bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className : ''} ${
+      className={`bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className : ''} ${
         linkWrapper ? '' : className
       }`}
       onClick={!linkWrapper ? onClick : undefined}
@@ -82,9 +82,9 @@ export function ContentCard({
         <div className="flex items-start justify-between">
           <div className="flex-1 pr-20">
             <div className="flex items-center gap-2 mb-1">
-              {Icon && <Icon className="w-8 h-8 text-amber-600" />}
+              {Icon && <Icon className="w-8 h-8 text-amber-600 select-none" />}
               <CardTitle
-                className={`text-lg text-slate-800 group-hover:text-amber-700 transition-colors line-clamp-1`}
+                className={`text-lg text-slate-800 line-clamp-1 select-none`}
               >
                 {title}
               </CardTitle>

@@ -15,7 +15,6 @@ import { Plus, Edit } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
 import { toast } from 'sonner'
 import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { CategoryHeader } from './-components/category-header'
 import type { Id } from 'convex/_generated/dataModel'
 import { TagCard } from './-components/tag-card'
@@ -27,6 +26,7 @@ import {
 import { CreateCategoryForm } from '~/components/forms/category-form/category-form'
 import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
 import { CATEGORY_KIND } from 'convex/tags/types'
+import { useFolderActions } from '~/hooks/useFolderActions'
 import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
 type CategorySearch = {

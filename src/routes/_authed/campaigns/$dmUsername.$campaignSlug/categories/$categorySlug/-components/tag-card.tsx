@@ -11,11 +11,11 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/
 import GenericTagDialog from '~/components/forms/category-tag-dialogs/generic-tag-dialog/generic-dialog'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { Edit, TagIcon, Trash2 } from '~/lib/icons'
-import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { useDraggable } from '@dnd-kit/core'
 import { CATEGORY_ITEM_TYPES, type CategoryDragData } from './dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { getCategoryIcon } from '~/lib/category-icons'
+import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 
 interface TagCardProps {
   tag: Tag

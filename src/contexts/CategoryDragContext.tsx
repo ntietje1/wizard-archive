@@ -1,6 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { createContext, useCallback, useContext, useState } from 'react'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import {
   DndContext,
   MouseSensor,
@@ -22,6 +21,7 @@ import {
   CATEGORY_ITEM_TYPES,
   CATEGORY_ROOT_TYPE,
 } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/dnd-utils'
+import { useFolderActions } from '~/hooks/useFolderActions'
 
 type CategoryDragContextType = {
   activeDragData: CategoryDragData | null
@@ -68,7 +68,6 @@ export function CategoryDragProvider({
     if (data && data.type) {
       setActiveDragData(data)
 
-      // Track pointer position during drag
       const handlePointerMove = (e: globalThis.PointerEvent) => {
         setPointerOffset({ x: e.clientX, y: e.clientY })
       }
@@ -86,18 +85,15 @@ export function CategoryDragProvider({
       setActiveDragData(null)
       setPointerOffset({ x: 0, y: 0 })
 
-      // Only allow drops if drag/drop is enabled
       if (!isEnabled || !active.data.current || !over) {
         return
       }
 
-      // Validate the drop using shared utility
       if (!canDropCategoryItem(active, over)) return
 
       const draggedData = active.data.current as CategoryDragData
       const targetData = over.data.current as CategoryDropData
 
-      // Handle folder move
       if (draggedData.type === CATEGORY_ITEM_TYPES.folders) {
         try {
           let parentId: Id<'folders'> | undefined = undefined
@@ -110,11 +106,10 @@ export function CategoryDragProvider({
             parentId: parentId,
           })
         } catch (error) {
-          // Handle error silently - mutations show toast
+          console.error(error)
         }
       }
 
-      // Handle tag move by moving its associated note
       if (draggedData.type === CATEGORY_ITEM_TYPES.tags) {
         try {
           if (draggedData.noteId) {
@@ -129,7 +124,7 @@ export function CategoryDragProvider({
             })
           }
         } catch (error) {
-          // Handle error silently - mutations show toast
+          console.error(error)
         }
       }
     },

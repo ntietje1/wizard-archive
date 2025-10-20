@@ -3,13 +3,14 @@ import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import { DraggableFolder } from './draggable-folder'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { toast } from 'sonner'
 import { FolderContextMenu } from './folder-context-menu'
 import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
 import { FolderEdit, Folder as FolderIcon } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import type { Id } from 'convex/_generated/dataModel'
+import { useFolderActions } from '~/hooks/useFolderActions'
+
 interface FolderButtonProps {
   folder: Folder
   ancestorIds?: Array<Id<'folders'>>

@@ -29,37 +29,57 @@ export interface CategoryDropData {
   [key: string]: any
 }
 
-export function canDropFolder(
-  active: Active | null,
-  over: Over | null,
+export function validateFolderDrop(
+  draggedItem: CategoryDragData | null,
+  targetData: CategoryDropData | null,
 ): boolean {
-  if (!active || !over) return false
-
-  const draggedItem = active.data.current as CategoryDragData
-  const targetData = over.data.current as CategoryDropData
+  if (!draggedItem || !targetData) return false
 
   if (draggedItem.type !== CATEGORY_ITEM_TYPES.folders) return false
 
-  const validTarget =
+  return (
     targetData.type === CATEGORY_ITEM_TYPES.folders ||
     targetData.type === CATEGORY_ROOT_TYPE
-
-  return validTarget
+  )
 }
 
-export function canDropTag(active: Active | null, over: Over | null): boolean {
-  if (!active || !over) return false
-
-  const draggedItem = active.data.current as CategoryDragData
-  const targetData = over.data.current as CategoryDropData
+export function validateTagDrop(
+  draggedItem: CategoryDragData | null,
+  targetData: CategoryDropData | null,
+): boolean {
+  if (!draggedItem || !targetData) return false
 
   if (draggedItem.type !== CATEGORY_ITEM_TYPES.tags) return false
 
-  const validTarget =
+  return (
     targetData.type === CATEGORY_ITEM_TYPES.folders ||
     targetData.type === CATEGORY_ROOT_TYPE
+  )
+}
 
-  return validTarget
+export function validateCategoryItemDrop(
+  draggedItem: CategoryDragData | null,
+  targetData: CategoryDropData | null,
+): boolean {
+  if (!draggedItem || !targetData) return false
+
+  if (targetData.id === draggedItem._id) return false
+
+  if (draggedItem.parentFolderId === targetData.id) return false
+
+  if (targetData.type === CATEGORY_ROOT_TYPE && !draggedItem.parentFolderId) {
+    return false
+  }
+
+  if (draggedItem.type === CATEGORY_ITEM_TYPES.folders) {
+    return validateFolderDrop(draggedItem, targetData)
+  }
+
+  if (draggedItem.type === CATEGORY_ITEM_TYPES.tags) {
+    return validateTagDrop(draggedItem, targetData)
+  }
+
+  return false
 }
 
 export function canDropCategoryItem(
@@ -71,21 +91,5 @@ export function canDropCategoryItem(
   const draggedItem = active.data.current as CategoryDragData
   const targetData = over.data.current as CategoryDropData
 
-  if (
-    targetData.id === draggedItem._id ||
-    draggedItem.parentFolderId === targetData.id ||
-    (targetData.type === CATEGORY_ROOT_TYPE && !draggedItem.parentFolderId)
-  ) {
-    return false
-  }
-
-  if (draggedItem.type === CATEGORY_ITEM_TYPES.folders) {
-    return canDropFolder(active, over)
-  }
-
-  if (draggedItem.type === CATEGORY_ITEM_TYPES.tags) {
-    return canDropTag(active, over)
-  }
-
-  return false
+  return validateCategoryItemDrop(draggedItem, targetData)
 }
