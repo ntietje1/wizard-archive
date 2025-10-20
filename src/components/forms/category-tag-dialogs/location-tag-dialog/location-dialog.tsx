@@ -106,11 +106,7 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
           parentFolderId,
         })
 
-        toast.success(`${config.singular} created successfully`)
-        onClose()
-
         if (navigateToNote && tagResult.noteId) {
-          // Fetch the note to get its slug
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: tagResult.noteId,
           })
@@ -125,6 +121,9 @@ export default function LocationDialog(props: TagDialogProps<Location>) {
             })
           }
         }
+
+        toast.success(`${config.singular} created successfully`)
+        onClose()
       } else if (mode === 'edit' && location) {
         await updateTagMutation.mutateAsync({
           tagId: location.tagId,

@@ -102,11 +102,7 @@ export default function GenericTagDialog(props: TagDialogProps) {
           parentFolderId,
         })
 
-        toast.success(`${config.singular} created successfully`)
-        onClose()
-
         if (navigateToNote && result.noteId) {
-          // Fetch the note to get its slug
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,
           })
@@ -121,6 +117,9 @@ export default function GenericTagDialog(props: TagDialogProps) {
             })
           }
         }
+
+        toast.success(`${config.singular} created successfully`)
+        onClose()
       } else if (mode === 'edit' && tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
