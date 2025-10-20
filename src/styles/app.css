@@ -152,4 +152,19 @@
       opacity: 1;
     }
   }
+
+  .animate-overlay-shrink {
+    animation: overlayItemShrink 0.1s ease-out forwards;
+  }
+
+  @keyframes overlayItemShrink {
+    from {
+      transform: scale(2);
+      opacity: 0.2;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
 }

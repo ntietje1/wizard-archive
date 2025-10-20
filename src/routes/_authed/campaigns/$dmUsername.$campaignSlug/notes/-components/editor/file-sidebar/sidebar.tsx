@@ -9,9 +9,9 @@ import { ClientOnly } from '@tanstack/react-router'
 import { DragOverlayItem } from './sidebar-item/drag-overlays'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCampaign } from '~/contexts/CampaignContext'
+import { useFolderActions } from '~/hooks/useFolderActions'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItems()

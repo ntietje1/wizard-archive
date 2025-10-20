@@ -65,8 +65,8 @@ const categoryIconsMap: Record<string, LucideIcon> = {
   ['Star']: Star,
 }
 
-export const getCategoryIcon = (categoryName: string) => {
-  return categoryIconsMap[categoryName] || TagIcon
+export const getCategoryIcon = (categoryName?: string): LucideIcon => {
+  return (categoryName && categoryIconsMap[categoryName]) || TagIcon
 }
 
 export const getNonDefaultCategoryIcons = () => {

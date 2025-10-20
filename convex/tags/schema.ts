@@ -56,6 +56,7 @@ export const tagValidatorFields = {
   ...commonMetaFields('tags'),
   ...tagTableFields,
   category: v.optional(v.object(tagCategoryValidatorFields)),
+  noteId: v.optional(v.id('notes')),
 } as const
 
 export const tagCategoryValidator = v.object(tagCategoryValidatorFields)

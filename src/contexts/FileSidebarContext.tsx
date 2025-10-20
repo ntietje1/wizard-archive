@@ -6,7 +6,6 @@ import {
 } from 'convex/notes/types'
 import { createContext, useCallback, useContext, useState } from 'react'
 import usePersistedState from '~/hooks/usePersistedState'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import {
   DndContext,
@@ -21,6 +20,7 @@ import {
   canDropItem,
   type DropData,
 } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/-components/editor/file-sidebar/dnd-utils'
+import { useFolderActions } from '~/hooks/useFolderActions'
 
 type FileSidebarContextType = {
   setRenamingId: (id: Id<'folders'> | Id<'notes'> | null) => void
