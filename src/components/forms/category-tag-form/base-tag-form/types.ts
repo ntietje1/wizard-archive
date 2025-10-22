@@ -24,22 +24,19 @@ export const defaultBaseFormValues: BaseTagFormValues = {
   color: '#ef4444',
 }
 
+interface TagDialogBaseProps {
+  isOpen: boolean
+  onClose: () => void
+  config: TagCategoryConfig
+  navigateToNote?: boolean
+  parentFolderId?: Id<'folders'>
+}
+
 export type TagDialogProps<T extends Tag = Tag> =
-  | {
+  | (TagDialogBaseProps & {
       mode: 'create'
-      isOpen: boolean
-      onClose: () => void
-      config: TagCategoryConfig
-      tag?: never
-      navigateToNote?: boolean
-      parentFolderId?: Id<'folders'>
-    }
-  | {
+    })
+  | (TagDialogBaseProps & {
       mode: 'edit'
-      isOpen: boolean
-      onClose: () => void
-      config: TagCategoryConfig
       tag: T
-      navigateToNote?: boolean
-      parentFolderId?: never
-    }
+    })

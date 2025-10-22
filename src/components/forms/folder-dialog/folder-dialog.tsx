@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { FormDialog } from '../category-tag-dialogs/base-tag-dialog/form-dialog'
+import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { FolderEdit, FolderPlus } from '~/lib/icons'

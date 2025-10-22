@@ -129,6 +129,12 @@ export default [
         clearInterval: 'readonly',
         ResizeObserver: 'readonly',
         StorageEvent: 'readonly',
+        // File APIs
+        File: 'readonly',
+        FileReader: 'readonly',
+        XMLHttpRequest: 'readonly',
+        ProgressEvent: 'readonly',
+        XMLHttpRequestUpload: 'readonly',
         // React globals
         React: 'readonly',
         // HTML Element types

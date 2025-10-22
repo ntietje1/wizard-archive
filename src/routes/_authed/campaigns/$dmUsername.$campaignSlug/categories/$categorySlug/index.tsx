@@ -7,12 +7,11 @@ import {
 import { useState } from 'react'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { FolderCard } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/folder-card'
-import { EmptyState } from '~/components/content-grid-page/empty-state'
+import { EmptyState } from './-components/empty-state'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 import { useCampaign } from '~/contexts/CampaignContext'
-import GenericTagDialog from '~/components/forms/category-tag-dialogs/generic-tag-dialog/generic-dialog'
-import { Plus, Edit } from '~/lib/icons'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { toast } from 'sonner'
 import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
 import { CategoryHeader } from './-components/category-header'
@@ -23,11 +22,11 @@ import {
   FolderDialog,
   type FolderFormValues,
 } from '~/components/forms/folder-dialog/folder-dialog'
-import { CreateCategoryForm } from '~/components/forms/category-form/category-form'
-import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
 import { CATEGORY_KIND } from 'convex/tags/types'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
+import { ScrollArea } from '@radix-ui/react-scroll-area'
 
 type CategorySearch = {
   folderId?: string
@@ -45,7 +44,7 @@ export const Route = createFileRoute(
   },
 })
 
-function GenericCategoryPageContent() {
+function GenericCategoryPage() {
   const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const params = useParams({
@@ -97,6 +96,9 @@ function GenericCategoryPageContent() {
     navigateToFolder,
     navigateToBreadcrumb,
     isLoading,
+    isAtRoot,
+    hasContent,
+    categoryConfig,
   } = useCategoryView({
     categorySlug,
     currentFolderId: search.folderId,
@@ -104,15 +106,6 @@ function GenericCategoryPageContent() {
   })
 
   const { createFolder } = useFolderActions()
-
-  const config: TagCategoryConfig | undefined = categoryData
-    ? {
-        singular: categoryData.displayName,
-        plural: categoryData.pluralDisplayName,
-        categorySlug,
-        icon: getCategoryIcon(categoryData.iconName),
-      }
-    : undefined
 
   const handleCreateFolder = async (values: FolderFormValues) => {
     if (!campaign || !categoryData) return
@@ -129,20 +122,13 @@ function GenericCategoryPageContent() {
       toast.error('Failed to create folder')
     }
   }
-
-  const showBreadcrumbs =
-    viewMode === VIEW_MODE.folderized && breadcrumbs.length > 0
-  const isAtRoot = breadcrumbs.length === 0
-  const hasContent = (tags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0
   const canEditCategory = categoryData?.kind === CATEGORY_KIND.User
 
-  const isDragEnabled = viewMode === VIEW_MODE.folderized
-
-  if (isLoading || !config) {
+  if (isLoading || !categoryConfig) {
     return (
       <div className="flex-1 p-6">
         <CategoryHeader
-          config={config}
+          config={categoryConfig}
           onNavigateBreadcrumb={() => {}}
           showBreadcrumbs={false}
           breadcrumbs={[]}
@@ -158,11 +144,11 @@ function GenericCategoryPageContent() {
   }
 
   return (
-    <CategoryDragProvider isEnabled={isDragEnabled}>
-      <div className="flex-1 p-6">
+    <CategoryDragProvider isEnabled={viewMode === VIEW_MODE.folderized}>
+      <ScrollArea className="flex-1 p-6">
         <CategoryHeader
-          config={config}
-          showBreadcrumbs={showBreadcrumbs}
+          config={categoryConfig}
+          showBreadcrumbs={true}
           breadcrumbs={breadcrumbs}
           onNavigateBreadcrumb={navigateToBreadcrumb}
           onCreateFolder={() => setCreatingFolder(true)}
@@ -193,48 +179,18 @@ function GenericCategoryPageContent() {
             <TagCard
               key={tag._id}
               tag={tag}
-              config={config}
+              config={categoryConfig}
               parentFolderId={parentFolderId}
             />
           ))}
 
           {/* Empty State */}
-          {!hasContent && viewMode === VIEW_MODE.flat && (
+          {!hasContent && (
             <EmptyState
-              icon={config.icon}
-              title={`No ${config.plural.toLowerCase()} yet`}
-              description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
-              action={{
-                label: `Create First ${config.singular}`,
-                onClick: () => setCreatingTag(true),
-                icon: Plus,
-              }}
-            />
-          )}
-
-          {!hasContent && viewMode === VIEW_MODE.folderized && isAtRoot && (
-            <EmptyState
-              icon={config.icon}
-              title={`No ${config.plural.toLowerCase()} yet`}
-              description={`Create your first ${config.singular.toLowerCase()} to start organizing your campaign.`}
-              action={{
-                label: `Create First ${config.singular}`,
-                onClick: () => setCreatingTag(true),
-                icon: Plus,
-              }}
-            />
-          )}
-
-          {!hasContent && viewMode === VIEW_MODE.folderized && !isAtRoot && (
-            <EmptyState
-              icon={config.icon}
-              title="No content in this folder"
-              description={`This folder is empty. Create a ${config.singular.toLowerCase()} to get started.`}
-              action={{
-                label: `Create ${config.singular}`,
-                onClick: () => setCreatingTag(true),
-                icon: Plus,
-              }}
+              viewMode={viewMode}
+              isAtRoot={isAtRoot}
+              onCreateTag={() => setCreatingTag(true)}
+              config={categoryConfig}
             />
           )}
         </ContentGrid>
@@ -244,7 +200,7 @@ function GenericCategoryPageContent() {
             mode="create"
             isOpen={creatingTag}
             onClose={() => setCreatingTag(false)}
-            config={config}
+            config={categoryConfig}
             parentFolderId={parentFolderId}
           />
         )}
@@ -259,27 +215,15 @@ function GenericCategoryPageContent() {
         )}
 
         {editingCategory && categoryData && (
-          <FormDialog
+          <CategoryDialog
+            mode="edit"
             isOpen={editingCategory}
             onClose={() => setEditingCategory(false)}
-            title="Edit Category"
-            description="Update the category name, icon, and default color."
-            icon={Edit}
-            maxWidth="max-w-2xl"
-          >
-            <CreateCategoryForm
-              mode="edit"
-              category={categoryData}
-              onClose={() => setEditingCategory(false)}
-              onSuccess={handleCategoryUpdated}
-            />
-          </FormDialog>
+            category={categoryData}
+            onSuccess={handleCategoryUpdated}
+          />
         )}
-      </div>
+      </ScrollArea>
     </CategoryDragProvider>
   )
-}
-
-function GenericCategoryPage() {
-  return <GenericCategoryPageContent />
 }

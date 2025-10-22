@@ -13,7 +13,7 @@ import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skele
 import { useCampaign } from '~/contexts/CampaignContext'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import type { Character } from 'convex/characters/types'
-import { CHARACTER_CONFIG } from '~/components/forms/category-tag-dialogs/character-tag-dialog/types'
+import { CHARACTER_CONFIG } from '~/components/forms/category-tag-form/character-tag-form/types'
 import CharacterDialog from '~/components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
 
 export default function CharactersContent() {

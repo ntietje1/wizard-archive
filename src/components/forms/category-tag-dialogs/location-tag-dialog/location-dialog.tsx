@@ -8,7 +8,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { Label } from '~/components/shadcn/ui/label'
 import { Input } from '~/components/shadcn/ui/input'
-import { ColorPicker } from '../base-tag-dialog/color-picker'
+import { ColorPicker } from '../../category-tag-form/base-tag-form/color-picker.tsx'
 import { Button } from '~/components/shadcn/ui/button.tsx'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useRouter } from '@tanstack/react-router'
@@ -18,12 +18,12 @@ import {
   validateTagName,
   validateTagNameAsync,
   validateTagDescription,
-} from '../generic-tag-dialog/validators.ts'
+} from '../../category-tag-form/generic-tag-form/validators.ts'
 import {
   type TagDialogProps,
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
-} from '../base-tag-dialog/types.ts'
+} from '../../category-tag-form/base-tag-form/types.ts'
 import { defaultLocationFormValues, type LocationFormValues } from './types.ts'
 
 export default function LocationDialog(props: TagDialogProps<Location>) {

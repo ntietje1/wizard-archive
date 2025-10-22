@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { ConvexReactClient } from 'convex/react'
 import type { Id } from 'convex/_generated/dataModel'
-import { MAX_NAME_LENGTH } from '../base-tag-dialog/types'
+import { MAX_NAME_LENGTH } from '../base-tag-form/types'
 
 export function validateTagDescription(
   value: string,

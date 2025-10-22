@@ -37,6 +37,7 @@ export const updateTag = mutation({
     displayName: v.optional(v.string()),
     color: v.optional(v.string()),
     description: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
   },
   returns: v.id('tags'),
   handler: async (ctx, args): Promise<Id<'tags'>> => {
@@ -44,6 +45,7 @@ export const updateTag = mutation({
       displayName: args.displayName,
       color: args.color,
       description: args.description,
+      imageStorageId: args.imageStorageId,
     })
 
     return args.tagId

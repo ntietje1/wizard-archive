@@ -1,5 +1,5 @@
 import { CategoryFolderButton } from '../generic-category-folder/category-folder-button'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 

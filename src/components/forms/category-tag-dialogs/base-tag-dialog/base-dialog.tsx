@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { FormDialog } from './form-dialog'
+import { FormDialog } from '../../category-tag-form/base-tag-form/form-dialog'
 import type { Tag } from 'convex/tags/types'
-import type { TagCategoryConfig } from './types'
+import type { TagCategoryConfig } from '../../category-tag-form/base-tag-form/types'
 
 type BaseTagDialogProps<
   TTag extends Tag = Tag,
@@ -65,7 +65,6 @@ export default function BaseTagDialog<
     },
   })
 
-  // Reset form when dialog mode/tag changes
   useEffect(() => {
     form.reset(getInitialValues({ mode, tag }))
   }, [mode, tag?._id, getInitialValues])

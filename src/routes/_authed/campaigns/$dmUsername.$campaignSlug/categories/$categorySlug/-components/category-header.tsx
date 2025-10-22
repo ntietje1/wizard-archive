@@ -1,6 +1,6 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { FolderPlus, Plus, Edit } from '~/lib/icons'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { CategoryBreadcrumb } from './category-breadcrumb'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
 import type { Id } from 'convex/_generated/dataModel'
@@ -39,7 +39,6 @@ export function CategoryHeader({
       <div className="mb-6">
         <CategoryBreadcrumb
           config={config}
-          showBreadcrumbs={showBreadcrumbs}
           breadcrumbs={breadcrumbs}
           onNavigate={onNavigateBreadcrumb}
           isLoading={true}
@@ -62,7 +61,6 @@ export function CategoryHeader({
     <div className="mb-6">
       <CategoryBreadcrumb
         config={config}
-        showBreadcrumbs={showBreadcrumbs}
         breadcrumbs={breadcrumbs}
         onNavigate={onNavigateBreadcrumb}
         isLoading={isLoading}

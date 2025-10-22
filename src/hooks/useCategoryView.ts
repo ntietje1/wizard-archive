@@ -8,8 +8,10 @@ import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Tag, TagCategory } from 'convex/tags/types'
 import type { Folder } from 'convex/notes/types'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import usePersistedState from './usePersistedState'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
+import { getCategoryIcon } from '~/lib/category-icons'
+import type { LucideIcon } from 'lucide-react'
 
 export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
 
@@ -34,11 +36,15 @@ interface UseCategoryViewReturn {
   tags?: Tag[]
   folders?: Folder[]
   categoryData?: TagCategory
+  categoryConfig?: TagCategoryConfig
   isLoading: boolean
 
   breadcrumbs: Array<{ id: Id<'folders'>; name: string }>
   navigateToFolder: (folder: Folder) => void
   navigateToBreadcrumb: (index: number) => void
+
+  isAtRoot: boolean
+  hasContent: boolean
 }
 
 export function useCategoryView({
@@ -141,12 +147,21 @@ export function useCategoryView({
     const tagIdsAtLevel = new Set(
       sidebarItems.data
         .filter((item) => item.type === SIDEBAR_ITEM_TYPES.notes)
-        .map((item) => (item as any).tagId)
+        .map((item) => item?.tagId ?? undefined)
         .filter(Boolean),
     )
 
     return tagsQuery.data?.filter((tag) => tagIdsAtLevel.has(tag._id))
   }, [viewMode, sidebarItems.data, tagsQuery.data])
+
+  const categoryConfig: TagCategoryConfig | undefined = categoryQuery.data
+    ? {
+        singular: categoryQuery.data.displayName,
+        plural: categoryQuery.data.pluralDisplayName,
+        categorySlug: categoryQuery.data.slug,
+        icon: getCategoryIcon(categoryQuery.data.iconName),
+      }
+    : undefined
 
   const navigateToFolder = (folder: Folder) => {
     onNavigate(folder._id)
@@ -184,9 +199,12 @@ export function useCategoryView({
     tags: filteredTags,
     folders: viewMode === VIEW_MODE.folderized ? folders : undefined,
     categoryData: categoryQuery.data,
+    categoryConfig,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,
     isLoading,
+    isAtRoot: breadcrumbs.length === 0,
+    hasContent: (filteredTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
   }
 }

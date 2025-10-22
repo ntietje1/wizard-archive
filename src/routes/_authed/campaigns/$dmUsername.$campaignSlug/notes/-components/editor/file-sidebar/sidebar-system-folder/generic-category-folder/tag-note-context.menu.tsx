@@ -12,8 +12,8 @@ import { api } from 'convex/_generated/api'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { toast } from 'sonner'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
-import GenericTagDialog from '~/components/forms/category-tag-dialogs/generic-tag-dialog/generic-dialog'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Note } from 'convex/notes/types'
 
 export interface TagNoteContextMenuProps {

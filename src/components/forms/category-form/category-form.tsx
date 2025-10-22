@@ -6,49 +6,23 @@ import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/utils'
-import { ColorPicker } from '~/components/forms/category-tag-dialogs/base-tag-dialog/color-picker'
+import { ColorPicker } from '~/components/forms/category-tag-form/base-tag-form/color-picker'
 import {
   getCategoryIcon,
   getNonDefaultCategoryIcons,
 } from '~/lib/category-icons'
-import type { Id } from 'convex/_generated/dataModel'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { TagCategory } from 'convex/tags/types'
+import type { CategoryFormProps } from './types'
+import { isFormValid } from './validators'
 
-function isFormValid(
-  autoPluralize: boolean,
-  categoryName: string,
-  displayName: string,
-  pluralDisplayName: string,
-): boolean {
-  if (autoPluralize) {
-    return !!categoryName.trim()
-  }
-  return !!displayName.trim() && !!pluralDisplayName.trim()
-}
-
-type CreateCategoryFormProps = {
-  mode: 'create'
-  campaignId: Id<'campaigns'>
-  onClose: () => void
-}
-
-type EditCategoryFormProps = {
-  mode: 'edit'
-  category: TagCategory
-  onClose: () => void
-  onSuccess?: (newSlug: string) => void
-}
-
-type CategoryFormProps = CreateCategoryFormProps | EditCategoryFormProps
-
-export function CreateCategoryForm(props: CategoryFormProps) {
-  const { mode, onClose } = props
-  const isEditMode = mode === 'edit'
-  const category = isEditMode ? props.category : undefined
-  const campaignId = isEditMode ? props.category.campaignId : props.campaignId
-  const onSuccess = isEditMode ? props.onSuccess : undefined
+export function CategoryForm({
+  mode,
+  category,
+  campaignId,
+  onClose,
+  onSuccess,
+}: CategoryFormProps) {
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
@@ -112,6 +86,10 @@ export function CreateCategoryForm(props: CategoryFormProps) {
 
       try {
         if (mode === 'create') {
+          if (!campaignId) {
+            toast.error('Campaign ID is required')
+            return
+          }
           if (autoPluralize) {
             await createCategory.mutateAsync({
               campaignId: campaignId,

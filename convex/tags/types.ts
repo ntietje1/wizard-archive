@@ -72,6 +72,7 @@ export type Tag = {
   campaignId: Id<'campaigns'>
   categoryId: Id<'tagCategories'>
   category?: TagCategory
+  imageStorageId?: Id<'_storage'>
   noteId?: Id<'notes'>
   updatedAt: number
   createdBy: Id<'campaignMembers'>
