@@ -121,15 +121,6 @@ export function FileUploadSection({
         error={fileUpload.uploadError}
         shouldShowError={!!fileUpload.uploadError}
       />
-      {/* {fileUpload.uploadError && (
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-          <AlertCircle
-            size={16}
-            className="text-destructive mt-0.5 flex-shrink-0"
-          />
-          <p className="text-sm text-destructive">{fileUpload.uploadError}</p>
-        </div>
-      )} */}
 
       {/* Upload Progress */}
       {fileUpload.isUploading && (
@@ -151,9 +142,10 @@ export function FileUploadSection({
           className="max-w-4xl w-full p-0 border-0 bg-black/90 [&>button]:hidden"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {renderPreviewDialog(fileUpload.preview, () =>
-            setIsPreviewDialogOpen(false),
-          )}
+          {fileUpload.preview &&
+            renderPreviewDialog(fileUpload.preview, () =>
+              setIsPreviewDialogOpen(false),
+            )}
         </DialogContent>
       </Dialog>
     </div>

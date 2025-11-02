@@ -533,9 +533,14 @@ export const updateTagAndContent = async (
     updates.description = input.description
   }
   if (input.imageStorageId !== undefined) {
+    if (input.imageStorageId) {
+      const url = await ctx.storage.getUrl(input.imageStorageId)
+      if (!url) {
+        throw new Error('Invalid storage reference')
+      }
+    }
     updates.imageStorageId = input.imageStorageId
   }
-
   await ctx.db.patch(tagId, updates)
 
   if (updates.displayName !== undefined && tagNote) {

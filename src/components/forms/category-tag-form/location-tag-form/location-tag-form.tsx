@@ -22,11 +22,8 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Character } from 'convex/characters/types.ts'
-import {
-  defaultCharacterFormValues,
-  type CharacterFormValues,
-} from './types.ts'
+import type { Location } from 'convex/locations/types'
+import { defaultLocationFormValues, type LocationFormValues } from './types.ts'
 import {
   NameField,
   DescriptionField,
@@ -34,11 +31,10 @@ import {
   ImageUploadField,
   SubmitButtons,
 } from '../generic-tag-form/fields.tsx'
-import { PlayerField } from './fields.tsx'
 
-interface CharacterTagFormProps {
+interface LocationTagFormProps {
   mode: 'create' | 'edit'
-  character?: Character
+  location?: Location
   config: TagCategoryConfig
   navigateToNote?: boolean
   parentFolderId?: Id<'folders'>
@@ -46,38 +42,27 @@ interface CharacterTagFormProps {
   onClose: () => void
 }
 
-export default function CharacterTagForm({
+export default function LocationTagForm({
   mode,
-  character,
+  location,
   config,
   navigateToNote,
   parentFolderId,
   isOpen,
   onClose,
-}: CharacterTagFormProps) {
+}: LocationTagFormProps) {
   const router = useRouter()
   const convex = useConvex()
   const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
-    mutationFn: useConvexMutation(api.characters.mutations.createCharacter),
+    mutationFn: useConvexMutation(api.locations.mutations.createLocation),
   })
 
-  const updateCharacterMutation = useMutation({
-    mutationFn: useConvexMutation(api.characters.mutations.updateCharacter),
+  const updateMutation = useMutation({
+    mutationFn: useConvexMutation(api.locations.mutations.updateLocation),
   })
-
-  const playersQuery = useQuery(
-    convexQuery(
-      api.campaigns.queries.getPlayersByCampaign,
-      campaign?._id
-        ? {
-            campaignId: campaign?._id,
-          }
-        : 'skip',
-    ),
-  )
 
   const getCategory = useQuery(
     convexQuery(
@@ -93,7 +78,7 @@ export default function CharacterTagForm({
 
   const imageUpload = useFileWithPreview({
     isOpen,
-    fileStorageId: character?.imageStorageId,
+    fileStorageId: location?.imageStorageId,
     uploadOnSelect: true,
     fileTypeValidator: (file: File) => {
       if (!file.type.startsWith('image/')) {
@@ -103,22 +88,21 @@ export default function CharacterTagForm({
     },
   })
 
-  const getInitialValues = useCallback((): CharacterFormValues => {
-    if (mode === 'edit' && character) {
+  const getInitialValues = useCallback((): LocationFormValues => {
+    if (mode === 'edit' && location) {
       return {
-        name: character.displayName,
-        description: character.description || '',
-        color: character.color,
-        playerId: character.playerId || undefined,
+        name: location.displayName,
+        description: location.description || '',
+        color: location.color,
       }
     } else {
       return {
-        ...defaultCharacterFormValues,
+        ...defaultLocationFormValues,
         color:
-          getCategory.data?.defaultColor || defaultCharacterFormValues.color,
+          getCategory.data?.defaultColor || defaultLocationFormValues.color,
       }
     }
-  }, [character, getCategory.data, mode])
+  }, [location, getCategory.data, mode])
 
   const form = useForm({
     defaultValues: getInitialValues(),
@@ -129,9 +113,9 @@ export default function CharacterTagForm({
 
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, character?._id, getInitialValues])
+  }, [mode, location?._id, getInitialValues])
 
-  async function handleSubmit(value: CharacterFormValues) {
+  async function handleSubmit(value: LocationFormValues) {
     if (!campaign) {
       toast.error('Campaign not found')
       return
@@ -149,8 +133,8 @@ export default function CharacterTagForm({
         try {
           imageStorageId = await imageUpload.handleSubmit()
         } catch (error) {
-          toast.error('Failed to upload image')
           console.error('Failed to upload image:', error)
+          toast.error('Failed to upload image')
           return
         }
       }
@@ -165,7 +149,6 @@ export default function CharacterTagForm({
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
           parentFolderId,
-          playerId: value.playerId || undefined,
         })
 
         if (navigateToNote && result.noteId) {
@@ -186,14 +169,13 @@ export default function CharacterTagForm({
 
         toast.success(`${config.singular} created successfully`)
         onClose()
-      } else if (mode === 'edit' && character) {
-        await updateCharacterMutation.mutateAsync({
-          characterId: character.characterId,
+      } else if (mode === 'edit' && location) {
+        await updateMutation.mutateAsync({
+          locationId: location.locationId,
           displayName: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color,
           imageStorageId: imageStorageId,
-          playerId: value.playerId || undefined,
         })
 
         toast.success(`${config.singular} updated successfully`)
@@ -231,7 +213,7 @@ export default function CharacterTagForm({
               campaign._id,
               getCategory.data._id,
               value,
-              mode === 'edit' && character ? character.tagId : undefined,
+              mode === 'edit' && location ? location.tagId : undefined,
             )
           },
           onChangeAsyncDebounceMs: 300,
@@ -266,17 +248,6 @@ export default function CharacterTagForm({
       {/* Color Picker */}
       <form.Field name="color">
         {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
-      </form.Field>
-
-      {/* Player */}
-      <form.Field name="playerId">
-        {(field) => (
-          <PlayerField
-            field={field}
-            players={playersQuery.data || []}
-            isDisabled={isFormDisabled}
-          />
-        )}
       </form.Field>
 
       {/* Image Upload Section */}

@@ -28,6 +28,7 @@ export function validateTagName(
 export async function validateTagNameAsync(
   convex: ConvexReactClient,
   campaignId: Id<'campaigns'>,
+  categoryId: Id<'tagCategories'>,
   displayName: string,
   excludeTagId?: Id<'tags'>,
 ): Promise<string | undefined> {
@@ -36,6 +37,7 @@ export async function validateTagNameAsync(
 
   const exists = await convex.query(api.tags.queries.checkTagNameExists, {
     campaignId,
+    categoryId,
     tagName: displayName.trim(),
     excludeTagId,
   })

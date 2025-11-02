@@ -7,14 +7,14 @@ import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 
 export interface CharacterFormValues extends BaseTagFormValues {
-  playerId?: Id<'campaignMembers'> | ''
+  playerId?: Id<'campaignMembers'>
 }
 
 export const defaultCharacterFormValues: CharacterFormValues = {
   name: '',
   description: '',
   color: '#ef4444',
-  playerId: '',
+  playerId: undefined,
 }
 
 export const CHARACTER_CONFIG: TagCategoryConfig = {

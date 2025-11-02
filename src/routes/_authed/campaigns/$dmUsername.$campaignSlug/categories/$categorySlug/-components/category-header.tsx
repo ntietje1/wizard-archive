@@ -8,7 +8,6 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 
 interface CategoryHeaderProps {
   config?: TagCategoryConfig
-  showBreadcrumbs?: boolean
   breadcrumbs?: FolderAncestor[]
   onNavigateBreadcrumb: (index: number) => void
   showFolderActions?: boolean
@@ -23,7 +22,6 @@ interface CategoryHeaderProps {
 
 export function CategoryHeader({
   config,
-  showBreadcrumbs,
   breadcrumbs,
   onNavigateBreadcrumb,
   onCreateFolder,
@@ -69,7 +67,7 @@ export function CategoryHeader({
         categoryId={categoryId}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 pl-1">
         <p className="text-muted-foreground">
           Manage {config.plural.toLowerCase()} for your campaign. Each{' '}
           {config.singular.toLowerCase()} automatically creates a tag that can

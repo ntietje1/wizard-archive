@@ -118,6 +118,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       reader.readAsDataURL(file)
 
       if (uploadOnSelect) {
+        setIsUploading(true)
         uploadFile
           .mutateAsync(file)
           .then((uploadedStorageId) => {
@@ -128,6 +129,9 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
             setUploadError(
               error instanceof Error ? error.message : 'Upload failed',
             )
+          })
+          .finally(() => {
+            setIsUploading(false)
           })
       }
 
@@ -170,8 +174,11 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   const handleSubmit = useCallback(async (): Promise<Id<'_storage'>> => {
     if (uploadOnSelect) {
       // file should already have been uploaded, just commit
-      if (!storageId) {
+      if (isUploading) {
         throw new Error('File is still uploading, please wait')
+      }
+      if (!storageId) {
+        throw new Error('No file uploaded')
       }
       await commitUpload.mutateAsync({ storageId })
       return storageId
@@ -191,7 +198,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setStorageId(uploadedStorageId)
       return uploadedStorageId
     }
-  }, [file, verifyFile, handleUpload, uploadOnSelect, storageId, commitUpload])
+  }, [file, handleUpload, uploadOnSelect, storageId, commitUpload, isUploading])
 
   return {
     file,

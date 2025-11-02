@@ -64,13 +64,13 @@ export const useFileUpload = () => {
                 storageId: string
               }
               const storageId = response.storageId as unknown as Id<'_storage'>
-              setUploadProgress({ loaded: 0, total: 0, percentage: 0 })
-              resolve(storageId)
               try {
                 await trackUploadMutation.mutateAsync({ storageId })
+                setUploadProgress({ loaded: 0, total: 0, percentage: 0 })
+                resolve(storageId)
               } catch (error) {
                 console.error('Failed to track upload', error)
-                reject(new Error('Failed to upload'))
+                reject(new Error('Failed to track upload'))
               }
             } catch (error) {
               reject(new Error('Failed to parse upload response'))
@@ -79,7 +79,6 @@ export const useFileUpload = () => {
             reject(new Error(`Upload failed with status ${xhr.status}`))
           }
         })
-
         xhr.addEventListener('error', () => {
           setUploadProgress({ loaded: 0, total: 0, percentage: 0 })
           reject(new Error('Upload failed'))

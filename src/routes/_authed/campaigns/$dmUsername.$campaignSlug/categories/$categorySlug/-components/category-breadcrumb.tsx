@@ -73,7 +73,7 @@ export function CategoryBreadcrumb({
                   </button>
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbPage className="font-bold text-foreground">
+                <BreadcrumbPage className="font-bold text-foreground text-3xl">
                   {config.plural}
                 </BreadcrumbPage>
               )}

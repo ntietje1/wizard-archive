@@ -1,4 +1,3 @@
-import LocationDialog from '~/components/forms/category-tag-dialogs/location-tag-dialog/location-dialog'
 import {
   CategoryContextMenu,
   type CategoryContextMenuProps,
@@ -12,6 +11,7 @@ import type {
   ContextMenuRef,
 } from '~/components/context-menu/context-menu'
 import { useFolderState } from '~/hooks/useFolderState'
+import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 
 export const LocationCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -70,7 +70,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
       >
         {children}
       </CategoryContextMenu>
-      <LocationDialog
+      <LocationTagDialog
         mode="create"
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}

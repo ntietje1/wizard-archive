@@ -5,7 +5,7 @@ import { CharacterNoteContextMenu } from './character-system-folder/character-no
 import { LocationCategoryFolderContextMenu } from './location-system-folder/location-category-context-menu'
 import { LocationNoteContextMenu } from './location-system-folder/location-note-context-menu'
 import { CHARACTER_CONFIG } from '~/components/forms/category-tag-form/character-tag-form/types'
-import { LOCATION_CONFIG } from '~/components/forms/category-tag-dialogs/location-tag-dialog/types'
+import { LOCATION_CONFIG } from '~/components/forms/category-tag-form/location-tag-form/types'
 import { SessionSystemFolder } from './session-system-folder/session-system-folder'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useQuery } from '@tanstack/react-query'

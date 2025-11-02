@@ -11,9 +11,10 @@ import type { Folder } from 'convex/notes/types'
 import usePersistedState from './usePersistedState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { getCategoryIcon } from '~/lib/category-icons'
-import type { LucideIcon } from 'lucide-react'
+import { CATEGORY_KIND } from 'convex/tags/types'
 
 export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
+export const CATEGORY_SKELETON_COUNT_STORAGE_KEY = 'category-skeleton-count'
 
 export const VIEW_MODE = {
   flat: 'flat',
@@ -25,8 +26,8 @@ export type FolderAncestor = { id: Id<'folders'>; name: string }
 
 interface UseCategoryViewOptions {
   categorySlug: string
-  currentFolderId?: string
-  onNavigate: (folderId: string | undefined) => void
+  currentFolderId?: Id<'folders'>
+  onNavigate: (folderId?: Id<'folders'>) => void
 }
 
 interface UseCategoryViewReturn {
@@ -37,6 +38,8 @@ interface UseCategoryViewReturn {
   folders?: Folder[]
   categoryData?: TagCategory
   categoryConfig?: TagCategoryConfig
+  campaignId?: Id<'campaigns'>
+  canEditCategory: boolean
   isLoading: boolean
 
   breadcrumbs: Array<{ id: Id<'folders'>; name: string }>
@@ -45,6 +48,9 @@ interface UseCategoryViewReturn {
 
   isAtRoot: boolean
   hasContent: boolean
+  showSkeletons: boolean
+  skeletonCount: number
+  invalidFolderId: boolean
 }
 
 export function useCategoryView({
@@ -58,6 +64,11 @@ export function useCategoryView({
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     `${CATEGORY_VIEW_MODE_STORAGE_KEY}-${categorySlug}`,
     VIEW_MODE.folderized,
+  )
+
+  const [skeletonCount] = usePersistedState<number>(
+    `${CATEGORY_SKELETON_COUNT_STORAGE_KEY}-${categorySlug}`,
+    6,
   )
 
   const ancestorsQuery = useQuery(
@@ -127,7 +138,7 @@ export function useCategoryView({
 
   const sidebarItems = useSidebarItems(
     categoryQuery.data?._id,
-    currentFolderId as Id<'folders'> | undefined,
+    currentFolderId,
     viewMode === VIEW_MODE.folderized,
   )
 
@@ -163,6 +174,29 @@ export function useCategoryView({
       }
     : undefined
 
+  const canEditCategory = categoryQuery.data?.kind === CATEGORY_KIND.User
+
+  const invalidFolderId =
+    sidebarItems.status === 'error' ||
+    ancestorsQuery.status === 'error' ||
+    currentFolderQuery.status === 'error'
+
+  const isLoading =
+    campaignWithMembership.status === 'pending' ||
+    categoryQuery.status === 'pending' ||
+    tagsQuery.status === 'pending' ||
+    (viewMode === VIEW_MODE.folderized && invalidFolderId) ||
+    (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
+    (viewMode === VIEW_MODE.folderized &&
+      !!currentFolderId &&
+      (ancestorsQuery.status === 'pending' ||
+        currentFolderQuery.status === 'pending'))
+
+  const showSkeletons = isLoading || !categoryConfig
+
+  // Reset skeletonCount to 0 while loading from localStorage
+  const effectiveSkeletonCount = isLoading ? 0 : skeletonCount
+
   const navigateToFolder = (folder: Folder) => {
     onNavigate(folder._id)
   }
@@ -183,16 +217,6 @@ export function useCategoryView({
     onNavigate(undefined)
   }
 
-  const isLoading =
-    campaignWithMembership.status === 'pending' ||
-    categoryQuery.status === 'pending' ||
-    tagsQuery.status === 'pending' ||
-    (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
-    (viewMode === VIEW_MODE.folderized &&
-      !!currentFolderId &&
-      (ancestorsQuery.status === 'pending' ||
-        currentFolderQuery.status === 'pending'))
-
   return {
     viewMode,
     toggleViewMode,
@@ -200,11 +224,16 @@ export function useCategoryView({
     folders: viewMode === VIEW_MODE.folderized ? folders : undefined,
     categoryData: categoryQuery.data,
     categoryConfig,
+    campaignId: campaign?._id,
+    canEditCategory,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,
     isLoading,
     isAtRoot: breadcrumbs.length === 0,
     hasContent: (filteredTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
+    showSkeletons,
+    skeletonCount: effectiveSkeletonCount,
+    invalidFolderId,
   }
 }

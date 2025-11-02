@@ -1,7 +1,7 @@
 import type {
   BaseTagFormValues,
   TagCategoryConfig,
-} from '../../category-tag-form/base-tag-form/types'
+} from '../base-tag-form/types'
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 

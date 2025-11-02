@@ -27,7 +27,7 @@ export function TagFormDialog({
       description={
         mode === 'create'
           ? `Add a new ${config.singular.toLowerCase()} to your campaign.`
-          : `Update ${config.singular.toLowerCase()} details`
+          : `Update ${config.singular.toLowerCase()} details.`
       }
       icon={config.icon}
     >

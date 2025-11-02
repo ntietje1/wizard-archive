@@ -1,11 +1,11 @@
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from './file-upload-section'
-import { useState } from 'react'
 
 interface PdfPreviewProps {
   previewUrl: string
 }
 
+//TODO: fix file name
 function PdfPreview({ previewUrl: _previewUrl }: PdfPreviewProps) {
   const fileName = 'document.pdf'
 
@@ -36,15 +36,11 @@ function PdfPreviewDialog({
   previewUrl,
   onClose,
 }: PdfPreviewProps & { onClose: () => void }) {
-  const [isDownloading, setIsDownloading] = useState(false)
-
   const handleDownload = () => {
-    setIsDownloading(true)
     const link = document.createElement('a')
     link.href = previewUrl
     link.download = 'document.pdf'
     link.click()
-    setIsDownloading(false)
     onClose()
   }
 
@@ -80,10 +76,9 @@ function PdfPreviewDialog({
 
       <button
         onClick={handleDownload}
-        disabled={isDownloading}
         className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
       >
-        {isDownloading ? 'Downloading...' : 'Download PDF'}
+        Download PDF
       </button>
 
       <p className="text-xs text-muted-foreground text-center">

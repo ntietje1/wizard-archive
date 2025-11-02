@@ -4,6 +4,7 @@ import {
   deleteTagAndCleanupContent,
   getTag,
   insertTagAndNote,
+  updateTagAndContent,
 } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
@@ -47,6 +48,10 @@ export const createLocation = mutation({
 export const updateLocation = mutation({
   args: {
     locationId: v.id('locations'),
+    displayName: v.optional(v.string()),
+    description: v.optional(v.string()),
+    color: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
   },
   returns: v.id('locations'),
   handler: async (ctx, args): Promise<Id<'locations'>> => {
@@ -61,9 +66,20 @@ export const updateLocation = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    await ctx.db.patch(args.locationId, {
-      // put location specific fields here
-    })
+    // Update tag fields if provided
+    if (
+      args.displayName !== undefined ||
+      args.description !== undefined ||
+      args.color !== undefined ||
+      args.imageStorageId !== undefined
+    ) {
+      await updateTagAndContent(ctx, location.tagId, {
+        displayName: args.displayName,
+        description: args.description,
+        color: args.color,
+        imageStorageId: args.imageStorageId,
+      })
+    }
 
     return args.locationId
   },

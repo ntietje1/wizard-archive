@@ -39,9 +39,6 @@ export const commitUpload = mutation({
     if (!fileStorage) {
       throw new Error('File storage not found')
     }
-    if (fileStorage.userId !== profile._id) {
-      throw new Error('File storage not found')
-    }
     return await ctx.db.patch(fileStorage._id, {
       status: FILE_STORAGE_STATUS.Committed,
       updatedAt: Date.now(),

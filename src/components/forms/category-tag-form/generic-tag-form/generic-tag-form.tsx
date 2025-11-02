@@ -13,24 +13,24 @@ import {
   validateTagName,
   validateTagNameAsync,
 } from './validators.ts'
-import { Label } from '~/components/shadcn/ui/label'
-import { Input } from '~/components/shadcn/ui/input'
-import { ColorPicker } from '../base-tag-form/color-picker.tsx'
-import { Button } from '~/components/shadcn/ui/button.tsx'
-import { Textarea } from '~/components/shadcn/ui/textarea'
 import {
   MAX_NAME_LENGTH,
   MAX_DESCRIPTION_LENGTH,
   defaultBaseFormValues,
   type BaseTagFormValues,
 } from '../base-tag-form/types.ts'
-import { ImageUploadSection } from '~/components/file-upload/image-upload-section.tsx'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import { ErrorAlertAndCharacterCount } from '../base-tag-form/error-alert.tsx'
 import type { GenericTagFormProps } from './types.ts'
+import {
+  NameField,
+  DescriptionField,
+  ColorField,
+  ImageUploadField,
+  SubmitButtons,
+} from './fields.tsx'
 
 export default function GenericTagForm({
   mode,
@@ -103,7 +103,7 @@ export default function GenericTagForm({
 
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, tag?._id, getInitialValues, form])
+  }, [mode, tag?._id, getInitialValues])
 
   async function handleSubmit(value: BaseTagFormValues) {
     if (!campaign) {
@@ -124,6 +124,7 @@ export default function GenericTagForm({
           imageStorageId = await imageUpload.handleSubmit()
         } catch (error) {
           console.error('Failed to upload image:', error)
+          toast.error('Failed to upload image')
           return
         }
       }
@@ -157,7 +158,6 @@ export default function GenericTagForm({
         }
 
         toast.success(`${config.singular} created successfully`)
-        onClose()
       } else if (mode === 'edit' && tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
@@ -168,13 +168,14 @@ export default function GenericTagForm({
         })
 
         toast.success(`${config.singular} updated successfully`)
-        onClose()
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)
       toast.error(`Failed to ${mode} ${config.singular.toLowerCase()}`)
     }
   }
+
+  const isFormDisabled = form.state.isSubmitting || imageUpload.isUploading
 
   return (
     <form
@@ -194,10 +195,11 @@ export default function GenericTagForm({
           onChange: ({ value }: { value: string }) =>
             validateTagName(value, MAX_NAME_LENGTH),
           onChangeAsync: async ({ value }: { value: string }) => {
-            if (!campaign) return undefined
+            if (!campaign || !getCategory.data) return undefined
             return validateTagNameAsync(
               convex,
               campaign._id,
+              getCategory.data._id,
               value,
               mode === 'edit' && tag ? tag._id : undefined,
             )
@@ -206,32 +208,11 @@ export default function GenericTagForm({
         }}
       >
         {(field) => (
-          <div className="space-y-2">
-            <Label
-              htmlFor={`${config.singular.toLowerCase()}-name`}
-              className="text-sm font-semibold"
-            >
-              {config.singular} Name *
-            </Label>
-            <Input
-              id={`${config.singular.toLowerCase()}-name`}
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              placeholder={`Enter ${config.singular.toLowerCase()} name...`}
-              maxLength={MAX_NAME_LENGTH}
-              disabled={form.state.isSubmitting || imageUpload.isUploading}
-              className="transition-colors"
-            />
-            <ErrorAlertAndCharacterCount
-              error={field.state.meta.errors[0]}
-              shouldShowError={
-                field.state.meta.errors.length > 0 && field.state.meta.isTouched
-              }
-              characterCount={field.state.value.length}
-              maxCharCount={MAX_NAME_LENGTH}
-            />
-          </div>
+          <NameField
+            field={field}
+            config={config}
+            isDisabled={isFormDisabled}
+          />
         )}
       </form.Field>
 
@@ -244,53 +225,22 @@ export default function GenericTagForm({
         }}
       >
         {(field) => (
-          <div className="space-y-2">
-            <Label
-              htmlFor={`${config.singular.toLowerCase()}-description`}
-              className="text-sm font-semibold"
-            >
-              Description
-            </Label>
-            <Textarea
-              id={`${config.singular.toLowerCase()}-description`}
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              placeholder={`Describe this ${config.singular.toLowerCase()}...`}
-              maxLength={MAX_DESCRIPTION_LENGTH}
-              disabled={form.state.isSubmitting || imageUpload.isUploading}
-              className="resize-none"
-            />
-            <ErrorAlertAndCharacterCount
-              error={field.state.meta.errors[0]}
-              shouldShowError={
-                field.state.meta.errors.length > 0 && field.state.meta.isTouched
-              }
-              characterCount={field.state.value.length}
-              maxCharCount={MAX_DESCRIPTION_LENGTH}
-            />
-          </div>
+          <DescriptionField
+            field={field}
+            config={config}
+            isDisabled={isFormDisabled}
+          />
         )}
       </form.Field>
 
       {/* Color Picker */}
       <form.Field name="color">
-        {(field) => (
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Tag Color</Label>
-            <ColorPicker
-              selectedColor={field.state.value}
-              onColorChange={(color) => field.handleChange(color)}
-              disabled={form.state.isSubmitting || imageUpload.isUploading}
-              aria-labelledby="color-picker-label"
-            />
-          </div>
-        )}
+        {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
       </form.Field>
 
       {/* Image Upload Section */}
-      <ImageUploadSection
-        label={`Image`}
+      <ImageUploadField
+        label="Image"
         fileUpload={imageUpload}
         isSubmitting={form.state.isSubmitting}
         handleFileSelect={imageUpload.handleFileSelect}
@@ -305,31 +255,14 @@ export default function GenericTagForm({
       >
         {({ canSubmit, isSubmitting }) => {
           return (
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting || imageUpload.isUploading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!canSubmit || isSubmitting || imageUpload.isUploading}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
-                    {mode === 'create' ? 'Creating...' : 'Updating...'}
-                  </>
-                ) : mode === 'create' ? (
-                  'Create'
-                ) : (
-                  'Update'
-                )}
-              </Button>
-            </div>
+            <SubmitButtons
+              mode={mode}
+              isSubmitting={isSubmitting}
+              canSubmit={canSubmit}
+              imageUpload={imageUpload}
+              nameValue={form.state.values.name}
+              onClose={onClose}
+            />
           )
         }}
       </form.Subscribe>

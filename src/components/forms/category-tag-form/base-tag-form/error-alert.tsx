@@ -1,14 +1,21 @@
 import { AlertCircle } from 'lucide-react'
 
 interface ErrorAlertProps {
-  error?: string
+  error?: string | Error
   shouldShowError: boolean
 }
+
+const getErrorMessage = (error: string | Error | undefined): string => {
+  if (!error) return 'An error occurred'
+  if (typeof error === 'string') return error
+  return 'Something went wrong. Please try again.'
+}
+
 export const ErrorAlert = ({ error, shouldShowError }: ErrorAlertProps) => {
   return shouldShowError ? (
     <p className="text-sm text-red-500 flex items-center gap-1 flex-1">
       <AlertCircle size={14} />
-      {error || 'An error occurred'}
+      {getErrorMessage(error)}
     </p>
   ) : null
 }
@@ -29,7 +36,7 @@ export const ErrorAlertAndCharacterCount = ({
       {shouldShowError ? (
         <p className="text-sm text-red-500 flex items-center gap-1 flex-1">
           <AlertCircle size={14} />
-          {error}
+          {getErrorMessage(error)}
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">

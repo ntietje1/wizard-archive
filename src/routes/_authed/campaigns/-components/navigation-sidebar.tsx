@@ -6,8 +6,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
-import { CategoryForm } from '../../../../components/forms/category-form/category-form'
 import {
   CATEGORY_KIND,
   SYSTEM_DEFAULT_CATEGORIES,
