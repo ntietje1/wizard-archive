@@ -8,6 +8,7 @@ import { locationTables } from './locations/schema'
 import { tagTables } from './tags/schema'
 import { sessionTables } from './sessions/schema'
 import { shareTables } from './shares/schema'
+import { fileStorageTables } from './storage/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -19,4 +20,5 @@ export default defineSchema({
   ...tagTables,
   ...sessionTables,
   ...shareTables,
+  ...fileStorageTables,
 })

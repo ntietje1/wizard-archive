@@ -3,13 +3,13 @@
     "**/*.ts",
     "**/*.tsx",
     "public/script*.js",
-    "src/components/forms/category-tag-dialogs/generic-tag-dialog"
+    "src/components/forms/category-tag-form/generic-tag-form"
   ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
     "types": ["vite/client"],
 
     /* Bundler mode */

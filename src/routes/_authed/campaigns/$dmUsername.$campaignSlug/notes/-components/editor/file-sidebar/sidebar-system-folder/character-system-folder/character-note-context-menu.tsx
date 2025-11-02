@@ -9,7 +9,6 @@ export const CharacterNoteContextMenu = forwardRef<
   ContextMenuRef,
   TagNoteContextMenuProps
 >(({ children, noteWithTag, categoryConfig, ...props }, ref) => {
-  // const character = useQuery(convexQuery(api.characters.queries.getCharacterByTagId, { tagId: tag._id }));
   return (
     <TagNoteContextMenu
       ref={ref}

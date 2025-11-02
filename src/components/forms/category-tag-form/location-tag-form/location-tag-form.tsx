@@ -1,0 +1,283 @@
+import { useCallback, useEffect } from 'react'
+import { useRouter } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  convexQuery,
+  useConvex,
+  useConvexMutation,
+} from '@convex-dev/react-query'
+import { useForm } from '@tanstack/react-form'
+import {
+  validateTagDescription,
+  validateTagName,
+  validateTagNameAsync,
+} from '../generic-tag-form/validators.ts'
+import {
+  MAX_NAME_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  type TagCategoryConfig,
+} from '../base-tag-form/types.ts'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
+import { toast } from 'sonner'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Location } from 'convex/locations/types'
+import { defaultLocationFormValues, type LocationFormValues } from './types.ts'
+import {
+  NameField,
+  DescriptionField,
+  ColorField,
+  ImageUploadField,
+  SubmitButtons,
+} from '../generic-tag-form/fields.tsx'
+
+interface LocationTagFormProps {
+  mode: 'create' | 'edit'
+  location?: Location
+  config: TagCategoryConfig
+  navigateToNote?: boolean
+  parentFolderId?: Id<'folders'>
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function LocationTagForm({
+  mode,
+  location,
+  config,
+  navigateToNote,
+  parentFolderId,
+  isOpen,
+  onClose,
+}: LocationTagFormProps) {
+  const router = useRouter()
+  const convex = useConvex()
+  const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+
+  const createMutation = useMutation({
+    mutationFn: useConvexMutation(api.locations.mutations.createLocation),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: useConvexMutation(api.locations.mutations.updateLocation),
+  })
+
+  const getCategory = useQuery(
+    convexQuery(
+      api.tags.queries.getTagCategoryBySlug,
+      campaign?._id
+        ? {
+            campaignId: campaign?._id,
+            slug: config.categorySlug,
+          }
+        : 'skip',
+    ),
+  )
+
+  const imageUpload = useFileWithPreview({
+    isOpen,
+    fileStorageId: location?.imageStorageId,
+    uploadOnSelect: true,
+    fileTypeValidator: (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        return { success: false, error: 'Only image files are allowed' }
+      }
+      return { success: true }
+    },
+  })
+
+  const getInitialValues = useCallback((): LocationFormValues => {
+    if (mode === 'edit' && location) {
+      return {
+        name: location.displayName,
+        description: location.description || '',
+        color: location.color,
+      }
+    } else {
+      return {
+        ...defaultLocationFormValues,
+        color:
+          getCategory.data?.defaultColor || defaultLocationFormValues.color,
+      }
+    }
+  }, [location, getCategory.data, mode])
+
+  const form = useForm({
+    defaultValues: getInitialValues(),
+    onSubmit: async ({ value }) => {
+      await handleSubmit(value)
+    },
+  })
+
+  useEffect(() => {
+    form.reset(getInitialValues())
+  }, [mode, location?._id, getInitialValues])
+
+  async function handleSubmit(value: LocationFormValues) {
+    if (!campaign) {
+      toast.error('Campaign not found')
+      return
+    }
+
+    if (!getCategory.data) {
+      toast.error(`Category not found`)
+      return
+    }
+
+    try {
+      let imageStorageId: Id<'_storage'> | undefined = undefined
+
+      if (imageUpload.file) {
+        try {
+          imageStorageId = await imageUpload.handleSubmit()
+        } catch (error) {
+          console.error('Failed to upload image:', error)
+          toast.error('Failed to upload image')
+          return
+        }
+      }
+
+      if (mode === 'create') {
+        const result = await createMutation.mutateAsync({
+          displayName: value.name.trim(),
+          name: value.name.trim(),
+          description: value.description.trim() || undefined,
+          color: value.color,
+          imageStorageId: imageStorageId,
+          campaignId: campaign._id,
+          categoryId: getCategory.data._id,
+          parentFolderId,
+        })
+
+        if (navigateToNote && result.noteId) {
+          const note = await convex.query(api.notes.queries.getNote, {
+            noteId: result.noteId,
+          })
+          if (note?.slug) {
+            router.navigate({
+              to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
+              params: {
+                dmUsername,
+                campaignSlug,
+                noteSlug: note.slug,
+              },
+            })
+          }
+        }
+
+        toast.success(`${config.singular} created successfully`)
+        onClose()
+      } else if (mode === 'edit' && location) {
+        await updateMutation.mutateAsync({
+          locationId: location.locationId,
+          displayName: value.name.trim(),
+          description: value.description.trim() || undefined,
+          color: value.color,
+          imageStorageId: imageStorageId,
+        })
+
+        toast.success(`${config.singular} updated successfully`)
+        onClose()
+      }
+    } catch (error) {
+      console.error(`Failed to ${mode} tag:`, error)
+      toast.error(`Failed to ${mode} ${config.singular.toLowerCase()}`)
+    }
+  }
+
+  const isFormDisabled = form.state.isSubmitting || imageUpload.isUploading
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        form.handleSubmit()
+      }}
+      className="space-y-4"
+    >
+      {/* Name Field */}
+      <form.Field
+        name="name"
+        validators={{
+          onMount: ({ value }: { value: string }) =>
+            validateTagName(value, MAX_NAME_LENGTH),
+          onChange: ({ value }: { value: string }) =>
+            validateTagName(value, MAX_NAME_LENGTH),
+          onChangeAsync: async ({ value }: { value: string }) => {
+            if (!campaign || !getCategory.data) return undefined
+            return validateTagNameAsync(
+              convex,
+              campaign._id,
+              getCategory.data._id,
+              value,
+              mode === 'edit' && location ? location.tagId : undefined,
+            )
+          },
+          onChangeAsyncDebounceMs: 300,
+        }}
+      >
+        {(field) => (
+          <NameField
+            field={field}
+            config={config}
+            isDisabled={isFormDisabled}
+          />
+        )}
+      </form.Field>
+
+      {/* Description Field */}
+      <form.Field
+        name="description"
+        validators={{
+          onChange: ({ value }: { value: string }) =>
+            validateTagDescription(value, MAX_DESCRIPTION_LENGTH),
+        }}
+      >
+        {(field) => (
+          <DescriptionField
+            field={field}
+            config={config}
+            isDisabled={isFormDisabled}
+          />
+        )}
+      </form.Field>
+
+      {/* Color Picker */}
+      <form.Field name="color">
+        {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
+      </form.Field>
+
+      {/* Image Upload Section */}
+      <ImageUploadField
+        label="Image"
+        fileUpload={imageUpload}
+        isSubmitting={form.state.isSubmitting}
+        handleFileSelect={imageUpload.handleFileSelect}
+      />
+
+      {/* Submit Buttons */}
+      <form.Subscribe
+        selector={(s: { canSubmit: boolean; isSubmitting: boolean }) => ({
+          canSubmit: s.canSubmit,
+          isSubmitting: s.isSubmitting,
+        })}
+      >
+        {({ canSubmit, isSubmitting }) => {
+          return (
+            <SubmitButtons
+              mode={mode}
+              isSubmitting={isSubmitting}
+              canSubmit={canSubmit}
+              imageUpload={imageUpload}
+              nameValue={form.state.values.name}
+              onClose={onClose}
+            />
+          )
+        }}
+      </form.Subscribe>
+    </form>
+  )
+}

@@ -1,4 +1,3 @@
-import CharacterDialog from '~/components/forms/category-tag-dialogs/character-tag-dialog/character-dialog'
 import {
   CategoryContextMenu,
   type CategoryContextMenuProps,
@@ -12,6 +11,7 @@ import type {
   ContextMenuRef,
 } from '~/components/context-menu/context-menu'
 import { useFolderState } from '~/hooks/useFolderState'
+import CharacterTagDialog from '~/components/forms/category-tag-form/character-tag-form/character-tag-dialog'
 
 export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -70,7 +70,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
       >
         {children}
       </CategoryContextMenu>
-      <CharacterDialog
+      <CharacterTagDialog
         mode="create"
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}

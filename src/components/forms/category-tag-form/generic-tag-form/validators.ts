@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { ConvexReactClient } from 'convex/react'
 import type { Id } from 'convex/_generated/dataModel'
-import { MAX_NAME_LENGTH } from '../base-tag-dialog/types'
+import { MAX_NAME_LENGTH } from '../base-tag-form/types'
 
 export function validateTagDescription(
   value: string,
@@ -28,6 +28,7 @@ export function validateTagName(
 export async function validateTagNameAsync(
   convex: ConvexReactClient,
   campaignId: Id<'campaigns'>,
+  categoryId: Id<'tagCategories'>,
   displayName: string,
   excludeTagId?: Id<'tags'>,
 ): Promise<string | undefined> {
@@ -36,6 +37,7 @@ export async function validateTagNameAsync(
 
   const exists = await convex.query(api.tags.queries.checkTagNameExists, {
     campaignId,
+    categoryId,
     tagName: displayName.trim(),
     excludeTagId,
   })

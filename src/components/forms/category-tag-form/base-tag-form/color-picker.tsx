@@ -1,4 +1,5 @@
 import { Check } from '~/lib/icons'
+import { cn } from '~/lib/utils'
 
 const DEFAULT_COLORS = [
   '#ef4444', // red
@@ -37,12 +38,15 @@ export function ColorPicker({
         >
           {colors.map((color) => (
             <button
-              id={`color-picker-${color}`}
+              id={`color-picker-${color.replace('#', '')}`}
               key={color}
               type="button"
               onClick={() => onColorChange(color)}
               disabled={disabled}
-              className="w-8 h-8 rounded-full border-2 border-slate-200 hover:border-slate-300 transition-colors relative flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 hover:scale-110 transform duration-150"
+              className={cn(
+                'w-8 h-8 rounded-full border-2 border-slate-200 hover:border-slate-300 transition-colors relative flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 hover:scale-110 transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600',
+                selectedColor === color && 'border-slate-300',
+              )}
               style={{ backgroundColor: color }}
               role="radio"
               aria-checked={selectedColor === color}

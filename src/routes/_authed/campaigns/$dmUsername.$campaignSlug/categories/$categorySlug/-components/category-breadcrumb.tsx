@@ -7,7 +7,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '~/components/shadcn/ui/breadcrumb'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Switch } from '~/components/shadcn/ui/switch'
@@ -16,7 +16,6 @@ import { BreadcrumbDropZone } from './breadcrumb-drop-zone'
 
 interface CategoryBreadcrumbProps {
   config?: TagCategoryConfig
-  showBreadcrumbs?: boolean
   breadcrumbs?: FolderAncestor[]
   onNavigate: (index: number) => void
   isLoading?: boolean
@@ -27,7 +26,6 @@ interface CategoryBreadcrumbProps {
 
 export function CategoryBreadcrumb({
   config,
-  showBreadcrumbs,
   breadcrumbs = [],
   onNavigate,
   isLoading,
@@ -43,7 +41,7 @@ export function CategoryBreadcrumb({
             <BreadcrumbItem>
               <Skeleton className="h-7 w-32" />
             </BreadcrumbItem>
-            {showBreadcrumbs && (
+            {breadcrumbs.length > 0 && (
               <>
                 <BreadcrumbSeparator className="[&>svg]:!size-5" />
                 <BreadcrumbItem>
@@ -64,7 +62,7 @@ export function CategoryBreadcrumb({
         <BreadcrumbList className="text-lg text-foreground">
           <BreadcrumbDropZone id="category-root" categoryId={categoryId} isRoot>
             <BreadcrumbItem>
-              {showBreadcrumbs ? (
+              {breadcrumbs.length > 0 ? (
                 <BreadcrumbLink asChild>
                   <button
                     type="button"
@@ -75,38 +73,37 @@ export function CategoryBreadcrumb({
                   </button>
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbPage className="font-bold text-foreground">
+                <BreadcrumbPage className="font-bold text-foreground text-3xl">
                   {config.plural}
                 </BreadcrumbPage>
               )}
             </BreadcrumbItem>
           </BreadcrumbDropZone>
 
-          {showBreadcrumbs &&
-            breadcrumbs.map((ancestor, index) => (
-              <React.Fragment key={ancestor.id}>
-                <BreadcrumbSeparator className="[&>svg]:!size-5 -mx-2 mt-1" />
-                <BreadcrumbDropZone id={ancestor.id} categoryId={categoryId}>
-                  <BreadcrumbItem>
-                    {index === breadcrumbs.length - 1 ? (
-                      <BreadcrumbPage className="font-bold text-foreground">
+          {breadcrumbs.map((ancestor, index) => (
+            <React.Fragment key={ancestor.id}>
+              <BreadcrumbSeparator className="[&>svg]:!size-5 -mx-2 mt-1" />
+              <BreadcrumbDropZone id={ancestor.id} categoryId={categoryId}>
+                <BreadcrumbItem>
+                  {index === breadcrumbs.length - 1 ? (
+                    <BreadcrumbPage className="font-bold text-foreground">
+                      {ancestor.name}
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink asChild>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate(index)}
+                        className="cursor-pointer font-medium text-foreground group-hover:!text-amber-600 transition-colors"
+                      >
                         {ancestor.name}
-                      </BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        <button
-                          type="button"
-                          onClick={() => onNavigate(index)}
-                          className="cursor-pointer font-medium text-foreground group-hover:!text-amber-600 transition-colors"
-                        >
-                          {ancestor.name}
-                        </button>
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </BreadcrumbDropZone>
-              </React.Fragment>
-            ))}
+                      </button>
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+              </BreadcrumbDropZone>
+            </React.Fragment>
+          ))}
         </BreadcrumbList>
       </Breadcrumb>
 

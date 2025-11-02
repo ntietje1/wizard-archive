@@ -8,10 +8,13 @@ import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Tag, TagCategory } from 'convex/tags/types'
 import type { Folder } from 'convex/notes/types'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import usePersistedState from './usePersistedState'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
+import { getCategoryIcon } from '~/lib/category-icons'
+import { CATEGORY_KIND } from 'convex/tags/types'
 
 export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
+export const CATEGORY_SKELETON_COUNT_STORAGE_KEY = 'category-skeleton-count'
 
 export const VIEW_MODE = {
   flat: 'flat',
@@ -23,8 +26,8 @@ export type FolderAncestor = { id: Id<'folders'>; name: string }
 
 interface UseCategoryViewOptions {
   categorySlug: string
-  currentFolderId?: string
-  onNavigate: (folderId: string | undefined) => void
+  currentFolderId?: Id<'folders'>
+  onNavigate: (folderId?: Id<'folders'>) => void
 }
 
 interface UseCategoryViewReturn {
@@ -34,11 +37,20 @@ interface UseCategoryViewReturn {
   tags?: Tag[]
   folders?: Folder[]
   categoryData?: TagCategory
+  categoryConfig?: TagCategoryConfig
+  campaignId?: Id<'campaigns'>
+  canEditCategory: boolean
   isLoading: boolean
 
   breadcrumbs: Array<{ id: Id<'folders'>; name: string }>
   navigateToFolder: (folder: Folder) => void
   navigateToBreadcrumb: (index: number) => void
+
+  isAtRoot: boolean
+  hasContent: boolean
+  showSkeletons: boolean
+  skeletonCount: number
+  invalidFolderId: boolean
 }
 
 export function useCategoryView({
@@ -52,6 +64,11 @@ export function useCategoryView({
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     `${CATEGORY_VIEW_MODE_STORAGE_KEY}-${categorySlug}`,
     VIEW_MODE.folderized,
+  )
+
+  const [skeletonCount] = usePersistedState<number>(
+    `${CATEGORY_SKELETON_COUNT_STORAGE_KEY}-${categorySlug}`,
+    6,
   )
 
   const ancestorsQuery = useQuery(
@@ -121,7 +138,7 @@ export function useCategoryView({
 
   const sidebarItems = useSidebarItems(
     categoryQuery.data?._id,
-    currentFolderId as Id<'folders'> | undefined,
+    currentFolderId,
     viewMode === VIEW_MODE.folderized,
   )
 
@@ -141,12 +158,44 @@ export function useCategoryView({
     const tagIdsAtLevel = new Set(
       sidebarItems.data
         .filter((item) => item.type === SIDEBAR_ITEM_TYPES.notes)
-        .map((item) => (item as any).tagId)
+        .map((item) => item?.tagId ?? undefined)
         .filter(Boolean),
     )
 
     return tagsQuery.data?.filter((tag) => tagIdsAtLevel.has(tag._id))
   }, [viewMode, sidebarItems.data, tagsQuery.data])
+
+  const categoryConfig: TagCategoryConfig | undefined = categoryQuery.data
+    ? {
+        singular: categoryQuery.data.displayName,
+        plural: categoryQuery.data.pluralDisplayName,
+        categorySlug: categoryQuery.data.slug,
+        icon: getCategoryIcon(categoryQuery.data.iconName),
+      }
+    : undefined
+
+  const canEditCategory = categoryQuery.data?.kind === CATEGORY_KIND.User
+
+  const invalidFolderId =
+    sidebarItems.status === 'error' ||
+    ancestorsQuery.status === 'error' ||
+    currentFolderQuery.status === 'error'
+
+  const isLoading =
+    campaignWithMembership.status === 'pending' ||
+    categoryQuery.status === 'pending' ||
+    tagsQuery.status === 'pending' ||
+    (viewMode === VIEW_MODE.folderized && invalidFolderId) ||
+    (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
+    (viewMode === VIEW_MODE.folderized &&
+      !!currentFolderId &&
+      (ancestorsQuery.status === 'pending' ||
+        currentFolderQuery.status === 'pending'))
+
+  const showSkeletons = isLoading || !categoryConfig
+
+  // Reset skeletonCount to 0 while loading from localStorage
+  const effectiveSkeletonCount = isLoading ? 0 : skeletonCount
 
   const navigateToFolder = (folder: Folder) => {
     onNavigate(folder._id)
@@ -168,25 +217,23 @@ export function useCategoryView({
     onNavigate(undefined)
   }
 
-  const isLoading =
-    campaignWithMembership.status === 'pending' ||
-    categoryQuery.status === 'pending' ||
-    tagsQuery.status === 'pending' ||
-    (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
-    (viewMode === VIEW_MODE.folderized &&
-      !!currentFolderId &&
-      (ancestorsQuery.status === 'pending' ||
-        currentFolderQuery.status === 'pending'))
-
   return {
     viewMode,
     toggleViewMode,
     tags: filteredTags,
     folders: viewMode === VIEW_MODE.folderized ? folders : undefined,
     categoryData: categoryQuery.data,
+    categoryConfig,
+    campaignId: campaign?._id,
+    canEditCategory,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,
     isLoading,
+    isAtRoot: breadcrumbs.length === 0,
+    hasContent: (filteredTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
+    showSkeletons,
+    skeletonCount: effectiveSkeletonCount,
+    invalidFolderId,
   }
 }

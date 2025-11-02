@@ -18,12 +18,15 @@ import {
   type CategoryDropData,
 } from './dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
+import { Card, CardHeader } from '~/components/shadcn/ui/card'
+import { Skeleton } from '~/components/shadcn/ui/skeleton'
 
 interface FolderCardProps {
-  folder: Folder
-  categoryId: Id<'tagCategories'>
-  onClick: (e: MouseEvent) => void
+  folder?: Folder
+  categoryId?: Id<'tagCategories'>
+  onClick?: (e: MouseEvent) => void
   className?: string
+  isLoading?: boolean
 }
 
 export function FolderCard({
@@ -31,6 +34,7 @@ export function FolderCard({
   categoryId,
   onClick,
   className = '',
+  isLoading = false,
 }: FolderCardProps) {
   const [editing, setEditing] = useState(false)
   const [deletingFolder, setDeletingFolder] = useState(false)
@@ -38,6 +42,24 @@ export function FolderCard({
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const { active } = useDndContext()
+
+  if (isLoading || !folder || !categoryId) {
+    return (
+      <Card className={`h-[180px] ${className}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Skeleton className="w-8 h-8 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </div>
+            <Skeleton className="w-8 h-8 rounded" />
+          </div>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   const dropData: CategoryDropData = {
     _id: folder._id,
@@ -105,7 +127,7 @@ export function FolderCard({
         <ContentCard
           title={folder.name || UNTITLED_FOLDER_NAME}
           icon={FolderIcon}
-          onClick={onClick}
+          onClick={onClick || (() => {})}
           className={`${className} ${isDragging ? 'opacity-20' : ''}`}
           actionButtons={[
             {

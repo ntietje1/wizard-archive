@@ -68,6 +68,7 @@ export const getTagsByCategory = query({
 export const checkTagNameExists = query({
   args: {
     campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
     tagName: v.string(),
     excludeTagId: v.optional(v.id('tags')),
   },

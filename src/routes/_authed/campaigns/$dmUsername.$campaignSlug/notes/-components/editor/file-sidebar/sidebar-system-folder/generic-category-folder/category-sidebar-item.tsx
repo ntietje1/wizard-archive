@@ -7,7 +7,7 @@ import {
   type TagNoteContextMenuProps,
 } from './tag-note-context.menu'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import {
   SIDEBAR_ITEM_TYPES,
   UNTITLED_NOTE_TITLE,

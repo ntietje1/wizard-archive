@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { insertTagAndNote, deleteTagAndCleanupContent } from '../tags/tags'
+import {
+  insertTagAndNote,
+  deleteTagAndCleanupContent,
+  updateTagAndContent,
+} from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
@@ -56,6 +60,10 @@ export const updateCharacter = mutation({
   args: {
     characterId: v.id('characters'),
     playerId: v.optional(v.id('campaignMembers')),
+    displayName: v.optional(v.string()),
+    description: v.optional(v.string()),
+    color: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
   },
   returns: v.id('characters'),
   handler: async (ctx, args): Promise<Id<'characters'>> => {
@@ -70,6 +78,22 @@ export const updateCharacter = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    // Update tag fields if provided
+    if (
+      args.displayName !== undefined ||
+      args.description !== undefined ||
+      args.color !== undefined ||
+      args.imageStorageId !== undefined
+    ) {
+      await updateTagAndContent(ctx, character.tagId, {
+        displayName: args.displayName,
+        description: args.description,
+        color: args.color,
+        imageStorageId: args.imageStorageId,
+      })
+    }
+
+    // Update character-specific fields
     if (args.playerId) {
       const player = await ctx.db.get(args.playerId)
       if (!player || player.campaignId !== character.campaignId) {

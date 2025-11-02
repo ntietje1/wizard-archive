@@ -188,6 +188,7 @@ export const insertTag = async (
     categoryId: newTag.categoryId,
     color: newTag.color,
     description: newTag.description,
+    imageStorageId: newTag.imageStorageId,
     campaignId: newTag.campaignId,
     updatedAt: Date.now(),
     createdBy: campaignWithMembership.member._id,
@@ -471,6 +472,7 @@ export const updateTagAndContent = async (
     displayName?: string
     color?: string
     description?: string
+    imageStorageId?: Id<'_storage'>
   },
 ) => {
   const tag = await ctx.db.get(tagId)
@@ -530,7 +532,15 @@ export const updateTagAndContent = async (
   if (input.description !== undefined) {
     updates.description = input.description
   }
-
+  if (input.imageStorageId !== undefined) {
+    if (input.imageStorageId) {
+      const url = await ctx.storage.getUrl(input.imageStorageId)
+      if (!url) {
+        throw new Error('Invalid storage reference')
+      }
+    }
+    updates.imageStorageId = input.imageStorageId
+  }
   await ctx.db.patch(tagId, updates)
 
   if (updates.displayName !== undefined && tagNote) {

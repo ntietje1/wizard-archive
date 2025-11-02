@@ -14,7 +14,7 @@ import {
   useConvex,
   useConvexMutation,
 } from '@convex-dev/react-query'
-import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
+import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import {
   removeInvalidCharacters,

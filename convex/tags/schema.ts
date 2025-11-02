@@ -24,6 +24,7 @@ export const tagTableFields = {
   name: v.string(),
   color: v.string(),
   description: v.optional(v.string()),
+  imageStorageId: v.optional(v.id('_storage')),
   campaignId: v.id('campaigns'),
   categoryId: v.id('tagCategories'),
 }

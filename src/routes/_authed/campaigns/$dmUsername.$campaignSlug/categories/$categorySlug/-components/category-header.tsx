@@ -1,6 +1,6 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { FolderPlus, Plus, Edit } from '~/lib/icons'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-dialogs/base-tag-dialog/types'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { CategoryBreadcrumb } from './category-breadcrumb'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
 import type { Id } from 'convex/_generated/dataModel'
@@ -8,7 +8,6 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 
 interface CategoryHeaderProps {
   config?: TagCategoryConfig
-  showBreadcrumbs?: boolean
   breadcrumbs?: FolderAncestor[]
   onNavigateBreadcrumb: (index: number) => void
   showFolderActions?: boolean
@@ -23,7 +22,6 @@ interface CategoryHeaderProps {
 
 export function CategoryHeader({
   config,
-  showBreadcrumbs,
   breadcrumbs,
   onNavigateBreadcrumb,
   onCreateFolder,
@@ -39,7 +37,6 @@ export function CategoryHeader({
       <div className="mb-6">
         <CategoryBreadcrumb
           config={config}
-          showBreadcrumbs={showBreadcrumbs}
           breadcrumbs={breadcrumbs}
           onNavigate={onNavigateBreadcrumb}
           isLoading={true}
@@ -62,7 +59,6 @@ export function CategoryHeader({
     <div className="mb-6">
       <CategoryBreadcrumb
         config={config}
-        showBreadcrumbs={showBreadcrumbs}
         breadcrumbs={breadcrumbs}
         onNavigate={onNavigateBreadcrumb}
         isLoading={isLoading}
@@ -71,7 +67,7 @@ export function CategoryHeader({
         categoryId={categoryId}
       />
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 pl-1">
         <p className="text-muted-foreground">
           Manage {config.plural.toLowerCase()} for your campaign. Each{' '}
           {config.singular.toLowerCase()} automatically creates a tag that can

@@ -6,8 +6,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { FormDialog } from '~/components/forms/category-tag-dialogs/base-tag-dialog/form-dialog'
-import { CreateCategoryForm } from '../../../../components/forms/category-form/category-form'
 import {
   CATEGORY_KIND,
   SYSTEM_DEFAULT_CATEGORIES,
@@ -20,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 
 const navigationItemsSection1 = [
   {
@@ -219,22 +218,15 @@ export const NavigationSidebar = () => {
       </ScrollArea>
 
       {/* Create Category Dialog */}
-      <FormDialog
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="New Category"
-        description="Create a user-defined category."
-        icon={Plus}
-        maxWidth="max-w-2xl"
-      >
-        {campaign && (
-          <CreateCategoryForm
-            mode="create"
-            campaignId={campaign._id}
-            onClose={() => setIsCreateOpen(false)}
-          />
-        )}
-      </FormDialog>
+      {campaign && (
+        <CategoryDialog
+          mode="create"
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onSuccess={() => setIsCreateOpen(false)}
+          campaignId={campaign._id}
+        />
+      )}
     </div>
   )
 }
