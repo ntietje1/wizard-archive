@@ -6,7 +6,6 @@ import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Folder } from 'convex/notes/types'
 import { useState, type MouseEvent } from 'react'
 import { toast } from 'sonner'
-import { ContentCard } from '~/components/content-grid-page/content-card'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import { Edit, Trash2, Folder as FolderIcon } from '~/lib/icons'
@@ -20,6 +19,8 @@ import {
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { Card, CardHeader } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
+import { Button } from '~/components/shadcn/ui/button'
+import './folder-card.css'
 
 interface FolderCardProps {
   folder?: Folder
@@ -45,7 +46,7 @@ export function FolderCard({
 
   if (isLoading || !folder || !categoryId) {
     return (
-      <Card className={`h-[180px] ${className}`}>
+      <Card className={`h-[140px] ${className}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -123,40 +124,97 @@ export function FolderCard({
         }}
         {...listeners}
         {...attributes}
+        className={`${className} ${isDragging ? 'opacity-20' : ''}`}
       >
-        <ContentCard
-          title={folder.name || UNTITLED_FOLDER_NAME}
-          icon={FolderIcon}
-          onClick={onClick || (() => {})}
-          className={`${className} ${isDragging ? 'opacity-20' : ''}`}
-          actionButtons={[
-            {
-              icon: Edit,
-              onClick: (e: MouseEvent) => {
-                e.stopPropagation()
-                setEditing(true)
-              },
-              'aria-label': 'Edit',
-              disabled: isDisabled,
-            },
-            {
-              icon: Trash2,
-              onClick: (e: MouseEvent) => {
-                e.stopPropagation()
-                setDeletingFolder(true)
-              },
-              'aria-label': 'Delete',
-              variant: 'destructive-subtle',
-              disabled: isDisabled,
-            },
-          ]}
-          hoverEffect={{
-            enabled: true,
-            className: isValidDropTarget
-              ? 'hover:border-amber-300 hover:bg-amber-300/10 hover:shadow-lg hover:scale-101 transition-all duration-100 hover:duration-200'
-              : '',
-          }}
-        />
+        <div
+          className={`folder-wrapper group bg-white transition-all ${
+            isValidDropTarget ? 'valid-drop-target' : ''
+          }`}
+        >
+          <div className="folder">
+            {/* Left part with folder tab */}
+            <div className="folder-left">
+              <svg viewBox="0 0 120 200" preserveAspectRatio="none">
+                <path
+                  d="M 100,25 L 83,10 L 20,10 C 11,10 5,16 5,25 L 5,175 C 5,184 11,190 20,190 L 120,190 L 120,25 Z"
+                  fill="currentColor"
+                  // stroke="#e2e8f0"
+                  // strokeWidth="1.5px"
+                />
+              </svg>
+            </div>
+
+            {/* Middle part (stretches horizontally) */}
+            <div className="folder-middle">
+              <svg viewBox="0 0 20 200" preserveAspectRatio="none">
+                <rect
+                  x="0"
+                  y="25"
+                  width="20"
+                  height="165"
+                  fill="currentColor"
+                  // stroke="#e2e8f0"
+                  // strokeWidth="1.5px"
+                />
+              </svg>
+            </div>
+
+            {/* Right part with rounded corners */}
+            <div className="folder-right">
+              <svg viewBox="0 0 60 200" preserveAspectRatio="none">
+                <path
+                  d="M 0,25 L 50,25 C 56,25 60,29 60,35 L 60,175 C 60,184 54,190 45,190 L 0,190 Z"
+                  fill="currentColor"
+                  // stroke="#e2e8f0"
+                  // strokeWidth="1.5px"
+                />
+              </svg>
+            </div>
+
+            {/* Overlay rectangle to hide seams */}
+            <div className="folder-seam-cover"></div>
+          </div>
+
+          {/* Content inside folder */}
+          <div className="folder-content" onClick={onClick || (() => {})}>
+            <div className="flex items-center gap-2">
+              <FolderIcon className="w-6 h-6 text-amber-600 select-none flex-shrink-0" />
+              <h2 className="text-xl text-slate-800 truncate select-none">
+                {folder.name || UNTITLED_FOLDER_NAME}
+              </h2>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          {!isDisabled && (
+            <div className="absolute top-3 right-3 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation()
+                  setEditing(true)
+                }}
+                className="bg-white/90 hover:bg-white shadow-sm"
+                aria-label="Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation()
+                  setDeletingFolder(true)
+                }}
+                className="bg-white/90 hover:bg-white shadow-sm text-red-600 hover:text-red-700"
+                aria-label="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {editing && (

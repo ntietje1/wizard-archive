@@ -1,11 +1,10 @@
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation, convexQuery } from '@convex-dev/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Tag } from 'convex/tags/types'
 import { useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { ContentCard } from '~/components/content-grid-page/content-card'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
@@ -16,8 +15,9 @@ import { CATEGORY_ITEM_TYPES, type CategoryDragData } from './dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
-import { Card, CardContent, CardHeader } from '~/components/shadcn/ui/card'
+import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
+import { Button } from '~/components/shadcn/ui/button'
 
 interface TagCardProps {
   tag?: Tag
@@ -44,6 +44,15 @@ export function TagCard({
   const deleteTag = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.deleteTag),
   })
+
+  const imageUrlQuery = useQuery(
+    convexQuery(
+      api.storage.queries.getDownloadUrl,
+      tag?.imageStorageId ? { storageId: tag.imageStorageId } : 'skip',
+    ),
+  )
+
+  const imageUrl = imageUrlQuery.data || null
 
   const handleDelete = async () => {
     if (!deletingTag) return
@@ -78,25 +87,33 @@ export function TagCard({
 
   if (isLoading || !tag || !config) {
     return (
-      <Card className="h-[180px]">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Skeleton className="w-3 h-3 rounded-full" />
-                <Skeleton className="h-5 w-32" />
-              </div>
-              <Skeleton className="h-4 w-16" />
+      <Card className="overflow-hidden flex gap-4 p-4">
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="w-5 h-5 rounded-full" />
+              <Skeleton className="h-5 w-32" />
             </div>
-            <Skeleton className="w-8 h-8 rounded" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-3/4" />
-        </CardContent>
+        </div>
+        <Skeleton className="w-28 h-32 flex-shrink-0 rounded-lg" />
       </Card>
     )
+  }
+
+  const hasImage = !!imageUrl && !imageUrlQuery.isLoading
+  const isLoadingImage = imageUrlQuery.isLoading && tag.imageStorageId
+  const CategoryIcon = config.icon
+
+  const handleCardClick = () => {
+    if (!isDragging) {
+      router.navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/notes',
+        params: { dmUsername, campaignSlug },
+      })
+    }
   }
 
   return (
@@ -107,48 +124,81 @@ export function TagCard({
         {...attributes}
         className={isDragging ? 'opacity-50' : ''}
       >
-        <ContentCard
-          title={tag.displayName}
-          description={tag.description}
-          color={tag.color}
-          badges={[
-            {
-              text: config.singular,
-              icon: config.icon,
-              variant: 'secondary',
-            },
-          ]}
-          onClick={
-            isDragging
-              ? () => {}
-              : () =>
-                  router.navigate({
-                    to: '/campaigns/$dmUsername/$campaignSlug/notes',
-                    params: { dmUsername, campaignSlug },
-                  })
-          }
-          actionButtons={[
-            {
-              icon: Edit,
-              onClick: (e) => {
-                e.stopPropagation()
-                setEditing(tag)
-              },
-              'aria-label': 'Edit',
-              disabled: isDisabled,
-            },
-            {
-              icon: Trash2,
-              onClick: (e) => {
-                e.stopPropagation()
-                setDeletingTag(tag)
-              },
-              'aria-label': 'Delete',
-              variant: 'destructive-subtle',
-              disabled: isDisabled,
-            },
-          ]}
-        />
+        <Card
+          className="bg-white border border-slate-200 w-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md"
+          onClick={handleCardClick}
+        >
+          {/* Left Content Section */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            {/* Icon + Title */}
+            <div className="overflow-hidden">
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <CategoryIcon className="w-6 h-6 text-amber-600 select-none flex-shrink-0" />
+                <CardTitle className="text-xl text-slate-800 truncate select-none">
+                  {tag.displayName}
+                </CardTitle>
+              </div>
+              {/* Description */}
+              {tag.description && (
+                <p className="text-sm text-slate-600 line-clamp-3 w-full overflow-hidden break-words">
+                  {tag.description}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Image Section  */}
+          <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm">
+            {isLoadingImage ? (
+              <Skeleton className="w-full h-full" />
+            ) : hasImage ? (
+              <img
+                src={imageUrl}
+                alt={tag.displayName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ backgroundColor: tag.color }}
+              >
+                <CategoryIcon className="w-8 h-8 text-white/80" />
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="absolute top-3 right-3 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+            {!isDisabled && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditing(tag)
+                  }}
+                  className="bg-white/90 hover:bg-white shadow-sm"
+                  aria-label="Edit"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeletingTag(tag)
+                  }}
+                  className="bg-white/90 hover:bg-white shadow-sm text-red-600 hover:text-red-700"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </Card>
       </div>
 
       {editing && (
