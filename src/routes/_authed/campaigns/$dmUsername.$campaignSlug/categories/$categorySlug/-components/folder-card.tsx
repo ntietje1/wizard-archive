@@ -17,7 +17,7 @@ import {
   type CategoryDropData,
 } from './dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
-import { Card, CardHeader } from '~/components/shadcn/ui/card'
+import { Card, CardHeader, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import './folder-card.css'
@@ -124,70 +124,65 @@ export function FolderCard({
         }}
         {...listeners}
         {...attributes}
-        className={`${className} ${isDragging ? 'opacity-20' : ''}`}
+        className={`h-[140px] ${className} ${isDragging ? 'opacity-20' : ''}`}
       >
         <div
-          className={`folder-wrapper group bg-white transition-all ${
+          className={`folder-wrapper group transition-all ${
             isValidDropTarget ? 'valid-drop-target' : ''
           }`}
+          onClick={onClick}
         >
           <div className="folder">
-            {/* Left part with folder tab */}
+            {/* Left section */}
             <div className="folder-left">
               <svg viewBox="0 0 120 200" preserveAspectRatio="none">
                 <path
-                  d="M 100,25 L 83,10 L 20,10 C 11,10 5,16 5,25 L 5,175 C 5,184 11,190 20,190 L 120,190 L 120,25 Z"
+                  d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
                   fill="currentColor"
-                  // stroke="#e2e8f0"
-                  // strokeWidth="1.5px"
                 />
               </svg>
             </div>
 
-            {/* Middle part (stretches horizontally) */}
+            {/* Middle section */}
             <div className="folder-middle">
               <svg viewBox="0 0 20 200" preserveAspectRatio="none">
                 <rect
                   x="0"
-                  y="25"
+                  y="15"
                   width="20"
-                  height="165"
+                  height="200"
                   fill="currentColor"
-                  // stroke="#e2e8f0"
-                  // strokeWidth="1.5px"
                 />
               </svg>
             </div>
 
-            {/* Right part with rounded corners */}
+            {/* Right section*/}
             <div className="folder-right">
               <svg viewBox="0 0 60 200" preserveAspectRatio="none">
                 <path
-                  d="M 0,25 L 50,25 C 56,25 60,29 60,35 L 60,175 C 60,184 54,190 45,190 L 0,190 Z"
+                  d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
                   fill="currentColor"
-                  // stroke="#e2e8f0"
-                  // strokeWidth="1.5px"
                 />
               </svg>
             </div>
 
-            {/* Overlay rectangle to hide seams */}
+            {/* Background (hides seams) */}
             <div className="folder-seam-cover"></div>
           </div>
 
-          {/* Content inside folder */}
-          <div className="folder-content" onClick={onClick || (() => {})}>
-            <div className="flex items-center gap-2">
+          {/* Folder name */}
+          <div className="folder-content p-3">
+            <div className="flex items-center gap-2 min-w-0">
               <FolderIcon className="w-6 h-6 text-amber-600 select-none flex-shrink-0" />
-              <h2 className="text-xl text-slate-800 truncate select-none">
+              <CardTitle className="text-xl text-slate-800 truncate select-none">
                 {folder.name || UNTITLED_FOLDER_NAME}
-              </h2>
+              </CardTitle>
             </div>
           </div>
 
           {/* Action buttons */}
           {!isDisabled && (
-            <div className="absolute top-3 right-3 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute pt-1 top-3 right-3 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
                 size="sm"

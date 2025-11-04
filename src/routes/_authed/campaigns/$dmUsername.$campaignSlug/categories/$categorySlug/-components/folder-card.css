@@ -1,13 +1,14 @@
 .folder-wrapper {
   position: relative;
-  display: inline-block;
+  display: block;
   width: 100%;
+  height: 100%;
   cursor: pointer;
 }
 
 .folder {
   display: flex;
-  height: 140px;
+  height: 100%;
   position: relative;
   color: #ffffff;
 }
@@ -33,42 +34,16 @@
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 0.5px 1.5px rgba(23, 23, 66, 0.25));
   transition: filter 0.2s ease;
-}
-
-/* Outline layer */
-.folder-outline {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  display: flex;
-}
-
-.outline-left {
-  flex-shrink: 0;
-  width: 120px;
-}
-
-.outline-middle {
-  flex-grow: 1;
-  min-width: 20px;
-}
-
-.outline-right {
-  flex-shrink: 0;
-  width: 60px;
 }
 
 .folder-seam-cover {
   position: absolute;
-  top: 17.5px;
+  top: 11px;
   left: 20px;
   right: 20px;
-  bottom: 7px;
+  bottom: 0px;
   background-color: #ffffff;
   pointer-events: none;
   z-index: 1;
@@ -76,19 +51,14 @@
 
 .folder-content {
   position: absolute;
-  top: 50px;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  padding: 12px;
-  overflow: auto;
+  top: 8px;
   z-index: 2;
 }
 
 .folder-wrapper:hover .folder svg {
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 1px 2px rgba(23, 23, 66, 0.25));
 }
 
 .folder-wrapper.valid-drop-target .folder svg {
-  filter: drop-shadow(0 1px 3px rgba(251, 191, 36, 0.6));
+  filter: drop-shadow(0 1px 3px rgba(251, 191, 36, 0.7));
 }
