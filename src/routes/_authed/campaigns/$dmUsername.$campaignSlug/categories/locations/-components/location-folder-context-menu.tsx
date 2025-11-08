@@ -106,4 +106,3 @@ export const LocationFolderContextMenu = forwardRef<
     </>
   )
 })
-
