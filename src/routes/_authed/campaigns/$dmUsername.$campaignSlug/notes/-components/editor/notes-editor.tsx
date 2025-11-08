@@ -11,10 +11,7 @@ import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { ClientOnly } from '@tanstack/react-router'
-import type { Id } from 'convex/_generated/dataModel'
 import { toast } from 'sonner'
-import { useConvex } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 
 const schema = BlockNoteSchema.create({
   inlineContentSpecs: customInlineContentSpecs,

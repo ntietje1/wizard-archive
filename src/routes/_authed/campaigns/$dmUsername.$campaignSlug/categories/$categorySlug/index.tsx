@@ -11,6 +11,7 @@ import {
   validateSearch,
   type CategorySearch,
 } from './-components/validateFolderId'
+import { CategoryFolderContextMenu } from './-components/folder/category-folder-context-menu'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/$categorySlug/',
@@ -61,6 +62,7 @@ function GenericCategoryPage() {
       currentFolderId={search.folderId}
       onNavigate={handleFolderNavigation}
       onCategoryUpdated={handleCategoryUpdated}
+      FolderContextMenuComponent={CategoryFolderContextMenu}
     />
   )
 }

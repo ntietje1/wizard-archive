@@ -6,6 +6,9 @@ import {
   type CategorySearch,
 } from '../$categorySlug/-components/validateFolderId'
 import type { Id } from 'convex/_generated/dataModel'
+import { LocationTagCardWithContextMenu } from './-components/location-card'
+import { LocationFolderCardWithContextMenu } from './-components/location-folder-card'
+import { LocationFolderContextMenu } from './-components/location-folder-context-menu'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations/',
@@ -35,6 +38,9 @@ function LocationsPage() {
       currentFolderId={search.folderId}
       onNavigate={handleFolderNavigation}
       TagDialogComponent={LocationTagDialog}
+      TagCardComponent={LocationTagCardWithContextMenu}
+      FolderCardComponent={LocationFolderCardWithContextMenu}
+      FolderContextMenuComponent={LocationFolderContextMenu}
     />
   )
 }

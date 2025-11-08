@@ -12,7 +12,7 @@ import {
 } from './types'
 import { Tag } from '../tags/types'
 import { getTopLevelBlocksByNote } from './helpers'
-import { getTag, getTagCategory } from '../tags/tags'
+import { getTag, getTagCategory, getTagsByCategory } from '../tags/tags'
 
 export const getNote = async (
   ctx: Ctx,
@@ -111,68 +111,101 @@ export const getFolder = async (
   }
 }
 
-export const getSidebarItems = async (
+export const getSidebarItemsByCategory = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  categoryId?: Id<'tagCategories'>,
-  parentId?: Id<'folders'>,
+  categoryId: Id<'tagCategories'>,
 ): Promise<AnySidebarItem[]> => {
   await requireCampaignMembership(
     ctx,
     { campaignId: campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
+  const category = await getTagCategory(ctx, campaignId, categoryId)
+  const tags = await getTagsByCategory(ctx, categoryId)
 
+  const folders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q.eq('campaignId', campaignId).eq('categoryId', categoryId),
+    )
+    .collect()
+    .then((folders) =>
+      folders.map((folder) => ({
+        ...folder,
+        category,
+        type: SIDEBAR_ITEM_TYPES.folders,
+      })),
+    )
+
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q.eq('campaignId', campaignId).eq('categoryId', categoryId),
+    )
+    .collect()
+    .then((notes) =>
+      notes.map((note) => ({
+        ...note,
+        category,
+        tag: tags.find((t) => t._id === note.tagId),
+        type: SIDEBAR_ITEM_TYPES.notes,
+      })),
+    )
+
+  return [...folders, ...notes] as AnySidebarItem[]
+}
+
+export const getSidebarItemsByParent = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  categoryId: Id<'tagCategories'> | undefined, // undefined category = has no category
+  parentId: Id<'folders'> | undefined, // undefined parent = at root level
+): Promise<AnySidebarItem[]> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
   const category = categoryId
     ? await getTagCategory(ctx, campaignId, categoryId)
     : undefined
+  const tags = categoryId ? await getTagsByCategory(ctx, categoryId) : []
 
-  let tags: Tag[] = []
-  if (categoryId) {
-    tags = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_categoryId', (q) =>
-        q.eq('campaignId', campaignId).eq('categoryId', categoryId),
-      )
-      .collect()
-      .then((tags) => tags.map((tag) => ({ ...tag, category })))
-  }
+  const folders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('categoryId', categoryId ?? undefined)
+        .eq('parentFolderId', parentId),
+    )
+    .collect()
+    .then((folders) =>
+      folders.map((folder) => ({
+        ...folder,
+        category,
+        type: SIDEBAR_ITEM_TYPES.folders,
+      })),
+    )
 
-  const [folders, notes] = await Promise.all([
-    ctx.db
-      .query('folders')
-      .withIndex('by_campaign_category_parent', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('categoryId', categoryId)
-          .eq('parentFolderId', parentId),
-      )
-      .collect()
-      .then((folders) =>
-        folders.map((folder) => ({
-          ...folder,
-          type: SIDEBAR_ITEM_TYPES.folders,
-          category,
-        })),
-      ),
-    ctx.db
-      .query('notes')
-      .withIndex('by_campaign_category_parent', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('categoryId', categoryId)
-          .eq('parentFolderId', parentId),
-      )
-      .collect()
-      .then((notes) =>
-        notes.map((note) => ({
-          ...note,
-          type: SIDEBAR_ITEM_TYPES.notes,
-          category,
-          tag: tags.find((t) => t._id === note.tagId),
-        })),
-      ),
-  ])
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('categoryId', categoryId ?? undefined)
+        .eq('parentFolderId', parentId),
+    )
+    .collect()
+    .then((notes) =>
+      notes.map((note) => ({
+        ...note,
+        category,
+        tag: tags.find((t) => t._id === note.tagId),
+        type: SIDEBAR_ITEM_TYPES.notes,
+      })),
+    )
 
   return [...folders, ...notes] as AnySidebarItem[]
 }

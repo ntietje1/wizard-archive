@@ -14,7 +14,8 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { hasAccessToBlock } from '../shares/shares'
 import {
-  getSidebarItems as getSidebarItemsFn,
+  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
+  getSidebarItemsByParent as getSidebarItemsByParentFn,
   getFolder as getFolderFn,
   getNoteWithContent,
   getNoteBySlug as getNoteBySlugFn,
@@ -75,7 +76,7 @@ export const getFolder = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const children = await getSidebarItemsFn(
+    const children = await getSidebarItemsByParentFn(
       ctx,
       folder.campaignId,
       folder.categoryId,
@@ -118,7 +119,18 @@ export const getNoteBySlug = query({
   },
 })
 
-export const getSidebarItems = query({
+export const getSidebarItemsByCategory = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+  },
+  returns: v.array(sidebarItemValidator),
+  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+    return getSidebarItemsByCategoryFn(ctx, args.campaignId, args.categoryId)
+  },
+})
+
+export const getSidebarItemsByParent = query({
   args: {
     campaignId: v.id('campaigns'),
     categoryId: v.optional(v.id('tagCategories')),
@@ -126,12 +138,7 @@ export const getSidebarItems = query({
   },
   returns: v.array(sidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-    return getSidebarItemsFn(
+    return getSidebarItemsByParentFn(
       ctx,
       args.campaignId,
       args.categoryId,

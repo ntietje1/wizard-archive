@@ -2,7 +2,6 @@ import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { SystemFolders } from './sidebar-system-folder/system-folders'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { useSidebarItems } from '~/hooks/useSidebarItems'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { DragOverlay } from '@dnd-kit/core'
 import { ClientOnly } from '@tanstack/react-router'
@@ -12,9 +11,10 @@ import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 function FileSidebarContent() {
-  const sidebarItems = useSidebarItems()
+  const sidebarItems = useSidebarItemsByParent()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { activeDragItem } = useFileSidebar()

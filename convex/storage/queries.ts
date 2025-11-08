@@ -6,6 +6,7 @@ export const getDownloadUrl = query({
   args: {
     storageId: v.id('_storage'),
   },
+  returns: v.union(v.null(), v.string()),
   handler: async (ctx, args) => {
     const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db
@@ -15,7 +16,7 @@ export const getDownloadUrl = query({
       )
       .unique()
     if (!fileStorage) {
-      throw new Error('File storage not found')
+      return null
     }
     return await ctx.storage.getUrl(args.storageId)
   },

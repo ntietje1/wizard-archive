@@ -62,12 +62,21 @@ export const deleteTag = mutation({
   },
 })
 
+const createTagCategoryNameArgs = v.union(
+  v.object({
+    categoryName: v.string(),
+  }),
+  v.object({
+    // NOTE: auto-pluralize is currently ALWAYS on in create mode
+    displayName: v.string(),
+    pluralDisplayName: v.string(),
+  }),
+)
+
 export const createTagCategory = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    categoryName: v.optional(v.string()),
-    displayName: v.optional(v.string()),
-    pluralDisplayName: v.optional(v.string()),
+    name: createTagCategoryNameArgs,
     iconName: v.string(),
     defaultColor: v.optional(v.string()),
   },
@@ -79,21 +88,20 @@ export const createTagCategory = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Either categoryName (auto-pluralize) or both displayName and pluralDisplayName (manual) must be provided
-    if (args.categoryName) {
+    if ('categoryName' in args.name) {
       return await insertTagCategory(ctx, {
         campaignId: args.campaignId,
         kind: CATEGORY_KIND.User,
-        categoryName: args.categoryName,
+        categoryName: args.name.categoryName,
         iconName: args.iconName,
         defaultColor: args.defaultColor,
       })
-    } else if (args.displayName && args.pluralDisplayName) {
+    } else if ('displayName' in args.name && 'pluralDisplayName' in args.name) {
       return await insertTagCategory(ctx, {
         campaignId: args.campaignId,
         kind: CATEGORY_KIND.User,
-        displayName: args.displayName,
-        pluralDisplayName: args.pluralDisplayName,
+        displayName: args.name.displayName,
+        pluralDisplayName: args.name.pluralDisplayName,
         iconName: args.iconName,
         defaultColor: args.defaultColor,
       })

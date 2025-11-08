@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '~/components/shadcn/ui/dialog'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { type LucideIcon } from '~/lib/icons'
 
 interface FormDialogProps {
@@ -40,7 +41,7 @@ export function FormDialog({
     >
       <DialogContent
         showCloseButton={closable}
-        className={`${maxWidth} max-h-[90vh] overflow-y-auto`}
+        className={`${maxWidth} max-h-[90vh] p-0 overflow-hidden`}
         onEscapeKeyDown={(event) => {
           if (!closable) {
             event.preventDefault()
@@ -54,15 +55,17 @@ export function FormDialog({
           }
         }}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-amber-600" />
-            {title}
-          </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+        <ScrollArea className="max-h-[90vh] m-[1px] my-1">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Icon className="h-5 w-5 text-amber-600" />
+              {title}
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
 
-        <div className="px-1">{children}</div>
+          <div className="px-6 pb-6">{children}</div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )

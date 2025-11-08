@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '~/components/shadcn/ui/dialog'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button } from '~/components/shadcn/ui/button'
 import { AlertTriangle, Loader2, type LucideIcon } from '~/lib/icons'
 import { type ReactNode } from 'react'
@@ -50,49 +51,80 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div
-              className={`p-2 rounded-full ${confirmVariant === 'destructive' ? 'bg-red-100' : 'bg-amber-100'}`}
-            >
-              <Icon
-                className={`w-5 h-5 ${confirmVariant === 'destructive' ? 'text-red-600' : 'text-amber-600'}`}
-              />
+      <DialogContent
+        className="max-w-md max-h-[90vh] p-0 overflow-hidden flex flex-col"
+        showCloseButton={!isLoading}
+        onEscapeKeyDown={(event) => {
+          if (isLoading) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+        }}
+        onPointerDownOutside={(event) => {
+          if (isLoading) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+        }}
+      >
+        <ScrollArea className="flex-1 max-h-[calc(90vh-80px)]">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <div className="flex items-start gap-4">
+              <div
+                className={`flex-shrink-0 p-2.5 rounded-lg ${
+                  confirmVariant === 'destructive'
+                    ? 'bg-red-50 dark:bg-red-950/20'
+                    : 'bg-amber-50 dark:bg-amber-950/20'
+                }`}
+              >
+                <Icon
+                  className={`w-5 h-5 ${
+                    confirmVariant === 'destructive'
+                      ? 'text-red-600 dark:text-red-500'
+                      : 'text-amber-600 dark:text-amber-500'
+                  }`}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-lg font-semibold text-foreground mb-2 break-words">
+                  {title}
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm leading-relaxed break-words">
+                  {description}
+                </DialogDescription>
+              </div>
             </div>
-            <DialogTitle className="text-lg font-semibold text-slate-800">
-              {title}
-            </DialogTitle>
-          </div>
-          <DialogDescription className="text-slate-600">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
+          </DialogHeader>
 
-        {children}
+          {children && (
+            <div className="px-6 pb-4">
+              <div className="text-sm text-muted-foreground">{children}</div>
+            </div>
+          )}
+        </ScrollArea>
 
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-3 px-6 py-4 border-t bg-muted/30">
           <Button
             variant="outline"
             onClick={handleClose}
             disabled={isLoading}
-            className="flex-1"
+            className="flex-1 min-w-0"
           >
-            Cancel
+            <span className="truncate">Cancel</span>
           </Button>
           <Button
             variant={confirmVariant}
             onClick={handleConfirm}
             disabled={disabled || isLoading}
-            className="flex-1"
+            className="flex-1 min-w-0"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Deleting...
+                <Loader2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">Processing...</span>
               </>
             ) : (
-              confirmLabel
+              <span className="truncate">{confirmLabel}</span>
             )}
           </Button>
         </div>

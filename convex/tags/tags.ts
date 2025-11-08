@@ -16,6 +16,11 @@ import { deleteNote } from '../notes/helpers'
 import { findBlockByBlockNoteId, getNote } from '../notes/notes'
 import pluralize from 'pluralize'
 
+function capitalizeFirstLetter(str: string): string {
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 export function combineTagEntity<TCombined>(
   idKey: string,
   entity: { _id: Id<TableNames> },
@@ -218,7 +223,6 @@ export async function ensureDefaultTagCategories(
     if (found) {
       ids.push(found._id)
     } else {
-      // Use pluralDisplayName as the categoryName since it's the primary form
       const id = await insertTagCategory(
         ctx,
         {
@@ -346,16 +350,16 @@ export async function insertTagCategory(
   if ('categoryName' in input) {
     // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
-    displayName = isPlural
-      ? pluralize.singular(input.categoryName)
-      : input.categoryName
-    pluralDisplayName = isPlural
-      ? input.categoryName
-      : pluralize.plural(input.categoryName)
+    displayName = capitalizeFirstLetter(
+      isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
+    )
+    pluralDisplayName = capitalizeFirstLetter(
+      isPlural ? input.categoryName : pluralize.plural(input.categoryName),
+    )
   } else {
     // manual mode (plural and singular specified)
-    displayName = input.displayName
-    pluralDisplayName = input.pluralDisplayName
+    displayName = capitalizeFirstLetter(input.displayName)
+    pluralDisplayName = capitalizeFirstLetter(input.pluralDisplayName)
   }
 
   const uniqueSlug = await findUniqueSlug(pluralDisplayName, async (slug) => {
@@ -408,6 +412,20 @@ export const updateTagCategory = async (
     throw new Error('User cannot update system-managed categories')
   }
 
+  // For system core categories, only allow color updates
+  if (category.kind === CATEGORY_KIND.SystemCore) {
+    if (
+      input.categoryName !== undefined ||
+      input.displayName !== undefined ||
+      input.pluralDisplayName !== undefined ||
+      input.iconName !== undefined
+    ) {
+      throw new Error(
+        'System categories can only have their color updated. Name and icon cannot be changed.',
+      )
+    }
+  }
+
   const updates: Partial<TagCategory> = {
     updatedAt: Date.now(),
   }
@@ -415,19 +433,19 @@ export const updateTagCategory = async (
   if (input.categoryName !== undefined) {
     // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
-    updates.displayName = isPlural
-      ? pluralize.singular(input.categoryName)
-      : input.categoryName
-    updates.pluralDisplayName = isPlural
-      ? input.categoryName
-      : pluralize.plural(input.categoryName)
+    updates.displayName = capitalizeFirstLetter(
+      isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
+    )
+    updates.pluralDisplayName = capitalizeFirstLetter(
+      isPlural ? input.categoryName : pluralize.plural(input.categoryName),
+    )
   } else {
     // manual mode
     if (input.displayName !== undefined) {
-      updates.displayName = input.displayName
+      updates.displayName = capitalizeFirstLetter(input.displayName)
     }
     if (input.pluralDisplayName !== undefined) {
-      updates.pluralDisplayName = input.pluralDisplayName
+      updates.pluralDisplayName = capitalizeFirstLetter(input.pluralDisplayName)
     }
   }
 
