@@ -11,7 +11,31 @@ import {
 import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/notes/types'
 import { useSortOptions } from './useSortOptions'
 
-export const useSidebarItems = (
+export const useSidebarItemsByCategory = (
+  categoryId: Id<'tagCategories'>,
+  enabled = true,
+) => {
+  const { sortOptions } = useSortOptions()
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+  const sidebarItems = useQuery(
+    convexQuery(
+      api.notes.queries.getSidebarItemsByCategory,
+      campaign?._id && enabled
+        ? {
+            campaignId: campaign._id,
+            categoryId: categoryId,
+          }
+        : 'skip',
+    ),
+  )
+  return {
+    ...sidebarItems,
+    data: sortItemsByOptions(sortOptions, sidebarItems.data),
+  }
+}
+
+export const useSidebarItemsByParent = (
   categoryId?: Id<'tagCategories'>,
   parentId?: Id<'folders'>,
   enabled = true,
@@ -21,7 +45,7 @@ export const useSidebarItems = (
   const campaign = campaignWithMembership?.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
-      api.notes.queries.getSidebarItems,
+      api.notes.queries.getSidebarItemsByParent,
       campaign?._id && enabled
         ? {
             campaignId: campaign._id,

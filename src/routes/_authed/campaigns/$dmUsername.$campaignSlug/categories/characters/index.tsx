@@ -6,6 +6,9 @@ import {
   type CategorySearch,
 } from '../$categorySlug/-components/validateFolderId'
 import type { Id } from 'convex/_generated/dataModel'
+import { CharacterTagCardWithContextMenu } from './-components/character-card'
+import { CharacterFolderCardWithContextMenu } from './-components/character-folder-card'
+import { CharacterFolderContextMenu } from './-components/character-folder-context-menu'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters/',
@@ -35,6 +38,9 @@ function CharactersPage() {
       currentFolderId={search.folderId}
       onNavigate={handleFolderNavigation}
       TagDialogComponent={CharacterTagDialog}
+      TagCardComponent={CharacterTagCardWithContextMenu}
+      FolderCardComponent={CharacterFolderCardWithContextMenu}
+      FolderContextMenuComponent={CharacterFolderContextMenu}
     />
   )
 }

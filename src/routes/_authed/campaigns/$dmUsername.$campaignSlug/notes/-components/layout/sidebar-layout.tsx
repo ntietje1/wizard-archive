@@ -5,7 +5,6 @@ import {
 } from '~/components/shadcn/ui/resizable'
 import { FileSidebar } from '../editor/file-sidebar/sidebar'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
-import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
@@ -31,12 +30,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0"
             >
-              <FileSidebarProvider>
-                <SidebarHeader />
-                <FileSidebar />
-              </FileSidebarProvider>
+              <SidebarHeader />
+              <FileSidebar />
             </ResizablePanel>
-            <ResizableHandle />
+            <div className="h-px w-full bg-border" />
             <SessionPanel />
           </ResizablePanelGroup>
         </ResizablePanel>

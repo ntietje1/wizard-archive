@@ -11,23 +11,39 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import { useCampaign } from '~/contexts/CampaignContext'
 import { Edit, TagIcon, Trash2 } from '~/lib/icons'
 import { useDraggable } from '@dnd-kit/core'
-import { CATEGORY_ITEM_TYPES, type CategoryDragData } from './dnd-utils'
+import { CATEGORY_ITEM_TYPES, type CategoryDragData } from '../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
+import { CategoryTagContextMenu } from './category-tag-context-menu'
+import type { Note } from 'convex/notes/types'
 
-interface TagCardProps {
-  tag?: Tag
+export interface TagCardProps {
+  noteAndTag?: Note
   config?: TagCategoryConfig
   parentFolderId?: Id<'folders'>
   isLoading?: boolean
 }
 
+export function TagCardWithContextMenu(props: TagCardProps) {
+  if (!props.config || !props.noteAndTag) {
+    return <TagCard {...props} />
+  }
+  return (
+    <CategoryTagContextMenu
+      categoryConfig={props.config}
+      noteWithTag={props.noteAndTag}
+    >
+      <TagCard {...props} />
+    </CategoryTagContextMenu>
+  )
+}
+
 export function TagCard({
-  tag,
+  noteAndTag,
   config,
   parentFolderId,
   isLoading = false,
@@ -36,6 +52,7 @@ export function TagCard({
   const { dmUsername, campaignSlug } = useCampaign()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
+  const tag = noteAndTag?.tag
 
   const [editing, setEditing] = useState<Tag | null>(null)
   const [deletingTag, setDeletingTag] = useState<Tag | null>(null)
@@ -87,18 +104,18 @@ export function TagCard({
 
   if (isLoading || !tag || !config) {
     return (
-      <Card className="overflow-hidden flex gap-4 p-4">
+      <Card className="bg-white border border-slate-200 w-full flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md">
         <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Skeleton className="w-5 h-5 rounded-full" />
-              <Skeleton className="h-5 w-32" />
+          <div className="overflow-hidden">
+            <div className="flex items-center gap-2 mb-2 min-w-0">
+              <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
+              <Skeleton className="h-6 w-32" />
             </div>
-            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-full mb-1" />
             <Skeleton className="h-3 w-3/4" />
           </div>
         </div>
-        <Skeleton className="w-28 h-32 flex-shrink-0 rounded-lg" />
+        <Skeleton className="w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
       </Card>
     )
   }
@@ -107,7 +124,7 @@ export function TagCard({
   const isLoadingImage = imageUrlQuery.isLoading && tag.imageStorageId
   const CategoryIcon = config.icon
 
-  const handleCardClick = () => {
+  const handleCardActivate = () => {
     if (!isDragging) {
       router.navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/notes',
@@ -126,7 +143,15 @@ export function TagCard({
       >
         <Card
           className="bg-white border border-slate-200 w-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md"
-          onClick={handleCardClick}
+          onClick={handleCardActivate}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleCardActivate()
+            }
+          }}
+          tabIndex={0}
+          role="button"
         >
           {/* Left Content Section */}
           <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -216,8 +241,8 @@ export function TagCard({
         onClose={() => setDeletingTag(null)}
         onConfirm={handleDelete}
         title={`Delete ${config.singular}`}
-        description={`Are you sure you want to delete ${deletingTag?.displayName}? This will also remove references in your notes. This action cannot be undone.`}
-        confirmLabel={`Delete ${config.singular}`}
+        description={`Are you sure you want to delete this ${config.singular}? This will also remove references in your notes. This action cannot be undone.`}
+        confirmLabel={`Delete ${deletingTag?.displayName}`}
         isLoading={isDeleting}
         icon={TagIcon}
       />

@@ -21,10 +21,10 @@ import type { ContextMenuRef } from '~/components/context-menu/context-menu'
 import { CategorySidebarItem } from './category-sidebar-item'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import { useSidebarItems } from '~/hooks/useSidebarItems'
 import type { AnySidebarItem, Folder } from 'convex/notes/types'
 import { DraggableCategoryFolder } from './draggable-category-folder'
 import { DroppableCategoryFolder } from './droppable-category-folder'
+import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 type CategoryContextMenuComponent =
   React.ComponentType<CategoryContextMenuProps>
@@ -62,10 +62,7 @@ export const CategoryFolderButton = ({
   )
   const categoryContextMenuRef = useRef<ContextMenuRef>(null)
 
-  const children = useSidebarItems(
-    folder?.categoryId || getCategory?.data?._id,
-    folder?._id,
-  )
+  const children = useSidebarItemsByParent(folder?.categoryId, folder?._id)
 
   const hasItems = (children.data && children.data.length > 0) || false
 

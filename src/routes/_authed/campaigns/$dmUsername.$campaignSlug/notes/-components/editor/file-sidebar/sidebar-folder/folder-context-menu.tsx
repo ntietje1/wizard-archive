@@ -13,7 +13,7 @@ import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useSidebarItems } from '~/hooks/useSidebarItems'
+import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import { FilePlus, FolderPlus, FolderEdit, Trash2 } from '~/lib/icons'
 
 interface FolderContextMenuProps {
@@ -33,9 +33,13 @@ export const FolderContextMenu = forwardRef<
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
 
+  const sidebarItemsByParent = useSidebarItemsByParent(
+    folder.categoryId,
+    folder._id,
+  )
+
   const hasDirectChildren =
-    folder &&
-    (useSidebarItems(folder.categoryId, folder._id).data?.length || 0) > 0
+    folder && (sidebarItemsByParent.data?.length || 0) > 0
 
   if (!campaignId) return children
 

@@ -44,8 +44,8 @@ export function CategoryHeader({
           onToggleViewMode={onToggleViewMode}
           categoryId={categoryId}
         />
-        <div className="flex items-start justify-between gap-4">
-          <Skeleton className="h-[36px] w-[600px]" />
+        <div className="flex items-start justify-between gap-4 pb-1">
+          <Skeleton className="h-6 w-[600px]" />
           <div className="flex gap-2 shrink-0">
             <Skeleton className="h-9 w-[100px]" />
             <Skeleton className="h-9 w-[100px]" />

@@ -72,7 +72,7 @@ export const NoteContextMenu = forwardRef<ContextMenuRef, NoteContextMenuProps>(
           onClose={() => setConfirmDeleteDialogOpen(false)}
           onConfirm={confirmDeleteNote}
           title="Delete Note"
-          description="Are you sure you want to delete this note?"
+          description="Are you sure you want to delete this note? This action cannot be undone."
           confirmLabel="Delete Note"
           confirmVariant="destructive"
           icon={Trash2}

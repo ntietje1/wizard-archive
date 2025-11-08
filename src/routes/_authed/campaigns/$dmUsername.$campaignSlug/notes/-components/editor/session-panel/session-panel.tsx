@@ -142,7 +142,7 @@ export function SessionPanel() {
           <DropdownMenuContent align="end">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="[&>svg]:hidden">
-                Add to previous session
+                Resume a previous session
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-64 max-h-64 overflow-y-auto mb-2">
                 {previousSessions.length === 0 && (

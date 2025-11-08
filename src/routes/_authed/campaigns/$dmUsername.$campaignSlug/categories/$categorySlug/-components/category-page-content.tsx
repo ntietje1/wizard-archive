@@ -5,9 +5,10 @@ import { toast } from 'sonner'
 import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
 import { CategoryHeader } from './category-header'
 import type { Id } from 'convex/_generated/dataModel'
-import { TagCard } from './tag-card'
-import { FolderCard } from './folder-card'
+import { TagCardWithContextMenu } from './tag/tag-card'
+import { FolderCardWithContextMenu } from './folder/folder-card'
 import { EmptyState } from './empty-state'
+import { CategoryFolderContextMenu } from './folder/category-folder-context-menu'
 import {
   FolderDialog,
   type FolderFormValues,
@@ -19,14 +20,23 @@ import { ScrollArea } from '@radix-ui/react-scroll-area'
 import type { ComponentType } from 'react'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'
+import { Button } from '~/components/shadcn/ui/button'
+import { Link } from '@tanstack/react-router'
 
 interface CategoryPageContentProps {
   categorySlug: string
   currentFolderId?: Id<'folders'>
   onNavigate: (folderId?: Id<'folders'>) => void
   onCategoryUpdated?: (newSlug: string) => void
-  TagCardComponent?: ComponentType<React.ComponentProps<typeof TagCard>>
-  FolderCardComponent?: ComponentType<React.ComponentProps<typeof FolderCard>>
+  TagCardComponent?: ComponentType<
+    React.ComponentProps<typeof TagCardWithContextMenu>
+  >
+  FolderCardComponent?: ComponentType<
+    React.ComponentProps<typeof FolderCardWithContextMenu>
+  >
+  FolderContextMenuComponent: ComponentType<
+    React.ComponentProps<typeof CategoryFolderContextMenu>
+  >
   TagDialogComponent?: ComponentType<TagDialogProps<any>>
   HeaderComponent?: ComponentType<React.ComponentProps<typeof CategoryHeader>>
   EmptyStateComponent?: ComponentType<React.ComponentProps<typeof EmptyState>>
@@ -37,8 +47,9 @@ export function CategoryPageContent({
   currentFolderId,
   onNavigate,
   onCategoryUpdated,
-  TagCardComponent = TagCard,
-  FolderCardComponent = FolderCard,
+  TagCardComponent = TagCardWithContextMenu,
+  FolderCardComponent = FolderCardWithContextMenu,
+  FolderContextMenuComponent,
   TagDialogComponent = GenericTagDialog,
   HeaderComponent = CategoryHeader,
   EmptyStateComponent = EmptyState,
@@ -50,7 +61,7 @@ export function CategoryPageContent({
   const {
     viewMode,
     toggleViewMode,
-    tags,
+    notesAndTags,
     folders,
     categoryData,
     categoryConfig,
@@ -63,8 +74,10 @@ export function CategoryPageContent({
     isAtRoot,
     hasContent,
     showSkeletons,
-    skeletonCount,
+    folderSkeletonCount,
+    noteSkeletonCount,
     invalidFolderId,
+    categoryNotFound,
   } = useCategoryView({
     categorySlug,
     currentFolderId,
@@ -104,103 +117,127 @@ export function CategoryPageContent({
     }
   }
 
+  if (categoryNotFound) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-md">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Category Not Found
+          </h2>
+          <p className="text-gray-600">
+            The category "{categorySlug}" doesn't exist or you don't have
+            permission to access it.
+          </p>
+          <Link to="/campaigns">
+            <Button variant="outline" size="sm">
+              Back to Campaigns //TODO: change to go back to category page
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <CategoryDragProvider isEnabled={viewMode === VIEW_MODE.folderized}>
-      <ScrollArea className="flex-1 p-6">
-        <HeaderComponent
-          config={categoryConfig}
-          breadcrumbs={breadcrumbs}
-          onNavigateBreadcrumb={navigateToBreadcrumb}
-          onCreateFolder={() => setCreatingFolder(true)}
-          onCreateTag={() => setCreatingTag(true)}
-          onEditCategory={
-            canEditCategory ? () => setEditingCategory(true) : undefined
-          }
-          onToggleViewMode={toggleViewMode}
-          viewMode={viewMode}
-          isLoading={isLoading}
-          categoryId={categoryData?._id}
-        />
+      <FolderContextMenuComponent categoryConfig={categoryConfig}>
+        <ScrollArea className="flex-1 p-6">
+          <HeaderComponent
+            config={categoryConfig}
+            breadcrumbs={breadcrumbs}
+            onNavigateBreadcrumb={navigateToBreadcrumb}
+            onCreateFolder={() => setCreatingFolder(true)}
+            onCreateTag={() => setCreatingTag(true)}
+            onEditCategory={
+              canEditCategory ? () => setEditingCategory(true) : undefined
+            }
+            onToggleViewMode={toggleViewMode}
+            viewMode={viewMode}
+            isLoading={isLoading}
+            categoryId={categoryData?._id}
+          />
 
-        <ContentGrid>
-          {/* Folder Cards */}
-          {viewMode === VIEW_MODE.folderized &&
-            categoryData?._id &&
-            (showSkeletons
-              ? Array.from({ length: skeletonCount }).map((_, i) => (
-                  <FolderCardComponent
-                    key={`skeleton-folder-${i}`}
+          <ContentGrid>
+            {/* Folder Cards */}
+            {viewMode === VIEW_MODE.folderized &&
+              (showSkeletons
+                ? Array.from({ length: folderSkeletonCount }).map((_, i) => (
+                    <FolderCardComponent
+                      key={`skeleton-folder-${i}`}
+                      isLoading={true}
+                      categoryId={categoryData?._id}
+                      categoryConfig={categoryConfig}
+                    />
+                  ))
+                : folders?.map((folder) => (
+                    <FolderCardComponent
+                      key={folder._id}
+                      folder={folder}
+                      categoryId={categoryData?._id}
+                      categoryConfig={categoryConfig}
+                      onClick={() => navigateToFolder(folder)}
+                    />
+                  )))}
+
+            {/* Tag Cards */}
+            {showSkeletons
+              ? Array.from({ length: noteSkeletonCount }).map((_, i) => (
+                  <TagCardComponent
+                    key={`skeleton-tag-${i}`}
                     isLoading={true}
-                    categoryId={categoryData._id}
+                    config={categoryConfig}
                   />
                 ))
-              : folders?.map((folder) => (
-                  <FolderCardComponent
-                    key={folder._id}
-                    folder={folder}
-                    categoryId={categoryData._id}
-                    onClick={() => navigateToFolder(folder)}
+              : notesAndTags?.map((note) => (
+                  <TagCardComponent
+                    key={note._id}
+                    noteAndTag={note}
+                    config={categoryConfig}
+                    parentFolderId={currentFolderId}
                   />
-                )))}
+                ))}
 
-          {/* Tag Cards */}
-          {showSkeletons
-            ? Array.from({ length: skeletonCount }).map((_, i) => (
-                <TagCardComponent
-                  key={`skeleton-tag-${i}`}
-                  isLoading={true}
-                  config={categoryConfig}
-                />
-              ))
-            : tags?.map((tag) => (
-                <TagCardComponent
-                  key={tag._id}
-                  tag={tag}
-                  config={categoryConfig}
-                  parentFolderId={currentFolderId}
-                />
-              ))}
+            {/* Empty State */}
+            {!showSkeletons && !hasContent && categoryConfig && (
+              <EmptyStateComponent
+                viewMode={viewMode}
+                isAtRoot={isAtRoot}
+                onCreateTag={() => setCreatingTag(true)}
+                config={categoryConfig}
+              />
+            )}
+          </ContentGrid>
 
-          {/* Empty State */}
-          {!showSkeletons && !hasContent && categoryConfig && (
-            <EmptyStateComponent
-              viewMode={viewMode}
-              isAtRoot={isAtRoot}
-              onCreateTag={() => setCreatingTag(true)}
+          {creatingTag && categoryConfig && (
+            <TagDialogComponent
+              mode="create"
+              isOpen={creatingTag}
+              onClose={() => setCreatingTag(false)}
               config={categoryConfig}
+              parentFolderId={currentFolderId}
             />
           )}
-        </ContentGrid>
 
-        {creatingTag && categoryConfig && (
-          <TagDialogComponent
-            mode="create"
-            isOpen={creatingTag}
-            onClose={() => setCreatingTag(false)}
-            config={categoryConfig}
-            parentFolderId={currentFolderId}
-          />
-        )}
+          {creatingFolder && (
+            <FolderDialog
+              mode="create"
+              isOpen={creatingFolder}
+              onClose={() => setCreatingFolder(false)}
+              onSubmit={handleCreateFolder}
+            />
+          )}
 
-        {creatingFolder && (
-          <FolderDialog
-            mode="create"
-            isOpen={creatingFolder}
-            onClose={() => setCreatingFolder(false)}
-            onSubmit={handleCreateFolder}
-          />
-        )}
-
-        {editingCategory && categoryData && (
-          <CategoryDialog
-            mode="edit"
-            isOpen={editingCategory}
-            onClose={() => setEditingCategory(false)}
-            category={categoryData}
-            onSuccess={handleCategoryUpdated}
-          />
-        )}
-      </ScrollArea>
+          {editingCategory && categoryData && (
+            <CategoryDialog
+              mode="edit"
+              isOpen={editingCategory}
+              onClose={() => setEditingCategory(false)}
+              category={categoryData}
+              onSuccess={handleCategoryUpdated}
+            />
+          )}
+        </ScrollArea>
+      </FolderContextMenuComponent>
     </CategoryDragProvider>
   )
 }

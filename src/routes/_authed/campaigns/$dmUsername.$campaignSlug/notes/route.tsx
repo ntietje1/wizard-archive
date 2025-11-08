@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { ClientOnly, createFileRoute } from '@tanstack/react-router'
 import { SidebarLayout } from './-components/layout/sidebar-layout'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
@@ -13,10 +13,12 @@ export const Route = createFileRoute(
 
 function NotesLayout() {
   return (
-    <SidebarLayout>
-      <NotesPageLayout>
-        <NotesEditor />
-      </NotesPageLayout>
-    </SidebarLayout>
+    <ClientOnly>
+      <SidebarLayout>
+        <NotesPageLayout>
+          <NotesEditor />
+        </NotesPageLayout>
+      </SidebarLayout>
+    </ClientOnly>
   )
 }

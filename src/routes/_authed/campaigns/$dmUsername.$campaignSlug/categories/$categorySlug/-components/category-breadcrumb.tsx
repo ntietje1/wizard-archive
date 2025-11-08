@@ -35,11 +35,13 @@ export function CategoryBreadcrumb({
 }: CategoryBreadcrumbProps) {
   if (isLoading || !config) {
     return (
-      <div className="mb-2 flex items-center justify-between gap-4">
+      <div className="mb-2 flex items-center justify-between gap-4 min-h-[36px] pb-2">
         <Breadcrumb>
           <BreadcrumbList className="text-lg text-foreground">
             <BreadcrumbItem>
-              <Skeleton className="h-7 w-32" />
+              <Skeleton
+                className={breadcrumbs.length === 0 ? 'h-9 w-32' : 'h-7 w-32'}
+              />
             </BreadcrumbItem>
             {breadcrumbs.length > 0 && (
               <>
@@ -57,7 +59,7 @@ export function CategoryBreadcrumb({
   }
 
   return (
-    <div className="mb-2 flex items-center justify-between gap-4">
+    <div className="mb-2 flex items-center justify-between gap-4 min-h-[36px]">
       <Breadcrumb>
         <BreadcrumbList className="text-lg text-foreground">
           <BreadcrumbDropZone id="category-root" categoryId={categoryId} isRoot>

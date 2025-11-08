@@ -7,8 +7,8 @@ import { FolderButton } from './folder-button'
 import type { Folder } from 'convex/notes/types'
 import { SidebarItem } from '../sidebar-item/sidebar-item'
 import { useFolderState } from '~/hooks/useFolderState'
-import { useSidebarItems } from '~/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
+import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 interface FolderWithChildrenProps {
   folder: Folder
@@ -20,7 +20,7 @@ export function FolderWithChildren({
   ancestorIds = [],
 }: FolderWithChildrenProps) {
   const { isExpanded, toggleExpanded } = useFolderState(folder._id)
-  const children = useSidebarItems(folder.categoryId, folder._id)
+  const children = useSidebarItemsByParent(folder.categoryId, folder._id)
   const hasChildren = (children.data && children.data.length > 0) || false
 
   const currentAncestors = [...ancestorIds, folder._id]

@@ -1,10 +1,15 @@
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button.tsx'
-import { X, Upload, AlertCircle, Expand } from 'lucide-react'
+import { X, Upload, Expand } from 'lucide-react'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Dialog, DialogContent } from '~/components/shadcn/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '~/components/shadcn/ui/dialog'
 import { ErrorAlert } from '../forms/category-tag-form/base-tag-form/error-alert'
 
 export interface FileUploadSectionProps {
@@ -138,6 +143,10 @@ export function FileUploadSection({
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogTitle className="sr-only">File Preview</DialogTitle>
+        <DialogDescription className="sr-only">
+          Preview the selected file
+        </DialogDescription>
         <DialogContent
           className="max-w-4xl w-full p-0 border-0 bg-black/90 [&>button]:hidden"
           onOpenAutoFocus={(e) => e.preventDefault()}

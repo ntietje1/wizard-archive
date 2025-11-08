@@ -195,8 +195,8 @@ export function CampaignsContent() {
         onConfirm={handleDeleteCampaign}
         title="Delete Campaign"
         description={`Are you sure you want to delete "${currentlyDeletingCampaign?.campaign.name}"? This will permanently delete the entire campaign including all notes, characters, locations, and settings. This action cannot be undone.`}
-        confirmLabel="Delete Campaign"
-        isLoading={false}
+        confirmLabel={`Delete ${currentlyDeletingCampaign?.campaign.name}`}
+        isLoading={deleteCampaign.isPending}
         icon={Sword}
       />
     </>

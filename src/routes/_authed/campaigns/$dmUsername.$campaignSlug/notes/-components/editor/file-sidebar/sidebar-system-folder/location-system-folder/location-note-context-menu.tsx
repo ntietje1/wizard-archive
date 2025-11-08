@@ -8,11 +8,11 @@ import type { ContextMenuRef } from '~/components/context-menu/context-menu'
 export const LocationNoteContextMenu = forwardRef<
   ContextMenuRef,
   TagNoteContextMenuProps
->(({ children, tagWithNote, categoryConfig, ...props }, ref) => {
+>(({ children, noteWithTag, categoryConfig, ...props }, ref) => {
   return (
     <TagNoteContextMenu
       ref={ref}
-      tagWithNote={tagWithNote}
+      noteWithTag={noteWithTag}
       categoryConfig={categoryConfig}
       {...props}
     >

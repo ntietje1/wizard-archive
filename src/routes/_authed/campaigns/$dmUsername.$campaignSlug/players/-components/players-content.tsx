@@ -181,17 +181,11 @@ export default function PlayersContent() {
         onClose={() => setDeletingMemberId(null)}
         onConfirm={handleDeleteMember}
         title="Remove Player"
-        description="Are you sure you want to remove this player from the campaign? This will revoke their access. You can undo this action in the player requests section."
-        confirmLabel="Remove Player"
+        description={`Are you sure you want to remove ${players.data?.find((p) => p._id === deletingMemberId)?.userProfile?.name ?? 'this player'} from the campaign? This will revoke their access. You can undo this action in the player requests section.`}
+        confirmLabel={`Remove ${players.data?.find((p) => p._id === deletingMemberId)?.userProfile?.name ?? 'Unknown'}`}
         isLoading={isDeleting}
         icon={Users}
       />
     </div>
-  )
-}
-
-function PlayersContentLoading() {
-  return (
-    <CardGridSkeleton count={6} showCreateCard={true} cardHeight="h-[180px]" />
   )
 }

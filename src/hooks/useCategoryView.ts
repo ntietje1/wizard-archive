@@ -1,20 +1,26 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { useSidebarItems } from './useSidebarItems'
 import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Tag, TagCategory } from 'convex/tags/types'
-import type { Folder } from 'convex/notes/types'
+import type { TagCategory } from 'convex/tags/types'
+import type { Folder, Note } from 'convex/notes/types'
 import usePersistedState from './usePersistedState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { CATEGORY_KIND } from 'convex/tags/types'
+import {
+  useSidebarItemsByCategory,
+  useSidebarItemsByParent,
+} from './useSidebarItems'
 
 export const CATEGORY_VIEW_MODE_STORAGE_KEY = 'category-view-mode'
-export const CATEGORY_SKELETON_COUNT_STORAGE_KEY = 'category-skeleton-count'
+export const CATEGORY_FOLDER_SKELETON_COUNT_STORAGE_KEY =
+  'category-folder-skeleton-count'
+export const CATEGORY_NOTE_SKELETON_COUNT_STORAGE_KEY =
+  'category-note-skeleton-count'
 
 export const VIEW_MODE = {
   flat: 'flat',
@@ -34,7 +40,7 @@ interface UseCategoryViewReturn {
   viewMode: ViewMode
   toggleViewMode: () => void
 
-  tags?: Tag[]
+  notesAndTags?: Note[]
   folders?: Folder[]
   categoryData?: TagCategory
   categoryConfig?: TagCategoryConfig
@@ -49,8 +55,10 @@ interface UseCategoryViewReturn {
   isAtRoot: boolean
   hasContent: boolean
   showSkeletons: boolean
-  skeletonCount: number
+  folderSkeletonCount: number
+  noteSkeletonCount: number
   invalidFolderId: boolean
+  categoryNotFound: boolean
 }
 
 export function useCategoryView({
@@ -66,9 +74,15 @@ export function useCategoryView({
     VIEW_MODE.folderized,
   )
 
-  const [skeletonCount] = usePersistedState<number>(
-    `${CATEGORY_SKELETON_COUNT_STORAGE_KEY}-${categorySlug}`,
-    6,
+  const [folderSkeletonCount, setFolderSkeletonCount] =
+    usePersistedState<number>(
+      `${CATEGORY_FOLDER_SKELETON_COUNT_STORAGE_KEY}-${categorySlug}-${currentFolderId}-${viewMode}`,
+      0,
+    )
+
+  const [noteSkeletonCount, setNoteSkeletonCount] = usePersistedState<number>(
+    `${CATEGORY_NOTE_SKELETON_COUNT_STORAGE_KEY}-${categorySlug}-${currentFolderId}-${viewMode}`,
+    0,
   )
 
   const ancestorsQuery = useQuery(
@@ -127,20 +141,22 @@ export function useCategoryView({
     ),
   )
 
-  const tagsQuery = useQuery(
-    convexQuery(
-      api.tags.queries.getTagsByCategory,
-      campaign?._id && categoryQuery.data?._id
-        ? { campaignId: campaign._id, categoryId: categoryQuery.data._id }
-        : 'skip',
-    ),
-  )
-
-  const sidebarItems = useSidebarItems(
+  const sidebarItemsByParent = useSidebarItemsByParent(
     categoryQuery.data?._id,
     currentFolderId,
-    viewMode === VIEW_MODE.folderized,
   )
+
+  const sidebarItemsByCategory = useSidebarItemsByCategory(
+    categoryQuery.data?._id as Id<'tagCategories'>,
+    !!categoryQuery.data?._id,
+  )
+
+  const sidebarItems = useMemo(() => {
+    if (viewMode === VIEW_MODE.folderized) {
+      return sidebarItemsByParent
+    }
+    return sidebarItemsByCategory
+  }, [viewMode, sidebarItemsByParent, sidebarItemsByCategory])
 
   const folders = useMemo(
     () =>
@@ -150,20 +166,29 @@ export function useCategoryView({
     [sidebarItems.data],
   )
 
-  const filteredTags = useMemo(() => {
-    if (viewMode === VIEW_MODE.flat || !sidebarItems.data) {
-      return tagsQuery.data
+  const notes = useMemo(
+    () =>
+      sidebarItems.data?.filter(
+        (item) => item.type === SIDEBAR_ITEM_TYPES.notes,
+      ) as Note[] | undefined,
+    [sidebarItems.data],
+  )
+
+  const filteredNotesAndTags = useMemo(() => {
+    if (!notes) {
+      return undefined
+    }
+
+    if (viewMode === VIEW_MODE.flat) {
+      return notes
     }
 
     const tagIdsAtLevel = new Set(
-      sidebarItems.data
-        .filter((item) => item.type === SIDEBAR_ITEM_TYPES.notes)
-        .map((item) => item?.tagId ?? undefined)
-        .filter(Boolean),
+      notes.map((note) => note.tagId).filter(Boolean),
     )
 
-    return tagsQuery.data?.filter((tag) => tagIdsAtLevel.has(tag._id))
-  }, [viewMode, sidebarItems.data, tagsQuery.data])
+    return notes.filter((note) => tagIdsAtLevel.has(note.tagId))
+  }, [viewMode, notes])
 
   const categoryConfig: TagCategoryConfig | undefined = categoryQuery.data
     ? {
@@ -174,28 +199,55 @@ export function useCategoryView({
       }
     : undefined
 
-  const canEditCategory = categoryQuery.data?.kind === CATEGORY_KIND.User
+  const canEditCategory =
+    categoryQuery.data?.kind === CATEGORY_KIND.User ||
+    categoryQuery.data?.kind === CATEGORY_KIND.SystemCore
 
   const invalidFolderId =
     sidebarItems.status === 'error' ||
     ancestorsQuery.status === 'error' ||
     currentFolderQuery.status === 'error'
 
+  const categoryNotFound =
+    campaign?._id !== undefined &&
+    categoryQuery.status !== 'pending' &&
+    categoryQuery.status === 'error'
+
   const isLoading =
     campaignWithMembership.status === 'pending' ||
-    categoryQuery.status === 'pending' ||
-    tagsQuery.status === 'pending' ||
+    sidebarItems.status === 'pending' ||
     (viewMode === VIEW_MODE.folderized && invalidFolderId) ||
-    (viewMode === VIEW_MODE.folderized && sidebarItems.status === 'pending') ||
     (viewMode === VIEW_MODE.folderized &&
       !!currentFolderId &&
       (ancestorsQuery.status === 'pending' ||
         currentFolderQuery.status === 'pending'))
 
-  const showSkeletons = isLoading || !categoryConfig
+  const showSkeletons = isLoading
 
-  // Reset skeletonCount to 0 while loading from localStorage
-  const effectiveSkeletonCount = isLoading ? 0 : skeletonCount
+  useEffect(() => {
+    if (!isLoading && sidebarItems.data) {
+      const folderCount =
+        viewMode === VIEW_MODE.folderized ? (folders?.length ?? 0) : 0
+      const noteCount = filteredNotesAndTags?.length ?? 0
+
+      if (folderCount > 0 && folderCount !== folderSkeletonCount) {
+        setFolderSkeletonCount(folderCount)
+      }
+      if (noteCount > 0 && noteCount !== noteSkeletonCount) {
+        setNoteSkeletonCount(noteCount)
+      }
+    }
+  }, [
+    isLoading,
+    sidebarItems.data,
+    viewMode,
+    folders?.length,
+    filteredNotesAndTags?.length,
+    folderSkeletonCount,
+    noteSkeletonCount,
+    setFolderSkeletonCount,
+    setNoteSkeletonCount,
+  ])
 
   const navigateToFolder = (folder: Folder) => {
     onNavigate(folder._id)
@@ -220,7 +272,7 @@ export function useCategoryView({
   return {
     viewMode,
     toggleViewMode,
-    tags: filteredTags,
+    notesAndTags: filteredNotesAndTags,
     folders: viewMode === VIEW_MODE.folderized ? folders : undefined,
     categoryData: categoryQuery.data,
     categoryConfig,
@@ -231,9 +283,12 @@ export function useCategoryView({
     navigateToBreadcrumb,
     isLoading,
     isAtRoot: breadcrumbs.length === 0,
-    hasContent: (filteredTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
+    hasContent:
+      (filteredNotesAndTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
     showSkeletons,
-    skeletonCount: effectiveSkeletonCount,
+    folderSkeletonCount,
+    noteSkeletonCount,
     invalidFolderId,
+    categoryNotFound,
   }
 }

@@ -15,19 +15,72 @@ import {
   validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
-} from './dnd-utils'
+} from '../dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
-import { Card, CardHeader, CardTitle } from '~/components/shadcn/ui/card'
+import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import './folder-card.css'
+import { CategoryFolderContextMenu } from './category-folder-context-menu'
+import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 
-interface FolderCardProps {
+function FolderSvg() {
+  return (
+    <div className="folder">
+      {/* Left section */}
+      <div className="folder-left">
+        <svg viewBox="0 0 120 200" preserveAspectRatio="none">
+          <path
+            d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
+            fill="currentColor"
+          />
+        </svg>
+      </div>
+
+      {/* Middle section */}
+      <div className="folder-middle">
+        <svg viewBox="0 0 20 200" preserveAspectRatio="none">
+          <rect x="0" y="15" width="20" height="200" fill="currentColor" />
+        </svg>
+      </div>
+
+      {/* Right section*/}
+      <div className="folder-right">
+        <svg viewBox="0 0 60 200" preserveAspectRatio="none">
+          <path
+            d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
+            fill="currentColor"
+          />
+        </svg>
+      </div>
+
+      {/* Background (hides seams) */}
+      <div className="folder-seam-cover"></div>
+    </div>
+  )
+}
+
+export interface FolderCardProps {
   folder?: Folder
   categoryId?: Id<'tagCategories'>
+  categoryConfig?: TagCategoryConfig
   onClick?: (e: MouseEvent) => void
   className?: string
   isLoading?: boolean
+}
+
+export function FolderCardWithContextMenu(props: FolderCardProps) {
+  if (!props.categoryConfig) {
+    return <FolderCard {...props} />
+  }
+  return (
+    <CategoryFolderContextMenu
+      categoryConfig={props.categoryConfig}
+      folder={props.folder}
+    >
+      <FolderCard {...props} />
+    </CategoryFolderContextMenu>
+  )
 }
 
 export function FolderCard({
@@ -46,19 +99,18 @@ export function FolderCard({
 
   if (isLoading || !folder || !categoryId) {
     return (
-      <Card className={`h-[140px] ${className}`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Skeleton className="w-8 h-8 rounded" />
-                <Skeleton className="h-5 w-32" />
-              </div>
+      <div className={`h-[140px] ${className}`}>
+        <div className="folder-wrapper">
+          <FolderSvg />
+          {/* Folder content skeleton */}
+          <div className="folder-content p-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
+              <Skeleton className="h-6 w-32" />
             </div>
-            <Skeleton className="w-8 h-8 rounded" />
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </div>
     )
   }
 
@@ -115,6 +167,12 @@ export function FolderCard({
     }
   }
 
+  const handleCardActivate = (e?: MouseEvent) => {
+    if (!isDragging && onClick) {
+      onClick(e || ({} as MouseEvent))
+    }
+  }
+
   return (
     <>
       <div
@@ -130,45 +188,17 @@ export function FolderCard({
           className={`folder-wrapper group transition-all ${
             isValidDropTarget ? 'valid-drop-target' : ''
           }`}
-          onClick={onClick}
+          onClick={handleCardActivate}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleCardActivate()
+            }
+          }}
+          tabIndex={0}
+          role="button"
         >
-          <div className="folder">
-            {/* Left section */}
-            <div className="folder-left">
-              <svg viewBox="0 0 120 200" preserveAspectRatio="none">
-                <path
-                  d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </div>
-
-            {/* Middle section */}
-            <div className="folder-middle">
-              <svg viewBox="0 0 20 200" preserveAspectRatio="none">
-                <rect
-                  x="0"
-                  y="15"
-                  width="20"
-                  height="200"
-                  fill="currentColor"
-                />
-              </svg>
-            </div>
-
-            {/* Right section*/}
-            <div className="folder-right">
-              <svg viewBox="0 0 60 200" preserveAspectRatio="none">
-                <path
-                  d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </div>
-
-            {/* Background (hides seams) */}
-            <div className="folder-seam-cover"></div>
-          </div>
+          <FolderSvg />
 
           {/* Folder name */}
           <div className="folder-content p-3">
