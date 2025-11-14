@@ -20,6 +20,7 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { CategoryTagContextMenu } from './category-tag-context-menu'
 import type { Note } from 'convex/notes/types'
+import { getTagColor } from '~/hooks/useTags'
 
 export interface TagCardProps {
   noteAndTag?: Note
@@ -53,6 +54,7 @@ export function TagCard({
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const tag = noteAndTag?.tag
+  const tagColor = tag ? getTagColor(tag) : undefined
 
   const [editing, setEditing] = useState<Tag | null>(null)
   const [deletingTag, setDeletingTag] = useState<Tag | null>(null)
@@ -185,7 +187,7 @@ export function TagCard({
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center"
-                style={{ backgroundColor: tag.color }}
+                style={{ backgroundColor: tagColor }}
               >
                 <CategoryIcon className="w-8 h-8 text-white/80" />
               </div>

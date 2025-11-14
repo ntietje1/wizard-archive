@@ -4,7 +4,7 @@ import {
   type DefaultReactSuggestionItem,
   SuggestionMenuController,
 } from '@blocknote/react'
-import { useTags } from './use-tags'
+import { useTags, getTagColor } from '~/hooks/useTags'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { toast } from 'sonner'
 
@@ -33,12 +33,11 @@ export default function TagMenu({
     const tagContent = {
       tagId: tag._id as string,
       tagName: tag.displayName,
-      tagColor: tag.color,
+      tagColor: getTagColor(tag),
     }
 
     try {
-      //TODO: fix this
-      ;(editor as any).insertInlineContent([
+      editor.insertInlineContent([
         {
           type: 'tag',
           props: tagContent,

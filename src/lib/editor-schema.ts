@@ -1,12 +1,9 @@
 import {
   type Block,
   BlockNoteEditor,
-  defaultBlockSpecs,
+  BlockNoteSchema,
   defaultInlineContentSpecs,
-  defaultStyleSpecs,
-  type BlockSchemaFromSpecs,
-  type InlineContentSchemaFromSpecs,
-  type StyleSchemaFromSpecs,
+  type PartialBlock,
 } from '@blocknote/core'
 import { TagInlineContent } from '~/components/editor/tag-inline-content'
 
@@ -15,14 +12,28 @@ export const customInlineContentSpecs = {
   tag: TagInlineContent,
 }
 
+export const editorSchema = BlockNoteSchema.create({
+  inlineContentSpecs: customInlineContentSpecs,
+})
+
+export type CustomBlockSchema = typeof editorSchema.blockSchema
+export type CustomInlineContentSchema = typeof editorSchema.inlineContentSchema
+export type CustomStyleSchema = typeof editorSchema.styleSchema
+
+export type CustomPartialBlock = PartialBlock<
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema
+>
+
 export type CustomBlock = Block<
-  BlockSchemaFromSpecs<typeof defaultBlockSpecs>,
-  InlineContentSchemaFromSpecs<typeof customInlineContentSpecs>,
-  StyleSchemaFromSpecs<typeof defaultStyleSpecs>
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema
 >
 
 export type CustomBlockNoteEditor = BlockNoteEditor<
-  BlockSchemaFromSpecs<typeof defaultBlockSpecs>,
-  InlineContentSchemaFromSpecs<typeof customInlineContentSpecs>,
-  StyleSchemaFromSpecs<typeof defaultStyleSpecs>
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema
 >

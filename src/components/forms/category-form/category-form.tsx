@@ -373,14 +373,34 @@ export function CategoryForm({
           </div>
         )}
 
-        <form.Field name="defaultColor">
+        <form.Field
+          name="defaultColor"
+          validators={{
+            onMount: ({ value }: { value: string }) =>
+              !value ? 'Default color is required' : undefined,
+            onChange: ({ value }: { value: string }) =>
+              !value ? 'Default color is required' : undefined,
+          }}
+        >
           {(field) => (
             <div className="space-y-2">
-              <Label>Default Tag Color</Label>
+              <Label>Default Tag Color *</Label>
               <ColorPicker
-                selectedColor={field.state.value}
-                onColorChange={(c: string) => field.handleChange(c)}
+                selectedColor={field.state.value || null}
+                onColorChange={(c: string | null) => {
+                  field.handleChange(c ?? '')
+                }}
+                allowDeselect={false}
               />
+              {field.state.meta.errors.length > 0 &&
+                field.state.meta.isTouched && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle size={14} />
+                    {typeof field.state.meta.errors[0] === 'string'
+                      ? field.state.meta.errors[0]
+                      : 'Default color is required'}
+                  </p>
+                )}
             </div>
           )}
         </form.Field>

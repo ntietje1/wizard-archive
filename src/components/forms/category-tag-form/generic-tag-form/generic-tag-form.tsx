@@ -83,15 +83,15 @@ export default function GenericTagForm({
       return {
         name: tag.displayName,
         description: tag.description || '',
-        color: tag.color,
+        color: tag.color ?? null,
       }
     } else {
       return {
         ...defaultBaseFormValues,
-        color: getCategory.data?.defaultColor || defaultBaseFormValues.color,
+        color: null,
       }
     }
-  }, [tag, getCategory.data, mode])
+  }, [tag, mode])
 
   const form = useForm({
     defaultValues: getInitialValues(),
@@ -134,7 +134,7 @@ export default function GenericTagForm({
           displayName: value.name.trim(),
           name: value.name.trim(),
           description: value.description.trim() || undefined,
-          color: value.color,
+          color: value.color ?? undefined,
           imageStorageId: imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
@@ -235,7 +235,13 @@ export default function GenericTagForm({
 
       {/* Color Picker */}
       <form.Field name="color">
-        {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
+        {(field) => (
+          <ColorField
+            field={field}
+            isDisabled={isFormDisabled}
+            categoryDefaultColor={getCategory.data?.defaultColor}
+          />
+        )}
       </form.Field>
 
       {/* Image Upload Section */}

@@ -27,9 +27,9 @@ interface FormFieldState {
 
 interface ColorFieldState {
   state: {
-    value: string
+    value: string | null
   }
-  handleChange: (value: string) => void
+  handleChange: (value: string | null) => void
 }
 
 interface NameFieldProps {
@@ -47,6 +47,7 @@ interface DescriptionFieldProps {
 interface ColorFieldProps {
   field: ColorFieldState
   isDisabled: boolean
+  categoryDefaultColor?: string
 }
 
 interface ImageUploadFieldProps {
@@ -131,12 +132,41 @@ export function DescriptionField({
   )
 }
 
-export function ColorField({ field, isDisabled }: ColorFieldProps) {
+export function ColorField({
+  field,
+  isDisabled,
+  categoryDefaultColor,
+}: ColorFieldProps) {
+  const isUsingCategoryDefault = field.state.value === null
+
   return (
     <div className="space-y-2">
-      <Label id="color-picker-label" className="text-sm font-semibold">
-        Tag Color
-      </Label>
+      <div className="flex items-center gap-2">
+        <Label id="color-picker-label" className="text-sm font-semibold">
+          Tag Color
+        </Label>
+        {isUsingCategoryDefault && categoryDefaultColor && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span>(Using the category color</span>
+            <span
+              className="inline-block w-3 h-3 mt-0.5 rounded-full"
+              style={{ backgroundColor: categoryDefaultColor }}
+              aria-label={`Category color: ${categoryDefaultColor}`}
+            />
+            <span>since no tag color is selected)</span>
+          </span>
+        )}
+        {isUsingCategoryDefault && !categoryDefaultColor && (
+          <span className="text-xs text-muted-foreground">
+            (No category default color is set)
+          </span>
+        )}
+        {!isUsingCategoryDefault && (
+          <span className="text-xs text-muted-foreground">
+            (Click again to deselect and revert to the default color)
+          </span>
+        )}
+      </div>
       <ColorPicker
         selectedColor={field.state.value}
         onColorChange={(color) => field.handleChange(color)}

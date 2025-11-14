@@ -22,7 +22,7 @@ export const tagCategoryTableFields = {
 export const tagTableFields = {
   displayName: v.string(),
   name: v.string(),
-  color: v.string(),
+  color: v.optional(v.string()),
   description: v.optional(v.string()),
   imageStorageId: v.optional(v.id('_storage')),
   campaignId: v.id('campaigns'),

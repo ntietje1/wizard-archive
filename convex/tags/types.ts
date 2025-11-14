@@ -67,7 +67,7 @@ export type Tag = {
 
   displayName: string
   name: string
-  color: string
+  color?: string
   description?: string
   campaignId: Id<'campaigns'>
   categoryId: Id<'tagCategories'>

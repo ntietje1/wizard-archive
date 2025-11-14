@@ -1,3 +1,6 @@
+track if tag color was manually cnaged
+switch share button ctrl click and reg click functionality
+
 Current features
 
 - Authentication (Clerk)

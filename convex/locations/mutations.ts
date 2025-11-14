@@ -50,7 +50,7 @@ export const updateLocation = mutation({
     locationId: v.id('locations'),
     displayName: v.optional(v.string()),
     description: v.optional(v.string()),
-    color: v.optional(v.string()),
+    color: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.id('_storage')),
   },
   returns: v.id('locations'),

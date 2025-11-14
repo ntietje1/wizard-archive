@@ -108,17 +108,16 @@ export default function CharacterTagForm({
       return {
         name: character.displayName,
         description: character.description || '',
-        color: character.color,
+        color: character.color ?? null,
         playerId: character.playerId || undefined,
       }
     } else {
       return {
         ...defaultCharacterFormValues,
-        color:
-          getCategory.data?.defaultColor || defaultCharacterFormValues.color,
+        color: null,
       }
     }
-  }, [character, getCategory.data, mode])
+  }, [character, mode])
 
   const form = useForm({
     defaultValues: getInitialValues(),
@@ -160,7 +159,7 @@ export default function CharacterTagForm({
           displayName: value.name.trim(),
           name: value.name.trim(),
           description: value.description.trim() || undefined,
-          color: value.color,
+          color: value.color ?? undefined,
           imageStorageId: imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
@@ -265,7 +264,13 @@ export default function CharacterTagForm({
 
       {/* Color Picker */}
       <form.Field name="color">
-        {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
+        {(field) => (
+          <ColorField
+            field={field}
+            isDisabled={isFormDisabled}
+            categoryDefaultColor={getCategory.data?.defaultColor}
+          />
+        )}
       </form.Field>
 
       {/* Player */}

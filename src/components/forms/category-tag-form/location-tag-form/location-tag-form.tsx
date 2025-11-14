@@ -93,16 +93,15 @@ export default function LocationTagForm({
       return {
         name: location.displayName,
         description: location.description || '',
-        color: location.color,
+        color: location.color ?? null,
       }
     } else {
       return {
         ...defaultLocationFormValues,
-        color:
-          getCategory.data?.defaultColor || defaultLocationFormValues.color,
+        color: null,
       }
     }
-  }, [location, getCategory.data, mode])
+  }, [location, mode])
 
   const form = useForm({
     defaultValues: getInitialValues(),
@@ -144,7 +143,7 @@ export default function LocationTagForm({
           displayName: value.name.trim(),
           name: value.name.trim(),
           description: value.description.trim() || undefined,
-          color: value.color,
+          color: value.color ?? undefined,
           imageStorageId: imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
@@ -247,7 +246,13 @@ export default function LocationTagForm({
 
       {/* Color Picker */}
       <form.Field name="color">
-        {(field) => <ColorField field={field} isDisabled={isFormDisabled} />}
+        {(field) => (
+          <ColorField
+            field={field}
+            isDisabled={isFormDisabled}
+            categoryDefaultColor={getCategory.data?.defaultColor}
+          />
+        )}
       </form.Field>
 
       {/* Image Upload Section */}

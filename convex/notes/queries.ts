@@ -255,20 +255,26 @@ export const getBlockTagState = query({
       }
     }
 
-    const blockTagIds = await getBlockLevelTags(ctx, block._id)
+    const [blockTagIds, noteLevelTag] = await Promise.all([
+      getBlockLevelTags(ctx, block._id),
+      getNoteLevelTag(ctx, note._id),
+    ])
     const inlineTagIds = extractTagIdsFromBlockContent(block.content)
-    const noteLevelTag = await getNoteLevelTag(ctx, note._id)
+    const noteTagId = noteLevelTag?._id
 
-    const noteTagIdList = noteLevelTag ? [noteLevelTag._id] : []
     const allTagIds = [
-      ...new Set([...blockTagIds, ...inlineTagIds, ...noteTagIdList]),
+      ...new Set([
+        ...blockTagIds,
+        ...inlineTagIds,
+        ...(noteTagId ? [noteTagId] : []),
+      ]),
     ]
 
     return {
       allTagIds,
       inlineTagIds,
       blockTagIds,
-      noteTagId: noteLevelTag?._id,
+      noteTagId,
     }
   },
 })

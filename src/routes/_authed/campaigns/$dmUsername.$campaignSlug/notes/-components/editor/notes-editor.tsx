@@ -1,21 +1,16 @@
 import { BlockNoteView } from '@blocknote/shadcn'
-import { BlockNoteSchema } from '@blocknote/core'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { Button } from '~/components/shadcn/ui/button'
 import TagMenu from './extensions/side-menu/tags/tag-menu'
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import SelectionToolbar from './extensions/selection-toolbar/selection-toolbar'
-import { customInlineContentSpecs } from '~/lib/editor-schema'
+import { editorSchema, type CustomPartialBlock } from '~/lib/editor-schema'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
-
-const schema = BlockNoteSchema.create({
-  inlineContentSpecs: customInlineContentSpecs,
-})
 
 export function NotesEditor() {
   return (
@@ -31,14 +26,12 @@ function NotesEditorBase() {
     note?.data && note?.data?.content && note?.data?.content.length > 0
 
   const editor = useCreateBlockNote(
-    hasContent
-      ? {
-          initialContent: note.data.content,
-          schema,
-        }
-      : {
-          schema,
-        },
+    {
+      schema: editorSchema,
+      ...(hasContent && {
+        initialContent: note.data.content as CustomPartialBlock[],
+      }),
+    },
     [note?.data?._id],
   )
 

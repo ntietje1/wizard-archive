@@ -62,7 +62,8 @@ export const CategoryFolderButton = ({
   )
   const categoryContextMenuRef = useRef<ContextMenuRef>(null)
 
-  const children = useSidebarItemsByParent(folder?.categoryId, folder?._id)
+  const categoryId = folder?.categoryId ?? getCategory?.data?._id
+  const children = useSidebarItemsByParent(categoryId, folder?._id)
 
   const hasItems = (children.data && children.data.length > 0) || false
 

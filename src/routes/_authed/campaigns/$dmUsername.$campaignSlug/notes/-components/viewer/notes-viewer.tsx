@@ -1,11 +1,12 @@
 import React from 'react'
-import { useTags } from '../editor/extensions/side-menu/tags/use-tags'
+import { useTags } from '~/hooks/useTags'
 import { api } from 'convex/_generated/api'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { BlockNoteSchema, BlockNoteEditor } from '@blocknote/core'
 import {
   customInlineContentSpecs,
   type CustomBlockNoteEditor,
+  type CustomPartialBlock,
 } from '~/lib/editor-schema'
 import type { Id } from 'convex/_generated/dataModel'
 import { useQuery } from '@tanstack/react-query'
@@ -41,7 +42,9 @@ export function NotesViewer() {
     if (!blocks.data || blocks.data.length === 0) return null
     return BlockNoteEditor.create({
       schema,
-      initialContent: blocks.data.map((block) => block.content),
+      initialContent: blocks.data.map(
+        (block) => block.content,
+      ) as CustomPartialBlock[],
     })
   }, [blocks.data])
 

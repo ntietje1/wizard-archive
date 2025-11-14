@@ -62,7 +62,7 @@ export const updateCharacter = mutation({
     playerId: v.optional(v.id('campaignMembers')),
     displayName: v.optional(v.string()),
     description: v.optional(v.string()),
-    color: v.optional(v.string()),
+    color: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.id('_storage')),
   },
   returns: v.id('characters'),

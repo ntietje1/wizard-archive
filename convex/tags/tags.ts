@@ -488,7 +488,7 @@ export const updateTagAndContent = async (
   tagId: Id<'tags'>,
   input: {
     displayName?: string
-    color?: string
+    color?: string | null
     description?: string
     imageStorageId?: Id<'_storage'>
   },
@@ -545,7 +545,9 @@ export const updateTagAndContent = async (
     updates.displayName = input.displayName
   }
   if (input.color !== undefined) {
-    updates.color = input.color
+    // null means explicitly clear the color
+    // undefined means don't update
+    updates.color = input.color === null ? undefined : input.color
   }
   if (input.description !== undefined) {
     updates.description = input.description

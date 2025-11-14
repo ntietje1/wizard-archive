@@ -15,13 +15,13 @@ export interface TagCategoryConfig {
 export interface BaseTagFormValues {
   name: string
   description: string
-  color: string
+  color: string | null
 }
 
 export const defaultBaseFormValues: BaseTagFormValues = {
   name: '',
   description: '',
-  color: '#ef4444',
+  color: null,
 }
 
 interface TagDialogBaseProps {

@@ -35,7 +35,7 @@ export const updateTag = mutation({
   args: {
     tagId: v.id('tags'),
     displayName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
   },

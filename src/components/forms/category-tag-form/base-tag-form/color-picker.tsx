@@ -4,10 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import {
   ColorPicker as AdvancedColorPicker,
-  ColorPickerAlpha,
   ColorPickerHue,
-  ColorPickerFormat,
-  ColorPickerOutput,
   ColorPickerSelection,
 } from '~/components/shadcn/ui/color-picker'
 import {
@@ -31,19 +28,12 @@ const DEFAULT_COLORS = [
   '#78716c', // stone
 ]
 
-const normalizeColor = (hex: string) => {
-  try {
-    return Color(hex).hex().toLowerCase()
-  } catch {
-    return hex.toLowerCase()
-  }
-}
-
 interface ColorPickerProps {
-  selectedColor: string
-  onColorChange: (color: string) => void
+  selectedColor: string | null
+  onColorChange: (color: string | null) => void
   colors?: string[]
   disabled?: boolean
+  allowDeselect?: boolean
 }
 
 export function ColorPicker({
@@ -51,31 +41,46 @@ export function ColorPicker({
   onColorChange,
   colors = DEFAULT_COLORS,
   disabled = false,
+  allowDeselect = true,
 }: ColorPickerProps) {
-  const normalizedColors = useMemo(
-    () => colors.map((color) => normalizeColor(color)),
-    [colors],
-  )
-  const normalizedSelectedColor = useMemo(
-    () => normalizeColor(selectedColor),
-    [selectedColor],
-  )
-  const isPresetSelected = normalizedColors.includes(normalizedSelectedColor)
-  const [customColor, setCustomColor] = useState(selectedColor)
+  const isPresetSelected =
+    selectedColor !== null && colors.includes(selectedColor)
+  // Initialize customColor with selectedColor if it's a custom color, otherwise use a default gray
+  const DEFAULT_CUSTOM_COLOR = '#808080'
+  const [customColor, setCustomColor] = useState<string>(() => {
+    if (selectedColor !== null && !colors.includes(selectedColor)) {
+      try {
+        return Color(selectedColor).hex()
+      } catch {
+        return selectedColor
+      }
+    }
+    return DEFAULT_CUSTOM_COLOR
+  })
   const [isCustomOpen, setIsCustomOpen] = useState(false)
 
   useEffect(() => {
-    if (!isPresetSelected) {
+    // Only update customColor when a custom color is selected (not a preset)
+    if (selectedColor !== null && !isPresetSelected) {
       try {
         setCustomColor(Color(selectedColor).hex())
       } catch {
         setCustomColor(selectedColor)
       }
     }
+    // When selectedColor is null or a preset is selected, keep the customColor as is
   }, [isPresetSelected, selectedColor])
 
   const handlePresetClick = (color: string) => {
     if (disabled) return
+    if (color === selectedColor && allowDeselect) {
+      onColorChange(null)
+      return
+    }
+    // If allowDeselect is false, don't allow toggling off
+    if (color === selectedColor && !allowDeselect) {
+      return
+    }
     onColorChange(color)
     setIsCustomOpen(false)
   }
@@ -92,7 +97,7 @@ export function ColorPicker({
     }
   }
 
-  const isCustomSelected = !isPresetSelected
+  const isCustomSelected = selectedColor !== null && !isPresetSelected
 
   return (
     <div className="space-y-2">
@@ -103,10 +108,8 @@ export function ColorPicker({
           aria-label="Color options"
           aria-disabled={disabled}
         >
-          {colors.map((color, index) => {
-            const normalizedColor =
-              normalizedColors[index] ?? normalizeColor(color)
-            const isSelected = normalizedSelectedColor === normalizedColor
+          {colors.map((color) => {
+            const isSelected = color === selectedColor
             return (
               <button
                 id={`color-picker-${color.replace('#', '')}`}
@@ -130,7 +133,15 @@ export function ColorPicker({
             )
           })}
 
-          <Popover open={isCustomOpen} onOpenChange={setIsCustomOpen}>
+          <Popover
+            open={isCustomOpen}
+            onOpenChange={(open) => {
+              setIsCustomOpen(open)
+              if (open) {
+                onColorChange(customColor)
+              }
+            }}
+          >
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -161,7 +172,7 @@ export function ColorPicker({
               )}
             >
               <AdvancedColorPicker
-                value={customColor}
+                value={customColor ?? undefined}
                 onChange={handleCustomChange}
               >
                 <div className="flex flex-col gap-4">
