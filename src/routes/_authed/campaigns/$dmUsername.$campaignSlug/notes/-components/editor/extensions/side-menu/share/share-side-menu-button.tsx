@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useComponentsContext } from '@blocknote/react'
@@ -41,7 +41,6 @@ export default function ShareSideMenuButton({
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const Components = useComponentsContext()!
-  const menuOpenRef = useRef(false)
 
   const blockTagState = useQuery(
     convexQuery(
@@ -108,51 +107,13 @@ export default function ShareSideMenuButton({
 
   const handleButtonClick = (e: React.MouseEvent) => {
     if (!note.data || isMutating) return
+    if (e.ctrlKey || e.metaKey) return
 
-    // Ctrl+click (or Cmd+click on Mac): open context menu via right-click simulation
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault()
-      e.stopPropagation()
-      const rect = e.currentTarget.getBoundingClientRect()
-      // Create a synthetic right-click event
-      const syntheticEvent = document.createEvent('MouseEvents')
-      syntheticEvent.initMouseEvent(
-        'contextmenu',
-        true,
-        true,
-        window,
-        0,
-        rect.left,
-        rect.bottom,
-        rect.left,
-        rect.bottom,
-        false,
-        false,
-        false,
-        false,
-        2, // right button
-        null,
-      )
-      e.currentTarget.dispatchEvent(syntheticEvent)
-      return
-    }
-
-    // Regular click: toggle "All players" share
     e.preventDefault()
     e.stopPropagation()
     if (sharedAllTag) {
       toggleShareTag(sharedAllTag)
     }
-  }
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    // Prevent closing and reopening if menu is already open
-    if (menuOpenRef.current) {
-      e.preventDefault()
-      e.stopPropagation()
-      return
-    }
-    freezeMenu()
   }
 
   const shareItems: ShareItem[] = useMemo(() => {
@@ -184,14 +145,15 @@ export default function ShareSideMenuButton({
   return (
     <ContextMenu
       onOpenChange={(open) => {
-        menuOpenRef.current = open
-        if (!open) {
+        if (open) {
+          freezeMenu()
+        } else {
           unfreezeMenu()
         }
       }}
     >
       <ContextMenuTrigger asChild>
-        <div onClick={handleButtonClick} onContextMenu={handleContextMenu}>
+        <div onClick={handleButtonClick}>
           <Components.SideMenu.Button
             label={isShared ? 'Shared' : 'Share'}
             className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''}`}
@@ -201,12 +163,7 @@ export default function ShareSideMenuButton({
       </ContextMenuTrigger>
       <ContextMenuContent
         className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]"
-        onCloseAutoFocus={(e) => {
-          e.preventDefault()
-        }}
-        onEscapeKeyDown={() => {
-          unfreezeMenu()
-        }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
         <ContextMenuSeparator />
