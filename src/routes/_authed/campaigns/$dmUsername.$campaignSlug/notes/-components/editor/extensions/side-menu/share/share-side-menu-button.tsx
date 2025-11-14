@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useComponentsContext } from '@blocknote/react'
@@ -7,14 +7,14 @@ import { toast } from 'sonner'
 import type { CustomBlock } from '~/lib/editor-schema'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useCampaign } from '~/contexts/CampaignContext'
-import type { Tag } from 'convex/tags/types'
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuCheckboxItem,
-} from '~/components/shadcn/ui/dropdown-menu'
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuLabel,
+  ContextMenuCheckboxItem,
+  ContextMenuSeparator,
+} from '~/components/shadcn/ui/context-menu'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import type { Share } from 'convex/shares/types'
 
@@ -22,6 +22,14 @@ interface ShareSideMenuButtonProps {
   block: CustomBlock
   freezeMenu: () => void
   unfreezeMenu: () => void
+}
+
+interface ShareItem {
+  key: string
+  name?: string
+  username?: string
+  share: Share
+  applied: boolean
 }
 
 export default function ShareSideMenuButton({
@@ -33,55 +41,52 @@ export default function ShareSideMenuButton({
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const Components = useComponentsContext()!
+  const menuOpenRef = useRef(false)
 
   const blockTagState = useQuery(
     convexQuery(
       api.notes.queries.getBlockTagState,
-      note.data?._id
-        ? {
-            noteId: note.data._id,
-            blockId: block.id,
-          }
-        : 'skip',
+      note.data?._id ? { noteId: note.data._id, blockId: block.id } : 'skip',
+    ),
+  )
+
+  const sharesQuery = useQuery(
+    convexQuery(
+      api.shares.queries.getShareTagsByCampaign,
+      campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
 
   const addShareToBlock = useMutation({
     mutationFn: useConvexMutation(api.shares.mutations.addShareBlock),
   })
+
   const removeShareFromBlock = useMutation({
     mutationFn: useConvexMutation(api.shares.mutations.removeShareFromBlock),
   })
+
   const isMutating = addShareToBlock.isPending || removeShareFromBlock.isPending
 
-  const sharedTagQueryResult = useQuery(
-    convexQuery(
-      api.shares.queries.getShareTagsByCampaign,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
-    ),
-  )
-  const sharedAllTag = sharedTagQueryResult.data?.find(
-    (s: Share) => s.memberId == null,
-  )
-  const playerSharedTags = sharedTagQueryResult.data?.filter(
-    (s: Share) => s.memberId != null,
-  )
+  const shares = sharesQuery.data ?? []
+  const sharedAllTag = shares.find((s: Share) => s.memberId == null)
+  const playerSharedTags = shares.filter((s: Share) => s.memberId != null)
 
-  // member details are now included on each share from the backend
-
-  const appliedTagIds = blockTagState.data?.allTagIds || []
+  const appliedTagIds = new Set(blockTagState.data?.allTagIds ?? [])
   const isShared = useMemo(() => {
-    if (!sharedAllTag || !playerSharedTags) return false
-    if (appliedTagIds.includes(sharedAllTag._id)) return true
+    if (!sharedAllTag) return false
+    if (appliedTagIds.has(sharedAllTag._id)) return true
     return playerSharedTags.some((share: Share) =>
-      appliedTagIds.includes(share.tagId),
+      appliedTagIds.has(share.tagId),
     )
   }, [appliedTagIds, sharedAllTag, playerSharedTags])
 
+  const isOptimisticShared =
+    (isShared && !isMutating) || (!isShared && isMutating)
+
   const toggleShareTag = async (share: Share) => {
-    if (!note.data) return
-    if (isMutating) return
-    const isApplied = appliedTagIds.includes(share.tagId)
+    if (!note.data || isMutating) return
+
+    const isApplied = appliedTagIds.has(share.tagId)
     try {
       if (isApplied) {
         await removeShareFromBlock.mutateAsync({
@@ -101,110 +106,146 @@ export default function ShareSideMenuButton({
     }
   }
 
-  const handleButtonClick = async (e: React.MouseEvent) => {
-    if (!note.data) return
-    if (isMutating) return
-    if (e.ctrlKey) {
-      if (sharedAllTag) {
-        await toggleShareTag(sharedAllTag)
-      }
+  const handleButtonClick = (e: React.MouseEvent) => {
+    if (!note.data || isMutating) return
+
+    // Ctrl+click (or Cmd+click on Mac): open context menu via right-click simulation
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      const rect = e.currentTarget.getBoundingClientRect()
+      // Create a synthetic right-click event
+      const syntheticEvent = document.createEvent('MouseEvents')
+      syntheticEvent.initMouseEvent(
+        'contextmenu',
+        true,
+        true,
+        window,
+        0,
+        rect.left,
+        rect.bottom,
+        rect.left,
+        rect.bottom,
+        false,
+        false,
+        false,
+        false,
+        2, // right button
+        null,
+      )
+      e.currentTarget.dispatchEvent(syntheticEvent)
       return
+    }
+
+    // Regular click: toggle "All players" share
+    e.preventDefault()
+    e.stopPropagation()
+    if (sharedAllTag) {
+      toggleShareTag(sharedAllTag)
     }
   }
 
-  const items: {
-    key: string
-    name?: string
-    username?: string
-    tag: Share
-    applied: boolean
-  }[] = useMemo(() => {
-    const list: {
-      key: string
-      name?: string
-      username?: string
-      tag: Share
-      applied: boolean
-    }[] = []
+  const handleContextMenu = (e: React.MouseEvent) => {
+    // Prevent closing and reopening if menu is already open
+    if (menuOpenRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+    freezeMenu()
+  }
+
+  const shareItems: ShareItem[] = useMemo(() => {
+    const items: ShareItem[] = []
+
     if (sharedAllTag) {
-      list.push({
+      items.push({
         key: `all-${sharedAllTag._id}`,
         name: 'All players',
-        tag: sharedAllTag,
-        applied: appliedTagIds.includes(sharedAllTag._id),
+        share: sharedAllTag,
+        applied: appliedTagIds.has(sharedAllTag._id),
       })
     }
-    ;(playerSharedTags || []).forEach((t: Share) => {
-      const profile = t.member?.userProfile
-      const fullName = profile?.name || undefined
-      const username = profile?.username
-      list.push({
-        key: `player-${t._id}`,
-        name: fullName,
-        username,
-        tag: t,
-        applied: appliedTagIds.includes(t._id),
+
+    playerSharedTags.forEach((share: Share) => {
+      const profile = share.member?.userProfile
+      items.push({
+        key: `player-${share._id}`,
+        name: profile?.name,
+        username: profile?.username,
+        share,
+        applied: appliedTagIds.has(share.tagId),
       })
     })
-    return list
+
+    return items
   }, [sharedAllTag, playerSharedTags, appliedTagIds])
 
   return (
-    <DropdownMenu
-      onOpenChange={(open: boolean) => {
-        if (open) {
-          freezeMenu()
-        } else {
+    <ContextMenu
+      onOpenChange={(open) => {
+        menuOpenRef.current = open
+        if (!open) {
           unfreezeMenu()
         }
       }}
     >
-      <DropdownMenuTrigger asChild>
-        <Components.SideMenu.Button
-          label={isShared ? 'Shared' : 'Share'}
-          className={`!p-0 !px-0 !h-6 !w-6 ${isShared ? '!text-blue-600' : ''}`}
-          onClick={handleButtonClick}
-          icon={<Share2 size={18} />}
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        side="bottom"
-        align="start"
-        className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
+      <ContextMenuTrigger asChild>
+        <div onClick={handleButtonClick} onContextMenu={handleContextMenu}>
+          <Components.SideMenu.Button
+            label={isShared ? 'Shared' : 'Share'}
+            className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''}`}
+            icon={<Share2 size={18} />}
+          />
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent
+        className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault()
+        }}
+        onEscapeKeyDown={() => {
+          unfreezeMenu()
+        }}
       >
-        <DropdownMenuLabel>Share with</DropdownMenuLabel>
-        {items.map((it) => (
-          <DropdownMenuCheckboxItem
-            key={it.key}
-            checked={it.applied}
-            disabled={isMutating}
-            indicatorAlign="right"
-            className="pl-2 pr-8 py-1.5"
-            aria-label={`Share with ${it.name || it.username || 'Player'}`}
-            onSelect={async (e) => {
-              e.preventDefault()
-              await toggleShareTag(it.tag)
-            }}
-          >
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span
-                className="truncate font-medium"
-                title={it.name || (it.username ? `@${it.username}` : 'Player')}
-              >
-                {it.name ? it.name : it.username ? `@${it.username}` : 'Player'}
-              </span>
-              {it.name && it.username && (
-                <span
-                  className="truncate text-xs text-muted-foreground"
-                  title={`@${it.username}`}
-                >
-                  @{it.username}
+        <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
+        <ContextMenuSeparator />
+        {shareItems.map((item) => {
+          const displayName = item.name || item.username || 'Player'
+          const displayText = item.name
+            ? item.name
+            : item.username
+              ? `@${item.username}`
+              : 'Player'
+
+          return (
+            <ContextMenuCheckboxItem
+              key={item.key}
+              checked={item.applied}
+              disabled={isMutating}
+              onSelect={async (e) => {
+                e.preventDefault()
+                await toggleShareTag(item.share)
+              }}
+              className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
+            >
+              <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
+                <span className="truncate font-medium" title={displayName}>
+                  {displayText}
                 </span>
-              )}
-            </span>
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                {item.name && item.username && (
+                  <span
+                    className="truncate text-xs text-muted-foreground"
+                    title={`@${item.username}`}
+                  >
+                    @{item.username}
+                  </span>
+                )}
+              </span>
+            </ContextMenuCheckboxItem>
+          )
+        })}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
