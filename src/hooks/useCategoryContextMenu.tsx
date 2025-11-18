@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Plus, FolderPlus, Pencil, Trash2 } from '~/lib/icons'
+import { Plus, FolderPlus, Pencil, Trash2, MapPin } from '~/lib/icons'
 import { useFolderState } from '~/hooks/useFolderState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Folder } from 'convex/notes/types'
@@ -308,5 +308,59 @@ export function useCategoryDeleteFolder(folder?: Folder) {
     setIsDialogOpen,
     confirmDeleteFolderFn,
     hasDirectChildren,
+  }
+}
+
+export function useCategoryNewMap(
+  categoryConfig: TagCategoryConfig | undefined,
+  folder?: Folder,
+) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { openFolder } = useFolderState(
+    folder?._id || categoryConfig?.categorySlug || '',
+  )
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+
+  const getCategory = useQuery(
+    convexQuery(
+      api.tags.queries.getTagCategoryBySlug,
+      campaign?._id && categoryConfig
+        ? {
+            campaignId: campaign._id,
+            slug: categoryConfig.categorySlug,
+          }
+        : 'skip',
+    ),
+  )
+
+  const handleNewMap = useCallback(() => {
+    if (!categoryConfig) return
+    // Only allow creating maps in locations category
+    if (categoryConfig.categorySlug !== 'locations') return
+    openFolder()
+    setIsDialogOpen(true)
+  }, [openFolder, categoryConfig])
+
+  const menuItem: ContextMenuItem | null = useMemo(() => {
+    // Only show for locations category
+    if (!categoryConfig || categoryConfig.categorySlug !== 'locations') {
+      return null
+    }
+    return {
+      type: 'action' as const,
+      icon: <MapPin className="h-4 w-4" />,
+      label: 'New Map',
+      onClick: handleNewMap,
+    }
+  }, [categoryConfig, handleNewMap])
+
+  return {
+    menuItem,
+    isDialogOpen,
+    setIsDialogOpen,
+    campaignId: campaign?._id,
+    categoryId: getCategory.data?._id,
+    parentFolderId: folder?._id,
   }
 }

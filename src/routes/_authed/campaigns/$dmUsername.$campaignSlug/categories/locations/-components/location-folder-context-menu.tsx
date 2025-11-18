@@ -10,9 +10,11 @@ import {
   useCategoryCreateItem,
   useCategoryNewFolderWithDialog,
   useCategoryEditFolder,
+  useCategoryNewMap,
 } from '~/hooks/useCategoryContextMenu'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
+import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { toast } from 'sonner'
 
@@ -28,6 +30,7 @@ export const LocationFolderContextMenu = forwardRef<
 >(({ children, categoryConfig, folder }, ref) => {
   const createItem = useCategoryCreateItem(categoryConfig, folder)
   const newFolder = useCategoryNewFolderWithDialog(categoryConfig, folder)
+  const newMap = useCategoryNewMap(categoryConfig, folder)
   const editFolder = useCategoryEditFolder(folder)
   const { updateFolder } = useFolderActions()
 
@@ -35,25 +38,43 @@ export const LocationFolderContextMenu = forwardRef<
     if (!categoryConfig) {
       return []
     }
-    if (folder) {
-      if (!editFolder.menuItem) {
-        return []
-      }
-      return [editFolder.menuItem]
-    }
     const items: ContextMenuItem[] = []
-    if (createItem.menuItem) {
-      items.push(createItem.menuItem)
+
+    if (folder) {
+      // When right-clicking on a folder, show create options for inside the folder
+      if (createItem.menuItem) {
+        items.push(createItem.menuItem)
+      }
+      if (newFolder.menuItem) {
+        items.push(newFolder.menuItem)
+      }
+      if (newMap.menuItem) {
+        items.push(newMap.menuItem)
+      }
+      if (editFolder.menuItem) {
+        items.push(editFolder.menuItem)
+      }
+    } else {
+      // When right-clicking on empty space, show create options for root level
+      if (createItem.menuItem) {
+        items.push(createItem.menuItem)
+      }
+      if (newFolder.menuItem) {
+        items.push(newFolder.menuItem)
+      }
+      if (newMap.menuItem) {
+        items.push(newMap.menuItem)
+      }
     }
-    if (newFolder.menuItem) {
-      items.push(newFolder.menuItem)
-    }
-    return items
+    return items.filter(
+      (item): item is NonNullable<typeof item> => item !== null,
+    )
   }, [
     folder,
     categoryConfig,
     createItem.menuItem,
     newFolder.menuItem,
+    newMap.menuItem,
     editFolder.menuItem,
   ])
 
@@ -63,14 +84,14 @@ export const LocationFolderContextMenu = forwardRef<
         {children}
       </ContextMenu>
 
-      {categoryConfig && !folder && (
+      {categoryConfig && (
         <>
           <LocationTagDialog
             mode="create"
             isOpen={createItem.isDialogOpen}
             onClose={() => createItem.setIsDialogOpen(false)}
             config={categoryConfig}
-            parentFolderId={undefined}
+            parentFolderId={folder?._id}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}
@@ -78,6 +99,15 @@ export const LocationFolderContextMenu = forwardRef<
             mode="create"
             onSubmit={newFolder.onSubmit}
           />
+          {newMap.campaignId && (
+            <MapDialog
+              isOpen={newMap.isDialogOpen}
+              onClose={() => newMap.setIsDialogOpen(false)}
+              campaignId={newMap.campaignId}
+              categoryId={newMap.categoryId}
+              parentFolderId={newMap.parentFolderId}
+            />
+          )}
         </>
       )}
 

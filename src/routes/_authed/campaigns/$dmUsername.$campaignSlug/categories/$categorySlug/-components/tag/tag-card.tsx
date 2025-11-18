@@ -11,7 +11,7 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import { useCampaign } from '~/contexts/CampaignContext'
 import { Edit, TagIcon, Trash2 } from '~/lib/icons'
 import { useDraggable } from '@dnd-kit/core'
-import { CATEGORY_ITEM_TYPES, type CategoryDragData } from '../dnd-utils'
+import { type CategoryDragData } from '../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
@@ -19,7 +19,7 @@ import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { CategoryTagContextMenu } from './category-tag-context-menu'
-import type { Note } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES, type Note } from 'convex/notes/types'
 import { getTagColor } from '~/hooks/useTags'
 
 export interface TagCardProps {
@@ -87,13 +87,14 @@ export function TagCard({
   }
 
   const dragData: CategoryDragData | undefined =
-    tag && config
+    tag && config && noteAndTag && tag.noteId
       ? {
-          _id: tag._id,
-          type: CATEGORY_ITEM_TYPES.tags,
+          _id: tag.noteId,
+          type: SIDEBAR_ITEM_TYPES.notes,
           name: tag.displayName,
           parentFolderId,
           noteId: tag.noteId,
+          categoryId: noteAndTag.categoryId || tag.category?._id,
           icon: getCategoryIcon(tag.category?.iconName ?? 'TagIcon'),
         }
       : undefined

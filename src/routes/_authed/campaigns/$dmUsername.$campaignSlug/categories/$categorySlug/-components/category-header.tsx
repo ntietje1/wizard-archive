@@ -1,5 +1,5 @@
 import { Button } from '~/components/shadcn/ui/button'
-import { FolderPlus, Plus, Edit } from '~/lib/icons'
+import { FolderPlus, Plus, Edit, MapPin } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { CategoryBreadcrumb } from './category-breadcrumb'
 import type { FolderAncestor, ViewMode } from '~/hooks/useCategoryView'
@@ -12,6 +12,7 @@ interface CategoryHeaderProps {
   onNavigateBreadcrumb: (index: number) => void
   showFolderActions?: boolean
   onCreateFolder?: () => void
+  onCreateMap?: () => void
   onToggleViewMode?: () => void
   viewMode?: ViewMode
   onCreateTag?: () => void
@@ -25,6 +26,7 @@ export function CategoryHeader({
   breadcrumbs,
   onNavigateBreadcrumb,
   onCreateFolder,
+  onCreateMap,
   onToggleViewMode,
   viewMode,
   onCreateTag,
@@ -94,6 +96,12 @@ export function CategoryHeader({
             >
               <FolderPlus className="w-4 h-4 mr-2" />
               New Folder
+            </Button>
+          )}
+          {onCreateMap && (
+            <Button variant="outline" onClick={onCreateMap}>
+              <MapPin className="w-4 h-4 mr-2" />
+              New Map
             </Button>
           )}
         </div>

@@ -8,12 +8,14 @@ import { DraggableNote } from './draggable-note'
 import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
 import { FileEdit, FileText } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface NoteButtonProps {
   note: Note
+  ancestorIds?: Id<'folders'>[]
 }
 
-export function NoteButton({ note }: NoteButtonProps) {
+export function NoteButton({ note, ancestorIds = [] }: NoteButtonProps) {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { note: currentNote, selectNote } = useCurrentNote()
   const { updateNote } = useNoteActions()
@@ -26,7 +28,7 @@ export function NoteButton({ note }: NoteButtonProps) {
   }
 
   return (
-    <DraggableNote note={note}>
+    <DraggableNote note={note} ancestorIds={ancestorIds}>
       <NoteContextMenu ref={contextMenuRef} note={note}>
         <SidebarItemButtonBase
           icon={FileText}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type React from 'react'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { toast } from 'sonner'
@@ -22,6 +22,9 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link } from '@tanstack/react-router'
+import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/notes/types'
+import { MapDialog } from '~/components/forms/map-form/map-dialog'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 
 interface CategoryPageContentProps {
   categorySlug: string
@@ -34,6 +37,7 @@ interface CategoryPageContentProps {
   FolderCardComponent?: ComponentType<
     React.ComponentProps<typeof FolderCardWithContextMenu>
   >
+  MapCardComponent?: ComponentType<any>
   FolderContextMenuComponent: ComponentType<
     React.ComponentProps<typeof CategoryFolderContextMenu>
   >
@@ -49,6 +53,7 @@ export function CategoryPageContent({
   onCategoryUpdated,
   TagCardComponent = TagCardWithContextMenu,
   FolderCardComponent = FolderCardWithContextMenu,
+  MapCardComponent,
   FolderContextMenuComponent,
   TagDialogComponent = GenericTagDialog,
   HeaderComponent = CategoryHeader,
@@ -56,6 +61,7 @@ export function CategoryPageContent({
 }: CategoryPageContentProps) {
   const [creatingTag, setCreatingTag] = useState(false)
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [creatingMap, setCreatingMap] = useState(false)
   const [editingCategory, setEditingCategory] = useState(false)
 
   const {
@@ -63,6 +69,7 @@ export function CategoryPageContent({
     toggleViewMode,
     notesAndTags,
     folders,
+    maps,
     categoryData,
     categoryConfig,
     campaignId,
@@ -83,6 +90,18 @@ export function CategoryPageContent({
     currentFolderId,
     onNavigate,
   })
+
+  // Component registry for rendering different item types
+  const CATEGORY_ITEM_COMPONENT_REGISTRY = useMemo(() => {
+    const registry: Partial<Record<SidebarItemType, ComponentType<any>>> = {
+      [SIDEBAR_ITEM_TYPES.folders]: FolderCardComponent,
+      [SIDEBAR_ITEM_TYPES.notes]: TagCardComponent,
+    }
+    if (MapCardComponent) {
+      registry[SIDEBAR_ITEM_TYPES.maps] = MapCardComponent
+    }
+    return registry
+  }, [FolderCardComponent, TagCardComponent, MapCardComponent])
 
   const { createFolder } = useFolderActions()
 
@@ -148,6 +167,12 @@ export function CategoryPageContent({
             onNavigateBreadcrumb={navigateToBreadcrumb}
             onCreateFolder={() => setCreatingFolder(true)}
             onCreateTag={() => setCreatingTag(true)}
+            onCreateMap={
+              categoryConfig?.categorySlug ===
+              SYSTEM_DEFAULT_CATEGORIES.Location.slug
+                ? () => setCreatingMap(true)
+                : undefined
+            }
             onEditCategory={
               canEditCategory ? () => setEditingCategory(true) : undefined
             }
@@ -158,44 +183,85 @@ export function CategoryPageContent({
           />
 
           <ContentGrid>
-            {/* Folder Cards */}
-            {viewMode === VIEW_MODE.folderized &&
-              (showSkeletons
-                ? Array.from({ length: folderSkeletonCount }).map((_, i) => (
-                    <FolderCardComponent
-                      key={`skeleton-folder-${i}`}
+            {/* Render items using registry */}
+            {showSkeletons ? (
+              <>
+                {viewMode === VIEW_MODE.folderized &&
+                  Array.from({ length: folderSkeletonCount }).map((_, i) => {
+                    const FolderComponent =
+                      CATEGORY_ITEM_COMPONENT_REGISTRY[
+                        SIDEBAR_ITEM_TYPES.folders
+                      ]
+                    return FolderComponent ? (
+                      <FolderComponent
+                        key={`skeleton-folder-${i}`}
+                        isLoading={true}
+                        categoryId={categoryData?._id}
+                        categoryConfig={categoryConfig}
+                      />
+                    ) : null
+                  })}
+                {Array.from({ length: noteSkeletonCount }).map((_, i) => {
+                  const TagComponent =
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.notes]
+                  return TagComponent ? (
+                    <TagComponent
+                      key={`skeleton-tag-${i}`}
                       isLoading={true}
-                      categoryId={categoryData?._id}
-                      categoryConfig={categoryConfig}
+                      config={categoryConfig}
                     />
-                  ))
-                : folders?.map((folder) => (
-                    <FolderCardComponent
-                      key={folder._id}
-                      folder={folder}
-                      categoryId={categoryData?._id}
-                      categoryConfig={categoryConfig}
-                      onClick={() => navigateToFolder(folder)}
-                    />
-                  )))}
+                  ) : null
+                })}
+              </>
+            ) : (
+              <>
+                {/* Folder Cards */}
+                {viewMode === VIEW_MODE.folderized &&
+                  folders?.map((folder) => {
+                    const FolderComponent =
+                      CATEGORY_ITEM_COMPONENT_REGISTRY[
+                        SIDEBAR_ITEM_TYPES.folders
+                      ]
+                    return FolderComponent ? (
+                      <FolderComponent
+                        key={folder._id}
+                        folder={folder}
+                        categoryId={categoryData?._id}
+                        categoryConfig={categoryConfig}
+                        onClick={() => navigateToFolder(folder)}
+                      />
+                    ) : null
+                  })}
 
-            {/* Tag Cards */}
-            {showSkeletons
-              ? Array.from({ length: noteSkeletonCount }).map((_, i) => (
-                  <TagCardComponent
-                    key={`skeleton-tag-${i}`}
-                    isLoading={true}
-                    config={categoryConfig}
-                  />
-                ))
-              : notesAndTags?.map((note) => (
-                  <TagCardComponent
-                    key={note._id}
-                    noteAndTag={note}
-                    config={categoryConfig}
-                    parentFolderId={currentFolderId}
-                  />
-                ))}
+                {/* Tag Cards */}
+                {notesAndTags?.map((note) => {
+                  const TagComponent =
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.notes]
+                  return TagComponent ? (
+                    <TagComponent
+                      key={note._id}
+                      noteAndTag={note}
+                      config={categoryConfig}
+                      parentFolderId={currentFolderId}
+                    />
+                  ) : null
+                })}
+
+                {/* Map Cards */}
+                {maps?.map((map) => {
+                  const MapComponent =
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.maps]
+                  return MapComponent ? (
+                    <MapComponent
+                      key={map._id}
+                      map={map}
+                      categoryId={categoryData?._id}
+                      categoryConfig={categoryConfig}
+                    />
+                  ) : null
+                })}
+              </>
+            )}
 
             {/* Empty State */}
             {!showSkeletons && !hasContent && categoryConfig && (
@@ -234,6 +300,16 @@ export function CategoryPageContent({
               onClose={() => setEditingCategory(false)}
               category={categoryData}
               onSuccess={handleCategoryUpdated}
+            />
+          )}
+
+          {creatingMap && campaignId && categoryData && (
+            <MapDialog
+              isOpen={creatingMap}
+              onClose={() => setCreatingMap(false)}
+              campaignId={campaignId}
+              categoryId={categoryData._id}
+              parentFolderId={currentFolderId}
             />
           )}
         </ScrollArea>

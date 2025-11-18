@@ -10,11 +10,13 @@ import { forwardRef, useState, useMemo, useCallback } from 'react'
 import { useFolderState } from '~/hooks/useFolderState'
 import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
+import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import {
   useCategoryCreateItem,
   useCategoryNewFolderWithDialog,
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
+  useCategoryNewMap,
 } from '~/hooks/useCategoryContextMenu'
 import type { ContextMenuItem } from '~/components/context-menu/context-menu'
 
@@ -31,6 +33,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
 
   const baseCreateItem = useCategoryCreateItem(categoryConfig, folder)
   const newFolder = useCategoryNewFolderWithDialog(categoryConfig, folder)
+  const newMap = useCategoryNewMap(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
   const deleteFolder = useCategoryDeleteFolder(folder)
 
@@ -55,6 +58,9 @@ export const LocationCategoryFolderContextMenu = forwardRef<
     }
     if (newFolder.menuItem) {
       items.push(newFolder.menuItem)
+    }
+    if (newMap.menuItem) {
+      items.push(newMap.menuItem)
     }
     if (renameFolder.menuItem) {
       items.push(renameFolder.menuItem)
@@ -82,6 +88,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
   }, [
     createItem,
     newFolder.menuItem,
+    newMap.menuItem,
     renameFolder.menuItem,
     deleteFolder.menuItem,
     folder,
@@ -112,6 +119,15 @@ export const LocationCategoryFolderContextMenu = forwardRef<
             mode="create"
             onSubmit={newFolder.onSubmit}
           />
+              {newMap.campaignId && (
+                <MapDialog
+                  isOpen={newMap.isDialogOpen}
+                  onClose={() => newMap.setIsDialogOpen(false)}
+                  campaignId={newMap.campaignId}
+                  categoryId={newMap.categoryId}
+                  parentFolderId={newMap.parentFolderId}
+                />
+              )}
         </>
       )}
     </>

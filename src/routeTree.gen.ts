@@ -20,11 +20,13 @@ import { Route as AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from '
 import { Route as AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/route'
+import { Route as AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/maps/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/settings/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugNotesIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/$playerId'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/$noteSlug'
+import { Route as AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/maps/$mapId'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/locations/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugCategoriesCharactersRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/characters/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/locations/index'
@@ -92,6 +94,12 @@ const AuthedCampaignsDmUsernameCampaignSlugNotesRouteRoute =
     path: '/notes',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
+const AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute =
+  AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteImport.update({
+    id: '/maps',
+    path: '/maps',
+    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
+  } as any)
 const AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute =
   AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -123,6 +131,12 @@ const AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute =
     id: '/$noteSlug',
     path: '/$noteSlug',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugNotesRouteRoute,
+  } as any)
+const AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute =
+  AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRouteImport.update({
+    id: '/$mapId',
+    path: '/$mapId',
+    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute,
   } as any)
 const AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRoute =
   AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRouteImport.update(
@@ -193,11 +207,13 @@ export interface FileRoutesByFullPath {
   '/campaigns/': typeof AuthedCampaignsIndexRoute
   '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
   '/join/$dmUsername/$campaignSlug': typeof JoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/maps': typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug/notes': typeof AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
   '/campaigns/$dmUsername/$campaignSlug/categories/characters': typeof AuthedCampaignsDmUsernameCampaignSlugCategoriesCharactersRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug/categories/locations': typeof AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRouteWithChildren
+  '/campaigns/$dmUsername/$campaignSlug/maps/$mapId': typeof AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute
   '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug': typeof AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute
   '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/notes/': typeof AuthedCampaignsDmUsernameCampaignSlugNotesIndexRoute
@@ -215,7 +231,9 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRouteRoute
   '/campaigns': typeof AuthedCampaignsIndexRoute
   '/join/$dmUsername/$campaignSlug': typeof JoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/maps': typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/maps/$mapId': typeof AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute
   '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug': typeof AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute
   '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/notes': typeof AuthedCampaignsDmUsernameCampaignSlugNotesIndexRoute
@@ -237,11 +255,13 @@ export interface FileRoutesById {
   '/_authed/campaigns/': typeof AuthedCampaignsIndexRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
   '/join/$dmUsername/$campaignSlug/': typeof JoinDmUsernameCampaignSlugIndexRoute
+  '/_authed/campaigns/$dmUsername/$campaignSlug/maps': typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren
   '/_authed/campaigns/$dmUsername/$campaignSlug/notes': typeof AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteWithChildren
   '/_authed/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
   '/_authed/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters': typeof AuthedCampaignsDmUsernameCampaignSlugCategoriesCharactersRouteRouteWithChildren
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations': typeof AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRouteWithChildren
+  '/_authed/campaigns/$dmUsername/$campaignSlug/maps/$mapId': typeof AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug': typeof AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/notes/': typeof AuthedCampaignsDmUsernameCampaignSlugNotesIndexRoute
@@ -263,11 +283,13 @@ export interface FileRouteTypes {
     | '/campaigns/'
     | '/campaigns/$dmUsername/$campaignSlug'
     | '/join/$dmUsername/$campaignSlug'
+    | '/campaigns/$dmUsername/$campaignSlug/maps'
     | '/campaigns/$dmUsername/$campaignSlug/notes'
     | '/campaigns/$dmUsername/$campaignSlug/players'
     | '/campaigns/$dmUsername/$campaignSlug/'
     | '/campaigns/$dmUsername/$campaignSlug/categories/characters'
     | '/campaigns/$dmUsername/$campaignSlug/categories/locations'
+    | '/campaigns/$dmUsername/$campaignSlug/maps/$mapId'
     | '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug'
     | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/notes/'
@@ -285,7 +307,9 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/campaigns'
     | '/join/$dmUsername/$campaignSlug'
+    | '/campaigns/$dmUsername/$campaignSlug/maps'
     | '/campaigns/$dmUsername/$campaignSlug'
+    | '/campaigns/$dmUsername/$campaignSlug/maps/$mapId'
     | '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug'
     | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/notes'
@@ -306,11 +330,13 @@ export interface FileRouteTypes {
     | '/_authed/campaigns/'
     | '/_authed/campaigns/$dmUsername/$campaignSlug'
     | '/join/$dmUsername/$campaignSlug/'
+    | '/_authed/campaigns/$dmUsername/$campaignSlug/maps'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/notes'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/players'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations'
+    | '/_authed/campaigns/$dmUsername/$campaignSlug/maps/$mapId'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/notes/'
@@ -410,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
+    '/_authed/campaigns/$dmUsername/$campaignSlug/maps': {
+      id: '/_authed/campaigns/$dmUsername/$campaignSlug/maps'
+      path: '/maps'
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/maps'
+      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteImport
+      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
+    }
     '/_authed/campaigns/$dmUsername/$campaignSlug/settings/': {
       id: '/_authed/campaigns/$dmUsername/$campaignSlug/settings/'
       path: '/settings'
@@ -444,6 +477,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug'
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugNotesRouteRoute
+    }
+    '/_authed/campaigns/$dmUsername/$campaignSlug/maps/$mapId': {
+      id: '/_authed/campaigns/$dmUsername/$campaignSlug/maps/$mapId'
+      path: '/$mapId'
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/maps/$mapId'
+      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRouteImport
+      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute
     }
     '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations': {
       id: '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations'
@@ -496,6 +536,21 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteChildren {
+  AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute: typeof AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute
+}
+
+const AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteChildren =
+  {
+    AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute:
+      AuthedCampaignsDmUsernameCampaignSlugMapsMapIdRoute,
+  }
+
+const AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren =
+  AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute._addFileChildren(
+    AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteChildren,
+  )
 
 interface AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteChildren {
   AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute: typeof AuthedCampaignsDmUsernameCampaignSlugNotesNoteSlugRoute
@@ -570,6 +625,7 @@ const AuthedCampaignsDmUsernameCampaignSlugCategoriesLocationsRouteRouteWithChil
   )
 
 interface AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
+  AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugNotesRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
@@ -581,6 +637,8 @@ interface AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
 
 const AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren =
   {
+    AuthedCampaignsDmUsernameCampaignSlugMapsRouteRoute:
+      AuthedCampaignsDmUsernameCampaignSlugMapsRouteRouteWithChildren,
     AuthedCampaignsDmUsernameCampaignSlugNotesRouteRoute:
       AuthedCampaignsDmUsernameCampaignSlugNotesRouteRouteWithChildren,
     AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute:

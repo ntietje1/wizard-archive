@@ -13,6 +13,7 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Switch } from '~/components/shadcn/ui/switch'
 import type { Id } from 'convex/_generated/dataModel'
 import { BreadcrumbDropZone } from './breadcrumb-drop-zone'
+import { SIDEBAR_ROOT_TYPE } from 'convex/notes/types'
 
 interface CategoryBreadcrumbProps {
   config?: TagCategoryConfig
@@ -62,7 +63,7 @@ export function CategoryBreadcrumb({
     <div className="mb-2 flex items-center justify-between gap-4 min-h-[36px]">
       <Breadcrumb>
         <BreadcrumbList className="text-lg text-foreground">
-          <BreadcrumbDropZone id="category-root" categoryId={categoryId} isRoot>
+          <BreadcrumbDropZone id={SIDEBAR_ROOT_TYPE} categoryId={categoryId}>
             <BreadcrumbItem>
               {breadcrumbs.length > 0 ? (
                 <BreadcrumbLink asChild>

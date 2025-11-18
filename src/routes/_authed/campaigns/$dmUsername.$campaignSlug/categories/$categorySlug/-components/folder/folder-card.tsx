@@ -2,7 +2,7 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Folder } from 'convex/notes/types'
 import { useState, type MouseEvent } from 'react'
 import { toast } from 'sonner'
@@ -11,7 +11,6 @@ import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import { Edit, Trash2, Folder as FolderIcon } from '~/lib/icons'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import {
-  CATEGORY_ITEM_TYPES,
   validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
@@ -116,8 +115,8 @@ export function FolderCard({
 
   const dropData: CategoryDropData = {
     _id: folder._id,
-    type: CATEGORY_ITEM_TYPES.folders,
-    categoryId,
+    type: SIDEBAR_ITEM_TYPES.folders,
+    categoryId: folder.categoryId,
   }
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folder._id,
@@ -133,9 +132,10 @@ export function FolderCard({
 
   const dragData: CategoryDragData = {
     _id: folder._id,
-    type: CATEGORY_ITEM_TYPES.folders,
+    type: SIDEBAR_ITEM_TYPES.folders,
     name: folder.name || UNTITLED_FOLDER_NAME,
     parentFolderId: folder.parentFolderId,
+    categoryId: folder.categoryId,
     icon: FolderIcon,
   }
   const {

@@ -9,6 +9,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { LocationTagCardWithContextMenu } from './-components/location-card'
 import { LocationFolderCardWithContextMenu } from './-components/location-folder-card'
 import { LocationFolderContextMenu } from './-components/location-folder-context-menu'
+import { MapCardWithContextMenu } from './-components/map-card'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/locations/',
@@ -40,6 +41,7 @@ function LocationsPage() {
       TagDialogComponent={LocationTagDialog}
       TagCardComponent={LocationTagCardWithContextMenu}
       FolderCardComponent={LocationFolderCardWithContextMenu}
+      MapCardComponent={MapCardWithContextMenu}
       FolderContextMenuComponent={LocationFolderContextMenu}
     />
   )

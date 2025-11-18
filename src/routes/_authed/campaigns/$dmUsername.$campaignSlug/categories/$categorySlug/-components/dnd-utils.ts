@@ -1,87 +1,29 @@
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
-
-export const CATEGORY_ITEM_TYPES = {
-  folders: 'category-folder',
-  tags: 'category-tag',
-} as const
-
-export const CATEGORY_ROOT_TYPE = 'category-root'
+import {
+  SIDEBAR_ROOT_TYPE,
+  type SidebarItemOrRootType,
+  type SidebarItemType,
+} from 'convex/notes/types'
+import { validateDrop } from '~/utils/dnd-utils'
 
 export interface CategoryDragData {
-  _id: string
-  type:
-    | (typeof CATEGORY_ITEM_TYPES)[keyof typeof CATEGORY_ITEM_TYPES]
-    | typeof CATEGORY_ROOT_TYPE
+  _id: Id<SidebarItemType>
+  type: SidebarItemType
   parentFolderId?: Id<'folders'>
   noteId?: Id<'notes'>
+  categoryId?: Id<'tagCategories'>
   name: string
   icon: LucideIcon
-  [key: string]: any
 }
 
 export interface CategoryDropData {
-  _id: string
-  type:
-    | (typeof CATEGORY_ITEM_TYPES)[keyof typeof CATEGORY_ITEM_TYPES]
-    | typeof CATEGORY_ROOT_TYPE
-  [key: string]: any
+  _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
+  type: SidebarItemOrRootType
+  categoryId?: Id<'tagCategories'>
 }
 
-// does not need to check for cycles, as the UI only shows the current level and the parent hierarchy
-export function validateFolderDrop(
-  draggedItem: CategoryDragData | null,
-  targetData: CategoryDropData | null,
-): boolean {
-  if (!draggedItem || !targetData) return false
-
-  if (draggedItem.type !== CATEGORY_ITEM_TYPES.folders) return false
-
-  return (
-    targetData.type === CATEGORY_ITEM_TYPES.folders ||
-    targetData.type === CATEGORY_ROOT_TYPE
-  )
-}
-
-export function validateTagDrop(
-  draggedItem: CategoryDragData | null,
-  targetData: CategoryDropData | null,
-): boolean {
-  if (!draggedItem || !targetData) return false
-
-  if (draggedItem.type !== CATEGORY_ITEM_TYPES.tags) return false
-
-  return (
-    targetData.type === CATEGORY_ITEM_TYPES.folders ||
-    targetData.type === CATEGORY_ROOT_TYPE
-  )
-}
-
-export function validateCategoryItemDrop(
-  draggedItem: CategoryDragData | null,
-  targetData: CategoryDropData | null,
-): boolean {
-  if (!draggedItem || !targetData) return false
-
-  if (targetData._id === draggedItem._id) return false
-
-  if (draggedItem.parentFolderId === targetData._id) return false
-
-  if (targetData.type === CATEGORY_ROOT_TYPE && !draggedItem.parentFolderId) {
-    return false
-  }
-
-  if (draggedItem.type === CATEGORY_ITEM_TYPES.folders) {
-    return validateFolderDrop(draggedItem, targetData)
-  }
-
-  if (draggedItem.type === CATEGORY_ITEM_TYPES.tags) {
-    return validateTagDrop(draggedItem, targetData)
-  }
-
-  return false
-}
 export function canDropCategoryItem(
   active: Active | null,
   over: Over | null,
@@ -93,5 +35,44 @@ export function canDropCategoryItem(
 
   if (!draggedItem || !targetData) return false
 
-  return validateCategoryItemDrop(draggedItem, targetData)
+  return validateDrop(
+    {
+      _id: draggedItem._id,
+      type: draggedItem.type,
+      parentFolderId: draggedItem.parentFolderId,
+      categoryId: draggedItem.categoryId,
+      ancestorIds: [], // don't need to check ancestorIds because we can only see 1 level in the category page
+    },
+    {
+      id: targetData._id,
+      type: targetData.type,
+      categoryId: targetData.categoryId,
+      ancestorIds: [], // same here
+    },
+    SIDEBAR_ROOT_TYPE,
+  )
+}
+
+export function validateCategoryItemDrop(
+  draggedItem: CategoryDragData | null,
+  targetData: CategoryDropData | null,
+): boolean {
+  if (!draggedItem || !targetData) return false
+
+  return validateDrop(
+    {
+      _id: draggedItem._id,
+      type: draggedItem.type,
+      parentFolderId: draggedItem.parentFolderId,
+      categoryId: draggedItem.categoryId,
+      ancestorIds: [],
+    },
+    {
+      id: targetData._id,
+      type: targetData.type,
+      categoryId: targetData.categoryId,
+      ancestorIds: [],
+    },
+    SIDEBAR_ROOT_TYPE,
+  )
 }

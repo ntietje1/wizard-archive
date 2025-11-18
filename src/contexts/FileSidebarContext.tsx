@@ -1,8 +1,8 @@
 import type { Id } from 'convex/_generated/dataModel'
 import {
-  SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
   type AnySidebarItem,
+  type SidebarItemType,
 } from 'convex/notes/types'
 import { createContext, useCallback, useContext, useState } from 'react'
 import usePersistedState from '~/hooks/usePersistedState'
@@ -18,21 +18,26 @@ import {
 } from '@dnd-kit/core'
 import {
   canDropItem,
-  type DropData,
+  type SidebarDragData,
+  type SidebarDropData,
 } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/-components/editor/file-sidebar/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { executeMove } from '~/utils/dnd-utils'
 
 type FileSidebarContextType = {
-  setRenamingId: (id: Id<'folders'> | Id<'notes'> | null) => void
-  renamingId: Id<'folders'> | Id<'notes'> | null
-  setDeletingId: (id: Id<'folders'> | Id<'notes'> | null) => void
-  deletingId: Id<'folders'> | Id<'notes'> | null
+  setRenamingId: (id: Id<SidebarItemType> | null) => void
+  renamingId: Id<SidebarItemType> | null
+  setDeletingId: (id: Id<SidebarItemType> | null) => void
+  deletingId: Id<SidebarItemType> | null
 
-  folderStates: Record<string, boolean>
-  setFolderState: (folderId: string, isOpen: boolean) => void
-  openFolder: (folderId: string) => void
-  closeFolder: (folderId: string) => void
-  activeDragItem: AnySidebarItem | null
+  folderStates: Record<Id<'folders'>, boolean>
+  setFolderState: (folderId: Id<'folders'>, isOpen: boolean) => void
+  openFolder: (folderId: Id<'folders'>) => void
+  closeFolder: (folderId: Id<'folders'>) => void
+  activeDragItem: SidebarDragData | null
 }
 
 const FileSidebarContext = createContext<FileSidebarContextType | null>(null)
@@ -42,26 +47,26 @@ export function FileSidebarProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [renamingId, setRenamingId] = useState<
-    Id<'folders'> | Id<'notes'> | null
-  >(null)
-  const [deletingId, setDeletingId] = useState<
-    Id<'folders'> | Id<'notes'> | null
-  >(null)
+  const [renamingId, setRenamingId] = useState<Id<SidebarItemType> | null>(null)
+  const [deletingId, setDeletingId] = useState<Id<SidebarItemType> | null>(null)
 
   const [folderStates, setFolderStates] = usePersistedState<
-    Record<string, boolean>
+    Record<Id<'folders'>, boolean>
   >('file-sidebar-folder-states', {})
 
   const { moveFolder } = useFolderActions()
   const { moveNote } = useNoteActions()
 
-  const [activeDragItem, setActiveDragItem] = useState<AnySidebarItem | null>(
+  const moveMap = useMutation({
+    mutationFn: useConvexMutation(api.locations.mutations.moveMap),
+  })
+
+  const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
   )
 
   const setFolderState = useCallback(
-    (folderId: string, isOpen: boolean) => {
+    (folderId: Id<'folders'>, isOpen: boolean) => {
       setFolderStates((prev) => ({
         ...prev,
         [folderId]: isOpen,
@@ -71,14 +76,14 @@ export function FileSidebarProvider({
   )
 
   const openFolder = useCallback(
-    (folderId: string) => {
+    (folderId: Id<'folders'>) => {
       setFolderState(folderId, true)
     },
     [setFolderState],
   )
 
   const closeFolder = useCallback(
-    (folderId: string) => {
+    (folderId: Id<'folders'>) => {
       setFolderState(folderId, false)
     },
     [setFolderState],
@@ -116,34 +121,31 @@ export function FileSidebarProvider({
       // Validate the drop using shared utility
       if (!canDropItem(active, over)) return
 
-      const draggedItem = active.data.current as AnySidebarItem
-      const targetData = over.data.current as DropData
+      const draggedItem = active.data.current as SidebarDragData
+      const targetData = over.data.current as SidebarDropData
 
-      if (draggedItem.type === SIDEBAR_ITEM_TYPES.notes) {
-        let parentFolderId: Id<'folders'> | undefined = undefined
+      if (!targetData) return
 
-        if (targetData.type !== SIDEBAR_ROOT_TYPE) {
-          parentFolderId = over.id as Id<'folders'>
-          openFolder(parentFolderId)
-        }
+      const targetId =
+        targetData._id === SIDEBAR_ROOT_TYPE
+          ? undefined
+          : (targetData._id as Id<'folders'>)
 
-        await moveNote.mutateAsync({ noteId: draggedItem._id, parentFolderId })
-      }
-
-      if (draggedItem.type === SIDEBAR_ITEM_TYPES.folders) {
-        let parentId: Id<'folders'> | undefined = undefined
-        if (targetData.type !== SIDEBAR_ROOT_TYPE) {
-          parentId = over.id as Id<'folders'>
-          openFolder(parentId)
-        }
-
-        await moveFolder.mutateAsync({
-          folderId: draggedItem._id,
-          parentId: parentId,
-        })
-      }
+      await executeMove(
+        draggedItem.type,
+        draggedItem._id,
+        targetId,
+        {
+          moveNote: (params) => moveNote.mutateAsync(params),
+          moveFolder: (params) => moveFolder.mutateAsync(params),
+          moveMap: (params) => moveMap.mutateAsync(params),
+        },
+        {
+          openFolder,
+        },
+      )
     },
-    [moveNote, moveFolder, openFolder],
+    [moveNote, moveFolder, moveMap, openFolder],
   )
 
   const handleDragCancel = useCallback(() => {

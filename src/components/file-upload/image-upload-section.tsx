@@ -22,7 +22,7 @@ export function ImageUploadSection({
       isSubmitting={isSubmitting}
       acceptPattern="image/*"
       fileTypeLabel="PNG, JPG, GIF, or other image formats"
-      maxSizeLabel="Max 5MB"
+      maxSizeLabel="Max 10MB"
       dragDropText="Drag an image here or click to browse"
       renderPreview={(url) => (
         <img src={url} alt="Preview" className="w-full h-full object-cover" />

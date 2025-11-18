@@ -4,7 +4,7 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export interface FileWithPreviewOptions {
   isOpen: boolean
@@ -207,6 +207,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     uploadError,
     isDragActive,
     uploadProgress,
+    removed: isFileRemoved,
 
     fileInputRef,
 

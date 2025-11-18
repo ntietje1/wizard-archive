@@ -1,23 +1,23 @@
 import { useDraggable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import type { Note } from 'convex/notes/types'
+import type { Map } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 
-interface DraggableNoteProps {
-  note: Note
+interface DraggableMapProps {
+  map: Map
   ancestorIds?: Id<'folders'>[]
   children: React.ReactNode
 }
 
-export function DraggableNote({
-  note,
+export function DraggableMap({
+  map,
   ancestorIds = [],
   children,
-}: DraggableNoteProps) {
+}: DraggableMapProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: note._id,
+    id: map._id,
     data: {
-      ...note,
+      ...map,
       ancestorIds,
     },
   })

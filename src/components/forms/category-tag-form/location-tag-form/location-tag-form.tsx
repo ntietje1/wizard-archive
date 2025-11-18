@@ -40,6 +40,7 @@ interface LocationTagFormProps {
   parentFolderId?: Id<'folders'>
   isOpen: boolean
   onClose: () => void
+  onLocationCreated?: (locationId: Id<'locations'>) => void
 }
 
 export default function LocationTagForm({
@@ -50,6 +51,7 @@ export default function LocationTagForm({
   parentFolderId,
   isOpen,
   onClose,
+  onLocationCreated,
 }: LocationTagFormProps) {
   const router = useRouter()
   const convex = useConvex()
@@ -150,6 +152,10 @@ export default function LocationTagForm({
           parentFolderId,
         })
 
+        if (onLocationCreated) {
+          onLocationCreated(result.locationId)
+        }
+
         if (navigateToNote && result.noteId) {
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,
@@ -166,8 +172,10 @@ export default function LocationTagForm({
           }
         }
 
-        toast.success(`${config.singular} created successfully`)
-        onClose()
+        if (!onLocationCreated) {
+          toast.success(`${config.singular} created successfully`)
+          onClose()
+        }
       } else if (mode === 'edit' && location) {
         await updateMutation.mutateAsync({
           locationId: location.locationId,

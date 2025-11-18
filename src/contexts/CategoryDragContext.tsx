@@ -18,10 +18,11 @@ import {
   canDropCategoryItem,
   type CategoryDragData,
   type CategoryDropData,
-  CATEGORY_ITEM_TYPES,
-  CATEGORY_ROOT_TYPE,
 } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { executeMove } from '~/utils/dnd-utils'
+import { SIDEBAR_ROOT_TYPE } from 'convex/notes/types'
+import { toast } from 'sonner'
 
 type CategoryDragContextType = {
   activeDragData: CategoryDragData | null
@@ -47,6 +48,10 @@ export function CategoryDragProvider({
 
   const moveNote = useMutation({
     mutationFn: useConvexMutation(api.notes.mutations.moveNote),
+  })
+
+  const moveMap = useMutation({
+    mutationFn: useConvexMutation(api.locations.mutations.moveMap),
   })
 
   const sensors = useSensors(
@@ -105,41 +110,22 @@ export function CategoryDragProvider({
       const draggedData = active.data.current as CategoryDragData
       const targetData = over.data.current as CategoryDropData
 
-      if (draggedData.type === CATEGORY_ITEM_TYPES.folders) {
-        try {
-          let parentId: Id<'folders'> | undefined = undefined
-          if (targetData.type !== CATEGORY_ROOT_TYPE) {
-            parentId = over.id as Id<'folders'>
-          }
+      // target is either the root or a folder
+      const targetId =
+        targetData.type === SIDEBAR_ROOT_TYPE
+          ? undefined
+          : (targetData._id as Id<'folders'>)
 
-          await moveFolder.mutateAsync({
-            folderId: draggedData._id as Id<'folders'>,
-            parentId: parentId,
-          })
-        } catch (error) {
-          console.error(error)
-        }
-      }
-
-      if (draggedData.type === CATEGORY_ITEM_TYPES.tags) {
-        try {
-          if (draggedData.noteId) {
-            let parentFolderId: Id<'folders'> | undefined = undefined
-            if (targetData.type !== CATEGORY_ROOT_TYPE) {
-              parentFolderId = over.id as Id<'folders'>
-            }
-
-            await moveNote.mutateAsync({
-              noteId: draggedData.noteId,
-              parentFolderId: parentFolderId,
-            })
-          }
-        } catch (error) {
-          console.error(error)
-        }
-      }
+      await executeMove(draggedData.type, draggedData._id, targetId, {
+        moveNote: (params) => moveNote.mutateAsync(params),
+        moveFolder: (params) => moveFolder.mutateAsync(params),
+        moveMap: (params) => moveMap.mutateAsync(params),
+      }).catch((error) => {
+        console.error('Failed to move item:', error)
+        toast.error('Failed to move item')
+      })
     },
-    [isEnabled, moveNote, moveFolder],
+    [isEnabled, moveNote, moveFolder, moveMap],
   )
 
   const handleDragCancel = useCallback(() => {

@@ -12,7 +12,7 @@ import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 interface FolderWithChildrenProps {
   folder: Folder
-  ancestorIds?: string[]
+  ancestorIds?: Id<'folders'>[]
 }
 
 export function FolderWithChildren({
@@ -23,15 +23,12 @@ export function FolderWithChildren({
   const children = useSidebarItemsByParent(folder.categoryId, folder._id)
   const hasChildren = (children.data && children.data.length > 0) || false
 
-  const currentAncestors = [...ancestorIds, folder._id]
+  const currentAncestors: Id<'folders'>[] = [...ancestorIds, folder._id]
 
   return (
     <DroppableFolder folder={folder} ancestorIds={ancestorIds}>
       <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
-        <FolderButton
-          folder={folder}
-          ancestorIds={ancestorIds as Id<'folders'>[]}
-        />
+        <FolderButton folder={folder} ancestorIds={ancestorIds} />
         <CollapsibleContent>
           <div className="relative pl-2">
             {/* Vertical line */}

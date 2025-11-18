@@ -1,33 +1,35 @@
 import { useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 import {
-  CATEGORY_ITEM_TYPES,
   validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
 } from './dnd-utils'
 import React from 'react'
+import {
+  SIDEBAR_ITEM_TYPES,
+  SIDEBAR_ROOT_TYPE,
+  type SidebarItemType,
+} from 'convex/notes/types'
 
 interface BreadcrumbDropZoneProps {
-  id: Id<'folders'> | 'category-root'
+  id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   categoryId?: Id<'tagCategories'>
-  isRoot?: boolean
   children: React.ReactElement
 }
 
 export function BreadcrumbDropZone({
   id,
   categoryId,
-  isRoot = false,
   children,
 }: BreadcrumbDropZoneProps) {
   const { active } = useDndContext()
 
   const dropData: CategoryDropData = {
     _id: id,
-    type: isRoot ? 'category-root' : CATEGORY_ITEM_TYPES.folders,
+    type:
+      id === SIDEBAR_ROOT_TYPE ? SIDEBAR_ROOT_TYPE : SIDEBAR_ITEM_TYPES.folders,
     categoryId,
-    isBreadcrumbTarget: true,
   }
 
   const { setNodeRef, isOver } = useDroppable({

@@ -2,8 +2,13 @@ import type { TagDialogProps } from '../base-tag-form/types.ts'
 import { TagFormDialog } from '../base-tag-form/tag-form-dialog.tsx'
 import LocationTagForm from './location-tag-form.tsx'
 import type { Location } from 'convex/locations/types'
+import type { Id } from 'convex/_generated/dataModel'
 
-export default function LocationTagDialog(props: TagDialogProps<Location>) {
+export default function LocationTagDialog(
+  props: TagDialogProps<Location> & {
+    onLocationCreated?: (locationId: Id<'locations'>) => void
+  },
+) {
   const location = props.mode === 'edit' ? props.tag : undefined
 
   return (
@@ -21,6 +26,7 @@ export default function LocationTagDialog(props: TagDialogProps<Location>) {
         parentFolderId={props.parentFolderId}
         isOpen={props.isOpen}
         onClose={props.onClose}
+        onLocationCreated={props.onLocationCreated}
       />
     </TagFormDialog>
   )

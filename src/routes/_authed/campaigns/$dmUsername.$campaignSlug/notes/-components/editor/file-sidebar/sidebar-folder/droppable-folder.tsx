@@ -2,10 +2,11 @@ import { useDroppable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
 import { SIDEBAR_ITEM_TYPES, type Folder } from 'convex/notes/types'
 import { canDropItem } from '../dnd-utils'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface DroppableFolderProps {
   folder: Folder
-  ancestorIds?: string[]
+  ancestorIds?: Id<'folders'>[]
   children: React.ReactNode
 }
 
@@ -18,7 +19,7 @@ export function DroppableFolder({
     id: folder._id,
     data: {
       accepts: [SIDEBAR_ITEM_TYPES.folders, SIDEBAR_ITEM_TYPES.notes],
-      id: folder._id,
+      _id: folder._id,
       categoryId: folder.categoryId,
       ancestorIds,
       type: SIDEBAR_ITEM_TYPES.folders,

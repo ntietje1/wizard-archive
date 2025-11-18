@@ -109,10 +109,10 @@ export const ContextMenu = forwardRef<ContextMenuRef, ContextMenuProps>(
           >
             {items.map((item, index) =>
               item.type === 'divider' ? (
-                <DropdownMenuSeparator key={index} />
+                <DropdownMenuSeparator key={`divider-${index}`} />
               ) : item.type === 'action' ? (
                 <DropdownMenuItem
-                  key={index}
+                  key={`action-${item.label}-${index}`}
                   onSelect={() => handleItemClick(item.onClick)}
                   className={item.className}
                 >
@@ -122,7 +122,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, ContextMenuProps>(
                   {item.label}
                 </DropdownMenuItem>
               ) : (
-                <div>Invalid item type</div>
+                <div key={`invalid-${index}`}>Invalid item type</div>
               ),
             )}
           </DropdownMenuContent>

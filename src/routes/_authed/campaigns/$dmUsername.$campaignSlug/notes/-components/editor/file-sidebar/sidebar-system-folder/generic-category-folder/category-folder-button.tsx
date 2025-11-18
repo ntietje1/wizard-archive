@@ -25,6 +25,7 @@ import type { AnySidebarItem, Folder } from 'convex/notes/types'
 import { DraggableCategoryFolder } from './draggable-category-folder'
 import { DroppableCategoryFolder } from './droppable-category-folder'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
+import type { Id } from 'convex/_generated/dataModel'
 
 type CategoryContextMenuComponent =
   React.ComponentType<CategoryContextMenuProps>
@@ -43,7 +44,7 @@ export const CategoryFolderButton = ({
   categoryContextMenu,
   tagNoteContextMenu,
   ancestorIds = [],
-}: CategoryFolderButtonProps & { ancestorIds?: string[] }) => {
+}: CategoryFolderButtonProps & { ancestorIds?: Id<'folders'>[] }) => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const getCategory = useQuery(

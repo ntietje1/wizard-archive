@@ -1,6 +1,7 @@
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
+import { useMemo } from 'react'
 import type { ComponentType } from 'react'
 import {
   TagNoteContextMenu,
@@ -13,63 +14,36 @@ import {
   UNTITLED_NOTE_TITLE,
   type AnySidebarItem,
   type Note,
+  type SidebarItemType,
 } from 'convex/notes/types'
 import { CategoryFolderButton } from './category-folder-button'
 import type { CategoryContextMenuProps } from './category-context-menu'
 import { DraggableNote } from '../../sidebar-note/draggable-note'
 import { FileEdit, FileText } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
+import { MapButton } from '../../sidebar-map/map-button'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface CategorySidebarItemProps {
   item: AnySidebarItem
   categoryConfig: TagCategoryConfig
   categoryContextMenu?: ComponentType<CategoryContextMenuProps>
   tagNoteContextMenu?: ComponentType<TagNoteContextMenuProps>
-  ancestorIds?: string[]
-}
-
-export const CategorySidebarItem = ({
-  item,
-  categoryConfig,
-  categoryContextMenu,
-  tagNoteContextMenu,
-  ancestorIds = [],
-}: CategorySidebarItemProps) => {
-  switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.folders:
-      return (
-        <CategoryFolderButton
-          folder={item}
-          categoryConfig={categoryConfig}
-          categoryContextMenu={categoryContextMenu}
-          tagNoteContextMenu={tagNoteContextMenu}
-          ancestorIds={ancestorIds}
-        />
-      )
-    case SIDEBAR_ITEM_TYPES.notes:
-      return (
-        <TagNoteButton
-          noteWithTag={item}
-          categoryConfig={categoryConfig}
-          contextMenuComponent={tagNoteContextMenu}
-        />
-      )
-
-    default:
-      throw new Error('Invalid item type or missing required properties')
-  }
+  ancestorIds?: Id<'folders'>[]
 }
 
 interface TagNoteButtonProps {
   noteWithTag: Note
   categoryConfig: TagCategoryConfig
   contextMenuComponent?: ComponentType<TagNoteContextMenuProps>
+  ancestorIds?: Id<'folders'>[]
 }
 
 export function TagNoteButton({
   noteWithTag,
   categoryConfig,
   contextMenuComponent,
+  ancestorIds = [],
 }: TagNoteButtonProps) {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { note: currentNote, selectNote } = useCurrentNote()
@@ -90,7 +64,7 @@ export function TagNoteButton({
       noteWithTag={noteWithTag}
       categoryConfig={categoryConfig}
     >
-      <DraggableNote note={noteWithTag}>
+      <DraggableNote note={noteWithTag} ancestorIds={ancestorIds}>
         <SidebarItemButtonBase
           icon={FileText}
           editIcon={FileEdit}
@@ -106,4 +80,58 @@ export function TagNoteButton({
       </DraggableNote>
     </ContextMenuComponent>
   )
+}
+
+export const CategorySidebarItem = ({
+  item,
+  categoryConfig,
+  categoryContextMenu,
+  tagNoteContextMenu,
+  ancestorIds = [],
+}: CategorySidebarItemProps) => {
+  const CATEGORY_SIDEBAR_ITEM_REGISTRY = useMemo<
+    Record<SidebarItemType, ComponentType<any>>
+  >(
+    () => ({
+      [SIDEBAR_ITEM_TYPES.folders]: CategoryFolderButton,
+      [SIDEBAR_ITEM_TYPES.notes]: TagNoteButton,
+      [SIDEBAR_ITEM_TYPES.maps]: MapButton,
+    }),
+    [],
+  )
+
+  const Component = CATEGORY_SIDEBAR_ITEM_REGISTRY[item.type]
+
+  if (!Component) {
+    throw new Error(`Invalid item type: ${item.type}`)
+  }
+
+  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+    return (
+      <Component
+        folder={item}
+        categoryConfig={categoryConfig}
+        categoryContextMenu={categoryContextMenu}
+        tagNoteContextMenu={tagNoteContextMenu}
+        ancestorIds={ancestorIds}
+      />
+    )
+  }
+
+  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    return (
+      <Component
+        noteWithTag={item}
+        categoryConfig={categoryConfig}
+        contextMenuComponent={tagNoteContextMenu}
+        ancestorIds={ancestorIds}
+      />
+    )
+  }
+
+  if (item.type === SIDEBAR_ITEM_TYPES.maps) {
+    return <Component map={item} ancestorIds={ancestorIds} />
+  }
+
+  throw new Error('Invalid item type or missing required properties')
 }

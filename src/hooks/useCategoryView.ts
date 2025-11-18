@@ -6,7 +6,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { TagCategory } from 'convex/tags/types'
-import type { Folder, Note } from 'convex/notes/types'
+import type { Folder, Note, Map } from 'convex/notes/types'
 import usePersistedState from './usePersistedState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { getCategoryIcon } from '~/lib/category-icons'
@@ -42,6 +42,7 @@ interface UseCategoryViewReturn {
 
   notesAndTags?: Note[]
   folders?: Folder[]
+  maps?: Map[]
   categoryData?: TagCategory
   categoryConfig?: TagCategoryConfig
   campaignId?: Id<'campaigns'>
@@ -174,6 +175,14 @@ export function useCategoryView({
     [sidebarItems.data],
   )
 
+  const maps = useMemo(
+    () =>
+      sidebarItems.data?.filter(
+        (item) => item.type === SIDEBAR_ITEM_TYPES.maps,
+      ) as Map[] | undefined,
+    [sidebarItems.data],
+  )
+
   const filteredNotesAndTags = useMemo(() => {
     if (!notes) {
       return undefined
@@ -284,7 +293,10 @@ export function useCategoryView({
     isLoading,
     isAtRoot: breadcrumbs.length === 0,
     hasContent:
-      (filteredNotesAndTags?.length ?? 0) > 0 || (folders?.length ?? 0) > 0,
+      (filteredNotesAndTags?.length ?? 0) > 0 ||
+      (folders?.length ?? 0) > 0 ||
+      (maps?.length ?? 0) > 0,
+    maps,
     showSkeletons,
     folderSkeletonCount,
     noteSkeletonCount,

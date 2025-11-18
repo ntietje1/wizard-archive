@@ -14,7 +14,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
     id: SIDEBAR_ROOT_TYPE,
     data: {
       accepts: [SIDEBAR_ITEM_TYPES.folders, SIDEBAR_ITEM_TYPES.notes],
-      id: SIDEBAR_ROOT_TYPE,
+      _id: SIDEBAR_ROOT_TYPE,
       categoryId: undefined,
       ancestorIds: [],
       type: SIDEBAR_ROOT_TYPE,

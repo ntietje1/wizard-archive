@@ -1,6 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { tagCategoryValidator, tagValidator } from '../tags/schema'
+import { mapValidator } from '../locations/schema'
 
 export const blockNoteIdValidator = v.string()
 
@@ -120,7 +121,11 @@ export const noteWithContentValidator = v.object({
 
 export const folderValidator = v.object(folderValidatorFields)
 
-export const sidebarItemValidator = v.union(noteValidator, folderValidator)
+export const sidebarItemValidator = v.union(
+  noteValidator,
+  folderValidator,
+  mapValidator,
+)
 
 export const folderWithChildrenValidator = v.object({
   ...folderValidatorFields,
