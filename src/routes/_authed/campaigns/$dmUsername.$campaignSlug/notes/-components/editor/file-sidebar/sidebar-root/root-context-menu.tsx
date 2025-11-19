@@ -9,6 +9,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { Grid2x2Plus } from 'lucide-react'
 
 interface RootContextMenuProps {
   children: React.ReactNode
@@ -48,6 +49,10 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
       })
   }
 
+  const handleNewCanvas = () => {
+    toast.error('Not implemented')
+  }
+
   const menuItems: ContextMenuItem[] = [
     {
       type: 'action',
@@ -60,6 +65,12 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
       label: 'New Folder',
       icon: <FolderPlus className="h-4 w-4" />,
       onClick: handleNewFolder,
+    },
+    {
+      type: 'action',
+      label: 'New Canvas',
+      icon: <Grid2x2Plus className="h-4 w-4" />,
+      onClick: handleNewCanvas,
     },
   ]
 

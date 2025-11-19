@@ -1,5 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/notes/types'
+import { Grid2x2Plus } from 'lucide-react'
 import { useState, forwardRef } from 'react'
 import { toast } from 'sonner'
 import {
@@ -64,17 +65,15 @@ export const FolderContextMenu = forwardRef<
       })
   }
 
+  const handleNewCanvas = () => {
+    toast.error('Not implemented')
+  }
+
   const handleDeleteFolder = () => {
     setConfirmDeleteDialogOpen(true)
   }
 
   const menuItems: ContextMenuItem[] = [
-    {
-      type: 'action',
-      label: 'Rename',
-      icon: <FolderEdit className="h-4 w-4" />,
-      onClick: handleRenameFolder,
-    },
     {
       type: 'action',
       label: 'New Page',
@@ -86,6 +85,21 @@ export const FolderContextMenu = forwardRef<
       label: 'New Folder',
       icon: <FolderPlus className="h-4 w-4" />,
       onClick: handleNewFolder,
+    },
+    {
+      type: 'action',
+      label: 'New Canvas',
+      icon: <Grid2x2Plus className="h-4 w-4" />,
+      onClick: handleNewCanvas,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      type: 'action',
+      label: 'Rename',
+      icon: <FolderEdit className="h-4 w-4" />,
+      onClick: handleRenameFolder,
     },
     {
       type: 'action',
