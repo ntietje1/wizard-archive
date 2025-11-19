@@ -33,11 +33,15 @@ type FileSidebarContextType = {
   setDeletingId: (id: Id<SidebarItemType> | null) => void
   deletingId: Id<SidebarItemType> | null
 
-  folderStates: Record<Id<'folders'>, boolean>
-  setFolderState: (folderId: Id<'folders'>, isOpen: boolean) => void
-  openFolder: (folderId: Id<'folders'>) => void
-  closeFolder: (folderId: Id<'folders'>) => void
+  folderStates: Record<string, boolean>
+  setFolderState: (folderId: string, isOpen: boolean) => void
+  openFolder: (folderId: string) => void
+  closeFolder: (folderId: string) => void
+  clearAllFolderStates: () => void
   activeDragItem: SidebarDragData | null
+  closeAllFoldersMode: boolean
+  toggleCloseAllFoldersMode: () => void
+  exitCloseAllMode: () => void
 }
 
 const FileSidebarContext = createContext<FileSidebarContextType | null>(null)
@@ -54,6 +58,9 @@ export function FileSidebarProvider({
     Record<Id<'folders'>, boolean>
   >('file-sidebar-folder-states', {})
 
+  const [closeAllFoldersMode, setCloseAllFoldersMode] =
+    usePersistedState<boolean>('file-sidebar-close-all-folders-mode', false)
+
   const { moveFolder } = useFolderActions()
   const { moveNote } = useNoteActions()
 
@@ -66,7 +73,7 @@ export function FileSidebarProvider({
   )
 
   const setFolderState = useCallback(
-    (folderId: Id<'folders'>, isOpen: boolean) => {
+    (folderId: string, isOpen: boolean) => {
       setFolderStates((prev) => ({
         ...prev,
         [folderId]: isOpen,
@@ -76,18 +83,30 @@ export function FileSidebarProvider({
   )
 
   const openFolder = useCallback(
-    (folderId: Id<'folders'>) => {
+    (folderId: string) => {
       setFolderState(folderId, true)
     },
     [setFolderState],
   )
 
   const closeFolder = useCallback(
-    (folderId: Id<'folders'>) => {
+    (folderId: string) => {
       setFolderState(folderId, false)
     },
     [setFolderState],
   )
+
+  const clearAllFolderStates = useCallback(() => {
+    setFolderStates({})
+  }, [setFolderStates])
+
+  const toggleCloseAllFoldersMode = useCallback(() => {
+    setCloseAllFoldersMode((prev) => !prev)
+  }, [setCloseAllFoldersMode])
+
+  const exitCloseAllMode = useCallback(() => {
+    setCloseAllFoldersMode(false)
+  }, [setCloseAllFoldersMode])
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -105,7 +124,7 @@ export function FileSidebarProvider({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
-    const item = active.data.current as AnySidebarItem
+    const item = active.data.current as SidebarDragData
     if (item) {
       setActiveDragItem(item)
     }
@@ -161,7 +180,11 @@ export function FileSidebarProvider({
     setFolderState,
     openFolder,
     closeFolder,
+    clearAllFolderStates,
     activeDragItem,
+    closeAllFoldersMode,
+    toggleCloseAllFoldersMode,
+    exitCloseAllMode,
   }
 
   return (

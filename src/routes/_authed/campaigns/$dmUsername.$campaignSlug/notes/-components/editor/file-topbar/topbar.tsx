@@ -2,21 +2,24 @@ import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { X, MoreVertical } from '~/lib/icons'
+import { X, MoreVertical, Trash2 } from '~/lib/icons'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { UNTITLED_NOTE_TITLE } from 'convex/notes/types'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
+import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { toast } from 'sonner'
 
 export function FileTopbar() {
-  const { note, selectNote, noteId } = useCurrentNote()
+  const { note, selectNote, noteSlug } = useCurrentNote()
   const { updateNote } = useNoteActions()
   const [title, setTitle] = useState(note.data?.name ?? '')
   const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -53,7 +56,11 @@ export function FileTopbar() {
     }
   }, [isEditing])
 
-  if (noteId && note.status === 'pending') {
+  const handleDeleteSuccess = useCallback(() => {
+    selectNote(null)
+  }, [selectNote])
+
+  if (noteSlug && note.status === 'pending') {
     return <TopbarLoading />
   }
 
@@ -100,13 +107,29 @@ export function FileTopbar() {
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end"></DropdownMenuContent>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => setIsDeleting(true)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete note
+              </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="ghost" size="icon" onClick={() => selectNote(null)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
+      {note.data && (
+        <NoteDeleteConfirmDialog
+          note={note.data}
+          isDeleting={isDeleting}
+          onClose={() => setIsDeleting(false)}
+          onConfirm={handleDeleteSuccess}
+        />
+      )}
     </div>
   )
 }

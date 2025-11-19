@@ -1,4 +1,4 @@
-import { MapPin, FileEdit, Trash2 } from '~/lib/icons'
+import { FileEdit, Trash2 } from '~/lib/icons'
 import {
   ContextMenu,
   type ContextMenuItem,
@@ -6,12 +6,8 @@ import {
 } from '~/components/context-menu/context-menu'
 import type { Map } from 'convex/notes/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { toast } from 'sonner'
 import { useCallback, useState, forwardRef } from 'react'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
+import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 
 interface MapContextMenuProps {
@@ -26,10 +22,6 @@ export const MapContextMenu = forwardRef<ContextMenuRef, MapContextMenuProps>(
     const [isEditing, setIsEditing] = useState(false)
     const { setRenamingId } = useFileSidebar()
 
-    const deleteMapMutation = useMutation({
-      mutationFn: useConvexMutation(api.locations.mutations.deleteMap),
-    })
-
     const handleRenameMap = () => {
       setRenamingId(map._id)
     }
@@ -41,21 +33,6 @@ export const MapContextMenu = forwardRef<ContextMenuRef, MapContextMenuProps>(
     const handleDeleteMap = () => {
       setConfirmDeleteDialogOpen(true)
     }
-
-    const confirmDeleteMap = useCallback(async () => {
-      await deleteMapMutation
-        .mutateAsync({ mapId: map._id })
-        .then(() => {
-          toast.success('Map deleted')
-        })
-        .catch((error: Error) => {
-          console.error(error)
-          toast.error('Failed to delete map')
-        })
-        .finally(() => {
-          setConfirmDeleteDialogOpen(false)
-        })
-    }, [deleteMapMutation, map._id])
 
     const menuItems: ContextMenuItem[] = [
       {
@@ -84,15 +61,10 @@ export const MapContextMenu = forwardRef<ContextMenuRef, MapContextMenuProps>(
         <ContextMenu ref={ref} items={menuItems}>
           {children}
         </ContextMenu>
-        <ConfirmationDialog
-          isOpen={confirmDeleteDialogOpen}
+        <MapDeleteConfirmDialog
+          map={map}
+          isDeleting={confirmDeleteDialogOpen}
           onClose={() => setConfirmDeleteDialogOpen(false)}
-          onConfirm={confirmDeleteMap}
-          title="Delete Map"
-          description="Are you sure you want to delete this map? This action cannot be undone."
-          confirmLabel="Delete Map"
-          confirmVariant="destructive"
-          icon={MapPin}
         />
         <MapDialog
           mapId={map._id}

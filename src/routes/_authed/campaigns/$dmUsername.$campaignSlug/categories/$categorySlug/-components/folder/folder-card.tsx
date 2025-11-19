@@ -6,7 +6,6 @@ import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { Folder } from 'convex/notes/types'
 import { useState, type MouseEvent } from 'react'
 import { toast } from 'sonner'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import { Edit, Trash2, Folder as FolderIcon } from '~/lib/icons'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
@@ -22,6 +21,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import './folder-card.css'
 import { CategoryFolderContextMenu } from './category-folder-context-menu'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
+import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 
 function FolderSvg() {
   return (
@@ -90,7 +90,6 @@ export function FolderCard({
   isLoading = false,
 }: FolderCardProps) {
   const [editing, setEditing] = useState(false)
-  const [deletingFolder, setDeletingFolder] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
@@ -151,21 +150,6 @@ export function FolderCard({
   const updateFolder = useMutation({
     mutationFn: useConvexMutation(api.notes.mutations.updateFolder),
   })
-  const deleteFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.deleteFolder),
-  })
-
-  const handleDelete = async () => {
-    setIsDeleting(true)
-    try {
-      await deleteFolder.mutateAsync({ folderId: folder._id })
-      setDeletingFolder(false)
-    } catch (error) {
-      toast.error('Failed to delete folder')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
 
   const handleCardActivate = (e?: MouseEvent) => {
     if (!isDragging && onClick) {
@@ -230,7 +214,7 @@ export function FolderCard({
                 size="sm"
                 onClick={(e: MouseEvent) => {
                   e.stopPropagation()
-                  setDeletingFolder(true)
+                  setIsDeleting(true)
                 }}
                 className="bg-white/90 hover:bg-white shadow-sm text-red-600 hover:text-red-700"
                 aria-label="Delete"
@@ -263,15 +247,10 @@ export function FolderCard({
         />
       )}
 
-      <ConfirmationDialog
-        isOpen={deletingFolder}
-        onClose={() => setDeletingFolder(false)}
-        onConfirm={handleDelete}
-        title="Delete Folder"
-        description={`Are you sure you want to delete ${folder.name ? `"${folder.name}"` : 'this folder'}? This will also delete all notes inside this folder. This action cannot be undone.`}
-        confirmLabel="Delete Folder"
-        isLoading={isDeleting}
-        icon={FolderIcon}
+      <FolderDeleteConfirmDialog
+        folder={folder}
+        isDeleting={isDeleting}
+        onClose={() => setIsDeleting(false)}
       />
     </>
   )

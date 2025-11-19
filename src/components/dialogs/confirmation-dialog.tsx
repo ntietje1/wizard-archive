@@ -7,7 +7,7 @@ import {
 } from '~/components/shadcn/ui/dialog'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button } from '~/components/shadcn/ui/button'
-import { AlertTriangle, Loader2, type LucideIcon } from '~/lib/icons'
+import { Loader2 } from '~/lib/icons'
 import { type ReactNode } from 'react'
 
 interface ConfirmationDialogProps {
@@ -18,7 +18,6 @@ interface ConfirmationDialogProps {
   description: ReactNode
   confirmLabel?: string
   confirmVariant?: 'default' | 'destructive'
-  icon?: LucideIcon
   children?: ReactNode
   isLoading?: boolean
   disabled?: boolean
@@ -32,7 +31,6 @@ export function ConfirmationDialog({
   description,
   confirmLabel = 'Confirm',
   confirmVariant = 'destructive',
-  icon: Icon = AlertTriangle,
   children,
   isLoading = false,
   disabled = false,
@@ -69,30 +67,13 @@ export function ConfirmationDialog({
       >
         <ScrollArea className="flex-1 max-h-[calc(90vh-80px)]">
           <DialogHeader className="px-6 pt-6 pb-4">
-            <div className="flex items-start gap-4">
-              <div
-                className={`flex-shrink-0 p-2.5 rounded-lg ${
-                  confirmVariant === 'destructive'
-                    ? 'bg-red-50 dark:bg-red-950/20'
-                    : 'bg-amber-50 dark:bg-amber-950/20'
-                }`}
-              >
-                <Icon
-                  className={`w-5 h-5 ${
-                    confirmVariant === 'destructive'
-                      ? 'text-red-600 dark:text-red-500'
-                      : 'text-amber-600 dark:text-amber-500'
-                  }`}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <DialogTitle className="text-lg font-semibold text-foreground mb-2 break-words">
-                  {title}
-                </DialogTitle>
-                <DialogDescription className="text-muted-foreground text-sm leading-relaxed break-words">
-                  {description}
-                </DialogDescription>
-              </div>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg font-semibold text-foreground mb-4 break-words">
+                {title}
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm leading-relaxed break-words">
+                {description}
+              </DialogDescription>
             </div>
           </DialogHeader>
 

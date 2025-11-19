@@ -1,10 +1,9 @@
 import { useConvexMutation, convexQuery } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES, type Map } from 'convex/notes/types'
 import { useState, type MouseEvent } from 'react'
-import { toast } from 'sonner'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
+import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapPin, Edit, Trash2 } from '~/lib/icons'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import {
@@ -52,14 +51,9 @@ export function MapCard({
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isViewing, setIsViewing] = useState(false)
-  const [isDeletingMap, setIsDeletingMap] = useState(false)
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const { active } = useDndContext()
-
-  const deleteMapMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.deleteMap),
-  })
 
   const imageUrlQuery = useQuery(
     convexQuery(
@@ -69,21 +63,6 @@ export function MapCard({
   )
 
   const imageUrl = imageUrlQuery.data || null
-
-  const handleDelete = async () => {
-    if (!map) return
-    setIsDeletingMap(true)
-    try {
-      await deleteMapMutation.mutateAsync({ mapId: map._id })
-      toast.success('Map deleted')
-      setIsDeleting(false)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to delete map')
-    } finally {
-      setIsDeletingMap(false)
-    }
-  }
 
   const dragData: CategoryDragData | undefined =
     map && categoryId
@@ -246,16 +225,13 @@ export function MapCard({
         />
       )}
 
-      <ConfirmationDialog
-        isOpen={isDeleting}
-        onClose={() => setIsDeleting(false)}
-        onConfirm={handleDelete}
-        title="Delete Map"
-        description={`Are you sure you want to delete "${map?.name || 'this map'}"? This action cannot be undone.`}
-        confirmLabel="Delete Map"
-        isLoading={isDeletingMap}
-        icon={MapPin}
-      />
+      {map && (
+        <MapDeleteConfirmDialog
+          map={map}
+          isDeleting={isDeleting}
+          onClose={() => setIsDeleting(false)}
+        />
+      )}
     </>
   )
 }

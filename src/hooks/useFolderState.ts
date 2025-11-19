@@ -2,13 +2,32 @@ import { useCallback } from 'react'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 
 export function useFolderState(folderId: string) {
-  const { folderStates, setFolderState } = useFileSidebar()
+  const {
+    folderStates,
+    setFolderState,
+    closeAllFoldersMode,
+    exitCloseAllMode,
+    clearAllFolderStates,
+  } = useFileSidebar()
 
-  const isExpanded = folderStates[folderId] ?? false
+  const isExpanded = !closeAllFoldersMode && (folderStates[folderId] ?? false)
 
   const toggleExpanded = useCallback(() => {
-    setFolderState(folderId, !isExpanded)
-  }, [folderId, isExpanded, setFolderState])
+    if (closeAllFoldersMode) {
+      exitCloseAllMode()
+      clearAllFolderStates()
+      setFolderState(folderId, true)
+    } else {
+      setFolderState(folderId, !(folderStates[folderId] ?? false))
+    }
+  }, [
+    folderId,
+    folderStates,
+    setFolderState,
+    closeAllFoldersMode,
+    exitCloseAllMode,
+    clearAllFolderStates,
+  ])
 
   const setExpanded = useCallback(
     (expanded: boolean) => {

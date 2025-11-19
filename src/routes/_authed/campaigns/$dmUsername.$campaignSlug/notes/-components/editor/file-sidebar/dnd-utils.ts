@@ -9,6 +9,7 @@ import { validateDrop } from '~/utils/dnd-utils'
 
 export interface SidebarDragData {
   _id: Id<SidebarItemType>
+  name: string
   type: SidebarItemType
   parentFolderId?: Id<'folders'>
   categoryId?: Id<'tagCategories'> | null

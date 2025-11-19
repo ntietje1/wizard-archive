@@ -1,23 +1,21 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Users, Link, User, Trash2 } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
   type CampaignMember,
 } from 'convex/campaigns/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { PlayerRequestsDialog } from './player-requests-dialog'
 import PlayersDmControls from './players-dm-controls'
-import { useMutation } from '@tanstack/react-query'
 import type { Id } from 'convex/_generated/dataModel'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ContentCard } from '~/components/content-grid-page/content-card'
 import { EmptyState } from '~/components/content-grid-page/empty-state'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
+import { PlayerDeleteConfirmDialog } from '~/components/dialogs/delete/player-delete-confirm-dialog'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 
 export default function PlayersContent() {
@@ -36,7 +34,8 @@ export default function PlayersContent() {
   const [isRequestsOpen, setIsRequestsOpen] = useState(false)
   const [deletingMemberId, setDeletingMemberId] =
     useState<Id<'campaignMembers'> | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+
+  const deletingPlayer = players.data?.find((p) => p._id === deletingMemberId)
 
   const handleCopyJoinUrl = async () => {
     if (
@@ -55,28 +54,6 @@ export default function PlayersContent() {
       toast.success('Join link copied to clipboard')
     } catch (e) {
       toast.error('Failed to copy join link')
-    }
-  }
-
-  const updateMemberStatus = useMutation({
-    mutationFn: useConvexMutation(
-      api.campaigns.mutations.updateCampaignMemberStatus,
-    ),
-  })
-  const handleDeleteMember = async () => {
-    if (!deletingMemberId) return
-    setIsDeleting(true)
-    try {
-      await updateMemberStatus.mutateAsync({
-        memberId: deletingMemberId,
-        status: CAMPAIGN_MEMBER_STATUS.Removed,
-      })
-      toast.success('Player removed successfully')
-      setDeletingMemberId(null)
-    } catch (e) {
-      toast.error('Failed to remove player')
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -176,16 +153,13 @@ export default function PlayersContent() {
         players={players.data ?? []}
       />
 
-      <ConfirmationDialog
-        isOpen={!!deletingMemberId}
-        onClose={() => setDeletingMemberId(null)}
-        onConfirm={handleDeleteMember}
-        title="Remove Player"
-        description={`Are you sure you want to remove ${players.data?.find((p) => p._id === deletingMemberId)?.userProfile?.name ?? 'this player'} from the campaign? This will revoke their access. You can undo this action in the player requests section.`}
-        confirmLabel={`Remove ${players.data?.find((p) => p._id === deletingMemberId)?.userProfile?.name ?? 'Unknown'}`}
-        isLoading={isDeleting}
-        icon={Users}
-      />
+      {deletingPlayer && (
+        <PlayerDeleteConfirmDialog
+          player={deletingPlayer}
+          isDeleting={!!deletingMemberId}
+          onClose={() => setDeletingMemberId(null)}
+        />
+      )}
     </div>
   )
 }

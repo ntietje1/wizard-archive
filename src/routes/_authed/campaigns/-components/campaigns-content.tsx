@@ -1,16 +1,15 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Link } from '@tanstack/react-router'
 import type { CampaignWithMembership } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { Edit, Notebook, Plus, Sword, Trash2, User, Users } from '~/lib/icons'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { CreateActionCard } from '~/components/content-grid-page/create-action-card'
 import { ContentCard } from '~/components/content-grid-page/content-card'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
+import { CampaignDeleteConfirmDialog } from '~/components/dialogs/delete/campaign-delete-confirm-dialog'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 import { CampaignDialog } from './campaign-dialog'
 import type { Id } from 'convex/_generated/dataModel'
@@ -26,9 +25,6 @@ export function CampaignsContent() {
   const campaigns = useQuery(
     convexQuery(api.campaigns.queries.getUserCampaigns, {}),
   )
-  const deleteCampaign = useMutation({
-    mutationFn: useConvexMutation(api.campaigns.mutations.deleteCampaign),
-  })
 
   const currentlyEditingCampaign = campaigns.data?.find(
     (campaignWithMembership: CampaignWithMembership) =>
@@ -47,20 +43,8 @@ export function CampaignsContent() {
     return <CampaignsContentLoading />
   }
 
-  const handleDeleteCampaign = async () => {
-    if (!deletingCampaignId) return
-
-    try {
-      await deleteCampaign.mutateAsync({
-        campaignId: deletingCampaignId,
-      })
-
-      toast.success('Campaign deleted successfully')
-      setDeletingCampaignId(null)
-    } catch (error) {
-      console.error('Failed to delete campaign:', error)
-      toast.error('Failed to delete campaign')
-    }
+  const handleDeleteSuccess = () => {
+    setDeletingCampaignId(null)
   }
 
   if (campaigns.data.length === 0) {
@@ -189,16 +173,14 @@ export function CampaignsContent() {
         campaignWithMembership={currentlyEditingCampaign ?? undefined}
       />
 
-      <ConfirmationDialog
-        isOpen={!!deletingCampaignId}
-        onClose={() => setDeletingCampaignId(null)}
-        onConfirm={handleDeleteCampaign}
-        title="Delete Campaign"
-        description={`Are you sure you want to delete "${currentlyDeletingCampaign?.campaign.name}"? This will permanently delete the entire campaign including all notes, characters, locations, and settings. This action cannot be undone.`}
-        confirmLabel={`Delete ${currentlyDeletingCampaign?.campaign.name}`}
-        isLoading={deleteCampaign.isPending}
-        icon={Sword}
-      />
+      {currentlyDeletingCampaign && (
+        <CampaignDeleteConfirmDialog
+          campaign={currentlyDeletingCampaign.campaign}
+          isDeleting={!!deletingCampaignId}
+          onClose={() => setDeletingCampaignId(null)}
+          onConfirm={handleDeleteSuccess}
+        />
+      )}
     </>
   )
 }

@@ -10,24 +10,20 @@ import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItemsByParent()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { activeDragItem } = useFileSidebar()
+  const { activeDragItem, setRenamingId } = useFileSidebar()
   const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
 
   const handleCreateNote = () => {
     if (!campaignId) return
-    createNote.mutateAsync({ campaignId: campaignId })
-  }
-  const handleCreateFolder = () => {
-    if (!campaignId) return
-    createFolder.mutateAsync({ campaignId: campaignId })
+    createNote.mutateAsync({ campaignId: campaignId }).then(({ noteId }) => {
+      setRenamingId(noteId)
+    })
   }
 
   if (sidebarItems.status === 'pending') {
@@ -53,13 +49,6 @@ function FileSidebarContent() {
               onClick={handleCreateNote}
             >
               New note
-            </Button>
-            <Button
-              className="max-w-24"
-              variant="outline"
-              onClick={handleCreateFolder}
-            >
-              New folder
             </Button>
           </div>
         )}

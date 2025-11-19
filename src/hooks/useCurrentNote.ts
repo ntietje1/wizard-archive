@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useNoteActions } from './useNoteActions'
 import { debounce } from 'lodash-es'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/lib/editor-schema'
 import { useAuth } from '@clerk/tanstack-react-start'
 
 export const useCurrentNote = () => {

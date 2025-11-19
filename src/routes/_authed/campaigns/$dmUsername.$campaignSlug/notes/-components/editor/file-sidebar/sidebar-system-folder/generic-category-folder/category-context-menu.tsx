@@ -3,11 +3,10 @@ import {
   type ContextMenuRef,
 } from '~/components/context-menu/context-menu'
 import { forwardRef, useMemo } from 'react'
-import { Trash2 } from '~/lib/icons'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import type { Folder } from 'convex/notes/types'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
+import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import {
   useCategoryCreateItem,
   useCategoryNewFolder,
@@ -70,39 +69,22 @@ export const CategoryContextMenu = forwardRef<
       />
 
       {folder && deleteFolder.menuItem && (
-        <ConfirmationDialog
-          isOpen={deleteFolder.isDialogOpen}
+        <FolderDeleteConfirmDialog
+          folder={folder}
+          isDeleting={deleteFolder.isDialogOpen}
           onClose={() => deleteFolder.setIsDialogOpen(false)}
-          onConfirm={deleteFolder.confirmDeleteFolderFn}
-          title={`Delete ${folder.name || 'Folder'}`}
-          description={
-            deleteFolder.hasDirectChildren ? (
-              <p>
-                <strong>This folder isn't empty!</strong>
-                <br />
-                <span>
-                  Are you sure you want to delete it and all its contents?
-                </span>
-              </p>
-            ) : (
-              <p>Are you sure you want to delete this folder?</p>
-            )
-          }
-          confirmLabel="Delete Folder"
-          confirmVariant="destructive"
-          icon={Trash2}
         />
       )}
 
-          {newMap.campaignId && (
-            <MapDialog
-              isOpen={newMap.isDialogOpen}
-              onClose={() => newMap.setIsDialogOpen(false)}
-              campaignId={newMap.campaignId}
-              categoryId={newMap.categoryId}
-              parentFolderId={newMap.parentFolderId}
-            />
-          )}
+      {newMap.campaignId && (
+        <MapDialog
+          isOpen={newMap.isDialogOpen}
+          onClose={() => newMap.setIsDialogOpen(false)}
+          campaignId={newMap.campaignId}
+          categoryId={newMap.categoryId}
+          parentFolderId={newMap.parentFolderId}
+        />
+      )}
     </>
   )
 })

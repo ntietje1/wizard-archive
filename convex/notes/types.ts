@@ -1,6 +1,6 @@
 import { Id } from '../_generated/dataModel'
 import { Tag, TagCategory } from '../tags/types'
-import type { CustomBlock } from './editorSpecs'
+import { CustomBlock } from './editorSpecs'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 

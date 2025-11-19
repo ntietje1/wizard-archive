@@ -1,15 +1,14 @@
-import { useConvexMutation, convexQuery } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Tag } from 'convex/tags/types'
 import { useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
-import { toast } from 'sonner'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
+import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { Edit, TagIcon, Trash2 } from '~/lib/icons'
+import { Edit, Trash2 } from '~/lib/icons'
 import { useDraggable } from '@dnd-kit/core'
 import { type CategoryDragData } from '../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
@@ -58,11 +57,6 @@ export function TagCard({
 
   const [editing, setEditing] = useState<Tag | null>(null)
   const [deletingTag, setDeletingTag] = useState<Tag | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const deleteTag = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.deleteTag),
-  })
 
   const imageUrlQuery = useQuery(
     convexQuery(
@@ -72,19 +66,6 @@ export function TagCard({
   )
 
   const imageUrl = imageUrlQuery.data || null
-
-  const handleDelete = async () => {
-    if (!deletingTag) return
-    setIsDeleting(true)
-    try {
-      await deleteTag.mutateAsync({ tagId: deletingTag._id })
-      setDeletingTag(null)
-    } catch (_) {
-      toast.error('Failed to delete tag')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
 
   const dragData: CategoryDragData | undefined =
     tag && config && noteAndTag && tag.noteId
@@ -239,16 +220,14 @@ export function TagCard({
         />
       )}
 
-      <ConfirmationDialog
-        isOpen={!!deletingTag}
-        onClose={() => setDeletingTag(null)}
-        onConfirm={handleDelete}
-        title={`Delete ${config.singular}`}
-        description={`Are you sure you want to delete this ${config.singular}? This will also remove references in your notes. This action cannot be undone.`}
-        confirmLabel={`Delete ${deletingTag?.displayName}`}
-        isLoading={isDeleting}
-        icon={TagIcon}
-      />
+      {deletingTag && config && (
+        <TagDeleteConfirmDialog
+          tag={deletingTag}
+          categoryConfig={config}
+          isDeleting={!!deletingTag}
+          onClose={() => setDeletingTag(null)}
+        />
+      )}
     </>
   )
 }

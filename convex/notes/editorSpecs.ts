@@ -9,11 +9,19 @@ import {
 } from '@blocknote/core'
 import { TagInlineSpecType } from '../tags/editorSpecs'
 
-type CustomInlineContentSpecs = typeof defaultInlineContentSpecs &
+export type CustomInlineContentSpecs = typeof defaultInlineContentSpecs &
   TagInlineSpecType
+export type CustomInlineContentSchema =
+  InlineContentSchemaFromSpecs<CustomInlineContentSpecs>
+
+export type CustomBlockSpecs = typeof defaultBlockSpecs
+export type CustomBlockSchema = BlockSchemaFromSpecs<CustomBlockSpecs>
+
+export type CustomStyleSpecs = typeof defaultStyleSpecs
+export type CustomStyleSchema = StyleSchemaFromSpecs<CustomStyleSpecs>
 
 export type CustomBlock = Block<
-  BlockSchemaFromSpecs<typeof defaultBlockSpecs>,
-  InlineContentSchemaFromSpecs<CustomInlineContentSpecs>,
-  StyleSchemaFromSpecs<typeof defaultStyleSpecs>
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema
 >

@@ -12,13 +12,13 @@ import {
   getNonDefaultCategoryIcons,
 } from '~/lib/category-icons'
 import { useCallback, useState } from 'react'
-import { toast } from 'sonner'
 import type { CategoryFormProps } from './types'
 import { validateCategoryName, validateCategoryDisplayName } from './validators'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
-import { Trash2, AlertCircle } from 'lucide-react'
+import { CategoryDeleteConfirmDialog } from '~/components/dialogs/delete/category-delete-confirm-dialog'
+import { AlertCircle } from 'lucide-react'
 import { MAX_NAME_LENGTH } from '../category-tag-form/base-tag-form/types'
 import { CATEGORY_KIND } from 'convex/tags/types'
+import { toast } from 'sonner'
 
 export function CategoryForm({
   mode,
@@ -167,21 +167,10 @@ export function CategoryForm({
     },
   })
 
-  const confirmDeleteCategory = useCallback(async () => {
-    if (mode === 'edit' && category) {
-      await deleteCategory
-        .mutateAsync({ categoryId: category._id })
-        .then(() => {
-          toast.success('Category deleted successfully')
-          onClose()
-          setIsConfirmingDelete(false)
-        })
-        .catch((error: Error) => {
-          console.error(error)
-          toast.error('Failed to delete category')
-        })
-    }
-  }, [deleteCategory, mode, category, onClose, setIsConfirmingDelete])
+  const handleDeleteSuccess = useCallback(() => {
+    onClose()
+    setIsConfirmingDelete(false)
+  }, [onClose])
 
   return (
     <>
@@ -444,16 +433,14 @@ export function CategoryForm({
           }}
         </form.Subscribe>
       </form>
-      <ConfirmationDialog
-        isOpen={isConfirmingDelete}
-        onClose={() => setIsConfirmingDelete(false)}
-        onConfirm={confirmDeleteCategory}
-        title="Delete Category"
-        description={`Are you sure you want to delete this category? This will also delete all tags and notes in this category. This action cannot be undone.`}
-        confirmLabel="Delete Category"
-        confirmVariant="destructive"
-        icon={Trash2}
-      />
+      {mode === 'edit' && category && (
+        <CategoryDeleteConfirmDialog
+          category={category}
+          isDeleting={isConfirmingDelete}
+          onClose={() => setIsConfirmingDelete(false)}
+          onConfirm={handleDeleteSuccess}
+        />
+      )}
     </>
   )
 }
