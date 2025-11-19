@@ -48,7 +48,7 @@ export const useSession = () => {
     startSession.mutate({
       displayName,
       name: displayName,
-      color: args.color ?? '#6366F1',
+      color: args.color,
       description: args.description ?? nowIso,
       campaignId,
       categoryId: args.categoryId,
