@@ -1,31 +1,35 @@
 import {
   ContextMenu,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
-import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
+import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Note } from 'convex/notes/types'
-import { useTagNoteEdit, useTagNoteDelete } from '~/hooks/useTagNoteContextMenu'
-import type { Location } from 'convex/locations/types'
+import {
+  useTagNoteRename,
+  useTagNoteEdit,
+  useTagNoteDelete,
+} from '~/hooks/useTagNoteContextMenu'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 
-export interface LocationTagContextMenuProps {
+export interface TagNoteContextMenuProps {
   children: React.ReactNode
   noteWithTag: Note
   categoryConfig: TagCategoryConfig
 }
 
-export const LocationTagContextMenu = forwardRef<
+export const TagNoteContextMenu = forwardRef<
   ContextMenuRef,
-  LocationTagContextMenuProps
+  TagNoteContextMenuProps
 >(({ children, noteWithTag, categoryConfig }, ref) => {
+  const rename = useTagNoteRename(noteWithTag)
   const edit = useTagNoteEdit(noteWithTag, categoryConfig)
   const deleteAction = useTagNoteDelete(noteWithTag, categoryConfig)
 
   const menuItems = useMemo(
-    () => [edit.menuItem, deleteAction.menuItem],
-    [edit.menuItem, deleteAction.menuItem],
+    () => [rename.menuItem, edit.menuItem, deleteAction.menuItem],
+    [rename.menuItem, edit.menuItem, deleteAction.menuItem],
   )
 
   return (
@@ -44,12 +48,12 @@ export const LocationTagContextMenu = forwardRef<
       )}
 
       {noteWithTag.tag && (
-        <LocationTagDialog
+        <GenericTagDialog
           mode="edit"
           isOpen={edit.isDialogOpen}
           onClose={() => edit.setIsDialogOpen(false)}
           config={categoryConfig}
-          tag={noteWithTag.tag as Location}
+          tag={noteWithTag.tag}
         />
       )}
     </>

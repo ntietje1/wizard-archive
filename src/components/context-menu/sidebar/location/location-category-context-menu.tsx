@@ -1,8 +1,8 @@
 import {
   ContextMenu,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
-import type { CategoryContextMenuProps } from '../generic-category-folder/category-context-menu'
+} from '~/components/context-menu/base/context-menu'
+import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
 import { MapPin, MapPinPlus } from '~/lib/icons'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useRouter } from '@tanstack/react-router'
@@ -18,7 +18,7 @@ import {
   useCategoryDeleteFolder,
   useCategoryNewMap,
 } from '~/hooks/useCategoryContextMenu'
-import type { ContextMenuItem } from '~/components/context-menu/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 
 export const LocationCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -119,15 +119,15 @@ export const LocationCategoryFolderContextMenu = forwardRef<
             mode="create"
             onSubmit={newFolder.onSubmit}
           />
-              {newMap.campaignId && (
-                <MapDialog
-                  isOpen={newMap.isDialogOpen}
-                  onClose={() => newMap.setIsDialogOpen(false)}
-                  campaignId={newMap.campaignId}
-                  categoryId={newMap.categoryId}
-                  parentFolderId={newMap.parentFolderId}
-                />
-              )}
+          {newMap.campaignId && (
+            <MapDialog
+              isOpen={newMap.isDialogOpen}
+              onClose={() => newMap.setIsDialogOpen(false)}
+              campaignId={newMap.campaignId}
+              categoryId={newMap.categoryId}
+              parentFolderId={newMap.parentFolderId}
+            />
+          )}
         </>
       )}
     </>

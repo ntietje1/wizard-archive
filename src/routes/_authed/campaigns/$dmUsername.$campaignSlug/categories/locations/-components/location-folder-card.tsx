@@ -1,5 +1,5 @@
 import { FolderCard } from '../../$categorySlug/-components/folder/folder-card'
-import { LocationFolderContextMenu } from './location-folder-context-menu'
+import { LocationFolderContextMenu } from '~/components/context-menu/category/location-folder-context-menu'
 import type { FolderCardProps } from '../../$categorySlug/-components/folder/folder-card'
 
 export function LocationFolderCardWithContextMenu(props: FolderCardProps) {

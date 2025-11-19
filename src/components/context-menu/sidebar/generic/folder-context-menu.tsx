@@ -7,7 +7,7 @@ import {
   ContextMenu,
   type ContextMenuItem,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'

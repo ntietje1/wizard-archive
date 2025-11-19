@@ -19,7 +19,7 @@ import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import './folder-card.css'
-import { CategoryFolderContextMenu } from './category-folder-context-menu'
+import { CategoryFolderContextMenu } from '~/components/context-menu/category/category-folder-context-menu'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 

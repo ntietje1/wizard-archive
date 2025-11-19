@@ -1,5 +1,5 @@
 import { FolderCard } from '../../$categorySlug/-components/folder/folder-card'
-import { CharacterFolderContextMenu } from './character-folder-context-menu'
+import { CharacterFolderContextMenu } from '~/components/context-menu/category/character-folder-context-menu'
 import type { FolderCardProps } from '../../$categorySlug/-components/folder/folder-card'
 
 export function CharacterFolderCardWithContextMenu(props: FolderCardProps) {

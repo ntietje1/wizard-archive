@@ -8,7 +8,7 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import { CharacterTagCardWithContextMenu } from './-components/character-card'
 import { CharacterFolderCardWithContextMenu } from './-components/character-folder-card'
-import { CharacterFolderContextMenu } from './-components/character-folder-context-menu'
+import { CharacterFolderContextMenu } from '~/components/context-menu/category/character-folder-context-menu'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/categories/characters/',

@@ -6,7 +6,7 @@ import type { ComponentType } from 'react'
 import {
   TagNoteContextMenu,
   type TagNoteContextMenuProps,
-} from './tag-note-context.menu'
+} from '~/components/context-menu/sidebar/generic/tag-note-context-menu'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import {
@@ -17,7 +17,7 @@ import {
   type SidebarItemType,
 } from 'convex/notes/types'
 import { CategoryFolderButton } from './category-folder-button'
-import type { CategoryContextMenuProps } from './category-context-menu'
+import type { CategoryContextMenuProps } from '~/components/context-menu/sidebar/generic/category-folder-context-menu'
 import { DraggableNote } from '../../sidebar-note/draggable-note'
 import { FileEdit, FileText } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'

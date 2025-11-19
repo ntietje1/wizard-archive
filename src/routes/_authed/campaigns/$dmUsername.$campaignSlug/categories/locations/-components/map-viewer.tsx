@@ -28,7 +28,7 @@ import {
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
 import { MapPin } from './map-pin'
-import { MapViewerContextMenu } from './map-viewer-context-menu'
+import { MapViewerContextMenu } from '~/components/context-menu/map/map-viewer-context-menu'
 
 interface MapViewerProps {
   mapId: Id<'maps'>

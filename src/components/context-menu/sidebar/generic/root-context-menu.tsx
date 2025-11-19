@@ -2,7 +2,7 @@ import { FilePlus, FolderPlus } from '~/lib/icons'
 import {
   ContextMenu,
   type ContextMenuItem,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import type { Id } from 'convex/_generated/dataModel'
 import { toast } from 'sonner'
 import { useCampaign } from '~/contexts/CampaignContext'
@@ -80,3 +80,4 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
     </ContextMenu>
   )
 }
+

@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Note } from 'convex/notes/types'
-import type { ContextMenuItem } from '~/components/context-menu/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 
 export function useTagNoteRename(noteWithTag: Note) {
   const { setRenamingId } = useFileSidebar()

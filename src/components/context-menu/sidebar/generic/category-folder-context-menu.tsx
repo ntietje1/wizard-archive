@@ -1,7 +1,7 @@
 import {
   ContextMenu,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'

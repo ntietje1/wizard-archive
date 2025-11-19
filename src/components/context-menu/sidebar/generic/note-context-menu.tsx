@@ -3,7 +3,7 @@ import {
   ContextMenu,
   type ContextMenuItem,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import type { Note } from 'convex/notes/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useState, forwardRef } from 'react'
@@ -58,3 +58,4 @@ export const NoteContextMenu = forwardRef<ContextMenuRef, NoteContextMenuProps>(
     )
   },
 )
+

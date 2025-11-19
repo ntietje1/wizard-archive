@@ -11,7 +11,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { ContextMenuItem } from '~/components/context-menu/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 import type { FolderFormValues } from '~/components/forms/folder-dialog/folder-dialog'
 import { useSidebarItemsByParent } from './useSidebarItems'
 

@@ -1,5 +1,5 @@
 import { TagCard } from '../../$categorySlug/-components/tag/tag-card'
-import { LocationTagContextMenu } from './location-tag-context-menu'
+import { LocationTagContextMenu } from '~/components/context-menu/category/location-tag-context-menu'
 import type { TagCardProps } from '../../$categorySlug/-components/tag/tag-card'
 
 export function LocationTagCardWithContextMenu(props: TagCardProps) {

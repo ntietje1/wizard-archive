@@ -1,35 +1,31 @@
 import {
   ContextMenu,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
-import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
+import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Note } from 'convex/notes/types'
-import {
-  useTagNoteRename,
-  useTagNoteEdit,
-  useTagNoteDelete,
-} from '~/hooks/useTagNoteContextMenu'
+import { useTagNoteEdit, useTagNoteDelete } from '~/hooks/useTagNoteContextMenu'
+import type { Location } from 'convex/locations/types'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 
-export interface TagNoteContextMenuProps {
+export interface LocationTagContextMenuProps {
   children: React.ReactNode
   noteWithTag: Note
   categoryConfig: TagCategoryConfig
 }
 
-export const TagNoteContextMenu = forwardRef<
+export const LocationTagContextMenu = forwardRef<
   ContextMenuRef,
-  TagNoteContextMenuProps
+  LocationTagContextMenuProps
 >(({ children, noteWithTag, categoryConfig }, ref) => {
-  const rename = useTagNoteRename(noteWithTag)
   const edit = useTagNoteEdit(noteWithTag, categoryConfig)
   const deleteAction = useTagNoteDelete(noteWithTag, categoryConfig)
 
   const menuItems = useMemo(
-    () => [rename.menuItem, edit.menuItem, deleteAction.menuItem],
-    [rename.menuItem, edit.menuItem, deleteAction.menuItem],
+    () => [edit.menuItem, deleteAction.menuItem],
+    [edit.menuItem, deleteAction.menuItem],
   )
 
   return (
@@ -47,15 +43,16 @@ export const TagNoteContextMenu = forwardRef<
         />
       )}
 
-      {deleteAction.tag && (
-        <GenericTagDialog
+      {noteWithTag.tag && (
+        <LocationTagDialog
           mode="edit"
           isOpen={edit.isDialogOpen}
           onClose={() => edit.setIsDialogOpen(false)}
           config={categoryConfig}
-          tag={deleteAction.tag}
+          tag={noteWithTag.tag as Location}
         />
       )}
     </>
   )
 })
+

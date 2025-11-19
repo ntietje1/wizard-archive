@@ -1,8 +1,8 @@
 import {
   ContextMenu,
   type ContextMenuRef,
-} from '~/components/context-menu/context-menu'
-import type { CategoryContextMenuProps } from '../generic-category-folder/category-context-menu'
+} from '~/components/context-menu/base/context-menu'
+import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
 import { UserPlus, Users } from '~/lib/icons'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useRouter } from '@tanstack/react-router'
@@ -16,7 +16,7 @@ import {
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
 } from '~/hooks/useCategoryContextMenu'
-import type { ContextMenuItem } from '~/components/context-menu/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 
 export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,

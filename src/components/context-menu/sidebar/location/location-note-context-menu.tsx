@@ -1,9 +1,9 @@
 import {
   TagNoteContextMenu,
   type TagNoteContextMenuProps,
-} from '../generic-category-folder/tag-note-context.menu'
+} from '../generic/tag-note-context-menu'
 import { forwardRef } from 'react'
-import type { ContextMenuRef } from '~/components/context-menu/context-menu'
+import type { ContextMenuRef } from '~/components/context-menu/base/context-menu'
 
 export const LocationNoteContextMenu = forwardRef<
   ContextMenuRef,

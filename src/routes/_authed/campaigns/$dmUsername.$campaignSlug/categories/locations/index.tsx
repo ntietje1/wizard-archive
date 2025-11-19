@@ -8,7 +8,7 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import { LocationTagCardWithContextMenu } from './-components/location-card'
 import { LocationFolderCardWithContextMenu } from './-components/location-folder-card'
-import { LocationFolderContextMenu } from './-components/location-folder-context-menu'
+import { LocationFolderContextMenu } from '~/components/context-menu/category/location-folder-context-menu'
 import { MapCardWithContextMenu } from './-components/map-card'
 
 export const Route = createFileRoute(

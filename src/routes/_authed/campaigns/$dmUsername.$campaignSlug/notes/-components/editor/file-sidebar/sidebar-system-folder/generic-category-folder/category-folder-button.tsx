@@ -13,11 +13,11 @@ import { useFolderActions } from '~/hooks/useFolderActions'
 import {
   CategoryContextMenu,
   type CategoryContextMenuProps,
-} from './category-context-menu'
-import { type TagNoteContextMenuProps } from './tag-note-context.menu'
+} from '~/components/context-menu/sidebar/generic/category-folder-context-menu'
+import { type TagNoteContextMenuProps } from '~/components/context-menu/sidebar/generic/tag-note-context-menu'
 import { toast } from 'sonner'
 import { useRef } from 'react'
-import type { ContextMenuRef } from '~/components/context-menu/context-menu'
+import type { ContextMenuRef } from '~/components/context-menu/base/context-menu'
 import { CategorySidebarItem } from './category-sidebar-item'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'

@@ -8,7 +8,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { TagCardWithContextMenu } from './tag/tag-card'
 import { FolderCardWithContextMenu } from './folder/folder-card'
 import { EmptyState } from './empty-state'
-import { CategoryFolderContextMenu } from './folder/category-folder-context-menu'
+import { CategoryFolderContextMenu } from '~/components/context-menu/category/category-folder-context-menu'
 import {
   FolderDialog,
   type FolderFormValues,

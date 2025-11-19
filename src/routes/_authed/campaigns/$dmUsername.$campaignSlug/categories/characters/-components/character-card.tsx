@@ -1,5 +1,5 @@
 import { TagCard } from '../../$categorySlug/-components/tag/tag-card'
-import { CharacterTagContextMenu } from './character-tag-context-menu'
+import { CharacterTagContextMenu } from '~/components/context-menu/category/character-tag-context-menu'
 import type { TagCardProps } from '../../$categorySlug/-components/tag/tag-card'
 
 export function CharacterTagCardWithContextMenu(props: TagCardProps) {

@@ -2,19 +2,19 @@ import {
   ContextMenu,
   type ContextMenuRef,
   type ContextMenuItem,
-} from '~/components/context-menu/context-menu'
+} from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo, useState } from 'react'
 import type { Map } from 'convex/notes/types'
 import { Edit, Trash2 } from '~/lib/icons'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 
-export interface MapContextMenuProps {
+export interface LocationsMapContextMenuProps {
   children: React.ReactNode
   map?: Map
 }
 
-export const MapContextMenu = forwardRef<ContextMenuRef, MapContextMenuProps>(
+export const LocationsMapContextMenu = forwardRef<ContextMenuRef, LocationsMapContextMenuProps>(
   ({ children, map }, ref) => {
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
@@ -70,4 +70,5 @@ export const MapContextMenu = forwardRef<ContextMenuRef, MapContextMenuProps>(
   },
 )
 
-MapContextMenu.displayName = 'MapContextMenu'
+LocationsMapContextMenu.displayName = 'LocationsMapContextMenu'
+
