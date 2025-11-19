@@ -16,7 +16,6 @@ export function DragOverlayItem({ item }: { item: AnySidebarItem }) {
     <div className="bg-muted/50 shadow-lg rounded-sm scale-95">
       <SidebarItemButtonBase
         icon={icon}
-        editIcon={icon}
         name={item.name || ''}
         defaultName={defaultName}
         isSelected={false}

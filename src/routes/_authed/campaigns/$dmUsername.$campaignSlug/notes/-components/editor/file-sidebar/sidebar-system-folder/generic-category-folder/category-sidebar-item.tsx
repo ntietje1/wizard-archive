@@ -67,7 +67,6 @@ export function TagNoteButton({
       <DraggableNote note={noteWithTag} ancestorIds={ancestorIds}>
         <SidebarItemButtonBase
           icon={FileText}
-          editIcon={FileEdit}
           name={noteWithTag.name || ''}
           defaultName={UNTITLED_NOTE_TITLE}
           isSelected={isSelected}

@@ -32,7 +32,6 @@ export function NoteButton({ note, ancestorIds = [] }: NoteButtonProps) {
       <NoteContextMenu ref={contextMenuRef} note={note}>
         <SidebarItemButtonBase
           icon={FileText}
-          editIcon={FileEdit}
           name={note.name || ''}
           defaultName={UNTITLED_NOTE_TITLE}
           isSelected={isSelected}

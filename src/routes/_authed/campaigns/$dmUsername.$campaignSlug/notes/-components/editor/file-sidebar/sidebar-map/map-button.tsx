@@ -41,7 +41,6 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
         <MapContextMenu ref={contextMenuRef} map={map}>
           <SidebarItemButtonBase
             icon={MapPin}
-            editIcon={FileEdit}
             name={map.name || 'Untitled Map'}
             defaultName="Untitled Map"
             isSelected={false}

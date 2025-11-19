@@ -39,7 +39,6 @@ export function FolderButton({ folder, ancestorIds = [] }: FolderButtonProps) {
       <DraggableFolder folder={folder} ancestorIds={ancestorIds}>
         <SidebarItemButtonBase
           icon={FolderIcon}
-          editIcon={FolderEdit}
           name={folder.name || ''}
           defaultName={UNTITLED_FOLDER_NAME}
           isExpanded={isExpanded}

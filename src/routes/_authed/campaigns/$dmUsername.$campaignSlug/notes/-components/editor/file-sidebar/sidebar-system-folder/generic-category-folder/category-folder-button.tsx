@@ -178,7 +178,6 @@ const CategoryFolderBase = ({
   return (
     <SidebarItemButtonBase
       icon={icon}
-      editIcon={icon}
       name={categoryName}
       defaultName={defaultName || categoryName}
       isExpanded={isExpanded}

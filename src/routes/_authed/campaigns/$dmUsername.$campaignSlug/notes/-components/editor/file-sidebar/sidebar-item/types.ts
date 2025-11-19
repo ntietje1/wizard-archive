@@ -17,7 +17,6 @@ export interface SidebarItemButtonProps
   extends SidebarItemHandlers,
     SidebarItemState {
   icon: LucideIcon
-  editIcon: LucideIcon
   name: string
   defaultName: string
   showChevron?: boolean

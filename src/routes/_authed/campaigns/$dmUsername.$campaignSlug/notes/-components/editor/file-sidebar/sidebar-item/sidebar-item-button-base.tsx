@@ -7,7 +7,6 @@ import { cn } from '~/lib/utils'
 
 export function SidebarItemButtonBase({
   icon: Icon,
-  editIcon: EditIcon,
   name,
   defaultName,
   isExpanded = false,
@@ -29,13 +28,7 @@ export function SidebarItemButtonBase({
       {/* Icon / Chevron Toggle */}
       <HoverToggleButton
         className="relative h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground"
-        nonHoverComponent={
-          isRenaming ? (
-            <EditIcon className="h-4 w-4" />
-          ) : (
-            <Icon className="h-4 w-4 shrink-0" />
-          )
-        }
+        nonHoverComponent={<Icon className="h-4 w-4 shrink-0" />}
         hoverComponent={
           showChevron ? (
             <Button
