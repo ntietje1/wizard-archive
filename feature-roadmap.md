@@ -1,4 +1,4 @@
-Current features
+# Current features
 
 - Authentication (Clerk)
   - OAuth, username/email + password
@@ -28,20 +28,21 @@ Current features
   - Folders under categories for organization
   - Sessions have custom auto-tagging on share, based on the current session
   - Folder view or flat view toggle for category pages with breadcrumb navigation
+- Maps
+  - Locations can be pinned onto a map image
+  - Future: Other types of tags allowed to be pinned
+  - Future: Embed maps as pins on other maps
+  - Future: Improve map UI
 
-Dev to-do list:
+# Dev to-do list:
 
 - disallow certain category names that would conflict with current paths
-- File upload (including sidebar integration)
-- Linking system ("#" syntax, allowing "mentioning" a note or note section by header)
 
-Planned user features road map
+# Planned user features road map
 
-- "Cover art" for campaigns, characters, locations, etc.
-  - Shows on cards on relevant pages
-  - Shows on hover cards
-  - Also includes other customization features
-  - Requires file upload
+- Wiki-style page linking (integrated with tag linking as well)
+  - Heading linking
+- Search feature
 - Character/Location note hover elements
   - DM customizable element that shows up on tag hover
   - What shows up for session tag hover?
@@ -70,10 +71,6 @@ Planned user features road map
   - Integrate with notes and character sheets
     - Clickable rolls integrated into character sheet/character hover card for attack/damage rolls and ability checks
     - Ability to add rolls into DM notes for quick access
-- Maps
-  - Ability to tie notes/sections to specific points on the map
-  - Requires file upload
-  - Requires sub-note linking
 - DM "presentation" mode
   - A view-only DM mode to be used during an active session
 - Player notes
@@ -104,7 +101,7 @@ Planned user features road map
   - Notion/Obsidian import
   - Asset manager/media library for bulk asset operations
 
-Extension features:
+# Extension features:
 
 - Initiative/combat tracker
   - Integrates with character sheets and notes
