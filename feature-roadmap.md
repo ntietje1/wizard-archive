@@ -37,12 +37,16 @@
 # Dev to-do list:
 
 - disallow certain category names that would conflict with current paths
+- maybe move all
 
 # Planned user features road map
 
 - Wiki-style page linking (integrated with tag linking as well)
   - Heading linking
-- Search feature
+- Navigation Features
+  - Tabs in note page
+  - Search feature
+  - Breadcrumb in note page
 - Character/Location note hover elements
   - DM customizable element that shows up on tag hover
   - What shows up for session tag hover?
