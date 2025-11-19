@@ -98,10 +98,7 @@ export default function LocationTagForm({
         color: location.color ?? null,
       }
     } else {
-      return {
-        ...defaultLocationFormValues,
-        color: null,
-      }
+      return defaultLocationFormValues
     }
   }, [location, mode])
 

@@ -86,10 +86,7 @@ export default function GenericTagForm({
         color: tag.color ?? null,
       }
     } else {
-      return {
-        ...defaultBaseFormValues,
-        color: null,
-      }
+      return defaultBaseFormValues
     }
   }, [tag, mode])
 
