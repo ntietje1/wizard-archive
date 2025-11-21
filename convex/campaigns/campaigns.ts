@@ -34,13 +34,15 @@ export async function getCampaign(
     const { dmUsername, campaignSlug } = campaignIdentifier
     const dmUserProfile = await getUserProfileByUsernameHandler(ctx, dmUsername)
     if (!dmUserProfile) throw new Error('Campaign not found')
+    const partialCampaign = await ctx.db
+      .query('campaigns')
+      .withIndex('by_slug_dm', (q) =>
+        q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile.userId),
+      )
+      .unique()
+    if (!partialCampaign) throw new Error('Campaign not found')
     campaign = {
-      ...(await ctx.db
-        .query('campaigns')
-        .withIndex('by_slug_dm', (q) =>
-          q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile.userId),
-        )
-        .unique()),
+      ...partialCampaign,
       dmUserProfile,
     } as Campaign
   } else if ('campaignId' in campaignIdentifier) {
@@ -49,9 +51,11 @@ export async function getCampaign(
     if (!dmUserId) throw new Error('Campaign not found')
     const dmUserProfile = await getUserProfileByUserIdHandler(ctx, dmUserId)
     if (!dmUserProfile) throw new Error('Campaign not found')
+    const partialCampaign = await ctx.db.get(campaignId)
+    if (!partialCampaign) throw new Error('Campaign not found')
     campaign = {
-      ...(await ctx.db.get(campaignId)),
-      dmUserProfile: dmUserProfile,
+      ...partialCampaign,
+      dmUserProfile,
     } as Campaign
   } else {
     throw new Error('Invalid campaign identifier')
