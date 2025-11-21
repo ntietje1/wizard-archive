@@ -2,7 +2,7 @@ import {
   type AnySidebarItem,
   SIDEBAR_ITEM_TYPES,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 import { NoteButton } from '../sidebar-note/note-button'
 import { FolderWithChildren } from '../sidebar-folder/folder-with-children'
 import { MapButton } from '../sidebar-map/map-button'

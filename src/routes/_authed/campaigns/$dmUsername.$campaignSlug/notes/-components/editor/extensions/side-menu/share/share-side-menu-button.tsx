@@ -70,20 +70,21 @@ export default function ShareSideMenuButton({
   const sharedAllTag = shares.find((s: Share) => s.memberId == null)
   const playerSharedTags = shares.filter((s: Share) => s.memberId != null)
 
+  const isBlockNotFound = blockTagState.data === null
   const appliedTagIds = new Set(blockTagState.data?.allTagIds ?? [])
   const isShared = useMemo(() => {
-    if (!sharedAllTag) return false
+    if (!sharedAllTag || isBlockNotFound) return false
     if (appliedTagIds.has(sharedAllTag._id)) return true
     return playerSharedTags.some((share: Share) =>
       appliedTagIds.has(share.tagId),
     )
-  }, [appliedTagIds, sharedAllTag, playerSharedTags])
+  }, [appliedTagIds, sharedAllTag, playerSharedTags, isBlockNotFound])
 
   const isOptimisticShared =
     (isShared && !isMutating) || (!isShared && isMutating)
 
   const toggleShareTag = async (share: Share) => {
-    if (!note.data || isMutating) return
+    if (!note.data || isMutating || isBlockNotFound) return
 
     const isApplied = appliedTagIds.has(share.tagId)
     try {
@@ -108,6 +109,11 @@ export default function ShareSideMenuButton({
   const handleButtonClick = (e: React.MouseEvent) => {
     if (!note.data || isMutating) return
     if (e.ctrlKey || e.metaKey) return
+
+    if (isBlockNotFound) {
+      toast.error('Sharing is not available for empty notes. Add content to access sharing.')
+      return
+    }
 
     e.preventDefault()
     e.stopPropagation()
@@ -156,7 +162,7 @@ export default function ShareSideMenuButton({
         <div onClick={handleButtonClick}>
           <Components.SideMenu.Button
             label={isShared ? 'Shared' : 'Share'}
-            className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''}`}
+            className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''} ${isBlockNotFound ? 'opacity-50 cursor-not-allowed' : ''}`}
             icon={<Share2 size={18} />}
           />
         </div>
@@ -167,7 +173,14 @@ export default function ShareSideMenuButton({
       >
         <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
         <ContextMenuSeparator />
-        {shareItems.map((item) => {
+        {isBlockNotFound ? (
+          <div className="px-2 py-2">
+            <div className="text-xs text-muted-foreground">
+              Sharing is not available for empty notes. Add content to access sharing.
+            </div>
+          </div>
+        ) : (
+          shareItems.map((item) => {
           const displayName = item.name || item.username || 'Player'
           const displayText = item.name
             ? item.name
@@ -201,7 +214,7 @@ export default function ShareSideMenuButton({
               </span>
             </ContextMenuCheckboxItem>
           )
-        })}
+        }))}
       </ContextMenuContent>
     </ContextMenu>
   )

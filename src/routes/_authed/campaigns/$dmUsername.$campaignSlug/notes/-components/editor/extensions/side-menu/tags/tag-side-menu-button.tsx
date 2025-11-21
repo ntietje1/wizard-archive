@@ -35,6 +35,7 @@ export default function TagSideMenuButton({
     filteredAvailableTags,
     manualTagObjects,
     isMutating,
+    isBlockNotFound,
     handleAddTag,
     handleRemoveTag,
   } = useBlockTags({
@@ -81,7 +82,15 @@ export default function TagSideMenuButton({
         align="start"
         className="w-72 overflow-y-auto max-h-[var(--radix-dropdown-menu-content-available-height)]"
       >
-        {(unavailableTags.length > 0 || manualTagObjects.length > 0) && (
+        {isBlockNotFound ? (
+          <div className="px-2 pt-2 pb-2">
+            <div className="text-xs text-muted-foreground">
+              Tags are not available for empty notes. Add content to access tagging.
+            </div>
+          </div>
+        ) : (
+          <>
+            {(unavailableTags.length > 0 || manualTagObjects.length > 0) && (
           <div className="px-2 pt-1 pb-2">
             <div className="text-xs text-muted-foreground mb-1.5">
               Current tags
@@ -214,6 +223,8 @@ export default function TagSideMenuButton({
             </div>
           </div>
         </Command>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -4,7 +4,7 @@ import {
   SIDEBAR_ROOT_TYPE,
   type SidebarItemOrRootType,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 
 interface DragItem {
   _id: Id<SidebarItemType>
@@ -21,6 +21,7 @@ interface DropTarget {
   ancestorIds?: Id<'folders'>[]
 }
 
+//TODO: visually show that you can drop onto the existing parent, but don't actually do anything in this case
 export function validateDrop(
   draggedItem: DragItem | null,
   targetData: DropTarget | null,

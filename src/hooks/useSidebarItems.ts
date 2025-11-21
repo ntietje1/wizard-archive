@@ -8,7 +8,7 @@ import {
   SORT_ORDERS,
   type SortOptions,
 } from 'convex/editors/types'
-import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/sidebarItems/types'
 import { useSortOptions } from './useSortOptions'
 
 export const useSidebarItemsByCategory = (
@@ -20,7 +20,7 @@ export const useSidebarItemsByCategory = (
   const campaign = campaignWithMembership?.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
-      api.notes.queries.getSidebarItemsByCategory,
+      api.sidebarItems.queries.getSidebarItemsByCategory,
       campaign?._id && enabled
         ? {
             campaignId: campaign._id,
@@ -45,7 +45,7 @@ export const useSidebarItemsByParent = (
   const campaign = campaignWithMembership?.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
-      api.notes.queries.getSidebarItemsByParent,
+      api.sidebarItems.queries.getSidebarItemsByParent,
       campaign?._id && enabled
         ? {
             campaignId: campaign._id,

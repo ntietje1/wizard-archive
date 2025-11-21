@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import type { Map } from 'convex/notes/types'
+import type { Map } from 'convex/locations/types'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface DraggableMapProps {

@@ -2,8 +2,8 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
-import type { Folder } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { UNTITLED_FOLDER_NAME, type Folder } from 'convex/folders/types'
 import { useState, type MouseEvent } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
@@ -148,7 +148,7 @@ export function FolderCard({
   })
 
   const updateFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.updateFolder),
+    mutationFn: useConvexMutation(api.folders.mutations.updateFolder),
   })
 
   const handleCardActivate = (e?: MouseEvent) => {

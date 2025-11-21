@@ -10,7 +10,7 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 
 interface BreadcrumbDropZoneProps {
   id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE

@@ -12,8 +12,9 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { findUniqueSlug } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
-import { deleteNote } from '../notes/helpers'
-import { findBlockByBlockNoteId, getNote } from '../notes/notes'
+import { deleteNote } from '../notes/notes'
+import { getNote } from '../notes/notes'
+import { findBlockByBlockNoteId } from '../notes/blocks'
 import pluralize from 'pluralize'
 
 function capitalizeFirstLetter(str: string): string {

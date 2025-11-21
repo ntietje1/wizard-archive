@@ -3,10 +3,10 @@ import { cn } from '~/lib/utils'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
-  type Folder,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 import { canDropItem } from '../../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
+import type { Folder } from 'convex/folders/types'
 
 interface DroppableCategoryFolderProps {
   folder?: Folder

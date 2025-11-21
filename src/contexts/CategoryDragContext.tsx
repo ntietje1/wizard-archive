@@ -21,7 +21,7 @@ import {
 } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { executeMove } from '~/utils/dnd-utils'
-import { SIDEBAR_ROOT_TYPE } from 'convex/notes/types'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { toast } from 'sonner'
 
 type CategoryDragContextType = {

@@ -13,7 +13,7 @@ import { Id } from '../_generated/dataModel'
 import { createTagAndNoteArgs } from '../tags/schema'
 import { getLocation } from './locations'
 import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
-import { getFolder } from '../notes/notes'
+import { getFolder } from "../folders/folders"
 
 export const createLocation = mutation({
   args: {

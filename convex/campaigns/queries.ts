@@ -8,7 +8,8 @@ import {
   CampaignWithMembership,
 } from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { Note, SIDEBAR_ITEM_TYPES } from '../notes/types'
+import { Note } from '../notes/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import {
   getCampaign,
   getCampaignMember,

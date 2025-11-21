@@ -1,7 +1,7 @@
-import { useConvexMutation, convexQuery } from '@convex-dev/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES, type Map } from 'convex/notes/types'
+import { type Map } from 'convex/locations/types'
 import { useState, type MouseEvent } from 'react'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapPin, Edit, Trash2 } from '~/lib/icons'
@@ -20,6 +20,8 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-form/bas
 import type { Id } from 'convex/_generated/dataModel'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapViewDialog } from './map-view-dialog'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { UNTITLED_MAP_NAME } from 'convex/locations/types'
 
 export interface MapCardProps {
   map?: Map
@@ -69,7 +71,7 @@ export function MapCard({
       ? {
           _id: map._id,
           type: SIDEBAR_ITEM_TYPES.maps,
-          name: map.name || 'Untitled Map',
+          name: map.name || UNTITLED_MAP_NAME,
           parentFolderId: map.parentFolderId,
           categoryId,
           icon: MapPin,
@@ -172,7 +174,7 @@ export function MapCard({
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
                 <CardTitle className="text-lg text-slate-800 truncate">
-                  {map.name || 'Untitled Map'}
+                  {map.name || UNTITLED_MAP_NAME}
                 </CardTitle>
               </div>
               {!isDisabled && (

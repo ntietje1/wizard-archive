@@ -4,7 +4,7 @@ import {
   type ContextMenuItem,
   type ContextMenuRef,
 } from '~/components/context-menu/base/context-menu'
-import type { Map } from 'convex/notes/types'
+import type { Map } from 'convex/locations/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useState, forwardRef } from 'react'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'

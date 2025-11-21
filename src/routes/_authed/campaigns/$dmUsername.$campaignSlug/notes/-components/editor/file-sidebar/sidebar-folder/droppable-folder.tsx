@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import { SIDEBAR_ITEM_TYPES, type Folder } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { Folder } from 'convex/folders/types'
 import { canDropItem } from '../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 

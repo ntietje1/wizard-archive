@@ -5,7 +5,7 @@ import {
   SIDEBAR_ROOT_TYPE,
   type SidebarItemOrRootType,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 import { validateDrop } from '~/utils/dnd-utils'
 
 export interface CategoryDragData {

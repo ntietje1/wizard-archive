@@ -1,26 +1,33 @@
-import {
-  SIDEBAR_ITEM_TYPES,
-  UNTITLED_FOLDER_NAME,
-  UNTITLED_NOTE_TITLE,
-} from 'convex/notes/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
-import { Folder as FolderIcon, FileText } from '~/lib/icons'
+import { Folder as FolderIcon, FileText, MapPin } from '~/lib/icons'
 import type { SidebarDragData } from '../dnd-utils'
+import { useMemo } from 'react'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { File } from 'lucide-react'
 
 export function DragOverlayItem({ item }: { item: SidebarDragData }) {
-  const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
-  const icon = isFolder ? FolderIcon : FileText
-  const defaultName = isFolder ? UNTITLED_FOLDER_NAME : UNTITLED_NOTE_TITLE
+  const icon = useMemo(() => {
+    switch (item.type) {
+    case SIDEBAR_ITEM_TYPES.folders:
+      return FolderIcon
+    case SIDEBAR_ITEM_TYPES.notes:
+      return FileText
+    case SIDEBAR_ITEM_TYPES.maps:
+      return MapPin
+    default:
+      return File
+    }
+  }, [item.type])
 
   return (
     <div className="bg-muted/50 shadow-lg rounded-sm scale-95">
       <SidebarItemButtonBase
         icon={icon}
         name={item.name}
-        defaultName={defaultName}
+        defaultName={item.name}
         isSelected={false}
         isRenaming={false}
-        showChevron={isFolder}
+        showChevron={false}
       />
     </div>
   )

@@ -3,17 +3,13 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { Id } from '../_generated/dataModel'
 import {
-  AnySidebarItem,
-  Block,
-  Folder,
   Note,
   NoteWithContent,
-  SIDEBAR_ITEM_TYPES,
 } from './types'
-import { Tag } from '../tags/types'
-import { getTopLevelBlocksByNote } from './helpers'
-import { getTag, getTagCategory, getTagsByCategory } from '../tags/tags'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { deleteNoteBlocks, getTopLevelBlocksByNote } from './blocks'
+import { deleteTagAndCleanupContent, getTag } from '../tags/tags'
+import { MutationCtx } from '../_generated/server'
 
 export const getNote = async (
   ctx: Ctx,
@@ -87,212 +83,29 @@ export const getNoteBySlug = async (
   return getNoteWithContent(ctx, note._id)
 }
 
-export const getFolder = async (
-  ctx: Ctx,
-  folderId: Id<'folders'>,
-): Promise<Folder> => {
-  const folder = await ctx.db.get(folderId)
-  if (!folder) {
-    throw new Error('Folder not found')
-  }
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: folder.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const category = folder.categoryId
-    ? await getTagCategory(ctx, folder.campaignId, folder.categoryId)
-    : undefined
-
-  return {
-    ...folder,
-    category,
-    type: SIDEBAR_ITEM_TYPES.folders,
-  }
-}
-
-export const getSidebarItemsByCategory = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  categoryId: Id<'tagCategories'>,
-): Promise<AnySidebarItem[]> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-  const category = await getTagCategory(ctx, campaignId, categoryId)
-  const tags = await getTagsByCategory(ctx, categoryId)
-
-  const allItems: AnySidebarItem[] = []
-
-  // Get folders
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', undefined),
-    )
-    .collect()
-    .then((folders) =>
-      folders.map((folder) => ({
-        ...folder,
-        category,
-        type: SIDEBAR_ITEM_TYPES.folders,
-      })),
-    )
-  allItems.push(...folders)
-
-  // Get notes
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', undefined),
-    )
-    .collect()
-    .then((notes) =>
-      notes.map((note) => ({
-        ...note,
-        category,
-        tag: tags.find((t) => t._id === note.tagId),
-        type: SIDEBAR_ITEM_TYPES.notes,
-      })),
-    )
-  allItems.push(...notes)
-
-  // Get maps (only for locations category)
-  if (category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
-    const maps = await ctx.db
-      .query('maps')
-      .withIndex('by_campaign_category_parent', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('categoryId', categoryId)
-          .eq('parentFolderId', undefined),
-      )
-      .collect()
-      .then(
-        (maps) =>
-          maps.map((map) => ({
-            ...map,
-            category,
-            type: SIDEBAR_ITEM_TYPES.maps,
-          })) as AnySidebarItem[],
-      )
-    allItems.push(...maps)
-  }
-
-  return allItems
-}
-
-export const getSidebarItemsByParent = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  categoryId: Id<'tagCategories'> | undefined, // undefined category = has no category
-  parentId: Id<'folders'> | undefined, // undefined parent = at root level
-): Promise<AnySidebarItem[]> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const category = categoryId
-    ? await getTagCategory(ctx, campaignId, categoryId)
-    : undefined
-  const tags = categoryId ? await getTagsByCategory(ctx, categoryId) : []
-
-  const allItems: AnySidebarItem[] = []
-
-  // Get folders
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', parentId),
-    )
-    .collect()
-    .then((folders) =>
-      folders.map((folder) => ({
-        ...folder,
-        category,
-        type: SIDEBAR_ITEM_TYPES.folders,
-      })),
-    )
-  allItems.push(...folders)
-
-  // Get notes
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', parentId),
-    )
-    .collect()
-    .then((notes) =>
-      notes.map((note) => ({
-        ...note,
-        category,
-        tag: tags.find((t) => t._id === note.tagId),
-        type: SIDEBAR_ITEM_TYPES.notes,
-      })),
-    )
-  allItems.push(...notes)
-
-  // Get maps (only for locations category)
-  if (category && category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
-    const maps = await ctx.db
-      .query('maps')
-      .withIndex('by_campaign_category_parent', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('categoryId', categoryId)
-          .eq('parentFolderId', parentId),
-      )
-      .collect()
-      .then(
-        (maps) =>
-          maps.map((map) => ({
-            ...map,
-            category,
-            type: SIDEBAR_ITEM_TYPES.maps,
-          })) as AnySidebarItem[],
-      )
-    allItems.push(...maps)
-  }
-
-  return allItems
-}
-
-export const findBlockByBlockNoteId = async (
-  ctx: Ctx,
+export async function deleteNote(
+  ctx: MutationCtx,
   noteId: Id<'notes'>,
-  blockId: string,
-): Promise<Block | null> => {
-  const note: Note | null = await getNote(ctx, noteId)
+  options?: { cascadeTag?: boolean} 
+): Promise<Id<'notes'>> {
+  const note = await ctx.db.get(noteId)
   if (!note) {
     throw new Error('Note not found')
   }
 
-  const block = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q
-        .eq('campaignId', note.campaignId)
-        .eq('noteId', noteId)
-        .eq('blockId', blockId),
-    )
-    .unique()
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: note.campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+  )
 
-  return block
+  await deleteNoteBlocks(ctx, noteId, note.campaignId)
+  const shouldCascadeTag = options?.cascadeTag !== false
+  if (shouldCascadeTag && note.tagId) {
+    await deleteTagAndCleanupContent(ctx, note.tagId)
+  }
+  await ctx.db.delete(noteId)
+
+  return noteId
 }
+

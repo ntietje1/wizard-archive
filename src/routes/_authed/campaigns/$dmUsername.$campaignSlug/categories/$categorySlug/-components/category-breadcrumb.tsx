@@ -13,7 +13,7 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Switch } from '~/components/shadcn/ui/switch'
 import type { Id } from 'convex/_generated/dataModel'
 import { BreadcrumbDropZone } from './breadcrumb-drop-zone'
-import { SIDEBAR_ROOT_TYPE } from 'convex/notes/types'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 
 interface CategoryBreadcrumbProps {
   config?: TagCategoryConfig

@@ -8,7 +8,7 @@ import {
   removeTagFromBlockHandler,
 } from '../tags/tags'
 import { getCurrentSession } from '../sessions/sessions'
-import { findBlockByBlockNoteId } from '../notes/notes'
+import { findBlockByBlockNoteId } from '../notes/blocks'
 
 export const addShareBlock = mutation({
   args: {

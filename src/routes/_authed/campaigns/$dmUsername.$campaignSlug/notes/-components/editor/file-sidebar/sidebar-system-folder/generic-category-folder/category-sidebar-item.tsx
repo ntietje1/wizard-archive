@@ -11,10 +11,12 @@ import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-ba
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import {
   SIDEBAR_ITEM_TYPES,
-  UNTITLED_NOTE_TITLE,
   type AnySidebarItem,
-  type Note,
   type SidebarItemType,
+} from 'convex/sidebarItems/types'
+import {
+  UNTITLED_NOTE_TITLE,
+  type Note,
 } from 'convex/notes/types'
 import { CategoryFolderButton } from './category-folder-button'
 import type { CategoryContextMenuProps } from '~/components/context-menu/sidebar/generic/category-folder-context-menu'
