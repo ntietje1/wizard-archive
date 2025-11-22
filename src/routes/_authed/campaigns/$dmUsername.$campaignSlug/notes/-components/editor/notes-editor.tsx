@@ -11,6 +11,7 @@ import { useNoteActions } from '~/hooks/useNoteActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { SlashMenu } from './extensions/slash-menu/slash-menu'
 
 export function NotesEditor() {
   return (
@@ -52,10 +53,12 @@ function NotesEditorBase() {
           theme="light"
           sideMenu={false}
           formattingToolbar={false}
+          slashMenu={false}
         >
           <TagMenu editor={editor} />
           <SideMenuController sideMenu={SideMenuRenderer} />
           <SelectionToolbar />
+          <SlashMenu editor={editor} />
         </BlockNoteView>
       </div>
     </div>

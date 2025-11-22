@@ -60,6 +60,7 @@ export function useBlockTags({
   const isMutating = addTagToBlock.isPending || removeTagFromBlock.isPending
 
   const state = blockTagState.data
+  const isBlockNotFound = state === null
   const inlineTagIds = state?.inlineTagIds ?? []
   const manualTagIds = state?.blockTagIds ?? []
   const noteTagId = state?.noteTagId ?? null
@@ -124,6 +125,7 @@ export function useBlockTags({
     manualTagObjects,
     isMutating,
     isLoading: blockTagState.isLoading,
+    isBlockNotFound,
     handleAddTag,
     handleRemoveTag,
   }

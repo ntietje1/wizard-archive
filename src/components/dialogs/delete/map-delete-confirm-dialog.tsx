@@ -1,13 +1,13 @@
 import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { Map } from 'convex/notes/types'
+import type { GameMap } from 'convex/gameMaps/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 
 interface MapDeleteConfirmDialogProps {
-  map: Map
+  map: GameMap
   isDeleting: boolean
   onConfirm?: () => void
   onClose: () => void
@@ -20,7 +20,7 @@ export function MapDeleteConfirmDialog({
   onClose,
 }: MapDeleteConfirmDialogProps) {
   const deleteMapMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.deleteMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.deleteMap),
   })
 
   const handleConfirm = useCallback(async () => {

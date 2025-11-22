@@ -4,7 +4,7 @@ import {
   SIDEBAR_ROOT_TYPE,
   type SidebarItemOrRootType,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 
 interface DragItem {
   _id: Id<SidebarItemType>
@@ -21,6 +21,7 @@ interface DropTarget {
   ancestorIds?: Id<'folders'>[]
 }
 
+//TODO: visually show that you can drop onto the existing parent, but don't actually do anything in this case
 export function validateDrop(
   draggedItem: DragItem | null,
   targetData: DropTarget | null,
@@ -80,7 +81,7 @@ interface MoveMutations {
     parentId?: Id<'folders'>
   }) => Promise<any>
   moveMap: (params: {
-    mapId: Id<'maps'>
+    mapId: Id<'gameMaps'>
     parentFolderId?: Id<'folders'>
   }) => Promise<any>
 }
@@ -107,9 +108,9 @@ export async function executeMove(
         parentId: targetId,
       })
       break
-    case SIDEBAR_ITEM_TYPES.maps:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       await mutations.moveMap({
-        mapId: itemId as Id<'maps'>,
+        mapId: itemId as Id<'gameMaps'>,
         parentFolderId: targetId,
       })
       break

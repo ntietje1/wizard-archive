@@ -22,7 +22,7 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link } from '@tanstack/react-router'
-import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/sidebarItems/types'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 
@@ -91,6 +91,7 @@ export function CategoryPageContent({
     onNavigate,
   })
 
+  //TODO: expand this to include dialogs, etc.
   // Component registry for rendering different item types
   const CATEGORY_ITEM_COMPONENT_REGISTRY = useMemo(() => {
     const registry: Partial<Record<SidebarItemType, ComponentType<any>>> = {
@@ -98,7 +99,7 @@ export function CategoryPageContent({
       [SIDEBAR_ITEM_TYPES.notes]: TagCardComponent,
     }
     if (MapCardComponent) {
-      registry[SIDEBAR_ITEM_TYPES.maps] = MapCardComponent
+      registry[SIDEBAR_ITEM_TYPES.gameMaps] = MapCardComponent
     }
     return registry
   }, [FolderCardComponent, TagCardComponent, MapCardComponent])
@@ -250,7 +251,7 @@ export function CategoryPageContent({
                 {/* Map Cards */}
                 {maps?.map((map) => {
                   const MapComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.maps]
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.gameMaps]
                   return MapComponent ? (
                     <MapComponent
                       key={map._id}

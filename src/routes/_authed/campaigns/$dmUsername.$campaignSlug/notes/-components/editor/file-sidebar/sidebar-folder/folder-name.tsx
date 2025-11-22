@@ -1,5 +1,4 @@
-import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
-import type { Folder } from 'convex/notes/types'
+import { UNTITLED_FOLDER_NAME, type Folder } from 'convex/folders/types'
 import { EditableItemName } from '../sidebar-item/editable-item-name'
 import { useFolderActions } from '~/hooks/useFolderActions'
 

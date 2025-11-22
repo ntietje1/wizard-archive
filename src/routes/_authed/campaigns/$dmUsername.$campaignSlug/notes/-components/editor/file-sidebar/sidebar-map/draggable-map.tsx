@@ -1,10 +1,10 @@
 import { useDraggable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import type { Map } from 'convex/notes/types'
+import type { GameMap } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface DraggableMapProps {
-  map: Map
+  map: GameMap
   ancestorIds?: Id<'folders'>[]
   children: React.ReactNode
 }

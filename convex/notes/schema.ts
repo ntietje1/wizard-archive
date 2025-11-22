@@ -1,7 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { tagCategoryValidator, tagValidator } from '../tags/schema'
-import { mapValidator } from '../locations/schema'
 
 export const blockNoteIdValidator = v.string()
 
@@ -24,22 +23,13 @@ const blockTagTableFields = {
 }
 
 const noteTableFields = {
-  userId: v.string(),
+  userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   name: v.optional(v.string()),
   slug: v.string(),
   updatedAt: v.number(),
   categoryId: v.optional(v.id('tagCategories')),
   tagId: v.optional(v.id('tags')),
-  parentFolderId: v.optional(v.id('folders')),
-}
-
-const folderTableFields = {
-  userId: v.string(),
-  campaignId: v.id('campaigns'),
-  name: v.optional(v.string()),
-  updatedAt: v.number(),
-  categoryId: v.optional(v.id('tagCategories')),
   parentFolderId: v.optional(v.id('folders')),
 }
 
@@ -54,14 +44,6 @@ export const notesTables = {
     ])
     .index('by_campaign_category_tag', ['campaignId', 'categoryId', 'tagId'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
-
-  folders: defineTable({
-    ...folderTableFields,
-  }).index('by_campaign_category_parent', [
-    'campaignId',
-    'categoryId',
-    'parentFolderId',
-  ]),
 
   blocks: defineTable({
     ...blockTableFields,
@@ -100,14 +82,6 @@ const noteValidatorFields = {
   tag: v.optional(tagValidator),
 } as const
 
-const folderValidatorFields = {
-  _id: v.id('folders'),
-  _creationTime: v.number(),
-  ...folderTableFields,
-  category: v.optional(tagCategoryValidator),
-  type: v.literal('folders'),
-} as const
-
 export const blockValidator = v.object(blockValidatorFields)
 
 export const blockTagValidator = v.object(blockTagValidatorFields)
@@ -119,15 +93,4 @@ export const noteWithContentValidator = v.object({
   content: v.array(customBlockValidator),
 })
 
-export const folderValidator = v.object(folderValidatorFields)
 
-export const sidebarItemValidator = v.union(
-  noteValidator,
-  folderValidator,
-  mapValidator,
-)
-
-export const folderWithChildrenValidator = v.object({
-  ...folderValidatorFields,
-  children: v.optional(v.array(sidebarItemValidator)),
-})

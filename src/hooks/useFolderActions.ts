@@ -4,16 +4,16 @@ import { api } from 'convex/_generated/api'
 
 export const useFolderActions = () => {
   const updateFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.updateFolder),
+    mutationFn: useConvexMutation(api.folders.mutations.updateFolder),
   })
   const createFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.createFolder),
+    mutationFn: useConvexMutation(api.folders.mutations.createFolder),
   })
   const deleteFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.deleteFolder),
+    mutationFn: useConvexMutation(api.folders.mutations.deleteFolder),
   })
   const moveFolder = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.moveFolder),
+    mutationFn: useConvexMutation(api.folders.mutations.moveFolder),
   })
 
   return {

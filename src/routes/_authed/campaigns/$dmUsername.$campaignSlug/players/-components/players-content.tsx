@@ -6,6 +6,7 @@ import { Users, Link, User, Trash2 } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
   type CampaignMember,
 } from 'convex/campaigns/types'
 import { useCampaign } from '~/contexts/CampaignContext'

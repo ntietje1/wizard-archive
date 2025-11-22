@@ -9,7 +9,7 @@ import { findUniqueSlug } from '../common/slug'
 export async function getUserProfileByUserIdHandler(ctx: Ctx, userId: string) {
   const profile = await ctx.db
     .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .withIndex('by_user', (q) => q.eq('clerkUserId', userId))
     .unique()
   return profile
 }
@@ -46,7 +46,7 @@ export async function createUserProfileHandler(
   )
 
   return await ctx.db.insert('userProfiles', {
-    userId: identity.subject,
+    clerkUserId: identity.subject,
     username: uniqueUsername,
     email: identity.email,
     name: identity.name,

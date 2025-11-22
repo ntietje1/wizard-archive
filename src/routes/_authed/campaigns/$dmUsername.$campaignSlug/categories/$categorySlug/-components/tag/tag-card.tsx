@@ -18,7 +18,8 @@ import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { CategoryTagContextMenu } from '~/components/context-menu/category/category-tag-context-menu'
-import { SIDEBAR_ITEM_TYPES, type Note } from 'convex/notes/types'
+import { type Note } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { getTagColor } from '~/hooks/useTags'
 
 export interface TagCardProps {

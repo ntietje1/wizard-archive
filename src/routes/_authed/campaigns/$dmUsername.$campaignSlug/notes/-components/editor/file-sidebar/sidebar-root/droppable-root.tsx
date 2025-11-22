@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
 import { RootContextMenu } from '~/components/context-menu/sidebar/generic/root-context-menu'
-import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from 'convex/notes/types'
+import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { canDropItem } from '../dnd-utils'
 
 interface DroppableRootProps {

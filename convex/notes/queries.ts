@@ -1,6 +1,6 @@
 import { query } from '../_generated/server'
 import { v } from 'convex/values'
-import { AnySidebarItem, Block, NoteWithContent, Folder } from './types'
+import { Block, NoteWithContent } from './types'
 import { Id } from '../_generated/dataModel'
 import {
   findBlock,
@@ -14,81 +14,14 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { hasAccessToBlock } from '../shares/shares'
 import {
-  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
-  getSidebarItemsByParent as getSidebarItemsByParentFn,
-  getFolder as getFolderFn,
   getNoteWithContent,
   getNoteBySlug as getNoteBySlugFn,
 } from './notes'
 import {
   blockValidator,
-  folderValidator,
-  folderWithChildrenValidator,
   noteWithContentValidator,
-  sidebarItemValidator,
 } from './schema'
-import { getBlocksByCampaign } from './helpers'
-
-export const getFolderAncestors = query({
-  args: {
-    folderId: v.id('folders'),
-  },
-  returns: v.array(folderValidator),
-  handler: async (ctx, args) => {
-    const folder = await ctx.db.get(args.folderId)
-    if (!folder) {
-      throw new Error('Folder not found')
-    }
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folder.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const ancestors: Folder[] = []
-    const visited = new Set<Id<'folders'>>([args.folderId])
-    let currentFolderId = folder.parentFolderId
-
-    while (currentFolderId) {
-      if (visited.has(currentFolderId)) {
-        throw new Error('Circular folder reference detected')
-      }
-      visited.add(currentFolderId)
-      const parentFolder = await getFolderFn(ctx, currentFolderId)
-      ancestors.unshift(parentFolder)
-      currentFolderId = parentFolder.parentFolderId
-    }
-    return ancestors
-  },
-})
-
-export const getFolder = query({
-  args: {
-    folderId: v.id('folders'),
-  },
-  returns: folderWithChildrenValidator,
-  handler: async (ctx, args): Promise<Folder> => {
-    const folder = await getFolderFn(ctx, args.folderId)
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folder.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const children = await getSidebarItemsByParentFn(
-      ctx,
-      folder.campaignId,
-      folder.categoryId,
-      args.folderId,
-    )
-
-    return {
-      ...folder,
-      children,
-    }
-  },
-})
+import { getBlocksByCampaign } from './blocks'
 
 export const getNote = query({
   args: {
@@ -116,34 +49,6 @@ export const getNoteBySlug = query({
       throw new Error('Note not found')
     }
     return note
-  },
-})
-
-export const getSidebarItemsByCategory = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    categoryId: v.id('tagCategories'),
-  },
-  returns: v.array(sidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return getSidebarItemsByCategoryFn(ctx, args.campaignId, args.categoryId)
-  },
-})
-
-export const getSidebarItemsByParent = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    categoryId: v.optional(v.id('tagCategories')),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.array(sidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return getSidebarItemsByParentFn(
-      ctx,
-      args.campaignId,
-      args.categoryId,
-      args.parentId,
-    )
   },
 })
 
@@ -220,12 +125,15 @@ export const getBlockTagState = query({
     noteId: v.id('notes'),
     blockId: v.string(),
   },
-  returns: v.object({
-    allTagIds: v.array(v.id('tags')),
-    inlineTagIds: v.array(v.id('tags')),
-    blockTagIds: v.array(v.id('tags')),
-    noteTagId: v.optional(v.id('tags')),
-  }),
+  returns: v.union(
+    v.object({
+      allTagIds: v.array(v.id('tags')),
+      inlineTagIds: v.array(v.id('tags')),
+      blockTagIds: v.array(v.id('tags')),
+      noteTagId: v.optional(v.id('tags')),
+    }),
+    v.null(),
+  ),
   handler: async (
     ctx,
     args,
@@ -234,7 +142,7 @@ export const getBlockTagState = query({
     inlineTagIds: Id<'tags'>[]
     blockTagIds: Id<'tags'>[]
     noteTagId: Id<'tags'> | undefined
-  }> => {
+  } | null> => {
     const note = await ctx.db.get(args.noteId)
     if (!note) throw new Error('Note not found')
 
@@ -246,13 +154,7 @@ export const getBlockTagState = query({
 
     const block = await findBlock(ctx, args.noteId, args.blockId)
     if (!block) {
-      const noteLevelTag = await getNoteLevelTag(ctx, note._id)
-      return {
-        allTagIds: noteLevelTag ? [noteLevelTag._id] : [],
-        inlineTagIds: [],
-        blockTagIds: [],
-        noteTagId: noteLevelTag?._id,
-      }
+      return null
     }
 
     const [blockTagIds, noteLevelTag] = await Promise.all([

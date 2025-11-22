@@ -34,24 +34,26 @@ export async function getCampaign(
     const { dmUsername, campaignSlug } = campaignIdentifier
     const dmUserProfile = await getUserProfileByUsernameHandler(ctx, dmUsername)
     if (!dmUserProfile) throw new Error('Campaign not found')
+    const partialCampaign = await ctx.db
+      .query('campaigns')
+      .withIndex('by_slug_dm', (q) =>
+        q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile._id),
+      )
+      .unique()
+    if (!partialCampaign) throw new Error('Campaign not found')
     campaign = {
-      ...(await ctx.db
-        .query('campaigns')
-        .withIndex('by_slug_dm', (q) =>
-          q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile.userId),
-        )
-        .unique()),
+      ...partialCampaign,
       dmUserProfile,
     } as Campaign
   } else if ('campaignId' in campaignIdentifier) {
     const { campaignId } = campaignIdentifier
-    const dmUserId = (await ctx.db.get(campaignId))?.dmUserId
-    if (!dmUserId) throw new Error('Campaign not found')
-    const dmUserProfile = await getUserProfileByUserIdHandler(ctx, dmUserId)
+    const partialCampaign = await ctx.db.get(campaignId)
+    if (!partialCampaign) throw new Error('Campaign not found')
+    const dmUserProfile = await ctx.db.get(partialCampaign.dmUserId)
     if (!dmUserProfile) throw new Error('Campaign not found')
     campaign = {
-      ...(await ctx.db.get(campaignId)),
-      dmUserProfile: dmUserProfile,
+      ...partialCampaign,
+      dmUserProfile,
     } as Campaign
   } else {
     throw new Error('Invalid campaign identifier')
@@ -67,11 +69,7 @@ export async function getCampaignMember(
   if (!member) {
     return null
   }
-  const userProfile = await ctx.db
-    .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('userId', member.userId))
-    .unique()
-
+  const userProfile = await ctx.db.get(member.userId)
   if (!userProfile) {
     throw new Error('User profile not found')
   }
@@ -92,10 +90,7 @@ export async function getCampaignMembers(
   const profilesByUserId = new Map<string, UserProfile>()
   await Promise.all(
     members.map(async (member) => {
-      const profile = await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('userId', member.userId))
-        .unique()
+      const profile = await ctx.db.get(member.userId)
       if (profile) profilesByUserId.set(member.userId, profile)
     }),
   )
@@ -144,7 +139,7 @@ export async function getCampaignMembership(
   const campaignMember =
     members.find((m) => {
       return (
-        m.userId === identity.subject &&
+        m.userId === identityWithProfile.profile._id &&
         allowedStatuses.includes(m.status) &&
         allowedRoles.includes(m.role)
       )

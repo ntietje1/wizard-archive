@@ -1,7 +1,7 @@
-import { useConvexMutation, convexQuery } from '@convex-dev/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES, type Map } from 'convex/notes/types'
+import { type GameMap } from 'convex/gameMaps/types'
 import { useState, type MouseEvent } from 'react'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapPin, Edit, Trash2 } from '~/lib/icons'
@@ -20,9 +20,11 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-form/bas
 import type { Id } from 'convex/_generated/dataModel'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapViewDialog } from './map-view-dialog'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
 
 export interface MapCardProps {
-  map?: Map
+  map?: GameMap
   categoryId?: Id<'tagCategories'>
   categoryConfig?: TagCategoryConfig
   onClick?: (e: MouseEvent) => void
@@ -68,8 +70,8 @@ export function MapCard({
     map && categoryId
       ? {
           _id: map._id,
-          type: SIDEBAR_ITEM_TYPES.maps,
-          name: map.name || 'Untitled Map',
+          type: SIDEBAR_ITEM_TYPES.gameMaps,
+          name: map.name || UNTITLED_MAP_NAME,
           parentFolderId: map.parentFolderId,
           categoryId,
           icon: MapPin,
@@ -111,7 +113,7 @@ export function MapCard({
 
   const dropData: CategoryDropData = {
     _id: map._id,
-    type: SIDEBAR_ITEM_TYPES.maps,
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
     categoryId,
   }
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -172,7 +174,7 @@ export function MapCard({
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
                 <CardTitle className="text-lg text-slate-800 truncate">
-                  {map.name || 'Untitled Map'}
+                  {map.name || UNTITLED_MAP_NAME}
                 </CardTitle>
               </div>
               {!isDisabled && (

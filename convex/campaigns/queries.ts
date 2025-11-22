@@ -8,7 +8,8 @@ import {
   CampaignWithMembership,
 } from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { Note, SIDEBAR_ITEM_TYPES } from '../notes/types'
+import { Note } from '../notes/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import {
   getCampaign,
   getCampaignMember,
@@ -22,7 +23,7 @@ export const getUserCampaigns = query({
 
     const campaignMemberships = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_user', (q) => q.eq('userId', profile.userId))
+      .withIndex('by_user', (q) => q.eq('userId', profile._id))
       .collect()
       .then((memberships) =>
         memberships.filter(
@@ -99,7 +100,7 @@ export const getPublicCampaignBySlug = query({
     const campaign = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile.userId),
+        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile._id),
       )
       .unique()
 
@@ -115,7 +116,7 @@ export const getPublicCampaignBySlug = query({
         .collect()
 
       const member = members.find(
-        (member) => member.userId === identityWithProfile.profile.userId,
+        (member) => member.userId === identityWithProfile.profile._id,
       )
 
       if (member) {
@@ -161,7 +162,7 @@ export const checkCampaignSlugExists = query({
     const existingCampaign = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', profile.userId),
+        q.eq('slug', args.slug).eq('dmUserId', profile._id),
       )
       .unique()
 
@@ -169,7 +170,6 @@ export const checkCampaignSlugExists = query({
       return false
     }
 
-    // If we're editing an existing campaign, treat the same campaign as "not existing"
     if (
       args.excludeCampaignId &&
       existingCampaign._id === args.excludeCampaignId

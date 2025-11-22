@@ -1,9 +1,8 @@
 import type { Id } from 'convex/_generated/dataModel'
 import {
   SIDEBAR_ROOT_TYPE,
-  type AnySidebarItem,
   type SidebarItemType,
-} from 'convex/notes/types'
+} from 'convex/sidebarItems/types'
 import { createContext, useCallback, useContext, useState } from 'react'
 import usePersistedState from '~/hooks/usePersistedState'
 import { useNoteActions } from '~/hooks/useNoteActions'
@@ -65,7 +64,7 @@ export function FileSidebarProvider({
   const { moveNote } = useNoteActions()
 
   const moveMap = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.moveMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
   })
 
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(

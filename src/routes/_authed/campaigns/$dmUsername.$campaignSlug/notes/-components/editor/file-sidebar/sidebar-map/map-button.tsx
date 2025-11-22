@@ -1,4 +1,4 @@
-import type { Map } from 'convex/notes/types'
+import { UNTITLED_MAP_NAME, type GameMap } from 'convex/gameMaps/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
@@ -6,14 +6,14 @@ import { api } from 'convex/_generated/api'
 import { SidebarMapContextMenu as MapContextMenu } from '~/components/context-menu/sidebar/location/sidebar-map-context-menu'
 import { DraggableMap } from './draggable-map'
 import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
-import { FileEdit, MapPin } from '~/lib/icons'
+import { MapPin } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { useState } from 'react'
 import { MapViewDialog } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/locations/-components/map-view-dialog'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface MapButtonProps {
-  map: Map
+  map: GameMap
   ancestorIds?: Id<'folders'>[]
 }
 
@@ -23,7 +23,7 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   const [isViewing, setIsViewing] = useState(false)
 
   const updateMapMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.updateMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
   })
 
   const handleFinishRename = async (name: string) => {
@@ -41,8 +41,8 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
         <MapContextMenu ref={contextMenuRef} map={map}>
           <SidebarItemButtonBase
             icon={MapPin}
-            name={map.name || 'Untitled Map'}
-            defaultName="Untitled Map"
+            name={map.name || UNTITLED_MAP_NAME}
+            defaultName={UNTITLED_MAP_NAME}
             isSelected={false}
             isRenaming={renamingId === map._id}
             showChevron={false}

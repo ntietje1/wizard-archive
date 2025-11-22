@@ -29,13 +29,13 @@ export const setCurrentEditor = mutation({
     const editor = await ctx.db
       .query('editor')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', args.campaignId!).eq('userId', profile.userId),
+        q.eq('campaignId', args.campaignId!).eq('userId', profile._id),
       )
       .unique()
 
     if (!editor) {
       return await ctx.db.insert('editor', {
-        userId: profile.userId,
+        userId: profile._id,
         campaignId: args.campaignId!,
         sortOrder: args.sortOrder ?? SORT_ORDERS.DateCreated,
         sortDirection: args.sortDirection ?? SORT_DIRECTIONS.Ascending,

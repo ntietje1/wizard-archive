@@ -7,7 +7,7 @@ export const getDownloadUrl = query({
     storageId: v.id('_storage'),
   },
   returns: v.union(v.null(), v.string()),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<string | null> => {
     const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db
       .query('fileStorage')

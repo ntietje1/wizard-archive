@@ -9,14 +9,18 @@ import { tagTables } from './tags/schema'
 import { sessionTables } from './sessions/schema'
 import { shareTables } from './shares/schema'
 import { fileStorageTables } from './storage/schema'
+import { foldersTables } from './folders/schema'
+import { mapTables } from './gameMaps/schema'
 
 export default defineSchema({
   ...notesTables,
+  ...foldersTables,
   ...editorTables,
   ...campaignTables,
   ...userTables,
   ...characterTables,
   ...locationTables,
+  ...mapTables,
   ...tagTables,
   ...sessionTables,
   ...shareTables,

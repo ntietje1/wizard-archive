@@ -3,10 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { SIDEBAR_ITEM_TYPES, UNTITLED_FOLDER_NAME } from 'convex/notes/types'
+import { UNTITLED_FOLDER_NAME, type Folder } from 'convex/folders/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { TagCategory } from 'convex/tags/types'
-import type { Folder, Note, Map } from 'convex/notes/types'
+import type { Note } from 'convex/notes/types'
+import type { GameMap } from 'convex/gameMaps/types'
+
 import usePersistedState from './usePersistedState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { getCategoryIcon } from '~/lib/category-icons'
@@ -42,7 +45,7 @@ interface UseCategoryViewReturn {
 
   notesAndTags?: Note[]
   folders?: Folder[]
-  maps?: Map[]
+  maps?: GameMap[]
   categoryData?: TagCategory
   categoryConfig?: TagCategoryConfig
   campaignId?: Id<'campaigns'>
@@ -88,7 +91,7 @@ export function useCategoryView({
 
   const ancestorsQuery = useQuery(
     convexQuery(
-      api.notes.queries.getFolderAncestors,
+      api.folders.queries.getFolderAncestors,
       currentFolderId && campaign?._id
         ? {
             folderId: currentFolderId as Id<'folders'>,
@@ -99,7 +102,7 @@ export function useCategoryView({
 
   const currentFolderQuery = useQuery(
     convexQuery(
-      api.notes.queries.getFolder,
+      api.folders.queries.getFolder,
       currentFolderId && campaign?._id
         ? {
             folderId: currentFolderId as Id<'folders'>,
@@ -112,7 +115,7 @@ export function useCategoryView({
     if (!currentFolderId) return []
 
     const ancestors = ancestorsQuery.data || []
-    const ancestorBreadcrumbs = ancestors.map((folder) => ({
+    const ancestorBreadcrumbs = ancestors.map((folder: Folder) => ({
       id: folder._id,
       name: folder.name || UNTITLED_FOLDER_NAME,
     }))
@@ -178,8 +181,8 @@ export function useCategoryView({
   const maps = useMemo(
     () =>
       sidebarItems.data?.filter(
-        (item) => item.type === SIDEBAR_ITEM_TYPES.maps,
-      ) as Map[] | undefined,
+        (item) => item.type === SIDEBAR_ITEM_TYPES.gameMaps,
+      ) as GameMap[] | undefined,
     [sidebarItems.data],
   )
 

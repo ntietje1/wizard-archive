@@ -16,7 +16,7 @@ export interface MapFormValues {
 }
 
 interface MapFormProps {
-  mapId?: Id<'maps'>
+  mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
   parentFolderId?: Id<'folders'>
@@ -25,7 +25,7 @@ interface MapFormProps {
 }
 
 const defaultMapFormValues: MapFormValues = {
-  name: 'New Map',
+  name: '',
 }
 
 export function MapForm({
@@ -37,15 +37,15 @@ export function MapForm({
   onSuccess,
 }: MapFormProps) {
   const map = useQuery(
-    convexQuery(api.locations.queries.getMap, mapId ? { mapId } : 'skip'),
+    convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
 
   const createMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.createMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.createMap),
   })
 
   const updateMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.updateMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
   })
 
   const imageUpload = useFileWithPreview({

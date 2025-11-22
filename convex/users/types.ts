@@ -4,7 +4,7 @@ export type UserProfile = {
   _id: Id<'userProfiles'>
   _creationTime: number
 
-  userId: string
+  clerkUserId: string
   username: string
   email?: string
   name?: string

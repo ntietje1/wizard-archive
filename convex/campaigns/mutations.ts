@@ -35,7 +35,7 @@ export const createCampaign = mutation({
       const conflict = await ctx.db
         .query('campaigns')
         .withIndex('by_slug_dm', (q) =>
-          q.eq('slug', slug).eq('dmUserId', profile.userId),
+          q.eq('slug', slug).eq('dmUserId', profile._id),
         )
         .unique()
       return conflict !== null
@@ -46,13 +46,13 @@ export const createCampaign = mutation({
       description: args.description,
       updatedAt: now,
       playerCount: 0,
-      dmUserId: profile.userId,
+      dmUserId: profile._id,
       slug: uniqueSlug,
       status: CAMPAIGN_STATUS.Active,
     })
 
     await ctx.db.insert('campaignMembers', {
-      userId: profile.userId,
+      userId: profile._id,
       campaignId,
       role: CAMPAIGN_MEMBER_ROLE.DM,
       status: CAMPAIGN_MEMBER_STATUS.Accepted,
@@ -86,7 +86,7 @@ export const joinCampaign = mutation({
     const campaign = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile.userId),
+        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile._id),
       )
       .unique()
 
@@ -99,15 +99,15 @@ export const joinCampaign = mutation({
       .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
       .collect()
 
-    if (campaignMembers.some((member) => member.userId === profile.userId)) {
-      return campaignMembers.find((member) => member.userId === profile.userId)!
+    if (campaignMembers.some((member) => member.userId === profile._id)) {
+      return campaignMembers.find((member) => member.userId === profile._id)!
         .status
     }
 
     const now = Date.now()
 
     const memberId = await ctx.db.insert('campaignMembers', {
-      userId: profile.userId,
+      userId: profile._id,
       campaignId: campaign._id,
       role: CAMPAIGN_MEMBER_ROLE.Player,
       status: CAMPAIGN_MEMBER_STATUS.Pending,
@@ -161,7 +161,7 @@ export const updateCampaign = mutation({
         const conflict = await ctx.db
           .query('campaigns')
           .withIndex('by_slug_dm', (q) =>
-            q.eq('slug', slug).eq('dmUserId', profile.userId),
+            q.eq('slug', slug).eq('dmUserId', profile._id),
           )
           .unique()
         return conflict !== null && conflict._id !== campaign._id
@@ -298,7 +298,7 @@ export const updateCampaignMemberStatus = mutation({
     // Verify caller is the DM of this campaign
     const callerMembership = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_user', (q) => q.eq('userId', profile.userId))
+      .withIndex('by_user', (q) => q.eq('userId', profile._id))
       .collect()
 
     const callerAsDm = callerMembership.find(

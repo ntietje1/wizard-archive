@@ -2,7 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
 const userProfileTableFields = {
-  userId: v.string(),
+  clerkUserId: v.string(),
   username: v.string(),
   email: v.optional(v.string()),
   name: v.optional(v.string()),
@@ -15,7 +15,7 @@ export const userTables = {
   userProfiles: defineTable({
     ...userProfileTableFields,
   })
-    .index('by_user', ['userId'])
+    .index('by_user', ['clerkUserId'])
     .index('by_username', ['username']),
 }
 
