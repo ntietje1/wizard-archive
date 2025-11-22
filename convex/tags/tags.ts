@@ -142,7 +142,7 @@ export const insertTagAndNote = async (
   })
 
   const noteId = await ctx.db.insert('notes', {
-    userId: profile.userId,
+    userId: profile._id,
     name: newTag.displayName,
     slug: uniqueSlug,
     campaignId: newTag.campaignId,

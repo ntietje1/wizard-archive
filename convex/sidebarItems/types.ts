@@ -27,7 +27,7 @@ export type SidebarItem<T extends SidebarItemType> = {
   _creationTime: number
 
   name?: string
-  userId: string
+  userId: Id<'userProfiles'>
   campaignId: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
   category?: TagCategory

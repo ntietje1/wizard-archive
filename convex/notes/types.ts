@@ -31,5 +31,4 @@ export type BlockTag = {
   tagId: Id<'tags'>
 }
 
-//TODO: remove this and move content to regular note type
 export type NoteWithContent = Note & { content: CustomBlock[] }

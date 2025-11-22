@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import { folderValidator, folderWithChildrenValidator } from "../notes/schema";
+import { folderValidator, folderWithChildrenValidator } from './schema';
 import { getFolderWithChildren, getFolderAncestors as getFolderAncestorsFn } from "./folders";
 import { Folder } from "./types";
 

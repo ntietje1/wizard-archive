@@ -9,6 +9,18 @@ export type Location = Tag & {
 export type Map = SidebarItem<typeof SIDEBAR_ITEM_TYPES.maps> & {
   imageStorageId?: Id<'_storage'>
 }
+export type MapPin = {
+  _id: Id<'mapPins'>
+  _creationTime: number
+  mapId: Id<'maps'>
+  locationId: Id<'locations'>
+  x: number
+  y: number
+}
+
+export type MapPinWithLocation = MapPin & {
+  location: Location
+}
 
 export const UNTITLED_MAP_NAME = 'Untitled Map';
 

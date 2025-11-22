@@ -15,7 +15,7 @@ export async function getUserIdentity(
 
   let profile = await ctx.db
     .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('userId', identity.subject))
+    .withIndex('by_user', (q) => q.eq('clerkUserId', identity.subject))
     .unique()
 
   if (!profile) {

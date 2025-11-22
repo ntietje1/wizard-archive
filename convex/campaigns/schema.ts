@@ -24,14 +24,14 @@ const campaignTableFields = {
   description: v.optional(v.string()),
   updatedAt: v.number(),
   playerCount: v.number(),
-  dmUserId: v.string(),
+  dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
   currentSessionId: v.optional(v.id('sessions')),
 }
 
 const campaignMemberTableFields = {
-  userId: v.string(),
+  userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   role: campaignMemberRoleValidator,
   status: campaignMemberStatusValidator,

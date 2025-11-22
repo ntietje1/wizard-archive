@@ -27,7 +27,7 @@ export type Editor = {
   _creationTime: number
 
   campaignId: Id<'campaigns'>
-  userId: string
+  userId: Id<'userProfiles'>
   sortOrder: SortOrder
   sortDirection: SortDirection
   foldersAlwaysOnTop: boolean

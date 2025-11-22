@@ -17,7 +17,7 @@ export const getCurrentEditor = query({
     const editor = await ctx.db
       .query('editor')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', args.campaignId!).eq('userId', profile.userId),
+        q.eq('campaignId', args.campaignId!).eq('userId', profile._id),
       )
       .unique()
 

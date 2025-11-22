@@ -37,7 +37,7 @@ export async function getCampaign(
     const partialCampaign = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile.userId),
+        q.eq('slug', campaignSlug).eq('dmUserId', dmUserProfile._id),
       )
       .unique()
     if (!partialCampaign) throw new Error('Campaign not found')
@@ -71,11 +71,7 @@ export async function getCampaignMember(
   if (!member) {
     return null
   }
-  const userProfile = await ctx.db
-    .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('userId', member.userId))
-    .unique()
-
+  const userProfile = await ctx.db.get(member.userId)
   if (!userProfile) {
     throw new Error('User profile not found')
   }
@@ -96,10 +92,7 @@ export async function getCampaignMembers(
   const profilesByUserId = new Map<string, UserProfile>()
   await Promise.all(
     members.map(async (member) => {
-      const profile = await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('userId', member.userId))
-        .unique()
+      const profile = await ctx.db.get(member.userId)
       if (profile) profilesByUserId.set(member.userId, profile)
     }),
   )

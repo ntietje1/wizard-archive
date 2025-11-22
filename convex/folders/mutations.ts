@@ -117,7 +117,7 @@ export const createFolder = mutation({
     const { profile } = identityWithProfile
 
     return await ctx.db.insert('folders', {
-      userId: profile.userId,
+      userId: profile._id,
       name: args.name || '',
       campaignId,
       updatedAt: Date.now(),

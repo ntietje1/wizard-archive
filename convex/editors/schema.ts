@@ -14,7 +14,7 @@ export const sortDirectionValidator = v.union(
 )
 
 const editorTableFields = {
-  userId: v.string(),
+  userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   sortOrder: sortOrderValidator,
   sortDirection: sortDirectionValidator,

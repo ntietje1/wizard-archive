@@ -9,9 +9,11 @@ import { tagTables } from './tags/schema'
 import { sessionTables } from './sessions/schema'
 import { shareTables } from './shares/schema'
 import { fileStorageTables } from './storage/schema'
+import { foldersTables } from './folders/schema'
 
 export default defineSchema({
   ...notesTables,
+  ...foldersTables,
   ...editorTables,
   ...campaignTables,
   ...userTables,

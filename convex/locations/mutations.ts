@@ -158,7 +158,7 @@ export const createMap = mutation({
 
     return await ctx.db.insert('maps', {
       campaignId: args.campaignId,
-      userId: profile.userId,
+      userId: profile._id,
       name: args.name,
       imageStorageId: args.imageStorageId,
       categoryId: args.categoryId,

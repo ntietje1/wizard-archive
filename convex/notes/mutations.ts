@@ -136,7 +136,7 @@ export const createNote = mutation({
     })
 
     const noteId = await ctx.db.insert('notes', {
-      userId: profile.userId,
+      userId: profile._id,
       name: args.name || '',
       slug: uniqueSlug,
       categoryId: args.categoryId,
