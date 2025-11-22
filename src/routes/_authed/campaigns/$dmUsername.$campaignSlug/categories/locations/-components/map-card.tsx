@@ -19,9 +19,10 @@ import { LocationsMapContextMenu as MapContextMenu } from '~/components/context-
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
-import { MapViewDialog } from './map-view-dialog'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
+import { useNavigate } from '@tanstack/react-router'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export interface MapCardProps {
   map?: GameMap
@@ -52,7 +53,8 @@ export function MapCard({
 }: MapCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isViewing, setIsViewing] = useState(false)
+  const navigate = useNavigate()
+  const { dmUsername, campaignSlug } = useCampaign()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const { active } = useDndContext()
@@ -93,7 +95,13 @@ export function MapCard({
     if (!isDragging && onClick) {
       onClick(e || ({} as MouseEvent))
     } else if (!isDragging && map) {
-      setIsViewing(true)
+      navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/notes',
+        params: { dmUsername, campaignSlug },
+        search: {
+          mapId: map._id,
+        },
+      })
     }
   }
 
@@ -216,14 +224,6 @@ export function MapCard({
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
           campaignId={map.campaignId}
-        />
-      )}
-
-      {isViewing && map && (
-        <MapViewDialog
-          mapId={map._id}
-          isOpen={isViewing}
-          onClose={() => setIsViewing(false)}
         />
       )}
 

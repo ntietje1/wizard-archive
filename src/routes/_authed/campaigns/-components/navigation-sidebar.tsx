@@ -97,14 +97,14 @@ export const NavigationSidebar = () => {
 
           {/* Categories */}
           {defaultCategories.map((c) => {
-            const to = `/campaigns/$dmUsername/$campaignSlug/categories/${c.slug}`
             const IconComp = getCategoryIcon(c.iconName)
             return (
               <Tooltip key={c.slug}>
                 <TooltipTrigger asChild>
                   <Link
-                    to={to}
+                    to="/campaigns/$dmUsername/$campaignSlug/notes"
                     params={{ dmUsername, campaignSlug }}
+                    search={{ categorySlug: c.slug }}
                     className={cn(
                       'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
                       'text-slate-600 hover:bg-slate-100 hover:text-slate-900',

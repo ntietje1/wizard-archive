@@ -8,9 +8,9 @@ import { DraggableMap } from './draggable-map'
 import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
 import { MapPin } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { useState } from 'react'
-import { MapViewDialog } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/locations/-components/map-view-dialog'
 import type { Id } from 'convex/_generated/dataModel'
+import { useNavigate } from '@tanstack/react-router'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 interface MapButtonProps {
   map: GameMap
@@ -20,7 +20,8 @@ interface MapButtonProps {
 export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const [isViewing, setIsViewing] = useState(false)
+  const navigate = useNavigate()
+  const { dmUsername, campaignSlug } = useCampaign()
 
   const updateMapMutation = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
@@ -32,34 +33,30 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   }
 
   const handleSelect = () => {
-    setIsViewing(true)
+    navigate({
+      to: '/campaigns/$dmUsername/$campaignSlug/notes',
+      params: { dmUsername, campaignSlug },
+      search: {
+        mapId: map._id,
+      },
+    })
   }
 
   return (
-    <>
-      <DraggableMap map={map} ancestorIds={ancestorIds}>
-        <MapContextMenu ref={contextMenuRef} map={map}>
-          <SidebarItemButtonBase
-            icon={MapPin}
-            name={map.name || UNTITLED_MAP_NAME}
-            defaultName={UNTITLED_MAP_NAME}
-            isSelected={false}
-            isRenaming={renamingId === map._id}
-            showChevron={false}
-            onSelect={handleSelect}
-            onMoreOptions={handleMoreOptions}
-            onFinishRename={handleFinishRename}
-          />
-        </MapContextMenu>
-      </DraggableMap>
-
-      {isViewing && (
-        <MapViewDialog
-          mapId={map._id}
-          isOpen={isViewing}
-          onClose={() => setIsViewing(false)}
+    <DraggableMap map={map} ancestorIds={ancestorIds}>
+      <MapContextMenu ref={contextMenuRef} map={map}>
+        <SidebarItemButtonBase
+          icon={MapPin}
+          name={map.name || UNTITLED_MAP_NAME}
+          defaultName={UNTITLED_MAP_NAME}
+          isSelected={false}
+          isRenaming={renamingId === map._id}
+          showChevron={false}
+          onSelect={handleSelect}
+          onMoreOptions={handleMoreOptions}
+          onFinishRename={handleFinishRename}
         />
-      )}
-    </>
+      </MapContextMenu>
+    </DraggableMap>
   )
 }

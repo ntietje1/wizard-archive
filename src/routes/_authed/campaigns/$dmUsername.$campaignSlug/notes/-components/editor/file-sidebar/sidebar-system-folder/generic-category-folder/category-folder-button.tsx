@@ -15,17 +15,18 @@ import {
   type CategoryContextMenuProps,
 } from '~/components/context-menu/sidebar/generic/category-folder-context-menu'
 import { type TagNoteContextMenuProps } from '~/components/context-menu/sidebar/generic/tag-note-context-menu'
-import { toast } from 'sonner'
 import { useRef } from 'react'
 import type { ContextMenuRef } from '~/components/context-menu/base/context-menu'
 import { CategorySidebarItem } from './category-sidebar-item'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import type { AnySidebarItem, Folder } from 'convex/notes/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { Folder } from 'convex/folders/types'
 import { DraggableCategoryFolder } from './draggable-category-folder'
 import { DroppableCategoryFolder } from './droppable-category-folder'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
+import { useNavigate } from '@tanstack/react-router'
 
 type CategoryContextMenuComponent =
   React.ComponentType<CategoryContextMenuProps>
@@ -96,6 +97,7 @@ export const CategoryFolderButton = ({
                 contextMenuRef={categoryContextMenuRef}
                 folder={folder}
                 defaultName={categoryConfig.plural}
+                categoryConfig={categoryConfig}
               />
             </DraggableCategoryFolder>
           ) : (
@@ -106,6 +108,7 @@ export const CategoryFolderButton = ({
               isExpanded={isExpanded}
               toggleExpanded={toggleExpanded}
               contextMenuRef={categoryContextMenuRef}
+              categoryConfig={categoryConfig}
             />
           )}
         </CategoryContextMenuComponent>
@@ -150,12 +153,24 @@ const CategoryFolderBase = ({
   contextMenuRef,
   folder,
   defaultName,
-}: CategoryFolderBaseProps) => {
+  categoryConfig,
+}: CategoryFolderBaseProps & { categoryConfig?: TagCategoryConfig }) => {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { updateFolder } = useFolderActions()
+  const navigate = useNavigate()
+  const { dmUsername, campaignSlug } = useCampaign()
 
   const handleFolderClick = () => {
-    toast.info('Category folder clicked - functionality coming soon!')
+    if (!categoryConfig) return
+    
+    navigate({
+      to: '/campaigns/$dmUsername/$campaignSlug/notes',
+      params: { dmUsername, campaignSlug },
+      search: {
+        categorySlug: categoryConfig.categorySlug,
+        ...(folder && { folderId: folder._id }),
+      },
+    })
   }
 
   const handleMoreOptionsWrapper = (e: React.MouseEvent) => {

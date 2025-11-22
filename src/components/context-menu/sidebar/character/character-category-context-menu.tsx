@@ -69,10 +69,13 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
           router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/categories/characters',
+            to: '/campaigns/$dmUsername/$campaignSlug/notes',
             params: {
               dmUsername,
               campaignSlug,
+            },
+            search: {
+              categorySlug: 'characters',
             },
           })
         },

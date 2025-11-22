@@ -21,7 +21,7 @@ import {
 import { CategoryFolderButton } from './category-folder-button'
 import type { CategoryContextMenuProps } from '~/components/context-menu/sidebar/generic/category-folder-context-menu'
 import { DraggableNote } from '../../sidebar-note/draggable-note'
-import { FileEdit, FileText } from '~/lib/icons'
+import { FileText } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { MapButton } from '../../sidebar-map/map-button'
 import type { Id } from 'convex/_generated/dataModel'

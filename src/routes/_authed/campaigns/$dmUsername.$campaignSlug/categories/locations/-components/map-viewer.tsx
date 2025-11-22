@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Button } from '~/components/shadcn/ui/button'
-import { Plus, X, ChevronRight } from '~/lib/icons'
+import { Plus, ChevronRight } from '~/lib/icons'
 import { ChevronLeft, Minus, Search, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useMutation } from '@tanstack/react-query'
@@ -32,7 +32,7 @@ import { getCategoryIcon } from '~/lib/category-icons'
 
 interface MapViewerProps {
   mapId: Id<'gameMaps'>
-  onClose: () => void
+  onClose?: () => void
 }
 
 interface PinPosition {
@@ -40,7 +40,7 @@ interface PinPosition {
   y: number
 }
 
-export function MapViewer({ mapId, onClose }: MapViewerProps) {
+export function MapViewer({ mapId }: MapViewerProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const imageRef = useRef<globalThis.HTMLImageElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
@@ -269,15 +269,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
 
   return (
     <>
-      <div className="absolute inset-0 bg-background overflow-hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 left-4 z-[1000] bg-white shadow-md"
-          onClick={onClose}
-        >
-          <X className="w-4 h-4" />
-        </Button>
+      <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
 
         <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
           <Button
@@ -309,7 +301,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
           </Button>
         </div>
 
-        <div className="absolute inset-0">
+        <div className="flex-1 relative min-h-0">
           {imageUrl ? (
             <TransformWrapper
               ref={transformWrapperRef}
