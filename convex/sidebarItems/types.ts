@@ -1,5 +1,5 @@
 import { Id } from "../_generated/dataModel";
-import { Map } from "../locations/types";
+import { Map } from '../maps/types';
 import { Note } from "../notes/types";
 import { Folder } from '../folders/types';
 import { TagCategory } from "../tags/types";

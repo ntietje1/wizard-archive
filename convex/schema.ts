@@ -10,6 +10,7 @@ import { sessionTables } from './sessions/schema'
 import { shareTables } from './shares/schema'
 import { fileStorageTables } from './storage/schema'
 import { foldersTables } from './folders/schema'
+import { mapTables } from './maps/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -19,6 +20,7 @@ export default defineSchema({
   ...userTables,
   ...characterTables,
   ...locationTables,
+  ...mapTables,
   ...tagTables,
   ...sessionTables,
   ...shareTables,
