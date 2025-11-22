@@ -1,13 +1,12 @@
 import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { requireCampaignMembership } from "../campaigns/campaigns";
 import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
-import { getLocation } from "../locations/locations";
-import type { Location } from "../locations/types";
-import type { Map, MapPinWithLocation } from './types';
+import { getNote } from "../notes/notes";
+import type { Map, MapPinWithItem } from './types';
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
-import { mapValidator, mapPinWithLocationValidator } from "./schema";
+import { mapValidator, mapPinWithItemValidator } from "./schema";
+import { getMap as getMapFn } from "./maps";
 
 
 export const getCampaignMaps = query({
@@ -41,21 +40,7 @@ export const getMap = query({
   },
   returns: mapValidator,
   handler: async (ctx, args): Promise<Map> => {
-    const map = await ctx.db.get(args.mapId)
-    if (!map) {
-      throw new Error('Map not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
-    )
-
-    return {
-      ...map,
-      type: SIDEBAR_ITEM_TYPES.maps
-    }
+    return getMapFn(ctx, args.mapId)
   },
 })
 
@@ -63,8 +48,8 @@ export const getMapPins = query({
   args: {
     mapId: v.id('maps'),
   },
-  returns: v.array(mapPinWithLocationValidator),
-  handler: async (ctx, args): Promise<MapPinWithLocation[]> => {
+  returns: v.array(mapPinWithItemValidator),
+  handler: async (ctx, args): Promise<MapPinWithItem[]> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')
@@ -78,35 +63,28 @@ export const getMapPins = query({
 
     const pins = await ctx.db
       .query('mapPins')
-      .withIndex('by_map', (q) => q.eq('mapId', args.mapId))
+      .withIndex('by_map_itemType', (q) => 
+        q.eq('mapId', args.mapId)
+      )
       .collect()
 
-    const pinsWithLocations = await Promise.all(
+    const pinsWithItems = await Promise.all(
       pins.map(async (pin) => {
-        const location = await getLocation(ctx, pin.locationId)
-        if (!location) {
-          return null
+        if (pin.itemType === SIDEBAR_ITEM_TYPES.notes && pin.noteId) {
+          return {
+            ...pin,
+            itemType: SIDEBAR_ITEM_TYPES.notes,
+            item: await getNote(ctx, pin.noteId),
+          }
+        } else if (pin.itemType === SIDEBAR_ITEM_TYPES.maps && pin.pinnedMapId) {
+          return {
+            ...pin,
+            itemType: SIDEBAR_ITEM_TYPES.maps,
+            item: await getMapFn(ctx, pin.pinnedMapId),
+          }
         }
-        return {
-          _id: pin._id,
-          _creationTime: pin._creationTime,
-          mapId: pin.mapId,
-          locationId: pin.locationId,
-          x: pin.x,
-          y: pin.y,
-          location,
-        }
-      })
-    )
+      })).then((pins) => pins.filter((p) => p !== null)) as MapPinWithItem[]
 
-    return pinsWithLocations.filter((p) => p !== null) as Array<{
-      _id: Id<'mapPins'>
-      _creationTime: number
-      mapId: Id<'maps'>
-      locationId: Id<'locations'>
-      x: number
-      y: number
-      location: Location
-    }>
+    return pinsWithItems
   },
 })

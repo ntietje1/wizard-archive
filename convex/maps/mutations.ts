@@ -4,9 +4,11 @@ import { mutation } from "../_generated/server";
 import { requireCampaignMembership } from "../campaigns/campaigns";
 import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
 import { getFolder } from "../folders/folders";
-import { getLocation } from "../locations/locations";
+import { getNote } from "../notes/notes";
 import { getTagCategory } from "../tags/tags";
 import { SYSTEM_DEFAULT_CATEGORIES } from "../tags/types";
+import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
+import { MapPin } from "./types";
 
 
 export const createMap = mutation({
@@ -161,11 +163,12 @@ export const deleteMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
     )
 
-    // Delete all pins for this map
     const pins = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map', (q) => q.eq('mapId', args.mapId))
-      .collect()
+        .query('mapPins')
+        .withIndex('by_map_itemType', (q) => 
+            q.eq('mapId', args.mapId)
+        )
+        .collect()
 
     for (const pin of pins) {
       await ctx.db.delete(pin._id)
@@ -176,12 +179,23 @@ export const deleteMap = mutation({
   },
 })
 
-export const setLocationPin = mutation({
+export const createItemPin = mutation({
   args: {
     mapId: v.id('maps'),
-    locationId: v.id('locations'),
     x: v.number(),
     y: v.number(),
+    iconName: v.string(),
+    color: v.optional(v.string()),
+    item: v.union(
+      v.object({
+        itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
+        noteId: v.id('notes'),
+      }),
+      v.object({
+        itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+        mapId: v.id('maps'),
+      })
+    ),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -189,41 +203,49 @@ export const setLocationPin = mutation({
     if (!map) {
       throw new Error('Map not found')
     }
-
-    const location = await getLocation(ctx, args.locationId)
-    if (!location) {
-      throw new Error('Location not found')
-    }
-
-    if (location.campaignId !== map.campaignId) {
-      throw new Error('Location and map must belong to the same campaign')
-    }
-
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
     )
 
-    // Check if pin already exists
-    const existingPin = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map_location', (q) => q.eq('mapId', args.mapId).eq('locationId', args.locationId)
-      )
-      .unique()
+    let pinnedItemCampaignId: Id<'campaigns'>
 
-    if (existingPin) {
-      // Update existing pin
-      await ctx.db.patch(existingPin._id, {
-        x: args.x,
-        y: args.y,
-      })
-      return existingPin._id
-    } else {
-      // Create new pin
+    if (args.item.itemType === SIDEBAR_ITEM_TYPES.notes) {
+      const item = args.item
+      const note = await getNote(ctx, item.noteId)
+      if (!note) {
+        throw new Error('Note not found')
+      }
+      pinnedItemCampaignId = note.campaignId
+      if (pinnedItemCampaignId !== map.campaignId) {
+        throw new Error('Pinned item and map must belong to the same campaign')
+      }
       return await ctx.db.insert('mapPins', {
         mapId: args.mapId,
-        locationId: args.locationId,
+        itemType: SIDEBAR_ITEM_TYPES.notes,
+        noteId: item.noteId,
+        iconName: args.iconName,
+        color: args.color,
+        x: args.x,
+        y: args.y,
+      })
+    } else {
+      const item = args.item
+      const pinnedMap = await ctx.db.get(item.mapId)
+      if (!pinnedMap) {
+        throw new Error('Pinned map not found')
+      }
+      pinnedItemCampaignId = pinnedMap.campaignId
+      if (pinnedItemCampaignId !== map.campaignId) {
+        throw new Error('Pinned item and map must belong to the same campaign')
+      }
+      return await ctx.db.insert('mapPins', {
+        mapId: args.mapId,
+        itemType: SIDEBAR_ITEM_TYPES.maps,
+        pinnedMapId: item.mapId,
+        iconName: args.iconName,
+        color: args.color,
         x: args.x,
         y: args.y,
       })
@@ -231,47 +253,27 @@ export const setLocationPin = mutation({
   },
 })
 
-export const removeLocationPin = mutation({
+export const updateItemPin = mutation({
   args: {
-    mapId: v.id('maps'),
-    locationId: v.id('locations'),
-  },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    const map = await ctx.db.get(args.mapId)
-    if (!map) {
-      throw new Error('Map not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
-    )
-
-    const pin = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map_location', (q) => q.eq('mapId', args.mapId).eq('locationId', args.locationId)
-      )
-      .unique()
-
-    if (pin) {
-      await ctx.db.delete(pin._id)
-    }
-
-    return null
-  },
-})
-
-export const updatePinCoordinates = mutation({
-  args: {
-    pinId: v.id('mapPins'),
+    mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
+    iconName: v.string(),
+    color: v.optional(v.string()),
+    item: v.union(
+      v.object({
+        itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
+        noteId: v.id('notes'),
+      }),
+      v.object({
+        itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+        mapId: v.id('maps'),
+      })
+    ),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.pinId)
+    const pin = await ctx.db.get(args.mapPinId)
     if (!pin) {
       throw new Error('Pin not found')
     }
@@ -287,11 +289,50 @@ export const updatePinCoordinates = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
     )
 
-    await ctx.db.patch(args.pinId, {
+    const updates: Partial<MapPin> = {
       x: args.x,
       y: args.y,
-    })
+      iconName: args.iconName,
+      color: args.color,
+    }
+    if (args.item.itemType === SIDEBAR_ITEM_TYPES.notes) {
+      updates.itemType = SIDEBAR_ITEM_TYPES.notes
+      updates.noteId = args.item.noteId
+    } else {
+      updates.itemType = SIDEBAR_ITEM_TYPES.maps
+      updates.pinnedMapId = args.item.mapId
+    }
 
-    return args.pinId
+    await ctx.db.patch(args.mapPinId, updates)
+
+    return args.mapPinId
   },
+})
+
+
+export const removeItemPin = mutation({
+  args: {
+    mapPinId: v.id('mapPins'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {    
+    const pin = await ctx.db.get(args.mapPinId)
+    if (!pin) {
+      throw new Error('Pin not found')
+    }
+
+    const map = await ctx.db.get(pin.mapId)
+    if (!map) {
+      throw new Error('Map not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: map.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+    )
+
+    await ctx.db.delete(args.mapPinId)
+    return null
+  }
 })

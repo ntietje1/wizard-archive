@@ -154,4 +154,3 @@ export const getSidebarItemsByCategory = async (
 
   return allItems
 }
-

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { locationValidator } from "../locations/schema";
 import { tagCategoryValidator } from "../tags/schema";
+import { noteValidator } from "../notes/schema";
 import { defineTable } from "convex/server";
+import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 
 
 export const mapTableFields = {
@@ -24,22 +25,57 @@ const mapValidatorFields = {
 export const mapValidator = v.object(mapValidatorFields)
 export const mapPinTableFields = {
   mapId: v.id('maps'),
-  locationId: v.id('locations'),
+  itemType: v.union(v.literal(SIDEBAR_ITEM_TYPES.notes), v.literal(SIDEBAR_ITEM_TYPES.maps)),
+  noteId: v.optional(v.id('notes')),
+  pinnedMapId: v.optional(v.id('maps')),
+  iconName: v.string(),
+  color: v.optional(v.string()),
   x: v.number(),
   y: v.number(),
 }
+
 const mapPinValidatorFields = {
   _id: v.id('mapPins'),
   _creationTime: v.number(),
-  ...mapPinTableFields,
+  mapId: v.id('maps'),
+  x: v.number(),
+  y: v.number(),
+  iconName: v.string(),
+  color: v.optional(v.string()),
 } as const
 
-export const mapPinValidator = v.object(mapPinValidatorFields)
+// Discriminated union validator - ensures either noteId or pinnedMapId is set based on itemType
+export const mapPinValidator = v.union(
+  v.object({
+    ...mapPinValidatorFields,
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
+    noteId: v.id('notes'),
+    pinnedMapId: v.optional(v.id('maps'))
+  }),
+  v.object({
+    ...mapPinValidatorFields,
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+    noteId: v.optional(v.id('notes')),
+    pinnedMapId: v.id('maps')
+  })
+)
 
-export const mapPinWithLocationValidator = v.object({
-  ...mapPinValidatorFields,
-  location: locationValidator,
-})
+export const mapPinWithItemValidator = v.union(
+  v.object({
+    ...mapPinValidatorFields,
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
+    noteId: v.id('notes'),
+    pinnedMapId: v.optional(v.id('maps')),
+    item: noteValidator,
+  }),
+  v.object({
+    ...mapPinValidatorFields,
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+    noteId: v.optional(v.id('notes')),
+    pinnedMapId: v.id('maps'),
+    item: mapValidator,
+  })
+)
 
 export const mapTables = {  
     maps: defineTable({
@@ -53,8 +89,6 @@ export const mapTables = {
     mapPins: defineTable({
       ...mapPinTableFields,
     })
-      .index('by_map_location', ['mapId', 'locationId'])
-      .index('by_map', ['mapId'])
-      .index('by_location', ['locationId']),
+      .index('by_map_itemType', ['mapId', 'itemType']),
 }
   
