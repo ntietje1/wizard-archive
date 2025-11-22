@@ -8,7 +8,6 @@ import { getNote } from "../notes/notes";
 import { getTagCategory } from "../tags/tags";
 import { SYSTEM_DEFAULT_CATEGORIES } from "../tags/types";
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
-import { MapPin } from "./types";
 
 
 export const createMap = mutation({
@@ -19,8 +18,8 @@ export const createMap = mutation({
     categoryId: v.optional(v.id('tagCategories')),
     parentFolderId: v.optional(v.id('folders')),
   },
-  returns: v.id('maps'),
-  handler: async (ctx, args): Promise<Id<'maps'>> => {
+  returns: v.id('gameMaps'),
+  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const { identityWithProfile } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -55,7 +54,7 @@ export const createMap = mutation({
       }
     }
 
-    return await ctx.db.insert('maps', {
+    return await ctx.db.insert('gameMaps', {
       campaignId: args.campaignId,
       userId: profile._id,
       name: args.name,
@@ -69,13 +68,13 @@ export const createMap = mutation({
 
 export const updateMap = mutation({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentFolderId: v.optional(v.union(v.id('folders'), v.null())),
   },
-  returns: v.id('maps'),
-  handler: async (ctx, args): Promise<Id<'maps'>> => {
+  returns: v.id('gameMaps'),
+  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')
@@ -122,11 +121,11 @@ export const updateMap = mutation({
 
 export const moveMap = mutation({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
     parentFolderId: v.optional(v.id('folders')),
   },
-  returns: v.id('maps'),
-  handler: async (ctx, args): Promise<Id<'maps'>> => {
+  returns: v.id('gameMaps'),
+  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')
@@ -138,6 +137,17 @@ export const moveMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
     )
 
+    
+    if (args.parentFolderId) {
+        const folder = await getFolder(ctx, args.parentFolderId)
+        if (!folder) {
+            throw new Error('Folder not found')
+        }
+        if (folder.campaignId !== map.campaignId) {
+            throw new Error('Folder must belong to the same campaign as the map')
+        }
+    }
+
     await ctx.db.patch(args.mapId, {
       parentFolderId: args.parentFolderId,
       updatedAt: Date.now(),
@@ -148,10 +158,10 @@ export const moveMap = mutation({
 
 export const deleteMap = mutation({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
   },
-  returns: v.id('maps'),
-  handler: async (ctx, args): Promise<Id<'maps'>> => {
+  returns: v.id('gameMaps'),
+  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')
@@ -181,7 +191,7 @@ export const deleteMap = mutation({
 
 export const createItemPin = mutation({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
     iconName: v.string(),
@@ -192,8 +202,8 @@ export const createItemPin = mutation({
         noteId: v.id('notes'),
       }),
       v.object({
-        itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
-        mapId: v.id('maps'),
+        itemType: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
+        mapId: v.id('gameMaps'),
       })
     ),
   },
@@ -242,7 +252,7 @@ export const createItemPin = mutation({
       }
       return await ctx.db.insert('mapPins', {
         mapId: args.mapId,
-        itemType: SIDEBAR_ITEM_TYPES.maps,
+        itemType: SIDEBAR_ITEM_TYPES.gameMaps,
         pinnedMapId: item.mapId,
         iconName: args.iconName,
         color: args.color,
@@ -259,17 +269,7 @@ export const updateItemPin = mutation({
     x: v.number(),
     y: v.number(),
     iconName: v.string(),
-    color: v.optional(v.string()),
-    item: v.union(
-      v.object({
-        itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
-        noteId: v.id('notes'),
-      }),
-      v.object({
-        itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
-        mapId: v.id('maps'),
-      })
-    ),
+    color: v.optional(v.string())
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -289,21 +289,12 @@ export const updateItemPin = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
     )
 
-    const updates: Partial<MapPin> = {
+    await ctx.db.patch(args.mapPinId, {
       x: args.x,
       y: args.y,
       iconName: args.iconName,
       color: args.color,
-    }
-    if (args.item.itemType === SIDEBAR_ITEM_TYPES.notes) {
-      updates.itemType = SIDEBAR_ITEM_TYPES.notes
-      updates.noteId = args.item.noteId
-    } else {
-      updates.itemType = SIDEBAR_ITEM_TYPES.maps
-      updates.pinnedMapId = args.item.mapId
-    }
-
-    await ctx.db.patch(args.mapPinId, updates)
+    })
 
     return args.mapPinId
   },

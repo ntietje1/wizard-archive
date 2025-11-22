@@ -4,14 +4,14 @@ import {
   type ContextMenuItem,
 } from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo, useState } from 'react'
-import type { Map } from 'convex/locations/types'
+import type { GameMap } from 'convex/gameMaps/types'
 import { Edit, Trash2 } from '~/lib/icons'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 
 export interface LocationsMapContextMenuProps {
   children: React.ReactNode
-  map?: Map
+  map?: GameMap
 }
 
 export const LocationsMapContextMenu = forwardRef<ContextMenuRef, LocationsMapContextMenuProps>(

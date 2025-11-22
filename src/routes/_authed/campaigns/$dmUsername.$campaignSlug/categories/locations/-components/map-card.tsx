@@ -1,7 +1,7 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { type Map } from 'convex/locations/types'
+import { type GameMap } from 'convex/gameMaps/types'
 import { useState, type MouseEvent } from 'react'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapPin, Edit, Trash2 } from '~/lib/icons'
@@ -21,10 +21,10 @@ import type { Id } from 'convex/_generated/dataModel'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapViewDialog } from './map-view-dialog'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import { UNTITLED_MAP_NAME } from 'convex/locations/types'
+import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
 
 export interface MapCardProps {
-  map?: Map
+  map?: GameMap
   categoryId?: Id<'tagCategories'>
   categoryConfig?: TagCategoryConfig
   onClick?: (e: MouseEvent) => void
@@ -70,7 +70,7 @@ export function MapCard({
     map && categoryId
       ? {
           _id: map._id,
-          type: SIDEBAR_ITEM_TYPES.maps,
+          type: SIDEBAR_ITEM_TYPES.gameMaps,
           name: map.name || UNTITLED_MAP_NAME,
           parentFolderId: map.parentFolderId,
           categoryId,
@@ -113,7 +113,7 @@ export function MapCard({
 
   const dropData: CategoryDropData = {
     _id: map._id,
-    type: SIDEBAR_ITEM_TYPES.maps,
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
     categoryId,
   }
   const { setNodeRef: setDropRef, isOver } = useDroppable({

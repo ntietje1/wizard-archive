@@ -4,14 +4,14 @@ import {
   type ContextMenuItem,
   type ContextMenuRef,
 } from '~/components/context-menu/base/context-menu'
-import type { Map } from 'convex/locations/types'
+import type { GameMap } from 'convex/gameMaps/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useState, forwardRef } from 'react'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 
 interface SidebarMapContextMenuProps {
-  map: Map
+  map: GameMap
   children: React.ReactNode
 }
 

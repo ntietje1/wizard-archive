@@ -96,7 +96,7 @@ export const CategorySidebarItem = ({
     () => ({
       [SIDEBAR_ITEM_TYPES.folders]: CategoryFolderButton,
       [SIDEBAR_ITEM_TYPES.notes]: TagNoteButton,
-      [SIDEBAR_ITEM_TYPES.maps]: MapButton,
+      [SIDEBAR_ITEM_TYPES.gameMaps]: MapButton,
     }),
     [],
   )
@@ -130,7 +130,7 @@ export const CategorySidebarItem = ({
     )
   }
 
-  if (item.type === SIDEBAR_ITEM_TYPES.maps) {
+  if (item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
     return <Component map={item} ancestorIds={ancestorIds} />
   }
 

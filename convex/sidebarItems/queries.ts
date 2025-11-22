@@ -12,7 +12,7 @@ export const getSidebarItemsByCategory = query({
   },
   returns: v.array(sidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return getSidebarItemsByCategoryFn(ctx, args.campaignId, args.categoryId)
+    return await getSidebarItemsByCategoryFn(ctx, args.campaignId, args.categoryId)
   },
 })
 
@@ -24,7 +24,7 @@ export const getSidebarItemsByParent = query({
   },
   returns: v.array(sidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return getSidebarItemsByParentFn(
+    return await getSidebarItemsByParentFn(
       ctx,
       args.campaignId,
       args.categoryId,

@@ -2,15 +2,14 @@ import { Id } from "../_generated/dataModel";
 import { Note } from "../notes/types";
 import { SidebarItem, SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 
-
-export type Map = SidebarItem<typeof SIDEBAR_ITEM_TYPES.maps> & {
+export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
   imageStorageId?: Id<'_storage'>
 }
 
 export type MapPin = {
   _id: Id<'mapPins'>
   _creationTime: number
-  mapId: Id<'maps'>
+  mapId: Id<'gameMaps'>
   x: number
   y: number
   iconName: string
@@ -19,12 +18,12 @@ export type MapPin = {
   | {
       itemType: typeof SIDEBAR_ITEM_TYPES.notes
       noteId: Id<'notes'>
-      pinnedMapId?: Id<'maps'>
+      pinnedMapId?: Id<'gameMaps'>
     }
   | {
-      itemType: typeof SIDEBAR_ITEM_TYPES.maps
+      itemType: typeof SIDEBAR_ITEM_TYPES.gameMaps
       noteId?: Id<'notes'>
-      pinnedMapId: Id<'maps'>
+      pinnedMapId: Id<'gameMaps'>
     }
 )
 
@@ -32,14 +31,14 @@ export type MapPinWithItem = MapPin & (
   | {
       itemType: typeof SIDEBAR_ITEM_TYPES.notes
       noteId: Id<'notes'>
-      pinnedMapId?: Id<'maps'>
+      pinnedMapId?: Id<'gameMaps'>
       item: Note
     }
   | {
-      itemType: typeof SIDEBAR_ITEM_TYPES.maps
+      itemType: typeof SIDEBAR_ITEM_TYPES.gameMaps
       noteId?: Id<'notes'>
-      pinnedMapId: Id<'maps'>
-      item: Map
+      pinnedMapId: Id<'gameMaps'>
+      item: GameMap
     }
 )
 

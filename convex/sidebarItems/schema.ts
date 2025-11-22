@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { folderValidator } from "../folders/schema";
-import { mapValidator } from '../maps/schema';
+import { folderValidator, folderValidatorFields } from "../folders/schema";
+import { mapValidator } from '../gameMaps/schema';
 import { noteValidator } from "../notes/schema";
 
 export const sidebarItemValidator = v.union(
@@ -8,3 +8,8 @@ export const sidebarItemValidator = v.union(
   folderValidator,
   mapValidator
 )
+
+export const folderWithChildrenValidator = v.object({
+  ...folderValidatorFields,
+  children: v.optional(v.array(sidebarItemValidator)),
+})

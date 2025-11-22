@@ -12,7 +12,7 @@ export function DragOverlayItem({ item }: { item: SidebarDragData }) {
       return FolderIcon
     case SIDEBAR_ITEM_TYPES.notes:
       return FileText
-    case SIDEBAR_ITEM_TYPES.maps:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       return MapPin
     default:
       return File

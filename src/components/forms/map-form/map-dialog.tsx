@@ -6,7 +6,7 @@ import type { Id } from 'convex/_generated/dataModel'
 interface MapDialogProps {
   isOpen: boolean
   onClose: () => void
-  mapId?: Id<'maps'>
+  mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
   parentFolderId?: Id<'folders'>

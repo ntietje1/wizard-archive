@@ -81,7 +81,7 @@ interface MoveMutations {
     parentId?: Id<'folders'>
   }) => Promise<any>
   moveMap: (params: {
-    mapId: Id<'maps'>
+    mapId: Id<'gameMaps'>
     parentFolderId?: Id<'folders'>
   }) => Promise<any>
 }
@@ -108,9 +108,9 @@ export async function executeMove(
         parentId: targetId,
       })
       break
-    case SIDEBAR_ITEM_TYPES.maps:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       await mutations.moveMap({
-        mapId: itemId as Id<'maps'>,
+        mapId: itemId as Id<'gameMaps'>,
         parentFolderId: targetId,
       })
       break

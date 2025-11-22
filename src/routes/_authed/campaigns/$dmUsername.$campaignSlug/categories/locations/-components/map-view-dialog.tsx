@@ -7,7 +7,7 @@ import { MapViewer } from './map-viewer'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface MapViewDialogProps {
-  mapId: Id<'maps'>
+  mapId: Id<'gameMaps'>
   isOpen: boolean
   onClose: () => void
 }

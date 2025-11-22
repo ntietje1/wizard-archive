@@ -29,9 +29,10 @@ import {
 } from 'react-zoom-pan-pinch'
 import { MapPin } from './map-pin'
 import { MapViewerContextMenu } from '~/components/context-menu/map/map-viewer-context-menu'
+import type { MapPinWithItem } from 'convex/gameMaps/types'
 
 interface MapViewerProps {
-  mapId: Id<'maps'>
+  mapId: Id<'gameMaps'>
   onClose: () => void
 }
 
@@ -68,10 +69,10 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
   const convex = useConvex()
 
   const mapQuery = useQuery(
-    convexQuery(api.locations.queries.getMap, { mapId }),
+    convexQuery(api.gameMaps.queries.getMap, { mapId }),
   )
   const pinsQuery = useQuery(
-    convexQuery(api.locations.queries.getMapPins, { mapId }),
+    convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
   )
   const locationsQuery = useQuery(
     convexQuery(
@@ -85,23 +86,23 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
   const allLocations = locationsQuery.data || []
 
   const pinnedLocationIds = useMemo(
-    () => new Set(pins.map((p) => p.locationId)),
+    () => new Set(pins.map((p: MapPinWithItem) => p.locationId)),
     [pins],
   )
 
   const pinnedLocations = useMemo(
-    () => allLocations.filter((loc) => pinnedLocationIds.has(loc.locationId)),
+    () => allLocations.filter((loc: Location) => pinnedLocationIds.has(loc.locationId)),
     [allLocations, pinnedLocationIds],
   )
 
   const nonPinnedLocations = useMemo(
-    () => allLocations.filter((loc) => !pinnedLocationIds.has(loc.locationId)),
+    () => allLocations.filter((loc: Location) => !pinnedLocationIds.has(loc.locationId)),
     [allLocations, pinnedLocationIds],
   )
 
   const filteredPinnedLocations = useMemo(
     () =>
-      pinnedLocations.filter((loc) =>
+      pinnedLocations.filter((loc: Location) =>
         loc.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [pinnedLocations, searchQuery],
@@ -109,18 +110,18 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
 
   const filteredNonPinnedLocations = useMemo(
     () =>
-      nonPinnedLocations.filter((loc) =>
+      nonPinnedLocations.filter((loc: Location) =>
         loc.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [nonPinnedLocations, searchQuery],
   )
 
   const updatePinMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.updatePinCoordinates),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.updatePinCoordinates),
   })
 
   const setLocationPinMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.setLocationPin),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.setLocationPin),
   })
 
   const categoryConfig = useMemo<TagCategoryConfig | undefined>(() => {
@@ -260,7 +261,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
 
   const handlePinDragStart = useCallback(
     (pinId: Id<'mapPins'>) => {
-      const pin = pins.find((p) => p._id === pinId)
+      const pin = pins.find((p: MapPinWithItem) => p._id === pinId)
       if (pin) {
         optimisticPositions.current.set(pinId, { x: pin.x, y: pin.y })
       }
@@ -287,7 +288,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
         setDraggingEnabledPinId(null)
       } catch (error) {
         console.error('Failed to update pin:', error)
-        const pin = pins.find((p) => p._id === pinId)
+        const pin = pins.find((p: MapPinWithItem) => p._id === pinId)
         if (pin) {
           optimisticPositions.current.set(pinId, { x: pin.x, y: pin.y })
         }
@@ -418,26 +419,29 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
                     }}
                   />
 
-                  {pins.map((pin) => {
+                  {pins.map((pin: MapPinWithItem) => {
                     const optimisticPos = optimisticPositions.current.get(
                       pin._id,
                     )
                     const position = optimisticPos || { x: pin.x, y: pin.y }
 
                     return (
-                      <MapPin
-                        key={pin._id}
-                        pin={{ ...pin, ...position }}
-                        location={pin.location}
-                        draggable={draggingEnabledPinId === pin._id}
-                        onDragStart={() => handlePinDragStart(pin._id)}
-                        onDrag={(x, y) => handlePinDrag(pin._id, { x, y })}
-                        onDragEnd={(x, y) =>
-                          handlePinDragEnd(pin._id, { x, y })
-                        }
-                        onContextMenu={(e) => handlePinContextMenu(pin._id, e)}
-                        imageRef={imageRef}
-                      />
+                      // <MapPin
+                      //   key={pin._id}
+                      //   pin={{ ...pin, ...position }}
+                      //   location={pin.location}
+                      //   draggable={draggingEnabledPinId === pin._id}
+                      //   onDragStart={() => handlePinDragStart(pin._id)}
+                      //   onDrag={(x, y) => handlePinDrag(pin._id, { x, y })}
+                      //   onDragEnd={(x, y) =>
+                      //     handlePinDragEnd(pin._id, { x, y })
+                      //   }
+                      //   onContextMenu={(e) => handlePinContextMenu(pin._id, e)}
+                      //   imageRef={imageRef}
+                      // />
+                      <div key={pin._id}>
+                        {pin.itemType}
+                      </div>
                     )
                   })}
                 </div>
@@ -462,7 +466,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
             <p className="text-sm font-medium">
               Click on map to place pin for{' '}
-              {allLocations.find((l) => l.locationId === pendingPinLocationId)
+              {allLocations.find((l: Location) => l.locationId === pendingPinLocationId)
                 ?.displayName || 'location'}
             </p>
           </div>
@@ -520,7 +524,7 @@ function PinContextMenu({
   onEnableDragging,
 }: {
   pinId: Id<'mapPins'>
-  mapId: Id<'maps'>
+  mapId: Id<'gameMaps'>
   position: PinPosition
   onClose: () => void
   onEnableDragging: (pinId: Id<'mapPins'>) => void
@@ -532,7 +536,7 @@ function PinContextMenu({
     mutationFn: useConvexMutation(api.locations.mutations.removeLocationPin),
   })
 
-  const pin = pinsQuery.data?.find((p) => p._id === pinId)
+  const pin = pinsQuery.data?.find((p: MapPinWithItem) => p._id === pinId)
 
   const handleRemovePin = useCallback(async () => {
     if (!pin) return

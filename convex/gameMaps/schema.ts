@@ -15,19 +15,19 @@ export const mapTableFields = {
   updatedAt: v.number(),
 }
 const mapValidatorFields = {
-  _id: v.id('maps'),
+  _id: v.id('gameMaps'),
   _creationTime: v.number(),
   ...mapTableFields,
   category: v.optional(tagCategoryValidator),
-  type: v.literal('maps'),
+  type: v.literal('gameMaps'),
 } as const
 
 export const mapValidator = v.object(mapValidatorFields)
 export const mapPinTableFields = {
-  mapId: v.id('maps'),
-  itemType: v.union(v.literal(SIDEBAR_ITEM_TYPES.notes), v.literal(SIDEBAR_ITEM_TYPES.maps)),
+  mapId: v.id('gameMaps'),
+  itemType: v.union(v.literal(SIDEBAR_ITEM_TYPES.notes), v.literal(SIDEBAR_ITEM_TYPES.gameMaps)),
   noteId: v.optional(v.id('notes')),
-  pinnedMapId: v.optional(v.id('maps')),
+  pinnedMapId: v.optional(v.id('gameMaps')),
   iconName: v.string(),
   color: v.optional(v.string()),
   x: v.number(),
@@ -37,7 +37,7 @@ export const mapPinTableFields = {
 const mapPinValidatorFields = {
   _id: v.id('mapPins'),
   _creationTime: v.number(),
-  mapId: v.id('maps'),
+  mapId: v.id('gameMaps'),
   x: v.number(),
   y: v.number(),
   iconName: v.string(),
@@ -50,13 +50,13 @@ export const mapPinValidator = v.union(
     ...mapPinValidatorFields,
     itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
     noteId: v.id('notes'),
-    pinnedMapId: v.optional(v.id('maps'))
+    pinnedMapId: v.optional(v.id('gameMaps'))
   }),
   v.object({
     ...mapPinValidatorFields,
-    itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
     noteId: v.optional(v.id('notes')),
-    pinnedMapId: v.id('maps')
+    pinnedMapId: v.id('gameMaps')
   })
 )
 
@@ -65,20 +65,20 @@ export const mapPinWithItemValidator = v.union(
     ...mapPinValidatorFields,
     itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
     noteId: v.id('notes'),
-    pinnedMapId: v.optional(v.id('maps')),
+    pinnedMapId: v.optional(v.id('gameMaps')),
     item: noteValidator,
   }),
   v.object({
     ...mapPinValidatorFields,
-    itemType: v.literal(SIDEBAR_ITEM_TYPES.maps),
+    itemType: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
     noteId: v.optional(v.id('notes')),
-    pinnedMapId: v.id('maps'),
+    pinnedMapId: v.id('gameMaps'),
     item: mapValidator,
   })
 )
 
 export const mapTables = {  
-    maps: defineTable({
+    gameMaps: defineTable({
       ...mapTableFields,
     }).index('by_campaign_category_parent', [
       'campaignId',

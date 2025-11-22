@@ -21,7 +21,7 @@ const SIDEBAR_ITEM_COMPONENT_REGISTRY: Record<
 > = {
   [SIDEBAR_ITEM_TYPES.folders]: FolderWithChildren,
   [SIDEBAR_ITEM_TYPES.notes]: NoteButton,
-  [SIDEBAR_ITEM_TYPES.maps]: MapButton,
+  [SIDEBAR_ITEM_TYPES.gameMaps]: MapButton,
 }
 
 export const SidebarItem = ({ item, ancestorIds = [] }: SidebarItemProps) => {
@@ -39,7 +39,7 @@ export const SidebarItem = ({ item, ancestorIds = [] }: SidebarItemProps) => {
     return <Component note={item} ancestorIds={ancestorIds} />
   }
 
-  if (item.type === SIDEBAR_ITEM_TYPES.maps) {
+  if (item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
     return <Component map={item} ancestorIds={ancestorIds} />
   }
 

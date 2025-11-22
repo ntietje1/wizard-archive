@@ -29,7 +29,7 @@ import type { CustomBlockNoteEditor } from "~/lib/editor-schema";
   // List containing all default Slash Menu Items, as well as our custom one.
   const getCustomSlashMenuItems = (
     editor: CustomBlockNoteEditor,
-  ): DefaultReactSuggestionItem[] => [
+  ): Array<DefaultReactSuggestionItem> => [
     ...getDefaultReactSlashMenuItems(editor)
     // .filter((item) => {
     //     return item.title !== "Heading 2"

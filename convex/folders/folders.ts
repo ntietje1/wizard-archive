@@ -37,7 +37,7 @@ export const getFolderWithChildren = async (
     ctx: Ctx,
     folderId: Id<'folders'>
 ): Promise<Folder> => {
-    const folder = await getFolder(ctx, folderId)
+    const folder: Folder = await getFolder(ctx, folderId)
     const children = await getSidebarItemsByParent(ctx, folder.campaignId, folder.categoryId, folderId)
     return { ...folder, children }
 }
@@ -66,7 +66,7 @@ export const getFolderAncestors = async (
         throw new Error('Circular folder reference detected')
       }
       visited.add(currentFolderId)
-      const parentFolder = await getFolder(ctx, currentFolderId)
+      const parentFolder: Folder = await getFolder(ctx, currentFolderId)
       ancestors.unshift(parentFolder)
       currentFolderId = parentFolder.parentFolderId
     }

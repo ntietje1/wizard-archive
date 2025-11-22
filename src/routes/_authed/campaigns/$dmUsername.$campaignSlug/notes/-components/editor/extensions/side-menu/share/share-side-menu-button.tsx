@@ -17,6 +17,7 @@ import {
 } from '~/components/shadcn/ui/context-menu'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import type { Share } from 'convex/shares/types'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface ShareSideMenuButtonProps {
   block: CustomBlock
@@ -71,7 +72,7 @@ export default function ShareSideMenuButton({
   const playerSharedTags = shares.filter((s: Share) => s.memberId != null)
 
   const isBlockNotFound = blockTagState.data === null
-  const appliedTagIds = new Set(blockTagState.data?.allTagIds ?? [])
+  const appliedTagIds = new Set<Id<'tags'>>(blockTagState.data?.allTagIds ?? [])
   const isShared = useMemo(() => {
     if (!sharedAllTag || isBlockNotFound) return false
     if (appliedTagIds.has(sharedAllTag._id)) return true

@@ -1,5 +1,5 @@
 import { Id } from "../_generated/dataModel";
-import { Map } from '../maps/types';
+import { GameMap } from '../gameMaps/types';
 import { Note } from "../notes/types";
 import { Folder } from '../folders/types';
 import { TagCategory } from "../tags/types";
@@ -10,7 +10,7 @@ export const SIDEBAR_ROOT_TYPE = 'root' as const
 export const SIDEBAR_ITEM_TYPES = {
   notes: 'notes',
   folders: 'folders',
-  maps: 'maps',
+  gameMaps: 'gameMaps',
 } as const
 
 export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
@@ -36,5 +36,5 @@ export type SidebarItem<T extends SidebarItemType> = {
   type: T
 }
 
-export type AnySidebarItem = Note | Folder | Map
+export type AnySidebarItem = Note | Folder | GameMap
 

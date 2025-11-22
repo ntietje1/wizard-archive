@@ -3,10 +3,10 @@ import { query } from "../_generated/server";
 import { requireCampaignMembership } from "../campaigns/campaigns";
 import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
 import { getNote } from "../notes/notes";
-import type { Map, MapPinWithItem } from './types';
+import type { GameMap, MapPinWithItem } from './types';
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 import { mapValidator, mapPinWithItemValidator } from "./schema";
-import { getMap as getMapFn } from "./maps";
+import { getMap as getMapFn } from "./gameMaps";
 
 
 export const getCampaignMaps = query({
@@ -14,7 +14,7 @@ export const getCampaignMaps = query({
     campaignId: v.id('campaigns'),
   },
   returns: v.array(mapValidator),
-  handler: async (ctx, args): Promise<Map[]> => {
+  handler: async (ctx, args): Promise<GameMap[]> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -22,31 +22,31 @@ export const getCampaignMaps = query({
     )
 
     const maps = await ctx.db
-      .query('maps')
+      .query('gameMaps')
       .withIndex('by_campaign_category_parent', (q) => q.eq('campaignId', args.campaignId)
       )
       .collect()
 
     return maps.map((m) => ({
       ...m,
-      type: SIDEBAR_ITEM_TYPES.maps,
+      type: SIDEBAR_ITEM_TYPES.gameMaps,
     }))
   },
 })
 
 export const getMap = query({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
   },
   returns: mapValidator,
-  handler: async (ctx, args): Promise<Map> => {
+  handler: async (ctx, args): Promise<GameMap> => {
     return getMapFn(ctx, args.mapId)
   },
 })
 
 export const getMapPins = query({
   args: {
-    mapId: v.id('maps'),
+    mapId: v.id('gameMaps'),
   },
   returns: v.array(mapPinWithItemValidator),
   handler: async (ctx, args): Promise<MapPinWithItem[]> => {
@@ -76,14 +76,16 @@ export const getMapPins = query({
             itemType: SIDEBAR_ITEM_TYPES.notes,
             item: await getNote(ctx, pin.noteId),
           }
-        } else if (pin.itemType === SIDEBAR_ITEM_TYPES.maps && pin.pinnedMapId) {
+        } else if (pin.itemType === SIDEBAR_ITEM_TYPES.gameMaps && pin.pinnedMapId) {
           return {
             ...pin,
-            itemType: SIDEBAR_ITEM_TYPES.maps,
+            itemType: SIDEBAR_ITEM_TYPES.gameMaps,
             item: await getMapFn(ctx, pin.pinnedMapId),
           }
         }
-      })).then((pins) => pins.filter((p) => p !== null)) as MapPinWithItem[]
+        return null
+      })
+    ).then((pins) => pins.filter((p): p is MapPinWithItem => p !== null))
 
     return pinsWithItems
   },

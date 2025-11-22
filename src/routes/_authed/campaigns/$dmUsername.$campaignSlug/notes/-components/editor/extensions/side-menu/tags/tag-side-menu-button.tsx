@@ -121,7 +121,7 @@ export default function TagSideMenuButton({
                 )
               })}
 
-              {manualTagObjects.map((tag) => {
+              {manualTagObjects.map((tag: Tag) => {
                 const tagColor = getTagColor(tag)
                 return (
                   <button

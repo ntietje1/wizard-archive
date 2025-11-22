@@ -5,6 +5,7 @@ import { FILE_STORAGE_STATUS } from './types'
 import { Id } from '../_generated/dataModel'
 
 export const generateUploadUrl = mutation({
+  returns: v.string(),
   handler: async (ctx): Promise<string> => {
     return await ctx.storage.generateUploadUrl()
   },
@@ -14,6 +15,7 @@ export const trackUpload = mutation({
   args: {
     storageId: v.id('_storage'),
   },
+  returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
     const { profile } = await requireUserIdentity(ctx)
     return await ctx.db.insert('fileStorage', {
@@ -29,6 +31,7 @@ export const commitUpload = mutation({
   args: {
     storageId: v.id('_storage'),
   },
+  returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
     const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db

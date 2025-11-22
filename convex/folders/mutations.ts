@@ -4,7 +4,7 @@ import { mutation } from "../_generated/server";
 import { requireCampaignMembership } from "../campaigns/campaigns";
 import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
 import { deleteNote as deleteNoteFn } from '../notes/notes';
-import { getFolderAncestors, getFolder as getFolderFn } from "./folders";
+import { getFolder, getFolderAncestors, getFolder as getFolderFn } from "./folders";
 
 
 export const deleteFolder = mutation({
@@ -146,10 +146,20 @@ export const moveFolder = mutation({
     )
 
     if (args.parentId) { // disallow moving folder into one of it's own children
-      const ancestors = await getFolderAncestors(ctx, args.parentId)
-      if (ancestors.some(a => a._id === args.folderId)) {
-        throw new Error('Cannot move folder into one of its own children')
-      }
+        const ancestors = await getFolderAncestors(ctx, args.parentId)
+        if (ancestors.some(a => a._id === args.folderId)) {
+            throw new Error('Cannot move folder into one of its own children')
+        }
+        const parentFolder = await getFolder(ctx, args.parentId)
+        if (!parentFolder) {
+            throw new Error('Parent folder not found')
+        }
+        if (parentFolder.campaignId !== folder.campaignId) {
+            throw new Error('Cannot move folder to a different campaign')
+        }
+        if (parentFolder.categoryId !== folder.categoryId) {
+            throw new Error('Cannot move folder to a different category')
+        }
     }
 
     await ctx.db.patch(args.folderId, { parentFolderId: args.parentId })

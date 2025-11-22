@@ -99,7 +99,7 @@ export function CategoryPageContent({
       [SIDEBAR_ITEM_TYPES.notes]: TagCardComponent,
     }
     if (MapCardComponent) {
-      registry[SIDEBAR_ITEM_TYPES.maps] = MapCardComponent
+      registry[SIDEBAR_ITEM_TYPES.gameMaps] = MapCardComponent
     }
     return registry
   }, [FolderCardComponent, TagCardComponent, MapCardComponent])
@@ -251,7 +251,7 @@ export function CategoryPageContent({
                 {/* Map Cards */}
                 {maps?.map((map) => {
                   const MapComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.maps]
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.gameMaps]
                   return MapComponent ? (
                     <MapComponent
                       key={map._id}

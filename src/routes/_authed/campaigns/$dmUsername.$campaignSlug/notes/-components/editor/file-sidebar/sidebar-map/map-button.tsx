@@ -1,4 +1,4 @@
-import { UNTITLED_MAP_NAME, type Map } from 'convex/locations/types'
+import { UNTITLED_MAP_NAME, type GameMap } from 'convex/gameMaps/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
@@ -13,7 +13,7 @@ import { MapViewDialog } from '~/routes/_authed/campaigns/$dmUsername.$campaignS
 import type { Id } from 'convex/_generated/dataModel'
 
 interface MapButtonProps {
-  map: Map
+  map: GameMap
   ancestorIds?: Id<'folders'>[]
 }
 

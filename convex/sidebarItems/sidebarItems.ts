@@ -58,27 +58,29 @@ export const getSidebarItemsByCategory = async (
   allItems.push(...notes)
 
   // Get maps (only for locations category)
-  if (category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
-    const maps = await ctx.db
-      .query('maps')
-      .withIndex('by_campaign_category_parent', (q) => q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId)
-        .eq('parentFolderId', undefined)
-      )
-      .collect()
-      .then(
-        (maps) => maps.map((map) => ({
-          ...map,
-          category,
-          type: SIDEBAR_ITEM_TYPES.maps,
-        })) as AnySidebarItem[]
-      )
-    allItems.push(...maps)
-  }
+//   if (category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+//     const maps = await ctx.db
+//       .query('gameMaps')
+//       .withIndex('by_campaign_category_parent', (q) => q
+//         .eq('campaignId', campaignId)
+//         .eq('categoryId', categoryId)
+//         .eq('parentFolderId', undefined)
+//       )
+//       .collect()
+//       .then(
+//         (maps) => maps.map((map) => ({
+//           ...map,
+//           category,
+//           type: SIDEBAR_ITEM_TYPES.maps,
+//         })) as AnySidebarItem[]
+//       )
+//     allItems.push(...maps)
+//   }
 
   return allItems
-};export const getSidebarItemsByParent = async (
+}
+
+export const getSidebarItemsByParent = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   categoryId: Id<'tagCategories'> | undefined, // undefined category = has no category
@@ -133,24 +135,24 @@ export const getSidebarItemsByCategory = async (
   allItems.push(...notes)
 
   // Get maps (only for locations category)
-  if (category && category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
-    const maps = await ctx.db
-      .query('maps')
-      .withIndex('by_campaign_category_parent', (q) => q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId)
-        .eq('parentFolderId', parentId)
-      )
-      .collect()
-      .then(
-        (maps) => maps.map((map) => ({
-          ...map,
-          category,
-          type: SIDEBAR_ITEM_TYPES.maps,
-        })) as AnySidebarItem[]
-      )
-    allItems.push(...maps)
-  }
+//   if (category && category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+//     const maps = await ctx.db
+//       .query('gameMaps')
+//       .withIndex('by_campaign_category_parent', (q) => q
+//         .eq('campaignId', campaignId)
+//         .eq('categoryId', categoryId)
+//         .eq('parentFolderId', parentId)
+//       )
+//       .collect()
+//       .then(
+//         (maps) => maps.map((map) => ({
+//           ...map,
+//           category,
+//           type: SIDEBAR_ITEM_TYPES.maps,
+//         })) as AnySidebarItem[]
+//       )
+//     allItems.push(...maps)
+//   }
 
   return allItems
 }

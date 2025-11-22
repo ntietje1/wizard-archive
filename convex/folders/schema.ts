@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { sidebarItemValidator } from '../sidebarItems/schema';
 import { tagCategoryValidator } from "../tags/schema";
 import { defineTable } from "convex/server";
 
@@ -12,7 +11,7 @@ export const folderTableFields = {
   categoryId: v.optional(v.id('tagCategories')),
   parentFolderId: v.optional(v.id('folders')),
 }
-const folderValidatorFields = {
+export const folderValidatorFields = {
   _id: v.id('folders'),
   _creationTime: v.number(),
   ...folderTableFields,
@@ -21,11 +20,6 @@ const folderValidatorFields = {
 } as const
 
 export const folderValidator = v.object(folderValidatorFields)
-
-export const folderWithChildrenValidator = v.object({
-  ...folderValidatorFields,
-  children: v.optional(v.array(sidebarItemValidator)),
-})
 
 export const foldersTables = {
     folders: defineTable({
