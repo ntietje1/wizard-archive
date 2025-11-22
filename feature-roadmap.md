@@ -21,6 +21,8 @@
 - Note sharing
   - Allows selectively sharing individual blocks within a note
   - Sharing to specific players or all players at once
+  - DM can share notes to specific players
+  - Future: Players can share notes amongst other players or maybe even the DM
 - Tag Categories
   - Characters, Locations, and Sessions
   - Tags created automatically, with automatic pages to view all tags for a specific category
@@ -36,17 +38,19 @@
 
 # Dev to-do list:
 
-- disallow certain category names that would conflict with current paths
-- maybe move all
+- redesign category pages to be integrated into note page
 
 # Planned user features road map
 
+- Version History with Rollback
+  - Last edited by / Created by
 - Wiki-style page linking (integrated with tag linking as well)
   - Heading linking
 - Navigation Features
   - Tabs in note page
   - Search feature
   - Breadcrumb in note page
+  - Bookmarks
 - Character/Location note hover elements
   - DM customizable element that shows up on tag hover
   - What shows up for session tag hover?
@@ -81,9 +85,6 @@
   - Player notes for each tag page notes
   - Standalone notes with personal file tree in sidebar
   - Extension: interweaving of player-notes into DM-notes
-- Fine-grained sharing control
-  - DM can share notes to specific players
-  - Players can share notes amongst other players or maybe even the DM
 - Robust keyboard controls
   - Standard controls like undo/redo, copy/cut/paste where appropriate
   - File tree controls (copy keybinds from popular tools)
