@@ -12,11 +12,6 @@ import {
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/contexts/CampaignContext'
-import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
-import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
-import { getCategoryIcon } from '~/lib/category-icons'
-import type { Location } from 'convex/locations/types'
 import { Card, CardContent } from '~/components/shadcn/ui/card'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Input } from '~/components/shadcn/ui/input'
@@ -27,9 +22,13 @@ import {
   TransformComponent,
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch'
-import { MapPin } from './map-pin'
-import { MapViewerContextMenu } from '~/components/context-menu/map/map-viewer-context-menu'
 import type { MapPinWithItem } from 'convex/gameMaps/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { Note } from 'convex/notes/types'
+import { UNTITLED_NOTE_TITLE } from 'convex/notes/types'
+import type { GameMap } from 'convex/gameMaps/types'
+import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 interface MapViewerProps {
   mapId: Id<'gameMaps'>
@@ -46,21 +45,16 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
   const imageRef = useRef<globalThis.HTMLImageElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
 
-  const [contextMenuPosition, setContextMenuPosition] =
-    useState<PinPosition | null>(null)
-  const [pendingPinPosition, setPendingPinPosition] =
-    useState<PinPosition | null>(null)
   const [selectedPinId, setSelectedPinId] = useState<Id<'mapPins'> | null>(null)
   const [pinContextMenuPosition, setPinContextMenuPosition] =
     useState<PinPosition | null>(null)
-  const [isCreatingLocation, setIsCreatingLocation] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<'pinned' | 'notPinned'>('pinned')
   const [searchQuery, setSearchQuery] = useState('')
-  const [draggingEnabledPinId, setDraggingEnabledPinId] =
-    useState<Id<'mapPins'> | null>(null)
-  const [pendingPinLocationId, setPendingPinLocationId] =
-    useState<Id<'locations'> | null>(null)
+  const [pendingPinItem, setPendingPinItem] = useState<{
+    itemType: typeof SIDEBAR_ITEM_TYPES.notes | typeof SIDEBAR_ITEM_TYPES.gameMaps
+    itemId: Id<'notes'> | Id<'gameMaps'>
+  } | null>(null)
 
   const optimisticPositions = useRef<Map<Id<'mapPins'>, PinPosition>>(new Map())
 
@@ -74,65 +68,53 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
   const pinsQuery = useQuery(
     convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
   )
-  const locationsQuery = useQuery(
+  const pinableItemsQuery = useQuery(
     convexQuery(
-      api.locations.queries.getLocationsByCampaign,
+      api.gameMaps.queries.getPinableItems,
       campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
 
   const map = mapQuery.data
   const pins = pinsQuery.data || []
-  const allLocations = locationsQuery.data || []
+  const allItems = pinableItemsQuery.data || []
 
-  const pinnedLocationIds = useMemo(
-    () => new Set(pins.map((p: MapPinWithItem) => p.locationId)),
+  const pinnedItemIds = useMemo(
+    () => new Set(pins.map((p: MapPinWithItem) => p.item._id)),
     [pins],
   )
 
-  const pinnedLocations = useMemo(
-    () => allLocations.filter((loc: Location) => pinnedLocationIds.has(loc.locationId)),
-    [allLocations, pinnedLocationIds],
+  const pinnedItems = useMemo(
+    () => allItems.filter((item) => pinnedItemIds.has(item._id)),
+    [allItems, pinnedItemIds],
   )
 
-  const nonPinnedLocations = useMemo(
-    () => allLocations.filter((loc: Location) => !pinnedLocationIds.has(loc.locationId)),
-    [allLocations, pinnedLocationIds],
+  const nonPinnedItems = useMemo(
+    () => allItems.filter((item) => !pinnedItemIds.has(item._id)),
+    [allItems, pinnedItemIds],
   )
 
-  const filteredPinnedLocations = useMemo(
+  const filteredPinnedItems = useMemo(
     () =>
-      pinnedLocations.filter((loc: Location) =>
-        loc.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [pinnedLocations, searchQuery],
+      pinnedItems.filter((item) => {
+        const name = item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+        return name.toLowerCase().includes(searchQuery.toLowerCase())
+      }),
+    [pinnedItems, searchQuery],
   )
 
-  const filteredNonPinnedLocations = useMemo(
+  const filteredNonPinnedItems = useMemo(
     () =>
-      nonPinnedLocations.filter((loc: Location) =>
-        loc.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [nonPinnedLocations, searchQuery],
+      nonPinnedItems.filter((item) => {
+        const name = item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+        return name.toLowerCase().includes(searchQuery.toLowerCase())
+      }),
+    [nonPinnedItems, searchQuery],
   )
 
-  const updatePinMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.updatePinCoordinates),
+  const createItemPinMutation = useMutation({
+    mutationFn: useConvexMutation(api.gameMaps.mutations.createItemPin),
   })
-
-  const setLocationPinMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.setLocationPin),
-  })
-
-  const categoryConfig = useMemo<TagCategoryConfig | undefined>(() => {
-    if (!campaign) return undefined
-    return {
-      categorySlug: SYSTEM_DEFAULT_CATEGORIES.Location.slug,
-      singular: SYSTEM_DEFAULT_CATEGORIES.Location.displayName,
-      plural: SYSTEM_DEFAULT_CATEGORIES.Location.pluralDisplayName,
-      icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Location.iconName),
-    }
-  }, [campaign])
 
   useEffect(() => {
     if (!map?.imageStorageId) {
@@ -154,15 +136,15 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape' && pendingPinLocationId) {
-        setPendingPinLocationId(null)
+      if (e.key === 'Escape' && pendingPinItem) {
+        setPendingPinItem(null)
         toast.info('Pin placement cancelled')
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [pendingPinLocationId])
+  }, [pendingPinItem])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {
@@ -182,35 +164,63 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
-      if (!pendingPinLocationId) return
+      if (!pendingPinItem) return
+
+      const item = allItems.find((i) => i._id === pendingPinItem.itemId)
+      if (!item) return
+
+      // Get iconName and color from item's category/tag
+      let iconName = 'TagIcon'
+      let color: string | undefined = undefined
+
+      if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+        const note = item as Note
+        iconName = note.category?.iconName || note.tag?.category?.iconName || 'TagIcon'
+        color = note.tag ? getTagColor(note.tag) : note.category?.defaultColor
+      } else if (item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
+        const gameMap = item as GameMap
+        iconName = gameMap.category?.iconName || 'MapPin'
+        color = gameMap.category?.defaultColor
+      }
 
       try {
-        await setLocationPinMutation.mutateAsync({
+        await createItemPinMutation.mutateAsync({
           mapId,
-          locationId: pendingPinLocationId,
           x: position.x,
           y: position.y,
+          iconName,
+          color,
+          item:
+            pendingPinItem.itemType === SIDEBAR_ITEM_TYPES.notes
+              ? {
+                  itemType: SIDEBAR_ITEM_TYPES.notes,
+                  noteId: pendingPinItem.itemId as Id<'notes'>,
+                }
+              : {
+                  itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+                  mapId: pendingPinItem.itemId as Id<'gameMaps'>,
+                },
         })
         toast.success('Pin placed on map')
-        setPendingPinLocationId(null)
+        setPendingPinItem(null)
       } catch (error) {
         console.error('Failed to place pin:', error)
         toast.error('Failed to place pin')
       }
     },
-    [pendingPinLocationId, mapId, setLocationPinMutation],
+    [pendingPinItem, mapId, createItemPinMutation, allItems],
   )
 
   const handleMapClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!pendingPinLocationId) return
+      if (!pendingPinItem) return
 
       e.preventDefault()
       e.stopPropagation()
       const position = getPercentageFromClick(e)
       handlePlacePin(position)
     },
-    [pendingPinLocationId, getPercentageFromClick, handlePlacePin],
+    [pendingPinItem, getPercentageFromClick, handlePlacePin],
   )
 
   const handleMapContextMenu = useCallback(
@@ -218,109 +228,25 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
       e.preventDefault()
       e.stopPropagation()
 
-      if (pendingPinLocationId) {
+      if (pendingPinItem) {
         const position = getPercentageFromClick(e)
         handlePlacePin(position)
-        return
-      }
-
-      const position = getPercentageFromClick(e)
-      setContextMenuPosition({ x: e.clientX, y: e.clientY })
-      setPendingPinPosition(position)
-    },
-    [pendingPinLocationId, getPercentageFromClick, handlePlacePin],
-  )
-
-  const handleCreateLocation = useCallback(() => {
-    if (!pendingPinPosition) return
-    setIsCreatingLocation(true)
-    setContextMenuPosition(null)
-  }, [pendingPinPosition])
-
-  const handleLocationCreated = useCallback(
-    async (locationId: Id<'locations'>) => {
-      if (!pendingPinPosition) return
-
-      try {
-        await setLocationPinMutation.mutateAsync({
-          mapId,
-          locationId,
-          x: pendingPinPosition.x,
-          y: pendingPinPosition.y,
-        })
-        toast.success('Location created and pinned to map')
-        setIsCreatingLocation(false)
-        setPendingPinPosition(null)
-      } catch (error) {
-        console.error('Failed to create pin:', error)
-        toast.error('Failed to pin location to map')
       }
     },
-    [pendingPinPosition, mapId, setLocationPinMutation],
+    [pendingPinItem, getPercentageFromClick, handlePlacePin],
   )
 
-  const handlePinDragStart = useCallback(
-    (pinId: Id<'mapPins'>) => {
-      const pin = pins.find((p: MapPinWithItem) => p._id === pinId)
-      if (pin) {
-        optimisticPositions.current.set(pinId, { x: pin.x, y: pin.y })
-      }
-    },
-    [pins],
-  )
-
-  const handlePinDrag = useCallback(
-    (pinId: Id<'mapPins'>, position: PinPosition) => {
-      optimisticPositions.current.set(pinId, position)
-    },
-    [],
-  )
-
-  const handlePinDragEnd = useCallback(
-    async (pinId: Id<'mapPins'>, position: PinPosition) => {
-      try {
-        await updatePinMutation.mutateAsync({
-          pinId,
-          x: position.x,
-          y: position.y,
-        })
-        optimisticPositions.current.delete(pinId)
-        setDraggingEnabledPinId(null)
-      } catch (error) {
-        console.error('Failed to update pin:', error)
-        const pin = pins.find((p: MapPinWithItem) => p._id === pinId)
-        if (pin) {
-          optimisticPositions.current.set(pinId, { x: pin.x, y: pin.y })
-        }
-        toast.error('Failed to update pin position')
-      }
-    },
-    [updatePinMutation, pins],
-  )
-
-  const handlePinContextMenu = useCallback(
-    (pinId: Id<'mapPins'>, e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setSelectedPinId(pinId)
-      setPinContextMenuPosition({ x: e.clientX, y: e.clientY })
-    },
-    [],
-  )
-
-  const handleEnableDragging = useCallback((pinId: Id<'mapPins'>) => {
-    setDraggingEnabledPinId(pinId)
-    setSelectedPinId(null)
-    setPinContextMenuPosition(null)
-  }, [])
 
   const handlePinnedLocationClick = useCallback(() => {
     // TODO: implement zoom/pan to pin here
   }, [])
 
-  const handleNonPinnedLocationClick = useCallback(
-    (locationId: Id<'locations'>) => {
-      setPendingPinLocationId(locationId)
+  const handleNonPinnedItemClick = useCallback(
+    (item: Note | GameMap) => {
+      setPendingPinItem({
+        itemType: item.type,
+        itemId: item._id,
+      })
     },
     [],
   )
@@ -392,7 +318,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
               maxScale={4}
               wheel={{ step: 0.1 }}
               doubleClick={{ disabled: false }}
-              panning={{ disabled: !!pendingPinLocationId }}
+              panning={{ disabled: !!pendingPinItem }}
               limitToBounds={false}
               centerOnInit={false}
             >
@@ -402,7 +328,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
               >
                 <div
                   className="relative"
-                  onClick={pendingPinLocationId ? handleMapClick : undefined}
+                  onClick={pendingPinItem ? handleMapClick : undefined}
                   onContextMenu={handleMapContextMenu}
                 >
                   <img
@@ -414,7 +340,7 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
                     onContextMenu={handleMapContextMenu}
                     draggable={false}
                     style={{
-                      cursor: pendingPinLocationId ? 'crosshair' : 'default',
+                      cursor: pendingPinItem ? 'crosshair' : 'default',
                       display: 'block',
                     }}
                   />
@@ -423,24 +349,27 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
                     const optimisticPos = optimisticPositions.current.get(
                       pin._id,
                     )
-                    const position = optimisticPos || { x: pin.x, y: pin.y }
+                    const pinPosition = optimisticPos || { x: pin.x, y: pin.y }
+
+                    const Icon = getCategoryIcon(pin.iconName)
+                    const color = pin.color || '#808080'
 
                     return (
-                      // <MapPin
-                      //   key={pin._id}
-                      //   pin={{ ...pin, ...position }}
-                      //   location={pin.location}
-                      //   draggable={draggingEnabledPinId === pin._id}
-                      //   onDragStart={() => handlePinDragStart(pin._id)}
-                      //   onDrag={(x, y) => handlePinDrag(pin._id, { x, y })}
-                      //   onDragEnd={(x, y) =>
-                      //     handlePinDragEnd(pin._id, { x, y })
-                      //   }
-                      //   onContextMenu={(e) => handlePinContextMenu(pin._id, e)}
-                      //   imageRef={imageRef}
-                      // />
-                      <div key={pin._id}>
-                        {pin.itemType}
+                      <div
+                        key={pin._id}
+                        className="absolute pointer-events-auto"
+                        style={{
+                          left: `${pinPosition.x}%`,
+                          top: `${pinPosition.y}%`,
+                          transform: 'translate(-50%, -50%)',
+                        }}
+                      >
+                        <div
+                          className="rounded-full p-1.5 shadow-lg border-2 border-white"
+                          style={{ backgroundColor: color }}
+                        >
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
                       </div>
                     )
                   })}
@@ -454,51 +383,33 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
           )}
         </div>
 
-        {contextMenuPosition && !pendingPinLocationId && (
-          <MapViewerContextMenu
-            position={contextMenuPosition}
-            onClose={() => setContextMenuPosition(null)}
-            onCreateLocation={handleCreateLocation}
-          />
-        )}
 
-        {pendingPinLocationId && (
+        {pendingPinItem && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
             <p className="text-sm font-medium">
               Click on map to place pin for{' '}
-              {allLocations.find((l: Location) => l.locationId === pendingPinLocationId)
-                ?.displayName || 'location'}
+              {(() => {
+                const item = allItems.find((i) => i._id === pendingPinItem.itemId)
+                return item?.name || (item?.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME) || 'item'
+              })()}
             </p>
           </div>
         )}
 
-        <LocationSidebar
+        <ItemSidebar
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          pinnedLocations={filteredPinnedLocations}
-          nonPinnedLocations={filteredNonPinnedLocations}
-          onPinnedLocationClick={handlePinnedLocationClick}
-          onNonPinnedLocationClick={handleNonPinnedLocationClick}
-          pendingPinLocationId={pendingPinLocationId}
+          pinnedItems={filteredPinnedItems}
+          nonPinnedItems={filteredNonPinnedItems}
+          onPinnedItemClick={handlePinnedLocationClick}
+          onNonPinnedItemClick={handleNonPinnedItemClick}
+          pendingPinItem={pendingPinItem}
         />
       </div>
-
-      {isCreatingLocation && categoryConfig && campaign && (
-        <LocationTagDialog
-          mode="create"
-          isOpen={isCreatingLocation}
-          onClose={() => {
-            setIsCreatingLocation(false)
-            setPendingPinPosition(null)
-          }}
-          config={categoryConfig}
-          onLocationCreated={handleLocationCreated}
-        />
-      )}
 
       {selectedPinId && pinContextMenuPosition && (
         <PinContextMenu
@@ -509,7 +420,6 @@ export function MapViewer({ mapId, onClose }: MapViewerProps) {
             setSelectedPinId(null)
             setPinContextMenuPosition(null)
           }}
-          onEnableDragging={handleEnableDragging}
         />
       )}
     </>
@@ -521,19 +431,17 @@ function PinContextMenu({
   mapId,
   position,
   onClose,
-  onEnableDragging,
 }: {
   pinId: Id<'mapPins'>
   mapId: Id<'gameMaps'>
   position: PinPosition
   onClose: () => void
-  onEnableDragging: (pinId: Id<'mapPins'>) => void
 }) {
   const pinsQuery = useQuery(
-    convexQuery(api.locations.queries.getMapPins, { mapId }),
+    convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
   )
   const removePinMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.removeLocationPin),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.removeItemPin),
   })
 
   const pin = pinsQuery.data?.find((p: MapPinWithItem) => p._id === pinId)
@@ -542,21 +450,15 @@ function PinContextMenu({
     if (!pin) return
     try {
       await removePinMutation.mutateAsync({
-        mapId,
-        locationId: pin.locationId,
+        mapPinId: pinId,
       })
       onClose()
     } catch (error) {
       console.error('Failed to remove pin:', error)
       toast.error('Failed to remove pin')
     }
-  }, [pin, mapId, removePinMutation, onClose])
+  }, [pin, pinId, removePinMutation, onClose])
 
-  const handleEnableDragging = useCallback(() => {
-    if (pin) {
-      onEnableDragging(pin._id)
-    }
-  }, [pin, onEnableDragging])
 
   useEffect(() => {
     const handleClickOutside = (e: globalThis.MouseEvent) => {
@@ -578,12 +480,6 @@ function PinContextMenu({
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
     >
       <button
-        onClick={handleEnableDragging}
-        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-sm"
-      >
-        Enable Dragging
-      </button>
-      <button
         onClick={handleRemovePin}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-sm text-red-600"
       >
@@ -593,18 +489,18 @@ function PinContextMenu({
   )
 }
 
-function LocationSidebar({
+function ItemSidebar({
   isOpen,
   onToggle,
   activeTab,
   onTabChange,
   searchQuery,
   onSearchChange,
-  pinnedLocations,
-  nonPinnedLocations,
-  onPinnedLocationClick,
-  onNonPinnedLocationClick,
-  pendingPinLocationId,
+  pinnedItems,
+  nonPinnedItems,
+  onPinnedItemClick,
+  onNonPinnedItemClick,
+  pendingPinItem,
 }: {
   isOpen: boolean
   onToggle: () => void
@@ -612,12 +508,36 @@ function LocationSidebar({
   onTabChange: (tab: 'pinned' | 'notPinned') => void
   searchQuery: string
   onSearchChange: (query: string) => void
-  pinnedLocations: Location[]
-  nonPinnedLocations: Location[]
-  onPinnedLocationClick: () => void
-  onNonPinnedLocationClick: (locationId: Id<'locations'>) => void
-  pendingPinLocationId: Id<'locations'> | null
+  pinnedItems: (Note | GameMap)[]
+  nonPinnedItems: (Note | GameMap)[]
+  onPinnedItemClick: () => void
+  onNonPinnedItemClick: (item: Note | GameMap) => void
+  pendingPinItem: { itemType: typeof SIDEBAR_ITEM_TYPES.notes | typeof SIDEBAR_ITEM_TYPES.gameMaps; itemId: Id<'notes'> | Id<'gameMaps'> } | null
 }) {
+  const getItemIcon = (item: Note | GameMap) => {
+    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+      const note = item as Note
+      return getCategoryIcon(note.category?.iconName || note.tag?.category?.iconName)
+    } else {
+      const gameMap = item as GameMap
+      return getCategoryIcon(gameMap.category?.iconName)
+    }
+  }
+
+  const getItemColor = (item: Note | GameMap) => {
+    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+      const note = item as Note
+      return note.tag ? getTagColor(note.tag) : note.category?.defaultColor
+    } else {
+      const gameMap = item as GameMap
+      return gameMap.category?.defaultColor
+    }
+  }
+
+  const getItemName = (item: Note | GameMap) => {
+    return item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+  }
+
   return (
     <>
       <Button
@@ -649,7 +569,7 @@ function LocationSidebar({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                Pinned ({pinnedLocations.length})
+                Pinned ({pinnedItems.length})
               </button>
               <button
                 onClick={() => onTabChange('notPinned')}
@@ -660,7 +580,7 @@ function LocationSidebar({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                Not Pinned ({nonPinnedLocations.length})
+                Not Pinned ({nonPinnedItems.length})
               </button>
             </div>
 
@@ -669,7 +589,7 @@ function LocationSidebar({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search locations..."
+                  placeholder="Search items..."
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   className="pl-9"
@@ -680,35 +600,33 @@ function LocationSidebar({
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-1">
                 {activeTab === 'pinned' &&
-                  pinnedLocations.map((location) => {
-                    const Icon = getCategoryIcon(location.category?.iconName)
-                    const color = getTagColor(location)
+                  pinnedItems.map((item) => {
+                    const Icon = getItemIcon(item)
+                    const color = getItemColor(item)
                     return (
                       <button
-                        key={location.locationId}
-                        onClick={onPinnedLocationClick}
+                        key={item._id}
+                        onClick={onPinnedItemClick}
                         className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2"
                       >
                         <Icon
                           className="w-4 h-4 flex-shrink-0"
                           style={{ color }}
                         />
-                        <span className="truncate">{location.displayName}</span>
+                        <span className="truncate">{getItemName(item)}</span>
                       </button>
                     )
                   })}
                 {activeTab === 'notPinned' &&
-                  nonPinnedLocations.map((location) => {
-                    const Icon = getCategoryIcon(location.category?.iconName)
-                    const color = getTagColor(location)
+                  nonPinnedItems.map((item) => {
+                    const Icon = getItemIcon(item)
+                    const color = getItemColor(item)
                     const isPending =
-                      pendingPinLocationId === location.locationId
+                      pendingPinItem?.itemId === item._id
                     return (
                       <button
-                        key={location.locationId}
-                        onClick={() =>
-                          onNonPinnedLocationClick(location.locationId)
-                        }
+                        key={item._id}
+                        onClick={() => onNonPinnedItemClick(item)}
                         className={cn(
                           'w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors flex items-center gap-2',
                           isPending && 'bg-blue-100 border border-blue-300',
@@ -718,23 +636,23 @@ function LocationSidebar({
                           className="w-4 h-4 flex-shrink-0"
                           style={{ color }}
                         />
-                        <span className="truncate">{location.displayName}</span>
+                        <span className="truncate">{getItemName(item)}</span>
                       </button>
                     )
                   })}
-                {activeTab === 'pinned' && pinnedLocations.length === 0 && (
+                {activeTab === 'pinned' && pinnedItems.length === 0 && (
                   <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                     {searchQuery
-                      ? 'No pinned locations match your search'
-                      : 'No pinned locations'}
+                      ? 'No pinned items match your search'
+                      : 'No pinned items'}
                   </div>
                 )}
                 {activeTab === 'notPinned' &&
-                  nonPinnedLocations.length === 0 && (
+                  nonPinnedItems.length === 0 && (
                     <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                       {searchQuery
-                        ? 'No locations match your search'
-                        : 'All locations are pinned'}
+                        ? 'No items match your search'
+                        : 'All items are pinned'}
                     </div>
                   )}
               </div>

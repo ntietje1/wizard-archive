@@ -7,6 +7,7 @@ import type { GameMap, MapPinWithItem } from './types';
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 import { mapValidator, mapPinWithItemValidator } from "./schema";
 import { getMap as getMapFn } from "./gameMaps";
+import { noteValidator } from "../notes/schema";
 
 
 export const getCampaignMaps = query({
@@ -88,5 +89,76 @@ export const getMapPins = query({
     ).then((pins) => pins.filter((p): p is MapPinWithItem => p !== null))
 
     return pinsWithItems
+  },
+})
+
+export const getPinableItems = query({
+  args: {
+    campaignId: v.id('campaigns'),
+  },
+  returns: v.array(
+    v.union(
+      noteValidator,
+      mapValidator,
+    ),
+  ),
+  handler: async (ctx, args) => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+    )
+
+    const [notes, maps] = await Promise.all([
+      ctx.db
+        .query('notes')
+        .withIndex('by_campaign_category_parent', (q) =>
+          q.eq('campaignId', args.campaignId),
+        )
+        .collect(),
+      ctx.db
+        .query('gameMaps')
+        .withIndex('by_campaign_category_parent', (q) =>
+          q.eq('campaignId', args.campaignId),
+        )
+        .collect(),
+    ])
+
+    // Get all categories for this campaign
+    const allCategories = await ctx.db
+      .query('tagCategories')
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))
+      .collect()
+
+    const categoryMap = new Map(allCategories.map((c) => [c._id, c]))
+
+    // Get all tags for this campaign
+    const allTags = await ctx.db
+      .query('tags')
+      .withIndex('by_campaign_categoryId', (q) => q.eq('campaignId', args.campaignId))
+      .collect()
+
+    const tagMap = new Map(allTags.map((t) => [t._id, t]))
+
+    const notesWithCategory = notes.map((note) => {
+      const category = note.categoryId ? categoryMap.get(note.categoryId) : undefined
+      const tag = note.tagId ? tagMap.get(note.tagId) : undefined
+      const tagWithCategory = tag && category ? { ...tag, category } : undefined
+
+      return {
+        ...note,
+        type: SIDEBAR_ITEM_TYPES.notes,
+        category,
+        tag: tagWithCategory,
+      }
+    })
+
+    const mapsWithCategory = maps.map((map) => ({
+      ...map,
+      type: SIDEBAR_ITEM_TYPES.gameMaps,
+      category: map.categoryId ? categoryMap.get(map.categoryId) : undefined,
+    }))
+
+    return [...notesWithCategory, ...mapsWithCategory]
   },
 })

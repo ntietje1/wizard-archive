@@ -47,12 +47,10 @@ export async function getCampaign(
     } as Campaign
   } else if ('campaignId' in campaignIdentifier) {
     const { campaignId } = campaignIdentifier
-    const dmUserId = (await ctx.db.get(campaignId))?.dmUserId
-    if (!dmUserId) throw new Error('Campaign not found')
-    const dmUserProfile = await getUserProfileByUserIdHandler(ctx, dmUserId)
-    if (!dmUserProfile) throw new Error('Campaign not found')
     const partialCampaign = await ctx.db.get(campaignId)
     if (!partialCampaign) throw new Error('Campaign not found')
+    const dmUserProfile = await ctx.db.get(partialCampaign.dmUserId)
+    if (!dmUserProfile) throw new Error('Campaign not found')
     campaign = {
       ...partialCampaign,
       dmUserProfile,
@@ -141,7 +139,7 @@ export async function getCampaignMembership(
   const campaignMember =
     members.find((m) => {
       return (
-        m.userId === identity.subject &&
+        m.userId === identityWithProfile.profile._id &&
         allowedStatuses.includes(m.status) &&
         allowedRoles.includes(m.role)
       )

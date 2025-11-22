@@ -64,7 +64,7 @@ export function FileSidebarProvider({
   const { moveNote } = useNoteActions()
 
   const moveMap = useMutation({
-    mutationFn: useConvexMutation(api.maps.mutations.moveMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
   })
 
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(

@@ -51,7 +51,7 @@ export function CategoryDragProvider({
   })
 
   const moveMap = useMutation({
-    mutationFn: useConvexMutation(api.maps.mutations.moveMap),
+    mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
   })
 
   const sensors = useSensors(
