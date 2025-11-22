@@ -25,7 +25,7 @@ interface MapFormProps {
 }
 
 const defaultMapFormValues: MapFormValues = {
-  name: 'New Map',
+  name: '',
 }
 
 export function MapForm({

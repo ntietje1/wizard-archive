@@ -23,7 +23,7 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   const [isViewing, setIsViewing] = useState(false)
 
   const updateMapMutation = useMutation({
-    mutationFn: useConvexMutation(api.locations.mutations.updateMap),
+    mutationFn: useConvexMutation(api.maps.mutations.updateMap),
   })
 
   const handleFinishRename = async (name: string) => {
