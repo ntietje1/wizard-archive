@@ -17,8 +17,10 @@ import {
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
   useCategoryNewMap,
+  useEditCategory,
 } from '~/hooks/useCategoryContextMenu'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 
 export const LocationCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -35,6 +37,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
   const newMap = useCategoryNewMap(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
   const deleteFolder = useCategoryDeleteFolder(folder)
+  const editCategory = useEditCategory(categoryConfig)
 
   const handleCreateItem = useCallback(() => {
     openFolder()
@@ -57,6 +60,10 @@ export const LocationCategoryFolderContextMenu = forwardRef<
     }
     if (newFolder.menuItem) {
       items.push(newFolder.menuItem)
+    }
+    // Only show edit category at root level (when folder is undefined)
+    if (!folder && editCategory.menuItem) {
+      items.push(editCategory.menuItem)
     }
     if (newMap.menuItem) {
       items.push(newMap.menuItem)
@@ -81,6 +88,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
   }, [
     createItem,
     newFolder.menuItem,
+    editCategory.menuItem,
     newMap.menuItem,
     renameFolder.menuItem,
     deleteFolder.menuItem,
@@ -116,6 +124,15 @@ export const LocationCategoryFolderContextMenu = forwardRef<
               campaignId={newMap.campaignId}
               categoryId={newMap.categoryId}
               parentFolderId={newMap.parentFolderId}
+            />
+          )}
+          {editCategory.category && (
+            <CategoryDialog
+              mode="edit"
+              isOpen={editCategory.isDialogOpen}
+              onClose={() => editCategory.setIsDialogOpen(false)}
+              category={editCategory.category}
+              onSuccess={editCategory.onCategoryUpdated}
             />
           )}
         </>

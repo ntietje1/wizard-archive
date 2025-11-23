@@ -54,23 +54,19 @@ export const SessionFolderContextMenu = forwardRef<
       toast.error('Failed to get category')
       return
     }
+    const parentFolderId = folder ? folder._id : undefined
     startNewSession({
       categoryId: getCategory.data._id,
-      parentFolderId: folder?._id,
+      parentFolderId: parentFolderId,
     })
-  }, [getCategory.data?._id, folder?._id, startNewSession])
+  }, [getCategory.data?._id, folder, startNewSession])
 
   const menuItems = useMemo(() => {
     if (!categoryConfig) {
       return []
     }
-    if (folder) {
-      if (!editFolder.menuItem) {
-        return []
-      }
-      return [editFolder.menuItem]
-    }
     const items: ContextMenuItem[] = []
+    
     items.push({
       type: 'action' as const,
       icon: <Play className="h-4 w-4" />,
@@ -78,14 +74,20 @@ export const SessionFolderContextMenu = forwardRef<
       onClick: handleStartNewSession,
     })
 
-    if (newFolder.menuItem) {
-      items.push(newFolder.menuItem)
+    if (folder) {
+      if (editFolder.menuItem) {
+        items.push(editFolder.menuItem)
+      }
+    } else {
+      if (newFolder.menuItem) {
+        items.push(newFolder.menuItem)
+      }
     }
     return items
   }, [
     folder,
     categoryConfig,
-    startNewSession,
+    handleStartNewSession,
     newFolder.menuItem,
     editFolder.menuItem,
   ])

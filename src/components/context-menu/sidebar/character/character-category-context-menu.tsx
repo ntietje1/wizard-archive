@@ -14,8 +14,10 @@ import {
   useCategoryNewFolderWithDialog,
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
+  useEditCategory,
 } from '~/hooks/useCategoryContextMenu'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 
 export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -31,6 +33,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   const newFolder = useCategoryNewFolderWithDialog(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
   const deleteFolder = useCategoryDeleteFolder(folder)
+  const editCategory = useEditCategory(categoryConfig)
 
   const handleCreateItem = () => {
     openFolder()
@@ -54,6 +57,10 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
     if (newFolder.menuItem) {
       items.push(newFolder.menuItem)
     }
+    // Only show edit category at root level (when folder is undefined)
+    if (!folder && editCategory.menuItem) {
+      items.push(editCategory.menuItem)
+    }
     if (renameFolder.menuItem) {
       items.push(renameFolder.menuItem)
     }
@@ -74,6 +81,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   }, [
     createItem,
     newFolder.menuItem,
+    editCategory.menuItem,
     renameFolder.menuItem,
     deleteFolder.menuItem,
     folder,
@@ -101,6 +109,15 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
             mode="create"
             onSubmit={newFolder.onSubmit}
           />
+          {editCategory.category && (
+            <CategoryDialog
+              mode="edit"
+              isOpen={editCategory.isDialogOpen}
+              onClose={() => editCategory.setIsDialogOpen(false)}
+              category={editCategory.category}
+              onSuccess={editCategory.onCategoryUpdated}
+            />
+          )}
         </>
       )}
     </>

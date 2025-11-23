@@ -31,12 +31,12 @@ export function EditorContent() {
 
   if (search.note) {
     content = 
-    <ResizablePanelGroup direction="horizontal" autoSaveId="notes-content">
-      <ResizablePanel defaultSize={50} minSize={25} >
+    <ResizablePanelGroup direction="horizontal" autoSaveId="notes-content" className="flex-1 min-h-0">
+      <ResizablePanel defaultSize={50} minSize={25} className="flex min-h-0 flex-col">
         <NotesEditor />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel defaultSize={50} minSize={25} >
+      <ResizablePanel defaultSize={50} minSize={25} className="flex min-h-0 flex-col">
         <NotesViewer />
       </ResizablePanel>
     </ResizablePanelGroup>
