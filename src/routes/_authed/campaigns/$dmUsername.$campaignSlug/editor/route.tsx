@@ -11,11 +11,11 @@ import { FileTopbar } from '~/components/notes-page/editor/file-topbar/topbar'
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
 )({
-  component: NotesLayout,
+  component: EditorLayout,
   validateSearch: (search: Record<string, unknown>) => validateSearch(search),
 })
 
-function NotesLayout() {
+function EditorLayout() {
   return (
     <ClientOnly>
       <SidebarLayout>
