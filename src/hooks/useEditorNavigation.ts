@@ -10,7 +10,7 @@ export const useEditorNavigation = () => {
   const navigateToNote = useCallback(
     (slug: string | null) => {
       navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           note: slug || undefined,
@@ -27,7 +27,7 @@ export const useEditorNavigation = () => {
   const navigateToMap = useCallback(
     (slug: string) => {
       navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           map: slug,
@@ -44,7 +44,7 @@ export const useEditorNavigation = () => {
   const navigateToCategory = useCallback(
     (slug: string, folderId?: Id<'folders'>) => {
       navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           category: slug,
@@ -60,7 +60,7 @@ export const useEditorNavigation = () => {
 
   const clearEditorContent = useCallback(() => {
     navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/notes',
+      to: '/campaigns/$dmUsername/$campaignSlug/editor',
       params: { dmUsername, campaignSlug },
       search: {
         note: undefined,

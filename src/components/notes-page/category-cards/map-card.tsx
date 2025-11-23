@@ -21,8 +21,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
-import { useNavigate } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 
 export interface MapCardProps {
   map?: GameMap
@@ -53,7 +52,7 @@ export function MapCard({
 }: MapCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const { navigateToMap } = useNotesNavigation()
+  const { navigateToMap } = useEditorNavigation()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const { active } = useDndContext()

@@ -8,7 +8,7 @@ import { useNoteActions } from './useNoteActions'
 import { debounce } from 'lodash-es'
 import type { CustomBlock } from '~/lib/editor-schema'
 import { useAuth } from '@clerk/tanstack-react-start'
-import type { NotesSearch } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/-components/validateSearch'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useEditorNavigation } from './useEditorNavigation'
 
 export const useCurrentNote = () => {
@@ -19,8 +19,8 @@ export const useCurrentNote = () => {
   const { navigateToNote } = useEditorNavigation()
 
   const search = useSearch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/notes',
-  }) as NotesSearch
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+  }) as EditorSearch
 
   const noteSlug = search.note
 

@@ -29,7 +29,7 @@ const navigationItemsSection1 = [
   },
   {
     name: 'Notes',
-    to: '/campaigns/$dmUsername/$campaignSlug/notes',
+    to: '/campaigns/$dmUsername/$campaignSlug/editor',
     icon: FileText,
   },
   {
@@ -102,7 +102,7 @@ export const NavigationSidebar = () => {
               <Tooltip key={c.slug}>
                 <TooltipTrigger asChild>
                   <Link
-                    to="/campaigns/$dmUsername/$campaignSlug/notes"
+                    to="/campaigns/$dmUsername/$campaignSlug/editor"
                     params={{ dmUsername, campaignSlug }}
                     search={{ category: c.slug }}
                     className={cn(

@@ -46,6 +46,7 @@ interface CategoryPageContentProps {
   EmptyStateComponent?: ComponentType<React.ComponentProps<typeof EmptyState>>
 }
 
+//TODO: get rid of "showFolder" button unless at root. Redesign with new integrated note page in mind
 export function CategoryPageContent({
   categorySlug,
   currentFolderId,

@@ -19,7 +19,7 @@ import {
   canDropItem,
   type SidebarDragData,
   type SidebarDropData,
-} from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/-components/editor/file-sidebar/dnd-utils'
+} from '~/components/notes-page/sidebar/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'

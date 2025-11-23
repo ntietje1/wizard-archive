@@ -1,19 +1,19 @@
 import { TagCard } from '../category/tag/tag-card'
-import { CharacterTagContextMenu } from '~/components/context-menu/category/character-tag-context-menu'
 import type { TagCardProps } from '../category/tag/tag-card'
+import { SessionTagContextMenu } from '~/components/context-menu/category/session-tag-context-menu'
 
 //TODO: these currently aren't used at all!!
-export function CharacterTagCardWithContextMenu(props: TagCardProps) {
+export function SessionTagCardWithContextMenu(props: TagCardProps) {
   if (!props.config || !props.noteAndTag) {
     return <TagCard {...props} />
   }
   return (
-    <CharacterTagContextMenu
+    <SessionTagContextMenu
       categoryConfig={props.config}
       noteWithTag={props.noteAndTag}
     >
       <TagCard {...props} />
-    </CharacterTagContextMenu>
+    </SessionTagContextMenu>
   )
 }
 

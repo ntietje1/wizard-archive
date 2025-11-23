@@ -1,19 +1,19 @@
 import { FolderCard } from '../category/folder/folder-card'
-import { LocationFolderContextMenu } from '~/components/context-menu/category/location-folder-context-menu'
 import type { FolderCardProps } from '../category/folder/folder-card'
+import { SessionFolderContextMenu } from '~/components/context-menu/category/session-folder-context-menu'
 
 //TODO: these currently aren't used at all!!
-export function LocationFolderCardWithContextMenu(props: FolderCardProps) {
+export function SessionFolderCardWithContextMenu(props: FolderCardProps) {
   if (!props.categoryConfig) {
     return <FolderCard {...props} />
   }
   return (
-    <LocationFolderContextMenu
+    <SessionFolderContextMenu
       categoryConfig={props.categoryConfig}
       folder={props.folder}
     >
       <FolderCard {...props} />
-    </LocationFolderContextMenu>
+    </SessionFolderContextMenu>
   )
 }
 
