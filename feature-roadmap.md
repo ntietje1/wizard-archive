@@ -39,6 +39,7 @@
 # Dev to-do list:
 
 - redesign category pages to be integrated into note page
+- add "create catagory" to context menu in sidebar
 
 # Planned user features road map
 
