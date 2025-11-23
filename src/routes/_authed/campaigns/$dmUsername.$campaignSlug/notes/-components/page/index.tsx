@@ -15,34 +15,34 @@ export function NotesPageLayout({ children }: { children: React.ReactNode }) {
   }) as NotesSearch
 
   // Only show NotesViewer when viewing a note (not a map or category)
-  const showNotesViewer = !search.mapId && !search.categorySlug
+  const showNotesViewer = !search.map && !search.category && search.note
 
   if (showNotesViewer) {
-    return (
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="flex-1 min-h-0"
-        autoSaveId="notes-page-layout"
+  return (
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="flex-1 min-h-0"
+      autoSaveId="notes-page-layout"
+    >
+      <ResizablePanel
+        defaultSize={50}
+        minSize={25}
+        className="flex min-h-0 flex-col"
       >
-        <ResizablePanel
-          defaultSize={50}
-          minSize={25}
-          className="flex min-h-0 flex-col"
-        >
-          <FileTopbar />
-          {children}
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel
-          defaultSize={50}
-          minSize={25}
-          className="flex min-h-0 flex-col"
-        >
-          <ClientOnly>
-            <NotesViewer />
-          </ClientOnly>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        <FileTopbar />
+        {children}
+      </ResizablePanel>
+      <ResizableHandle />
+      <ResizablePanel
+        defaultSize={50}
+        minSize={25}
+        className="flex min-h-0 flex-col"
+      >
+        <ClientOnly>
+          <NotesViewer />
+        </ClientOnly>
+      </ResizablePanel>
+    </ResizablePanelGroup>
     )
   }
 

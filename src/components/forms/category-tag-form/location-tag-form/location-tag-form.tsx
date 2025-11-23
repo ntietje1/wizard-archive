@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from 'react'
-import { useRouter } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
@@ -19,6 +18,7 @@ import {
   type TagCategoryConfig,
 } from '../base-tag-form/types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
@@ -36,7 +36,6 @@ interface LocationTagFormProps {
   mode: 'create' | 'edit'
   location?: Location
   config: TagCategoryConfig
-  navigateToNote?: boolean
   parentFolderId?: Id<'folders'>
   isOpen: boolean
   onClose: () => void
@@ -47,15 +46,14 @@ export default function LocationTagForm({
   mode,
   location,
   config,
-  navigateToNote,
   parentFolderId,
   isOpen,
   onClose,
   onLocationCreated,
 }: LocationTagFormProps) {
-  const router = useRouter()
   const convex = useConvex()
-  const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
+  const { campaignWithMembership } = useCampaign()
+  const { navigateToNote } = useEditorNavigation()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
@@ -153,19 +151,12 @@ export default function LocationTagForm({
           onLocationCreated(result.locationId)
         }
 
-        if (navigateToNote && result.noteId) {
+        if (result.noteId) {
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,
           })
           if (note?.slug) {
-            router.navigate({
-              to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
-              params: {
-                dmUsername,
-                campaignSlug,
-                noteSlug: note.slug,
-              },
-            })
+            navigateToNote(note.slug)
           }
         }
 

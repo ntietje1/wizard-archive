@@ -9,6 +9,7 @@ export const mapTableFields = {
   userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   name: v.optional(v.string()),
+  slug: v.string(),
   imageStorageId: v.optional(v.id('_storage')),
   categoryId: v.optional(v.id('tagCategories')),
   parentFolderId: v.optional(v.id('folders')),
@@ -84,7 +85,7 @@ export const mapTables = {
       'campaignId',
       'categoryId',
       'parentFolderId',
-    ]),
+    ]).index('by_campaign_slug', ['campaignId', 'slug']),
   
     mapPins: defineTable({
       ...mapPinTableFields,

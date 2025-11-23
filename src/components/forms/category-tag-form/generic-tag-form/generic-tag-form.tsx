@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from 'react'
-import { useRouter } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
@@ -31,19 +30,19 @@ import {
   ImageUploadField,
   SubmitButtons,
 } from './fields.tsx'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 
 export default function GenericTagForm({
   mode,
   tag,
   config,
-  navigateToNote,
   parentFolderId,
   isOpen,
   onClose,
 }: GenericTagFormProps) {
-  const router = useRouter()
   const convex = useConvex()
-  const { campaignWithMembership, dmUsername, campaignSlug } = useCampaign()
+  const { campaignWithMembership } = useCampaign()
+  const { navigateToNote } = useEditorNavigation()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
@@ -138,19 +137,12 @@ export default function GenericTagForm({
           parentFolderId,
         })
 
-        if (navigateToNote && result.noteId) {
+        if (result.noteId) {
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,
           })
           if (note?.slug) {
-            router.navigate({
-              to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
-              params: {
-                dmUsername,
-                campaignSlug,
-                noteSlug: note.slug,
-              },
-            })
+            navigateToNote(note.slug)
           }
         }
 

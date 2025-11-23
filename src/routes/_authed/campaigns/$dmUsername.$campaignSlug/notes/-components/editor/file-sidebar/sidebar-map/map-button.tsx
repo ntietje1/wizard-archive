@@ -9,8 +9,7 @@ import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
 import { MapPin } from '~/lib/icons'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import type { Id } from 'convex/_generated/dataModel'
-import { useNavigate } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 
 interface MapButtonProps {
   map: GameMap
@@ -20,8 +19,7 @@ interface MapButtonProps {
 export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToMap } = useEditorNavigation()
 
   const updateMapMutation = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
@@ -33,30 +31,24 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   }
 
   const handleSelect = () => {
-    navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/notes',
-      params: { dmUsername, campaignSlug },
-      search: {
-        mapId: map._id,
-      },
-    })
+    navigateToMap(map.slug)
   }
 
   return (
-    <DraggableMap map={map} ancestorIds={ancestorIds}>
-      <MapContextMenu ref={contextMenuRef} map={map}>
-        <SidebarItemButtonBase
-          icon={MapPin}
-          name={map.name || UNTITLED_MAP_NAME}
-          defaultName={UNTITLED_MAP_NAME}
-          isSelected={false}
-          isRenaming={renamingId === map._id}
-          showChevron={false}
-          onSelect={handleSelect}
-          onMoreOptions={handleMoreOptions}
-          onFinishRename={handleFinishRename}
-        />
-      </MapContextMenu>
-    </DraggableMap>
+      <DraggableMap map={map} ancestorIds={ancestorIds}>
+        <MapContextMenu ref={contextMenuRef} map={map}>
+          <SidebarItemButtonBase
+            icon={MapPin}
+            name={map.name || UNTITLED_MAP_NAME}
+            defaultName={UNTITLED_MAP_NAME}
+            isSelected={false}
+            isRenaming={renamingId === map._id}
+            showChevron={false}
+            onSelect={handleSelect}
+            onMoreOptions={handleMoreOptions}
+            onFinishRename={handleFinishRename}
+          />
+        </MapContextMenu>
+      </DraggableMap>
   )
 }

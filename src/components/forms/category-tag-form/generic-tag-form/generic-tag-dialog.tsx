@@ -17,7 +17,6 @@ export default function GenericTagDialog(props: TagDialogProps<Tag>) {
         mode={props.mode}
         tag={tag}
         config={props.config}
-        navigateToNote={props.navigateToNote}
         parentFolderId={props.parentFolderId}
         isOpen={props.isOpen}
         onClose={props.onClose}

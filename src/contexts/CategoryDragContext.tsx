@@ -18,7 +18,7 @@ import {
   canDropCategoryItem,
   type CategoryDragData,
   type CategoryDropData,
-} from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/dnd-utils'
+} from '~/components/notes-page/category/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { executeMove } from '~/utils/dnd-utils'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'

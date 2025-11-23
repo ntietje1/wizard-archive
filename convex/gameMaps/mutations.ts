@@ -8,6 +8,7 @@ import { getNote } from "../notes/notes";
 import { getTagCategory } from "../tags/tags";
 import { SYSTEM_DEFAULT_CATEGORIES } from "../tags/types";
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
+import { findUniqueSlug, shortenId } from "../common/slug";
 
 
 export const createMap = mutation({
@@ -54,10 +55,24 @@ export const createMap = mutation({
       }
     }
 
+    const slugBasis =
+      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
+
+    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+      const conflict = await ctx.db
+        .query('gameMaps')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', args.campaignId).eq('slug', slug),
+        )
+        .unique()
+      return conflict !== null
+    })
+
     return await ctx.db.insert('gameMaps', {
       campaignId: args.campaignId,
       userId: profile._id,
       name: args.name,
+      slug: uniqueSlug,
       imageStorageId: args.imageStorageId,
       categoryId: args.categoryId,
       parentFolderId: args.parentFolderId,
@@ -88,6 +103,7 @@ export const updateMap = mutation({
 
     const updates: {
       name?: string
+      slug?: string
       imageStorageId?: Id<'_storage'>
       parentFolderId?: Id<'folders'>
       updatedAt: number
@@ -97,6 +113,23 @@ export const updateMap = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
+
+      const slugBasis =
+        args.name && args.name.trim() !== ''
+          ? args.name
+          : shortenId(args.mapId)
+
+      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('gameMaps')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', map.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== args.mapId
+      })
+
+      updates.slug = uniqueSlug
     }
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId

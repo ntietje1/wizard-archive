@@ -31,7 +31,7 @@ import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 
 interface MapViewerProps {
-  mapId: Id<'gameMaps'>
+  map: string
   onClose?: () => void
 }
 
@@ -40,7 +40,7 @@ interface PinPosition {
   y: number
 }
 
-export function MapViewer({ mapId }: MapViewerProps) {
+export function MapViewer({ map: mapSlug }: MapViewerProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const imageRef = useRef<globalThis.HTMLImageElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
@@ -63,10 +63,21 @@ export function MapViewer({ mapId }: MapViewerProps) {
   const convex = useConvex()
 
   const mapQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMap, { mapId }),
+    convexQuery(
+      api.gameMaps.queries.getMapBySlug,
+      campaign?._id && mapSlug
+        ? { campaignId: campaign._id, slug: mapSlug }
+        : 'skip',
+    ),
   )
+  const map = mapQuery.data
+  const mapId = map?._id
+
   const pinsQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
+    convexQuery(
+      api.gameMaps.queries.getMapPins,
+      mapId ? { mapId } : 'skip',
+    ),
   )
   const pinableItemsQuery = useQuery(
     convexQuery(
@@ -75,9 +86,10 @@ export function MapViewer({ mapId }: MapViewerProps) {
     ),
   )
 
-  const map = mapQuery.data
   const pins = pinsQuery.data || []
   const allItems = pinableItemsQuery.data || []
+
+
 
   const pinnedItemIds = useMemo(
     () => new Set(pins.map((p: MapPinWithItem) => p.item._id)),
@@ -164,7 +176,7 @@ export function MapViewer({ mapId }: MapViewerProps) {
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
-      if (!pendingPinItem) return
+      if (!pendingPinItem || !mapId) return
 
       const item = allItems.find((i) => i._id === pendingPinItem.itemId)
       if (!item) return
@@ -403,7 +415,7 @@ export function MapViewer({ mapId }: MapViewerProps) {
         />
       </div>
 
-      {selectedPinId && pinContextMenuPosition && (
+      {selectedPinId && pinContextMenuPosition && mapId && (
         <PinContextMenu
           pinId={selectedPinId}
           mapId={mapId}
@@ -655,3 +667,4 @@ function ItemSidebar({
     </>
   )
 }
+

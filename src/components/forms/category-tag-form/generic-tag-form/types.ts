@@ -7,7 +7,6 @@ export interface GenericTagFormProps {
   mode: 'create' | 'edit'
   tag?: Tag
   config: TagCategoryConfig
-  navigateToNote?: boolean
   parentFolderId?: Id<'folders'>
   isOpen: boolean
   onClose: () => void

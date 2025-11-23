@@ -1,6 +1,6 @@
-import { TagCard } from '../../$categorySlug/-components/tag/tag-card'
+import { TagCard } from '../category/tag/tag-card'
 import { CharacterTagContextMenu } from '~/components/context-menu/category/character-tag-context-menu'
-import type { TagCardProps } from '../../$categorySlug/-components/tag/tag-card'
+import type { TagCardProps } from '../category/tag/tag-card'
 
 export function CharacterTagCardWithContextMenu(props: TagCardProps) {
   if (!props.config || !props.noteAndTag) {
@@ -15,3 +15,4 @@ export function CharacterTagCardWithContextMenu(props: TagCardProps) {
     </CharacterTagContextMenu>
   )
 }
+

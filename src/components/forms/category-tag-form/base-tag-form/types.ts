@@ -28,7 +28,6 @@ interface TagDialogBaseProps {
   isOpen: boolean
   onClose: () => void
   config: TagCategoryConfig
-  navigateToNote?: boolean
   parentFolderId?: Id<'folders'>
 }
 

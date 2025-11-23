@@ -26,7 +26,7 @@ import { DraggableCategoryFolder } from './draggable-category-folder'
 import { DroppableCategoryFolder } from './droppable-category-folder'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
-import { useNavigate } from '@tanstack/react-router'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 
 type CategoryContextMenuComponent =
   React.ComponentType<CategoryContextMenuProps>
@@ -157,20 +157,12 @@ const CategoryFolderBase = ({
 }: CategoryFolderBaseProps & { categoryConfig?: TagCategoryConfig }) => {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { updateFolder } = useFolderActions()
-  const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToCategory } = useEditorNavigation()
 
   const handleFolderClick = () => {
     if (!categoryConfig) return
     
-    navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/notes',
-      params: { dmUsername, campaignSlug },
-      search: {
-        categorySlug: categoryConfig.categorySlug,
-        ...(folder && { folderId: folder._id }),
-      },
-    })
+    navigateToCategory(categoryConfig.categorySlug, folder?._id)
   }
 
   const handleMoreOptionsWrapper = (e: React.MouseEvent) => {

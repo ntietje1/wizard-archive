@@ -10,7 +10,7 @@ import {
   validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
-} from '../../$categorySlug/-components/dnd-utils'
+} from '../category/dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -53,8 +53,7 @@ export function MapCard({
 }: MapCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToMap } = useNotesNavigation()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const { active } = useDndContext()
@@ -95,13 +94,7 @@ export function MapCard({
     if (!isDragging && onClick) {
       onClick(e || ({} as MouseEvent))
     } else if (!isDragging && map) {
-      navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
-        params: { dmUsername, campaignSlug },
-        search: {
-          mapId: map._id,
-        },
-      })
+      navigateToMap(map.slug)
     }
   }
 
@@ -237,3 +230,4 @@ export function MapCard({
     </>
   )
 }
+

@@ -2,12 +2,10 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Tag } from 'convex/tags/types'
-import { useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { Edit, Trash2 } from '~/lib/icons'
 import { useDraggable } from '@dnd-kit/core'
 import { type CategoryDragData } from '../dnd-utils'
@@ -21,6 +19,7 @@ import { CategoryTagContextMenu } from '~/components/context-menu/category/categ
 import { type Note } from 'convex/notes/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { getTagColor } from '~/hooks/useTags'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 
 export interface TagCardProps {
   noteAndTag?: Note
@@ -49,8 +48,7 @@ export function TagCard({
   parentFolderId,
   isLoading = false,
 }: TagCardProps) {
-  const router = useRouter()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToNote } = useEditorNavigation()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
   const tag = noteAndTag?.tag
@@ -110,11 +108,8 @@ export function TagCard({
   const CategoryIcon = config.icon
 
   const handleCardActivate = () => {
-    if (!isDragging) {
-      router.navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
-        params: { dmUsername, campaignSlug },
-      })
+    if (!isDragging && noteAndTag?.slug) {
+      navigateToNote(noteAndTag.slug)
     }
   }
 
@@ -232,3 +227,4 @@ export function TagCard({
     </>
   )
 }
+

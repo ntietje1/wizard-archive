@@ -25,3 +25,31 @@ export const getMap = async (
       type: SIDEBAR_ITEM_TYPES.gameMaps
     }
 }
+
+export const getMapBySlug = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  slug: string,
+): Promise<GameMap | null> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const map = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+
+  if (!map) {
+    return null
+  }
+
+  return {
+    ...map,
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
+  }
+}

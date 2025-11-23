@@ -6,7 +6,7 @@ import { getNote } from "../notes/notes";
 import type { GameMap, MapPinWithItem } from './types';
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 import { mapValidator, mapPinWithItemValidator } from "./schema";
-import { getMap as getMapFn } from "./gameMaps";
+import { getMap as getMapFn, getMapBySlug as getMapBySlugFn } from "./gameMaps";
 import { noteValidator } from "../notes/schema";
 
 
@@ -42,6 +42,21 @@ export const getMap = query({
   returns: mapValidator,
   handler: async (ctx, args): Promise<GameMap> => {
     return getMapFn(ctx, args.mapId)
+  },
+})
+
+export const getMapBySlug = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    slug: v.string(),
+  },
+  returns: mapValidator,
+  handler: async (ctx, args): Promise<GameMap> => {
+    const map = await getMapBySlugFn(ctx, args.campaignId, args.slug)
+    if (!map) {
+      throw new Error('Map not found')
+    }
+    return map
   },
 })
 

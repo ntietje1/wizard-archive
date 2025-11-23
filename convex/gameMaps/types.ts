@@ -3,6 +3,7 @@ import { Note } from "../notes/types";
 import { SidebarItem, SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
+  slug: string
   imageStorageId?: Id<'_storage'>
 }
 

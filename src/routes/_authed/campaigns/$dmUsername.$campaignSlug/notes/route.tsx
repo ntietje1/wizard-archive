@@ -8,11 +8,10 @@ import {
   validateSearch,
   type NotesSearch,
 } from './-components/validateSearch'
-import { MapViewer } from '../categories/locations/-components/map-viewer'
-import { CategoryPageContent } from '../categories/$categorySlug/-components/category-page-content'
+import { MapViewer } from '~/components/notes-page/map/map-viewer'
+import { CategoryPageContent } from '~/components/notes-page/category/category-page-content'
 import { CategoryFolderContextMenu } from '~/components/context-menu/category/category-folder-context-menu'
-import { useNavigate } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const Route = createFileRoute(
@@ -26,41 +25,31 @@ function NotesLayout() {
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/notes',
   }) as NotesSearch
-  const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToCategory } = useEditorNavigation()
 
   const handleCategoryNavigate = (folderId?: Id<'folders'>) => {
-    navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/notes',
-      params: { dmUsername, campaignSlug },
-      search: {
-        categorySlug: search.categorySlug,
-        folderId,
-      },
-    })
+    if (search.category) {
+      navigateToCategory(search.category, folderId)
+    }
   }
 
   const handleCategoryUpdated = (newSlug: string) => {
-    if (newSlug !== search.categorySlug) {
-      navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes',
-        params: { dmUsername, campaignSlug },
-        search: {
-          categorySlug: newSlug,
-          folderId: search.folderId,
-        },
-      })
+    if (newSlug !== search.category) {
+      navigateToCategory(newSlug)
     }
   }
 
   let content: React.ReactNode = null
 
-  if (search.mapId) {
-    content = <MapViewer mapId={search.mapId} />
-  } else if (search.categorySlug) {
+  // Priority: note > map > category > default (empty editor)
+  if (search.note) {
+    content = <NotesEditor />
+  } else if (search.map) {
+    content = <MapViewer map={search.map} />
+  } else if (search.category) {
     content = (
       <CategoryPageContent
-        categorySlug={search.categorySlug}
+        categorySlug={search.category}
         currentFolderId={search.folderId}
         onNavigate={handleCategoryNavigate}
         onCategoryUpdated={handleCategoryUpdated}

@@ -1,53 +1,39 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useSearch } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useNoteActions } from './useNoteActions'
 import { debounce } from 'lodash-es'
 import type { CustomBlock } from '~/lib/editor-schema'
 import { useAuth } from '@clerk/tanstack-react-start'
+import type { NotesSearch } from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/notes/-components/validateSearch'
+import { useEditorNavigation } from './useEditorNavigation'
 
 export const useCurrentNote = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
+  const { campaignWithMembership } = useCampaign()
   const { updateNoteContent } = useNoteActions()
   const { isLoaded, isSignedIn } = useAuth()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const { navigateToNote } = useEditorNavigation()
 
-  const pathNoteSlug =
-    location.pathname.includes('/notes/') &&
-    !location.pathname.endsWith('/notes')
-      ? location.pathname.split('/notes/')[1]
-      : null
+  const search = useSearch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/notes',
+  }) as NotesSearch
+
+  const noteSlug = search.note
 
   const note = useQuery(
     convexQuery(
       api.notes.queries.getNoteBySlug,
-      isLoaded && isSignedIn && pathNoteSlug && campaignId
-        ? { campaignId, slug: pathNoteSlug }
+      isLoaded && isSignedIn && noteSlug && campaignId
+        ? { campaignId, slug: noteSlug }
         : 'skip',
     ),
   )
 
-  const selectNote = useCallback(
-    (noteSlug: string | null) => {
-      if (!noteSlug) {
-        navigate({
-          to: '/campaigns/$dmUsername/$campaignSlug/notes',
-          params: { dmUsername, campaignSlug },
-        })
-        return
-      }
-      navigate({
-        to: '/campaigns/$dmUsername/$campaignSlug/notes/$noteSlug',
-        params: { dmUsername, campaignSlug, noteSlug },
-      })
-    },
-    [dmUsername, campaignSlug, navigate],
-  )
+  const selectNote = navigateToNote
 
   const updateCurrentNoteContent = useMemo(
     () =>
@@ -62,10 +48,10 @@ export const useCurrentNote = () => {
     return () => {
       updateCurrentNoteContent.flush()
     }
-  }, [pathNoteSlug, updateCurrentNoteContent])
+  }, [noteSlug, updateCurrentNoteContent])
   return {
     note,
-    noteSlug: pathNoteSlug,
+    noteSlug,
     selectNote,
     updateCurrentNoteContent,
   }

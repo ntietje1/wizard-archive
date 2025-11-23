@@ -17,7 +17,6 @@ export default function CharacterTagDialog(props: TagDialogProps<Character>) {
         mode={props.mode}
         character={character}
         config={props.config}
-        navigateToNote={props.navigateToNote}
         parentFolderId={props.parentFolderId}
         isOpen={props.isOpen}
         onClose={props.onClose}

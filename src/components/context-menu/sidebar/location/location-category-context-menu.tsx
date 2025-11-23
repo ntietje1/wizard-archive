@@ -5,8 +5,8 @@ import {
 import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
 import { MapPin, MapPinPlus } from '~/lib/icons'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { useRouter } from '@tanstack/react-router'
 import { forwardRef, useState, useMemo, useCallback } from 'react'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFolderState } from '~/hooks/useFolderState'
 import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
@@ -24,8 +24,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
   CategoryContextMenuProps
 >(({ categoryConfig, children, folder }, ref) => {
-  const router = useRouter()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToCategory } = useEditorNavigation()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
     folder?._id || categoryConfig?.categorySlug || '',
@@ -74,16 +73,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
         icon: <MapPin className="h-4 w-4" />,
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
-          router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/notes',
-            params: {
-              dmUsername,
-              campaignSlug,
-            },
-            search: {
-              categorySlug: 'locations',
-            },
-          })
+          navigateToCategory('locations')
         },
       })
     }
@@ -96,9 +86,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
     deleteFolder.menuItem,
     folder,
     categoryConfig,
-    router,
-    dmUsername,
-    campaignSlug,
+    navigateToCategory,
   ])
 
   return (
@@ -114,7 +102,6 @@ export const LocationCategoryFolderContextMenu = forwardRef<
             onClose={() => setIsCreateDialogOpen(false)}
             config={categoryConfig}
             parentFolderId={folder?._id}
-            navigateToNote={false}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}

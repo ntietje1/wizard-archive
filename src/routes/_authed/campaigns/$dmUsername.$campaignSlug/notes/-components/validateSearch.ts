@@ -1,10 +1,10 @@
 import type { Id } from 'convex/_generated/dataModel'
 
 export type NotesSearch = {
-  categorySlug?: string
+  category?: string
   folderId?: Id<'folders'>
-  mapId?: Id<'gameMaps'>
-  noteSlug?: string
+  map?: string
+  note?: string
 }
 
 export const validateSearch = (
@@ -12,20 +12,35 @@ export const validateSearch = (
 ): NotesSearch => {
   const result: NotesSearch = {}
 
-  if ('categorySlug' in search && typeof search.categorySlug === 'string' && search.categorySlug.trim().length > 0) {
-    result.categorySlug = search.categorySlug
+  // Extract all potential content type params
+  const note =
+    'note' in search && typeof search.note === 'string' && search.note.trim().length > 0
+      ? search.note.trim()
+      : undefined
+
+  const map =
+    'map' in search && typeof search.map === 'string' && search.map.trim().length > 0
+      ? search.map.trim()
+      : undefined
+
+  const category =
+    'category' in search && typeof search.category === 'string' && search.category.trim().length > 0
+      ? search.category.trim()
+      : undefined
+
+  // Mutual exclusivity: only one content type param can be present
+  // Priority: note > map > category
+  if (note) {
+    result.note = note
+  } else if (map) {
+    result.map = map
+  } else if (category) {
+    result.category = category
   }
 
+  // folderId is always allowed (used with category)
   if ('folderId' in search && typeof search.folderId === 'string' && search.folderId.trim().length > 0) {
     result.folderId = search.folderId as Id<'folders'>
-  }
-
-  if ('mapId' in search && typeof search.mapId === 'string' && search.mapId.trim().length > 0) {
-    result.mapId = search.mapId as Id<'gameMaps'>
-  }
-
-  if ('noteSlug' in search && typeof search.noteSlug === 'string' && search.noteSlug.trim().length > 0) {
-    result.noteSlug = search.noteSlug
   }
 
   return result

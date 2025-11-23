@@ -76,3 +76,4 @@ export function validateCategoryItemDrop(
     SIDEBAR_ROOT_TYPE,
   )
 }
+

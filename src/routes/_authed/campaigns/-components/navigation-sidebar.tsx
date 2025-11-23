@@ -104,7 +104,7 @@ export const NavigationSidebar = () => {
                   <Link
                     to="/campaigns/$dmUsername/$campaignSlug/notes"
                     params={{ dmUsername, campaignSlug }}
-                    search={{ categorySlug: c.slug }}
+                    search={{ category: c.slug }}
                     className={cn(
                       'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
                       'text-slate-600 hover:bg-slate-100 hover:text-slate-900',

@@ -4,9 +4,8 @@ import {
 } from '~/components/context-menu/base/context-menu'
 import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
 import { UserPlus, Users } from '~/lib/icons'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useRouter } from '@tanstack/react-router'
 import { forwardRef, useState, useMemo } from 'react'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFolderState } from '~/hooks/useFolderState'
 import CharacterTagDialog from '~/components/forms/category-tag-form/character-tag-form/character-tag-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
@@ -22,8 +21,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
   CategoryContextMenuProps
 >(({ categoryConfig, children, folder }, ref) => {
-  const router = useRouter()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToCategory } = useEditorNavigation()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
     folder?._id || categoryConfig?.categorySlug || '',
@@ -68,16 +66,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
         icon: <Users className="h-4 w-4" />,
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
-          router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/notes',
-            params: {
-              dmUsername,
-              campaignSlug,
-            },
-            search: {
-              categorySlug: 'characters',
-            },
-          })
+          navigateToCategory('characters')
         },
       })
     }
@@ -89,9 +78,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
     deleteFolder.menuItem,
     folder,
     categoryConfig,
-    router,
-    dmUsername,
-    campaignSlug,
+    navigateToCategory,
   ])
 
   return (
@@ -107,7 +94,6 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
             onClose={() => setIsCreateDialogOpen(false)}
             config={categoryConfig}
             parentFolderId={folder?._id}
-            navigateToNote={false}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}
