@@ -36,17 +36,14 @@
   - Future: Embed maps as pins on other maps
   - Future: Improve map UI
 
-# Dev to-do list:
-
-- redesign category pages to be integrated into note page
-- add "create catagory" to context menu in sidebar
-
 # Planned user features road map
 
 - Shared Notes interweaved with personal notes
   - have a special type of block that can be inserted into the read-only view of the shared tagged blocks
   - this block would be editable, automatically tagged to whatever tag it's placed in
   - also has all the same features of any other block (sharable, taggable)
+  - each tag note has multiple pages. Start with 2: "your notes", "shared notes"
+  - shared notes are read-only except for insertable editable blocks
 - Version History with Rollback
   - Last edited by / Created by
 - Wiki-style page linking (integrated with tag linking as well)
