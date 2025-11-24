@@ -43,6 +43,10 @@
 
 # Planned user features road map
 
+- Shared Notes interweaved with personal notes
+  - have a special type of block that can be inserted into the read-only view of the shared tagged blocks
+  - this block would be editable, automatically tagged to whatever tag it's placed in
+  - also has all the same features of any other block (sharable, taggable)
 - Version History with Rollback
   - Last edited by / Created by
 - Wiki-style page linking (integrated with tag linking as well)
