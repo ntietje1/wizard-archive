@@ -81,12 +81,6 @@ export function SessionPanel() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-start gap-6">
             <div>
-              <div className="text-xs text-muted-foreground">Campaign</div>
-              <div className="truncate text-sm font-medium">
-                {campaign?.name ?? '—'}
-              </div>
-            </div>
-            <div>
               <div className="text-xs text-muted-foreground whitespace-nowrap">
                 Current Session
               </div>
