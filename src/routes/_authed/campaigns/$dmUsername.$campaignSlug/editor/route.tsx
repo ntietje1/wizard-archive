@@ -6,7 +6,7 @@ import { EditorContent } from '~/components/notes-page/notes-content'
 import {
   validateSearch,
 } from '~/components/notes-page/validate-search'
-import { FileTopbar } from '~/components/notes-page/editor/file-topbar/topbar'
+import { FileTopbar } from '~/components/notes-page/editor/topbar/file-topbar'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor',

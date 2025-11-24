@@ -7,10 +7,10 @@ import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-c
 import { MapPin, Edit, Trash2 } from '~/lib/icons'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import {
-  validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
-} from '../category/dnd-utils'
+  canDropCategoryItem,
+} from '~/components/notes-page/category/dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -55,7 +55,7 @@ export function MapCard({
   const { navigateToMap } = useEditorNavigation()
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
-  const { active } = useDndContext()
+  const { active, over } = useDndContext()
 
   const imageUrlQuery = useQuery(
     convexQuery(
@@ -122,11 +122,7 @@ export function MapCard({
   })
 
   const isValidDropTarget =
-    isOver &&
-    validateCategoryItemDrop(
-      active?.data?.current as CategoryDragData | null,
-      dropData,
-    )
+    isOver && active && over && canDropCategoryItem(active, over)
 
   return (
     <>

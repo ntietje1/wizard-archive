@@ -37,7 +37,7 @@ export function CategoryHeader({
   if (!config || isLoading) {
     return (
       <div className="mb-6">
-        <CategoryBreadcrumb
+        {/* <CategoryBreadcrumb
           config={config}
           breadcrumbs={breadcrumbs}
           onNavigate={onNavigateBreadcrumb}
@@ -45,7 +45,7 @@ export function CategoryHeader({
           viewMode={viewMode}
           onToggleViewMode={onToggleViewMode}
           categoryId={categoryId}
-        />
+        /> */}
         <div className="flex items-start justify-between gap-4 pb-1">
           <Skeleton className="h-6 w-[600px]" />
           <div className="flex gap-2 shrink-0">
@@ -59,7 +59,7 @@ export function CategoryHeader({
 
   return (
     <div className="mb-6">
-      <CategoryBreadcrumb
+      {/* <CategoryBreadcrumb
         config={config}
         breadcrumbs={breadcrumbs}
         onNavigate={onNavigateBreadcrumb}
@@ -67,7 +67,7 @@ export function CategoryHeader({
         viewMode={viewMode}
         onToggleViewMode={onToggleViewMode}
         categoryId={categoryId}
-      />
+      /> */}
 
       <div className="flex items-start justify-between gap-4 pl-1">
         <p className="text-muted-foreground">

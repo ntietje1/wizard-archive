@@ -5,7 +5,6 @@ import {
 } from 'convex/sidebarItems/types'
 import { createContext, useCallback, useContext, useState } from 'react'
 import usePersistedState from '~/hooks/usePersistedState'
-import { useNoteActions } from '~/hooks/useNoteActions'
 import {
   DndContext,
   MouseSensor,
@@ -14,6 +13,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  pointerWithin,
 } from '@dnd-kit/core'
 import {
   canDropItem,
@@ -21,6 +21,7 @@ import {
   type SidebarDropData,
 } from '~/components/notes-page/sidebar/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useNoteActions } from '~/hooks/useNoteActions'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
@@ -161,7 +162,9 @@ export function FileSidebarProvider({
         {
           openFolder,
         },
-      )
+      ).catch((error) => {
+        console.error('Failed to move item:', error)
+      })
     },
     [moveNote, moveFolder, moveMap, openFolder],
   )
@@ -195,6 +198,7 @@ export function FileSidebarProvider({
             y: 0.25,
           },
         }}
+        collisionDetection={pointerWithin}
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

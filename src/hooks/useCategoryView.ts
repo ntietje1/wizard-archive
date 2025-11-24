@@ -63,6 +63,7 @@ interface UseCategoryViewReturn {
   noteSkeletonCount: number
   invalidFolderId: boolean
   categoryNotFound: boolean
+  ancestorIds: Id<'folders'>[]
 }
 
 export function useCategoryView({
@@ -281,6 +282,11 @@ export function useCategoryView({
     onNavigate(undefined)
   }
 
+  const ancestorIds = useMemo(() => {
+    const ancestors = ancestorsQuery.data || []
+    return ancestors.map((folder: Folder) => folder._id)
+  }, [ancestorsQuery.data])
+
   return {
     viewMode,
     toggleViewMode,
@@ -305,5 +311,6 @@ export function useCategoryView({
     noteSkeletonCount,
     invalidFolderId,
     categoryNotFound,
+    ancestorIds,
   }
 }

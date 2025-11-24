@@ -14,7 +14,6 @@ import {
   type FolderFormValues,
 } from '~/components/forms/folder-dialog/folder-dialog'
 import { useFolderActions } from '~/hooks/useFolderActions'
-import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 import { ScrollArea } from '@radix-ui/react-scroll-area'
 import type { ComponentType } from 'react'
@@ -25,6 +24,7 @@ import { Link } from '@tanstack/react-router'
 import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/sidebarItems/types'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
 interface CategoryPageContentProps {
   categorySlug: string
@@ -160,7 +160,7 @@ export function CategoryPageContent({
   }
 
   return (
-    <CategoryDragProvider isEnabled={viewMode === VIEW_MODE.folderized}>
+    <CategoryDragProvider>
       <FolderContextMenuComponent categoryConfig={categoryConfig}>
         <ScrollArea className="flex-1 p-6">
           <HeaderComponent

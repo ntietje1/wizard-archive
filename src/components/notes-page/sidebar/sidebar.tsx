@@ -3,14 +3,14 @@ import { SidebarItem } from './sidebar-item/sidebar-item'
 import { CategorySystemFolders } from './category-items/category-system-folders'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { DragOverlay } from '@dnd-kit/core'
 import { ClientOnly } from '@tanstack/react-router'
-import { DragOverlayItem } from './sidebar-item/drag-overlays'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
+import { DragOverlay } from '@dnd-kit/core'
+import { DragOverlayItem } from './sidebar-item/drag-overlays'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItemsByParent()
@@ -52,11 +52,10 @@ function FileSidebarContent() {
             </Button>
           </div>
         )}
-
-        <DragOverlay dropAnimation={null}>
-          {activeDragItem && <DragOverlayItem item={activeDragItem} />}
-        </DragOverlay>
       </ScrollArea>
+      <DragOverlay dropAnimation={null}>
+        {activeDragItem && <DragOverlayItem item={activeDragItem} />}
+      </DragOverlay>
     </DroppableRoot>
   )
 }

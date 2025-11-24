@@ -27,6 +27,9 @@ export function validateDrop(
   targetData: DropTarget | null,
   rootType: typeof SIDEBAR_ROOT_TYPE,
 ): boolean {
+  console.log('draggedItem', draggedItem)
+  console.log('targetData', targetData)
+  console.log('rootType', rootType)
   if (!draggedItem || !targetData) return false
   if (targetData.id === draggedItem._id) return false
 

@@ -10,10 +10,10 @@ import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import { Edit, Trash2, Folder as FolderIcon } from '~/lib/icons'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import {
-  validateCategoryItemDrop,
   type CategoryDragData,
   type CategoryDropData,
-} from '../dnd-utils'
+  canDropCategoryItem,
+} from '~/components/notes-page/category/dnd-utils'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -93,7 +93,7 @@ export function FolderCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const { activeDragItem } = useCategoryDrag()
   const isDisabled = activeDragItem !== null
-  const { active } = useDndContext()
+  const { active, over } = useDndContext()
 
   if (isLoading || !folder || !categoryId) {
     return (
@@ -123,11 +123,7 @@ export function FolderCard({
   })
 
   const isValidDropTarget =
-    isOver &&
-    validateCategoryItemDrop(
-      active?.data?.current as CategoryDragData | null,
-      dropData,
-    )
+    isOver && active && over && canDropCategoryItem(active, over)
 
   const dragData: CategoryDragData = {
     _id: folder._id,

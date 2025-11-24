@@ -1,5 +1,6 @@
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
+import type { LucideIcon } from '~/lib/icons'
 import {
   SIDEBAR_ROOT_TYPE,
   type SidebarItemOrRootType,
@@ -9,17 +10,18 @@ import { validateDrop } from '~/utils/dnd-utils'
 
 export interface SidebarDragData {
   _id: Id<SidebarItemType>
-  name: string
   type: SidebarItemType
   parentFolderId?: Id<'folders'>
-  categoryId?: Id<'tagCategories'> | null
+  categoryId?: Id<'tagCategories'>
   ancestorIds?: Id<'folders'>[]
+  name: string
+  icon: LucideIcon
 }
 
 export interface SidebarDropData {
   _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
-  categoryId?: Id<'tagCategories'> | null
+  categoryId?: Id<'tagCategories'>
   ancestorIds?: Id<'folders'>[]
   accepts?: SidebarItemType[]
 }
@@ -37,13 +39,13 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
       _id: draggedItem._id,
       type: draggedItem.type,
       parentFolderId: draggedItem.parentFolderId,
-      categoryId: draggedItem.categoryId || undefined,
+      categoryId: draggedItem.categoryId,
       ancestorIds: draggedItem.ancestorIds || [],
     },
     {
       id: targetData._id,
       type: targetData.type,
-      categoryId: targetData.categoryId || undefined,
+      categoryId: targetData.categoryId,
       ancestorIds: targetData.ancestorIds || [],
     },
     SIDEBAR_ROOT_TYPE,

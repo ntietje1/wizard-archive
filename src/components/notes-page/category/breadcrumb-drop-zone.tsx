@@ -1,10 +1,9 @@
 import { useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 import {
-  validateCategoryItemDrop,
-  type CategoryDragData,
   type CategoryDropData,
-} from './dnd-utils'
+  canDropCategoryItem,
+} from '~/components/notes-page/category/dnd-utils'
 import React from 'react'
 import {
   SIDEBAR_ITEM_TYPES,
@@ -23,7 +22,7 @@ export function BreadcrumbDropZone({
   categoryId,
   children,
 }: BreadcrumbDropZoneProps) {
-  const { active } = useDndContext()
+  const { active, over } = useDndContext()
 
   const dropData: CategoryDropData = {
     _id: id,
@@ -38,11 +37,7 @@ export function BreadcrumbDropZone({
   })
 
   const isValidDropTarget =
-    isOver &&
-    validateCategoryItemDrop(
-      active?.data?.current as CategoryDragData | null,
-      dropData,
-    )
+    isOver && active && over && canDropCategoryItem(active, over)
 
   return (
     <div

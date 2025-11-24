@@ -8,7 +8,9 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-form/bas
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import { Edit, Trash2 } from '~/lib/icons'
 import { useDraggable } from '@dnd-kit/core'
-import { type CategoryDragData } from '../dnd-utils'
+import {
+  type CategoryDragData,
+} from '~/components/notes-page/category/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useCategoryDrag } from '~/contexts/CategoryDragContext'
