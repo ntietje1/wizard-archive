@@ -6,6 +6,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/components/shadcn/ui/tooltip'
 import { X, MoreVertical } from '~/lib/icons'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -20,6 +25,7 @@ interface EditableTopbarProps {
   isEmpty?: boolean
   menuItems?: ContextMenuItem[]
   deleteDialog?: React.ReactNode
+  readOnly?: boolean
 }
 
 export function EditableTopbar({
@@ -31,6 +37,7 @@ export function EditableTopbar({
   isEmpty = false,
   menuItems = [],
   deleteDialog,
+  readOnly = false,
 }: EditableTopbarProps) {
   const [title, setTitle] = useState(name)
   const [isEditing, setIsEditing] = useState(false)
@@ -103,14 +110,29 @@ export function EditableTopbar({
             />
           ) : (
             <div className="truncate">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="text-left border-b border-transparent hover:border-gray-300 px-2 max-w-full truncate"
-              >
-                {title || (
-                  <span className="opacity-85">{defaultName || 'Untitled'}</span>
-                )}
-              </button>
+              {readOnly ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-left px-2 max-w-full truncate cursor-not-allowed opacity-75">
+                      {title || (
+                        <span className="opacity-85">{defaultName || 'Untitled'}</span>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>System category names cannot be changed</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-left border-b border-transparent hover:border-gray-300 px-2 max-w-full truncate"
+                >
+                  {title || (
+                    <span className="opacity-85">{defaultName || 'Untitled'}</span>
+                  )}
+                </button>
+              )}
             </div>
           )}
 

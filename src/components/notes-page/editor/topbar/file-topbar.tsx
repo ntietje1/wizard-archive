@@ -5,8 +5,8 @@ import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useMapActions } from '~/hooks/useMapActions'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { EditorSearch } from '../../validate-search'
 import { UNTITLED_NOTE_TITLE } from 'convex/notes/types'
@@ -20,6 +20,7 @@ import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import { CATEGORY_KIND } from 'convex/tags/types'
 
 export function FileTopbar() {
   const search = useSearch({
@@ -214,6 +215,7 @@ function CategoryTopbar({
 }) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const { navigateToCategory } = useEditorNavigation()
 
   const categoryQuery = useQuery(
     convexQuery(
@@ -238,6 +240,9 @@ function CategoryTopbar({
     ),
   )
 
+  const updateCategory = useMutation({
+    mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
+  })
   const { updateFolder } = useFolderActions()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -261,12 +266,29 @@ function CategoryTopbar({
 
   // Handle category rename
   const handleCategoryRename = useCallback(
-    async (_newName: string) => {
-      // TODO: implement category rename
-      toast.error('Category rename not yet implemented')
-      throw new Error('Not implemented')
+    async (newName: string) => {
+      if (!categoryQuery.data) return
+      try {
+        const result = await updateCategory.mutateAsync({
+          categoryId: categoryQuery.data._id,
+          categoryName: newName,
+        })
+        // Redirect to new slug if it changed
+        if (result.slug && result.slug !== categorySlug) {
+          navigateToCategory(
+            result.slug,
+            folderId
+              ? (folderId as import('convex/_generated/dataModel').Id<'folders'>)
+              : undefined,
+          )
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('Failed to update category')
+        throw error
+      }
     },
-    [],
+    [categoryQuery.data, categorySlug, folderId, navigateToCategory, updateCategory],
   )
 
   // Menu items for folder
@@ -312,6 +334,9 @@ function CategoryTopbar({
   }
 
   // Otherwise show category topbar
+  const isSystemCategory =
+    categoryQuery.data?.kind !== CATEGORY_KIND.User
+
   if (categoryQuery.isLoading) {
     return <EditableTopbar name="" isLoading={true} onRename={handleCategoryRename} />
   }
@@ -327,6 +352,7 @@ function CategoryTopbar({
       onRename={handleCategoryRename}
       onClose={onClose}
       menuItems={categoryMenuItems}
+      readOnly={isSystemCategory}
     />
   )
 }
