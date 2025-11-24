@@ -28,7 +28,6 @@ export const getSidebarItemsByCategory = async (
     .withIndex('by_campaign_category_parent', (q) => q
       .eq('campaignId', campaignId)
       .eq('categoryId', categoryId ?? undefined)
-      .eq('parentFolderId', undefined)
     )
     .collect()
     .then((folders) => folders.map((folder) => ({
@@ -45,7 +44,6 @@ export const getSidebarItemsByCategory = async (
     .withIndex('by_campaign_category_parent', (q) => q
       .eq('campaignId', campaignId)
       .eq('categoryId', categoryId ?? undefined)
-      .eq('parentFolderId', undefined)
     )
     .collect()
     .then((notes) => notes.map((note) => ({
@@ -64,7 +62,6 @@ export const getSidebarItemsByCategory = async (
       .withIndex('by_campaign_category_parent', (q) => q
         .eq('campaignId', campaignId)
         .eq('categoryId', categoryId)
-        .eq('parentFolderId', undefined)
       )
       .collect()
       .then(
