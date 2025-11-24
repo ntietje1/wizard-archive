@@ -4,7 +4,7 @@ import {
   type ContextMenuItem,
 } from '~/components/context-menu/base/context-menu'
 import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
-import { Play, Calendar } from 'lucide-react'
+import { Play, Calendar, SquareArrowOutUpRight } from 'lucide-react'
 import { forwardRef, useCallback, useMemo } from 'react'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFolderState } from '~/hooks/useFolderState'
@@ -125,7 +125,7 @@ export const SessionCategoryFolderContextMenu = forwardRef<
     if (!folder && categoryConfig) {
       items.push({
         type: 'action' as const,
-        icon: <Calendar className="h-4 w-4" />,
+        icon: <SquareArrowOutUpRight className="h-4 w-4" />,
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
           navigateToCategory('sessions')

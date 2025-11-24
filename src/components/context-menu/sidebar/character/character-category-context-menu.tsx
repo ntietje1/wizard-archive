@@ -18,6 +18,7 @@ import {
 } from '~/hooks/useCategoryContextMenu'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
+import { SquareArrowOutUpRight } from 'lucide-react'
 
 export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
@@ -70,7 +71,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
     if (!folder && categoryConfig) {
       items.push({
         type: 'action' as const,
-        icon: <Users className="h-4 w-4" />,
+        icon: <SquareArrowOutUpRight className="h-4 w-4" />,
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
           navigateToCategory('characters')
