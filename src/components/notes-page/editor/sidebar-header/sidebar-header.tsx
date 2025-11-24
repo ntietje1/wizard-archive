@@ -11,9 +11,7 @@ import { CloseAllFoldersButton } from './close-all-folders'
 
 export function SidebarHeader() {
   return (
-    <div className="flex items-center justify-between px-2 pl-4 h-12 border-b bg-background">
-      <h2 className="text-lg font-semibold">Files</h2>
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-center px-8 h-12 border-b bg-background">
         <Tooltip>
           <TooltipTrigger asChild>
             <NewNoteButton />
@@ -44,7 +42,6 @@ export function SidebarHeader() {
           </TooltipTrigger>
           <TooltipContent>Change sort order</TooltipContent>
         </Tooltip>
-      </div>
     </div>
   )
 }
