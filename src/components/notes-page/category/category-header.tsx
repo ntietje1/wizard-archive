@@ -69,7 +69,7 @@ export function CategoryHeader({
         categoryId={categoryId}
       /> */}
 
-      <div className="flex items-start justify-between gap-4 pl-1">
+      {/* <div className="flex items-start justify-between gap-4 pl-1">
         <p className="text-muted-foreground">
           Manage {config.plural.toLowerCase()} for your campaign. Each{' '}
           {config.singular.toLowerCase()} automatically creates a tag that can
@@ -105,7 +105,7 @@ export function CategoryHeader({
             </Button>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

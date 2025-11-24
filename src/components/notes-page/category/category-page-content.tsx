@@ -3,7 +3,6 @@ import type React from 'react'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { toast } from 'sonner'
 import { useCategoryView, VIEW_MODE } from '~/hooks/useCategoryView'
-import { CategoryHeader } from './category-header'
 import type { Id } from 'convex/_generated/dataModel'
 import { TagCardWithContextMenu } from './tag/tag-card'
 import { FolderCardWithContextMenu } from './folder/folder-card'
@@ -23,7 +22,6 @@ import { Button } from '~/components/shadcn/ui/button'
 import { Link } from '@tanstack/react-router'
 import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/sidebarItems/types'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
 interface CategoryPageContentProps {
@@ -42,11 +40,9 @@ interface CategoryPageContentProps {
     React.ComponentProps<typeof CategoryFolderContextMenu>
   >
   TagDialogComponent?: ComponentType<TagDialogProps<any>>
-  HeaderComponent?: ComponentType<React.ComponentProps<typeof CategoryHeader>>
   EmptyStateComponent?: ComponentType<React.ComponentProps<typeof EmptyState>>
 }
 
-//TODO: get rid of "showFolder" button unless at root. Redesign with new integrated note page in mind
 export function CategoryPageContent({
   categorySlug,
   currentFolderId,
@@ -57,7 +53,6 @@ export function CategoryPageContent({
   MapCardComponent,
   FolderContextMenuComponent,
   TagDialogComponent = GenericTagDialog,
-  HeaderComponent = CategoryHeader,
   EmptyStateComponent = EmptyState,
 }: CategoryPageContentProps) {
   const [creatingTag, setCreatingTag] = useState(false)
@@ -67,18 +62,13 @@ export function CategoryPageContent({
 
   const {
     viewMode,
-    toggleViewMode,
     notesAndTags,
     folders,
     maps,
     categoryData,
     categoryConfig,
     campaignId,
-    canEditCategory,
-    breadcrumbs,
     navigateToFolder,
-    navigateToBreadcrumb,
-    isLoading,
     isAtRoot,
     hasContent,
     showSkeletons,
@@ -163,27 +153,6 @@ export function CategoryPageContent({
     <CategoryDragProvider>
       <FolderContextMenuComponent categoryConfig={categoryConfig}>
         <ScrollArea className="flex-1 p-6">
-          <HeaderComponent
-            config={categoryConfig}
-            breadcrumbs={breadcrumbs}
-            onNavigateBreadcrumb={navigateToBreadcrumb}
-            onCreateFolder={() => setCreatingFolder(true)}
-            onCreateTag={() => setCreatingTag(true)}
-            onCreateMap={
-              categoryConfig?.categorySlug ===
-              SYSTEM_DEFAULT_CATEGORIES.Location.slug
-                ? () => setCreatingMap(true)
-                : undefined
-            }
-            onEditCategory={
-              canEditCategory ? () => setEditingCategory(true) : undefined
-            }
-            onToggleViewMode={toggleViewMode}
-            viewMode={viewMode}
-            isLoading={isLoading}
-            categoryId={categoryData?._id}
-          />
-
           <ContentGrid>
             {/* Render items using registry */}
             {showSkeletons ? (

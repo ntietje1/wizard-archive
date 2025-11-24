@@ -15,12 +15,18 @@ import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { Trash2 } from '~/lib/icons'
+import { Trash2, Folder } from '~/lib/icons'
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 import { CATEGORY_KIND } from 'convex/tags/types'
+import usePersistedState from '~/hooks/usePersistedState'
+import {
+  VIEW_MODE,
+  CATEGORY_VIEW_MODE_STORAGE_KEY,
+  type ViewMode,
+} from '~/hooks/useCategoryView'
 
 export function FileTopbar() {
   const search = useSearch({
@@ -312,8 +318,33 @@ function CategoryTopbar({
     />
   ) : null
 
-  // Menu items for category
-  const categoryMenuItems: ContextMenuItem[] = []
+  // View mode state (only used when at root category)
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
+    `${CATEGORY_VIEW_MODE_STORAGE_KEY}-${categorySlug}`,
+    VIEW_MODE.folderized as ViewMode,
+  )
+
+  // Handle view mode toggle
+  const handleToggleViewMode = useCallback(() => {
+    setViewMode((prev: ViewMode) =>
+      prev === VIEW_MODE.flat ? VIEW_MODE.folderized : VIEW_MODE.flat,
+    )
+    // Navigate to root when toggling view mode
+    navigateToCategory(categorySlug, undefined)
+  }, [setViewMode, navigateToCategory, categorySlug])
+
+  // Menu items for category (only show view mode toggle at root)
+  const categoryMenuItems: ContextMenuItem[] = !folderId
+    ? [
+        {
+          type: 'action',
+          label:
+            viewMode === VIEW_MODE.folderized ? 'Hide Folders' : 'Show Folders',
+          icon: <Folder className="h-4 w-4" />,
+          onClick: handleToggleViewMode,
+        },
+      ]
+    : []
 
   // If viewing a folder, show folder topbar
   if (folderId && folderQuery.data) {
