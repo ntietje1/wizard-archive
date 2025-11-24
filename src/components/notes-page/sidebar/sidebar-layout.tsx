@@ -6,6 +6,7 @@ import {
 import { FileSidebar } from './sidebar'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { SessionPanel } from '../editor/session-panel/session-panel'
+import { RootContextMenu } from '~/components/context-menu/sidebar/generic/root-context-menu'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -30,8 +31,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0"
             >
-              <SidebarHeader />
-              <FileSidebar />
+              <RootContextMenu className="flex flex-col flex-1 min-h-0">
+                <SidebarHeader />
+                <FileSidebar />
+              </RootContextMenu>
             </ResizablePanel>
             <div className="h-px w-full bg-border" />
             <SessionPanel />

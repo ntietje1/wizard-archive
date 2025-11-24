@@ -339,15 +339,12 @@ export function useCategoryNewMap(
 
   const handleNewMap = useCallback(() => {
     if (!categoryConfig) return
-    // Only allow creating maps in locations category
-    if (categoryConfig.categorySlug !== 'locations') return
     openFolder()
     setIsDialogOpen(true)
   }, [openFolder, categoryConfig])
 
   const menuItem: ContextMenuItem | null = useMemo(() => {
-    // Only show for locations category
-    if (!categoryConfig || categoryConfig.categorySlug !== 'locations') {
+    if (!categoryConfig) {
       return null
     }
     return {
@@ -364,6 +361,37 @@ export function useCategoryNewMap(
     setIsDialogOpen,
     campaignId: campaign?._id,
     categoryId: getCategory.data?._id,
+    parentFolderId: folder?._id,
+  }
+}
+
+export function useNewMap(folder?: Folder) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+
+  const handleNewMap = useCallback(() => {
+    setIsDialogOpen(true)
+  }, [])
+
+  const menuItem: ContextMenuItem | null = useMemo(() => {
+    if (!campaign) {
+      return null
+    }
+    return {
+      type: 'action' as const,
+      icon: <MapPin className="h-4 w-4" />,
+      label: 'New Map',
+      onClick: handleNewMap,
+    }
+  }, [campaign, handleNewMap])
+
+  return {
+    menuItem,
+    isDialogOpen,
+    setIsDialogOpen,
+    campaignId: campaign?._id,
+    categoryId: undefined,
     parentFolderId: folder?._id,
   }
 }

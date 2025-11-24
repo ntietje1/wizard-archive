@@ -6,6 +6,7 @@ import {
 import { SortMenu } from './sort-menu'
 import { NewNoteButton } from './new-note'
 import { NewFolderButton } from './new-folder'
+import { NewCategoryButton } from './new-category'
 import { CloseAllFoldersButton } from './close-all-folders'
 
 export function SidebarHeader() {
@@ -24,6 +25,12 @@ export function SidebarHeader() {
             <NewFolderButton />
           </TooltipTrigger>
           <TooltipContent>New folder</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <NewCategoryButton />
+          </TooltipTrigger>
+          <TooltipContent>New category</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>

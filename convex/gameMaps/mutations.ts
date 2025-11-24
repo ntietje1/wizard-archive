@@ -6,7 +6,6 @@ import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
 import { getFolder } from "../folders/folders";
 import { getNote } from "../notes/notes";
 import { getTagCategory } from "../tags/tags";
-import { SYSTEM_DEFAULT_CATEGORIES } from "../tags/types";
 import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
 import { findUniqueSlug, shortenId } from "../common/slug";
 
@@ -28,10 +27,7 @@ export const createMap = mutation({
     )
     const { profile } = identityWithProfile
 
-    // enforce only location category (might change this in the future)
-    if (!args.categoryId) {
-      throw new Error('Category ID is required for creating a map')
-    } else {
+    if (args.categoryId) {
       const category = await getTagCategory(
         ctx,
         args.campaignId,
@@ -39,9 +35,6 @@ export const createMap = mutation({
       )
       if (!category) {
         throw new Error('Category not found')
-      }
-      if (category.slug !== SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
-        throw new Error('Category is not a location category')
       }
     }
 

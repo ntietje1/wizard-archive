@@ -3,7 +3,6 @@ import { requireCampaignMembership } from "../campaigns/campaigns";
 import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
 import { Ctx } from "../common/types";
 import { getTagCategory, getTagsByCategory } from "../tags/tags";
-import { SYSTEM_DEFAULT_CATEGORIES } from "../tags/types";
 import { AnySidebarItem, SIDEBAR_ITEM_TYPES } from "./types";
 
 
@@ -55,24 +54,23 @@ export const getSidebarItemsByCategory = async (
     )
   allItems.push(...notes)
 
-//   Get maps (only for locations category)
-  if (category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+    // Get maps
     const maps = await ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_category_parent', (q) => q
+        .query('gameMaps')
+        .withIndex('by_campaign_category_parent', (q) => q
         .eq('campaignId', campaignId)
         .eq('categoryId', categoryId)
-      )
-      .collect()
-      .then(
+        )
+        .collect()
+        .then(
         (maps) => maps.map((map) => ({
-          ...map,
-          category,
-          type: SIDEBAR_ITEM_TYPES.gameMaps,
+            ...map,
+            category,
+            type: SIDEBAR_ITEM_TYPES.gameMaps,
         })) as AnySidebarItem[]
-      )
+        )
     allItems.push(...maps)
-  }
+  
 
   return allItems
 }
@@ -131,8 +129,7 @@ export const getSidebarItemsByParent = async (
     )
   allItems.push(...notes)
 
-  // Get maps (only for locations category)
-  if (category && category.slug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+    // Get maps (only for locations category)
     const maps = await ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_category_parent', (q) => q
@@ -149,7 +146,6 @@ export const getSidebarItemsByParent = async (
         })) as AnySidebarItem[]
       )
     allItems.push(...maps)
-  }
 
   return allItems
 }

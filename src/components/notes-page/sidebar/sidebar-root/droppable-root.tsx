@@ -1,6 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import { RootContextMenu } from '~/components/context-menu/sidebar/generic/root-context-menu'
 import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { canDropItem } from '../dnd-utils'
 
@@ -26,9 +25,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   return (
     <div ref={setNodeRef} className={cn(className, isValidDrop && 'bg-muted')}>
-      <RootContextMenu className="flex flex-col flex-1">
-        {children}
-      </RootContextMenu>
+      {children}
     </div>
   )
 }

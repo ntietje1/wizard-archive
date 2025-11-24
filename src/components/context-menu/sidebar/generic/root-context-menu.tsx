@@ -9,7 +9,11 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
-import { Grid2x2Plus } from 'lucide-react'
+import { Grid2x2Plus, Tags } from 'lucide-react'
+import { useState } from 'react'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
+import { useNewMap } from '~/hooks/useCategoryContextMenu'
+import { MapDialog } from '~/components/forms/map-form/map-dialog'
 
 interface RootContextMenuProps {
   children: React.ReactNode
@@ -22,6 +26,9 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
   const { setRenamingId } = useFileSidebar()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const campaign = campaignWithMembership?.data?.campaign
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false)
+  const newMap = useNewMap()
 
   if (!campaignId) return children
 
@@ -53,6 +60,10 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
     toast.error('Not implemented')
   }
 
+  const handleNewCategory = () => {
+    setIsCreateCategoryOpen(true)
+  }
+
   const menuItems: ContextMenuItem[] = [
     {
       type: 'action',
@@ -68,6 +79,13 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
     },
     {
       type: 'action',
+      label: 'New Category',
+      icon: <Tags className="h-4 w-4" />,
+      onClick: handleNewCategory,
+    },
+    ...(newMap.menuItem ? [newMap.menuItem] : []),
+    {
+      type: 'action',
       label: 'New Canvas',
       icon: <Grid2x2Plus className="h-4 w-4" />,
       onClick: handleNewCanvas,
@@ -75,9 +93,31 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
   ]
 
   return (
-    <ContextMenu items={menuItems} className={className}>
-      {children}
-    </ContextMenu>
+    <>
+      <ContextMenu items={menuItems} className={className}>
+        {children}
+      </ContextMenu>
+      {campaign && (
+        <>
+          <CategoryDialog
+            mode="create"
+            isOpen={isCreateCategoryOpen}
+            onClose={() => setIsCreateCategoryOpen(false)}
+            onSuccess={() => setIsCreateCategoryOpen(false)}
+            campaignId={campaign._id}
+          />
+          {newMap.campaignId && (
+            <MapDialog
+              isOpen={newMap.isDialogOpen}
+              onClose={() => newMap.setIsDialogOpen(false)}
+              campaignId={newMap.campaignId}
+              categoryId={newMap.categoryId}
+              parentFolderId={newMap.parentFolderId}
+            />
+          )}
+        </>
+      )}
+    </>
   )
 }
 
