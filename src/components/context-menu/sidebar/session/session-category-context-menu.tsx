@@ -4,11 +4,10 @@ import {
   type ContextMenuItem,
 } from '~/components/context-menu/base/context-menu'
 import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
-import { Play, Calendar, SquareArrowOutUpRight } from 'lucide-react'
+import { Play, SquareArrowOutUpRight, Square } from 'lucide-react'
 import { forwardRef, useCallback, useMemo } from 'react'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFolderState } from '~/hooks/useFolderState'
-import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
 import {
   useCategoryNewFolderWithDialog,
@@ -32,9 +31,10 @@ export const SessionCategoryFolderContextMenu = forwardRef<
   const { openFolder } = useFolderState(
     folder?._id || categoryConfig?.categorySlug || '',
   )
-  const { startNewSession } = useSession()
+  const { startNewSession, currentSession, endCurrentSession } = useSession()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
+  const campaignId = campaign?._id
 
   const newFolder = useCategoryNewFolderWithDialog(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
@@ -52,6 +52,8 @@ export const SessionCategoryFolderContextMenu = forwardRef<
         : 'skip',
     ),
   )
+
+  const hasActiveSession = !!currentSession.data
 
   const handleStartNewSession = useCallback(() => {
     if (!getCategory.data?._id) {
@@ -82,31 +84,34 @@ export const SessionCategoryFolderContextMenu = forwardRef<
     openFolder,
   ])
 
+  const handleEndCurrentSession = useCallback(() => {
+    if (!campaignId) {
+      toast.error('Campaign not found')
+      return
+    }
+    endCurrentSession.mutate({ campaignId })
+  }, [campaignId, endCurrentSession])
+
   const menuItems = useMemo(() => {
     const items: ContextMenuItem[] = []
     
-    // Show "Start New Session" at root level and in sub folders
+    // Show "Start New Session" or "End Current Session" at root level and in sub folders
     if (categoryConfig) {
-      // Capture folder._id at menu creation time to ensure correct parent
-      const currentFolderId = folder?._id
-      items.push({
-        type: 'action' as const,
-        icon: <Play className="h-4 w-4" />,
-        label: 'Start New Session',
-        onClick: () => {
-          if (!getCategory.data?._id) {
-            toast.error('Failed to get category')
-            return
-          }
-          if (folder) {
-            openFolder()
-          }
-          startNewSession({
-            categoryId: getCategory.data._id,
-            parentFolderId: currentFolderId,
-          })
-        },
-      })
+      if (hasActiveSession) {
+        items.push({
+          type: 'action' as const,
+          icon: <Square className="h-4 w-4" />,
+          label: 'End Current Session',
+          onClick: handleEndCurrentSession,
+        })
+      } else {
+        items.push({
+          type: 'action' as const,
+          icon: <Play className="h-4 w-4" />,
+          label: 'Start New Session',
+          onClick: handleStartNewSession,
+        })
+      }
     }
 
     if (newFolder.menuItem) {
@@ -144,6 +149,8 @@ export const SessionCategoryFolderContextMenu = forwardRef<
     navigateToCategory,
     startNewSession,
     openFolder,
+    hasActiveSession,
+    handleEndCurrentSession,
   ])
 
   return (
