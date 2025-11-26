@@ -45,7 +45,7 @@ export const CategoryFolderButton = ({
   categoryContextMenu,
   tagNoteContextMenu,
   ancestorIds = [],
-}: CategoryFolderButtonProps & { ancestorIds?: Id<'notes'>[] }) => {
+}: CategoryFolderButtonProps & { ancestorIds?: Array<Id<'notes'>> }) => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const getCategory = useQuery(

@@ -20,7 +20,6 @@ export const setCurrentEditor = mutation({
         v.literal(SORT_DIRECTIONS.Descending),
       ),
     ),
-    foldersAlwaysOnTop: v.optional(v.boolean()),
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
@@ -39,7 +38,6 @@ export const setCurrentEditor = mutation({
         campaignId: args.campaignId!,
         sortOrder: args.sortOrder ?? SORT_ORDERS.DateCreated,
         sortDirection: args.sortDirection ?? SORT_DIRECTIONS.Ascending,
-        foldersAlwaysOnTop: args.foldersAlwaysOnTop ?? false,
       })
     }
 
@@ -47,9 +45,6 @@ export const setCurrentEditor = mutation({
       ...(args.sortOrder !== undefined && { sortOrder: args.sortOrder }),
       ...(args.sortDirection !== undefined && {
         sortDirection: args.sortDirection,
-      }),
-      ...(args.foldersAlwaysOnTop !== undefined && {
-        foldersAlwaysOnTop: args.foldersAlwaysOnTop,
       }),
     })
 

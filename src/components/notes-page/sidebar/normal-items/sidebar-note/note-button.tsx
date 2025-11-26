@@ -34,7 +34,7 @@ export function NoteButton({ note, ancestorIds = [] }: NoteButtonProps) {
   const children = useSidebarItemsByParent(note.categoryId, note._id)
   const hasChildren = (children.data && children.data.length > 0) || false
 
-  const currentAncestors: Id<'notes'>[] = [...ancestorIds, note._id]
+  const currentAncestors: Array<Id<'notes'>> = [...ancestorIds, note._id]
 
   const handleFinishRename = async (name: string) => {
     await updateNote.mutateAsync({ noteId: note._id, name })

@@ -12,7 +12,6 @@ import { useCampaign } from '~/contexts/CampaignContext'
 const defaultSortOptions: SortOptions = {
   order: SORT_ORDERS.DateCreated,
   direction: SORT_DIRECTIONS.Descending,
-  foldersAlwaysOnTop: false,
 }
 
 export const useSortOptions = () => {
@@ -37,14 +36,11 @@ export const useSortOptions = () => {
     const nextOptions: SortOptions = {
       order: editor.sortOrder ?? defaultSortOptions.order,
       direction: editor.sortDirection ?? defaultSortOptions.direction,
-      foldersAlwaysOnTop:
-        editor.foldersAlwaysOnTop ?? defaultSortOptions.foldersAlwaysOnTop,
     }
 
     setSortOptions((prev) =>
       prev.order === nextOptions.order &&
-      prev.direction === nextOptions.direction &&
-      prev.foldersAlwaysOnTop === nextOptions.foldersAlwaysOnTop
+      prev.direction === nextOptions.direction
         ? prev
         : nextOptions,
     )
@@ -58,7 +54,6 @@ export const useSortOptions = () => {
         campaignId: campaign._id,
         sortOrder: options.order,
         sortDirection: options.direction,
-        foldersAlwaysOnTop: options.foldersAlwaysOnTop,
       })
     },
     [campaign?._id, setCurrentEditor],

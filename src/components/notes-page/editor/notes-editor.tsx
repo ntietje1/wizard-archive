@@ -19,6 +19,8 @@ import { toast } from 'sonner'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import { Plus, StickyNote, Map as MapIcon } from 'lucide-react'
 import { cn } from '~/lib/utils'
+import type { Id } from 'convex/_generated/dataModel'
+import type { PageType } from 'convex/pages/types'
 
 export function NotesEditor() {
   return (
@@ -78,7 +80,12 @@ function NotesEditorBase() {
 }
 
 interface PageTabsProps {
-  pages: Array<{ _id: string; slug: string; title: string; type: string }>
+  pages: Array<{
+    _id: Id<'pages'>
+    slug: string
+    title: string
+    type: PageType
+  }>
   pageSlug: string | undefined
   onSelectPage: (slug: string) => void
   onCreatePage: () => void
@@ -123,8 +130,9 @@ function PageTabs({
   )
 }
 
+//TODO: fix typing here
 interface PageContentProps {
-  page: { _id: string; content?: any } | null | undefined
+  page: { _id: Id<'pages'>; content?: any } | null | undefined
   onUpdate: (content: any) => void
 }
 

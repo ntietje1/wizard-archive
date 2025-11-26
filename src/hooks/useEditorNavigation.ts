@@ -25,10 +25,9 @@ export const useEditorNavigation = () => {
     [dmUsername, campaignSlug, navigate],
   )
 
+  // does NOT update the note slug, so must be used within a note and not to navigate to a page in a different note
   const navigateToPage = useCallback(
-    (noteId: Id<'notes'>, pageSlug: string) => {
-      // We need to get the note slug first, but for now we'll use a simpler approach
-      // The note should already be in the URL, so we just update the page param
+    (pageSlug: string) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },

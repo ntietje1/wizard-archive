@@ -14,6 +14,17 @@ export const getPagesByNoteId = query({
   },
   returns: v.array(pageValidator),
   handler: async (ctx, args): Promise<Page[]> => {
+    const note = await ctx.db.get(args.noteId)
+    if (!note) {
+      return []
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: note.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
     return await ctx.db
       .query('pages')
       .withIndex('by_note_order', (q) => q.eq('noteId', args.noteId))

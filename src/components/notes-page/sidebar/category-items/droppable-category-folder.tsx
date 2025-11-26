@@ -11,7 +11,7 @@ import type { Note } from 'convex/notes/types'
 interface DroppableCategoryFolderProps {
   folder?: Note
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'notes'>[]
+  ancestorIds?: Array<Id<'notes'>>
   children: React.ReactNode
 }
 

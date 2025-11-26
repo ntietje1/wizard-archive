@@ -97,7 +97,7 @@ export async function getBlocksByCampaign(
     .collect()
 }
 
-async function deleteBlockTags(
+async function deleteBlockAndTags(
   ctx: MutationCtx,
   blockId: Id<'blocks'>,
   campaignId: Id<'campaigns'>,
@@ -123,7 +123,7 @@ export async function deleteBlocksByNote(
   const blocks = await getBlocksByNote(ctx, noteId, campaignId)
 
   for (const block of blocks) {
-    await deleteBlockTags(ctx, block._id, campaignId)
+    await deleteBlockAndTags(ctx, block._id, campaignId)
   }
 }
 

@@ -30,7 +30,7 @@ export const useNoteActions = () => {
   })
 
   const updatePageContentWithSanitization = useCallback(
-    async (pageId: Id<'pages'>, payload: CustomBlock[]) => {
+    async (pageId: Id<'pages'>, payload: Array<CustomBlock>) => {
       const sanitized = sanitizeNoteContent(payload)
       await updatePageContent.mutateAsync({
         pageId,

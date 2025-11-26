@@ -62,14 +62,14 @@ export const useCurrentPage = (
       title: 'New Page',
       type: 'text',
     })
+    if (!result.slug) return
     setPersistedPageSlug(result.slug)
-    navigateToPage(noteId, result.slug)
+    navigateToPage(result.slug)
   }
 
   const selectPage = (slug: string) => {
-    if (!noteId) return
     setPersistedPageSlug(slug)
-    navigateToPage(noteId, slug)
+    navigateToPage(slug)
   }
 
   const updateCurrentPageContent = useMemo(

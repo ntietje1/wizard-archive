@@ -8,7 +8,7 @@ import type { SidebarDragData } from '../dnd-utils'
 
 interface DraggableCategoryFolderProps {
   folder?: Note
-  ancestorIds?: Id<'notes'>[]
+  ancestorIds?: Array<Id<'notes'>>
   children: React.ReactNode
 }
 

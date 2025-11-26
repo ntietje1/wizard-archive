@@ -8,10 +8,7 @@ import {
   SORT_ORDERS,
   type SortOptions,
 } from 'convex/editors/types'
-import {
-  SIDEBAR_ITEM_TYPES,
-  type AnySidebarItem,
-} from 'convex/sidebarItems/types'
+import { type AnySidebarItem } from 'convex/sidebarItems/types'
 import { useSortOptions } from './useSortOptions'
 
 export const useSidebarItemsByCategory = (
@@ -70,20 +67,6 @@ export const sortItemsByOptions = (
 ) => {
   if (!items) return undefined
   return [...items].sort((a, b) => {
-    if (
-      options.foldersAlwaysOnTop &&
-      a.type === SIDEBAR_ITEM_TYPES.notes &&
-      b.type !== SIDEBAR_ITEM_TYPES.notes
-    ) {
-      return -1
-    }
-    if (
-      options.foldersAlwaysOnTop &&
-      a.type !== SIDEBAR_ITEM_TYPES.notes &&
-      b.type === SIDEBAR_ITEM_TYPES.notes
-    ) {
-      return 1
-    }
     switch (options.order) {
       case SORT_ORDERS.Alphabetical: {
         const nameA = a.name || ''

@@ -33,10 +33,6 @@ export function SortMenu() {
     setSortOptions({ ...sortOptions, direction: value as SortDirection })
   }
 
-  const handleFoldersAlwaysOnTopChange = (value: boolean) => {
-    setSortOptions({ ...sortOptions, foldersAlwaysOnTop: value })
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -88,13 +84,6 @@ export function SortMenu() {
             Descending
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem
-          checked={sortOptions.foldersAlwaysOnTop}
-          onCheckedChange={handleFoldersAlwaysOnTopChange}
-        >
-          Folders always on top
-        </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

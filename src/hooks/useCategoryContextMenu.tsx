@@ -209,7 +209,7 @@ export function useCategoryNewFolderWithDialog(
   }
 }
 
-export function useCategoryRenameFolder(folder?: Folder) {
+export function useCategoryRenameFolder(folder?: Note) {
   const { setRenamingId } = useFileSidebar()
 
   const handleRenameFolder = useCallback(() => {
@@ -234,7 +234,7 @@ export function useCategoryRenameFolder(folder?: Folder) {
   }
 }
 
-export function useCategoryEditFolder(folder?: Folder) {
+export function useCategoryEditFolder(folder?: Note) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const handleEditFolder = useCallback(() => {
@@ -261,7 +261,7 @@ export function useCategoryEditFolder(folder?: Folder) {
   }
 }
 
-export function useCategoryDeleteFolder(folder?: Folder) {
+export function useCategoryDeleteFolder(folder?: Note) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { deleteFolder } = useFolderActions()
   const sidebarItems = useSidebarItemsByParent(
@@ -316,7 +316,7 @@ export function useCategoryDeleteFolder(folder?: Folder) {
 
 export function useCategoryNewMap(
   categoryConfig: TagCategoryConfig | undefined,
-  folder?: Folder,
+  folder?: Note,
 ) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
@@ -365,7 +365,7 @@ export function useCategoryNewMap(
   }
 }
 
-export function useNewMap(folder?: Folder) {
+export function useNewMap(folder?: Note) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign

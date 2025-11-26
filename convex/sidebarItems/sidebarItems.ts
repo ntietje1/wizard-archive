@@ -26,7 +26,7 @@ export const getSidebarItemsByCategory = async (
     .withIndex('by_campaign_category_parent', (q) =>
       q
         .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
+        .eq('categoryId', categoryId)
         .eq('parentId', undefined),
     )
     .collect()
@@ -88,7 +88,7 @@ export const getSidebarItemsByParent = async (
     .withIndex('by_campaign_category_parent', (q) =>
       q
         .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
+        .eq('categoryId', categoryId)
         .eq('parentId', parentId),
     )
     .collect()

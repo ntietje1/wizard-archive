@@ -56,6 +56,7 @@ export const validateSearch = (
 
   // page is allowed when note is present
   if (
+    result.note &&
     'page' in search &&
     typeof search.page === 'string' &&
     search.page.trim().length > 0
