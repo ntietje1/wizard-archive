@@ -3,11 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { UNTITLED_FOLDER_NAME, type Folder } from 'convex/folders/types'
+import { UNTITLED_FOLDER_NAME, type Note } from 'convex/notes/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { TagCategory } from 'convex/tags/types'
-import type { Note } from 'convex/notes/types'
 import type { GameMap } from 'convex/gameMaps/types'
 
 import usePersistedState from './usePersistedState'
@@ -31,12 +30,12 @@ export const VIEW_MODE = {
 } as const
 
 export type ViewMode = (typeof VIEW_MODE)[keyof typeof VIEW_MODE]
-export type FolderAncestor = { id: Id<'folders'>; name: string }
+export type FolderAncestor = { id: Id<'notes'>; name: string }
 
 interface UseCategoryViewOptions {
   categorySlug: string
-  currentFolderId?: Id<'folders'>
-  onNavigate: (folderId?: Id<'folders'>) => void
+  currentFolderId?: Id<'notes'>
+  onNavigate: (folderId?: Id<'notes'>) => void
 }
 
 interface UseCategoryViewReturn {
@@ -44,7 +43,7 @@ interface UseCategoryViewReturn {
   toggleViewMode: () => void
 
   notesAndTags?: Note[]
-  folders?: Folder[]
+  folders?: Note[]
   maps?: GameMap[]
   categoryData?: TagCategory
   categoryConfig?: TagCategoryConfig
@@ -52,8 +51,8 @@ interface UseCategoryViewReturn {
   canEditCategory: boolean
   isLoading: boolean
 
-  breadcrumbs: Array<{ id: Id<'folders'>; name: string }>
-  navigateToFolder: (folder: Folder) => void
+  breadcrumbs: Array<{ id: Id<'notes'>; name: string }>
+  navigateToFolder: (folder: Note) => void
   navigateToBreadcrumb: (index: number) => void
 
   isAtRoot: boolean
@@ -63,7 +62,7 @@ interface UseCategoryViewReturn {
   noteSkeletonCount: number
   invalidFolderId: boolean
   categoryNotFound: boolean
-  ancestorIds: Id<'folders'>[]
+  ancestorIds: Id<'notes'>[]
 }
 
 export function useCategoryView({
@@ -92,10 +91,10 @@ export function useCategoryView({
 
   const ancestorsQuery = useQuery(
     convexQuery(
-      api.folders.queries.getFolderAncestors,
+      api.notes.queries.getNoteAncestors,
       currentFolderId && campaign?._id
         ? {
-            folderId: currentFolderId as Id<'folders'>,
+            noteId: currentFolderId as Id<'notes'>,
           }
         : 'skip',
     ),
@@ -103,10 +102,10 @@ export function useCategoryView({
 
   const currentFolderQuery = useQuery(
     convexQuery(
-      api.folders.queries.getFolder,
+      api.notes.queries.getNote,
       currentFolderId && campaign?._id
         ? {
-            folderId: currentFolderId as Id<'folders'>,
+            noteId: currentFolderId as Id<'notes'>,
           }
         : 'skip',
     ),
@@ -116,9 +115,9 @@ export function useCategoryView({
     if (!currentFolderId) return []
 
     const ancestors = ancestorsQuery.data || []
-    const ancestorBreadcrumbs = ancestors.map((folder: Folder) => ({
-      id: folder._id,
-      name: folder.name || UNTITLED_FOLDER_NAME,
+    const ancestorBreadcrumbs = ancestors.map((note: Note) => ({
+      id: note._id,
+      name: note.name || UNTITLED_FOLDER_NAME,
     }))
 
     if (currentFolderQuery.data) {
@@ -163,11 +162,12 @@ export function useCategoryView({
     return sidebarItemsByCategory
   }, [viewMode, sidebarItemsByParent, sidebarItemsByCategory])
 
+  // Folders are notes without tagId (tag-notes are shown separately as tag cards)
   const folders = useMemo(
     () =>
       sidebarItems.data?.filter(
-        (item) => item.type === SIDEBAR_ITEM_TYPES.folders,
-      ) as Folder[] | undefined,
+        (item) => item.type === SIDEBAR_ITEM_TYPES.notes && !item.tagId,
+      ) as Note[] | undefined,
     [sidebarItems.data],
   )
 
@@ -262,7 +262,7 @@ export function useCategoryView({
     setNoteSkeletonCount,
   ])
 
-  const navigateToFolder = (folder: Folder) => {
+  const navigateToFolder = (folder: Note) => {
     onNavigate(folder._id)
   }
 
@@ -284,7 +284,7 @@ export function useCategoryView({
 
   const ancestorIds = useMemo(() => {
     const ancestors = ancestorsQuery.data || []
-    return ancestors.map((folder: Folder) => folder._id)
+    return ancestors.map((note: Note) => note._id)
   }, [ancestorsQuery.data])
 
   return {

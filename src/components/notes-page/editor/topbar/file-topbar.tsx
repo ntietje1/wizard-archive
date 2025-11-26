@@ -3,14 +3,13 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { useMapActions } from '~/hooks/useMapActions'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { EditorSearch } from '../../validate-search'
 import { UNTITLED_NOTE_TITLE } from 'convex/notes/types'
-import { UNTITLED_FOLDER_NAME } from 'convex/folders/types'
+import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
@@ -219,7 +218,7 @@ function CategoryTopbar({
   onClose,
 }: {
   categorySlug: string
-  folderId?: Id<'folders'>
+  folderId?: Id<'notes'>
   onClose: () => void
 }) {
   const { campaignWithMembership } = useCampaign()
@@ -240,10 +239,10 @@ function CategoryTopbar({
 
   const folderQuery = useQuery(
     convexQuery(
-      api.folders.queries.getFolder,
+      api.notes.queries.getNote,
       folderId && campaignId
         ? {
-            folderId: folderId,
+            noteId: folderId,
           }
         : 'skip',
     ),
@@ -252,7 +251,7 @@ function CategoryTopbar({
   const updateCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
   })
-  const { updateFolder } = useFolderActions()
+  const { updateNote } = useNoteActions()
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Handle folder rename
@@ -260,8 +259,8 @@ function CategoryTopbar({
     async (newName: string) => {
       if (!folderQuery.data) return
       try {
-        await updateFolder.mutateAsync({
-          folderId: folderQuery.data._id,
+        await updateNote.mutateAsync({
+          noteId: folderQuery.data._id,
           name: newName,
         })
       } catch (error) {
@@ -270,7 +269,7 @@ function CategoryTopbar({
         throw error
       }
     },
-    [folderQuery.data, updateFolder],
+    [folderQuery.data, updateNote],
   )
 
   // Handle category rename

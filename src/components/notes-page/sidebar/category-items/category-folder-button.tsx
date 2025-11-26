@@ -20,7 +20,7 @@ import type { ContextMenuRef } from '~/components/context-menu/base/context-menu
 import { SidebarItemButtonBase } from '../sidebar-item/sidebar-item-button-base'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
@@ -33,7 +33,7 @@ type CategoryContextMenuComponent =
 type NoteContextMenuComponent = React.ComponentType<TagNoteContextMenuProps>
 
 interface CategoryFolderButtonProps {
-  folder?: Folder
+  folder?: Note
   categoryConfig: TagCategoryConfig
   categoryContextMenu?: CategoryContextMenuComponent
   tagNoteContextMenu?: NoteContextMenuComponent
@@ -45,7 +45,7 @@ export const CategoryFolderButton = ({
   categoryContextMenu,
   tagNoteContextMenu,
   ancestorIds = [],
-}: CategoryFolderButtonProps & { ancestorIds?: Id<'folders'>[] }) => {
+}: CategoryFolderButtonProps & { ancestorIds?: Id<'notes'>[] }) => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const getCategory = useQuery(
@@ -72,7 +72,7 @@ export const CategoryFolderButton = ({
   const CategoryContextMenuComponent =
     categoryContextMenu || CategoryContextMenu
 
-  const currentAncestors: Array<Id<'folders'>> = folder
+  const currentAncestors: Array<Id<'notes'>> = folder
     ? [...ancestorIds, folder._id]
     : ancestorIds
 
@@ -143,7 +143,7 @@ interface CategoryFolderBaseProps {
   isExpanded: boolean
   toggleExpanded: () => void
   contextMenuRef: React.RefObject<ContextMenuRef | null>
-  folder?: Folder
+  folder?: Note
   defaultName?: string
 }
 

@@ -8,7 +8,7 @@ import type { SidebarDragData } from '../../dnd-utils'
 
 interface DraggableMapProps {
   map: GameMap
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
   children: React.ReactNode
 }
 
@@ -20,7 +20,7 @@ export function DraggableMap({
   const dragData: SidebarDragData = {
     _id: map._id,
     type: map.type,
-    parentFolderId: map.parentFolderId,
+    parentId: map.parentId,
     categoryId: map.categoryId,
     ancestorIds,
     name: map.name || UNTITLED_MAP_NAME,

@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import { UNTITLED_FOLDER_NAME, type Folder } from 'convex/folders/types'
+import { UNTITLED_FOLDER_NAME, type Note } from 'convex/notes/types'
 import { useState, type MouseEvent } from 'react'
 import { toast } from 'sonner'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
@@ -60,7 +60,7 @@ function FolderSvg() {
 }
 
 export interface FolderCardProps {
-  folder?: Folder
+  folder?: Note
   categoryId?: Id<'tagCategories'>
   categoryConfig?: TagCategoryConfig
   onClick?: (e: MouseEvent) => void
@@ -84,7 +84,6 @@ export function FolderCardWithContextMenu(props: FolderCardProps) {
 
 export function FolderCard({
   folder,
-  categoryId,
   onClick,
   className = '',
   isLoading = false,
@@ -95,7 +94,7 @@ export function FolderCard({
   const isDisabled = activeDragItem !== null
   const { active, over } = useDndContext()
 
-  if (isLoading || !folder || !categoryId) {
+  if (isLoading || !folder) {
     return (
       <div className={`h-[140px] ${className}`}>
         <div className="folder-wrapper">
@@ -114,7 +113,7 @@ export function FolderCard({
 
   const dropData: CategoryDropData = {
     _id: folder._id,
-    type: SIDEBAR_ITEM_TYPES.folders,
+    type: SIDEBAR_ITEM_TYPES.notes,
     categoryId: folder.categoryId,
   }
   const { setNodeRef: setDropRef, isOver } = useDroppable({
@@ -127,9 +126,9 @@ export function FolderCard({
 
   const dragData: CategoryDragData = {
     _id: folder._id,
-    type: SIDEBAR_ITEM_TYPES.folders,
+    type: SIDEBAR_ITEM_TYPES.notes,
     name: folder.name || UNTITLED_FOLDER_NAME,
-    parentFolderId: folder.parentFolderId,
+    parentId: folder.parentId,
     categoryId: folder.categoryId,
     icon: FolderIcon,
   }
@@ -144,7 +143,7 @@ export function FolderCard({
   })
 
   const updateFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.updateFolder),
+    mutationFn: useConvexMutation(api.notes.mutations.updateNote),
   })
 
   const handleCardActivate = (e?: MouseEvent) => {
@@ -232,7 +231,7 @@ export function FolderCard({
           onSubmit={async (values) => {
             try {
               await updateFolder.mutateAsync({
-                folderId: folder._id,
+                noteId: folder._id,
                 name: values.name,
               })
               setEditing(false)

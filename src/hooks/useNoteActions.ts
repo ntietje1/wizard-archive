@@ -18,16 +18,26 @@ export const useNoteActions = () => {
   const moveNote = useMutation({
     mutationFn: useConvexMutation(api.notes.mutations.moveNote),
   })
+  const createPage = useMutation({
+    mutationFn: useConvexMutation(api.pages.mutations.createPage),
+  })
+  const updatePage = useMutation({
+    mutationFn: useConvexMutation(api.pages.mutations.updatePage),
+  })
 
-  const updateNoteContent = useCallback(
-    async (noteId: Id<'notes'>, payload: CustomBlock[]) => {
+  const updatePageContent = useMutation({
+    mutationFn: useConvexMutation(api.pages.mutations.updatePageContent),
+  })
+
+  const updatePageContentWithSanitization = useCallback(
+    async (pageId: Id<'pages'>, payload: CustomBlock[]) => {
       const sanitized = sanitizeNoteContent(payload)
-      await updateNote.mutateAsync({
-        noteId,
+      await updatePageContent.mutateAsync({
+        pageId,
         content: sanitized,
       })
     },
-    [updateNote],
+    [updatePageContent],
   )
 
   return {
@@ -35,8 +45,10 @@ export const useNoteActions = () => {
     createNote,
     deleteNote,
     moveNote,
-
-    updateNoteContent,
+    createPage,
+    updatePage,
+    updatePageContent,
+    updatePageContentWithSanitization,
   }
 }
 

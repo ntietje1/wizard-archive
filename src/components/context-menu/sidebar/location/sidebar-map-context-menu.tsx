@@ -73,7 +73,7 @@ export const SidebarMapContextMenu = forwardRef<
         onClose={() => setIsEditing(false)}
         campaignId={map.campaignId}
         categoryId={map.categoryId}
-        parentFolderId={map.parentFolderId}
+        parentId={map.parentId}
       />
     </>
   )

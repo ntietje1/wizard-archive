@@ -60,13 +60,13 @@ export const SessionCategoryFolderContextMenu = forwardRef<
       toast.error('Failed to get category')
       return
     }
-    const parentFolderId = folder ? folder._id : undefined
+    const parentId = folder ? folder._id : undefined
     if (folder) {
       openFolder()
     }
     startNewSession({
       categoryId: getCategory.data._id,
-      parentFolderId: parentFolderId,
+      parentId: parentId,
     })
   }, [getCategory.data?._id, folder, startNewSession, openFolder])
 

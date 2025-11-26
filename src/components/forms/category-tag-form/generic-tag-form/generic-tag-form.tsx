@@ -36,7 +36,7 @@ export default function GenericTagForm({
   mode,
   tag,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
 }: GenericTagFormProps) {
@@ -135,7 +135,7 @@ export default function GenericTagForm({
             imageStorageId: imageStorageId,
             campaignId: campaign._id,
             categoryId: getCategory.data._id,
-            parentFolderId,
+            parentId,
           })
           .catch((error) => {
             console.error('Failed to create tag:', error)

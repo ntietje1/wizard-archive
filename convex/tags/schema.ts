@@ -31,7 +31,7 @@ export const tagTableFields = {
 
 export const createTagAndNoteArgs = {
   ...tagTableFields,
-  parentFolderId: v.optional(v.id('folders')),
+  parentId: v.optional(v.id('notes')),
 }
 
 export const tagTables = {

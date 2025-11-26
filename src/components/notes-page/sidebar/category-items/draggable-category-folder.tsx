@@ -1,14 +1,14 @@
 import { useDraggable } from '@dnd-kit/core'
 import { cn } from '~/lib/utils'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Folder as FolderIcon } from '~/lib/icons'
-import { UNTITLED_FOLDER_NAME } from 'convex/folders/types'
+import { UNTITLED_FOLDER_NAME } from 'convex/notes/types'
 import type { SidebarDragData } from '../dnd-utils'
 
 interface DraggableCategoryFolderProps {
-  folder?: Folder
-  ancestorIds?: Id<'folders'>[]
+  folder?: Note
+  ancestorIds?: Id<'notes'>[]
   children: React.ReactNode
 }
 
@@ -22,7 +22,7 @@ export function DraggableCategoryFolder({
   const dragData: SidebarDragData = {
     _id: folder._id,
     type: folder.type,
-    parentFolderId: folder.parentFolderId,
+    parentFolderId: folder.parentId,
     categoryId: folder.categoryId,
     ancestorIds,
     name: folder.name || UNTITLED_FOLDER_NAME,

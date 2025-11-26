@@ -102,7 +102,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
             isOpen={isCreateDialogOpen}
             onClose={() => setIsCreateDialogOpen(false)}
             config={categoryConfig}
-            parentFolderId={folder?._id}
+            parentId={folder?._id}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}

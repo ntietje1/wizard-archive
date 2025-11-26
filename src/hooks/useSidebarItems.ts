@@ -40,7 +40,7 @@ export const useSidebarItemsByCategory = (
 
 export const useSidebarItemsByParent = (
   categoryId?: Id<'tagCategories'>,
-  parentId?: Id<'folders'>,
+  parentId?: Id<'notes'>,
   enabled = true,
 ) => {
   const { sortOptions } = useSortOptions()
@@ -72,15 +72,15 @@ export const sortItemsByOptions = (
   return [...items].sort((a, b) => {
     if (
       options.foldersAlwaysOnTop &&
-      a.type === SIDEBAR_ITEM_TYPES.folders &&
-      b.type !== SIDEBAR_ITEM_TYPES.folders
+      a.type === SIDEBAR_ITEM_TYPES.notes &&
+      b.type !== SIDEBAR_ITEM_TYPES.notes
     ) {
       return -1
     }
     if (
       options.foldersAlwaysOnTop &&
-      a.type !== SIDEBAR_ITEM_TYPES.folders &&
-      b.type === SIDEBAR_ITEM_TYPES.folders
+      a.type !== SIDEBAR_ITEM_TYPES.notes &&
+      b.type === SIDEBAR_ITEM_TYPES.notes
     ) {
       return 1
     }

@@ -8,6 +8,9 @@
  * @module
  */
 
+import type * as blocks_blocks from "../blocks/blocks.js";
+import type * as blocks_queries from "../blocks/queries.js";
+import type * as blocks_types from "../blocks/types.js";
 import type * as campaigns_campaigns from "../campaigns/campaigns.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
@@ -22,10 +25,6 @@ import type * as common_types from "../common/types.js";
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
 import type * as editors_types from "../editors/types.js";
-import type * as folders_folders from "../folders/folders.js";
-import type * as folders_mutations from "../folders/mutations.js";
-import type * as folders_queries from "../folders/queries.js";
-import type * as folders_types from "../folders/types.js";
 import type * as gameMaps_gameMaps from "../gameMaps/gameMaps.js";
 import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
@@ -34,12 +33,14 @@ import type * as locations_locations from "../locations/locations.js";
 import type * as locations_mutations from "../locations/mutations.js";
 import type * as locations_queries from "../locations/queries.js";
 import type * as locations_types from "../locations/types.js";
-import type * as notes_blocks from "../notes/blocks.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_mutations from "../notes/mutations.js";
 import type * as notes_notes from "../notes/notes.js";
 import type * as notes_queries from "../notes/queries.js";
 import type * as notes_types from "../notes/types.js";
+import type * as pages_mutations from "../pages/mutations.js";
+import type * as pages_queries from "../pages/queries.js";
+import type * as pages_types from "../pages/types.js";
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_sessions from "../sessions/sessions.js";
@@ -79,6 +80,9 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "blocks/blocks": typeof blocks_blocks;
+  "blocks/queries": typeof blocks_queries;
+  "blocks/types": typeof blocks_types;
   "campaigns/campaigns": typeof campaigns_campaigns;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
@@ -93,10 +97,6 @@ declare const fullApi: ApiFromModules<{
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;
   "editors/types": typeof editors_types;
-  "folders/folders": typeof folders_folders;
-  "folders/mutations": typeof folders_mutations;
-  "folders/queries": typeof folders_queries;
-  "folders/types": typeof folders_types;
   "gameMaps/gameMaps": typeof gameMaps_gameMaps;
   "gameMaps/mutations": typeof gameMaps_mutations;
   "gameMaps/queries": typeof gameMaps_queries;
@@ -105,12 +105,14 @@ declare const fullApi: ApiFromModules<{
   "locations/mutations": typeof locations_mutations;
   "locations/queries": typeof locations_queries;
   "locations/types": typeof locations_types;
-  "notes/blocks": typeof notes_blocks;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/mutations": typeof notes_mutations;
   "notes/notes": typeof notes_notes;
   "notes/queries": typeof notes_queries;
   "notes/types": typeof notes_types;
+  "pages/mutations": typeof pages_mutations;
+  "pages/queries": typeof pages_queries;
+  "pages/types": typeof pages_types;
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/sessions": typeof sessions_sessions;

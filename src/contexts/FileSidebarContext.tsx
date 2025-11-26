@@ -20,7 +20,6 @@ import {
   type SidebarDragData,
   type SidebarDropData,
 } from '~/components/notes-page/sidebar/dnd-utils'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
@@ -56,13 +55,12 @@ export function FileSidebarProvider({
   const [deletingId, setDeletingId] = useState<Id<SidebarItemType> | null>(null)
 
   const [folderStates, setFolderStates] = usePersistedState<
-    Record<Id<'folders'>, boolean>
+    Record<string, boolean>
   >('file-sidebar-folder-states', {})
 
   const [closeAllFoldersMode, setCloseAllFoldersMode] =
     usePersistedState<boolean>('file-sidebar-close-all-folders-mode', false)
 
-  const { moveFolder } = useFolderActions()
   const { moveNote } = useNoteActions()
 
   const moveMap = useMutation({
@@ -149,7 +147,7 @@ export function FileSidebarProvider({
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
           ? undefined
-          : (targetData._id as Id<'folders'>)
+          : (targetData._id as Id<'notes'>)
 
       await executeMove(
         draggedItem.type,
@@ -157,18 +155,17 @@ export function FileSidebarProvider({
         targetId,
         {
           moveNote: (params) => moveNote.mutateAsync(params),
-          moveFolder: (params) => moveFolder.mutateAsync(params),
           moveMap: (params) => moveMap.mutateAsync(params),
         },
         {
-          openFolder,
+          openFolder: (id) => openFolder(id),
         },
       ).catch((error: Error) => {
         console.error('Failed to move item:', error)
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveFolder, moveMap, openFolder],
+    [moveNote, moveMap, openFolder],
   )
 
   const handleDragCancel = useCallback(() => {

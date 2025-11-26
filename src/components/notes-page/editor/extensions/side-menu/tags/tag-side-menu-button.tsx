@@ -13,6 +13,8 @@ import {
 } from '~/components/shadcn/ui/dropdown-menu'
 import type { Tag } from 'convex/tags/types'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
+import { useCurrentPage } from '~/hooks/useCurrentPage'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 interface TagSideMenuButtonProps {
   block: CustomBlock
@@ -25,7 +27,10 @@ export default function TagSideMenuButton({
   freezeMenu,
   unfreezeMenu,
 }: TagSideMenuButtonProps) {
-  const { note } = useCurrentNote()
+  const { note, noteSlug } = useCurrentNote()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const { currentPage } = useCurrentPage(noteSlug, campaignId)
   const [query, setQuery] = useState('')
 
   const Components = useComponentsContext()!
@@ -40,6 +45,7 @@ export default function TagSideMenuButton({
     handleRemoveTag,
   } = useBlockTags({
     noteId: note.data?._id,
+    pageId: currentPage?._id,
     blockId: block.id,
     searchQuery: query,
   })

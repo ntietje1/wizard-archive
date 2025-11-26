@@ -9,7 +9,7 @@ interface MapDialogProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   onSuccess?: () => void
 }
 
@@ -19,7 +19,7 @@ export function MapDialog({
   mapId,
   campaignId,
   categoryId,
-  parentFolderId,
+  parentId,
   onSuccess,
 }: MapDialogProps) {
   if (!isOpen) return null
@@ -40,7 +40,7 @@ export function MapDialog({
         mapId={mapId}
         campaignId={campaignId}
         categoryId={categoryId}
-        parentFolderId={parentFolderId}
+        parentId={parentId}
         onClose={onClose}
         onSuccess={onSuccess}
       />

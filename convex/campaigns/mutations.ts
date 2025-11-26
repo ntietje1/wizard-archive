@@ -189,7 +189,7 @@ export const deleteCampaign = mutation({
 
     const blocks = await ctx.db
       .query('blocks')
-      .withIndex('by_campaign_note_toplevel_pos', (q) =>
+      .withIndex('by_campaign_note_page_block', (q) =>
         q.eq('campaignId', args.campaignId),
       )
       .collect()
@@ -207,17 +207,6 @@ export const deleteCampaign = mutation({
 
     for (const note of notes) {
       await ctx.db.delete(note._id)
-    }
-
-    const folders = await ctx.db
-      .query('folders')
-      .withIndex('by_campaign_category_parent', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    for (const folder of folders) {
-      await ctx.db.delete(folder._id)
     }
 
     const tagCategories = await ctx.db

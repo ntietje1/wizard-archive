@@ -16,6 +16,7 @@ import {
   ContextMenuSeparator,
 } from '~/components/shadcn/ui/context-menu'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
+import { useCurrentPage } from '~/hooks/useCurrentPage'
 import type { Share } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 
@@ -38,15 +39,19 @@ export default function ShareSideMenuButton({
   freezeMenu,
   unfreezeMenu,
 }: ShareSideMenuButtonProps) {
-  const { note } = useCurrentNote()
+  const { note, noteSlug } = useCurrentNote()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
+  const campaignId = campaign?._id
+  const { currentPage } = useCurrentPage(noteSlug, campaignId)
   const Components = useComponentsContext()!
 
   const blockTagState = useQuery(
     convexQuery(
-      api.notes.queries.getBlockTagState,
-      note.data?._id ? { noteId: note.data._id, blockId: block.id } : 'skip',
+      api.blocks.queries.getBlockTagState,
+      note.data?._id && currentPage?._id
+        ? { noteId: note.data._id, pageId: currentPage._id, blockId: block.id }
+        : 'skip',
     ),
   )
 
@@ -85,19 +90,21 @@ export default function ShareSideMenuButton({
     (isShared && !isMutating) || (!isShared && isMutating)
 
   const toggleShareTag = async (share: Share) => {
-    if (!note.data || isMutating || isBlockNotFound) return
+    if (!note.data || !currentPage?._id || isMutating || isBlockNotFound) return
 
     const isApplied = appliedTagIds.has(share.tagId)
     try {
       if (isApplied) {
         await removeShareFromBlock.mutateAsync({
           noteId: note.data._id,
+          pageId: currentPage._id,
           blockId: block.id,
           shareId: share.shareId,
         })
       } else {
         await addShareToBlock.mutateAsync({
           noteId: note.data._id,
+          pageId: currentPage._id,
           blockId: block.id,
           shareId: share.shareId,
         })

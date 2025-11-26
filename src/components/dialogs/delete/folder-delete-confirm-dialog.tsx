@@ -1,12 +1,12 @@
 import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { Folder } from 'convex/notes/types'
-import { useFolderActions } from '~/hooks/useFolderActions'
+import type { Note } from 'convex/notes/types'
+import { useNoteActions } from '~/hooks/useNoteActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 interface FolderDeleteConfirmDialogProps {
-  folder: Folder
+  folder: Note
   isDeleting: boolean
   onConfirm?: () => void
   onClose: () => void
@@ -17,7 +17,7 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { deleteFolder } = useFolderActions()
+  const { deleteNote } = useNoteActions()
   const sidebarItemsByParent = useSidebarItemsByParent(
     folder.categoryId,
     folder._id,
@@ -25,8 +25,8 @@ export function FolderDeleteConfirmDialog({
   const hasDirectChildren =
     folder && (sidebarItemsByParent.data?.length || 0) > 0
   const handleConfirm = useCallback(async () => {
-    await deleteFolder
-      .mutateAsync({ folderId: folder._id })
+    await deleteNote
+      .mutateAsync({ noteId: folder._id })
       .then(() => {
         toast.success('Folder deleted')
       })
@@ -38,7 +38,7 @@ export function FolderDeleteConfirmDialog({
         onConfirm?.()
         onClose()
       })
-  }, [deleteFolder, folder._id, onConfirm, onClose])
+  }, [deleteNote, folder._id, onConfirm, onClose])
 
   return (
     <ConfirmationDialog

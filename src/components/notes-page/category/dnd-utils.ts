@@ -11,7 +11,7 @@ import { validateDrop } from '~/utils/dnd-utils'
 export interface CategoryDragData {
   _id: Id<SidebarItemType>
   type: SidebarItemType
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   noteId?: Id<'notes'>
   categoryId?: Id<'tagCategories'>
   name: string
@@ -39,7 +39,7 @@ export function canDropCategoryItem(
     {
       _id: draggedItem._id,
       type: draggedItem.type,
-      parentFolderId: draggedItem.parentFolderId,
+      parentId: draggedItem.parentId,
       categoryId: draggedItem.categoryId,
       ancestorIds: [], // don't need to check ancestorIds because we can only see 1 level in the category page
     },
@@ -63,7 +63,7 @@ export function validateCategoryItemDrop(
     {
       _id: draggedItem._id,
       type: draggedItem.type,
-      parentFolderId: draggedItem.parentFolderId,
+      parentId: draggedItem.parentId,
       categoryId: draggedItem.categoryId,
       ancestorIds: [],
     },

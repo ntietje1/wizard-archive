@@ -39,7 +39,7 @@ export const useSession = () => {
     categoryId: Id<'tagCategories'>
     color?: string
     description?: string
-    parentFolderId?: Id<'folders'>
+    parentId?: Id<'notes'>
     endedAt?: number | undefined
   }) => {
     if (!campaignId) return
@@ -52,7 +52,7 @@ export const useSession = () => {
       description: args.description ?? nowIso,
       campaignId,
       categoryId: args.categoryId,
-      parentFolderId: args.parentFolderId,
+      parentId: args.parentId,
       endedAt: args.endedAt,
     })
   }

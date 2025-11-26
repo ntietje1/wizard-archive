@@ -1,24 +1,62 @@
 import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
+import { useNoteActions } from './useNoteActions'
 
+/**
+ * useFolderActions - Wrapper around useNoteActions for creating "folder" notes
+ * Folders are now just notes that don't automatically create pages
+ */
 export const useFolderActions = () => {
-  const updateFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.updateFolder),
-  })
+  const { createNote, updateNote, deleteNote, moveNote } = useNoteActions()
+
   const createFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.createFolder),
+    mutationFn: async (params: {
+      name?: string
+      parentId?: Id<'notes'>
+      campaignId: Id<'campaigns'>
+      categoryId?: Id<'tagCategories'>
+    }) => {
+      // Create note without page (folder behavior)
+      const result = await createNote.mutateAsync({
+        ...params,
+        createPage: false,
+      })
+      return result.noteId
+    },
   })
+
+  const updateFolder = useMutation({
+    mutationFn: async (params: { folderId: Id<'notes'>; name: string }) => {
+      return await updateNote.mutateAsync({
+        noteId: params.folderId,
+        name: params.name,
+      })
+    },
+  })
+
   const deleteFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.deleteFolder),
+    mutationFn: async (params: { folderId: Id<'notes'> }) => {
+      return await deleteNote.mutateAsync({
+        noteId: params.folderId,
+      })
+    },
   })
+
   const moveFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.moveFolder),
+    mutationFn: async (params: {
+      folderId: Id<'notes'>
+      parentId?: Id<'notes'>
+    }) => {
+      return await moveNote.mutateAsync({
+        noteId: params.folderId,
+        parentId: params.parentId,
+      })
+    },
   })
 
   return {
-    updateFolder,
     createFolder,
+    updateFolder,
     deleteFolder,
     moveFolder,
   }

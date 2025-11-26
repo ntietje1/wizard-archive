@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import type React from 'react'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { toast } from 'sonner'
@@ -20,17 +20,13 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link } from '@tanstack/react-router'
-import {
-  SIDEBAR_ITEM_TYPES,
-  type SidebarItemType,
-} from 'convex/sidebarItems/types'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
 interface CategoryPageContentProps {
   categorySlug: string
-  currentFolderId?: Id<'folders'>
-  onNavigate: (folderId?: Id<'folders'>) => void
+  currentFolderId?: Id<'notes'>
+  onNavigate: (folderId?: Id<'notes'>) => void
   onCategoryUpdated?: (newSlug: string) => void
   TagCardComponent?: ComponentType<
     React.ComponentProps<typeof TagCardWithContextMenu>
@@ -85,19 +81,6 @@ export function CategoryPageContent({
     onNavigate,
   })
 
-  //TODO: expand this to include dialogs, etc.
-  // Component registry for rendering different item types
-  const CATEGORY_ITEM_COMPONENT_REGISTRY = useMemo(() => {
-    const registry: Partial<Record<SidebarItemType, ComponentType<any>>> = {
-      [SIDEBAR_ITEM_TYPES.folders]: FolderCardComponent,
-      [SIDEBAR_ITEM_TYPES.notes]: TagCardComponent,
-    }
-    if (MapCardComponent) {
-      registry[SIDEBAR_ITEM_TYPES.gameMaps] = MapCardComponent
-    }
-    return registry
-  }, [FolderCardComponent, TagCardComponent, MapCardComponent])
-
   const { createFolder } = useFolderActions()
 
   useEffect(() => {
@@ -114,7 +97,7 @@ export function CategoryPageContent({
       await createFolder.mutateAsync({
         campaignId,
         categoryId: categoryData._id,
-        parentFolderId: currentFolderId,
+        parentId: currentFolderId,
         name: values.name,
       })
       toast.success('Folder created')
@@ -157,15 +140,11 @@ export function CategoryPageContent({
       <FolderContextMenuComponent categoryConfig={categoryConfig}>
         <ScrollArea className="flex-1 p-6">
           <ContentGrid>
-            {/* Render items using registry */}
             {showSkeletons ? (
               <>
                 {viewMode === VIEW_MODE.folderized &&
                   Array.from({ length: folderSkeletonCount }).map((_, i) => {
-                    const FolderComponent =
-                      CATEGORY_ITEM_COMPONENT_REGISTRY[
-                        SIDEBAR_ITEM_TYPES.folders
-                      ]
+                    const FolderComponent = FolderCardComponent
                     return FolderComponent ? (
                       <FolderComponent
                         key={`skeleton-folder-${i}`}
@@ -176,8 +155,7 @@ export function CategoryPageContent({
                     ) : null
                   })}
                 {Array.from({ length: noteSkeletonCount }).map((_, i) => {
-                  const TagComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.notes]
+                  const TagComponent = TagCardComponent
                   return TagComponent ? (
                     <TagComponent
                       key={`skeleton-tag-${i}`}
@@ -192,10 +170,7 @@ export function CategoryPageContent({
                 {/* Folder Cards */}
                 {viewMode === VIEW_MODE.folderized &&
                   folders?.map((folder) => {
-                    const FolderComponent =
-                      CATEGORY_ITEM_COMPONENT_REGISTRY[
-                        SIDEBAR_ITEM_TYPES.folders
-                      ]
+                    const FolderComponent = FolderCardComponent
                     return FolderComponent ? (
                       <FolderComponent
                         key={folder._id}
@@ -208,34 +183,25 @@ export function CategoryPageContent({
                   })}
 
                 {/* Tag Cards */}
-                {notesAndTags?.map((note) => {
-                  const TagComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.notes]
-                  return TagComponent ? (
-                    <TagComponent
-                      key={note._id}
-                      noteAndTag={note}
-                      config={categoryConfig}
-                      parentFolderId={currentFolderId}
-                    />
-                  ) : null
-                })}
+                {notesAndTags?.map((note) => (
+                  <TagCardComponent
+                    key={note._id}
+                    noteAndTag={note}
+                    config={categoryConfig}
+                    parentId={currentFolderId}
+                  />
+                ))}
 
                 {/* Map Cards */}
-                {maps?.map((map) => {
-                  const MapComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[
-                      SIDEBAR_ITEM_TYPES.gameMaps
-                    ]
-                  return MapComponent ? (
-                    <MapComponent
+                {MapCardComponent &&
+                  maps?.map((map) => (
+                    <MapCardComponent
                       key={map._id}
                       map={map}
                       categoryId={categoryData?._id}
                       categoryConfig={categoryConfig}
                     />
-                  ) : null
-                })}
+                  ))}
               </>
             )}
 
@@ -256,7 +222,7 @@ export function CategoryPageContent({
               isOpen={creatingTag}
               onClose={() => setCreatingTag(false)}
               config={categoryConfig}
-              parentFolderId={currentFolderId}
+              parentId={currentFolderId}
             />
           )}
 
@@ -285,7 +251,7 @@ export function CategoryPageContent({
               onClose={() => setCreatingMap(false)}
               campaignId={campaignId}
               categoryId={categoryData._id}
-              parentFolderId={currentFolderId}
+              parentId={currentFolderId}
             />
           )}
         </ScrollArea>

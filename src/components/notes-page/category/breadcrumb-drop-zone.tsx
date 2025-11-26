@@ -27,7 +27,7 @@ export function BreadcrumbDropZone({
   const dropData: CategoryDropData = {
     _id: id,
     type:
-      id === SIDEBAR_ROOT_TYPE ? SIDEBAR_ROOT_TYPE : SIDEBAR_ITEM_TYPES.folders,
+      id === SIDEBAR_ROOT_TYPE ? SIDEBAR_ROOT_TYPE : SIDEBAR_ITEM_TYPES.notes,
     categoryId,
   }
 

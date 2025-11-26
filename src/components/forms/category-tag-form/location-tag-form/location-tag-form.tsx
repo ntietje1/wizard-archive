@@ -36,7 +36,7 @@ interface LocationTagFormProps {
   mode: 'create' | 'edit'
   location?: Location
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   isOpen: boolean
   onClose: () => void
   onLocationCreated?: (locationId: Id<'locations'>) => void
@@ -144,7 +144,7 @@ export default function LocationTagForm({
           imageStorageId: imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
-          parentFolderId,
+          parentId,
         })
 
         if (onLocationCreated) {

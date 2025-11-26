@@ -15,7 +15,7 @@ import {
 import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { blockNoteIdValidator } from '../notes/schema'
+import { blockNoteIdValidator } from '../blocks/schema'
 
 export const createTag = mutation({
   args: createTagAndNoteArgs,
@@ -27,7 +27,7 @@ export const createTag = mutation({
     ctx,
     args,
   ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
-    return await insertTagAndNote(ctx, args, args.parentFolderId)
+    return await insertTagAndNote(ctx, args, args.parentId)
   },
 })
 
@@ -151,6 +151,7 @@ export const deleteTagCategory = mutation({
 export const addTagToBlock = mutation({
   args: {
     noteId: v.id('notes'),
+    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     tagId: v.id('tags'),
   },
@@ -159,6 +160,7 @@ export const addTagToBlock = mutation({
     return await addTagToBlockHandler(
       ctx,
       args.noteId,
+      args.pageId,
       args.blockId,
       args.tagId,
     )
@@ -168,6 +170,7 @@ export const addTagToBlock = mutation({
 export const removeTagFromBlock = mutation({
   args: {
     noteId: v.id('notes'),
+    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     tagId: v.id('tags'),
   },
@@ -176,6 +179,7 @@ export const removeTagFromBlock = mutation({
     return await removeTagFromBlockHandler(
       ctx,
       args.noteId,
+      args.pageId,
       args.blockId,
       args.tagId,
     )

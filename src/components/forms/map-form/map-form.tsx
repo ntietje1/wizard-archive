@@ -19,7 +19,7 @@ interface MapFormProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   onClose: () => void
   onSuccess?: () => void
 }
@@ -32,7 +32,7 @@ export function MapForm({
   mapId,
   campaignId,
   categoryId,
-  parentFolderId,
+  parentId,
   onClose,
   onSuccess,
 }: MapFormProps) {
@@ -119,7 +119,7 @@ export function MapForm({
           name: values.name,
           imageStorageId: finalImageStorageId,
           categoryId,
-          parentFolderId,
+          parentId,
         })
         toast.success('Map created')
       } else {

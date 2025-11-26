@@ -28,7 +28,7 @@ export function NotesViewer() {
 
   const blocks = useQuery(
     convexQuery(
-      api.notes.queries.getBlocksByTags,
+      api.blocks.queries.getBlocksByTags,
       selectedTagIds.length > 0 && campaign?._id
         ? {
             campaignId: campaign._id,

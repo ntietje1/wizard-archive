@@ -8,17 +8,34 @@ export const useEditorNavigation = () => {
   const { dmUsername, campaignSlug } = useCampaign()
 
   const navigateToNote = useCallback(
-    (slug: string | null) => {
+    (slug: string | null, pageSlug?: string) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           note: slug || undefined,
+          page: pageSlug || undefined,
           // Clear other content type params
           map: undefined,
           category: undefined,
           folderId: undefined,
         },
+      })
+    },
+    [dmUsername, campaignSlug, navigate],
+  )
+
+  const navigateToPage = useCallback(
+    (noteId: Id<'notes'>, pageSlug: string) => {
+      // We need to get the note slug first, but for now we'll use a simpler approach
+      // The note should already be in the URL, so we just update the page param
+      navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
+        params: { dmUsername, campaignSlug },
+        search: (prev) => ({
+          ...prev,
+          page: pageSlug,
+        }),
       })
     },
     [dmUsername, campaignSlug, navigate],
@@ -42,7 +59,7 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToCategory = useCallback(
-    (slug: string, folderId?: Id<'folders'>) => {
+    (slug: string, folderId?: Id<'notes'>) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -73,6 +90,7 @@ export const useEditorNavigation = () => {
 
   return {
     navigateToNote,
+    navigateToPage,
     navigateToMap,
     navigateToCategory,
     clearEditorContent,

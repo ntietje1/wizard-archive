@@ -5,7 +5,7 @@ import {
 import { forwardRef, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import {
   useCategoryCreateItem,
@@ -21,7 +21,7 @@ import { CategoryDialog } from '~/components/forms/category-form/category-dialog
 export interface CategoryContextMenuProps {
   children: React.ReactNode
   categoryConfig: TagCategoryConfig
-  folder?: Folder
+  folder?: Note
 }
 
 export const CategoryContextMenu = forwardRef<
@@ -73,7 +73,7 @@ export const CategoryContextMenu = forwardRef<
         isOpen={createItem.isDialogOpen}
         onClose={() => createItem.setIsDialogOpen(false)}
         config={categoryConfig}
-        parentFolderId={folder?._id}
+        parentId={folder?._id}
       />
 
       {folder && deleteFolder.menuItem && (
@@ -90,7 +90,7 @@ export const CategoryContextMenu = forwardRef<
           onClose={() => newMap.setIsDialogOpen(false)}
           campaignId={newMap.campaignId}
           categoryId={newMap.categoryId}
-          parentFolderId={newMap.parentFolderId}
+          parentId={newMap.parentId}
         />
       )}
 

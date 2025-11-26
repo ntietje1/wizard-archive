@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 
 interface MapButtonProps {
   map: GameMap
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
 }
 
 export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {

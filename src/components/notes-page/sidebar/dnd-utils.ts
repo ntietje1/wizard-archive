@@ -11,9 +11,9 @@ import { validateDrop } from '~/utils/dnd-utils'
 export interface SidebarDragData {
   _id: Id<SidebarItemType>
   type: SidebarItemType
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
   name: string
   icon: LucideIcon
 }
@@ -22,7 +22,7 @@ export interface SidebarDropData {
   _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
   accepts?: SidebarItemType[]
 }
 
@@ -38,7 +38,7 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
     {
       _id: draggedItem._id,
       type: draggedItem.type,
-      parentFolderId: draggedItem.parentFolderId,
+      parentId: draggedItem.parentId,
       categoryId: draggedItem.categoryId,
       ancestorIds: draggedItem.ancestorIds || [],
     },

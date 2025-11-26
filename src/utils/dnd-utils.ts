@@ -9,16 +9,16 @@ import {
 interface DragItem {
   _id: Id<SidebarItemType>
   type: SidebarItemType
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
 }
 
 interface DropTarget {
   id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
 }
 
 //TODO: visually show that you can drop onto the existing parent, but don't actually do anything in this case
@@ -27,9 +27,6 @@ export function validateDrop(
   targetData: DropTarget | null,
   rootType: typeof SIDEBAR_ROOT_TYPE,
 ): boolean {
-  console.log('draggedItem', draggedItem)
-  console.log('targetData', targetData)
-  console.log('rootType', rootType)
   if (!draggedItem || !targetData) return false
   if (targetData.id === draggedItem._id) return false
 
@@ -51,70 +48,56 @@ export function validateDrop(
   }
 
   // Prevent dropping on same parent
-  if (targetData.type === rootType && !draggedItem.parentFolderId) return false
+  if (targetData.type === rootType && !draggedItem.parentId) return false
+  if (targetData.type !== rootType && draggedItem.parentId === targetData.id) {
+    return false
+  }
+
+  // Notes cannot be dropped on their own children (when acting as folders)
   if (
-    targetData.type !== rootType &&
-    draggedItem.parentFolderId === targetData.id
+    draggedItem.type === SIDEBAR_ITEM_TYPES.notes &&
+    targetData.ancestorIds?.includes(draggedItem._id as Id<'notes'>)
   ) {
     return false
   }
 
-  // Folders cannot be dropped on their own children
-  if (
-    draggedItem.type === SIDEBAR_ITEM_TYPES.folders &&
-    targetData.ancestorIds?.includes(draggedItem._id as Id<'folders'>)
-  ) {
-    return false
-  }
-
-  // Can only drop on root or folders
+  // Can only drop on root or notes (which act as folders)
   return (
-    targetData.type === rootType ||
-    targetData.type === SIDEBAR_ITEM_TYPES.folders
+    targetData.type === rootType || targetData.type === SIDEBAR_ITEM_TYPES.notes
   )
 }
 
 interface MoveMutations {
   moveNote: (params: {
     noteId: Id<'notes'>
-    parentFolderId?: Id<'folders'>
-  }) => Promise<any>
-  moveFolder: (params: {
-    folderId: Id<'folders'>
-    parentId?: Id<'folders'>
+    parentId?: Id<'notes'>
   }) => Promise<any>
   moveMap: (params: {
     mapId: Id<'gameMaps'>
-    parentFolderId?: Id<'folders'>
+    parentId?: Id<'notes'>
   }) => Promise<any>
 }
 
 export async function executeMove(
   itemType: SidebarItemType,
   itemId: Id<SidebarItemType>,
-  targetId: Id<'folders'> | undefined,
+  targetId: Id<'notes'> | undefined,
   mutations: MoveMutations,
   callbacks?: {
-    openFolder?: (folderId: Id<'folders'>) => void
+    openFolder?: (folderId: Id<'notes'>) => void
   },
 ): Promise<void> {
   switch (itemType) {
     case SIDEBAR_ITEM_TYPES.notes:
       await mutations.moveNote({
         noteId: itemId as Id<'notes'>,
-        parentFolderId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.folders:
-      await mutations.moveFolder({
-        folderId: itemId as Id<'folders'>,
         parentId: targetId,
       })
       break
     case SIDEBAR_ITEM_TYPES.gameMaps:
       await mutations.moveMap({
         mapId: itemId as Id<'gameMaps'>,
-        parentFolderId: targetId,
+        parentId: targetId,
       })
       break
     default:

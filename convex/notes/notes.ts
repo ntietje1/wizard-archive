@@ -2,9 +2,9 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { Id } from '../_generated/dataModel'
-import { Note, NoteWithContent } from './types'
+import { Note } from './types'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { deleteNoteBlocks, getTopLevelBlocksByNote } from './blocks'
+import { deleteBlocksByNote } from '../blocks/blocks'
 import { deleteTagAndCleanupContent, getTag } from '../tags/tags'
 import { MutationCtx } from '../_generated/server'
 
@@ -34,32 +34,11 @@ export const getNote = async (
   }
 }
 
-export const getNoteWithContent = async (
-  ctx: Ctx,
-  noteId: Id<'notes'>,
-): Promise<NoteWithContent | null> => {
-  const note: Note | null = await getNote(ctx, noteId)
-  if (!note) {
-    return null
-  }
-
-  const [topLevelBlocks] = await Promise.all([
-    getTopLevelBlocksByNote(ctx, note._id, note.campaignId),
-  ])
-
-  const content = topLevelBlocks.map((block) => block.content)
-
-  return {
-    ...note,
-    content,
-  }
-}
-
 export const getNoteBySlug = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   slug: string,
-): Promise<NoteWithContent | null> => {
+): Promise<Note | null> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -77,7 +56,7 @@ export const getNoteBySlug = async (
     return null
   }
 
-  return getNoteWithContent(ctx, note._id)
+  return getNote(ctx, note._id)
 }
 
 export async function deleteNote(
@@ -96,7 +75,7 @@ export async function deleteNote(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  await deleteNoteBlocks(ctx, noteId, note.campaignId)
+  await deleteBlocksByNote(ctx, noteId, note.campaignId)
   const shouldCascadeTag = options?.cascadeTag !== false
   if (shouldCascadeTag && note.tagId) {
     await deleteTagAndCleanupContent(ctx, note.tagId)

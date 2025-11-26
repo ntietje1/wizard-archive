@@ -47,7 +47,7 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
   const handleNewFolder = () => {
     createFolder
       .mutateAsync({ campaignId: campaignId })
-      .then((folderId: Id<'folders'>) => {
+      .then((folderId: Id<'notes'>) => {
         setRenamingId(folderId)
       })
       .catch((error: Error) => {
@@ -112,7 +112,7 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
               onClose={() => newMap.setIsDialogOpen(false)}
               campaignId={newMap.campaignId}
               categoryId={newMap.categoryId}
-              parentFolderId={newMap.parentFolderId}
+              parentId={newMap.parentId}
             />
           )}
         </>

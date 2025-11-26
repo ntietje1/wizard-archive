@@ -3,7 +3,6 @@ import { Id } from '../_generated/dataModel'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getFolder } from '../folders/folders'
 import { getNote } from '../notes/notes'
 import { getTagCategory } from '../tags/tags'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
@@ -15,7 +14,7 @@ export const createMap = mutation({
     name: v.optional(v.string()),
     imageStorageId: v.id('_storage'),
     categoryId: v.optional(v.id('tagCategories')),
-    parentFolderId: v.optional(v.id('folders')),
+    parentId: v.optional(v.id('notes')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -37,13 +36,15 @@ export const createMap = mutation({
       }
     }
 
-    if (args.parentFolderId) {
-      const folder = await getFolder(ctx, args.parentFolderId)
-      if (!folder) {
-        throw new Error('Folder not found')
+    if (args.parentId) {
+      const parentNote = await getNote(ctx, args.parentId)
+      if (!parentNote) {
+        throw new Error('Parent note not found')
       }
-      if (folder.campaignId !== args.campaignId) {
-        throw new Error('Folder must belong to the same campaign as the map')
+      if (parentNote.campaignId !== args.campaignId) {
+        throw new Error(
+          'Parent note must belong to the same campaign as the map',
+        )
       }
     }
 
@@ -67,7 +68,7 @@ export const createMap = mutation({
       slug: uniqueSlug,
       imageStorageId: args.imageStorageId,
       categoryId: args.categoryId,
-      parentFolderId: args.parentFolderId,
+      parentId: args.parentId,
       updatedAt: Date.now(),
     })
   },
@@ -78,7 +79,7 @@ export const updateMap = mutation({
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
-    parentFolderId: v.optional(v.union(v.id('folders'), v.null())),
+    parentId: v.optional(v.union(v.id('notes'), v.null())),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -97,7 +98,7 @@ export const updateMap = mutation({
       name?: string
       slug?: string
       imageStorageId?: Id<'_storage'>
-      parentFolderId?: Id<'folders'>
+      parentId?: Id<'notes'>
       updatedAt: number
     } = {
       updatedAt: Date.now(),
@@ -124,15 +125,17 @@ export const updateMap = mutation({
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId
     }
-    if (args.parentFolderId !== undefined) {
-      updates.parentFolderId = args.parentFolderId ?? undefined
-      if (args.parentFolderId) {
-        const folder = await getFolder(ctx, args.parentFolderId)
-        if (!folder) {
-          throw new Error('Folder not found')
+    if (args.parentId !== undefined) {
+      updates.parentId = args.parentId ?? undefined
+      if (args.parentId) {
+        const parentNote = await getNote(ctx, args.parentId)
+        if (!parentNote) {
+          throw new Error('Parent note not found')
         }
-        if (folder.campaignId !== map.campaignId) {
-          throw new Error('Folder must belong to the same campaign as the map')
+        if (parentNote.campaignId !== map.campaignId) {
+          throw new Error(
+            'Parent note must belong to the same campaign as the map',
+          )
         }
       }
     }
@@ -145,7 +148,7 @@ export const updateMap = mutation({
 export const moveMap = mutation({
   args: {
     mapId: v.id('gameMaps'),
-    parentFolderId: v.optional(v.id('folders')),
+    parentId: v.optional(v.id('notes')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -160,18 +163,20 @@ export const moveMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    if (args.parentFolderId) {
-      const folder = await getFolder(ctx, args.parentFolderId)
-      if (!folder) {
-        throw new Error('Folder not found')
+    if (args.parentId) {
+      const parentNote = await getNote(ctx, args.parentId)
+      if (!parentNote) {
+        throw new Error('Parent note not found')
       }
-      if (folder.campaignId !== map.campaignId) {
-        throw new Error('Folder must belong to the same campaign as the map')
+      if (parentNote.campaignId !== map.campaignId) {
+        throw new Error(
+          'Parent note must belong to the same campaign as the map',
+        )
       }
     }
 
     await ctx.db.patch(args.mapId, {
-      parentFolderId: args.parentFolderId,
+      parentId: args.parentId,
       updatedAt: Date.now(),
     })
     return args.mapId

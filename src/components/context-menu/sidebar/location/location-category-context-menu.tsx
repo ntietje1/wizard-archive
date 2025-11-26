@@ -110,7 +110,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
             isOpen={isCreateDialogOpen}
             onClose={() => setIsCreateDialogOpen(false)}
             config={categoryConfig}
-            parentFolderId={folder?._id}
+            parentId={folder?._id}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}
@@ -124,7 +124,7 @@ export const LocationCategoryFolderContextMenu = forwardRef<
               onClose={() => newMap.setIsDialogOpen(false)}
               campaignId={newMap.campaignId}
               categoryId={newMap.categoryId}
-              parentFolderId={newMap.parentFolderId}
+              parentId={newMap.parentId}
             />
           )}
           {editCategory.category && (

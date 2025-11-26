@@ -38,7 +38,6 @@ export function CategoryDragProvider({
 }: {
   children: React.ReactNode
 }) {
-  const { moveFolder } = useFolderActions()
   const { moveNote } = useNoteActions()
 
   const moveMap = useMutation({
@@ -112,7 +111,7 @@ export function CategoryDragProvider({
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
           ? undefined
-          : (targetData._id as Id<'folders'>)
+          : (targetData._id as Id<'notes'>)
 
       await executeMove(
         draggedItem.type,
@@ -120,7 +119,6 @@ export function CategoryDragProvider({
         targetId,
         {
           moveNote: (params) => moveNote.mutateAsync(params),
-          moveFolder: (params) => moveFolder.mutateAsync(params),
           moveMap: (params) => moveMap.mutateAsync(params),
         },
         {},
@@ -128,7 +126,7 @@ export function CategoryDragProvider({
         console.error('Failed to move item:', error)
       })
     },
-    [moveNote, moveFolder, moveMap],
+    [moveNote, moveMap],
   )
 
   const handleDragCancel = useCallback(() => {

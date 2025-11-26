@@ -16,7 +16,7 @@ export function NewFolderButton() {
     if (!campaignId) return
     try {
       const folderId = await createFolder.mutateAsync({ campaignId })
-      setRenamingId(folderId as Id<'folders'>)
+      setRenamingId(folderId as Id<'notes'>)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')

@@ -11,7 +11,7 @@ export const mapTableFields = {
   slug: v.string(),
   imageStorageId: v.optional(v.id('_storage')),
   categoryId: v.optional(v.id('tagCategories')),
-  parentFolderId: v.optional(v.id('folders')),
+  parentId: v.optional(v.id('notes')),
   updatedAt: v.number(),
 }
 const mapValidatorFields = {
@@ -87,7 +87,7 @@ export const mapTables = {
     .index('by_campaign_category_parent', [
       'campaignId',
       'categoryId',
-      'parentFolderId',
+      'parentId',
     ])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 

@@ -5,7 +5,7 @@ import {
 } from '~/components/context-menu/base/context-menu'
 import { forwardRef, useCallback, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import {
   useCategoryNewFolderWithDialog,
   useCategoryEditFolder,
@@ -23,7 +23,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 export interface SessionFolderContextMenuProps {
   children: React.ReactNode
   categoryConfig?: TagCategoryConfig
-  folder?: Folder
+  folder?: Note
 }
 
 export const SessionFolderContextMenu = forwardRef<
@@ -57,10 +57,10 @@ export const SessionFolderContextMenu = forwardRef<
       toast.error('Category not found')
       return
     }
-    const parentFolderId = folder ? folder._id : undefined
+    const parentId = folder ? folder._id : undefined
     startNewSession({
       categoryId: getCategory.data._id,
-      parentFolderId: parentFolderId,
+      parentId: parentId,
     })
   }, [getCategory.data?._id, folder, startNewSession])
 

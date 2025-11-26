@@ -28,7 +28,7 @@ interface TagDialogBaseProps {
   isOpen: boolean
   onClose: () => void
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
 }
 
 export type TagDialogProps<T extends Tag = Tag> =

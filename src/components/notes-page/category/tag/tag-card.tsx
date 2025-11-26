@@ -24,7 +24,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 export interface TagCardProps {
   noteAndTag?: Note
   config?: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   isLoading?: boolean
 }
 
@@ -45,7 +45,7 @@ export function TagCardWithContextMenu(props: TagCardProps) {
 export function TagCard({
   noteAndTag,
   config,
-  parentFolderId,
+  parentId,
   isLoading = false,
 }: TagCardProps) {
   const { navigateToNote } = useEditorNavigation()
@@ -72,7 +72,7 @@ export function TagCard({
           _id: tag.noteId,
           type: SIDEBAR_ITEM_TYPES.notes,
           name: tag.displayName,
-          parentFolderId,
+          parentId,
           noteId: tag.noteId,
           categoryId: noteAndTag.categoryId || tag.category?._id,
           icon: getCategoryIcon(tag.category?.iconName ?? 'TagIcon'),

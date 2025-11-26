@@ -72,7 +72,7 @@ export function MapCard({
           _id: map._id,
           type: SIDEBAR_ITEM_TYPES.gameMaps,
           name: map.name || UNTITLED_MAP_NAME,
-          parentFolderId: map.parentFolderId,
+          parentId: map.parentId,
           categoryId,
           icon: MapPin,
         }

@@ -40,7 +40,7 @@ interface CharacterTagFormProps {
   mode: 'create' | 'edit'
   character?: Character
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: Id<'notes'>
   isOpen: boolean
   onClose: () => void
 }
@@ -161,7 +161,7 @@ export default function CharacterTagForm({
           imageStorageId: imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
-          parentFolderId,
+          parentId,
           playerId: value.playerId || undefined,
         })
 

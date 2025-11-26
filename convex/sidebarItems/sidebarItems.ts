@@ -20,97 +20,6 @@ export const getSidebarItemsByCategory = async (
 
   const allItems: AnySidebarItem[] = []
 
-  // Get folders
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q.eq('campaignId', campaignId).eq('categoryId', categoryId ?? undefined),
-    )
-    .collect()
-    .then((folders) =>
-      folders.map((folder) => ({
-        ...folder,
-        category,
-        type: SIDEBAR_ITEM_TYPES.folders,
-      })),
-    )
-  allItems.push(...folders)
-
-  // Get notes
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q.eq('campaignId', campaignId).eq('categoryId', categoryId ?? undefined),
-    )
-    .collect()
-    .then((notes) =>
-      notes.map((note) => ({
-        ...note,
-        category,
-        tag: tags.find((t) => t._id === note.tagId),
-        type: SIDEBAR_ITEM_TYPES.notes,
-      })),
-    )
-  allItems.push(...notes)
-
-  // Get maps
-  const maps = await ctx.db
-    .query('gameMaps')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q.eq('campaignId', campaignId).eq('categoryId', categoryId),
-    )
-    .collect()
-    .then(
-      (maps) =>
-        maps.map((map) => ({
-          ...map,
-          category,
-          type: SIDEBAR_ITEM_TYPES.gameMaps,
-        })) as AnySidebarItem[],
-    )
-  allItems.push(...maps)
-
-  return allItems
-}
-
-export const getSidebarItemsByParent = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  categoryId: Id<'tagCategories'> | undefined, // undefined category = has no category
-  parentId: Id<'folders'> | undefined,
-): Promise<AnySidebarItem[]> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const category = categoryId
-    ? await getTagCategory(ctx, campaignId, categoryId)
-    : undefined
-  const tags = categoryId ? await getTagsByCategory(ctx, categoryId) : []
-
-  const allItems: AnySidebarItem[] = []
-
-  // Get folders
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_category_parent', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', parentId),
-    )
-    .collect()
-    .then((folders) =>
-      folders.map((folder) => ({
-        ...folder,
-        category,
-        type: SIDEBAR_ITEM_TYPES.folders,
-      })),
-    )
-  allItems.push(...folders)
-
   // Get notes
   const notes = await ctx.db
     .query('notes')
@@ -118,7 +27,7 @@ export const getSidebarItemsByParent = async (
       q
         .eq('campaignId', campaignId)
         .eq('categoryId', categoryId ?? undefined)
-        .eq('parentFolderId', parentId),
+        .eq('parentId', undefined),
     )
     .collect()
     .then((notes) =>
@@ -138,7 +47,69 @@ export const getSidebarItemsByParent = async (
       q
         .eq('campaignId', campaignId)
         .eq('categoryId', categoryId)
-        .eq('parentFolderId', parentId),
+        .eq('parentId', undefined),
+    )
+    .collect()
+    .then(
+      (maps) =>
+        maps.map((map) => ({
+          ...map,
+          category,
+          type: SIDEBAR_ITEM_TYPES.gameMaps,
+        })) as AnySidebarItem[],
+    )
+  allItems.push(...maps)
+
+  return allItems
+}
+
+export const getSidebarItemsByParent = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  categoryId: Id<'tagCategories'> | undefined, // undefined category = has no category
+  parentId: Id<'notes'> | undefined,
+): Promise<AnySidebarItem[]> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const category = categoryId
+    ? await getTagCategory(ctx, campaignId, categoryId)
+    : undefined
+  const tags = categoryId ? await getTagsByCategory(ctx, categoryId) : []
+
+  const allItems: AnySidebarItem[] = []
+
+  // Get notes
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('categoryId', categoryId ?? undefined)
+        .eq('parentId', parentId),
+    )
+    .collect()
+    .then((notes) =>
+      notes.map((note) => ({
+        ...note,
+        category,
+        tag: tags.find((t) => t._id === note.tagId),
+        type: SIDEBAR_ITEM_TYPES.notes,
+      })),
+    )
+  allItems.push(...notes)
+
+  // Get maps
+  const maps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_category_parent', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('categoryId', categoryId)
+        .eq('parentId', parentId),
     )
     .collect()
     .then(

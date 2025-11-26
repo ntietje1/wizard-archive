@@ -7,14 +7,14 @@ import {
   TagCategory,
   SYSTEM_DEFAULT_CATEGORIES,
 } from './types'
-import { Block } from '../notes/types'
+import type { Block } from '../blocks/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { findUniqueSlug } from '../common/slug'
+import { findUniqueSlug, slugify } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote } from '../notes/notes'
 import { getNote } from '../notes/notes'
-import { findBlockByBlockNoteId } from '../notes/blocks'
+import { findBlockByBlockNoteId } from '../blocks/blocks'
 import pluralize from 'pluralize'
 
 function capitalizeFirstLetter(str: string): string {
@@ -119,7 +119,7 @@ export const insertTagAndNote = async (
     | 'category'
     | 'createdBy'
   >,
-  parentFolderId?: Id<'folders'>,
+  parentId?: Id<'notes'>,
   allowManagedTags: boolean = false,
 ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
   const { identityWithProfile } = await requireCampaignMembership(
@@ -149,7 +149,44 @@ export const insertTagAndNote = async (
     updatedAt: Date.now(),
     categoryId: newTag.categoryId,
     tagId: tagId,
-    parentFolderId: parentFolderId,
+    parentId: parentId,
+  })
+
+  // Create two pages for tag-notes: "Your Notes" and "Shared Notes"
+  // Generate unique slugs for each page (unique per note)
+  const yourNotesSlug = await findUniqueSlug('your-notes', async (slug) => {
+    const conflict = await ctx.db
+      .query('pages')
+      .withIndex('by_note_slug', (q) => q.eq('noteId', noteId).eq('slug', slug))
+      .unique()
+    return conflict !== null
+  })
+
+  const sharedNotesSlug = await findUniqueSlug('shared-notes', async (slug) => {
+    const conflict = await ctx.db
+      .query('pages')
+      .withIndex('by_note_slug', (q) => q.eq('noteId', noteId).eq('slug', slug))
+      .unique()
+    return conflict !== null
+  })
+
+  await ctx.db.insert('pages', {
+    noteId,
+    title: 'Your Notes',
+    slug: yourNotesSlug,
+    type: 'text',
+    order: 0,
+    isReadOnly: false,
+    isDeletable: true,
+  })
+  await ctx.db.insert('pages', {
+    noteId,
+    title: 'Shared Notes',
+    slug: sharedNotesSlug,
+    type: 'text',
+    order: 1,
+    isReadOnly: true,
+    isDeletable: false,
   })
 
   return { tagId, noteId }
@@ -577,7 +614,7 @@ export const updateTagAndContent = async (
 
     const allBlocks = await ctx.db
       .query('blocks')
-      .withIndex('by_campaign_note_toplevel_pos', (q) =>
+      .withIndex('by_campaign_note_page_block', (q) =>
         q.eq('campaignId', tag.campaignId),
       )
       .collect()
@@ -759,6 +796,7 @@ export async function getBlockLevelTag(
 export async function findBlock(
   ctx: Ctx,
   noteId: Id<'notes'>,
+  pageId: Id<'pages'>,
   blockId: string,
 ): Promise<Block | null> {
   const note = await ctx.db.get(noteId)
@@ -766,17 +804,19 @@ export async function findBlock(
     return null
   }
 
-  const block = (await ctx.db
+  // Use the full index to efficiently find the block
+  const block = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
+    .withIndex('by_campaign_note_page_block', (q) =>
       q
         .eq('campaignId', note.campaignId)
         .eq('noteId', noteId)
+        .eq('pageId', pageId)
         .eq('blockId', blockId),
     )
-    .unique()) as Block | null
+    .unique()
 
-  return block
+  return block ? (block as Block) : null
 }
 
 export async function getBlockLevelTags(
@@ -878,6 +918,7 @@ async function addTagToBlock(
 export async function addTagToBlockHandler(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
+  pageId: Id<'pages'>,
   blockId: string,
   tagId: Id<'tags'>,
 ) {
@@ -892,7 +933,12 @@ export async function addTagToBlockHandler(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const existingBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
+  const existingBlock = await findBlockByBlockNoteId(
+    ctx,
+    noteId,
+    pageId,
+    blockId,
+  )
 
   if (existingBlock) {
     const inlineTagIds = extractTagIdsFromBlockContent(existingBlock.content)
@@ -904,7 +950,12 @@ export async function addTagToBlockHandler(
 
     await addTagToBlock(ctx, existingBlock, tagId)
   } else {
-    const targetBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
+    const targetBlock = await findBlockByBlockNoteId(
+      ctx,
+      noteId,
+      pageId,
+      blockId,
+    )
 
     if (targetBlock) {
       const inlineTagIds = extractTagIdsFromBlockContent(targetBlock)
@@ -919,6 +970,7 @@ export async function addTagToBlockHandler(
         blockId: blockId,
         position: undefined,
         content: targetBlock,
+        pageId: pageId,
         isTopLevel: false,
         campaignId: note.campaignId,
         updatedAt: Date.now(),
@@ -962,6 +1014,7 @@ async function removeTagFromBlock(
 export async function removeTagFromBlockHandler(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
+  pageId: Id<'pages'>,
   blockId: string,
   tagId: Id<'tags'>,
 ) {
@@ -976,7 +1029,7 @@ export async function removeTagFromBlockHandler(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const block = await findBlockByBlockNoteId(ctx, noteId, blockId)
+  const block = await findBlockByBlockNoteId(ctx, noteId, pageId, blockId)
   if (!block) {
     throw new Error('Block not found')
   }
@@ -1075,7 +1128,7 @@ export function extractTagIdsFromBlockContent(block: any): Id<'tags'>[] {
   return tagIds
 }
 
-function computeTopLevelPositions(
+export function computeTopLevelPositions(
   allBlocksWithTags: Map<
     string,
     { block: CustomBlock; tagIds: Id<'tags'>[]; isTopLevel: boolean }
@@ -1089,11 +1142,12 @@ function computeTopLevelPositions(
   return positions
 }
 
-async function upsertBlock(
+export async function upsertBlock(
   ctx: MutationCtx,
   existingBlock: Block | undefined,
   params: {
     noteId: Id<'notes'>
+    pageId: Id<'pages'>
     campaignId: Id<'campaigns'>
     blockId: string
     isTopLevel: boolean
@@ -1117,13 +1171,14 @@ async function upsertBlock(
     blockId: params.blockId,
     position: params.position,
     content: params.content,
+    pageId: params.pageId,
     isTopLevel: params.isTopLevel,
     campaignId: params.campaignId,
     updatedAt: params.now,
   })
 }
 
-async function updateBlockTags(
+export async function updateBlockTags(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
   finalBlockDbId: Id<'blocks'>,
@@ -1173,7 +1228,7 @@ async function updateBlockTags(
   }
 }
 
-async function insertInlineBlockTags(
+export async function insertInlineBlockTags(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
   finalBlockDbId: Id<'blocks'>,
@@ -1206,7 +1261,7 @@ async function removeBlockAndTags(
   await ctx.db.delete(block._id)
 }
 
-async function cleanupUnprocessedBlocks(
+export async function cleanupUnprocessedBlocks(
   ctx: MutationCtx,
   existingBlocks: Block[],
   processedBlockIds: Set<string>,
@@ -1258,9 +1313,19 @@ export async function saveTopLevelBlocks(
     noteLevelTag?._id || null,
   )
 
+  // Get first page for this note
+  const firstPage = await ctx.db
+    .query('pages')
+    .withIndex('by_note_order', (q) => q.eq('noteId', noteId))
+    .first()
+
+  if (!firstPage) {
+    throw new Error('No pages found for note')
+  }
+
   const existingBlocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_toplevel_pos', (q) =>
+    .withIndex('by_campaign_note_page_block', (q) =>
       q.eq('campaignId', note.campaignId).eq('noteId', noteId),
     )
     .collect()
@@ -1281,6 +1346,7 @@ export async function saveTopLevelBlocks(
 
     const finalBlockDbId = await upsertBlock(ctx, existingBlock, {
       noteId,
+      pageId: firstPage._id,
       campaignId: note.campaignId,
       blockId,
       isTopLevel,

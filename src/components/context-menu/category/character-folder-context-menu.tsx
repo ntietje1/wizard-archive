@@ -5,7 +5,7 @@ import {
 } from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import {
   useCategoryCreateItem,
   useCategoryNewFolderWithDialog,
@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 export interface CharacterFolderContextMenuProps {
   children: React.ReactNode
   categoryConfig?: TagCategoryConfig
-  folder?: Folder
+  folder?: Note
 }
 
 export const CharacterFolderContextMenu = forwardRef<
@@ -70,7 +70,7 @@ export const CharacterFolderContextMenu = forwardRef<
             isOpen={createItem.isDialogOpen}
             onClose={() => createItem.setIsDialogOpen(false)}
             config={categoryConfig}
-            parentFolderId={undefined}
+            parentId={undefined}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}

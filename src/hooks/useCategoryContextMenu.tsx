@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Plus, FolderPlus, Pencil, Trash2, MapPin, TagIcon } from '~/lib/icons'
 import { useFolderState } from '~/hooks/useFolderState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
@@ -20,7 +20,7 @@ import type { EditorSearch } from '~/components/notes-page/validate-search'
 
 export function useCategoryCreateItem(
   categoryConfig: TagCategoryConfig | undefined,
-  folder?: Folder,
+  folder?: Note,
 ) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
@@ -52,7 +52,7 @@ export function useCategoryCreateItem(
 
 export function useCategoryNewFolder(
   categoryConfig: TagCategoryConfig,
-  folder?: Folder,
+  folder?: Note,
 ) {
   const { openFolder } = useFolderState(
     folder?._id || categoryConfig.categorySlug,
@@ -90,11 +90,11 @@ export function useCategoryNewFolder(
 
     await createFolder
       .mutateAsync({
-        parentFolderId: folder?._id,
+        parentId: folder?._id,
         campaignId: campaign._id,
         categoryId: getCategory.data._id,
       })
-      .then((folderId: Id<'folders'>) => {
+      .then((folderId: Id<'notes'>) => {
         openFolder()
         setRenamingId(folderId)
       })
@@ -129,7 +129,7 @@ export function useCategoryNewFolder(
 
 export function useCategoryNewFolderWithDialog(
   categoryConfig: TagCategoryConfig | undefined,
-  folder?: Folder,
+  folder?: Note,
 ) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
@@ -175,7 +175,7 @@ export function useCategoryNewFolderWithDialog(
       await createFolder
         .mutateAsync({
           name: values.name,
-          parentFolderId: folder?._id,
+          parentId: folder?._id,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
         })
@@ -361,7 +361,7 @@ export function useCategoryNewMap(
     setIsDialogOpen,
     campaignId: campaign?._id,
     categoryId: getCategory.data?._id,
-    parentFolderId: folder?._id,
+    parentId: folder?._id,
   }
 }
 
@@ -392,7 +392,7 @@ export function useNewMap(folder?: Folder) {
     setIsDialogOpen,
     campaignId: campaign?._id,
     categoryId: undefined,
-    parentFolderId: folder?._id,
+    parentId: folder?._id,
   }
 }
 
@@ -437,7 +437,7 @@ export function useEditCategory(categoryConfig: TagCategoryConfig | undefined) {
       ) {
         navigateToCategory(
           newSlug,
-          search.folderId ? (search.folderId as Id<'folders'>) : undefined,
+          search.folderId ? (search.folderId as Id<'notes'>) : undefined,
         )
       }
     },

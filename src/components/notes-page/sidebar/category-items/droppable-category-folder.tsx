@@ -6,12 +6,12 @@ import {
 } from 'convex/sidebarItems/types'
 import { canDropItem } from '../dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
+import type { Note } from 'convex/notes/types'
 
 interface DroppableCategoryFolderProps {
-  folder?: Folder
+  folder?: Note
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Id<'notes'>[]
   children: React.ReactNode
 }
 
@@ -25,12 +25,12 @@ export function DroppableCategoryFolder({
   const dropId =
     folder?._id ||
     (categoryId ? `category-root-${categoryId}` : SIDEBAR_ROOT_TYPE)
-  const dropType = folder ? SIDEBAR_ITEM_TYPES.folders : SIDEBAR_ROOT_TYPE
+  const dropType = folder ? SIDEBAR_ITEM_TYPES.notes : SIDEBAR_ROOT_TYPE
 
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: dropId,
     data: {
-      accepts: [SIDEBAR_ITEM_TYPES.folders, SIDEBAR_ITEM_TYPES.notes],
+      accepts: [SIDEBAR_ITEM_TYPES.notes],
       _id: folder ? folder._id : SIDEBAR_ROOT_TYPE,
       categoryId: targetCategoryId,
       ancestorIds,

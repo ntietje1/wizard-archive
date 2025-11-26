@@ -19,7 +19,7 @@ export function EditorContent() {
   }) as EditorSearch
   const { navigateToCategory } = useEditorNavigation()
 
-  const handleCategoryNavigate = (folderId?: Id<'folders'>) => {
+  const handleCategoryNavigate = (folderId?: Id<'notes'>) => {
     if (search.category) {
       navigateToCategory(search.category, folderId)
     }

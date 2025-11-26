@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/notes/types'
+import type { Note } from 'convex/notes/types'
 import { Grid2x2Plus } from 'lucide-react'
 import { useState, forwardRef } from 'react'
 import { toast } from 'sonner'
@@ -17,7 +17,7 @@ import { useNoteActions } from '~/hooks/useNoteActions'
 import { FilePlus, FolderPlus, FolderEdit, Trash2 } from '~/lib/icons'
 
 interface FolderContextMenuProps {
-  folder: Folder
+  folder: Note
   children: React.ReactNode
 }
 
@@ -29,7 +29,7 @@ export const FolderContextMenu = forwardRef<
   const { setRenamingId } = useFileSidebar()
   const { createFolder } = useFolderActions()
   const { openFolder } = useFolderState(folder._id)
-  const { createNote } = useNoteActions()
+  const { createPage } = useNoteActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
 
@@ -40,11 +40,10 @@ export const FolderContextMenu = forwardRef<
   }
 
   const handleNewPage = async () => {
-    await createNote
-      .mutateAsync({ parentFolderId: folder._id, campaignId: campaignId })
-      .then(({ noteId }) => {
+    await createPage
+      .mutateAsync({ noteId: folder._id, title: 'New Page', type: 'text' })
+      .then(() => {
         openFolder()
-        setRenamingId(noteId)
       })
       .catch((error: Error) => {
         console.error(error)
@@ -54,8 +53,8 @@ export const FolderContextMenu = forwardRef<
 
   const handleNewFolder = async () => {
     await createFolder
-      .mutateAsync({ parentFolderId: folder._id, campaignId: campaignId })
-      .then((folderId: Id<'folders'>) => {
+      .mutateAsync({ parentId: folder._id, campaignId: campaignId })
+      .then((folderId: Id<'notes'>) => {
         openFolder()
         setRenamingId(folderId)
       })

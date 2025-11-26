@@ -1,7 +1,6 @@
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useCurrentNote } from '~/hooks/useCurrentNote'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useMemo } from 'react'
 import type { ComponentType } from 'react'
 import {
   TagNoteContextMenu,
@@ -12,7 +11,6 @@ import type { TagCategoryConfig } from '~/components/forms/category-tag-form/bas
 import {
   SIDEBAR_ITEM_TYPES,
   type AnySidebarItem,
-  type SidebarItemType,
 } from 'convex/sidebarItems/types'
 import { UNTITLED_NOTE_TITLE, type Note } from 'convex/notes/types'
 import { CategoryFolderButton } from './category-folder-button'
@@ -28,14 +26,14 @@ interface CategorySidebarItemProps {
   categoryConfig: TagCategoryConfig
   categoryContextMenu?: ComponentType<CategoryContextMenuProps>
   tagNoteContextMenu?: ComponentType<TagNoteContextMenuProps>
-  ancestorIds?: Array<Id<'folders'>>
+  ancestorIds?: Array<Id<'notes'>>
 }
 
 interface TagNoteButtonProps {
   noteWithTag: Note
   categoryConfig: TagCategoryConfig
   contextMenuComponent?: ComponentType<TagNoteContextMenuProps>
-  ancestorIds?: Array<Id<'folders'>>
+  ancestorIds?: Array<Id<'notes'>>
 }
 
 export function TagNoteButton({
@@ -87,49 +85,37 @@ export const CategorySidebarItem = ({
   tagNoteContextMenu,
   ancestorIds = [],
 }: CategorySidebarItemProps) => {
-  const CATEGORY_SIDEBAR_ITEM_REGISTRY = useMemo<
-    Record<SidebarItemType, ComponentType<any>>
-  >(
-    () => ({
-      [SIDEBAR_ITEM_TYPES.folders]: CategoryFolderButton,
-      [SIDEBAR_ITEM_TYPES.notes]: TagNoteButton,
-      [SIDEBAR_ITEM_TYPES.gameMaps]: MapButton,
-    }),
-    [],
-  )
-
-  const Component = CATEGORY_SIDEBAR_ITEM_REGISTRY[item.type]
-
-  if (!Component) {
-    throw new Error(`Invalid item type: ${item.type}`)
-  }
-
-  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-    return (
-      <Component
-        folder={item}
-        categoryConfig={categoryConfig}
-        categoryContextMenu={categoryContextMenu}
-        tagNoteContextMenu={tagNoteContextMenu}
-        ancestorIds={ancestorIds}
-      />
-    )
-  }
-
+  // Handle notes - distinguish between folder-notes (no tagId) and tag-notes (has tagId)
   if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-    return (
-      <Component
-        noteWithTag={item}
-        categoryConfig={categoryConfig}
-        contextMenuComponent={tagNoteContextMenu}
-        ancestorIds={ancestorIds}
-      />
-    )
+    const note = item as Note
+    // Notes with tagId are tag-notes, notes without tagId are folder-notes
+    if (note.tagId) {
+      return (
+        <TagNoteButton
+          noteWithTag={note}
+          categoryConfig={categoryConfig}
+          contextMenuComponent={tagNoteContextMenu}
+          ancestorIds={ancestorIds}
+        />
+      )
+    } else {
+      return (
+        <CategoryFolderButton
+          folder={note}
+          categoryConfig={categoryConfig}
+          categoryContextMenu={categoryContextMenu}
+          tagNoteContextMenu={tagNoteContextMenu}
+          ancestorIds={ancestorIds}
+        />
+      )
+    }
   }
 
+  // Handle maps
   if (item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-    return <Component map={item} ancestorIds={ancestorIds} />
+    return <MapButton map={item} ancestorIds={ancestorIds} />
   }
 
-  throw new Error('Invalid item type or missing required properties')
+  // TypeScript should never reach here, but handle it just in case
+  throw new Error(`Invalid item type: ${(item as any).type}`)
 }

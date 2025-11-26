@@ -2,17 +2,15 @@ import { mutation } from '../_generated/server'
 import { v } from 'convex/values'
 import { Doc } from '../_generated/dataModel'
 import { Id } from '../_generated/dataModel'
-import { saveTopLevelBlocks, updateTagAndContent } from '../tags/tags'
+import { updateTagAndContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { customBlockValidator } from './schema'
 import { deleteNote as deleteNoteFn } from './notes'
 import { findUniqueSlug, shortenId } from '../common/slug'
 
 export const updateNote = mutation({
   args: {
     noteId: v.id('notes'),
-    content: v.optional(v.array(customBlockValidator)),
     name: v.optional(v.string()),
   },
   returns: v.id('notes'),
@@ -31,10 +29,6 @@ export const updateNote = mutation({
     const now = Date.now()
     const updates: Partial<Doc<'notes'>> = {
       updatedAt: now,
-    }
-
-    if (args.content !== undefined) {
-      await saveTopLevelBlocks(ctx, args.noteId, args.content)
     }
 
     if (args.name !== undefined) {
@@ -70,7 +64,7 @@ export const updateNote = mutation({
 export const moveNote = mutation({
   args: {
     noteId: v.id('notes'),
-    parentFolderId: v.optional(v.id('folders')),
+    parentId: v.optional(v.id('notes')),
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
@@ -85,7 +79,7 @@ export const moveNote = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    await ctx.db.patch(args.noteId, { parentFolderId: args.parentFolderId })
+    await ctx.db.patch(args.noteId, { parentId: args.parentId })
     return args.noteId
   },
 })
@@ -104,8 +98,9 @@ export const createNote = mutation({
   args: {
     name: v.optional(v.string()),
     categoryId: v.optional(v.id('tagCategories')),
-    parentFolderId: v.optional(v.id('folders')),
+    parentId: v.optional(v.id('notes')),
     campaignId: v.id('campaigns'),
+    createPage: v.optional(v.boolean()),
   },
   returns: v.object({
     noteId: v.id('notes'),
@@ -140,10 +135,33 @@ export const createNote = mutation({
       name: args.name || '',
       slug: uniqueSlug,
       categoryId: args.categoryId,
-      parentFolderId: args.parentFolderId,
+      parentId: args.parentId,
       updatedAt: Date.now(),
       campaignId: args.campaignId,
     })
+
+    // Create default page only if createPage is true (defaults to true)
+    const shouldCreatePage = args.createPage !== false
+    if (shouldCreatePage) {
+      // Generate unique slug for default page (unique per note)
+      const mainPageSlug = await findUniqueSlug('main', async (slug) => {
+        const conflict = await ctx.db
+          .query('pages')
+          .withIndex('by_note_slug', (q) =>
+            q.eq('noteId', noteId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null
+      })
+
+      await ctx.db.insert('pages', {
+        noteId,
+        title: 'Main',
+        slug: mainPageSlug,
+        type: 'text',
+        order: 0,
+      })
+    }
 
     return { noteId: noteId, slug: uniqueSlug }
   },
