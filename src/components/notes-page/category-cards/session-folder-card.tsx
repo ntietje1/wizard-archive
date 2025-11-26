@@ -16,4 +16,3 @@ export function SessionFolderCardWithContextMenu(props: FolderCardProps) {
     </SessionFolderContextMenu>
   )
 }
-

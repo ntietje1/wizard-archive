@@ -1,14 +1,13 @@
-import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
-import { mutation } from "../_generated/server";
-import { requireCampaignMembership } from "../campaigns/campaigns";
-import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
-import { getFolder } from "../folders/folders";
-import { getNote } from "../notes/notes";
-import { getTagCategory } from "../tags/tags";
-import { SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
-import { findUniqueSlug, shortenId } from "../common/slug";
-
+import { v } from 'convex/values'
+import { Id } from '../_generated/dataModel'
+import { mutation } from '../_generated/server'
+import { requireCampaignMembership } from '../campaigns/campaigns'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getFolder } from '../folders/folders'
+import { getNote } from '../notes/notes'
+import { getTagCategory } from '../tags/tags'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { findUniqueSlug, shortenId } from '../common/slug'
 
 export const createMap = mutation({
   args: {
@@ -23,7 +22,7 @@ export const createMap = mutation({
     const { identityWithProfile } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
     const { profile } = identityWithProfile
 
@@ -31,7 +30,7 @@ export const createMap = mutation({
       const category = await getTagCategory(
         ctx,
         args.campaignId,
-        args.categoryId
+        args.categoryId,
       )
       if (!category) {
         throw new Error('Category not found')
@@ -91,7 +90,7 @@ export const updateMap = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     const updates: {
@@ -108,9 +107,7 @@ export const updateMap = mutation({
       updates.name = args.name
 
       const slugBasis =
-        args.name && args.name.trim() !== ''
-          ? args.name
-          : shortenId(args.mapId)
+        args.name && args.name.trim() !== '' ? args.name : shortenId(args.mapId)
 
       const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
         const conflict = await ctx.db
@@ -160,18 +157,17 @@ export const moveMap = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    
     if (args.parentFolderId) {
-        const folder = await getFolder(ctx, args.parentFolderId)
-        if (!folder) {
-            throw new Error('Folder not found')
-        }
-        if (folder.campaignId !== map.campaignId) {
-            throw new Error('Folder must belong to the same campaign as the map')
-        }
+      const folder = await getFolder(ctx, args.parentFolderId)
+      if (!folder) {
+        throw new Error('Folder not found')
+      }
+      if (folder.campaignId !== map.campaignId) {
+        throw new Error('Folder must belong to the same campaign as the map')
+      }
     }
 
     await ctx.db.patch(args.mapId, {
@@ -196,15 +192,13 @@ export const deleteMap = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     const pins = await ctx.db
-        .query('mapPins')
-        .withIndex('by_map_itemType', (q) => 
-            q.eq('mapId', args.mapId)
-        )
-        .collect()
+      .query('mapPins')
+      .withIndex('by_map_itemType', (q) => q.eq('mapId', args.mapId))
+      .collect()
 
     for (const pin of pins) {
       await ctx.db.delete(pin._id)
@@ -230,7 +224,7 @@ export const createItemPin = mutation({
       v.object({
         itemType: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
         mapId: v.id('gameMaps'),
-      })
+      }),
     ),
   },
   returns: v.id('mapPins'),
@@ -242,7 +236,7 @@ export const createItemPin = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     let pinnedItemCampaignId: Id<'campaigns'>
@@ -295,7 +289,7 @@ export const updateItemPin = mutation({
     x: v.number(),
     y: v.number(),
     iconName: v.string(),
-    color: v.optional(v.string())
+    color: v.optional(v.string()),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -312,7 +306,7 @@ export const updateItemPin = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     await ctx.db.patch(args.mapPinId, {
@@ -326,13 +320,12 @@ export const updateItemPin = mutation({
   },
 })
 
-
 export const removeItemPin = mutation({
   args: {
     mapPinId: v.id('mapPins'),
   },
   returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {    
+  handler: async (ctx, args): Promise<null> => {
     const pin = await ctx.db.get(args.mapPinId)
     if (!pin) {
       throw new Error('Pin not found')
@@ -346,10 +339,10 @@ export const removeItemPin = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     await ctx.db.delete(args.mapPinId)
     return null
-  }
+  },
 })

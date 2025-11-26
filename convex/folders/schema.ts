@@ -1,7 +1,6 @@
-import { v } from "convex/values";
-import { tagCategoryValidator } from "../tags/schema";
-import { defineTable } from "convex/server";
-
+import { v } from 'convex/values'
+import { tagCategoryValidator } from '../tags/schema'
+import { defineTable } from 'convex/server'
 
 export const folderTableFields = {
   userId: v.id('userProfiles'),
@@ -22,11 +21,11 @@ export const folderValidatorFields = {
 export const folderValidator = v.object(folderValidatorFields)
 
 export const foldersTables = {
-    folders: defineTable({
-        ...folderTableFields,
-    }).index('by_campaign_category_parent', [
-        'campaignId',
-        'categoryId',
-        'parentFolderId',
-    ]),
+  folders: defineTable({
+    ...folderTableFields,
+  }).index('by_campaign_category_parent', [
+    'campaignId',
+    'categoryId',
+    'parentFolderId',
+  ]),
 }

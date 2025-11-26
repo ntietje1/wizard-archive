@@ -27,13 +27,15 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   })
 
   const handleFinishRename = async (name: string) => {
-    await updateMapMutation.mutateAsync({ mapId: map._id, name })
-    .catch((error) => {
-      console.error(error)
-      toast.error('Failed to update map')
-    }).finally(() => {
-      setRenamingId(null)
-    })
+    await updateMapMutation
+      .mutateAsync({ mapId: map._id, name })
+      .catch((error) => {
+        console.error(error)
+        toast.error('Failed to update map')
+      })
+      .finally(() => {
+        setRenamingId(null)
+      })
   }
 
   const handleSelect = () => {
@@ -41,20 +43,20 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
   }
 
   return (
-      <DraggableMap map={map} ancestorIds={ancestorIds}>
-        <MapContextMenu ref={contextMenuRef} map={map}>
-          <SidebarItemButtonBase
-            icon={MapPin}
-            name={map.name || UNTITLED_MAP_NAME}
-            defaultName={UNTITLED_MAP_NAME}
-            isSelected={false}
-            isRenaming={renamingId === map._id}
-            showChevron={false}
-            onSelect={handleSelect}
-            onMoreOptions={handleMoreOptions}
-            onFinishRename={handleFinishRename}
-          />
-        </MapContextMenu>
-      </DraggableMap>
+    <DraggableMap map={map} ancestorIds={ancestorIds}>
+      <MapContextMenu ref={contextMenuRef} map={map}>
+        <SidebarItemButtonBase
+          icon={MapPin}
+          name={map.name || UNTITLED_MAP_NAME}
+          defaultName={UNTITLED_MAP_NAME}
+          isSelected={false}
+          isRenaming={renamingId === map._id}
+          showChevron={false}
+          onSelect={handleSelect}
+          onMoreOptions={handleMoreOptions}
+          onFinishRename={handleFinishRename}
+        />
+      </MapContextMenu>
+    </DraggableMap>
   )
 }

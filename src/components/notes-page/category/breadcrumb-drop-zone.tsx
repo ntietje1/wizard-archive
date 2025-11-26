@@ -56,4 +56,3 @@ export function BreadcrumbDropZone({
     </div>
   )
 }
-

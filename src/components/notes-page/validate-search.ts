@@ -14,17 +14,23 @@ export const validateSearch = (
 
   // Extract all potential content type params
   const note =
-    'note' in search && typeof search.note === 'string' && search.note.trim().length > 0
+    'note' in search &&
+    typeof search.note === 'string' &&
+    search.note.trim().length > 0
       ? search.note.trim()
       : undefined
 
   const map =
-    'map' in search && typeof search.map === 'string' && search.map.trim().length > 0
+    'map' in search &&
+    typeof search.map === 'string' &&
+    search.map.trim().length > 0
       ? search.map.trim()
       : undefined
 
   const category =
-    'category' in search && typeof search.category === 'string' && search.category.trim().length > 0
+    'category' in search &&
+    typeof search.category === 'string' &&
+    search.category.trim().length > 0
       ? search.category.trim()
       : undefined
 
@@ -39,11 +45,13 @@ export const validateSearch = (
   }
 
   // folderId is always allowed (used with category)
-  if ('folderId' in search && typeof search.folderId === 'string' && search.folderId.trim().length > 0) {
+  if (
+    'folderId' in search &&
+    typeof search.folderId === 'string' &&
+    search.folderId.trim().length > 0
+  ) {
     result.folderId = search.folderId as Id<'folders'>
   }
 
   return result
 }
-
-

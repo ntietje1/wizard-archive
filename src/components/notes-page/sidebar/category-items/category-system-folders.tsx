@@ -20,7 +20,9 @@ interface CategorySystemFoldersProps {
   className?: string
 }
 
-export const CategorySystemFolders = ({ className }: CategorySystemFoldersProps) => {
+export const CategorySystemFolders = ({
+  className,
+}: CategorySystemFoldersProps) => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
   const categories = useQuery(

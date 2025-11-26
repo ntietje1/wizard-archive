@@ -63,10 +63,7 @@ export function CategoryBreadcrumb({
     <div className="mb-2 flex items-center justify-between gap-4 min-h-[36px]">
       <Breadcrumb>
         <BreadcrumbList className="text-lg text-foreground">
-          <BreadcrumbDropZone
-            id={SIDEBAR_ROOT_TYPE}
-            categoryId={categoryId}
-          >
+          <BreadcrumbDropZone id={SIDEBAR_ROOT_TYPE} categoryId={categoryId}>
             <BreadcrumbItem>
               {breadcrumbs.length > 0 ? (
                 <BreadcrumbLink asChild>
@@ -89,10 +86,7 @@ export function CategoryBreadcrumb({
           {breadcrumbs.map((ancestor, index) => (
             <React.Fragment key={ancestor.id}>
               <BreadcrumbSeparator className="[&>svg]:!size-5 -mx-2 mt-1" />
-              <BreadcrumbDropZone
-                id={ancestor.id}
-                categoryId={categoryId}
-              >
+              <BreadcrumbDropZone id={ancestor.id} categoryId={categoryId}>
                 <BreadcrumbItem>
                   {index === breadcrumbs.length - 1 ? (
                     <BreadcrumbPage className="font-bold text-foreground">
@@ -129,4 +123,3 @@ export function CategoryBreadcrumb({
     </div>
   )
 }
-

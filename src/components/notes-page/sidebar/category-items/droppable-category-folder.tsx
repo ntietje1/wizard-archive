@@ -22,7 +22,9 @@ export function DroppableCategoryFolder({
   children,
 }: DroppableCategoryFolderProps) {
   const targetCategoryId = folder?.categoryId || categoryId
-  const dropId = folder?._id || (categoryId ? `category-root-${categoryId}` : SIDEBAR_ROOT_TYPE)
+  const dropId =
+    folder?._id ||
+    (categoryId ? `category-root-${categoryId}` : SIDEBAR_ROOT_TYPE)
   const dropType = folder ? SIDEBAR_ITEM_TYPES.folders : SIDEBAR_ROOT_TYPE
 
   const { setNodeRef, isOver, active, over } = useDroppable({

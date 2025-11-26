@@ -112,7 +112,9 @@ export default function ShareSideMenuButton({
     if (e.ctrlKey || e.metaKey) return
 
     if (isBlockNotFound) {
-      toast.error('Sharing is not available for empty notes. Add content to access sharing.')
+      toast.error(
+        'Sharing is not available for empty notes. Add content to access sharing.',
+      )
       return
     }
 
@@ -177,45 +179,47 @@ export default function ShareSideMenuButton({
         {isBlockNotFound ? (
           <div className="px-2 py-2">
             <div className="text-xs text-muted-foreground">
-              Sharing is not available for empty notes. Add content to access sharing.
+              Sharing is not available for empty notes. Add content to access
+              sharing.
             </div>
           </div>
         ) : (
           shareItems.map((item) => {
-          const displayName = item.name || item.username || 'Player'
-          const displayText = item.name
-            ? item.name
-            : item.username
-              ? `@${item.username}`
-              : 'Player'
+            const displayName = item.name || item.username || 'Player'
+            const displayText = item.name
+              ? item.name
+              : item.username
+                ? `@${item.username}`
+                : 'Player'
 
-          return (
-            <ContextMenuCheckboxItem
-              key={item.key}
-              checked={item.applied}
-              disabled={isMutating}
-              onSelect={async (e) => {
-                e.preventDefault()
-                await toggleShareTag(item.share)
-              }}
-              className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
-            >
-              <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                <span className="truncate font-medium" title={displayName}>
-                  {displayText}
-                </span>
-                {item.name && item.username && (
-                  <span
-                    className="truncate text-xs text-muted-foreground"
-                    title={`@${item.username}`}
-                  >
-                    @{item.username}
+            return (
+              <ContextMenuCheckboxItem
+                key={item.key}
+                checked={item.applied}
+                disabled={isMutating}
+                onSelect={async (e) => {
+                  e.preventDefault()
+                  await toggleShareTag(item.share)
+                }}
+                className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
+              >
+                <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
+                  <span className="truncate font-medium" title={displayName}>
+                    {displayText}
                   </span>
-                )}
-              </span>
-            </ContextMenuCheckboxItem>
-          )
-        }))}
+                  {item.name && item.username && (
+                    <span
+                      className="truncate text-xs text-muted-foreground"
+                      title={`@${item.username}`}
+                    >
+                      @{item.username}
+                    </span>
+                  )}
+                </span>
+              </ContextMenuCheckboxItem>
+            )
+          })
+        )}
       </ContextMenuContent>
     </ContextMenu>
   )

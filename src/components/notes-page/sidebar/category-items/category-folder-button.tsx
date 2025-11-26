@@ -72,7 +72,9 @@ export const CategoryFolderButton = ({
   const CategoryContextMenuComponent =
     categoryContextMenu || CategoryContextMenu
 
-  const currentAncestors: Array<Id<'folders'>> = folder ? [...ancestorIds, folder._id] : ancestorIds
+  const currentAncestors: Array<Id<'folders'>> = folder
+    ? [...ancestorIds, folder._id]
+    : ancestorIds
 
   return (
     <DroppableCategoryFolder
@@ -161,7 +163,7 @@ const CategoryFolderBase = ({
 
   const handleFolderClick = () => {
     if (!categoryConfig) return
-    
+
     navigateToCategory(categoryConfig.categorySlug, folder?._id)
   }
 

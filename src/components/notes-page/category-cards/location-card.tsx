@@ -16,4 +16,3 @@ export function LocationTagCardWithContextMenu(props: TagCardProps) {
     </LocationTagContextMenu>
   )
 }
-

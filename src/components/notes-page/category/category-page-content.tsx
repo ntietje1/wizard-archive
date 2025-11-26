@@ -20,7 +20,10 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link } from '@tanstack/react-router'
-import { SIDEBAR_ITEM_TYPES, type SidebarItemType } from 'convex/sidebarItems/types'
+import {
+  SIDEBAR_ITEM_TYPES,
+  type SidebarItemType,
+} from 'convex/sidebarItems/types'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { CategoryDragProvider } from '~/contexts/CategoryDragContext'
 
@@ -221,7 +224,9 @@ export function CategoryPageContent({
                 {/* Map Cards */}
                 {maps?.map((map) => {
                   const MapComponent =
-                    CATEGORY_ITEM_COMPONENT_REGISTRY[SIDEBAR_ITEM_TYPES.gameMaps]
+                    CATEGORY_ITEM_COMPONENT_REGISTRY[
+                      SIDEBAR_ITEM_TYPES.gameMaps
+                    ]
                   return MapComponent ? (
                     <MapComponent
                       key={map._id}
@@ -288,4 +293,3 @@ export function CategoryPageContent({
     </CategoryDragProvider>
   )
 }
-

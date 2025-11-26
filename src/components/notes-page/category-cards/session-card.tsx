@@ -16,4 +16,3 @@ export function SessionTagCardWithContextMenu(props: TagCardProps) {
     </SessionTagContextMenu>
   )
 }
-

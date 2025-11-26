@@ -126,20 +126,21 @@ export default function GenericTagForm({
       }
 
       if (mode === 'create') {
-        const result = await createMutation.mutateAsync({
-          displayName: value.name.trim(),
-          name: value.name.trim(),
-          description: value.description.trim() || undefined,
-          color: value.color ?? undefined,
-          imageStorageId: imageStorageId,
-          campaignId: campaign._id,
-          categoryId: getCategory.data._id,
-          parentFolderId,
-        })
-        .catch((error) => {
-          console.error('Failed to create tag:', error)
-          toast.error('Failed to create tag')
-        })
+        const result = await createMutation
+          .mutateAsync({
+            displayName: value.name.trim(),
+            name: value.name.trim(),
+            description: value.description.trim() || undefined,
+            color: value.color ?? undefined,
+            imageStorageId: imageStorageId,
+            campaignId: campaign._id,
+            categoryId: getCategory.data._id,
+            parentFolderId,
+          })
+          .catch((error) => {
+            console.error('Failed to create tag:', error)
+            toast.error('Failed to create tag')
+          })
         if (result?.noteId) {
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,

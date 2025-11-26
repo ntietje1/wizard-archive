@@ -396,9 +396,7 @@ export function useNewMap(folder?: Folder) {
   }
 }
 
-export function useEditCategory(
-  categoryConfig: TagCategoryConfig | undefined,
-) {
+export function useEditCategory(categoryConfig: TagCategoryConfig | undefined) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
@@ -430,7 +428,7 @@ export function useEditCategory(
     (newSlug: string) => {
       setIsDialogOpen(false)
       toast.success('Category updated successfully')
-      
+
       // If category slug changed and user is currently on this category's page, navigate them
       if (
         categoryConfig &&
@@ -439,9 +437,7 @@ export function useEditCategory(
       ) {
         navigateToCategory(
           newSlug,
-          search.folderId
-            ? (search.folderId as Id<'folders'>)
-            : undefined,
+          search.folderId ? (search.folderId as Id<'folders'>) : undefined,
         )
       }
     },

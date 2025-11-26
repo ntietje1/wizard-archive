@@ -48,7 +48,9 @@ export function FileTopbar() {
     return (
       <MapTopbar
         mapSlug={search.map}
-        campaignId={campaignId as import('convex/_generated/dataModel').Id<'campaigns'>}
+        campaignId={
+          campaignId as import('convex/_generated/dataModel').Id<'campaigns'>
+        }
         onClose={() => navigateToMap('')}
       />
     )
@@ -282,10 +284,7 @@ function CategoryTopbar({
         })
         // Redirect to new slug if it changed
         if (result.slug && result.slug !== categorySlug) {
-          navigateToCategory(
-            result.slug,
-            folderId,
-          )
+          navigateToCategory(result.slug, folderId)
         }
       } catch (error) {
         console.error(error)
@@ -293,7 +292,13 @@ function CategoryTopbar({
         throw error
       }
     },
-    [categoryQuery.data, categorySlug, folderId, navigateToCategory, updateCategory],
+    [
+      categoryQuery.data,
+      categorySlug,
+      folderId,
+      navigateToCategory,
+      updateCategory,
+    ],
   )
 
   // Menu items for folder
@@ -348,7 +353,13 @@ function CategoryTopbar({
   // If viewing a folder, show folder topbar
   if (folderId && folderQuery.data) {
     if (folderQuery.isLoading) {
-      return <EditableTopbar name="" isLoading={true} onRename={handleFolderRename} />
+      return (
+        <EditableTopbar
+          name=""
+          isLoading={true}
+          onRename={handleFolderRename}
+        />
+      )
     }
 
     return (
@@ -364,20 +375,31 @@ function CategoryTopbar({
   }
 
   // Otherwise show category topbar
-  const isSystemCategory =
-    categoryQuery.data?.kind !== CATEGORY_KIND.User
+  const isSystemCategory = categoryQuery.data?.kind !== CATEGORY_KIND.User
 
   if (categoryQuery.isLoading) {
-    return <EditableTopbar name="" isLoading={true} onRename={handleCategoryRename} />
+    return (
+      <EditableTopbar
+        name=""
+        isLoading={true}
+        onRename={handleCategoryRename}
+      />
+    )
   }
 
   if (!categoryQuery.data) {
-    return <EditableTopbar name="" isEmpty={true} onRename={handleCategoryRename} />
+    return (
+      <EditableTopbar name="" isEmpty={true} onRename={handleCategoryRename} />
+    )
   }
 
   return (
     <EditableTopbar
-      name={categoryQuery.data.pluralDisplayName || categoryQuery.data.displayName || ''}
+      name={
+        categoryQuery.data.pluralDisplayName ||
+        categoryQuery.data.displayName ||
+        ''
+      }
       defaultName="Category"
       onRename={handleCategoryRename}
       onClose={onClose}
@@ -386,4 +408,3 @@ function CategoryTopbar({
     />
   )
 }
-

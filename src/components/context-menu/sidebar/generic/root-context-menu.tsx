@@ -120,4 +120,3 @@ export function RootContextMenu({ children, className }: RootContextMenuProps) {
     </>
   )
 }
-

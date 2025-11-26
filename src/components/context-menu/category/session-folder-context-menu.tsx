@@ -77,7 +77,7 @@ export const SessionFolderContextMenu = forwardRef<
       return []
     }
     const items: ContextMenuItem[] = []
-    
+
     if (hasActiveSession) {
       items.push({
         type: 'action' as const,

@@ -190,8 +190,9 @@ export function CategoryDragProvider({
 export const useCategoryDrag = () => {
   const context = useContext(CategoryDragContext)
   if (!context) {
-    throw new Error('useCategoryDrag must be used within a CategoryDragProvider')
+    throw new Error(
+      'useCategoryDrag must be used within a CategoryDragProvider',
+    )
   }
   return context
 }
-

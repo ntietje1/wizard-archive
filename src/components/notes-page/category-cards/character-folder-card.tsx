@@ -16,4 +16,3 @@ export function CharacterFolderCardWithContextMenu(props: FolderCardProps) {
     </CharacterFolderContextMenu>
   )
 }
-

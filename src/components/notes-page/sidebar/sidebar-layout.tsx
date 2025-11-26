@@ -41,11 +41,14 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           </ResizablePanelGroup>
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={80} minSize={25} className="flex flex-col min-h-0">
+        <ResizablePanel
+          defaultSize={80}
+          minSize={25}
+          className="flex flex-col min-h-0"
+        >
           {children}
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
   )
 }
-

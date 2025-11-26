@@ -22,14 +22,15 @@ function FileSidebarContent() {
 
   const handleCreateNote = () => {
     if (!campaignId) return
-    createNote.mutateAsync({ campaignId: campaignId })
-    .then(({ noteId }) => {
-      setRenamingId(noteId)
-    })
-    .catch((error: Error) => {
-      console.error(error)
-      toast.error('Failed to create note')
-    })
+    createNote
+      .mutateAsync({ campaignId: campaignId })
+      .then(({ noteId }) => {
+        setRenamingId(noteId)
+      })
+      .catch((error: Error) => {
+        console.error(error)
+        toast.error('Failed to create note')
+      })
   }
 
   if (sidebarItems.status === 'pending') {

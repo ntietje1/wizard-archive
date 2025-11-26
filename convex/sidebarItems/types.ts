@@ -1,9 +1,8 @@
-import { Id } from "../_generated/dataModel";
-import { GameMap } from '../gameMaps/types';
-import { Note } from "../notes/types";
-import { Folder } from '../folders/types';
-import { TagCategory } from "../tags/types";
-
+import { Id } from '../_generated/dataModel'
+import { GameMap } from '../gameMaps/types'
+import { Note } from '../notes/types'
+import { Folder } from '../folders/types'
+import { TagCategory } from '../tags/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -13,14 +12,16 @@ export const SIDEBAR_ITEM_TYPES = {
   gameMaps: 'gameMaps',
 } as const
 
-export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
+export type SidebarItemType =
+  (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
 
 export const SIDEBAR_ITEM_OR_ROOT_TYPES = {
   ...SIDEBAR_ITEM_TYPES,
   root: SIDEBAR_ROOT_TYPE,
 } as const
 
-export type SidebarItemOrRootType = (typeof SIDEBAR_ITEM_OR_ROOT_TYPES)[keyof typeof SIDEBAR_ITEM_OR_ROOT_TYPES]
+export type SidebarItemOrRootType =
+  (typeof SIDEBAR_ITEM_OR_ROOT_TYPES)[keyof typeof SIDEBAR_ITEM_OR_ROOT_TYPES]
 
 export type SidebarItem<T extends SidebarItemType> = {
   _id: Id<T>
@@ -37,4 +38,3 @@ export type SidebarItem<T extends SidebarItemType> = {
 }
 
 export type AnySidebarItem = Note | Folder | GameMap
-

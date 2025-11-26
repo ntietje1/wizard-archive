@@ -7,7 +7,11 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorSearch } from './validate-search'
 import { NotesViewer } from './viewer/notes-viewer'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../shadcn/ui/resizable'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '../shadcn/ui/resizable'
 
 export function EditorContent() {
   const search = useSearch({
@@ -30,16 +34,29 @@ export function EditorContent() {
   let content: React.ReactNode = null
 
   if (search.note) {
-    content = 
-    <ResizablePanelGroup direction="horizontal" autoSaveId="notes-content" className="flex-1 min-h-0">
-      <ResizablePanel defaultSize={50} minSize={25} className="flex min-h-0 flex-col">
-        <NotesEditor />
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel defaultSize={50} minSize={25} className="flex min-h-0 flex-col">
-        <NotesViewer />
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    content = (
+      <ResizablePanelGroup
+        direction="horizontal"
+        autoSaveId="notes-content"
+        className="flex-1 min-h-0"
+      >
+        <ResizablePanel
+          defaultSize={50}
+          minSize={25}
+          className="flex min-h-0 flex-col"
+        >
+          <NotesEditor />
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel
+          defaultSize={50}
+          minSize={25}
+          className="flex min-h-0 flex-col"
+        >
+          <NotesViewer />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    )
   } else if (search.map) {
     content = <MapViewer map={search.map} />
   } else if (search.category) {
@@ -58,4 +75,3 @@ export function EditorContent() {
 
   return content
 }
-

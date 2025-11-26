@@ -108,5 +108,3 @@ export const deleteLocation = mutation({
     return args.locationId
   },
 })
-
-

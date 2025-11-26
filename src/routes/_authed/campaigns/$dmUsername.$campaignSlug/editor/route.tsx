@@ -3,9 +3,7 @@ import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
 import { EditorContent } from '~/components/notes-page/notes-content'
-import {
-  validateSearch,
-} from '~/components/notes-page/validate-search'
+import { validateSearch } from '~/components/notes-page/validate-search'
 import { FileTopbar } from '~/components/notes-page/editor/topbar/file-topbar'
 
 export const Route = createFileRoute(

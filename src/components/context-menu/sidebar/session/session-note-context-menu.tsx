@@ -20,4 +20,3 @@ export const SessionNoteContextMenu = forwardRef<
     </TagNoteContextMenu>
   )
 })
-

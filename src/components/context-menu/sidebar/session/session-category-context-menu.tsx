@@ -68,12 +68,7 @@ export const SessionCategoryFolderContextMenu = forwardRef<
       categoryId: getCategory.data._id,
       parentFolderId: parentFolderId,
     })
-  }, [
-    getCategory.data?._id,
-    folder,
-    startNewSession,
-    openFolder,
-  ])
+  }, [getCategory.data?._id, folder, startNewSession, openFolder])
 
   const handleEndCurrentSession = useCallback(() => {
     if (!campaignId) {
@@ -85,7 +80,7 @@ export const SessionCategoryFolderContextMenu = forwardRef<
 
   const menuItems = useMemo(() => {
     const items: ContextMenuItem[] = []
-    
+
     if (categoryConfig) {
       if (hasActiveSession) {
         items.push({
@@ -170,4 +165,3 @@ export const SessionCategoryFolderContextMenu = forwardRef<
     </>
   )
 })
-

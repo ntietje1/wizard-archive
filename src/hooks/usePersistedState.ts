@@ -63,7 +63,10 @@ function usePersistedState<T>(
         }
       } else {
         // Handle same-window custom events
-        const customEvent = event as CustomEvent<{ key: string; newValue: string }>
+        const customEvent = event as CustomEvent<{
+          key: string
+          newValue: string
+        }>
         if (customEvent.detail.key === key) {
           try {
             setStoredValue(JSON.parse(customEvent.detail.newValue))
@@ -80,7 +83,10 @@ function usePersistedState<T>(
       handleStorageChange as EventListener,
     )
     return () => {
-      window.removeEventListener('storage', handleStorageChange as EventListener)
+      window.removeEventListener(
+        'storage',
+        handleStorageChange as EventListener,
+      )
       window.removeEventListener(
         'localStorageChange',
         handleStorageChange as EventListener,

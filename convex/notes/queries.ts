@@ -13,14 +13,8 @@ import {
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { hasAccessToBlock } from '../shares/shares'
-import {
-  getNoteWithContent,
-  getNoteBySlug as getNoteBySlugFn,
-} from './notes'
-import {
-  blockValidator,
-  noteWithContentValidator,
-} from './schema'
+import { getNoteWithContent, getNoteBySlug as getNoteBySlugFn } from './notes'
+import { blockValidator, noteWithContentValidator } from './schema'
 import { getBlocksByCampaign } from './blocks'
 
 export const getNote = query({

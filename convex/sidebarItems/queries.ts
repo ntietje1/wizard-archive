@@ -1,9 +1,11 @@
-import { v } from "convex/values";
-import { query } from "../_generated/server";
-import { sidebarItemValidator } from './schema';
-import { getSidebarItemsByCategory as getSidebarItemsByCategoryFn, getSidebarItemsByParent as getSidebarItemsByParentFn } from "./sidebarItems";
-import { AnySidebarItem } from "./types";
-
+import { v } from 'convex/values'
+import { query } from '../_generated/server'
+import { sidebarItemValidator } from './schema'
+import {
+  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
+  getSidebarItemsByParent as getSidebarItemsByParentFn,
+} from './sidebarItems'
+import { AnySidebarItem } from './types'
 
 export const getSidebarItemsByCategory = query({
   args: {
@@ -12,7 +14,11 @@ export const getSidebarItemsByCategory = query({
   },
   returns: v.array(sidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return await getSidebarItemsByCategoryFn(ctx, args.campaignId, args.categoryId)
+    return await getSidebarItemsByCategoryFn(
+      ctx,
+      args.campaignId,
+      args.categoryId,
+    )
   },
 })
 
@@ -28,7 +34,7 @@ export const getSidebarItemsByParent = query({
       ctx,
       args.campaignId,
       args.categoryId,
-      args.parentId
+      args.parentId,
     )
   },
 })

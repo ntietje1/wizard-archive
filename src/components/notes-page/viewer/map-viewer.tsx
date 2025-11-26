@@ -52,7 +52,9 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
   const [activeTab, setActiveTab] = useState<'pinned' | 'notPinned'>('pinned')
   const [searchQuery, setSearchQuery] = useState('')
   const [pendingPinItem, setPendingPinItem] = useState<{
-    itemType: typeof SIDEBAR_ITEM_TYPES.notes | typeof SIDEBAR_ITEM_TYPES.gameMaps
+    itemType:
+      | typeof SIDEBAR_ITEM_TYPES.notes
+      | typeof SIDEBAR_ITEM_TYPES.gameMaps
     itemId: Id<'notes'> | Id<'gameMaps'>
   } | null>(null)
 
@@ -74,10 +76,7 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
   const mapId = map?._id
 
   const pinsQuery = useQuery(
-    convexQuery(
-      api.gameMaps.queries.getMapPins,
-      mapId ? { mapId } : 'skip',
-    ),
+    convexQuery(api.gameMaps.queries.getMapPins, mapId ? { mapId } : 'skip'),
   )
   const pinableItemsQuery = useQuery(
     convexQuery(
@@ -88,8 +87,6 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
 
   const pins = pinsQuery.data || []
   const allItems = pinableItemsQuery.data || []
-
-
 
   const pinnedItemIds = useMemo(
     () => new Set(pins.map((p: MapPinWithItem) => p.item._id)),
@@ -109,7 +106,11 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
   const filteredPinnedItems = useMemo(
     () =>
       pinnedItems.filter((item) => {
-        const name = item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+        const name =
+          item.name ||
+          (item.type === SIDEBAR_ITEM_TYPES.notes
+            ? UNTITLED_NOTE_TITLE
+            : UNTITLED_MAP_NAME)
         return name.toLowerCase().includes(searchQuery.toLowerCase())
       }),
     [pinnedItems, searchQuery],
@@ -118,7 +119,11 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
   const filteredNonPinnedItems = useMemo(
     () =>
       nonPinnedItems.filter((item) => {
-        const name = item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+        const name =
+          item.name ||
+          (item.type === SIDEBAR_ITEM_TYPES.notes
+            ? UNTITLED_NOTE_TITLE
+            : UNTITLED_MAP_NAME)
         return name.toLowerCase().includes(searchQuery.toLowerCase())
       }),
     [nonPinnedItems, searchQuery],
@@ -187,7 +192,8 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
 
       if (item.type === SIDEBAR_ITEM_TYPES.notes) {
         const note = item as Note
-        iconName = note.category?.iconName || note.tag?.category?.iconName || 'TagIcon'
+        iconName =
+          note.category?.iconName || note.tag?.category?.iconName || 'TagIcon'
         color = note.tag ? getTagColor(note.tag) : note.category?.defaultColor
       } else if (item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
         const gameMap = item as GameMap
@@ -248,20 +254,16 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
     [pendingPinItem, getPercentageFromClick, handlePlacePin],
   )
 
-
   const handlePinnedLocationClick = useCallback(() => {
     // TODO: implement zoom/pan to pin here
   }, [])
 
-  const handleNonPinnedItemClick = useCallback(
-    (item: Note | GameMap) => {
-      setPendingPinItem({
-        itemType: item.type,
-        itemId: item._id,
-      })
-    },
-    [],
-  )
+  const handleNonPinnedItemClick = useCallback((item: Note | GameMap) => {
+    setPendingPinItem({
+      itemType: item.type,
+      itemId: item._id,
+    })
+  }, [])
 
   const handleZoomIn = useCallback(() => {
     transformWrapperRef.current?.zoomIn()
@@ -282,7 +284,6 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
   return (
     <>
       <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
-
         <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
           <Button
             variant="outline"
@@ -387,14 +388,21 @@ export function MapViewer({ map: mapSlug }: MapViewerProps) {
           )}
         </div>
 
-
         {pendingPinItem && (
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
             <p className="text-sm font-medium">
               Click on map to place pin for{' '}
               {(() => {
-                const item = allItems.find((i) => i._id === pendingPinItem.itemId)
-                return item?.name || (item?.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME) || 'item'
+                const item = allItems.find(
+                  (i) => i._id === pendingPinItem.itemId,
+                )
+                return (
+                  item?.name ||
+                  (item?.type === SIDEBAR_ITEM_TYPES.notes
+                    ? UNTITLED_NOTE_TITLE
+                    : UNTITLED_MAP_NAME) ||
+                  'item'
+                )
               })()}
             </p>
           </div>
@@ -463,7 +471,6 @@ function PinContextMenu({
     }
   }, [pin, pinId, removePinMutation, onClose])
 
-
   useEffect(() => {
     const handleClickOutside = (e: globalThis.MouseEvent) => {
       const menu = document.getElementById(`pin-context-menu-${pinId}`)
@@ -516,12 +523,19 @@ function ItemSidebar({
   nonPinnedItems: (Note | GameMap)[]
   onPinnedItemClick: () => void
   onNonPinnedItemClick: (item: Note | GameMap) => void
-  pendingPinItem: { itemType: typeof SIDEBAR_ITEM_TYPES.notes | typeof SIDEBAR_ITEM_TYPES.gameMaps; itemId: Id<'notes'> | Id<'gameMaps'> } | null
+  pendingPinItem: {
+    itemType:
+      | typeof SIDEBAR_ITEM_TYPES.notes
+      | typeof SIDEBAR_ITEM_TYPES.gameMaps
+    itemId: Id<'notes'> | Id<'gameMaps'>
+  } | null
 }) {
   const getItemIcon = (item: Note | GameMap) => {
     if (item.type === SIDEBAR_ITEM_TYPES.notes) {
       const note = item as Note
-      return getCategoryIcon(note.category?.iconName || note.tag?.category?.iconName)
+      return getCategoryIcon(
+        note.category?.iconName || note.tag?.category?.iconName,
+      )
     } else {
       const gameMap = item as GameMap
       return getCategoryIcon(gameMap.category?.iconName)
@@ -539,7 +553,12 @@ function ItemSidebar({
   }
 
   const getItemName = (item: Note | GameMap) => {
-    return item.name || (item.type === SIDEBAR_ITEM_TYPES.notes ? UNTITLED_NOTE_TITLE : UNTITLED_MAP_NAME)
+    return (
+      item.name ||
+      (item.type === SIDEBAR_ITEM_TYPES.notes
+        ? UNTITLED_NOTE_TITLE
+        : UNTITLED_MAP_NAME)
+    )
   }
 
   return (
@@ -625,8 +644,7 @@ function ItemSidebar({
                   nonPinnedItems.map((item) => {
                     const Icon = getItemIcon(item)
                     const color = getItemColor(item)
-                    const isPending =
-                      pendingPinItem?.itemId === item._id
+                    const isPending = pendingPinItem?.itemId === item._id
                     return (
                       <button
                         key={item._id}
@@ -651,14 +669,13 @@ function ItemSidebar({
                       : 'No pinned items'}
                   </div>
                 )}
-                {activeTab === 'notPinned' &&
-                  nonPinnedItems.length === 0 && (
-                    <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                      {searchQuery
-                        ? 'No items match your search'
-                        : 'All items are pinned'}
-                    </div>
-                  )}
+                {activeTab === 'notPinned' && nonPinnedItems.length === 0 && (
+                  <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    {searchQuery
+                      ? 'No items match your search'
+                      : 'All items are pinned'}
+                  </div>
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -667,4 +684,3 @@ function ItemSidebar({
     </>
   )
 }
-

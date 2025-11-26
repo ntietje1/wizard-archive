@@ -115,7 +115,9 @@ export function EditableTopbar({
                   <TooltipTrigger asChild>
                     <div className="text-left px-2 max-w-full truncate cursor-not-allowed opacity-75">
                       {title || (
-                        <span className="opacity-85">{defaultName || 'Untitled'}</span>
+                        <span className="opacity-85">
+                          {defaultName || 'Untitled'}
+                        </span>
                       )}
                     </div>
                   </TooltipTrigger>
@@ -129,7 +131,9 @@ export function EditableTopbar({
                   className="text-left border-b border-transparent hover:border-gray-300 px-2 max-w-full truncate"
                 >
                   {title || (
-                    <span className="opacity-85">{defaultName || 'Untitled'}</span>
+                    <span className="opacity-85">
+                      {defaultName || 'Untitled'}
+                    </span>
                   )}
                 </button>
               )}
@@ -198,4 +202,3 @@ function TopbarEmpty() {
     </div>
   )
 }
-
