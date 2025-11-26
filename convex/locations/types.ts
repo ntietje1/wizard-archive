@@ -5,4 +5,3 @@ export type Location = Tag & {
   tagId: Id<'tags'>
   locationId: Id<'locations'>
 }
-

@@ -2,10 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { Id } from '../_generated/dataModel'
-import {
-  Note,
-  NoteWithContent,
-} from './types'
+import { Note, NoteWithContent } from './types'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { deleteNoteBlocks, getTopLevelBlocksByNote } from './blocks'
 import { deleteTagAndCleanupContent, getTag } from '../tags/tags'
@@ -86,7 +83,7 @@ export const getNoteBySlug = async (
 export async function deleteNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
-  options?: { cascadeTag?: boolean} 
+  options?: { cascadeTag?: boolean },
 ): Promise<Id<'notes'>> {
   const note = await ctx.db.get(noteId)
   if (!note) {
@@ -96,7 +93,7 @@ export async function deleteNote(
   await requireCampaignMembership(
     ctx,
     { campaignId: note.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
   await deleteNoteBlocks(ctx, noteId, note.campaignId)
@@ -108,4 +105,3 @@ export async function deleteNote(
 
   return noteId
 }
-

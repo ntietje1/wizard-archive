@@ -22,7 +22,6 @@ export default function LocationTagDialog(
         mode={props.mode}
         location={location}
         config={props.config}
-        navigateToNote={props.navigateToNote}
         parentFolderId={props.parentFolderId}
         isOpen={props.isOpen}
         onClose={props.onClose}

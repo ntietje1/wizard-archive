@@ -5,7 +5,7 @@ import {
   defaultInlineContentSpecs,
   type PartialBlock,
 } from '@blocknote/core'
-import { TagInlineContent } from '~/components/editor/tag-inline-content'
+import { TagInlineContent } from '~/components/notes-page/editor/blocks/tag-inline-content'
 
 export const customInlineContentSpecs = {
   ...defaultInlineContentSpecs,

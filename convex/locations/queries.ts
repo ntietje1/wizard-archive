@@ -102,5 +102,3 @@ export const getLocationByTagId = query({
     return combineLocationAndTag(location, tag, category)
   },
 })
-
-

@@ -1,9 +1,12 @@
-import { v } from "convex/values";
-import { query } from "../_generated/server";
-import { folderValidator } from './schema';
-import { folderWithChildrenValidator } from '../sidebarItems/schema';
-import { getFolderWithChildren, getFolderAncestors as getFolderAncestorsFn } from "./folders";
-import { Folder } from "./types";
+import { v } from 'convex/values'
+import { query } from '../_generated/server'
+import { folderValidator } from './schema'
+import { folderWithChildrenValidator } from '../sidebarItems/schema'
+import {
+  getFolderWithChildren,
+  getFolderAncestors as getFolderAncestorsFn,
+} from './folders'
+import { Folder } from './types'
 
 export const getFolderAncestors = query({
   args: {
@@ -24,4 +27,3 @@ export const getFolder = query({
     return await getFolderWithChildren(ctx, args.folderId)
   },
 })
-

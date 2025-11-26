@@ -92,5 +92,3 @@ export const noteWithContentValidator = v.object({
   ...noteValidatorFields,
   content: v.array(customBlockValidator),
 })
-
-

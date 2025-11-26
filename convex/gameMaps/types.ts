@@ -1,8 +1,9 @@
-import { Id } from "../_generated/dataModel";
-import { Note } from "../notes/types";
-import { SidebarItem, SIDEBAR_ITEM_TYPES } from "../sidebarItems/types";
+import { Id } from '../_generated/dataModel'
+import { Note } from '../notes/types'
+import { SidebarItem, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
+  slug: string
   imageStorageId?: Id<'_storage'>
 }
 
@@ -27,19 +28,20 @@ export type MapPin = {
     }
 )
 
-export type MapPinWithItem = MapPin & (
-  | {
-      itemType: typeof SIDEBAR_ITEM_TYPES.notes
-      noteId: Id<'notes'>
-      pinnedMapId?: Id<'gameMaps'>
-      item: Note
-    }
-  | {
-      itemType: typeof SIDEBAR_ITEM_TYPES.gameMaps
-      noteId?: Id<'notes'>
-      pinnedMapId: Id<'gameMaps'>
-      item: GameMap
-    }
-)
+export type MapPinWithItem = MapPin &
+  (
+    | {
+        itemType: typeof SIDEBAR_ITEM_TYPES.notes
+        noteId: Id<'notes'>
+        pinnedMapId?: Id<'gameMaps'>
+        item: Note
+      }
+    | {
+        itemType: typeof SIDEBAR_ITEM_TYPES.gameMaps
+        noteId?: Id<'notes'>
+        pinnedMapId: Id<'gameMaps'>
+        item: GameMap
+      }
+  )
 
 export const UNTITLED_MAP_NAME = 'Untitled Map'

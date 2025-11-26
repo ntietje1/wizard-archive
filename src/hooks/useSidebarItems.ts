@@ -8,7 +8,10 @@ import {
   SORT_ORDERS,
   type SortOptions,
 } from 'convex/editors/types'
-import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/sidebarItems/types'
+import {
+  SIDEBAR_ITEM_TYPES,
+  type AnySidebarItem,
+} from 'convex/sidebarItems/types'
 import { useSortOptions } from './useSortOptions'
 
 export const useSidebarItemsByCategory = (

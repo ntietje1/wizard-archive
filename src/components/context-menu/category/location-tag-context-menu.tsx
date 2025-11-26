@@ -12,7 +12,7 @@ import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-c
 
 export interface LocationTagContextMenuProps {
   children: React.ReactNode
-  noteWithTag: Note
+  noteWithTag: Note & { tag: Location }
   categoryConfig: TagCategoryConfig
 }
 
@@ -49,10 +49,9 @@ export const LocationTagContextMenu = forwardRef<
           isOpen={edit.isDialogOpen}
           onClose={() => edit.setIsDialogOpen(false)}
           config={categoryConfig}
-          tag={noteWithTag.tag as Location}
+          tag={noteWithTag.tag}
         />
       )}
     </>
   )
 })
-

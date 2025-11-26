@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Plus, FolderPlus, Pencil, Trash2, MapPin } from '~/lib/icons'
+import { Plus, FolderPlus, Pencil, Trash2, MapPin, TagIcon } from '~/lib/icons'
 import { useFolderState } from '~/hooks/useFolderState'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import type { Folder } from 'convex/folders/types'
@@ -9,11 +9,14 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useQuery } from '@tanstack/react-query'
+import { useSearch } from '@tanstack/react-router'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
 import type { FolderFormValues } from '~/components/forms/folder-dialog/folder-dialog'
 import { useSidebarItemsByParent } from './useSidebarItems'
+import { useEditorNavigation } from './useEditorNavigation'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
 
 export function useCategoryCreateItem(
   categoryConfig: TagCategoryConfig | undefined,
@@ -112,7 +115,7 @@ export function useCategoryNewFolder(
     () => ({
       type: 'action' as const,
       icon: <FolderPlus className="h-4 w-4" />,
-      label: `New ${categoryConfig.singular} Folder`,
+      label: `New Folder`,
       onClick: handleNewFolder,
     }),
     [categoryConfig.singular, handleNewFolder],
@@ -193,7 +196,7 @@ export function useCategoryNewFolderWithDialog(
     return {
       type: 'action' as const,
       icon: <FolderPlus className="h-4 w-4" />,
-      label: `New ${categoryConfig.singular} Folder`,
+      label: `New Folder`,
       onClick: handleNewFolder,
     }
   }, [categoryConfig, handleNewFolder])
@@ -336,15 +339,12 @@ export function useCategoryNewMap(
 
   const handleNewMap = useCallback(() => {
     if (!categoryConfig) return
-    // Only allow creating maps in locations category
-    if (categoryConfig.categorySlug !== 'locations') return
     openFolder()
     setIsDialogOpen(true)
   }, [openFolder, categoryConfig])
 
   const menuItem: ContextMenuItem | null = useMemo(() => {
-    // Only show for locations category
-    if (!categoryConfig || categoryConfig.categorySlug !== 'locations') {
+    if (!categoryConfig) {
       return null
     }
     return {
@@ -362,5 +362,105 @@ export function useCategoryNewMap(
     campaignId: campaign?._id,
     categoryId: getCategory.data?._id,
     parentFolderId: folder?._id,
+  }
+}
+
+export function useNewMap(folder?: Folder) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+
+  const handleNewMap = useCallback(() => {
+    setIsDialogOpen(true)
+  }, [])
+
+  const menuItem: ContextMenuItem | null = useMemo(() => {
+    if (!campaign) {
+      return null
+    }
+    return {
+      type: 'action' as const,
+      icon: <MapPin className="h-4 w-4" />,
+      label: 'New Map',
+      onClick: handleNewMap,
+    }
+  }, [campaign, handleNewMap])
+
+  return {
+    menuItem,
+    isDialogOpen,
+    setIsDialogOpen,
+    campaignId: campaign?._id,
+    categoryId: undefined,
+    parentFolderId: folder?._id,
+  }
+}
+
+export function useEditCategory(categoryConfig: TagCategoryConfig | undefined) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership?.data?.campaign
+  const { navigateToCategory } = useEditorNavigation()
+
+  const search = useSearch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+  }) as EditorSearch
+
+  const getCategory = useQuery(
+    convexQuery(
+      api.tags.queries.getTagCategoryBySlug,
+      campaign?._id && categoryConfig
+        ? {
+            campaignId: campaign._id,
+            slug: categoryConfig.categorySlug,
+          }
+        : 'skip',
+    ),
+  )
+
+  const handleEditCategory = useCallback(() => {
+    if (categoryConfig) {
+      setIsDialogOpen(true)
+    }
+  }, [categoryConfig])
+
+  const handleCategoryUpdated = useCallback(
+    (newSlug: string) => {
+      setIsDialogOpen(false)
+      toast.success('Category updated successfully')
+
+      // If category slug changed and user is currently on this category's page, navigate them
+      if (
+        categoryConfig &&
+        search.category === categoryConfig.categorySlug &&
+        newSlug !== categoryConfig.categorySlug
+      ) {
+        navigateToCategory(
+          newSlug,
+          search.folderId ? (search.folderId as Id<'folders'>) : undefined,
+        )
+      }
+    },
+    [categoryConfig, search.category, search.folderId, navigateToCategory],
+  )
+
+  const menuItem: ContextMenuItem | null = useMemo(() => {
+    if (!categoryConfig) return null
+    const Icon = categoryConfig.icon || TagIcon
+    return {
+      type: 'action' as const,
+      icon: <Icon className="h-4 w-4" />,
+      label: 'Edit Category',
+      onClick: handleEditCategory,
+    }
+  }, [categoryConfig, handleEditCategory])
+
+  return {
+    menuItem,
+    isDialogOpen,
+    setIsDialogOpen,
+    category: getCategory.data,
+    isLoading: getCategory.isLoading,
+    onCategoryUpdated: handleCategoryUpdated,
   }
 }

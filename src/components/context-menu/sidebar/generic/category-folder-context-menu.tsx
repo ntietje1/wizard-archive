@@ -5,7 +5,7 @@ import {
 import { forwardRef, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
-import type { Folder } from 'convex/notes/types'
+import type { Folder } from 'convex/folders/types'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import {
   useCategoryCreateItem,
@@ -13,8 +13,10 @@ import {
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
   useCategoryNewMap,
+  useEditCategory,
 } from '~/hooks/useCategoryContextMenu'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 
 export interface CategoryContextMenuProps {
   children: React.ReactNode
@@ -31,9 +33,13 @@ export const CategoryContextMenu = forwardRef<
   const newMap = useCategoryNewMap(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
   const deleteFolder = useCategoryDeleteFolder(folder)
+  const editCategory = useEditCategory(categoryConfig)
 
   const menuItems = useMemo(() => {
     const items = [createItem.menuItem, newFolder.menuItem]
+    if (!folder && editCategory.menuItem) {
+      items.push(editCategory.menuItem)
+    }
     if (newMap.menuItem) {
       items.push(newMap.menuItem)
     }
@@ -52,6 +58,8 @@ export const CategoryContextMenu = forwardRef<
     newMap.menuItem,
     renameFolder.menuItem,
     deleteFolder.menuItem,
+    editCategory.menuItem,
+    folder,
   ])
 
   return (
@@ -83,6 +91,16 @@ export const CategoryContextMenu = forwardRef<
           campaignId={newMap.campaignId}
           categoryId={newMap.categoryId}
           parentFolderId={newMap.parentFolderId}
+        />
+      )}
+
+      {editCategory.category && (
+        <CategoryDialog
+          mode="edit"
+          isOpen={editCategory.isDialogOpen}
+          onClose={() => editCategory.setIsDialogOpen(false)}
+          category={editCategory.category}
+          onSuccess={editCategory.onCategoryUpdated}
         />
       )}
     </>

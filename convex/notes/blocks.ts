@@ -1,14 +1,13 @@
-import { Id } from "../_generated/dataModel";
-import { MutationCtx } from "../_generated/server";
-import { Ctx } from "../common/types";
-import { getNote } from "./notes";
-import { Block, Note } from "./types";
-
+import { Id } from '../_generated/dataModel'
+import { MutationCtx } from '../_generated/server'
+import { Ctx } from '../common/types'
+import { getNote } from './notes'
+import { Block, Note } from './types'
 
 export const findBlockByBlockNoteId = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  blockId: string
+  blockId: string,
 ): Promise<Block | null> => {
   const note: Note | null = await getNote(ctx, noteId)
   if (!note) {
@@ -17,10 +16,11 @@ export const findBlockByBlockNoteId = async (
 
   const block = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_block', (q) => q
-      .eq('campaignId', note.campaignId)
-      .eq('noteId', noteId)
-      .eq('blockId', blockId)
+    .withIndex('by_campaign_note_block', (q) =>
+      q
+        .eq('campaignId', note.campaignId)
+        .eq('noteId', noteId)
+        .eq('blockId', blockId),
     )
     .unique()
 
@@ -30,11 +30,12 @@ export const findBlockByBlockNoteId = async (
 export async function getBlocksByNote(
   ctx: Ctx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>
+  campaignId: Id<'campaigns'>,
 ): Promise<Block[]> {
   return await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_toplevel_pos', (q) => q.eq('campaignId', campaignId).eq('noteId', noteId)
+    .withIndex('by_campaign_note_toplevel_pos', (q) =>
+      q.eq('campaignId', campaignId).eq('noteId', noteId),
     )
     .collect()
 }
@@ -42,14 +43,15 @@ export async function getBlocksByNote(
 export async function getTopLevelBlocksByNote(
   ctx: Ctx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>
+  campaignId: Id<'campaigns'>,
 ): Promise<Block[]> {
   const blocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_toplevel_pos', (q) => q
-      .eq('campaignId', campaignId)
-      .eq('noteId', noteId)
-      .eq('isTopLevel', true)
+    .withIndex('by_campaign_note_toplevel_pos', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('noteId', noteId)
+        .eq('isTopLevel', true),
     )
     .collect()
 
@@ -58,11 +60,12 @@ export async function getTopLevelBlocksByNote(
 
 export async function getBlocksByCampaign(
   ctx: Ctx,
-  campaignId: Id<'campaigns'>
+  campaignId: Id<'campaigns'>,
 ): Promise<Block[]> {
   return await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_toplevel_pos', (q) => q.eq('campaignId', campaignId)
+    .withIndex('by_campaign_note_toplevel_pos', (q) =>
+      q.eq('campaignId', campaignId),
     )
     .collect()
 }
@@ -70,11 +73,12 @@ export async function getBlocksByCampaign(
 async function deleteBlockTags(
   ctx: MutationCtx,
   blockId: Id<'blocks'>,
-  campaignId: Id<'campaigns'>
+  campaignId: Id<'campaigns'>,
 ): Promise<void> {
   const blockTags = await ctx.db
     .query('blockTags')
-    .withIndex('by_campaign_block_tag', (q) => q.eq('campaignId', campaignId).eq('blockId', blockId)
+    .withIndex('by_campaign_block_tag', (q) =>
+      q.eq('campaignId', campaignId).eq('blockId', blockId),
     )
     .collect()
 
@@ -87,7 +91,7 @@ async function deleteBlockTags(
 export async function deleteNoteBlocks(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>
+  campaignId: Id<'campaigns'>,
 ): Promise<void> {
   const blocks = await getBlocksByNote(ctx, noteId, campaignId)
 
@@ -95,4 +99,3 @@ export async function deleteNoteBlocks(
     await deleteBlockTags(ctx, block._id, campaignId)
   }
 }
-

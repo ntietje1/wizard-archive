@@ -1,4 +1,8 @@
 import type { Id } from 'convex/_generated/dataModel'
+import {
+  SIDEBAR_ROOT_TYPE,
+  type SidebarItemType,
+} from 'convex/sidebarItems/types'
 import { createContext, useCallback, useContext, useState, useRef } from 'react'
 import {
   DndContext,
@@ -11,48 +15,41 @@ import {
   DragOverlay,
   pointerWithin,
 } from '@dnd-kit/core'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
-import { api } from 'convex/_generated/api'
 import {
   canDropCategoryItem,
   type CategoryDragData,
   type CategoryDropData,
-} from '~/routes/_authed/campaigns/$dmUsername.$campaignSlug/categories/$categorySlug/-components/dnd-utils'
+} from '~/components/notes-page/category/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useNoteActions } from '~/hooks/useNoteActions'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import { executeMove } from '~/utils/dnd-utils'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
-import { toast } from 'sonner'
 
 type CategoryDragContextType = {
-  activeDragData: CategoryDragData | null
-  isEnabled: boolean
+  activeDragItem: CategoryDragData | null
 }
 
 const CategoryDragContext = createContext<CategoryDragContextType | null>(null)
 
 export function CategoryDragProvider({
   children,
-  isEnabled,
 }: {
   children: React.ReactNode
-  isEnabled: boolean
 }) {
-  const [activeDragData, setActiveDragData] = useState<CategoryDragData | null>(
-    null,
-  )
-  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
-  const pointerListenerRef = useRef<(() => void) | null>(null)
-
   const { moveFolder } = useFolderActions()
-
-  const moveNote = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.moveNote),
-  })
+  const { moveNote } = useNoteActions()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
   })
+
+  const [activeDragItem, setActiveDragItem] = useState<CategoryDragData | null>(
+    null,
+  )
+  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
+  const pointerListenerRef = useRef<(() => void) | null>(null)
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -70,10 +67,11 @@ export function CategoryDragProvider({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
-    const data = active.data.current as CategoryDragData
-    if (data && data.type) {
-      setActiveDragData(data)
+    const item = active.data.current as CategoryDragData
+    if (item) {
+      setActiveDragItem(item)
 
+      // Set up pointer tracking for drag overlay
       if (pointerListenerRef.current) {
         pointerListenerRef.current()
       }
@@ -93,7 +91,7 @@ export function CategoryDragProvider({
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
-      setActiveDragData(null)
+      setActiveDragItem(null)
       setPointerOffset({ x: 0, y: 0 })
 
       if (pointerListenerRef.current) {
@@ -101,31 +99,36 @@ export function CategoryDragProvider({
         pointerListenerRef.current = null
       }
 
-      if (!isEnabled || !active.data.current || !over) {
-        return
-      }
+      if (!active.data.current || !over) return
 
+      // Validate the drop
       if (!canDropCategoryItem(active, over)) return
 
-      const draggedData = active.data.current as CategoryDragData
+      const draggedItem = active.data.current as CategoryDragData
       const targetData = over.data.current as CategoryDropData
 
-      // target is either the root or a folder
+      if (!targetData) return
+
       const targetId =
-        targetData.type === SIDEBAR_ROOT_TYPE
+        targetData._id === SIDEBAR_ROOT_TYPE
           ? undefined
           : (targetData._id as Id<'folders'>)
 
-      await executeMove(draggedData.type, draggedData._id, targetId, {
-        moveNote: (params) => moveNote.mutateAsync(params),
-        moveFolder: (params) => moveFolder.mutateAsync(params),
-        moveMap: (params) => moveMap.mutateAsync(params),
-      }).catch((error) => {
+      await executeMove(
+        draggedItem.type,
+        draggedItem._id,
+        targetId,
+        {
+          moveNote: (params) => moveNote.mutateAsync(params),
+          moveFolder: (params) => moveFolder.mutateAsync(params),
+          moveMap: (params) => moveMap.mutateAsync(params),
+        },
+        {},
+      ).catch((error) => {
         console.error('Failed to move item:', error)
-        toast.error('Failed to move item')
       })
     },
-    [isEnabled, moveNote, moveFolder, moveMap],
+    [moveNote, moveFolder, moveMap],
   )
 
   const handleDragCancel = useCallback(() => {
@@ -134,13 +137,12 @@ export function CategoryDragProvider({
       pointerListenerRef.current()
       pointerListenerRef.current = null
     }
-    setActiveDragData(null)
+    setActiveDragItem(null)
     setPointerOffset({ x: 0, y: 0 })
   }, [])
 
   const value: CategoryDragContextType = {
-    activeDragData,
-    isEnabled,
+    activeDragItem,
   }
 
   return (
@@ -169,11 +171,13 @@ export function CategoryDragProvider({
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {activeDragData ? (
+          {activeDragItem ? (
             <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
-              <activeDragData.icon className="w-5 h-5" />
+              {activeDragItem.icon && (
+                <activeDragItem.icon className="w-5 h-5" />
+              )}
               <span className="text-sm text-foreground font-semibold">
-                {activeDragData.name}
+                {activeDragItem.name}
               </span>
             </div>
           ) : null}
@@ -190,8 +194,5 @@ export const useCategoryDrag = () => {
       'useCategoryDrag must be used within a CategoryDragProvider',
     )
   }
-  return {
-    activeDragItem: context.activeDragData,
-    isEnabled: context.isEnabled,
-  }
+  return context
 }

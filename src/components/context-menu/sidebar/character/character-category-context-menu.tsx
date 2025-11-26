@@ -4,9 +4,8 @@ import {
 } from '~/components/context-menu/base/context-menu'
 import type { CategoryContextMenuProps } from '../generic/category-folder-context-menu'
 import { UserPlus, Users } from '~/lib/icons'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useRouter } from '@tanstack/react-router'
 import { forwardRef, useState, useMemo } from 'react'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFolderState } from '~/hooks/useFolderState'
 import CharacterTagDialog from '~/components/forms/category-tag-form/character-tag-form/character-tag-dialog'
 import { FolderDialog } from '~/components/forms/folder-dialog/folder-dialog'
@@ -15,15 +14,17 @@ import {
   useCategoryNewFolderWithDialog,
   useCategoryRenameFolder,
   useCategoryDeleteFolder,
+  useEditCategory,
 } from '~/hooks/useCategoryContextMenu'
 import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
+import { SquareArrowOutUpRight } from 'lucide-react'
 
 export const CharacterCategoryFolderContextMenu = forwardRef<
   ContextMenuRef,
   CategoryContextMenuProps
 >(({ categoryConfig, children, folder }, ref) => {
-  const router = useRouter()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { navigateToCategory } = useEditorNavigation()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const { openFolder } = useFolderState(
     folder?._id || categoryConfig?.categorySlug || '',
@@ -33,6 +34,7 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   const newFolder = useCategoryNewFolderWithDialog(categoryConfig, folder)
   const renameFolder = useCategoryRenameFolder(folder)
   const deleteFolder = useCategoryDeleteFolder(folder)
+  const editCategory = useEditCategory(categoryConfig)
 
   const handleCreateItem = () => {
     openFolder()
@@ -56,6 +58,10 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
     if (newFolder.menuItem) {
       items.push(newFolder.menuItem)
     }
+    // Only show edit category at root level (when folder is undefined)
+    if (!folder && editCategory.menuItem) {
+      items.push(editCategory.menuItem)
+    }
     if (renameFolder.menuItem) {
       items.push(renameFolder.menuItem)
     }
@@ -65,16 +71,10 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
     if (!folder && categoryConfig) {
       items.push({
         type: 'action' as const,
-        icon: <Users className="h-4 w-4" />,
+        icon: <SquareArrowOutUpRight className="h-4 w-4" />,
         label: `Go to ${categoryConfig.plural}`,
         onClick: () => {
-          router.navigate({
-            to: '/campaigns/$dmUsername/$campaignSlug/categories/characters',
-            params: {
-              dmUsername,
-              campaignSlug,
-            },
-          })
+          navigateToCategory('characters')
         },
       })
     }
@@ -82,13 +82,12 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
   }, [
     createItem,
     newFolder.menuItem,
+    editCategory.menuItem,
     renameFolder.menuItem,
     deleteFolder.menuItem,
     folder,
     categoryConfig,
-    router,
-    dmUsername,
-    campaignSlug,
+    navigateToCategory,
   ])
 
   return (
@@ -104,7 +103,6 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
             onClose={() => setIsCreateDialogOpen(false)}
             config={categoryConfig}
             parentFolderId={folder?._id}
-            navigateToNote={false}
           />
           <FolderDialog
             isOpen={newFolder.isDialogOpen}
@@ -112,6 +110,15 @@ export const CharacterCategoryFolderContextMenu = forwardRef<
             mode="create"
             onSubmit={newFolder.onSubmit}
           />
+          {editCategory.category && (
+            <CategoryDialog
+              mode="edit"
+              isOpen={editCategory.isDialogOpen}
+              onClose={() => editCategory.setIsDialogOpen(false)}
+              category={editCategory.category}
+              onSuccess={editCategory.onCategoryUpdated}
+            />
+          )}
         </>
       )}
     </>

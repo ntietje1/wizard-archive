@@ -5,7 +5,7 @@ import {
 } from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
-import type { Folder } from 'convex/notes/types'
+import type { Folder } from 'convex/folders/types'
 import {
   useCategoryCreateItem,
   useCategoryNewFolderWithDialog,

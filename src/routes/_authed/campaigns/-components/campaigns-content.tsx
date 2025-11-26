@@ -146,7 +146,7 @@ export function CampaignsContent() {
                 }
                 linkWrapper={(children) => (
                   <Link
-                    to={`/campaigns/$dmUsername/$campaignSlug/notes`}
+                    to={`/campaigns/$dmUsername/$campaignSlug/editor`}
                     params={{
                       dmUsername: campaign.dmUserProfile.username,
                       campaignSlug: campaign.slug,

@@ -14,61 +14,61 @@ export interface LocationsMapContextMenuProps {
   map?: GameMap
 }
 
-export const LocationsMapContextMenu = forwardRef<ContextMenuRef, LocationsMapContextMenuProps>(
-  ({ children, map }, ref) => {
-    const [isEditing, setIsEditing] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
+export const LocationsMapContextMenu = forwardRef<
+  ContextMenuRef,
+  LocationsMapContextMenuProps
+>(({ children, map }, ref) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-    const menuItems = useMemo(() => {
-      if (!map) {
-        return []
-      }
+  const menuItems = useMemo(() => {
+    if (!map) {
+      return []
+    }
 
-      const items: ContextMenuItem[] = [
-        {
-          type: 'action',
-          label: 'Edit',
-          icon: <Edit className="h-4 w-4" />,
-          onClick: () => setIsEditing(true),
-        },
-        {
-          type: 'action',
-          label: 'Delete',
-          icon: <Trash2 className="h-4 w-4" />,
-          onClick: () => setIsDeleting(true),
-        },
-      ]
-      return items
-    }, [map, setIsEditing, setIsDeleting])
+    const items: ContextMenuItem[] = [
+      {
+        type: 'action',
+        label: 'Edit',
+        icon: <Edit className="h-4 w-4" />,
+        onClick: () => setIsEditing(true),
+      },
+      {
+        type: 'action',
+        label: 'Delete',
+        icon: <Trash2 className="h-4 w-4" />,
+        onClick: () => setIsDeleting(true),
+      },
+    ]
+    return items
+  }, [map, setIsEditing, setIsDeleting])
 
-    return (
-      <>
-        <ContextMenu ref={ref} items={menuItems} menuClassName="w-64">
-          {children}
-        </ContextMenu>
+  return (
+    <>
+      <ContextMenu ref={ref} items={menuItems} menuClassName="w-64">
+        {children}
+      </ContextMenu>
 
-        {map && (
-          <>
-            <MapDialog
-              mapId={map._id}
-              isOpen={isEditing}
-              onClose={() => setIsEditing(false)}
-              campaignId={map.campaignId}
+      {map && (
+        <>
+          <MapDialog
+            mapId={map._id}
+            isOpen={isEditing}
+            onClose={() => setIsEditing(false)}
+            campaignId={map.campaignId}
+          />
+
+          {map && (
+            <MapDeleteConfirmDialog
+              map={map}
+              isDeleting={isDeleting}
+              onClose={() => setIsDeleting(false)}
             />
-
-            {map && (
-              <MapDeleteConfirmDialog
-                map={map}
-                isDeleting={isDeleting}
-                onClose={() => setIsDeleting(false)}
-              />
-            )}
-          </>
-        )}
-      </>
-    )
-  },
-)
+          )}
+        </>
+      )}
+    </>
+  )
+})
 
 LocationsMapContextMenu.displayName = 'LocationsMapContextMenu'
-
