@@ -46,7 +46,7 @@ export default function LocationTagForm({
   mode,
   location,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
   onLocationCreated,

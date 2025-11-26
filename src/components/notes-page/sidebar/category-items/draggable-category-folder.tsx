@@ -22,7 +22,7 @@ export function DraggableCategoryFolder({
   const dragData: SidebarDragData = {
     _id: folder._id,
     type: folder.type,
-    parentFolderId: folder.parentId,
+    parentId: folder.parentId,
     categoryId: folder.categoryId,
     ancestorIds,
     name: folder.name || UNTITLED_FOLDER_NAME,

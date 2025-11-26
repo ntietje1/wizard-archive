@@ -49,7 +49,7 @@ export default function CharacterTagForm({
   mode,
   character,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
 }: CharacterTagFormProps) {
