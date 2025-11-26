@@ -54,7 +54,7 @@ export const SessionFolderContextMenu = forwardRef<
 
   const handleStartNewSession = useCallback(() => {
     if (!getCategory.data?._id) {
-      toast.error('Failed to get category')
+      toast.error('Category not found')
       return
     }
     const parentFolderId = folder ? folder._id : undefined

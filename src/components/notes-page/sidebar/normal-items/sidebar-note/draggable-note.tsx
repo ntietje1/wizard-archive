@@ -8,7 +8,7 @@ import type { SidebarDragData } from '../../dnd-utils'
 
 interface DraggableNoteProps {
   note: Note
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Array<Id<'folders'>>
   children: React.ReactNode
 }
 

@@ -129,7 +129,7 @@ export const getSidebarItemsByParent = async (
     )
   allItems.push(...notes)
 
-    // Get maps (only for locations category)
+    // Get maps
     const maps = await ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_category_parent', (q) => q

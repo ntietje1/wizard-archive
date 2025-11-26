@@ -12,7 +12,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: SIDEBAR_ROOT_TYPE,
     data: {
-      accepts: [SIDEBAR_ITEM_TYPES.folders, SIDEBAR_ITEM_TYPES.notes],
+      accepts: SIDEBAR_ITEM_TYPES,
       _id: SIDEBAR_ROOT_TYPE,
       categoryId: undefined,
       ancestorIds: [],

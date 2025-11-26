@@ -7,7 +7,6 @@ import {
 import {
   useBlockNoteEditor,
   useComponentsContext,
-  useDictionary,
   useEditorContentOrSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
@@ -36,7 +35,6 @@ function checkBackgroundColorInSchema(
 
 export const BackgroundColorButton = () => {
   const Components = useComponentsContext()!
-  const dict = useDictionary()
   const editor = useBlockNoteEditor<
     BlockSchema,
     InlineContentSchema,

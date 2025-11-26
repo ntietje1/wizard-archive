@@ -136,17 +136,19 @@ export default function GenericTagForm({
           categoryId: getCategory.data._id,
           parentFolderId,
         })
-
-        if (result.noteId) {
+        .catch((error) => {
+          console.error('Failed to create tag:', error)
+          toast.error('Failed to create tag')
+        })
+        if (result?.noteId) {
           const note = await convex.query(api.notes.queries.getNote, {
             noteId: result.noteId,
           })
           if (note?.slug) {
             navigateToNote(note.slug)
           }
+          toast.success(`${config.singular} created successfully`)
         }
-
-        toast.success(`${config.singular} created successfully`)
       } else if (mode === 'edit' && tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,

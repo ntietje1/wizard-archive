@@ -12,7 +12,7 @@ import type { Id } from 'convex/_generated/dataModel'
 
 interface NoteButtonProps {
   note: Note
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Array<Id<'folders'>>
 }
 
 export function NoteButton({ note, ancestorIds = [] }: NoteButtonProps) {

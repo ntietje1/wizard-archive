@@ -75,7 +75,7 @@ export default function ShareSideMenuButton({
   const appliedTagIds = new Set<Id<'tags'>>(blockTagState.data?.allTagIds ?? [])
   const isShared = useMemo(() => {
     if (!sharedAllTag || isBlockNotFound) return false
-    if (appliedTagIds.has(sharedAllTag._id)) return true
+    if (appliedTagIds.has(sharedAllTag.tagId)) return true
     return playerSharedTags.some((share: Share) =>
       appliedTagIds.has(share.tagId),
     )

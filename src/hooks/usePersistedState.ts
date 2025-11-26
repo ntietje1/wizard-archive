@@ -33,7 +33,7 @@ function usePersistedState<T>(
             queueMicrotask(() => {
               window.dispatchEvent(
                 new CustomEvent('localStorageChange', {
-                  detail: { key, newValue: valueToStore },
+                  detail: { key, newValue: JSON.stringify(valueToStore) },
                 }),
               )
             })
@@ -63,9 +63,13 @@ function usePersistedState<T>(
         }
       } else {
         // Handle same-window custom events
-        const customEvent = event as CustomEvent<{ key: string; newValue: T }>
+        const customEvent = event as CustomEvent<{ key: string; newValue: string }>
         if (customEvent.detail.key === key) {
-          setStoredValue(customEvent.detail.newValue)
+          try {
+            setStoredValue(JSON.parse(customEvent.detail.newValue))
+          } catch (error) {
+            console.log(error)
+          }
         }
       }
     }

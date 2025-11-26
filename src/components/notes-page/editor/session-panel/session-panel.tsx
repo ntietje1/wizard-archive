@@ -44,8 +44,8 @@ export function SessionPanel() {
   )
 
   const hasActiveSession = !!currentSession.data
-  const sortedSessions = sessions.data ?? []
-  const previousSessions = useMemo(() => {
+  const sortedSessions: Array<Session> = sessions.data ?? []
+  const previousSessions: Array<Session> = useMemo(() => {
     if (!sortedSessions) return []
     const currentId = currentSession.data?.sessionId
     return sortedSessions.filter((s) => s.sessionId !== currentId)

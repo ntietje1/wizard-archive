@@ -60,17 +60,8 @@ export const SessionCategoryFolderContextMenu = forwardRef<
       toast.error('Failed to get category')
       return
     }
-    // When folder is defined, create session inside that folder
-    // When folder is undefined, create session at root
-    // Explicitly use folder._id when folder exists to ensure correct parent
     const parentFolderId = folder ? folder._id : undefined
-    console.log('Starting new session:', {
-      folder: folder ? { _id: folder._id, name: folder.name } : null,
-      parentFolderId,
-      categoryId: getCategory.data._id,
-    })
     if (folder) {
-      // Open the folder so the new session is visible
       openFolder()
     }
     startNewSession({
@@ -95,7 +86,6 @@ export const SessionCategoryFolderContextMenu = forwardRef<
   const menuItems = useMemo(() => {
     const items: ContextMenuItem[] = []
     
-    // Show "Start New Session" or "End Current Session" at root level and in sub folders
     if (categoryConfig) {
       if (hasActiveSession) {
         items.push({
@@ -117,7 +107,7 @@ export const SessionCategoryFolderContextMenu = forwardRef<
     if (newFolder.menuItem) {
       items.push(newFolder.menuItem)
     }
-    // Only show edit category at root level (when folder is undefined)
+    // Only show edit category at root level
     if (!folder && editCategory.menuItem) {
       items.push(editCategory.menuItem)
     }

@@ -148,8 +148,8 @@ export function FolderCard({
   })
 
   const handleCardActivate = (e?: MouseEvent) => {
-    if (!isDragging && onClick) {
-      onClick(e || ({} as MouseEvent))
+    if (!isDragging && onClick && e) {
+      onClick(e)
     }
   }
 

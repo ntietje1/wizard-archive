@@ -27,6 +27,7 @@ import {
   CATEGORY_VIEW_MODE_STORAGE_KEY,
   type ViewMode,
 } from '~/hooks/useCategoryView'
+import type { Id } from 'convex/_generated/dataModel'
 
 export function FileTopbar() {
   const search = useSearch({
@@ -216,7 +217,7 @@ function CategoryTopbar({
   onClose,
 }: {
   categorySlug: string
-  folderId?: string
+  folderId?: Id<'folders'>
   onClose: () => void
 }) {
   const { campaignWithMembership } = useCampaign()
@@ -240,7 +241,7 @@ function CategoryTopbar({
       api.folders.queries.getFolder,
       folderId && campaignId
         ? {
-            folderId: folderId as import('convex/_generated/dataModel').Id<'folders'>,
+            folderId: folderId,
           }
         : 'skip',
     ),
@@ -283,9 +284,7 @@ function CategoryTopbar({
         if (result.slug && result.slug !== categorySlug) {
           navigateToCategory(
             result.slug,
-            folderId
-              ? (folderId as import('convex/_generated/dataModel').Id<'folders'>)
-              : undefined,
+            folderId,
           )
         }
       } catch (error) {

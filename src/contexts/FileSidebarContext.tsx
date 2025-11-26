@@ -26,6 +26,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { executeMove } from '~/utils/dnd-utils'
+import { toast } from 'sonner'
 
 type FileSidebarContextType = {
   setRenamingId: (id: Id<SidebarItemType> | null) => void
@@ -162,8 +163,9 @@ export function FileSidebarProvider({
         {
           openFolder,
         },
-      ).catch((error) => {
+      ).catch((error: Error) => {
         console.error('Failed to move item:', error)
+        toast.error('Failed to move item')
       })
     },
     [moveNote, moveFolder, moveMap, openFolder],

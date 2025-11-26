@@ -72,7 +72,7 @@ export const CategoryFolderButton = ({
   const CategoryContextMenuComponent =
     categoryContextMenu || CategoryContextMenu
 
-  const currentAncestors = folder ? [...ancestorIds, folder._id] : ancestorIds
+  const currentAncestors: Array<Id<'folders'>> = folder ? [...ancestorIds, folder._id] : ancestorIds
 
   return (
     <DroppableCategoryFolder

@@ -1,6 +1,6 @@
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { toast } from 'sonner'
-import type { AnySidebarItem } from 'convex/notes/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useEffect, useRef, useState } from 'react'
 
 interface EditableItemNameProps<T extends AnySidebarItem> {
@@ -43,7 +43,7 @@ interface EditableNameProps {
   initialName: string
   defaultName: string
   isRenaming: boolean
-  onFinishRename: (name: string) => void
+  onFinishRename: (name: string) => Promise<void>
 }
 
 export function EditableName({
@@ -72,13 +72,13 @@ export function EditableName({
         onChange={(e) => {
           setName(e.target.value)
         }}
-        onBlur={() => onFinishRename(name)}
-        onKeyDown={(e) => {
+        onBlur={async () => await onFinishRename(name)}
+        onKeyDown={async (e) => {
           if (e.key === 'Enter') {
-            onFinishRename(name)
+            await onFinishRename(name)
           } else if (e.key === 'Escape') {
             setName(initialName)
-            onFinishRename(initialName)
+            await onFinishRename(initialName)
           }
           // Prevent space from triggering button click
           if (e.key === ' ') {

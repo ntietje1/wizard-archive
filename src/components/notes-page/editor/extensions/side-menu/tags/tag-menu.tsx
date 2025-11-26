@@ -7,6 +7,7 @@ import {
 import { useTags, getTagColor } from '~/hooks/useTags'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { toast } from 'sonner'
+import { TAG_INLINE_CONTENT_TYPE } from 'convex/tags/editorSpecs'
 
 const getTagMenuItems = (
   onAddTag: (tag: Tag) => void,
@@ -31,7 +32,7 @@ export default function TagMenu({
     if (!editor) return
 
     const tagContent = {
-      tagId: tag._id as string,
+      tagId: tag._id,
       tagName: tag.displayName,
       tagColor: getTagColor(tag),
     }
@@ -39,7 +40,7 @@ export default function TagMenu({
     try {
       editor.insertInlineContent([
         {
-          type: 'tag',
+          type: TAG_INLINE_CONTENT_TYPE,
           props: tagContent,
         },
         ' ', // add a space after the mention

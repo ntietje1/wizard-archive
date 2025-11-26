@@ -10,6 +10,7 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import type { Id } from 'convex/_generated/dataModel'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemButtonBase } from '../../sidebar-item/sidebar-item-button-base'
+import { toast } from 'sonner'
 
 interface MapButtonProps {
   map: GameMap
@@ -27,7 +28,12 @@ export function MapButton({ map, ancestorIds = [] }: MapButtonProps) {
 
   const handleFinishRename = async (name: string) => {
     await updateMapMutation.mutateAsync({ mapId: map._id, name })
-    setRenamingId(null)
+    .catch((error) => {
+      console.error(error)
+      toast.error('Failed to update map')
+    }).finally(() => {
+      setRenamingId(null)
+    })
   }
 
   const handleSelect = () => {

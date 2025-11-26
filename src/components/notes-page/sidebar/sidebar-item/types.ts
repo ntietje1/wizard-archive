@@ -20,5 +20,5 @@ export interface SidebarItemButtonProps
   name: string
   defaultName: string
   showChevron?: boolean
-  onFinishRename?: (name: string) => void
+  onFinishRename?: (name: string) => Promise<void>
 }

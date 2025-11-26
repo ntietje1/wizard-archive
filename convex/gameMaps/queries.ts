@@ -52,6 +52,11 @@ export const getMapBySlug = query({
   },
   returns: mapValidator,
   handler: async (ctx, args): Promise<GameMap> => {
+    await requireCampaignMembership(
+      ctx,
+        { campaignId: args.campaignId },
+        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+      )
     const map = await getMapBySlugFn(ctx, args.campaignId, args.slug)
     if (!map) {
       throw new Error('Map not found')

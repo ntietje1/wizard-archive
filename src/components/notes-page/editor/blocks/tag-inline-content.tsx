@@ -7,7 +7,7 @@ import { convexQuery } from '@convex-dev/react-query'
 
 export const TagInlineContent = createReactInlineContentSpec(
   {
-    type: 'tag',
+    type: 'tag' as const,
     propSchema: {
       tagId: { default: '' },
       tagName: { default: '' },

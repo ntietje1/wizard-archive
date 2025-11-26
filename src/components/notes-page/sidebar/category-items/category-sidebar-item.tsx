@@ -31,14 +31,14 @@ interface CategorySidebarItemProps {
   categoryConfig: TagCategoryConfig
   categoryContextMenu?: ComponentType<CategoryContextMenuProps>
   tagNoteContextMenu?: ComponentType<TagNoteContextMenuProps>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Array<Id<'folders'>>
 }
 
 interface TagNoteButtonProps {
   noteWithTag: Note
   categoryConfig: TagCategoryConfig
   contextMenuComponent?: ComponentType<TagNoteContextMenuProps>
-  ancestorIds?: Id<'folders'>[]
+  ancestorIds?: Array<Id<'folders'>>
 }
 
 export function TagNoteButton({

@@ -78,7 +78,7 @@ export function NotesEditorEmptyContent() {
       .then(({ slug }) => {
         selectNote(slug)
       })
-      .catch((error: Error) => {
+      .catch((error: unknown) => {
         console.error(error)
         toast.error('Failed to create note')
       })

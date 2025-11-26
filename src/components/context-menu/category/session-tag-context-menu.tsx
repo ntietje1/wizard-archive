@@ -1,5 +1,6 @@
 import {
   ContextMenu,
+  type ContextMenuItem,
   type ContextMenuRef,
 } from '~/components/context-menu/base/context-menu'
 import { forwardRef, useMemo } from 'react'
@@ -12,7 +13,7 @@ import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-f
 
 export interface SessionTagContextMenuProps {
   children: React.ReactNode
-  noteWithTag: Note
+  noteWithTag: Note & { tag: Session }
   categoryConfig: TagCategoryConfig
 }
 
@@ -23,7 +24,7 @@ export const SessionTagContextMenu = forwardRef<
   const edit = useTagNoteEdit(noteWithTag, categoryConfig)
   const deleteAction = useTagNoteDelete(noteWithTag, categoryConfig)
 
-  const menuItems = useMemo(
+  const menuItems: Array<ContextMenuItem> = useMemo(
     () => [edit.menuItem, deleteAction.menuItem],
     [edit.menuItem, deleteAction.menuItem],
   )
@@ -49,7 +50,7 @@ export const SessionTagContextMenu = forwardRef<
           isOpen={edit.isDialogOpen}
           onClose={() => edit.setIsDialogOpen(false)}
           config={categoryConfig}
-          tag={noteWithTag.tag as Session}
+          tag={noteWithTag.tag}
         />
       )}
     </>

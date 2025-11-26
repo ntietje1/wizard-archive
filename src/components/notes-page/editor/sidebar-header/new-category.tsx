@@ -13,7 +13,7 @@ export function NewCategoryButton() {
 
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setIsCreateOpen(true)}>
+      <Button variant="ghost" size="icon" aria-label="Create new category" onClick={() => setIsCreateOpen(true)}>
         <Tags className="h-4 w-4" />
       </Button>
       <CategoryDialog

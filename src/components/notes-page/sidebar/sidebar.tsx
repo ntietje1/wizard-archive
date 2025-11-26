@@ -11,6 +11,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import { DragOverlay } from '@dnd-kit/core'
 import { DragOverlayItem } from './sidebar-item/drag-overlays'
+import { toast } from 'sonner'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItemsByParent()
@@ -21,8 +22,13 @@ function FileSidebarContent() {
 
   const handleCreateNote = () => {
     if (!campaignId) return
-    createNote.mutateAsync({ campaignId: campaignId }).then(({ noteId }) => {
+    createNote.mutateAsync({ campaignId: campaignId })
+    .then(({ noteId }) => {
       setRenamingId(noteId)
+    })
+    .catch((error: Error) => {
+      console.error(error)
+      toast.error('Failed to create note')
     })
   }
 
