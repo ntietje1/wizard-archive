@@ -8,16 +8,22 @@ import {
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
-import { createTagAndNoteArgs } from '../tags/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 
 export const createCharacter = mutation({
   args: {
-    ...createTagAndNoteArgs,
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+    parentId: v.optional(sidebarItemIdValidator),
     playerId: v.optional(v.id('campaignMembers')),
   },
   returns: v.object({
     tagId: v.id('tags'),
-    noteId: v.id('notes'),
     characterId: v.id('characters'),
   }),
   handler: async (
@@ -25,7 +31,6 @@ export const createCharacter = mutation({
     args,
   ): Promise<{
     tagId: Id<'tags'>
-    noteId: Id<'notes'>
     characterId: Id<'characters'>
   }> => {
     await requireCampaignMembership(
@@ -34,7 +39,11 @@ export const createCharacter = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const { tagId, noteId } = await insertTagAndNote(ctx, args)
+    const { tagId } = await insertTagAndNote(
+      ctx,
+      args,
+      args.parentId ?? args.categoryId,
+    )
 
     if (args.playerId) {
       const player = await ctx.db.get(args.playerId)
@@ -52,7 +61,7 @@ export const createCharacter = mutation({
       playerId: args.playerId,
     })
 
-    return { tagId, noteId, characterId }
+    return { tagId, characterId }
   },
 })
 
@@ -60,7 +69,8 @@ export const updateCharacter = mutation({
   args: {
     characterId: v.id('characters'),
     playerId: v.optional(v.id('campaignMembers')),
-    displayName: v.optional(v.string()),
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
     description: v.optional(v.string()),
     color: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.id('_storage')),
@@ -80,13 +90,15 @@ export const updateCharacter = mutation({
 
     // Update tag fields if provided
     if (
-      args.displayName !== undefined ||
+      args.name !== undefined ||
+      args.iconName !== undefined ||
       args.description !== undefined ||
       args.color !== undefined ||
       args.imageStorageId !== undefined
     ) {
       await updateTagAndContent(ctx, character.tagId, {
-        displayName: args.displayName,
+        name: args.name,
+        iconName: args.iconName,
         description: args.description,
         color: args.color,
         imageStorageId: args.imageStorageId,

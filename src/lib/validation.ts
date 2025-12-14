@@ -7,7 +7,7 @@ export interface ValidationResult {
   successMessage?: string
 }
 
-export interface Validator<T = any> {
+export interface Validator<T = unknown> {
   validate: (value: T) => ValidationResult
   message?: string
   showSuccess?: boolean

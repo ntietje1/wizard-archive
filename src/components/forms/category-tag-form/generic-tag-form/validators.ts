@@ -29,16 +29,16 @@ export async function validateTagNameAsync(
   convex: ConvexReactClient,
   campaignId: Id<'campaigns'>,
   categoryId: Id<'tagCategories'>,
-  displayName: string,
+  name: string,
   excludeTagId?: Id<'tags'>,
 ): Promise<string | undefined> {
-  const syncErr = validateTagName(displayName, MAX_NAME_LENGTH)
+  const syncErr = validateTagName(name, MAX_NAME_LENGTH)
   if (syncErr) return syncErr
 
   const exists = await convex.query(api.tags.queries.checkTagNameExists, {
     campaignId,
     categoryId,
-    tagName: displayName.trim(),
+    tagName: name.trim(),
     excludeTagId,
   })
 

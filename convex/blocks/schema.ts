@@ -10,7 +10,6 @@ const blockTableFields = {
   blockId: v.string(),
   position: v.optional(v.number()),
   content: customBlockValidator,
-  pageId: v.id('pages'),
   isTopLevel: v.boolean(),
   campaignId: v.id('campaigns'),
   updatedAt: v.number(),
@@ -25,14 +24,7 @@ const blockTagTableFields = {
 export const blocksTables = {
   blocks: defineTable({
     ...blockTableFields,
-  })
-    .index('by_campaign_note_page_block', [
-      'campaignId',
-      'noteId',
-      'pageId',
-      'blockId',
-    ])
-    .index('by_page', ['pageId']),
+  }).index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId']),
 
   blockTags: defineTable({
     ...blockTagTableFields,

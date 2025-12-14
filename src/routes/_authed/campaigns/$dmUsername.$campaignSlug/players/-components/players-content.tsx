@@ -49,11 +49,11 @@ export default function PlayersContent() {
       return toast.error('Failed to copy join link')
     }
     const joinUrl =
-      window.location.origin + '/join/' + dmUsername + '/' + campaignSlug
+      `${window.location.origin  }/join/${  dmUsername  }/${  campaignSlug}`
     try {
       await navigator.clipboard.writeText(joinUrl)
       toast.success('Join link copied to clipboard')
-    } catch (e) {
+    } catch {
       toast.error('Failed to copy join link')
     }
   }

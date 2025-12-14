@@ -3,9 +3,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { Id } from '../_generated/dataModel'
 import { Note } from './types'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { deleteBlocksByNote } from '../blocks/blocks'
-import { deleteTagAndCleanupContent, getTag } from '../tags/tags'
 import { MutationCtx } from '../_generated/server'
 
 export const getNote = async (
@@ -23,15 +21,7 @@ export const getNote = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const tag = note.tagId ? await getTag(ctx, note.tagId) : undefined
-  const category = tag?.category
-
-  return {
-    ...note,
-    type: SIDEBAR_ITEM_TYPES.notes,
-    tag,
-    category,
-  }
+  return note
 }
 
 export const getNoteBySlug = async (
@@ -62,7 +52,6 @@ export const getNoteBySlug = async (
 export async function deleteNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
-  options?: { cascadeTag?: boolean },
 ): Promise<Id<'notes'>> {
   const note = await ctx.db.get(noteId)
   if (!note) {
@@ -76,10 +65,6 @@ export async function deleteNote(
   )
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
-  const shouldCascadeTag = options?.cascadeTag !== false
-  if (shouldCascadeTag && note.tagId) {
-    await deleteTagAndCleanupContent(ctx, note.tagId)
-  }
   await ctx.db.delete(noteId)
 
   return noteId

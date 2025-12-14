@@ -59,7 +59,7 @@ function CampaignSettingsPage() {
       <div>
         <h2 className="text-2xl font-bold">Campaign Settings</h2>
         <p className="text-gray-600 mt-1">
-          Manage your campaign's configuration and preferences.
+          {"Manage your campaign's configuration and preferences."}
         </p>
       </div>
 

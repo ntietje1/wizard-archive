@@ -29,7 +29,7 @@ export default function PlayersDmControls({
     ),
   )
 
-  const joinUrl = getOrigin() + '/join/' + dmUsername + '/' + campaignSlug
+  const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
 
   const pendingCount = (players.data ?? []).filter(
     (p) =>

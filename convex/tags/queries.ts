@@ -6,6 +6,7 @@ import {
   getTag as getTagFn,
   getTagsByCategory as getTagsByCategoryFn,
   getTagsByCampaign as getTagsByCampaignFn,
+  getTagCategory as getTagCategoryFn,
 } from './tags'
 import { tagCategoryValidator, tagValidator } from './schema'
 
@@ -41,6 +42,26 @@ export const getTag = query({
   returns: tagValidator,
   handler: async (ctx, args): Promise<Tag> => {
     return await getTagFn(ctx, args.tagId)
+  },
+})
+
+export const getTagBySlug = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    slug: v.string(),
+  },
+  returns: tagValidator,
+  handler: async (ctx, args): Promise<Tag> => {
+    const tag = await ctx.db
+      .query('tags')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+      )
+      .unique()
+    if (!tag) {
+      throw new Error(`Tag not found: ${args.slug}`)
+    }
+    return await getTagFn(ctx, tag._id)
   },
 })
 
@@ -144,5 +165,16 @@ export const getTagCategoryBySlug = query({
     }
 
     return category
+  },
+})
+
+export const getTagCategory = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+  },
+  returns: tagCategoryValidator,
+  handler: async (ctx, args): Promise<TagCategory> => {
+    return await getTagCategoryFn(ctx, args.campaignId, args.categoryId)
   },
 })

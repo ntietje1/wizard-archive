@@ -30,7 +30,7 @@ export function TagDeleteConfirmDialog({
     await deleteTag
       .mutateAsync({ tagId: tag._id })
       .then(() => {
-        toast.success(`${tag.displayName} deleted successfully`)
+        toast.success(`${tag.name || ''} deleted successfully`)
         return onConfirm?.()
       })
       .catch((error: Error) => {
@@ -43,7 +43,7 @@ export function TagDeleteConfirmDialog({
   }, [
     deleteTag,
     tag._id,
-    tag.displayName,
+    tag.name || '',
     categoryConfig.singular,
     onConfirm,
     onClose,
@@ -56,7 +56,7 @@ export function TagDeleteConfirmDialog({
       onConfirm={handleConfirm}
       title={`Delete ${categoryConfig.singular}`}
       description={`Are you sure you want to delete this ${categoryConfig.singular}? This will also remove references in your notes. This action cannot be undone.`}
-      confirmLabel={`Delete ${tag.displayName}`}
+      confirmLabel={`Delete ${tag.name || ''}`}
       confirmVariant="destructive"
       isLoading={deleteTag.isPending}
     />

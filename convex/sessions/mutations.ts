@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { Id } from '../_generated/dataModel'
 import { insertTagAndNote } from '../tags/tags'
-import { createTagAndNoteArgs } from '../tags/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import {
   endCurrentSession as endCurrentSessionHandler,
   getCurrentSession,
@@ -13,12 +13,18 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 
 export const startSession = mutation({
   args: {
-    ...createTagAndNoteArgs,
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+    parentId: v.optional(sidebarItemIdValidator),
     endedAt: v.optional(v.number()),
   },
   returns: v.object({
     tagId: v.id('tags'),
-    noteId: v.id('notes'),
     sessionId: v.id('sessions'),
   }),
   handler: async (
@@ -26,7 +32,6 @@ export const startSession = mutation({
     args,
   ): Promise<{
     tagId: Id<'tags'>
-    noteId: Id<'notes'>
     sessionId: Id<'sessions'>
   }> => {
     const { campaignWithMembership } = await requireCampaignMembership(
@@ -40,14 +45,14 @@ export const startSession = mutation({
       await ctx.db.patch(campaign.currentSessionId, { endedAt: Date.now() })
     }
 
-    const { tagId, noteId } = await insertTagAndNote(ctx, args, args.parentId)
+    const { tagId } = await insertTagAndNote(ctx, args, args.parentId)
     const sessionId = await ctx.db.insert('sessions', {
       campaignId: args.campaignId,
-      tagId: tagId,
+      tagId,
       endedAt: args.endedAt,
     })
     await ctx.db.patch(args.campaignId, { currentSessionId: sessionId })
-    return { tagId, noteId, sessionId }
+    return { tagId, sessionId }
   },
 })
 

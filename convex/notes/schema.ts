@@ -1,28 +1,24 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { tagCategoryValidator, tagValidator } from '../tags/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 
 const noteTableFields = {
-  userId: v.id('userProfiles'),
-  campaignId: v.id('campaigns'),
   name: v.optional(v.string()),
+  iconName: v.optional(v.string()),
   slug: v.string(),
-  updatedAt: v.number(),
+  campaignId: v.id('campaigns'),
   categoryId: v.optional(v.id('tagCategories')),
-  tagId: v.optional(v.id('tags')),
-  parentId: v.optional(v.id('notes')),
+  parentId: v.optional(sidebarItemIdValidator),
+  updatedAt: v.number(),
+  type: v.literal('notes'),
 }
 
 export const notesTables = {
   notes: defineTable({
     ...noteTableFields,
   })
-    .index('by_campaign_category_parent', [
-      'campaignId',
-      'categoryId',
-      'parentId',
-    ])
-    .index('by_campaign_category_tag', ['campaignId', 'categoryId', 'tagId'])
+    .index('by_campaign_parent', ['campaignId', 'parentId'])
+    .index('by_campaign_category', ['campaignId', 'categoryId'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 
@@ -30,9 +26,12 @@ const noteValidatorFields = {
   _id: v.id('notes'),
   _creationTime: v.number(),
   ...noteTableFields,
-  category: v.optional(tagCategoryValidator),
   type: v.literal('notes'),
-  tag: v.optional(tagValidator),
 } as const
 
 export const noteValidator = v.object(noteValidatorFields)
+
+export const noteWithContentValidator = v.object({
+  ...noteValidatorFields,
+  content: v.array(v.any()),
+})

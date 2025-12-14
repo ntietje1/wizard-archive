@@ -1,7 +1,6 @@
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -18,8 +17,12 @@ import {
   SortAsc,
   SortDesc,
 } from '~/lib/icons'
-import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import type { SortDirection, SortOrder } from 'convex/editors/types'
+import {
+  SORT_DIRECTIONS,
+  SORT_ORDERS,
+  type SortDirection,
+  type SortOrder,
+} from 'convex/editors/types'
 import { useSortOptions } from '~/hooks/useSortOptions'
 
 export function SortMenu() {

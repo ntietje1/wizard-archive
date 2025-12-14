@@ -89,7 +89,7 @@ function RouteComponent() {
 
     await joinCampaign.mutateAsync({
       slug: campaignSlug,
-      dmUsername: dmUsername,
+      dmUsername,
     })
   }
 
@@ -258,7 +258,7 @@ function RouteComponent() {
             description: (
               <>
                 Your request to join <strong>{campaign.name}</strong> has been
-                sent. You'll gain access once the DM confirms your request.
+                sent. {"You'll gain access once the DM confirms your request."}
               </>
             ),
             statusVariant: 'warning' as const,
@@ -323,9 +323,11 @@ function RouteComponent() {
           return {
             title: "You've Been Removed",
             description: (
-              <>
-                You've been removed from <strong>{campaign.name}</strong>.
-              </>
+              <p>
+                {"You've been removed from "}
+                <strong>{campaign.name}</strong>
+                {'.'}
+              </p>
             ),
             statusVariant: 'error' as const,
             titleColor: 'text-red-800',

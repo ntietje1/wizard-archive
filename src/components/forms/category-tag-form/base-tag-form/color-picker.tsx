@@ -1,6 +1,6 @@
 import Color from 'color'
 import { PipetteIcon } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   ColorPicker as AdvancedColorPicker,

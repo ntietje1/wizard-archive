@@ -7,15 +7,20 @@ import {
   TagCategory,
   SYSTEM_DEFAULT_CATEGORIES,
 } from './types'
+import { SIDEBAR_ITEM_TYPES, SidebarItemId } from '../sidebarItems/types'
 import type { Block } from '../blocks/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { findUniqueSlug, slugify } from '../common/slug'
+import { findUniqueSlug } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
-import { deleteNote } from '../notes/notes'
-import { getNote } from '../notes/notes'
+import { deleteNote, getNote } from '../notes/notes'
 import { findBlockByBlockNoteId } from '../blocks/blocks'
 import pluralize from 'pluralize'
+import {
+  getSidebarItemById,
+  isValidSidebarParent,
+} from '../sidebarItems/sidebarItems'
+import { deleteMap } from '../gameMaps/gameMaps'
 
 function capitalizeFirstLetter(str: string): string {
   if (!str) return str
@@ -59,7 +64,10 @@ export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
 
   const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
 
-  return { ...tag, category }
+  return {
+    ...tag,
+    category,
+  }
 }
 
 export async function getTagCategory(
@@ -86,25 +94,21 @@ export async function getTagCategoryBySlug(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   slug: string,
-): Promise<TagCategory> {
+): Promise<TagCategory | null> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const existing = await ctx.db
+  const category = await ctx.db
     .query('tagCategories')
     .withIndex('by_campaign_slug', (q) =>
       q.eq('campaignId', campaignId).eq('slug', slug),
     )
     .unique()
 
-  if (!existing) {
-    throw new Error('Category not found')
-  }
-
-  return existing
+  return category
 }
 
 export const insertTagAndNote = async (
@@ -114,24 +118,58 @@ export const insertTagAndNote = async (
     | '_id'
     | '_creationTime'
     | 'updatedAt'
-    | 'name'
-    | 'noteId'
     | 'category'
     | 'createdBy'
+    | 'type'
+    | 'slug'
   >,
-  parentId?: Id<'notes'>,
+  parentId?: SidebarItemId,
   allowManagedTags: boolean = false,
-): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
-  const { identityWithProfile } = await requireCampaignMembership(
+): Promise<{ tagId: Id<'tags'> }> => {
+  await requireCampaignMembership(
     ctx,
     { campaignId: newTag.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  const { profile } = identityWithProfile
 
-  const tagId = await insertTag(ctx, newTag, allowManagedTags)
+  // Generate unique slug for tag
+  const slugBasis = newTag.name || 'untitled-tag' //TODO: make this consistent with the slug basis for notes and folders
+  const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+    const conflict = await ctx.db
+      .query('tags')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', newTag.campaignId).eq('slug', slug),
+      )
+      .unique()
+    return conflict !== null
+  })
 
-  const uniqueSlug = await findUniqueSlug(newTag.displayName, async (slug) => {
+  if (parentId) {
+    const parentItem = await getSidebarItemById(
+      ctx,
+      newTag.campaignId,
+      parentId,
+    )
+    if (!parentItem) {
+      throw new Error('Invalid parentId')
+    }
+    if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.tags, parentItem.type)) {
+      throw new Error(`Invalid parent item for tag: ${parentId}`)
+    }
+  }
+
+  const tagId = await insertTag(
+    ctx,
+    {
+      ...newTag,
+      slug: uniqueSlug,
+      parentId,
+    },
+    allowManagedTags,
+  )
+
+  // Create two child notes for tag: "Your Notes" and "Shared Notes"
+  const yourNotesSlug = await findUniqueSlug('your-notes', async (slug) => {
     const conflict = await ctx.db
       .query('notes')
       .withIndex('by_campaign_slug', (q) =>
@@ -141,62 +179,49 @@ export const insertTagAndNote = async (
     return conflict !== null
   })
 
-  const noteId = await ctx.db.insert('notes', {
-    userId: profile._id,
-    name: newTag.displayName,
-    slug: uniqueSlug,
-    campaignId: newTag.campaignId,
-    updatedAt: Date.now(),
-    categoryId: newTag.categoryId,
-    tagId: tagId,
-    parentId: parentId,
-  })
-
-  // Create two pages for tag-notes: "Your Notes" and "Shared Notes"
-  // Generate unique slugs for each page (unique per note)
-  const yourNotesSlug = await findUniqueSlug('your-notes', async (slug) => {
-    const conflict = await ctx.db
-      .query('pages')
-      .withIndex('by_note_slug', (q) => q.eq('noteId', noteId).eq('slug', slug))
-      .unique()
-    return conflict !== null
-  })
-
   const sharedNotesSlug = await findUniqueSlug('shared-notes', async (slug) => {
     const conflict = await ctx.db
-      .query('pages')
-      .withIndex('by_note_slug', (q) => q.eq('noteId', noteId).eq('slug', slug))
+      .query('notes')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', newTag.campaignId).eq('slug', slug),
+      )
       .unique()
     return conflict !== null
   })
 
-  await ctx.db.insert('pages', {
-    noteId,
-    title: 'Your Notes',
+  // Get the tag to access its categoryId
+  const tag = await ctx.db.get(tagId)
+  if (!tag) {
+    throw new Error('Tag not found after creation')
+  }
+
+  await ctx.db.insert('notes', {
+    name: 'Your Notes',
     slug: yourNotesSlug,
-    type: 'text',
-    order: 0,
-    isReadOnly: false,
-    isDeletable: true,
+    campaignId: newTag.campaignId,
+    categoryId: tag.categoryId,
+    updatedAt: Date.now(),
+    parentId: tagId,
+    type: 'notes',
   })
-  await ctx.db.insert('pages', {
-    noteId,
-    title: 'Shared Notes',
+  await ctx.db.insert('notes', {
+    name: 'Shared Notes',
     slug: sharedNotesSlug,
-    type: 'text',
-    order: 1,
-    isReadOnly: true,
-    isDeletable: false,
+    campaignId: newTag.campaignId,
+    categoryId: tag.categoryId,
+    updatedAt: Date.now(),
+    parentId: tagId,
+    type: 'notes',
   })
 
-  return { tagId, noteId }
+  return { tagId }
 }
 
 export const insertTag = async (
   ctx: MutationCtx,
   newTag: Omit<
     Tag,
-    '_id' | '_creationTime' | 'updatedAt' | 'name' | 'category' | 'createdBy'
+    '_id' | '_creationTime' | 'updatedAt' | 'category' | 'createdBy' | 'type'
   >,
   allowManaged: boolean = false,
 ): Promise<Id<'tags'>> => {
@@ -213,28 +238,48 @@ export const insertTag = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const existing = await ctx.db
-    .query('tags')
-    .withIndex('by_campaign_name', (q) =>
-      q
-        .eq('campaignId', newTag.campaignId)
-        .eq('name', newTag.displayName.toLowerCase()),
+  if (newTag.name) {
+    //TODO: come up with a better way to check for duplicates
+    const allTags = await ctx.db
+      .query('tags')
+      .withIndex('by_campaign_name', (q) =>
+        q.eq('campaignId', newTag.campaignId),
+      )
+      .collect()
+    const nameLower = newTag.name.toLowerCase()
+    const existing = allTags.find((t) => t.name?.toLowerCase() === nameLower)
+    if (existing) {
+      throw new Error('Tag already exists')
+    }
+  }
+
+  if (newTag.parentId) {
+    const parentItem = await getSidebarItemById(
+      ctx,
+      newTag.campaignId,
+      newTag.parentId,
     )
-    .unique()
-  if (existing) {
-    throw new Error('Tag already exists')
+    if (!parentItem) {
+      throw new Error('Invalid parentId')
+    }
+    if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.tags, parentItem.type)) {
+      throw new Error(`Invalid parent item for tag: ${newTag.parentId}`)
+    }
   }
 
   const tagId = await ctx.db.insert('tags', {
-    displayName: newTag.displayName,
-    name: newTag.displayName.toLowerCase(),
+    name: newTag.name,
+    iconName: newTag.iconName,
+    slug: newTag.slug,
     categoryId: newTag.categoryId,
+    parentId: newTag.parentId,
     color: newTag.color,
     description: newTag.description,
     imageStorageId: newTag.imageStorageId,
     campaignId: newTag.campaignId,
     updatedAt: Date.now(),
     createdBy: campaignWithMembership.member._id,
+    type: 'tags',
   })
 
   return tagId
@@ -266,7 +311,7 @@ export async function ensureDefaultTagCategories(
         {
           campaignId,
           kind: d.kind,
-          categoryName: d.pluralDisplayName,
+          categoryName: d.pluralName,
           iconName: d.iconName,
           defaultColor: d.defaultColor,
         },
@@ -284,7 +329,7 @@ export async function getTagsByCampaign(
 ): Promise<Tag[]> {
   await requireCampaignMembership(
     ctx,
-    { campaignId: campaignId },
+    { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
@@ -302,7 +347,10 @@ export async function getTagsByCampaign(
     if (!category) {
       throw new Error(`Category not found for tag ${t._id}`)
     }
-    return { ...t, category }
+    return {
+      ...t,
+      category,
+    }
   })
 }
 
@@ -327,22 +375,15 @@ export async function getTagsByCategory(
 
   const tags = await ctx.db
     .query('tags')
-    .withIndex('by_campaign_categoryId', (q) =>
-      q.eq('campaignId', category.campaignId).eq('categoryId', categoryId),
-    )
-    .collect()
-
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_category_tag', (q) =>
-      q.eq('campaignId', category.campaignId).eq('categoryId', categoryId),
+    .withIndex('by_campaign_category', (q) =>
+      q.eq('campaignId', category.campaignId).eq('categoryId', category._id),
     )
     .collect()
 
   return tags.map((t) => ({
     ...t,
-    category,
-    noteId: notes.find((n) => n.tagId === t._id)?._id,
+    category: { ...category, type: SIDEBAR_ITEM_TYPES.tagCategories },
+    type: SIDEBAR_ITEM_TYPES.tags,
   }))
 }
 
@@ -354,15 +395,13 @@ export async function insertTagCategory(
     | '_creationTime'
     | 'updatedAt'
     | 'createdBy'
-    | 'name'
     | 'slug'
-    | 'displayName'
-    | 'pluralDisplayName'
+    | 'name'
+    | 'pluralName'
+    | 'type'
+    | 'parentId'
   > &
-    (
-      | { categoryName: string }
-      | { displayName: string; pluralDisplayName: string }
-    ),
+    ({ categoryName: string } | { name: string; pluralName: string }),
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
   const { campaignWithMembership } = await requireCampaignMembership(
@@ -382,25 +421,25 @@ export async function insertTagCategory(
     throw new Error('Invalid kind')
   }
 
-  let displayName: string
-  let pluralDisplayName: string
+  let name: string
+  let pluralName: string
 
   if ('categoryName' in input) {
     // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
-    displayName = capitalizeFirstLetter(
+    name = capitalizeFirstLetter(
       isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
     )
-    pluralDisplayName = capitalizeFirstLetter(
+    pluralName = capitalizeFirstLetter(
       isPlural ? input.categoryName : pluralize.plural(input.categoryName),
     )
   } else {
     // manual mode (plural and singular specified)
-    displayName = capitalizeFirstLetter(input.displayName)
-    pluralDisplayName = capitalizeFirstLetter(input.pluralDisplayName)
+    name = capitalizeFirstLetter(input.name)
+    pluralName = capitalizeFirstLetter(input.pluralName)
   }
 
-  const uniqueSlug = await findUniqueSlug(pluralDisplayName, async (slug) => {
+  const uniqueSlug = await findUniqueSlug(pluralName, async (slug) => {
     const conflict = await ctx.db
       .query('tagCategories')
       .withIndex('by_campaign_slug', (q) =>
@@ -414,12 +453,14 @@ export async function insertTagCategory(
     updatedAt: Date.now(),
     campaignId: input.campaignId,
     slug: uniqueSlug,
-    displayName: displayName,
-    pluralDisplayName: pluralDisplayName,
+    name,
+    pluralName,
     kind: input.kind,
     iconName: input.iconName,
     defaultColor: input.defaultColor,
     createdBy: campaignWithMembership.member._id,
+    type: 'tagCategories',
+    parentId: undefined, // Categories cannot have parents
   })
   return id
 }
@@ -428,12 +469,9 @@ export const updateTagCategory = async (
   ctx: MutationCtx,
   categoryId: Id<'tagCategories'>,
   input: {
-    categoryName?: string
-    displayName?: string
-    pluralDisplayName?: string
     iconName?: string
     defaultColor?: string
-  },
+  } & ({ categoryName: string } | { name: string; pluralName: string }),
 ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
   const category = await ctx.db.get(categoryId)
   if (!category) {
@@ -450,40 +488,26 @@ export const updateTagCategory = async (
     throw new Error('User cannot update system-managed categories')
   }
 
-  // For system core categories, only allow color updates
-  if (category.kind === CATEGORY_KIND.SystemCore) {
-    if (
-      input.categoryName !== undefined ||
-      input.displayName !== undefined ||
-      input.pluralDisplayName !== undefined ||
-      input.iconName !== undefined
-    ) {
-      throw new Error(
-        'System categories can only have their color updated. Name and icon cannot be changed.',
-      )
-    }
-  }
-
   const updates: Partial<TagCategory> = {
     updatedAt: Date.now(),
   }
 
-  if (input.categoryName !== undefined) {
+  if ('categoryName' in input) {
     // auto-pluralize mode
     const isPlural = pluralize.isPlural(input.categoryName)
-    updates.displayName = capitalizeFirstLetter(
+    updates.name = capitalizeFirstLetter(
       isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
     )
-    updates.pluralDisplayName = capitalizeFirstLetter(
+    updates.pluralName = capitalizeFirstLetter(
       isPlural ? input.categoryName : pluralize.plural(input.categoryName),
     )
   } else {
     // manual mode
-    if (input.displayName !== undefined) {
-      updates.displayName = capitalizeFirstLetter(input.displayName)
+    if (input.name !== undefined) {
+      updates.name = capitalizeFirstLetter(input.name)
     }
-    if (input.pluralDisplayName !== undefined) {
-      updates.pluralDisplayName = capitalizeFirstLetter(input.pluralDisplayName)
+    if (input.pluralName !== undefined) {
+      updates.pluralName = capitalizeFirstLetter(input.pluralName)
     }
   }
 
@@ -495,9 +519,9 @@ export const updateTagCategory = async (
     updates.defaultColor = input.defaultColor
   }
 
-  if (updates.pluralDisplayName !== undefined) {
+  if (updates.pluralName !== undefined) {
     const uniqueSlug = await findUniqueSlug(
-      updates.pluralDisplayName,
+      updates.pluralName,
       async (slug) => {
         const conflict = await ctx.db
           .query('tagCategories')
@@ -525,7 +549,8 @@ export const updateTagAndContent = async (
   ctx: MutationCtx,
   tagId: Id<'tags'>,
   input: {
-    displayName?: string
+    name?: string
+    iconName?: string
     color?: string | null
     description?: string
     imageStorageId?: Id<'_storage'>
@@ -535,16 +560,6 @@ export const updateTagAndContent = async (
   if (!tag) {
     throw new Error('Tag not found')
   }
-
-  const tagNote = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_category_tag', (q) =>
-      q
-        .eq('campaignId', tag.campaignId)
-        .eq('categoryId', tag.categoryId)
-        .eq('tagId', tagId),
-    )
-    .unique()
 
   const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
@@ -564,23 +579,40 @@ export const updateTagAndContent = async (
     throw new Error('Managed-category tags cannot be updated')
   }
 
-  const updates: Partial<Tag> = {
+  const updates: {
+    updatedAt: number
+    name?: string
+    iconName?: string
+    color?: string | undefined
+    description?: string
+    imageStorageId?: Id<'_storage'>
+  } = {
     updatedAt: Date.now(),
   }
 
-  if (input.displayName !== undefined) {
-    const next = input.displayName.toLowerCase()
-    const existing = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', tag.campaignId).eq('name', next),
+  if (input.name !== undefined) {
+    if (input.name) {
+      // Check for case-insensitive duplicate by querying all tags
+      const allTags = await ctx.db
+        .query('tags')
+        .withIndex('by_campaign_name', (q) =>
+          q.eq('campaignId', tag.campaignId),
+        )
+        .collect()
+      const nameLower = input.name.toLowerCase()
+      const existing = allTags.find(
+        (t) => t.name?.toLowerCase() === nameLower && t._id !== tagId,
       )
-      .unique()
-    if (existing && existing._id !== tagId) {
-      throw new Error('Tag already exists')
+      if (existing) {
+        throw new Error('Tag already exists')
+      }
+      updates.name = input.name
+    } else {
+      updates.name = undefined
     }
-    updates.name = input.displayName.toLowerCase()
-    updates.displayName = input.displayName
+  }
+  if (input.iconName !== undefined) {
+    updates.iconName = input.iconName
   }
   if (input.color !== undefined) {
     // null means explicitly clear the color
@@ -601,20 +633,13 @@ export const updateTagAndContent = async (
   }
   await ctx.db.patch(tagId, updates)
 
-  if (updates.displayName !== undefined && tagNote) {
-    await ctx.db.patch(tagNote._id, {
-      name: updates.displayName,
-      updatedAt: Date.now(),
-    })
-  }
-
-  if (updates.displayName !== undefined || updates.color !== undefined) {
-    const newDisplayName = updates.displayName
+  if (updates.name !== undefined || updates.color !== undefined) {
+    const newName = updates.name
     const newColor = updates.color
 
     const allBlocks = await ctx.db
       .query('blocks')
-      .withIndex('by_campaign_note_page_block', (q) =>
+      .withIndex('by_campaign_note_block', (q) =>
         q.eq('campaignId', tag.campaignId),
       )
       .collect()
@@ -628,7 +653,7 @@ export const updateTagAndContent = async (
             ...content,
             props: {
               ...content.props,
-              tagName: newDisplayName ?? content.props.tagName,
+              tagName: newName ?? content.props.tagName,
               tagColor: newColor ?? content.props.tagColor,
             },
           }
@@ -684,19 +709,28 @@ export const deleteTagAndCleanupContent = async (
     throw new Error('System-managed categories cannot be deleted')
   }
 
-  const note = await ctx.db
+  // find all sidebar children
+  const notes = await ctx.db
     .query('notes')
-    .withIndex('by_campaign_category_tag', (q) =>
-      q
-        .eq('campaignId', tag.campaignId)
-        .eq('categoryId', tag.categoryId)
-        .eq('tagId', tagId),
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', tag.campaignId).eq('parentId', tagId),
     )
-    .unique()
+    .collect()
 
-  if (note) {
-    await deleteNote(ctx, note._id, { cascadeTag: false })
+  const maps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', tag.campaignId).eq('parentId', tagId),
+    )
+    .collect()
+
+  for (const note of notes) {
+    await deleteNote(ctx, note._id)
   }
+  for (const map of maps) {
+    await deleteMap(ctx, map._id)
+  }
+
   //TODO: modify all tags in content to just be text without being an actual tag inline content
   await ctx.db.delete(tagId)
   return tagId
@@ -723,13 +757,14 @@ export const deleteTagCategory = async (
 
   const tags = await ctx.db
     .query('tags')
-    .withIndex('by_campaign_categoryId', (q) =>
-      q.eq('campaignId', category.campaignId).eq('categoryId', categoryId),
+    .withIndex('by_campaign_category', (q) =>
+      q.eq('campaignId', category.campaignId).eq('categoryId', category._id),
     )
     .collect()
   if (tags.length > 0) {
     throw new Error('Cannot delete category with existing tags')
   }
+  //TODO: delete all other children
 
   await ctx.db.delete(categoryId)
   return categoryId
@@ -744,22 +779,32 @@ export async function getNoteLevelTag(
     throw new Error('Note not found')
   }
 
-  if (!note.tagId) {
+  // Check if note's parentId is a tag
+  if (!note.parentId) {
     return null
   }
 
-  const tag = await ctx.db.get(note.tagId)
-
-  if (!tag) {
+  const parentItem = await getSidebarItemById(
+    ctx,
+    note.campaignId,
+    note.parentId,
+  )
+  if (!parentItem || parentItem.type !== SIDEBAR_ITEM_TYPES.tags) {
     return null
   }
+
+  const tag = parentItem as Tag
 
   const category = await ctx.db.get(tag.categoryId)
   if (!category) {
     throw new Error('Category not found')
   }
 
-  return { ...tag, category }
+  return {
+    ...tag,
+    category: { ...category, type: SIDEBAR_ITEM_TYPES.tagCategories },
+    type: SIDEBAR_ITEM_TYPES.tags,
+  } as Tag
 }
 
 export async function getBlockLevelTag(
@@ -776,27 +821,26 @@ export async function getBlockLevelTag(
     throw new Error('Note not found')
   }
 
-  if (!note.tagId) {
+  // Check if note's parentId is a tag
+  if (!note.parentId) {
     return null
   }
 
-  const tag = await ctx.db.get(note.tagId)
-  if (!tag) {
-    throw new Error('Tag not found')
+  const parentItem = await getSidebarItemById(
+    ctx,
+    note.campaignId,
+    note.parentId,
+  )
+  if (!parentItem || parentItem.type !== SIDEBAR_ITEM_TYPES.tags) {
+    return null
   }
 
-  const category = await ctx.db.get(tag.categoryId)
-  if (!category) {
-    throw new Error('Category not found')
-  }
-
-  return { ...tag, category }
+  return parentItem as Tag
 }
 
 export async function findBlock(
   ctx: Ctx,
   noteId: Id<'notes'>,
-  pageId: Id<'pages'>,
   blockId: string,
 ): Promise<Block | null> {
   const note = await ctx.db.get(noteId)
@@ -807,11 +851,10 @@ export async function findBlock(
   // Use the full index to efficiently find the block
   const block = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
+    .withIndex('by_campaign_note_block', (q) =>
       q
         .eq('campaignId', note.campaignId)
         .eq('noteId', noteId)
-        .eq('pageId', pageId)
         .eq('blockId', blockId),
     )
     .unique()
@@ -904,7 +947,7 @@ async function addTagToBlock(
     await ctx.db.insert('blockTags', {
       campaignId: block.campaignId,
       blockId: block._id,
-      tagId: tagId,
+      tagId,
     })
 
     await ctx.db.patch(block._id, {
@@ -918,7 +961,6 @@ async function addTagToBlock(
 export async function addTagToBlockHandler(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
-  pageId: Id<'pages'>,
   blockId: string,
   tagId: Id<'tags'>,
 ) {
@@ -933,12 +975,7 @@ export async function addTagToBlockHandler(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const existingBlock = await findBlockByBlockNoteId(
-    ctx,
-    noteId,
-    pageId,
-    blockId,
-  )
+  const existingBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
 
   if (existingBlock) {
     const inlineTagIds = extractTagIdsFromBlockContent(existingBlock.content)
@@ -950,12 +987,7 @@ export async function addTagToBlockHandler(
 
     await addTagToBlock(ctx, existingBlock, tagId)
   } else {
-    const targetBlock = await findBlockByBlockNoteId(
-      ctx,
-      noteId,
-      pageId,
-      blockId,
-    )
+    const targetBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
 
     if (targetBlock) {
       const inlineTagIds = extractTagIdsFromBlockContent(targetBlock)
@@ -966,11 +998,10 @@ export async function addTagToBlockHandler(
       }
 
       const blockDbId = await ctx.db.insert('blocks', {
-        noteId: noteId,
-        blockId: blockId,
+        noteId,
+        blockId,
         position: undefined,
         content: targetBlock,
-        pageId: pageId,
         isTopLevel: false,
         campaignId: note.campaignId,
         updatedAt: Date.now(),
@@ -1014,7 +1045,6 @@ async function removeTagFromBlock(
 export async function removeTagFromBlockHandler(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
-  pageId: Id<'pages'>,
   blockId: string,
   tagId: Id<'tags'>,
 ) {
@@ -1029,7 +1059,7 @@ export async function removeTagFromBlockHandler(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const block = await findBlockByBlockNoteId(ctx, noteId, pageId, blockId)
+  const block = await findBlockByBlockNoteId(ctx, noteId, blockId)
   if (!block) {
     throw new Error('Block not found')
   }
@@ -1076,9 +1106,9 @@ export function extractAllBlocksWithTags(
 
         if (isTopLevel || tagIds.length > 0 || noteTagId) {
           blocksMap.set(block.id, {
-            block: block,
+            block,
             tagIds,
-            isTopLevel: isTopLevel,
+            isTopLevel,
           })
         }
       }
@@ -1147,7 +1177,6 @@ export async function upsertBlock(
   existingBlock: Block | undefined,
   params: {
     noteId: Id<'notes'>
-    pageId: Id<'pages'>
     campaignId: Id<'campaigns'>
     blockId: string
     isTopLevel: boolean
@@ -1171,7 +1200,6 @@ export async function upsertBlock(
     blockId: params.blockId,
     position: params.position,
     content: params.content,
-    pageId: params.pageId,
     isTopLevel: params.isTopLevel,
     campaignId: params.campaignId,
     updatedAt: params.now,
@@ -1221,9 +1249,9 @@ export async function updateBlockTags(
 
   for (const tagId of tagsToAdd) {
     await ctx.db.insert('blockTags', {
-      campaignId: campaignId,
+      campaignId,
       blockId: finalBlockDbId,
-      tagId: tagId,
+      tagId,
     })
   }
 }
@@ -1237,9 +1265,9 @@ export async function insertInlineBlockTags(
   const finalTagIds = [...new Set([...inlineTagIds])]
   for (const tagId of finalTagIds) {
     await ctx.db.insert('blockTags', {
-      campaignId: campaignId,
+      campaignId,
       blockId: finalBlockDbId,
-      tagId: tagId,
+      tagId,
     })
   }
 }
@@ -1294,92 +1322,6 @@ export async function cleanupUnprocessedBlocks(
       }
     }
   }
-}
-
-export async function saveTopLevelBlocks(
-  ctx: MutationCtx,
-  noteId: Id<'notes'>,
-  content: CustomBlock[],
-) {
-  const now = Date.now()
-
-  const note = await ctx.db.get(noteId)
-  if (!note) return
-
-  const noteLevelTag = note.tagId ? await ctx.db.get(note.tagId) : null
-
-  const allBlocksWithTags = extractAllBlocksWithTags(
-    content,
-    noteLevelTag?._id || null,
-  )
-
-  // Get first page for this note
-  const firstPage = await ctx.db
-    .query('pages')
-    .withIndex('by_note_order', (q) => q.eq('noteId', noteId))
-    .first()
-
-  if (!firstPage) {
-    throw new Error('No pages found for note')
-  }
-
-  const existingBlocks = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
-      q.eq('campaignId', note.campaignId).eq('noteId', noteId),
-    )
-    .collect()
-
-  const existingBlocksMap = new Map(
-    existingBlocks.map((block) => [block.blockId, block]),
-  )
-
-  const processedBlockIds = new Set<string>()
-  const positions = computeTopLevelPositions(allBlocksWithTags)
-
-  for (const [
-    blockId,
-    { block, tagIds: inlineTagIds, isTopLevel },
-  ] of allBlocksWithTags) {
-    processedBlockIds.add(blockId)
-    const existingBlock = existingBlocksMap.get(blockId)
-
-    const finalBlockDbId = await upsertBlock(ctx, existingBlock, {
-      noteId,
-      pageId: firstPage._id,
-      campaignId: note.campaignId,
-      blockId,
-      isTopLevel,
-      position: isTopLevel ? positions.get(blockId) : undefined,
-      content: block,
-      now,
-    })
-
-    if (existingBlock) {
-      await updateBlockTags(
-        ctx,
-        note.campaignId,
-        finalBlockDbId,
-        existingBlock.content,
-        inlineTagIds,
-      )
-    } else {
-      await insertInlineBlockTags(
-        ctx,
-        note.campaignId,
-        finalBlockDbId,
-        inlineTagIds,
-      )
-    }
-  }
-
-  await cleanupUnprocessedBlocks(
-    ctx,
-    existingBlocks,
-    processedBlockIds,
-    content,
-    now,
-  )
 }
 
 export function findBlockById(content: any, blockId: string): any | null {

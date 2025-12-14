@@ -1,0 +1,31 @@
+import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
+import type { ComponentType } from 'react'
+
+export interface EditorViewerProps {
+  item: AnySidebarItem
+  search?: unknown
+}
+
+export interface EditorItemConfig {
+  component: ComponentType<EditorViewerProps>
+}
+
+type EditorDefaults = Record<SidebarItemType, EditorItemConfig>
+
+let defaults: EditorDefaults | null = null
+
+export function registerDefaults(config: EditorDefaults) {
+  defaults = config
+}
+
+export function getEditorConfig(
+  itemType: SidebarItemType,
+): EditorItemConfig | null {
+  return defaults?.[itemType] ?? null
+}
+
+export function getViewerComponent(
+  itemType: SidebarItemType,
+): ComponentType<EditorViewerProps> | null {
+  return getEditorConfig(itemType)?.component ?? null
+}

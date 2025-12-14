@@ -87,7 +87,6 @@ export const getBlocksByTags = query({
 export const getBlockTagState = query({
   args: {
     noteId: v.id('notes'),
-    pageId: v.id('pages'),
     blockId: v.string(),
   },
   returns: v.union(
@@ -116,7 +115,7 @@ export const getBlockTagState = query({
       { campaignId: note.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
-    const block = await findBlock(ctx, args.noteId, args.pageId, args.blockId)
+    const block = await findBlock(ctx, args.noteId, args.blockId)
     if (!block) {
       return null
     }

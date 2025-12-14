@@ -1,12 +1,12 @@
 import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { Note } from 'convex/notes/types'
-import { useNoteActions } from '~/hooks/useNoteActions'
+import type { Folder } from 'convex/folders/types'
+import { useFolderActions } from '~/hooks/useFolderActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 interface FolderDeleteConfirmDialogProps {
-  folder: Note
+  folder: Folder
   isDeleting: boolean
   onConfirm?: () => void
   onClose: () => void
@@ -17,16 +17,13 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { deleteNote } = useNoteActions()
-  const sidebarItemsByParent = useSidebarItemsByParent(
-    folder.categoryId,
-    folder._id,
-  )
+  const { deleteFolder } = useFolderActions()
+  const sidebarItemsByParent = useSidebarItemsByParent(folder._id)
   const hasDirectChildren =
     folder && (sidebarItemsByParent.data?.length || 0) > 0
   const handleConfirm = useCallback(async () => {
-    await deleteNote
-      .mutateAsync({ noteId: folder._id })
+    await deleteFolder
+      .mutateAsync({ folderId: folder._id })
       .then(() => {
         toast.success('Folder deleted')
       })
@@ -38,7 +35,7 @@ export function FolderDeleteConfirmDialog({
         onConfirm?.()
         onClose()
       })
-  }, [deleteNote, folder._id, onConfirm, onClose])
+  }, [deleteFolder, folder._id, onConfirm, onClose])
 
   return (
     <ConfirmationDialog
@@ -48,15 +45,17 @@ export function FolderDeleteConfirmDialog({
       title="Delete Folder"
       description={
         hasDirectChildren ? (
-          <p>
-            <strong className="text-red-600">This folder isn't empty!</strong>
+          <>
+            <strong className="text-red-600">
+              {"This folder isn't empty!"}
+            </strong>
             <br />
             <span>
               Are you sure you want to delete it and all its contents?
             </span>
-          </p>
+          </>
         ) : (
-          <p>Are you sure you want to delete this folder?</p>
+          <>Are you sure you want to delete this folder?</>
         )
       }
       confirmLabel="Delete Folder"

@@ -16,17 +16,16 @@ import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { blockNoteIdValidator } from '../blocks/schema'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export const createTag = mutation({
   args: createTagAndNoteArgs,
   returns: v.object({
     tagId: v.id('tags'),
-    noteId: v.id('notes'),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
+  handler: async (ctx, args): Promise<{ tagId: Id<'tags'> }> => {
     return await insertTagAndNote(ctx, args, args.parentId)
   },
 })
@@ -34,7 +33,8 @@ export const createTag = mutation({
 export const updateTag = mutation({
   args: {
     tagId: v.id('tags'),
-    displayName: v.optional(v.string()),
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
@@ -42,7 +42,8 @@ export const updateTag = mutation({
   returns: v.id('tags'),
   handler: async (ctx, args): Promise<Id<'tags'>> => {
     await updateTagAndContent(ctx, args.tagId, {
-      displayName: args.displayName,
+      name: args.name,
+      iconName: args.iconName,
       color: args.color,
       description: args.description,
       imageStorageId: args.imageStorageId,
@@ -62,14 +63,64 @@ export const deleteTag = mutation({
   },
 })
 
+export const moveTag = mutation({
+  args: {
+    tagId: v.id('tags'),
+    parentId: v.optional(sidebarItemIdValidator),
+  },
+  returns: v.id('tags'),
+  handler: async (ctx, args): Promise<Id<'tags'>> => {
+    const tag = await ctx.db.get(args.tagId)
+    if (!tag) {
+      throw new Error('Tag not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: tag.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    // Tags can only be under categories or folders
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        tag.campaignId,
+        args.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
+      }
+      // Validate that parentId is not a map
+      if (parentItem.type === SIDEBAR_ITEM_TYPES.gameMaps) {
+        throw new Error('Maps cannot be parents of tags')
+      }
+      if (
+        parentItem.type !== SIDEBAR_ITEM_TYPES.tagCategories &&
+        parentItem.type !== SIDEBAR_ITEM_TYPES.folders
+      ) {
+        throw new Error('Tags can only be children of categories or folders')
+      }
+    }
+
+    await ctx.db.patch(args.tagId, {
+      parentId: args.parentId as
+        | Id<'folders'>
+        | Id<'tagCategories'>
+        | undefined,
+    })
+    return args.tagId
+  },
+})
+
 const createTagCategoryNameArgs = v.union(
   v.object({
     categoryName: v.string(),
   }),
   v.object({
     // NOTE: auto-pluralize is currently ALWAYS on in create mode
-    displayName: v.string(),
-    pluralDisplayName: v.string(),
+    name: v.string(),
+    pluralName: v.string(),
   }),
 )
 
@@ -96,18 +147,18 @@ export const createTagCategory = mutation({
         iconName: args.iconName,
         defaultColor: args.defaultColor,
       })
-    } else if ('displayName' in args.name && 'pluralDisplayName' in args.name) {
+    } else if ('name' in args.name && 'pluralName' in args.name) {
       return await insertTagCategory(ctx, {
         campaignId: args.campaignId,
         kind: CATEGORY_KIND.User,
-        displayName: args.name.displayName,
-        pluralDisplayName: args.name.pluralDisplayName,
+        name: args.name.name,
+        pluralName: args.name.pluralName,
         iconName: args.iconName,
         defaultColor: args.defaultColor,
       })
     } else {
       throw new Error(
-        'Must provide either categoryName or both displayName and pluralDisplayName',
+        'Must provide either categoryName or both name and pluralName',
       )
     }
   },
@@ -116,8 +167,8 @@ export const updateTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),
     categoryName: v.optional(v.string()),
-    displayName: v.optional(v.string()),
-    pluralDisplayName: v.optional(v.string()),
+    name: v.optional(v.string()),
+    pluralName: v.optional(v.string()),
     iconName: v.optional(v.string()),
     defaultColor: v.optional(v.string()),
   },
@@ -129,13 +180,24 @@ export const updateTagCategory = mutation({
     ctx,
     args,
   ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
-    return await updateTagCategoryFn(ctx, args.categoryId, {
-      categoryName: args.categoryName,
-      displayName: args.displayName,
-      pluralDisplayName: args.pluralDisplayName,
-      iconName: args.iconName,
-      defaultColor: args.defaultColor,
-    })
+    if (args.categoryName !== undefined) {
+      return await updateTagCategoryFn(ctx, args.categoryId, {
+        categoryName: args.categoryName,
+        iconName: args.iconName,
+        defaultColor: args.defaultColor,
+      })
+    }
+    if (args.name !== undefined && args.pluralName !== undefined) {
+      return await updateTagCategoryFn(ctx, args.categoryId, {
+        name: args.name,
+        pluralName: args.pluralName,
+        iconName: args.iconName,
+        defaultColor: args.defaultColor,
+      })
+    }
+    throw new Error(
+      'Must provide either categoryName or both name and pluralName',
+    )
   },
 })
 export const deleteTagCategory = mutation({
@@ -151,7 +213,6 @@ export const deleteTagCategory = mutation({
 export const addTagToBlock = mutation({
   args: {
     noteId: v.id('notes'),
-    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     tagId: v.id('tags'),
   },
@@ -160,7 +221,6 @@ export const addTagToBlock = mutation({
     return await addTagToBlockHandler(
       ctx,
       args.noteId,
-      args.pageId,
       args.blockId,
       args.tagId,
     )
@@ -170,7 +230,6 @@ export const addTagToBlock = mutation({
 export const removeTagFromBlock = mutation({
   args: {
     noteId: v.id('notes'),
-    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     tagId: v.id('tags'),
   },
@@ -179,7 +238,6 @@ export const removeTagFromBlock = mutation({
     return await removeTagFromBlockHandler(
       ctx,
       args.noteId,
-      args.pageId,
       args.blockId,
       args.tagId,
     )

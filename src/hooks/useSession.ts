@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/contexts/CampaignContext'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 export const useSession = () => {
   const { campaignWithMembership } = useCampaign()
@@ -12,7 +13,7 @@ export const useSession = () => {
       api.sessions.queries.getCurrentSession,
       campaignId
         ? {
-            campaignId: campaignId,
+            campaignId,
           }
         : 'skip',
     ),
@@ -20,7 +21,7 @@ export const useSession = () => {
   const sessions = useQuery(
     convexQuery(
       api.sessions.queries.getSessionsByCampaign,
-      campaignId ? { campaignId: campaignId } : 'skip',
+      campaignId ? { campaignId } : 'skip',
     ),
   )
   const startSession = useMutation({
@@ -39,20 +40,19 @@ export const useSession = () => {
     categoryId: Id<'tagCategories'>
     color?: string
     description?: string
-    parentId?: Id<'notes'>
+    parentId?: SidebarItemId
     endedAt?: number | undefined
   }) => {
     if (!campaignId) return
-    const displayName = `Session ${nextSessionNumber}`
+    const name = `Session ${nextSessionNumber}`
     const nowIso = new Date().toISOString()
     startSession.mutate({
-      displayName,
-      name: displayName,
+      name,
       color: args.color,
       description: args.description ?? nowIso,
       campaignId,
       categoryId: args.categoryId,
-      parentId: args.parentId,
+      parentId: args.parentId ?? args.categoryId,
       endedAt: args.endedAt,
     })
   }

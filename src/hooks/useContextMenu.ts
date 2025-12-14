@@ -1,9 +1,8 @@
 import { useRef, useCallback } from 'react'
-import type { MouseEvent } from 'react'
-import type { ContextMenuRef } from '~/components/context-menu/base/context-menu'
+import type { SidebarItemContextMenuRef as UnifiedContextMenuRef } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 
 export function useContextMenu() {
-  const contextMenuRef = useRef<ContextMenuRef>(null)
+  const contextMenuRef = useRef<UnifiedContextMenuRef>(null)
 
   const handleMoreOptions = useCallback((e: MouseEvent) => {
     e.stopPropagation()

@@ -14,8 +14,8 @@ export const BackgroundColorIcon = (
     () =>
       ({
         pointerEvents: 'none',
-        height: size.toString() + 'px',
-        width: size.toString() + 'px',
+        height: `${size}px`,
+        width: `${size}px`,
       }) as const,
     [size],
   )

@@ -17,6 +17,11 @@ export function TagFormDialog({
   mode,
   children,
 }: TagFormDialogProps) {
+  if (!config?.singular || !config?.plural) {
+    console.error('TagFormDialog: config is missing singular or plural', config)
+    return null
+  }
+
   return (
     <FormDialog
       isOpen={isOpen}

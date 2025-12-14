@@ -2,6 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { CATEGORY_KIND } from './types'
 import { commonMetaFields } from '../common/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 
 export const categoryKindValidator = v.union(
   v.literal(CATEGORY_KIND.SystemCore),
@@ -10,28 +11,40 @@ export const categoryKindValidator = v.union(
 )
 
 export const tagCategoryTableFields = {
-  pluralDisplayName: v.string(),
-  displayName: v.string(),
+  pluralName: v.optional(v.string()),
+  name: v.optional(v.string()),
   slug: v.string(),
   kind: categoryKindValidator,
   campaignId: v.id('campaigns'),
-  iconName: v.string(),
+  iconName: v.optional(v.string()),
   defaultColor: v.optional(v.string()),
+  type: v.literal('tagCategories'),
+  parentId: v.optional(sidebarItemIdValidator),
+  categoryId: v.optional(v.id('tagCategories')),
 }
 
 export const tagTableFields = {
-  displayName: v.string(),
-  name: v.string(),
+  name: v.optional(v.string()),
+  iconName: v.optional(v.string()),
+  slug: v.string(),
   color: v.optional(v.string()),
   description: v.optional(v.string()),
   imageStorageId: v.optional(v.id('_storage')),
   campaignId: v.id('campaigns'),
   categoryId: v.id('tagCategories'),
+  parentId: v.optional(sidebarItemIdValidator),
+  type: v.literal('tags'),
 }
 
 export const createTagAndNoteArgs = {
-  ...tagTableFields,
-  parentId: v.optional(v.id('notes')),
+  name: v.optional(v.string()),
+  iconName: v.optional(v.string()),
+  color: v.optional(v.string()),
+  description: v.optional(v.string()),
+  imageStorageId: v.optional(v.id('_storage')),
+  campaignId: v.id('campaigns'),
+  categoryId: v.id('tagCategories'),
+  parentId: v.optional(sidebarItemIdValidator),
 }
 
 export const tagTables = {
@@ -44,8 +57,10 @@ export const tagTables = {
     ...commonMetaFields('tags'),
     ...tagTableFields,
   })
-    .index('by_campaign_categoryId', ['campaignId', 'categoryId'])
-    .index('by_campaign_name', ['campaignId', 'name']),
+    .index('by_campaign_parent', ['campaignId', 'parentId'])
+    .index('by_campaign_category', ['campaignId', 'categoryId'])
+    .index('by_campaign_name', ['campaignId', 'name'])
+    .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 
 const tagCategoryValidatorFields = {
@@ -57,7 +72,6 @@ export const tagValidatorFields = {
   ...commonMetaFields('tags'),
   ...tagTableFields,
   category: v.optional(v.object(tagCategoryValidatorFields)),
-  noteId: v.optional(v.id('notes')),
 } as const
 
 export const tagCategoryValidator = v.object(tagCategoryValidatorFields)

@@ -1,9 +1,12 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { sidebarItemValidator } from './schema'
+import { anySidebarItemValidator } from './schema'
+import { sidebarItemIdValidator } from './idValidator'
 import {
   getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
+  getSidebarItemAncestors as getSidebarItemAncestorsFn,
+  getSidebarItemById,
 } from './sidebarItems'
 import { AnySidebarItem } from './types'
 
@@ -12,7 +15,7 @@ export const getSidebarItemsByCategory = query({
     campaignId: v.id('campaigns'),
     categoryId: v.id('tagCategories'),
   },
-  returns: v.array(sidebarItemValidator),
+  returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
     return await getSidebarItemsByCategoryFn(
       ctx,
@@ -25,16 +28,36 @@ export const getSidebarItemsByCategory = query({
 export const getSidebarItemsByParent = query({
   args: {
     campaignId: v.id('campaigns'),
-    categoryId: v.optional(v.id('tagCategories')),
-    parentId: v.optional(v.id('notes')),
+    parentId: v.optional(sidebarItemIdValidator),
   },
-  returns: v.array(sidebarItemValidator),
+  returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return await getSidebarItemsByParentFn(
-      ctx,
-      args.campaignId,
-      args.categoryId,
-      args.parentId,
-    )
+    return await getSidebarItemsByParentFn(ctx, args.campaignId, args.parentId)
+  },
+})
+
+export const getSidebarItemAncestors = query({
+  args: {
+    id: sidebarItemIdValidator,
+    campaignId: v.id('campaigns'),
+  },
+  returns: v.array(anySidebarItemValidator),
+  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+    return await getSidebarItemAncestorsFn(ctx, args.campaignId, args.id)
+  },
+})
+
+export const getSidebarItem = query({
+  args: {
+    id: sidebarItemIdValidator,
+    campaignId: v.id('campaigns'),
+  },
+  returns: anySidebarItemValidator,
+  handler: async (ctx, args): Promise<AnySidebarItem> => {
+    const item = await getSidebarItemById(ctx, args.campaignId, args.id)
+    if (!item) {
+      throw new Error('Sidebar item not found')
+    }
+    return item
   },
 })

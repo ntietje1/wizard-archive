@@ -13,7 +13,6 @@ import { findBlockByBlockNoteId } from '../blocks/blocks'
 export const addShareBlock = mutation({
   args: {
     noteId: v.id('notes'),
-    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     shareId: v.id('shares'),
   },
@@ -28,7 +27,6 @@ export const addShareBlock = mutation({
       await addTagToBlockHandler(
         ctx,
         args.noteId,
-        args.pageId,
         args.blockId,
         currentSession.tagId,
       )
@@ -37,7 +35,6 @@ export const addShareBlock = mutation({
     return await addTagToBlockHandler(
       ctx,
       args.noteId,
-      args.pageId,
       args.blockId,
       share.tagId,
     )
@@ -47,7 +44,6 @@ export const addShareBlock = mutation({
 export const removeShareFromBlock = mutation({
   args: {
     noteId: v.id('notes'),
-    pageId: v.id('pages'),
     blockId: blockNoteIdValidator,
     shareId: v.id('shares'),
   },
@@ -59,12 +55,7 @@ export const removeShareFromBlock = mutation({
     }
     const currentSession = await getCurrentSession(ctx, share.campaignId)
     if (currentSession) {
-      const block = await findBlockByBlockNoteId(
-        ctx,
-        args.noteId,
-        args.pageId,
-        args.blockId,
-      )
+      const block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockId)
       if (!block) {
         throw new Error('Block not found')
       }
@@ -74,7 +65,6 @@ export const removeShareFromBlock = mutation({
         await removeTagFromBlockHandler(
           ctx,
           args.noteId,
-          args.pageId,
           args.blockId,
           currentSession.tagId,
         )
@@ -83,7 +73,6 @@ export const removeShareFromBlock = mutation({
     return await removeTagFromBlockHandler(
       ctx,
       args.noteId,
-      args.pageId,
       args.blockId,
       share.tagId,
     )

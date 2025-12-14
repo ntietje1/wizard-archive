@@ -74,7 +74,7 @@ export function NotesViewer() {
             }}
             type="button"
           >
-            {tag.displayName}
+            {tag.name || 'Untitled'}
           </Button>
         ))}
       </div>

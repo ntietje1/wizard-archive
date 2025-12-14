@@ -5,7 +5,6 @@ export type Block = {
   _id: Id<'blocks'>
   _creationTime: number
   noteId: Id<'notes'>
-  pageId: Id<'pages'>
   blockId: string
   position?: number
   content: CustomBlock

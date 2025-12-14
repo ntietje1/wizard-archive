@@ -13,11 +13,13 @@ import {
   insertInlineBlockTags,
   cleanupUnprocessedBlocks,
 } from '../tags/tags'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { Tag } from '../tags/types'
 
 export const findBlockByBlockNoteId = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  pageId: Id<'pages'>,
   blockId: string,
 ): Promise<Block | null> => {
   const note: Note | null = await getNote(ctx, noteId)
@@ -28,11 +30,10 @@ export const findBlockByBlockNoteId = async (
   // Use the full index to efficiently find the block
   const block = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
+    .withIndex('by_campaign_note_block', (q) =>
       q
         .eq('campaignId', note.campaignId)
         .eq('noteId', noteId)
-        .eq('pageId', pageId)
         .eq('blockId', blockId),
     )
     .unique()
@@ -47,7 +48,7 @@ export async function getBlocksByNote(
 ): Promise<Block[]> {
   return await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
+    .withIndex('by_campaign_note_block', (q) =>
       q.eq('campaignId', campaignId).eq('noteId', noteId),
     )
     .collect()
@@ -60,7 +61,7 @@ export async function getTopLevelBlocksByNote(
 ): Promise<Block[]> {
   const blocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
+    .withIndex('by_campaign_note_block', (q) =>
       q.eq('campaignId', campaignId).eq('noteId', noteId),
     )
     .collect()
@@ -70,18 +71,20 @@ export async function getTopLevelBlocksByNote(
     .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
-export async function getTopLevelBlocksByPage(
+export async function getTopLevelBlocksByChildNote(
   ctx: Ctx,
-  pageId: Id<'pages'>,
+  noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
 ): Promise<Block[]> {
   const blocks = await ctx.db
     .query('blocks')
-    .withIndex('by_page', (q) => q.eq('pageId', pageId))
+    .withIndex('by_campaign_note_block', (q) =>
+      q.eq('campaignId', campaignId).eq('noteId', noteId),
+    )
     .collect()
 
   return blocks
-    .filter((block) => block.isTopLevel && block.campaignId === campaignId)
+    .filter((block) => block.isTopLevel)
     .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
@@ -91,9 +94,7 @@ export async function getBlocksByCampaign(
 ): Promise<Block[]> {
   return await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_page_block', (q) =>
-      q.eq('campaignId', campaignId),
-    )
+    .withIndex('by_campaign_note_block', (q) => q.eq('campaignId', campaignId))
     .collect()
 }
 
@@ -127,24 +128,24 @@ export async function deleteBlocksByNote(
   }
 }
 
-export async function saveTopLevelBlocksForPage(
+export async function saveTopLevelBlocksForChildNote(
   ctx: MutationCtx,
-  pageId: Id<'pages'>,
+  noteId: Id<'notes'>,
   content: CustomBlock[],
 ) {
   const now = Date.now()
 
-  const page = await ctx.db.get(pageId)
-  if (!page) {
-    throw new Error('Page not found')
-  }
-
-  const note = await ctx.db.get(page.noteId)
+  const note = await ctx.db.get(noteId)
   if (!note) {
     throw new Error('Note not found')
   }
 
-  const noteLevelTag = note.tagId ? await ctx.db.get(note.tagId) : null
+  // Check if note's parentId is a tag
+  const parentItem = note.parentId
+    ? await getSidebarItemById(ctx, note.campaignId, note.parentId)
+    : null
+  const noteLevelTag =
+    parentItem?.type === SIDEBAR_ITEM_TYPES.tags ? (parentItem as Tag) : null
 
   const allBlocksWithTags = extractAllBlocksWithTags(
     content,
@@ -153,7 +154,9 @@ export async function saveTopLevelBlocksForPage(
 
   const existingBlocks = await ctx.db
     .query('blocks')
-    .withIndex('by_page', (q) => q.eq('pageId', pageId))
+    .withIndex('by_campaign_note_block', (q) =>
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+    )
     .collect()
 
   const existingBlocksMap = new Map(
@@ -171,8 +174,7 @@ export async function saveTopLevelBlocksForPage(
     const existingBlock = existingBlocksMap.get(blockId)
 
     const finalBlockDbId = await upsertBlock(ctx, existingBlock, {
-      noteId: page.noteId,
-      pageId: pageId,
+      noteId,
       campaignId: note.campaignId,
       blockId,
       isTopLevel,

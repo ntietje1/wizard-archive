@@ -2,6 +2,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { useCallback } from 'react'
 import { useCampaign } from '~/contexts/CampaignContext'
 import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import {
+  isCategory,
+  isFolder,
+  isGameMap,
+  isNote,
+  isTag,
+} from '~/lib/sidebar-item-utils'
 
 export const useEditorNavigation = () => {
   const navigate = useNavigate()
@@ -16,6 +24,7 @@ export const useEditorNavigation = () => {
           note: slug || undefined,
           page: pageSlug || undefined,
           // Clear other content type params
+          tag: undefined,
           map: undefined,
           category: undefined,
           folderId: undefined,
@@ -49,6 +58,26 @@ export const useEditorNavigation = () => {
           map: slug,
           // Clear other content type params
           note: undefined,
+          tag: undefined,
+          category: undefined,
+          folderId: undefined,
+        },
+      })
+    },
+    [dmUsername, campaignSlug, navigate],
+  )
+
+  const navigateToTag = useCallback(
+    (slug: string | null, pageSlug?: string) => {
+      navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
+        params: { dmUsername, campaignSlug },
+        search: {
+          tag: slug || undefined,
+          page: pageSlug,
+          // Clear other content type params
+          note: undefined,
+          map: undefined,
           category: undefined,
           folderId: undefined,
         },
@@ -58,20 +87,67 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToCategory = useCallback(
-    (slug: string, folderId?: Id<'notes'>) => {
+    (slug: string, folderId?: Id<'notes'> | Id<'folders'>) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           category: slug,
-          folderId: folderId ?? undefined,
+          folderId,
           // Clear other content type params
           note: undefined,
+          tag: undefined,
           map: undefined,
+          folder: undefined,
         },
       })
     },
     [dmUsername, campaignSlug, navigate],
+  )
+
+  const navigateToFolder = useCallback(
+    (slug: string) => {
+      navigate({
+        to: '/campaigns/$dmUsername/$campaignSlug/editor',
+        params: { dmUsername, campaignSlug },
+        search: {
+          folder: slug,
+          // Clear other content type params
+          note: undefined,
+          tag: undefined,
+          map: undefined,
+          category: undefined,
+          folderId: undefined,
+        },
+      })
+    },
+    [dmUsername, campaignSlug, navigate],
+  )
+
+  const navigateToItem = useCallback(
+    (item: AnySidebarItem) => {
+      if (isNote(item)) {
+        navigateToNote(item.slug)
+      } else if (isTag(item)) {
+        navigateToTag(item.slug)
+      } else if (isGameMap(item)) {
+        navigateToMap(item.slug)
+      } else if (isCategory(item)) {
+        navigateToCategory(item.slug)
+      } else if (isFolder(item)) {
+        navigateToFolder(item.slug)
+      } else {
+        // @ts-ignore
+        console.error('Invalid item type:', item.type)
+      }
+    },
+    [
+      navigateToNote,
+      navigateToTag,
+      navigateToMap,
+      navigateToCategory,
+      navigateToFolder,
+    ],
   )
 
   const clearEditorContent = useCallback(() => {
@@ -80,6 +156,7 @@ export const useEditorNavigation = () => {
       params: { dmUsername, campaignSlug },
       search: {
         note: undefined,
+        tag: undefined,
         map: undefined,
         category: undefined,
         folderId: undefined,
@@ -89,9 +166,12 @@ export const useEditorNavigation = () => {
 
   return {
     navigateToNote,
+    navigateToTag,
     navigateToPage,
     navigateToMap,
     navigateToCategory,
+    navigateToFolder,
+    navigateToItem,
     clearEditorContent,
   }
 }

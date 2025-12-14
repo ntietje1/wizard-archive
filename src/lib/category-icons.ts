@@ -10,7 +10,6 @@ import {
   TagIcon,
   Sword,
   Apple,
-  Book,
   Beef,
   Bird,
   BowArrow,
@@ -30,8 +29,14 @@ import {
   Squirrel,
   Sun,
   Star,
+  Folder,
+  FileText,
 } from '~/lib/icons'
 import type { LucideIcon } from 'lucide-react'
+import {
+  SIDEBAR_ITEM_TYPES,
+  type AnySidebarItem,
+} from 'convex/sidebarItems/types'
 
 const categoryIconsMap: Record<string, LucideIcon> = {
   [SYSTEM_DEFAULT_CATEGORIES.Character.iconName]: User,
@@ -76,4 +81,31 @@ export const getNonDefaultCategoryIcons = () => {
         .map((c) => c.iconName)
         .includes(iconName),
   )
+}
+
+// Default icons for each sidebar item type
+const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
+  [SIDEBAR_ITEM_TYPES.folders]: Folder,
+  [SIDEBAR_ITEM_TYPES.notes]: FileText,
+  [SIDEBAR_ITEM_TYPES.gameMaps]: MapPin,
+  [SIDEBAR_ITEM_TYPES.tags]: TagIcon,
+}
+
+/**
+ * Gets the appropriate icon for any sidebar item.
+ * Uses category icons for categories and tags, default icons for other types.
+ */
+export const getSidebarItemIcon = (item: AnySidebarItem): LucideIcon => {
+  switch (item.type) {
+    case SIDEBAR_ITEM_TYPES.tagCategories:
+      return getCategoryIcon(item.iconName)
+    case SIDEBAR_ITEM_TYPES.tags:
+      return getCategoryIcon(item.category?.iconName) || TagIcon
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] || FileText
+    default:
+      return FileText
+  }
 }

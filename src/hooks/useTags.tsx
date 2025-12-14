@@ -31,14 +31,12 @@ export function useTags() {
 
 interface UseBlockTagsParams {
   noteId: Id<'notes'> | undefined
-  pageId: Id<'pages'> | undefined
   blockId: string
   searchQuery?: string
 }
 
 export function useBlockTags({
   noteId,
-  pageId,
   blockId,
   searchQuery = '',
 }: UseBlockTagsParams) {
@@ -47,7 +45,7 @@ export function useBlockTags({
   const blockTagState = useQuery(
     convexQuery(
       api.blocks.queries.getBlockTagState,
-      noteId && pageId ? { noteId, pageId, blockId } : 'skip',
+      noteId ? { noteId, blockId } : 'skip',
     ),
   )
 
@@ -96,7 +94,7 @@ export function useBlockTags({
     const query = searchQuery.trim().toLowerCase()
     if (!query) return availableTags
     return availableTags.filter((tag) =>
-      tag.displayName.toLowerCase().includes(query),
+      (tag.name || '').toLowerCase().includes(query),
     )
   }, [availableTags, searchQuery])
 
@@ -111,13 +109,21 @@ export function useBlockTags({
   )
 
   const handleAddTag = async (tagId: Id<'tags'>) => {
-    if (!noteId || !pageId || isMutating) return
-    await addTagToBlock.mutateAsync({ noteId, pageId, blockId, tagId })
+    if (!noteId || isMutating) return
+    await addTagToBlock.mutateAsync({
+      noteId,
+      blockId,
+      tagId,
+    })
   }
 
   const handleRemoveTag = async (tagId: Id<'tags'>) => {
-    if (!noteId || !pageId || isMutating) return
-    await removeTagFromBlock.mutateAsync({ noteId, pageId, blockId, tagId })
+    if (!noteId || isMutating) return
+    await removeTagFromBlock.mutateAsync({
+      noteId,
+      blockId,
+      tagId,
+    })
   }
 
   return {

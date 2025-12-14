@@ -73,6 +73,7 @@ export const useFileUpload = () => {
                 reject(new Error('Failed to track upload'))
               }
             } catch (error) {
+              console.error('Failed to parse upload response', error)
               reject(new Error('Failed to parse upload response'))
             }
           } else {

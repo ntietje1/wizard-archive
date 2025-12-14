@@ -13,7 +13,9 @@ export function Header({ children }: HeaderProps) {
         <header className="bg-background h-10 border-b border-border">
           <div className="mx-auto flex justify-between items-center h-full px-4">
             <Link to="/" className="font-bold text-xl text-primary">
-              The Wizard's Archive
+              <span className="whitespace-nowrap">
+                {"The Wizard's Archive"}
+              </span>
             </Link>
           </div>
           {children}

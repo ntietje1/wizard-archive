@@ -2,23 +2,28 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import {
   deleteTagAndCleanupContent,
-  getTag,
   insertTagAndNote,
   updateTagAndContent,
 } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
-import { createTagAndNoteArgs } from '../tags/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { getLocation } from './locations'
 
 export const createLocation = mutation({
   args: {
-    ...createTagAndNoteArgs,
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    imageStorageId: v.optional(v.id('_storage')),
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+    parentId: v.optional(sidebarItemIdValidator),
   },
   returns: v.object({
     tagId: v.id('tags'),
-    noteId: v.id('notes'),
     locationId: v.id('locations'),
   }),
   handler: async (
@@ -26,7 +31,6 @@ export const createLocation = mutation({
     args,
   ): Promise<{
     tagId: Id<'tags'>
-    noteId: Id<'notes'>
     locationId: Id<'locations'>
   }> => {
     await requireCampaignMembership(
@@ -34,21 +38,22 @@ export const createLocation = mutation({
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
-    const { tagId, noteId } = await insertTagAndNote(ctx, args)
+    const { tagId } = await insertTagAndNote(ctx, args, args.parentId)
 
     const locationId = await ctx.db.insert('locations', {
       campaignId: args.campaignId,
-      tagId: tagId,
+      tagId,
     })
 
-    return { tagId, noteId, locationId }
+    return { tagId, locationId }
   },
 })
 
 export const updateLocation = mutation({
   args: {
     locationId: v.id('locations'),
-    displayName: v.optional(v.string()),
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
     description: v.optional(v.string()),
     color: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.id('_storage')),
@@ -68,13 +73,15 @@ export const updateLocation = mutation({
 
     // Update tag fields if provided
     if (
-      args.displayName !== undefined ||
+      args.name !== undefined ||
+      args.iconName !== undefined ||
       args.description !== undefined ||
       args.color !== undefined ||
       args.imageStorageId !== undefined
     ) {
       await updateTagAndContent(ctx, location.tagId, {
-        displayName: args.displayName,
+        name: args.name,
+        iconName: args.iconName,
         description: args.description,
         color: args.color,
         imageStorageId: args.imageStorageId,

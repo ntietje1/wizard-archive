@@ -4,10 +4,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
+import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
 import { toast } from 'sonner'
 
@@ -18,8 +20,7 @@ export interface MapFormValues {
 interface MapFormProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  categoryId?: Id<'tagCategories'>
-  parentId?: Id<'notes'>
+  parentId?: SidebarItemId
   onClose: () => void
   onSuccess?: () => void
 }
@@ -31,11 +32,11 @@ const defaultMapFormValues: MapFormValues = {
 export function MapForm({
   mapId,
   campaignId,
-  categoryId,
   parentId,
   onClose,
   onSuccess,
 }: MapFormProps) {
+  const { openParentFolders } = useOpenParentFolders()
   const map = useQuery(
     convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
@@ -114,13 +115,13 @@ export function MapForm({
         toast.success('Map updated')
       } else if (campaignId) {
         // Create new map - require image
-        await createMutation.mutateAsync({
+        const newMapId = await createMutation.mutateAsync({
           campaignId,
           name: values.name,
           imageStorageId: finalImageStorageId,
-          categoryId,
           parentId,
         })
+        await openParentFolders(newMapId)
         toast.success('Map created')
       } else {
         toast.error('Invalid form state: missing map or campaign ID')

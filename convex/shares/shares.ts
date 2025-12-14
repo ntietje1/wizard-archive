@@ -7,9 +7,10 @@ import {
   requireCampaignMembership,
 } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
-import { combineTagEntity } from '../tags/tags'
 import {
+  combineTagEntity,
   getEffectiveTagIdsForBlock,
+  getTagCategory,
   getTagCategoryBySlug,
   getTagsByCategory,
   insertTagAndNote,
@@ -38,10 +39,7 @@ export const getShare = async (
   if (!tag) {
     return null
   }
-  const category = await ctx.db.get(tag.categoryId)
-  if (!category) {
-    return null
-  }
+  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
   return { ...combineSharesAndTag(share, tag, category), member }
 }
 
@@ -51,7 +49,6 @@ export const createShare = async (
   memberId: Id<'campaignMembers'> | null,
 ): Promise<{
   tagId: Id<'tags'>
-  noteId: Id<'notes'>
   shareId: Id<'shares'>
 }> => {
   const category = await getTagCategoryBySlug(
@@ -59,39 +56,44 @@ export const createShare = async (
     campaignId,
     SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
+  if (!category) {
+    throw new Error(
+      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
+    )
+  }
   await requireCampaignMembership(
     ctx,
-    { campaignId: campaignId },
+    { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  const { tagId, noteId } = await insertTagAndNote(
+  const { tagId } = await insertTagAndNote(
     ctx,
     memberId
       ? {
-          displayName: 'Shared: (Player)',
+          name: 'Shared: (Player)',
           color: '#F59E0B',
           description: 'Visible to a specific player',
           campaignId,
           categoryId: category._id,
         }
       : {
-          displayName: 'Shared: (All)',
+          name: 'Shared: (All)',
           color: '#F59E0B',
           description: 'Visible to all players',
           campaignId,
           categoryId: category._id,
         },
-    undefined,
+    category._id,
     true,
   )
 
   const shareId = await ctx.db.insert('shares', {
-    campaignId: campaignId,
-    tagId: tagId,
+    campaignId,
+    tagId,
     memberId: memberId || undefined,
   })
 
-  return { tagId, noteId, shareId }
+  return { tagId, shareId }
 }
 
 export async function getSharedAllTag(
@@ -121,6 +123,7 @@ export async function ensureSharedAllTag(
   try {
     return (await getSharedAllTag(ctx, campaignId))._id
   } catch (error) {
+    console.error('Missing shared all tag', error)
     return await createShare(ctx, campaignId, null).then((s) => s.tagId)
   }
 }
@@ -134,6 +137,11 @@ export async function getPlayerSharedTags(
     campaignId,
     SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
+  if (!category) {
+    throw new Error(
+      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
+    )
+  }
   const tags = await getTagsByCategory(ctx, category._id)
   const shares = await ctx.db
     .query('shares')
@@ -166,6 +174,11 @@ export async function getPlayerSharedTag(
     campaignId,
     SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
   )
+  if (!category) {
+    throw new Error(
+      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
+    )
+  }
   const playerShare = await ctx.db
     .query('shares')
     .withIndex('by_campaign_member', (q) =>
@@ -190,6 +203,7 @@ export async function ensurePlayerSharedTag(
   try {
     return (await getPlayerSharedTag(ctx, campaignId, memberId))._id
   } catch (error) {
+    console.error('Missing player shared tag', error)
     return await createShare(ctx, campaignId, memberId).then((s) => s.tagId)
   }
 }

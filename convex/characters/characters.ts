@@ -1,7 +1,7 @@
 import { Character } from './types'
 import { Id } from '../_generated/dataModel'
 import { QueryCtx } from '../_generated/server'
-import { combineTagEntity } from '../tags/tags'
+import { combineTagEntity, getTagCategory } from '../tags/tags'
 
 export const combineCharacterAndTag = (
   character: { _id: Id<'characters'> },
@@ -22,9 +22,6 @@ export const getCharacter = async (
   if (!tag) {
     return null
   }
-  const category = await ctx.db.get(tag.categoryId)
-  if (!category) {
-    return null
-  }
+  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
   return combineCharacterAndTag(character, tag, category)
 }

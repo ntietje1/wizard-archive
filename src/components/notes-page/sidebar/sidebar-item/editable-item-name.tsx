@@ -1,43 +1,4 @@
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { toast } from 'sonner'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useEffect, useRef, useState } from 'react'
-
-interface EditableItemNameProps<T extends AnySidebarItem> {
-  item: T
-  defaultName: string
-  updateItem: (id: T['_id'], name: string) => Promise<T['_id']>
-}
-
-export function EditableItemName<T extends AnySidebarItem>({
-  item,
-  defaultName,
-  updateItem,
-}: EditableItemNameProps<T>) {
-  const { renamingId, setRenamingId } = useFileSidebar()
-  const isRenaming = renamingId === item._id
-
-  const handleFinishRename = async (name: string) => {
-    try {
-      console.log('handleFinishRename', item._id, name)
-      await updateItem(item._id, name)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to update item')
-    } finally {
-      setRenamingId(null)
-    }
-  }
-
-  return (
-    <EditableName
-      initialName={item.name || ''}
-      defaultName={defaultName}
-      isRenaming={isRenaming}
-      onFinishRename={handleFinishRename}
-    />
-  )
-}
 
 interface EditableNameProps {
   initialName: string

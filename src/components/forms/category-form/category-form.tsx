@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvex, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -27,17 +27,12 @@ export function CategoryForm({
   onClose,
   onSuccess,
 }: CategoryFormProps) {
-  const convex = useConvex()
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
 
   const updateCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
-  })
-
-  const deleteCategory = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.deleteTagCategory),
   })
 
   const iconOptions = getNonDefaultCategoryIcons()
@@ -55,14 +50,14 @@ export function CategoryForm({
     setAutoPluralize(checked)
     if (checked) {
       if (mode === 'edit' && category) {
-        form.setFieldValue('categoryName', category.pluralDisplayName)
+        form.setFieldValue('categoryName', category.pluralName)
       }
-      form.setFieldValue('displayName', '')
-      form.setFieldValue('pluralDisplayName', '')
+      form.setFieldValue('name', '')
+      form.setFieldValue('pluralName', '')
     } else {
       if (mode === 'edit' && category) {
-        form.setFieldValue('displayName', category.displayName)
-        form.setFieldValue('pluralDisplayName', category.pluralDisplayName)
+        form.setFieldValue('name', category.name)
+        form.setFieldValue('pluralName', category.pluralName)
       }
       form.setFieldValue('categoryName', '')
     }
@@ -71,17 +66,17 @@ export function CategoryForm({
   const getInitialValues = () => {
     if (mode === 'edit' && category) {
       return {
-        categoryName: category.pluralDisplayName,
-        displayName: category.displayName,
-        pluralDisplayName: category.pluralDisplayName,
+        categoryName: category.pluralName,
+        name: category.name,
+        pluralName: category.pluralName,
         iconName: category.iconName,
         defaultColor: category.defaultColor || '#ef4444',
       }
     }
     return {
       categoryName: '',
-      displayName: '',
-      pluralDisplayName: '',
+      name: '',
+      pluralName: '',
       iconName: 'TagIcon',
       defaultColor: '#ef4444',
     }
@@ -96,8 +91,8 @@ export function CategoryForm({
           !validateCategoryName(
             effectiveAutoPluralize,
             value.categoryName,
-            value.displayName,
-            value.pluralDisplayName,
+            value.name,
+            value.pluralName,
           )
         ) {
           return
@@ -111,7 +106,7 @@ export function CategoryForm({
             return
           }
           await createCategory.mutateAsync({
-            campaignId: campaignId,
+            campaignId,
             name: {
               categoryName: value.categoryName.trim(),
             },
@@ -146,8 +141,8 @@ export function CategoryForm({
           } else {
             const result = await updateCategory.mutateAsync({
               categoryId: category._id,
-              displayName: value.displayName.trim(),
-              pluralDisplayName: value.pluralDisplayName.trim(),
+              name: value.name.trim(),
+              pluralName: value.pluralName.trim(),
               iconName: value.iconName,
               defaultColor: value.defaultColor,
             })
@@ -225,7 +220,7 @@ export function CategoryForm({
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <form.Field
-                  name="displayName"
+                  name="name"
                   validators={{
                     onMount: ({ value }: { value: string }) =>
                       validateCategoryDisplayName(value, MAX_NAME_LENGTH),
@@ -263,7 +258,7 @@ export function CategoryForm({
                 </form.Field>
 
                 <form.Field
-                  name="pluralDisplayName"
+                  name="pluralName"
                   validators={{
                     onMount: ({ value }: { value: string }) =>
                       validateCategoryDisplayName(value, MAX_NAME_LENGTH),
@@ -354,7 +349,7 @@ export function CategoryForm({
           <div className="space-y-2">
             <Label>Category Name</Label>
             <div className="text-sm text-muted-foreground py-2 px-3 border rounded-md bg-slate-50">
-              {category.pluralDisplayName}
+              {category.pluralName}
             </div>
             <p className="text-xs text-muted-foreground">
               System category names cannot be changed

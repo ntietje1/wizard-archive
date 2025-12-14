@@ -1,7 +1,7 @@
 import { Session } from './types'
 import { Id } from '../_generated/dataModel'
 import { MutationCtx, QueryCtx } from '../_generated/server'
-import { combineTagEntity } from '../tags/tags'
+import { combineTagEntity, getTagCategory } from '../tags/tags'
 
 export const combineSessionAndTag = (
   session: { _id: Id<'sessions'> },
@@ -32,10 +32,7 @@ export const getSession = async (
   if (!tag) {
     return null
   }
-  const category = await ctx.db.get(tag.categoryId)
-  if (!category) {
-    return null
-  }
+  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
   return combineSessionAndTag(session, tag, category)
 }
 

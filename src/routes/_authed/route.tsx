@@ -3,7 +3,6 @@ import {
   SignedIn,
   SignedOut,
   SignIn,
-  useAuth,
   useUser,
 } from '@clerk/tanstack-react-start'
 import { Header } from '~/components/Header'
@@ -12,8 +11,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { Authenticated } from 'convex/react'
-import ErrorPage from '~/components/error/error-page'
 
 const useEnsureProfile = () => {
   const { user } = useUser()
@@ -30,7 +27,27 @@ const useEnsureProfile = () => {
         )
       },
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+}
+
+function AuthedRouteComponent() {
+  useEnsureProfile()
+  const forceRedirectUrl =
+    typeof window !== 'undefined' ? window.location.href : '/'
+  return (
+    <div className="flex flex-col h-screen">
+      <Header />
+      <SignedOut>
+        <div className="flex items-center justify-center p-24">
+          <SignIn routing="hash" forceRedirectUrl={forceRedirectUrl} />
+        </div>
+      </SignedOut>
+      <SignedIn>
+        <Outlet />
+      </SignedIn>
+    </div>
+  )
 }
 
 export const Route = createFileRoute('/_authed')({
@@ -42,22 +59,5 @@ export const Route = createFileRoute('/_authed')({
   // errorComponent: ({ error }) => {
   //   return <ErrorPage error={error.message} />
   // },
-  component: () => {
-    useEnsureProfile()
-    const forceRedirectUrl =
-      typeof window !== 'undefined' ? window.location.href : '/'
-    return (
-      <div className="flex flex-col h-screen">
-        <Header />
-        <SignedOut>
-          <div className="flex items-center justify-center p-24">
-            <SignIn routing="hash" forceRedirectUrl={forceRedirectUrl} />
-          </div>
-        </SignedOut>
-        <SignedIn>
-          <Outlet />
-        </SignedIn>
-      </div>
-    )
-  },
+  component: AuthedRouteComponent,
 })

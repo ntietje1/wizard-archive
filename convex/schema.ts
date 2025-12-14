@@ -1,6 +1,6 @@
 import { defineSchema } from 'convex/server'
 import { notesTables } from './notes/schema'
-import { pagesTables } from './pages/schema'
+import { foldersTables } from './folders/schema'
 import { blocksTables } from './blocks/schema'
 import { campaignTables } from './campaigns/schema'
 import { editorTables } from './editors/schema'
@@ -15,7 +15,7 @@ import { mapTables } from './gameMaps/schema'
 
 export default defineSchema({
   ...notesTables,
-  ...pagesTables,
+  ...foldersTables,
   ...blocksTables,
   ...editorTables,
   ...campaignTables,

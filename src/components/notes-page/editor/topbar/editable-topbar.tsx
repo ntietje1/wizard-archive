@@ -14,7 +14,7 @@ import {
 import { X, MoreVertical } from '~/lib/icons'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
 
 interface EditableTopbarProps {
   name: string

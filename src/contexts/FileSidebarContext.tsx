@@ -3,7 +3,7 @@ import {
   SIDEBAR_ROOT_TYPE,
   type SidebarItemType,
 } from 'convex/sidebarItems/types'
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useState, useRef } from 'react'
 import usePersistedState from '~/hooks/usePersistedState'
 import {
   DndContext,
@@ -13,18 +13,21 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  DragOverlay,
   pointerWithin,
 } from '@dnd-kit/core'
 import {
   canDropItem,
   type SidebarDragData,
   type SidebarDropData,
-} from '~/components/notes-page/sidebar/dnd-utils'
+  executeMove,
+} from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
+import { useFolderActions } from '~/hooks/useFolderActions'
+import { useTagActions } from '~/hooks/useTagActions'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { executeMove } from '~/utils/dnd-utils'
 import { toast } from 'sonner'
 
 type FileSidebarContextType = {
@@ -62,6 +65,8 @@ export function FileSidebarProvider({
     usePersistedState<boolean>('file-sidebar-close-all-folders-mode', false)
 
   const { moveNote } = useNoteActions()
+  const { moveFolder } = useFolderActions()
+  const { moveTag } = useTagActions()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
@@ -70,6 +75,8 @@ export function FileSidebarProvider({
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
   )
+  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
+  const pointerListenerRef = useRef<(() => void) | null>(null)
 
   const setFolderState = useCallback(
     (folderId: string, isOpen: boolean) => {
@@ -126,6 +133,21 @@ export function FileSidebarProvider({
     const item = active.data.current as SidebarDragData
     if (item) {
       setActiveDragItem(item)
+
+      // Set up pointer tracking for drag overlay
+      if (pointerListenerRef.current) {
+        pointerListenerRef.current()
+      }
+
+      const handlePointerMove = (e: globalThis.PointerEvent) => {
+        setPointerOffset({ x: e.clientX, y: e.clientY })
+      }
+
+      document.addEventListener('pointermove', handlePointerMove)
+
+      pointerListenerRef.current = () => {
+        document.removeEventListener('pointermove', handlePointerMove)
+      }
     }
   }, [])
 
@@ -133,6 +155,12 @@ export function FileSidebarProvider({
     async (event: DragEndEvent) => {
       const { active, over } = event
       setActiveDragItem(null)
+      setPointerOffset({ x: 0, y: 0 })
+
+      if (pointerListenerRef.current) {
+        pointerListenerRef.current()
+        pointerListenerRef.current = null
+      }
 
       if (!active.data.current || !over) return
 
@@ -147,7 +175,11 @@ export function FileSidebarProvider({
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
           ? undefined
-          : (targetData._id as Id<'notes'>)
+          : (targetData._id as
+              | Id<'notes'>
+              | Id<'folders'>
+              | Id<'tagCategories'>
+              | Id<'tags'>)
 
       await executeMove(
         draggedItem.type,
@@ -156,6 +188,8 @@ export function FileSidebarProvider({
         {
           moveNote: (params) => moveNote.mutateAsync(params),
           moveMap: (params) => moveMap.mutateAsync(params),
+          moveFolder: (params) => moveFolder.mutateAsync(params),
+          moveTag: (params) => moveTag.mutateAsync(params),
         },
         {
           openFolder: (id) => openFolder(id),
@@ -165,11 +199,17 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveMap, openFolder],
+    [moveNote, moveMap, moveFolder, moveTag, openFolder],
   )
 
   const handleDragCancel = useCallback(() => {
+    // Clean up pointer listener
+    if (pointerListenerRef.current) {
+      pointerListenerRef.current()
+      pointerListenerRef.current = null
+    }
     setActiveDragItem(null)
+    setPointerOffset({ x: 0, y: 0 })
   }, [])
 
   const value: FileSidebarContextType = {
@@ -204,6 +244,27 @@ export function FileSidebarProvider({
         onDragCancel={handleDragCancel}
       >
         {children}
+        <DragOverlay
+          dropAnimation={null}
+          className="flex items-center justify-center pointer-events-none"
+          style={{
+            position: 'fixed',
+            left: `${pointerOffset.x}px`,
+            top: `${pointerOffset.y}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          {activeDragItem ? (
+            <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
+              {activeDragItem.icon && (
+                <activeDragItem.icon className="w-5 h-5" />
+              )}
+              <span className="text-sm text-foreground font-semibold">
+                {activeDragItem.name}
+              </span>
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </FileSidebarContext.Provider>
   )
