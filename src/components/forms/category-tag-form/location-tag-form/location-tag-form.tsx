@@ -212,7 +212,7 @@ export default function LocationTagForm({
               campaign._id,
               getCategory.data._id,
               value,
-              mode === 'edit' && location ? location.tagId : undefined,
+              location?.tagId,
             )
           },
           onChangeAsyncDebounceMs: 300,

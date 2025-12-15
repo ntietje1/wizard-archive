@@ -5,6 +5,6 @@ import type { TagCategoryConfig } from '../base-tag-form/types'
 export const SESSION_CONFIG: TagCategoryConfig = {
   categorySlug: SYSTEM_DEFAULT_CATEGORIES.Session.slug,
   singular: SYSTEM_DEFAULT_CATEGORIES.Session.name,
-  plural: SYSTEM_DEFAULT_CATEGORIES.Session.pluralName,
+  plural: SYSTEM_DEFAULT_CATEGORIES.Session.name,
   icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Session.iconName),
 }

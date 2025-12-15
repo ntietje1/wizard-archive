@@ -16,7 +16,7 @@ import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { blockNoteIdValidator } from '../blocks/schema'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { getSidebarItemById, isValidSidebarParent } from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
@@ -81,7 +81,6 @@ export const moveTag = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Tags can only be under categories or folders
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -91,43 +90,22 @@ export const moveTag = mutation({
       if (!parentItem) {
         throw new Error('Parent not found')
       }
-      // Validate that parentId is not a map
-      if (parentItem.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-        throw new Error('Maps cannot be parents of tags')
-      }
-      if (
-        parentItem.type !== SIDEBAR_ITEM_TYPES.tagCategories &&
-        parentItem.type !== SIDEBAR_ITEM_TYPES.folders
-      ) {
-        throw new Error('Tags can only be children of categories or folders')
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.tags, parentItem.type)) {
+        throw new Error(`Invalid parent type: ${parentItem.type}`)
       }
     }
 
     await ctx.db.patch(args.tagId, {
-      parentId: args.parentId as
-        | Id<'folders'>
-        | Id<'tagCategories'>
-        | undefined,
+      parentId: args.parentId,
     })
     return args.tagId
   },
 })
 
-const createTagCategoryNameArgs = v.union(
-  v.object({
-    categoryName: v.string(),
-  }),
-  v.object({
-    // NOTE: auto-pluralize is currently ALWAYS on in create mode
-    name: v.string(),
-    pluralName: v.string(),
-  }),
-)
-
 export const createTagCategory = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: createTagCategoryNameArgs,
+    name: v.string(),
     iconName: v.string(),
     defaultColor: v.optional(v.string()),
   },
@@ -139,36 +117,19 @@ export const createTagCategory = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    if ('categoryName' in args.name) {
       return await insertTagCategory(ctx, {
         campaignId: args.campaignId,
         kind: CATEGORY_KIND.User,
-        categoryName: args.name.categoryName,
+        name: args.name,
         iconName: args.iconName,
         defaultColor: args.defaultColor,
       })
-    } else if ('name' in args.name && 'pluralName' in args.name) {
-      return await insertTagCategory(ctx, {
-        campaignId: args.campaignId,
-        kind: CATEGORY_KIND.User,
-        name: args.name.name,
-        pluralName: args.name.pluralName,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
-    } else {
-      throw new Error(
-        'Must provide either categoryName or both name and pluralName',
-      )
-    }
   },
 })
 export const updateTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),
-    categoryName: v.optional(v.string()),
     name: v.optional(v.string()),
-    pluralName: v.optional(v.string()),
     iconName: v.optional(v.string()),
     defaultColor: v.optional(v.string()),
   },
@@ -180,26 +141,14 @@ export const updateTagCategory = mutation({
     ctx,
     args,
   ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
-    if (args.categoryName !== undefined) {
-      return await updateTagCategoryFn(ctx, args.categoryId, {
-        categoryName: args.categoryName,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
-    }
-    if (args.name !== undefined && args.pluralName !== undefined) {
-      return await updateTagCategoryFn(ctx, args.categoryId, {
-        name: args.name,
-        pluralName: args.pluralName,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
-    }
-    throw new Error(
-      'Must provide either categoryName or both name and pluralName',
-    )
+    return await updateTagCategoryFn(ctx, args.categoryId, {
+      name: args.name,
+      iconName: args.iconName,
+      defaultColor: args.defaultColor,
+    })
   },
 })
+
 export const deleteTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),

@@ -34,6 +34,7 @@ export async function validateTagNameAsync(
 ): Promise<string | undefined> {
   const syncErr = validateTagName(name, MAX_NAME_LENGTH)
   if (syncErr) return syncErr
+  console.log('validateTagNameAsync', name, excludeTagId)
 
   const exists = await convex.query(api.tags.queries.checkTagNameExists, {
     campaignId,

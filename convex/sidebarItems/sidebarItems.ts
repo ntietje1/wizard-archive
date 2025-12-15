@@ -20,6 +20,7 @@ export const getSidebarItemsByCategory = async (
   campaignId: Id<'campaigns'>,
   categoryId: Id<'tagCategories'>,
 ): Promise<AnySidebarItem[]> => {
+  console.log('getSidebarItemsByCategory', campaignId, categoryId)
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -49,12 +50,6 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-    .then((folders) =>
-      folders.map((folder) => ({
-        ...folder,
-        category,
-      })),
-    )
   allItems.push(...folders)
 
   const notes = await ctx.db
@@ -63,12 +58,6 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-    .then((notes) =>
-      notes.map((note) => ({
-        ...note,
-        category,
-      })),
-    )
   allItems.push(...notes)
 
   const maps = await ctx.db
@@ -77,14 +66,9 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-    .then(
-      (maps) =>
-        maps.map((map) => ({
-          ...map,
-          category,
-        })) as AnySidebarItem[],
-    )
   allItems.push(...maps)
+
+  console.log('allItems', allItems)
 
   return allItems
 }
@@ -264,6 +248,10 @@ export const validSidebarChildren: Record<
   [SIDEBAR_ITEM_TYPES.folders]: validFolderChildren,
   [SIDEBAR_ITEM_TYPES.notes]: validNoteChildren,
   [SIDEBAR_ITEM_TYPES.gameMaps]: validMapChildren,
+}
+
+export const canItemHaveChildren = (type: SidebarItemType): boolean => {
+  return validSidebarChildren[type].length > 0
 }
 
 export const isValidSidebarParent = (

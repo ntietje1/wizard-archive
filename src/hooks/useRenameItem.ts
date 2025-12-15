@@ -54,7 +54,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
           case 'tagCategories': {
             await updateCategory.mutateAsync({
               categoryId: item._id,
-              categoryName: newName,
+              name: newName,
             })
             break
           }

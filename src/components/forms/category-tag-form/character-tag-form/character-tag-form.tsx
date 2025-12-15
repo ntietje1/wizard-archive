@@ -225,7 +225,7 @@ export default function CharacterTagForm({
               campaign._id,
               getCategory.data._id,
               value,
-              mode === 'edit' && character ? character.tagId : undefined,
+              character?.tagId,
             )
           },
           onChangeAsyncDebounceMs: 300,

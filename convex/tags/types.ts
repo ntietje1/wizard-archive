@@ -1,4 +1,5 @@
 import { Id } from '../_generated/dataModel'
+import { slugify } from '../common/slug'
 import { Note } from '../notes/types'
 import { SidebarItem, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
@@ -10,33 +11,29 @@ export const CATEGORY_KIND = {
 
 export const SYSTEM_DEFAULT_CATEGORIES = {
   Character: {
-    name: 'Character',
-    pluralName: 'Characters',
-    slug: 'characters',
+    name: 'Characters',
+    slug: slugify('Characters'),
     iconName: 'User',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#ef4444',
   },
   Location: {
-    name: 'Location',
-    pluralName: 'Locations',
-    slug: 'locations',
+    name: 'Locations',
+    slug: slugify('Locations'),
     iconName: 'MapPin',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#3B82F6',
   },
   Session: {
-    name: 'Session',
-    pluralName: 'Sessions',
-    slug: 'sessions',
+    name: 'Sessions',
+    slug: slugify('Sessions'),
     iconName: 'Calendar',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#22C55E',
   },
   Shared: {
-    name: 'Shares',
-    pluralName: 'Shares',
-    slug: 'shares',
+    name: 'Shared',
+    slug: slugify('Shared'),
     iconName: 'Share2',
     kind: CATEGORY_KIND.SystemManaged,
     defaultColor: '#F59E0B',
@@ -50,7 +47,6 @@ export type CategoryKind = (typeof CATEGORY_KIND)[keyof typeof CATEGORY_KIND]
 export type TagCategory = SidebarItem<
   typeof SIDEBAR_ITEM_TYPES.tagCategories
 > & {
-  pluralName?: string
   kind: CategoryKind
   defaultColor?: string
   createdBy: Id<'campaignMembers'>

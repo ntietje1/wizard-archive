@@ -95,6 +95,7 @@ export const checkTagNameExists = query({
   },
   returns: v.boolean(),
   handler: async (ctx, args): Promise<boolean> => {
+    console.log('checkTagNameExists', args)
     const existing = await ctx.db
       .query('tags')
       .withIndex('by_campaign_name', (q) =>

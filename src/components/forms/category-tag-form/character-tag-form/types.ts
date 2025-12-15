@@ -19,7 +19,7 @@ export const defaultCharacterFormValues: CharacterFormValues = {
 
 export const CHARACTER_CONFIG: TagCategoryConfig = {
   singular: SYSTEM_DEFAULT_CATEGORIES.Character.name,
-  plural: SYSTEM_DEFAULT_CATEGORIES.Character.pluralName,
+  plural: SYSTEM_DEFAULT_CATEGORIES.Character.name,
   icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Character.iconName),
   categorySlug: SYSTEM_DEFAULT_CATEGORIES.Character.slug,
 }

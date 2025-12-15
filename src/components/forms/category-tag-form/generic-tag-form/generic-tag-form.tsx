@@ -197,7 +197,7 @@ export default function GenericTagForm({
               campaign._id,
               getCategory.data._id,
               value,
-              mode === 'edit' && tag ? tag._id : undefined,
+              tag?._id,
             )
           },
           onChangeAsyncDebounceMs: 300,

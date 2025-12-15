@@ -10,12 +10,11 @@ import {
 import { SIDEBAR_ITEM_TYPES, SidebarItemId } from '../sidebarItems/types'
 import type { Block } from '../blocks/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { findUniqueSlug } from '../common/slug'
+import { findUniqueSlug, shortenId } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
 import { deleteNote, getNote } from '../notes/notes'
 import { findBlockByBlockNoteId } from '../blocks/blocks'
-import pluralize from 'pluralize'
 import {
   getSidebarItemById,
   isValidSidebarParent,
@@ -302,7 +301,7 @@ export async function ensureDefaultTagCategories(
 
   const ids: Id<'tagCategories'>[] = []
   for (const d of Object.values(SYSTEM_DEFAULT_CATEGORIES)) {
-    const found = existing.find((c) => c.slug === d.slug)
+    const found = existing.find((c) => c.name === d.name)
     if (found) {
       ids.push(found._id)
     } else {
@@ -311,7 +310,7 @@ export async function ensureDefaultTagCategories(
         {
           campaignId,
           kind: d.kind,
-          categoryName: d.pluralName,
+          name: d.name,
           iconName: d.iconName,
           defaultColor: d.defaultColor,
         },
@@ -396,12 +395,9 @@ export async function insertTagCategory(
     | 'updatedAt'
     | 'createdBy'
     | 'slug'
-    | 'name'
-    | 'pluralName'
     | 'type'
     | 'parentId'
-  > &
-    ({ categoryName: string } | { name: string; pluralName: string }),
+  >,
   allowSystem: boolean = false,
 ): Promise<Id<'tagCategories'>> {
   const { campaignWithMembership } = await requireCampaignMembership(
@@ -421,25 +417,10 @@ export async function insertTagCategory(
     throw new Error('Invalid kind')
   }
 
-  let name: string
-  let pluralName: string
+  const slugBasis =
+    input.name && input.name.trim() !== '' ? input.name : crypto.randomUUID()
 
-  if ('categoryName' in input) {
-    // auto-pluralize mode
-    const isPlural = pluralize.isPlural(input.categoryName)
-    name = capitalizeFirstLetter(
-      isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
-    )
-    pluralName = capitalizeFirstLetter(
-      isPlural ? input.categoryName : pluralize.plural(input.categoryName),
-    )
-  } else {
-    // manual mode (plural and singular specified)
-    name = capitalizeFirstLetter(input.name)
-    pluralName = capitalizeFirstLetter(input.pluralName)
-  }
-
-  const uniqueSlug = await findUniqueSlug(pluralName, async (slug) => {
+  const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
     const conflict = await ctx.db
       .query('tagCategories')
       .withIndex('by_campaign_slug', (q) =>
@@ -453,8 +434,7 @@ export async function insertTagCategory(
     updatedAt: Date.now(),
     campaignId: input.campaignId,
     slug: uniqueSlug,
-    name,
-    pluralName,
+    name: input.name,
     kind: input.kind,
     iconName: input.iconName,
     defaultColor: input.defaultColor,
@@ -471,7 +451,8 @@ export const updateTagCategory = async (
   input: {
     iconName?: string
     defaultColor?: string
-  } & ({ categoryName: string } | { name: string; pluralName: string }),
+    name?: string
+  },
 ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
   const category = await ctx.db.get(categoryId)
   if (!category) {
@@ -492,36 +473,10 @@ export const updateTagCategory = async (
     updatedAt: Date.now(),
   }
 
-  if ('categoryName' in input) {
-    // auto-pluralize mode
-    const isPlural = pluralize.isPlural(input.categoryName)
-    updates.name = capitalizeFirstLetter(
-      isPlural ? pluralize.singular(input.categoryName) : input.categoryName,
-    )
-    updates.pluralName = capitalizeFirstLetter(
-      isPlural ? input.categoryName : pluralize.plural(input.categoryName),
-    )
-  } else {
-    // manual mode
-    if (input.name !== undefined) {
-      updates.name = capitalizeFirstLetter(input.name)
-    }
-    if (input.pluralName !== undefined) {
-      updates.pluralName = capitalizeFirstLetter(input.pluralName)
-    }
-  }
-
-  if (input.iconName !== undefined) {
-    updates.iconName = input.iconName
-  }
-
-  if (input.defaultColor !== undefined) {
-    updates.defaultColor = input.defaultColor
-  }
-
-  if (updates.pluralName !== undefined) {
+  if (input.name !== undefined) {
+    updates.name = capitalizeFirstLetter(input.name)
     const uniqueSlug = await findUniqueSlug(
-      updates.pluralName,
+      input.name && input.name.trim() !== '' ? input.name : shortenId(categoryId),
       async (slug) => {
         const conflict = await ctx.db
           .query('tagCategories')
@@ -533,6 +488,14 @@ export const updateTagCategory = async (
       },
     )
     updates.slug = uniqueSlug
+  }
+
+  if (input.iconName !== undefined) {
+    updates.iconName = input.iconName
+  }
+
+  if (input.defaultColor !== undefined) {
+    updates.defaultColor = input.defaultColor
   }
 
   await ctx.db.patch(categoryId, updates)

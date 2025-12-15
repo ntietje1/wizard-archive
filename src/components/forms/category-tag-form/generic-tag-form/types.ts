@@ -15,7 +15,7 @@ export interface GenericTagFormProps {
 export const createConfig = (category: TagCategory): TagCategoryConfig => {
   return {
     singular: category.name || '',
-    plural: category.pluralName || '',
+    plural: category.name || '',
     icon: getCategoryIcon(category.iconName),
     categorySlug: category.slug,
   }

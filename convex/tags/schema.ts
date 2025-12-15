@@ -11,7 +11,6 @@ export const categoryKindValidator = v.union(
 )
 
 export const tagCategoryTableFields = {
-  pluralName: v.optional(v.string()),
   name: v.optional(v.string()),
   slug: v.string(),
   kind: categoryKindValidator,

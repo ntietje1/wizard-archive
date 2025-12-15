@@ -8,7 +8,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { canItemHaveChildren, defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,7 +29,7 @@ interface SidebarItemButtonProps {
 
 function getItemDisplayName(item: AnySidebarItem): string {
   if (isTagCategory(item)) {
-    return item.pluralName || item.name || 'Category'
+    return item.name || 'Category'
   }
   return item.name || defaultItemName(item)
 }
@@ -87,13 +87,13 @@ export function SidebarItemButton({
       name={displayName}
       defaultName={defaultName}
       isSelected={isSelected}
-      isExpanded={hasChildren ? isExpanded : undefined}
+      isExpanded={isExpanded}
       isRenaming={renamingId === item._id}
       onSelect={handleSelect}
       onToggleExpanded={toggleExpanded}
       onMoreOptions={handleMoreOptions}
       onFinishRename={handleFinishRename}
-      showChevron={hasChildren}
+      showChevron={canItemHaveChildren(item.type)}
     />
   )
 

@@ -12,6 +12,7 @@ import {
   SquareArrowOutUpRight,
   Plus,
 } from 'lucide-react'
+import pluralize from 'pluralize'
 
 export type ActionHandlers = {
   open: (ctx: MenuContext) => void
@@ -40,12 +41,11 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
     {
       id: 'open',
       label: 'Open',
-      icon: FilePlus,
+      icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
       shouldShow: p.and(
-        p.isType('notes', 'gameMaps', 'folders', 'tags'),
-        p.inSidebar,
+        p.inSidebar
       ),
       action: actions.open,
     },
@@ -67,7 +67,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
         // "New Tag"
         {
           id: 'submenu-create-tag',
-          label: (ctx) => ctx.category?.name || 'Tag',
+          label: (ctx) => ctx.category?.name ? pluralize.singular(ctx.category.name) : 'Tag',
           icon: Tags,
           group: 'create',
           priority: 1,
@@ -183,16 +183,6 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       ),
       action: actions.showInSidebar,
     },
-    {
-      id: 'go-to-category',
-      label: (ctx) =>
-        `Go to ${ctx.category?.pluralName || ctx.category?.name || 'Category'}`,
-      icon: SquareArrowOutUpRight,
-      group: 'primary',
-      priority: 0,
-      shouldShow: p.and(p.isType('tagCategories'), p.hasCategory, p.not(p.inView('topbar'))),
-      action: actions.goToCategory,
-    },
 
     // ========== TYPE-SPECIFIC GROUP ==========
     {
@@ -216,7 +206,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
     {
       id: 'edit-tag',
       label: (ctx) =>
-        ctx.category?.name ? `Edit ${ctx.category.name}` : 'Edit Tag',
+        ctx.category?.name ? `Edit ${pluralize.singular(ctx.category.name)}` : 'Edit Tag',
       icon: FileEdit,
       group: 'type-specific',
       priority: 42,
