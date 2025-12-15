@@ -1,6 +1,6 @@
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { useItemActions } from '~/hooks/useItemActions'
+import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import { useContextMenu } from '~/hooks/useContextMenu'
@@ -39,7 +39,7 @@ export function SidebarItemButton({
   ancestorIds = [],
 }: SidebarItemButtonProps) {
   const { renamingId, setRenamingId } = useFileSidebar()
-  const { rename } = useItemActions(item)
+  const { rename } = useRenameItem(item)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
   const { item: currentItem } = useCurrentItem()
@@ -71,6 +71,7 @@ export function SidebarItemButton({
   const category = isTagCategory(item) ? item : categoryQuery.data
 
   const handleFinishRename = async (name: string) => {
+    if (!rename) return
     try {
       await rename(name)
       setRenamingId(null)

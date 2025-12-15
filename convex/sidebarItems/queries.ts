@@ -43,7 +43,11 @@ export const getSidebarItemAncestors = query({
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<AnySidebarItem[]> => {
-    return await getSidebarItemAncestorsFn(ctx, args.campaignId, args.id)
+    const item = await getSidebarItemById(ctx, args.campaignId, args.id)
+    if (!item) {
+      throw new Error('Sidebar item not found')
+    }
+    return await getSidebarItemAncestorsFn(ctx, args.campaignId, item.parentId)
   },
 })
 

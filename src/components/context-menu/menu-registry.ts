@@ -59,6 +59,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       priority: 5,
       shouldShow: p.and(
         p.canEdit,
+        p.not(p.inView('topbar')),
         p.or(p.isType('folders'), p.isType('tagCategories'), p.atRoot),
       ),
       action: () => {}, // No action for submenu parent
@@ -175,7 +176,10 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       priority: 0,
       shouldShow: p.and(
         p.isType('notes', 'gameMaps', 'folders', 'tags'),
-        p.notInSidebar,
+        p.or(
+          p.notInSidebar,
+          p.inView('topbar'),
+        ),
       ),
       action: actions.showInSidebar,
     },
@@ -186,7 +190,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
-      shouldShow: p.and(p.isType('tagCategories'), p.hasCategory),
+      shouldShow: p.and(p.isType('tagCategories'), p.hasCategory, p.not(p.inView('topbar'))),
       action: actions.goToCategory,
     },
 
@@ -230,7 +234,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       variant: 'danger',
       shouldShow: p.and(
         p.canDelete,
-        p.inSidebar,
+        p.or(p.inSidebar, p.inView('topbar')),
         p.isType('notes', 'folders', 'tags', 'gameMaps'),
       ),
       action: actions.delete,

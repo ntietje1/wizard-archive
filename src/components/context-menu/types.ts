@@ -8,6 +8,7 @@ import type { LucideIcon } from '~/lib/icons'
 
 export type ViewContext =
   | 'sidebar'
+  | 'topbar'
   | 'folder-view'
   | 'map-view'
   | 'canvas-view'
