@@ -24,8 +24,6 @@ export const mapValidator = v.object(mapValidatorFields)
 export const mapPinTableFields = {
   mapId: v.id('gameMaps'),
   itemId: sidebarItemIdValidator,
-  iconName: v.string(),
-  color: v.optional(v.string()),
   x: v.number(),
   y: v.number(),
   updatedAt: v.number(),

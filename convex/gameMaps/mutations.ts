@@ -205,8 +205,6 @@ export const createItemPin = mutation({
     mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
-    iconName: v.string(),
-    color: v.optional(v.string()),
     itemId: sidebarItemIdValidator,
   },
   returns: v.id('mapPins'),
@@ -228,8 +226,6 @@ export const createItemPin = mutation({
     return await ctx.db.insert('mapPins', {
       mapId: args.mapId,
       itemId: args.itemId,
-      iconName: args.iconName,
-      color: args.color,
       x: args.x,
       y: args.y,
       updatedAt: Date.now(),
@@ -242,8 +238,6 @@ export const updateItemPin = mutation({
     mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
-    iconName: v.string(),
-    color: v.optional(v.string()),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -266,8 +260,6 @@ export const updateItemPin = mutation({
     await ctx.db.patch(args.mapPinId, {
       x: args.x,
       y: args.y,
-      iconName: args.iconName,
-      color: args.color,
       updatedAt: Date.now(),
     })
 

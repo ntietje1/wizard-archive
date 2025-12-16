@@ -2,7 +2,6 @@ import React, { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { MenuContext, MenuItemDef } from '../types'
 import { buildMenu } from '../menu-builder'
-import { useMenuItems } from './ContextMenuProvider'
 import { getCategoryIcon } from '~/lib/category-icons'
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
   DropdownMenuSubContent,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { cn } from '~/lib/utils'
+import { useMenuItems } from './ContextMenuProvider'
 
 export interface ContextMenuItem {
   type: 'action' | 'divider'
@@ -40,6 +40,7 @@ export function ContextMenu({
 }: Props) {
   const { menuItems } = useMenuItems()
   const menuRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = React.useState(true)
 
   const builtMenu = buildMenu(menuItems, context)
 
@@ -65,7 +66,10 @@ export function ContextMenu({
   if (builtMenu.isEmpty) return null
 
   const handleAction = async (item: MenuItemDef) => {
+    // Execute the action first
     await item.action(context)
+    // Then close the menu
+    setIsOpen(false)
     onClose()
   }
 
@@ -118,7 +122,18 @@ export function ContextMenu({
           item.className,
         )}
         disabled={disabled}
-        onSelect={() => !disabled && handleAction(item)}
+        onSelect={async (e) => {
+          // Prevent default close behavior
+          e.preventDefault()
+          if (!disabled) {
+            // Execute action, then close
+            await handleAction(item)
+          }
+        }}
+        onClick={(e) => {
+          // Also prevent click from bubbling
+          e.stopPropagation()
+        }}
       >
         {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
         <span className="flex-1">{label}</span>
@@ -137,11 +152,22 @@ export function ContextMenu({
   const menuContent = (
     <div
       ref={menuRef}
+      data-context-menu
       style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none' }}
       onClick={(e) => e.stopPropagation()}
     >
-      <DropdownMenu open={true} onOpenChange={() => onClose()} modal={false}>
+      <DropdownMenu
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open)
+          if (!open) {
+            onClose()
+          }
+        }}
+        modal={false}
+      >
         <DropdownMenuContent
+          data-context-menu
           className={cn(menuClassName, 'z-[9999]')}
           style={{
             position: 'fixed',

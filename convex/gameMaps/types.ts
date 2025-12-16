@@ -15,8 +15,6 @@ export type MapPin = {
   _creationTime: number
   mapId: Id<'gameMaps'>
   itemId: SidebarItemId
-  iconName: string
-  color?: string
   x: number
   y: number
   updatedAt: number

@@ -8,6 +8,8 @@ import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
+import { useConvex } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import {
   isNote,
   isFolder,
@@ -37,7 +39,8 @@ import { createConfig } from '~/components/forms/category-tag-form/generic-tag-f
 import type { ActionHandlers } from './menu-registry'
 
 export function useMenuActions() {
-  const { navigateToCategory, navigateToItem } = useEditorNavigation()
+  const { navigateToCategory, navigateToItem, navigateToMap } =
+    useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createNote } = useNoteActions()
@@ -45,6 +48,7 @@ export function useMenuActions() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const campaign = campaignWithMembership?.data?.campaign
+  const convex = useConvex()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
@@ -197,6 +201,50 @@ export function useMenuActions() {
         })
       }
     },
+
+    pinToMap: useCallback(async (ctx: MenuContext) => {
+      if (!ctx.item || !ctx.activeMapId) return
+
+      // Check if already pinned using context data
+      if (ctx.pinnedItemIds?.has(ctx.item._id)) {
+        toast.error('Item is already pinned on this map')
+        return
+      }
+
+      // Dispatch event to map viewer to enter pin placement mode
+      // Icon and color will be determined from the item when placing the pin
+      const event = new CustomEvent('map-pin-placement-request', {
+        detail: {
+          itemId: ctx.item._id,
+        },
+      })
+      window.dispatchEvent(event)
+      toast.info('Click on the map to place the pin')
+    }, []),
+
+    goToMapPin: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !ctx.activeMapId) return
+
+        // Check if pinned using context data
+        if (!ctx.pinnedItemIds?.has(ctx.item._id)) {
+          toast.error('Item is not pinned on this map')
+          return
+        }
+
+        try {
+          // Navigate to the map
+          const map = await convex.query(api.gameMaps.queries.getMap, {
+            mapId: ctx.activeMapId as Id<'gameMaps'>,
+          })
+          navigateToMap(map.slug)
+        } catch (error) {
+          console.error('Failed to navigate to map pin:', error)
+          toast.error('Failed to navigate to map pin')
+        }
+      },
+      [convex, navigateToMap],
+    ),
   }
 
   const dialogsContent = useMemo(

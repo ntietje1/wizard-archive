@@ -49,12 +49,6 @@ export const folderHasCategoryId: Predicate = (ctx) => {
 
 export const atRoot: Predicate = (ctx) => ctx.parentType === 'root'
 
-export const isDm: Predicate = (ctx) => ctx.isDm
-
-export const canEdit: Predicate = (ctx) => ctx.canEdit
-
-export const canDelete: Predicate = (ctx) => ctx.canDelete
-
 export const hasCategory: Predicate = (ctx) => Boolean(ctx.category)
 
 export const inCategory =
@@ -66,17 +60,14 @@ export const always: Predicate = () => true
 
 export const never: Predicate = () => false
 
-export const and =
-  (...predicates: Predicate[]): Predicate =>
-  (ctx) =>
-    predicates.every((p) => p(ctx))
+export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMapId)
 
-export const or =
-  (...predicates: Predicate[]): Predicate =>
-  (ctx) =>
-    predicates.some((p) => p(ctx))
+export const isPinnedOnActiveMap: Predicate = (ctx) => {
+  if (!ctx.item || !ctx.pinnedItemIds) return false
+  return ctx.pinnedItemIds.has(ctx.item._id)
+}
 
-export const not =
-  (predicate: Predicate): Predicate =>
-  (ctx) =>
-    !predicate(ctx)
+export const mapIsNotActiveMap: Predicate = (ctx) => {
+  if (!ctx.item || !ctx.activeMapId) return false
+  return ctx.activeMapId !== ctx.item._id
+}

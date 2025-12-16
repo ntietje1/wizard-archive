@@ -4,9 +4,6 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
-import { useMenuItems } from '~/components/context-menu/components/ContextMenuProvider'
-import { buildMenu } from '~/components/context-menu/menu-builder'
-import { createMenuContext } from '~/components/context-menu/context-builder'
 import usePersistedState from '~/hooks/usePersistedState'
 import {
   FOLDER_VIEW_MODE_STORAGE_KEY,
@@ -17,21 +14,19 @@ import { Folder } from '~/lib/icons'
 import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useContextEnhancers } from '~/components/context-menu/hooks/useContextEnhancers'
+import { useMenuContext } from '~/components/context-menu/hooks/useMenuContext'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import { useMenuItemsFromContext } from '~/components/context-menu/hooks/useMenuItemsFromContext'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
   const { clearEditorContent, navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem(item)
   const { Dialogs } = useMenuActions()
-  const { menuItems } = useMenuItems()
-  const { campaignWithMembership } = useCampaign()
-  const memberRole = campaignWithMembership.data?.member.role
 
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
     `${FOLDER_VIEW_MODE_STORAGE_KEY}-${item?._id ?? 'none'}`,
@@ -55,11 +50,13 @@ export function FileTopbar() {
   const ancestors = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItemAncestors,
-      item ? {
-        campaignId: item.campaignId,
-        id: item._id,
-      } : 'skip',
-    )
+      item
+        ? {
+            campaignId: item.campaignId,
+            id: item._id,
+          }
+        : 'skip',
+    ),
   )
 
   const handleToggleViewMode = useCallback(() => {
@@ -68,50 +65,16 @@ export function FileTopbar() {
     )
   }, [setViewMode])
 
-  const menuContext = useMemo(() => {
-    if (!item) return null
-      
-    const parentType = item.parentId ? 'folders' : SIDEBAR_ROOT_TYPE
+  // Use enhancers to build context
+  const enhancers = useContextEnhancers({ category })
+  const menuContext = useMenuContext({
+    item: item || undefined,
+    viewContext: 'topbar',
+    enhancers,
+  })
 
-    return createMenuContext({
-      item,
-      viewContext: 'topbar',
-      parentType,
-      category,
-      memberRole,
-    })
-  }, [item, category, memberRole])
-
-  //TODO: make building the context menu items self-contained in a hook
-  const builtMenu = useMemo(() => {
-    if (!menuContext) return { flatItems: [], isEmpty: true }
-    return buildMenu(menuItems, menuContext)
-  }, [menuItems, menuContext])
-
-
-  const unifiedMenuItems: ContextMenuItem[] = useMemo(() => {
-    if (builtMenu.isEmpty || !menuContext) return []
-
-    return builtMenu.flatItems
-      .map((menuItem) => {
-        const label =
-          typeof menuItem.label === 'function'
-            ? menuItem.label(menuContext)
-            : menuItem.label
-        const IconComponent = menuItem.icon
-
-        return {
-          type: 'action' as const,
-          label,
-          icon: IconComponent ? <IconComponent className="h-4 w-4" /> : undefined,
-          onClick: () => menuItem.action(menuContext),
-          className:
-            menuItem.variant === 'danger'
-              ? 'text-red-600 focus:text-red-600'
-              : undefined,
-        }
-      })
-  }, [builtMenu, menuContext])
+  // Build menu items from context
+  const unifiedMenuItems = useMenuItemsFromContext(menuContext)
 
   const computedMenuItems: ContextMenuItem[] = useMemo(() => {
     if (isTagCategory(item)) {

@@ -3,8 +3,8 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { ViewContext } from '../types'
 import type { TagCategory } from 'convex/tags/types'
 import { useContextMenu } from '../hooks/useContextMenu'
+import { useContextEnhancers } from '../hooks/useContextEnhancers'
 import { ContextMenu } from '../components/ContextMenu'
-import { useCampaign } from '~/contexts/CampaignContext'
 
 interface SidebarItemContextMenuProps {
   item?: AnySidebarItem
@@ -24,14 +24,14 @@ export const SidebarItemContextMenu = forwardRef<
   SidebarItemContextMenuRef,
   SidebarItemContextMenuProps
 >(({ item, viewContext, category, parentItem, children, className }, ref) => {
-  const { campaignWithMembership } = useCampaign()
-  const memberRole = campaignWithMembership.data?.member.role
+  // Use the enhancer hook to get common enhancers
+  const enhancers = useContextEnhancers({ category })
 
   const contextMenu = useContextMenu({
     viewContext,
-    category,
+    item,
     parentItem,
-    memberRole,
+    enhancers,
   })
 
   React.useImperativeHandle(ref, () => ({

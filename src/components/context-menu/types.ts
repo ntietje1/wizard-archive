@@ -1,6 +1,7 @@
 import type {
   AnySidebarItem,
   SidebarItemOrRootType,
+  SidebarItemId,
 } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
@@ -28,13 +29,11 @@ export interface MenuContext {
   // User/permissions
   currentUserId?: string
   memberRole?: CampaignMemberRole
-  isDm: boolean
-  canEdit: boolean
-  canDelete: boolean
 
   // View state
   activeMapId?: string
   activeCanvasId?: string
+  pinnedItemIds?: Set<SidebarItemId>
 }
 
 export type Predicate = (ctx: MenuContext) => boolean

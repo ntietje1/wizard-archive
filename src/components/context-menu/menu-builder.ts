@@ -35,15 +35,14 @@ export function buildMenu(items: MenuItemDef[], ctx: MenuContext): BuiltMenu {
   }
 
   // group items
-  const groupMap = new Map<string, MenuItemDef[]>()
-
-  for (const item of visible) {
+  const groupMap = visible.reduce((map, item) => {
     const group = item.group ?? 'default'
-    if (!groupMap.has(group)) {
-      groupMap.set(group, [])
+    if (!map.has(group)) {
+      map.set(group, [])
     }
-    groupMap.get(group)!.push(item)
-  }
+    map.get(group)!.push(item)
+    return map
+  }, new Map<string, MenuItemDef[]>())
 
   // sort items within each group
   for (const items of groupMap.values()) {

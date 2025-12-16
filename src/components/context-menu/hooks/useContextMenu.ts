@@ -5,9 +5,7 @@ import {
   type SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
 import type { MenuContext, ViewContext } from '../types'
-import { createMenuContext } from '../context-builder'
-import type { TagCategory } from 'convex/tags/types'
-import type { CampaignMemberRole } from 'convex/campaigns/types'
+import { createMenuContext, type ContextEnhancer } from '../context'
 
 interface MenuState {
   isOpen: boolean
@@ -17,11 +15,14 @@ interface MenuState {
 
 interface UseContextMenuOptions {
   viewContext: ViewContext
-  category?: TagCategory
-  memberRole?: CampaignMemberRole
-  activeMapId?: string
-  activeCanvasId?: string
+  item?: AnySidebarItem
   parentItem?: AnySidebarItem
+  /**
+   * Context enhancers that add additional context.
+   * This allows components to contribute context without
+   * modifying the hook signature.
+   */
+  enhancers?: ContextEnhancer[]
 }
 
 export function useContextMenu(options: UseContextMenuOptions) {
@@ -51,15 +52,22 @@ export function useContextMenu(options: UseContextMenuOptions) {
 
       const parentType = item ? getParentType(item) : SIDEBAR_ROOT_TYPE
 
-      const context = createMenuContext({
+      // Start with base context
+      const baseContext: Partial<MenuContext> = {
         item,
         viewContext: options.viewContext,
         parentType,
-        category: options.category,
-        memberRole: options.memberRole,
-        activeMapId: options.activeMapId,
-        activeCanvasId: options.activeCanvasId,
-      })
+      }
+
+      // Apply all enhancers sequentially
+      const enhancedContext =
+        options.enhancers?.reduce(
+          (ctx, enhancer) => enhancer.enhance(ctx),
+          baseContext,
+        ) ?? baseContext
+
+      // Create final context (with defaults)
+      const context = createMenuContext(enhancedContext as any)
 
       setMenu({
         isOpen: true,
@@ -74,20 +82,18 @@ export function useContextMenu(options: UseContextMenuOptions) {
     setMenu((prev) => ({ ...prev, isOpen: false }))
   }, [])
 
-  // Close on outside click
+  // Close on outside click - but let DropdownMenu handle it via onOpenChange
+  // We only handle Escape key here
   useEffect(() => {
     if (!menu.isOpen) return
 
-    const handleClick = () => close()
     const handleEscape = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') close()
     }
 
-    document.addEventListener('click', handleClick)
     document.addEventListener('keydown', handleEscape)
 
     return () => {
-      document.removeEventListener('click', handleClick)
       document.removeEventListener('keydown', handleEscape)
     }
   }, [menu.isOpen, close])
