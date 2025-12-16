@@ -1,11 +1,9 @@
 'use client'
 
 import Color from 'color'
-import { Slider } from 'radix-ui'
+import { Slider as SliderPrimitive } from '@base-ui/react/slider'
 import {
-  type ComponentProps,
   createContext,
-  type HTMLAttributes,
   memo,
   useCallback,
   useContext,
@@ -14,6 +12,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import type { ComponentProps, HTMLAttributes } from 'react'
 import { Input } from '~/components/shadcn/ui/input'
 import {
   Select,
@@ -230,9 +229,9 @@ export const ColorPickerSelection = memo(
         setPositionY(y)
         setSaturation(x * 100)
         const topLightness = x < 0.01 ? 100 : 50 + 50 * (1 - x)
-        const lightness = topLightness * (1 - y)
+        const newLightness = topLightness * (1 - y)
 
-        setLightness(lightness)
+        setLightness(newLightness)
       },
       [isDragging, setSaturation, setLightness],
     )
@@ -297,7 +296,7 @@ export const ColorPickerSelection = memo(
 
 ColorPickerSelection.displayName = 'ColorPickerSelection'
 
-export type ColorPickerHueProps = ComponentProps<typeof Slider.Root>
+export type ColorPickerHueProps = ComponentProps<typeof SliderPrimitive.Root>
 
 export const ColorPickerHue = ({
   className,
@@ -306,23 +305,26 @@ export const ColorPickerHue = ({
   const { hue, setHue } = useColorPicker()
 
   return (
-    <Slider.Root
+    <SliderPrimitive.Root
       className={cn('relative flex h-4 w-full touch-none', className)}
       max={360}
-      onValueChange={([hue]) => setHue(hue)}
+      onValueChange={(value) => {
+        const newHue = Array.isArray(value) ? value[0] : value
+        if (typeof newHue === 'number') {
+          setHue(newHue)
+        }
+      }}
       step={1}
       value={[hue]}
       {...props}
     >
-      <Slider.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[linear-gradient(90deg,#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF,#FF0000)]">
-        <Slider.Range className="absolute h-full" />
-      </Slider.Track>
-      <Slider.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
-    </Slider.Root>
+      <SliderPrimitive.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[linear-gradient(90deg,#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF,#FF0000)]" />
+      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+    </SliderPrimitive.Root>
   )
 }
 
-export type ColorPickerAlphaProps = ComponentProps<typeof Slider.Root>
+export type ColorPickerAlphaProps = ComponentProps<typeof SliderPrimitive.Root>
 
 export const ColorPickerAlpha = ({
   className,
@@ -337,15 +339,20 @@ export const ColorPickerAlpha = ({
   }, [hue, saturation, lightness])
 
   return (
-    <Slider.Root
+    <SliderPrimitive.Root
       className={cn('relative flex h-4 w-full touch-none', className)}
       max={100}
-      onValueChange={([alpha]) => setAlpha(alpha)}
+      onValueChange={(value) => {
+        const newAlpha = Array.isArray(value) ? value[0] : value
+        if (typeof newAlpha === 'number') {
+          setAlpha(newAlpha)
+        }
+      }}
       step={1}
       value={[alpha]}
       {...props}
     >
-      <Slider.Track
+      <SliderPrimitive.Track
         className="relative my-0.5 h-3 w-full grow rounded-full"
         style={{
           background:
@@ -356,16 +363,15 @@ export const ColorPickerAlpha = ({
           className="absolute inset-0 rounded-full"
           style={{ background: gradient }}
         />
-        <Slider.Range className="absolute h-full rounded-full bg-transparent" />
-      </Slider.Track>
-      <Slider.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
-    </Slider.Root>
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+    </SliderPrimitive.Root>
   )
 }
 
 export type ColorPickerOutputProps = ComponentProps<typeof SelectTrigger>
 
-const formats: ColorMode[] = ['hex', 'rgb', 'css', 'hsl']
+const formats: Array<ColorMode> = ['hex', 'rgb', 'css', 'hsl']
 
 export const ColorPickerOutput = ({
   className,
@@ -374,9 +380,22 @@ export const ColorPickerOutput = ({
   const { mode, setMode } = useColorPicker()
 
   return (
-    <Select onValueChange={setMode} value={mode}>
+    <Select
+      onValueChange={(value) => {
+        if (
+          value &&
+          (value === 'hex' ||
+            value === 'rgb' ||
+            value === 'css' ||
+            value === 'hsl')
+        ) {
+          setMode(value)
+        }
+      }}
+      value={mode}
+    >
       <SelectTrigger className="h-8 w-20 shrink-0 text-xs" {...props}>
-        <SelectValue placeholder="Mode" />
+        <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {formats.map((format) => (
@@ -492,37 +511,34 @@ export const ColorPickerFormat = ({
     )
   }
 
-  if (mode === 'hsl') {
-    const hsl = color
-      .hsl()
-      .array()
-      .map((value) => Math.round(value))
+  // mode === 'hsl' (last remaining option)
+  const hsl = color
+    .hsl()
+    .array()
+    .map((value) => Math.round(value))
 
-    return (
-      <div
-        className={cn(
-          '-space-x-px flex items-center rounded-md shadow-sm',
-          className,
-        )}
-        {...props}
-      >
-        {hsl.map((value, index) => (
-          <Input
-            className={cn(
-              'h-8 rounded-r-none bg-secondary px-2 text-xs shadow-none',
-              index && 'rounded-l-none',
-              className,
-            )}
-            key={index}
-            readOnly
-            type="text"
-            value={value}
-          />
-        ))}
-        <PercentageInput value={alpha} />
-      </div>
-    )
-  }
-
-  return null
+  return (
+    <div
+      className={cn(
+        '-space-x-px flex items-center rounded-md shadow-sm',
+        className,
+      )}
+      {...props}
+    >
+      {hsl.map((value, index) => (
+        <Input
+          className={cn(
+            'h-8 rounded-r-none bg-secondary px-2 text-xs shadow-none',
+            index && 'rounded-l-none',
+            className,
+          )}
+          key={index}
+          readOnly
+          type="text"
+          value={value}
+        />
+      ))}
+      <PercentageInput value={alpha} />
+    </div>
+  )
 }
