@@ -87,7 +87,7 @@ export function createCategoryEnhancer(
  * Extends Partial<MenuContext> to allow enhancers to provide any context fields.
  * Requires only core fields: item, viewContext, and parentType.
  */
-interface ContextBuilderOptions extends Partial<MenuContext> {
+export interface ContextBuilderOptions extends Partial<MenuContext> {
   item: AnySidebarItem | undefined
   viewContext: ViewContext
   parentType: SidebarItemOrRootType

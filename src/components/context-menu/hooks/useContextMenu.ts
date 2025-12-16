@@ -5,7 +5,11 @@ import {
   type SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
 import type { MenuContext, ViewContext } from '../types'
-import { createMenuContext, type ContextEnhancer } from '../context'
+import {
+  createMenuContext,
+  type ContextEnhancer,
+  type ContextBuilderOptions,
+} from '../context'
 
 interface MenuState {
   isOpen: boolean
@@ -65,9 +69,10 @@ export function useContextMenu(options: UseContextMenuOptions) {
           (ctx, enhancer) => enhancer.enhance(ctx),
           baseContext,
         ) ?? baseContext
-
-      // Create final context (with defaults)
-      const context = createMenuContext(enhancedContext as any)
+        
+      const context = createMenuContext(
+        enhancedContext as ContextBuilderOptions,
+      )
 
       setMenu({
         isOpen: true,
