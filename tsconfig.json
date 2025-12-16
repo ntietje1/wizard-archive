@@ -3,7 +3,10 @@
     "**/*.ts",
     "**/*.tsx",
     "public/script*.js",
-    "src/components/forms/category-tag-form/generic-tag-form"
+    "src/components/forms/category-tag-form/generic-tag-form",
+    "eslint.config.js",
+    "prettier.config.js",
+    "vite.config.js"
   ],
   "compilerOptions": {
     "target": "ES2022",
