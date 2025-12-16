@@ -13,7 +13,7 @@ import {
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
 import { Check } from '~/lib/icons'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 
 const DEFAULT_COLORS = [
   '#ef4444', // red

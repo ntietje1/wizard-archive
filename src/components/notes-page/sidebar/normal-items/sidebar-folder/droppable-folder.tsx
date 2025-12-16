@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { Folder } from 'convex/folders/types'
 import { canDropItem } from '../../dnd-utils'

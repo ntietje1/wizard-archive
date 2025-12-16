@@ -16,7 +16,7 @@ import {
 import { Button } from '~/components/shadcn/ui/button'
 import { Check, RefreshCw, X } from '~/lib/icons'
 import { toast } from 'sonner'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { Badge } from '~/components/shadcn/ui/badge'
 import { useConvexMutation } from '@convex-dev/react-query'
 

@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import type { Note } from 'convex/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { FileText } from '~/lib/icons'

@@ -16,7 +16,7 @@ import { Card, CardContent } from '~/components/shadcn/ui/card'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Input } from '~/components/shadcn/ui/input'
 import { getTagColor } from '~/hooks/useTags'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import {
   TransformWrapper,
   TransformComponent,

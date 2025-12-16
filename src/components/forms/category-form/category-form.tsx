@@ -5,7 +5,7 @@ import { api } from 'convex/_generated/api'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { ColorPicker } from '~/components/forms/category-tag-form/base-tag-form/color-picker'
 import {
   getCategoryIcon,

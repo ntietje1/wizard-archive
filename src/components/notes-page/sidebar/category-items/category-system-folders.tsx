@@ -1,4 +1,4 @@
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { CategoryFolderButton } from './category-folder-button'
 import { CharacterCategoryFolderContextMenu } from '~/components/context-menu/sidebar/character/character-category-context-menu'
 import { CharacterNoteContextMenu } from '~/components/context-menu/sidebar/character/character-note-context-menu'

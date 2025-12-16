@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { MapPin } from '~/lib/icons'

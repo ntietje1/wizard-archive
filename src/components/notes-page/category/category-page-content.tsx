@@ -14,7 +14,7 @@ import {
 } from '~/components/forms/folder-dialog/folder-dialog'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
-import { ScrollArea } from '@radix-ui/react-scroll-area'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import type { ComponentType } from 'react'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
 import type { TagDialogProps } from '~/components/forms/category-tag-form/base-tag-form/types'

@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 
 export interface ContextMenuItemBase {
   className?: string

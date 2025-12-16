@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/shadcn/ui/select'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 
 type ColorMode = 'hex' | 'rgb' | 'css' | 'hsl'
 
