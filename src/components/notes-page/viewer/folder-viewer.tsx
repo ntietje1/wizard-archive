@@ -5,7 +5,6 @@ import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { PageEditorSkeleton } from '../editor/page-editor'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { TagCategory } from 'convex/tags/types'
 import type { Folder } from 'convex/folders/types'
 import { ItemCard } from './folder-view/item-card'
 
@@ -19,19 +18,6 @@ export function FolderViewer({ item }: EditorViewerProps) {
   }
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
-    if (item.type === 'tagCategories' && category) {
-      return (
-        <SidebarItemContextMenu
-          className="h-full w-full"
-          item={item as TagCategory}
-          viewContext="folder-view"
-          category={category}
-        >
-          {children}
-        </SidebarItemContextMenu>
-      )
-    }
-
     if (item.type === 'folders') {
       return (
         <SidebarItemContextMenu

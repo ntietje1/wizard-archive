@@ -131,13 +131,13 @@ export function EditableTopbar({
               {!onRename ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="text-left px-1 max-w-full truncate cursor-not-allowed opacity-75">
+                    <span className="text-left px-1 inline-block cursor-not-allowed opacity-75">
                       {title || (
                         <span className="opacity-85">
                           {defaultName || 'Untitled'}
                         </span>
                       )}
-                    </div>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>System category names cannot be changed</p>

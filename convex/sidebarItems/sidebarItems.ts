@@ -20,7 +20,6 @@ export const getSidebarItemsByCategory = async (
   campaignId: Id<'campaigns'>,
   categoryId: Id<'tagCategories'>,
 ): Promise<AnySidebarItem[]> => {
-  console.log('getSidebarItemsByCategory', campaignId, categoryId)
   await requireCampaignMembership(
     ctx,
     { campaignId },

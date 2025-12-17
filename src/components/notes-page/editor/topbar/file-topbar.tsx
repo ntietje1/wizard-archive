@@ -1,16 +1,9 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
-import usePersistedState from '~/hooks/usePersistedState'
-import {
-  FOLDER_VIEW_MODE_STORAGE_KEY,
-  VIEW_MODE,
-  type ViewMode,
-} from '~/hooks/useFolderView'
-import { Folder } from '~/lib/icons'
 import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
@@ -27,11 +20,6 @@ export function FileTopbar() {
   const { clearEditorContent, navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem(item)
   const { Dialogs } = useMenuActions()
-
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    `${FOLDER_VIEW_MODE_STORAGE_KEY}-${item?._id ?? 'none'}`,
-    VIEW_MODE.folderized as ViewMode,
-  )
 
   const categoryQuery = useQuery(
     convexQuery(
@@ -59,12 +47,6 @@ export function FileTopbar() {
     ),
   )
 
-  const handleToggleViewMode = useCallback(() => {
-    setViewMode((prev: ViewMode) =>
-      prev === VIEW_MODE.flat ? VIEW_MODE.folderized : VIEW_MODE.flat,
-    )
-  }, [setViewMode])
-
   // Use enhancers to build context
   const enhancers = useContextEnhancers({ category })
   const menuContext = useMenuContext({
@@ -79,18 +61,11 @@ export function FileTopbar() {
   const computedMenuItems: ContextMenuItem[] = useMemo(() => {
     if (isTagCategory(item)) {
       return [
-        {
-          type: 'action',
-          label:
-            viewMode === VIEW_MODE.folderized ? 'Hide Folders' : 'Show Folders',
-          icon: <Folder className="h-4 w-4" />,
-          onClick: handleToggleViewMode,
-        },
         ...unifiedMenuItems,
       ]
     }
     return unifiedMenuItems
-  }, [handleToggleViewMode, item, unifiedMenuItems, viewMode])
+  }, [item, unifiedMenuItems])
 
   const defaultName = defaultItemName(item)
 
