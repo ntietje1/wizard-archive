@@ -7,7 +7,7 @@ export function useContextMenu() {
 
   const handleMoreOptions = useCallback((e: MouseEvent) => {
     e.stopPropagation()
-    contextMenuRef.current?.open({ x: e.clientX + 4, y: e.clientY + 4 })
+    contextMenuRef.current?.open(e)
   }, [])
 
   return { contextMenuRef, handleMoreOptions }
