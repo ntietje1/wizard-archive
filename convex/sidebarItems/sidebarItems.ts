@@ -14,6 +14,7 @@ import { getTag, getTagCategory } from '../tags/tags'
 import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder } from '../folders/folders'
+import { CATEGORY_KIND } from '../tags/types'
 
 export const getSidebarItemsByCategory = async (
   ctx: Ctx,
@@ -90,9 +91,8 @@ export const getSidebarItemsByParent = async (
 
   const allItems: AnySidebarItem[] = []
 
-  allItems.push(...allCategories.filter((c) => c.parentId === parentId))
-
-  // categories cannot have parents, don't query them
+  // filter out system managed categories (also ensure only categories without parent Ids are included, but they shouldn't ever)
+  allItems.push(...allCategories.filter((c) => c.parentId === parentId && c.kind !== CATEGORY_KIND.SystemManaged))
 
   const tags = await ctx.db
     .query('tags')
