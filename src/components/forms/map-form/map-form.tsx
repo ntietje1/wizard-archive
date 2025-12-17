@@ -10,8 +10,10 @@ import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
 import { toast } from 'sonner'
+import { useConvex } from '@convex-dev/react-query'
 
 export interface MapFormValues {
   name: string
@@ -37,6 +39,8 @@ export function MapForm({
   onSuccess,
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
+  const { navigateToMap } = useEditorNavigation()
+  const convex = useConvex()
   const map = useQuery(
     convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
@@ -122,6 +126,16 @@ export function MapForm({
           parentId,
         })
         await openParentFolders(newMapId)
+        try {
+          const createdMap = await convex.query(api.gameMaps.queries.getMap, {
+            mapId: newMapId,
+          })
+          if (createdMap?.slug) {
+            navigateToMap(createdMap.slug)
+          }
+        } catch (error) {
+          console.error('Failed to navigate to created map:', error)
+        }
         toast.success('Map created')
       } else {
         toast.error('Invalid form state: missing map or campaign ID')

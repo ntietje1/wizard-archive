@@ -37,10 +37,15 @@ import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
 import type { ActionHandlers } from './menu-registry'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export function useMenuActions() {
-  const { navigateToCategory, navigateToItem, navigateToMap } =
-    useEditorNavigation()
+  const {
+    navigateToCategory,
+    navigateToItem,
+    navigateToMap,
+    clearEditorContent,
+  } = useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createNote } = useNoteActions()
@@ -49,6 +54,7 @@ export function useMenuActions() {
   const campaignId = campaignWithMembership.data?.campaign._id
   const campaign = campaignWithMembership?.data?.campaign
   const convex = useConvex()
+  const { item: currentItem } = useCurrentItem()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
@@ -255,6 +261,11 @@ export function useMenuActions() {
             key={`delete-note-${deleteNoteDialog._id}`}
             note={deleteNoteDialog}
             isDeleting={true}
+            onConfirm={() => {
+              if (currentItem?._id === deleteNoteDialog._id) {
+                clearEditorContent()
+              }
+            }}
             onClose={() => setDeleteNoteDialog(null)}
           />
         )}
@@ -264,6 +275,11 @@ export function useMenuActions() {
             key={`delete-folder-${deleteFolderDialog._id}`}
             folder={deleteFolderDialog}
             isDeleting={true}
+            onConfirm={() => {
+              if (currentItem?._id === deleteFolderDialog._id) {
+                clearEditorContent()
+              }
+            }}
             onClose={() => setDeleteFolderDialog(null)}
           />
         )}
@@ -274,6 +290,11 @@ export function useMenuActions() {
             tag={deleteTagDialog.tag}
             categoryConfig={createConfig(deleteTagDialog.category)}
             isDeleting={true}
+            onConfirm={() => {
+              if (currentItem?._id === deleteTagDialog.tag._id) {
+                clearEditorContent()
+              }
+            }}
             onClose={() => setDeleteTagDialog(null)}
           />
         )}
@@ -283,6 +304,11 @@ export function useMenuActions() {
             key={`delete-map-${deleteMapDialog._id}`}
             map={deleteMapDialog}
             isDeleting={true}
+            onConfirm={() => {
+              if (currentItem?._id === deleteMapDialog._id) {
+                clearEditorContent()
+              }
+            }}
             onClose={() => setDeleteMapDialog(null)}
           />
         )}
@@ -349,7 +375,6 @@ export function useMenuActions() {
             mode="create"
             isOpen={true}
             onClose={() => setCreateCategoryDialog(false)}
-            onSuccess={() => setCreateCategoryDialog(false)}
             campaignId={campaign._id}
           />
         )}
@@ -435,6 +460,8 @@ export function useMenuActions() {
       editTagDialog,
       campaignId,
       campaign,
+      currentItem,
+      clearEditorContent,
     ],
   )
 

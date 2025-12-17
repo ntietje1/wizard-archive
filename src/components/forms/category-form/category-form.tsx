@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation, useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -27,6 +27,7 @@ export function CategoryForm({
   onClose,
   onSuccess,
 }: CategoryFormProps) {
+  const convex = useConvex()
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
@@ -72,12 +73,31 @@ export function CategoryForm({
             toast.error('Campaign ID is required')
             return
           }
-          await createCategory.mutateAsync({
+          const categoryId = await createCategory.mutateAsync({
             campaignId,
             name: value.name.trim(),
             iconName: value.iconName || 'TagIcon',
             defaultColor: value.defaultColor,
           })
+          if (onSuccess) {
+            try {
+              const createdCategory = await convex.query(
+                api.tags.queries.getTagCategory,
+                {
+                  campaignId,
+                  categoryId,
+                },
+              )
+              if (createdCategory?.slug) {
+                onSuccess(createdCategory.slug)
+              }
+            } catch (error) {
+              console.error('Failed to fetch created category:', error)
+              onClose()
+            }
+          } else {
+            onClose()
+          }
           toast.success('Category created successfully')
         } else if (mode === 'edit' && category) {
           if (isSystemCategory) {
