@@ -33,8 +33,8 @@ export default function TagSideMenuButton({
   const campaignId = campaignWithMembership.data?.campaign._id
   const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
   const { currentPage } = usePageLayout({
-    parentId: isPageLayout ? item?._id : undefined,
-    parentSlug: isPageLayout ? item?.slug : undefined,
+    itemId: isPageLayout ? item?._id : undefined,
+    itemSlug: isPageLayout ? item?.slug : undefined,
     campaignId: isPageLayout ? campaignId : undefined,
   })
   const [query, setQuery] = useState('')

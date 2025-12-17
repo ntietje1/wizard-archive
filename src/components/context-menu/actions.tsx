@@ -34,7 +34,7 @@ import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-c
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId, AnySidebarItem } from 'convex/sidebarItems/types'
 import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
 import type { ActionHandlers } from './menu-registry'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
@@ -44,6 +44,7 @@ export function useMenuActions() {
     navigateToCategory,
     navigateToItem,
     navigateToMap,
+    navigateToPage,
     clearEditorContent,
   } = useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
@@ -71,6 +72,8 @@ export function useMenuActions() {
   } | null>(null)
   const [createMapDialog, setCreateMapDialog] = useState<{
     parentId?: SidebarItemId
+    navigateToParent?: boolean
+    parentItem?: AnySidebarItem
   } | null>(null)
   const [createCategoryDialog, setCreateCategoryDialog] = useState(false)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
@@ -82,6 +85,24 @@ export function useMenuActions() {
     tag: Tag
     category: TagCategory
   } | null>(null)
+
+  const handleCreatePageMapSuccess = useCallback(
+    async (mapSlug: string | undefined, parentId: SidebarItemId | undefined, parentItem: AnySidebarItem | undefined) => {
+      if (parentId) {
+        await openParentFolders(parentId)
+      }
+      if (parentItem) {
+        // If parent is the current editor item, navigate to the page within that item
+        if (currentItem?._id === parentId && mapSlug) {
+          navigateToPage(mapSlug)
+        } else {
+          // Otherwise, navigate to the parent item
+          navigateToItem(parentItem)
+        }
+      }
+    },
+    [openParentFolders, currentItem, navigateToPage, navigateToItem],
+  )
 
   const actions: ActionHandlers = {
     open: useCallback(
@@ -169,6 +190,45 @@ export function useMenuActions() {
     createMap: (ctx: MenuContext) => {
       setCreateMapDialog({ parentId: ctx.item?._id })
     },
+
+    createPageNote: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId || !ctx.item) return
+
+        const parentId = ctx.item._id
+        const { noteId, slug } = await createNote.mutateAsync({
+          campaignId,
+          parentId,
+          categoryId: ctx.category?._id,
+        })
+        
+        await openParentFolders(parentId)
+        
+        // If parent is the current editor item, navigate to the page within that item
+        if (currentItem?._id === parentId) {
+          navigateToPage(slug)
+        } else {
+          // Otherwise, navigate to the parent item
+          navigateToItem(ctx.item)
+        }
+        
+        setRenamingId(noteId)
+      },
+      [campaignId, createNote, openParentFolders, navigateToItem, navigateToPage, currentItem],
+    ),
+
+    createPageMap: useCallback(
+      (ctx: MenuContext) => {
+        if (!ctx.item) return
+        const parentId = ctx.item._id
+        setCreateMapDialog({
+          parentId,
+          navigateToParent: true,
+          parentItem: ctx.item,
+        })
+      },
+      [],
+    ),
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
@@ -366,6 +426,16 @@ export function useMenuActions() {
             onClose={() => setCreateMapDialog(null)}
             campaignId={campaignId}
             parentId={createMapDialog.parentId}
+            onSuccess={
+              createMapDialog.navigateToParent && createMapDialog.parentItem
+                ? (mapSlug) =>
+                    handleCreatePageMapSuccess(
+                      mapSlug,
+                      createMapDialog.parentId,
+                      createMapDialog.parentItem,
+                    )
+                : undefined
+            }
           />
         )}
 

@@ -24,7 +24,7 @@ interface MapFormProps {
   campaignId?: Id<'campaigns'>
   parentId?: SidebarItemId
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (mapSlug?: string) => void
 }
 
 const defaultMapFormValues: MapFormValues = {
@@ -126,23 +126,28 @@ export function MapForm({
           parentId,
         })
         await openParentFolders(newMapId)
+        // Get the created map's slug for onSuccess callback
+        let mapSlug: string | undefined
         try {
           const createdMap = await convex.query(api.gameMaps.queries.getMap, {
             mapId: newMapId,
           })
-          if (createdMap?.slug) {
-            navigateToMap(createdMap.slug)
-          }
+          mapSlug = createdMap?.slug
         } catch (error) {
-          console.error('Failed to navigate to created map:', error)
+          console.error('Failed to get created map:', error)
+        }
+        
+        // Only navigate to map if onSuccess is not provided (onSuccess handles navigation)
+        if (!onSuccess && mapSlug) {
+          navigateToMap(mapSlug)
         }
         toast.success('Map created')
+        onSuccess?.(mapSlug)
+        onClose()
       } else {
         toast.error('Invalid form state: missing map or campaign ID')
         return
       }
-      onSuccess?.()
-      onClose()
     } catch (error) {
       console.error(error)
       toast.error(mapId ? 'Failed to update map' : 'Failed to create map')

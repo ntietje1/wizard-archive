@@ -8,6 +8,7 @@ export interface EditorViewerProps {
 
 export interface EditorItemConfig {
   component: ComponentType<EditorViewerProps>
+  showPageBar?: boolean
 }
 
 type EditorDefaults = Record<SidebarItemType, EditorItemConfig>
@@ -28,4 +29,8 @@ export function getViewerComponent(
   itemType: SidebarItemType,
 ): ComponentType<EditorViewerProps> | null {
   return getEditorConfig(itemType)?.component ?? null
+}
+
+export function shouldShowPageBar(itemType: SidebarItemType): boolean {
+  return getEditorConfig(itemType)?.showPageBar ?? false
 }

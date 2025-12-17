@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/sidebarItems/types'
 import { useNoteActions } from './useNoteActions'
 import { useTagActions } from './useTagActions'
 import { useMapActions } from './useMapActions'
@@ -11,6 +11,9 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import { toast } from 'sonner'
 import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
+import { useSearch } from '@tanstack/react-router'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { isNote, isGameMap } from '~/lib/sidebar-item-utils'
 
 export function useRenameItem(item: AnySidebarItem | null) {
   const { updateNote } = useNoteActions()
@@ -21,7 +24,11 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const convex = useConvex()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { item: currentItem } = useCurrentItem()
-  const { navigateToItem } = useEditorNavigation()
+  const { navigateToItem, navigateToPage } = useEditorNavigation()
+  
+  const search = useSearch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+  }) as EditorSearch
 
   const updateCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
@@ -33,25 +40,26 @@ export function useRenameItem(item: AnySidebarItem | null) {
 
       const oldSlug = item.slug
       const isCurrentItem = currentItem?._id === item._id
+      const isCurrentPage = search.page === oldSlug && (isNote(item) || isGameMap(item))
 
       try {
         switch (item.type) {
-          case 'notes':
+          case SIDEBAR_ITEM_TYPES.notes:
             await updateNote.mutateAsync({ noteId: item._id, name: newName })
             break
-          case 'tags':
+          case SIDEBAR_ITEM_TYPES.tags:
             await updateTag.mutateAsync({ tagId: item._id, name: newName })
             break
-          case 'gameMaps':
+          case SIDEBAR_ITEM_TYPES.gameMaps:
             await updateMap.mutateAsync({ mapId: item._id, name: newName })
             break
-          case 'folders':
+          case SIDEBAR_ITEM_TYPES.folders:
             await updateFolder.mutateAsync({
               folderId: item._id,
               name: newName,
             })
             break
-          case 'tagCategories': {
+          case SIDEBAR_ITEM_TYPES.tagCategories: {
             await updateCategory.mutateAsync({
               categoryId: item._id,
               name: newName,
@@ -62,19 +70,23 @@ export function useRenameItem(item: AnySidebarItem | null) {
             break
         }
 
-        // If this is the current item and slug might have changed, check and navigate
-        if (isCurrentItem) {
-          const updatedItem = await convex.query(
-            api.sidebarItems.queries.getSidebarItem,
-            {
-              id: item._id,
-              campaignId,
-            },
-          )
+        const updatedItem = await convex.query(
+          api.sidebarItems.queries.getSidebarItem,
+          {
+            id: item._id,
+            campaignId,
+          },
+        )
 
-          if (updatedItem && updatedItem.slug !== oldSlug) {
-            navigateToItem(updatedItem)
-          }
+        if (!updatedItem) return
+
+        // If this is the current page and slug changed, navigate to new page slug
+        if (isCurrentPage && updatedItem.slug !== oldSlug) {
+          navigateToPage(updatedItem.slug)
+        }
+        // If this is the current item (but not a page) and slug changed, navigate to item
+        else if (isCurrentItem && updatedItem.slug !== oldSlug) {
+          navigateToItem(updatedItem)
         }
       } catch (error) {
         console.error(error)
@@ -93,6 +105,8 @@ export function useRenameItem(item: AnySidebarItem | null) {
       updateCategory,
       currentItem,
       navigateToItem,
+      navigateToPage,
+      search.page,
     ],
   )
 

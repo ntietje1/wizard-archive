@@ -3,17 +3,17 @@ import type { EditorViewerProps } from '~/lib/editor-registry'
 import { useFolderView } from '~/hooks/useFolderView'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { PageEditorSkeleton } from '../editor/page-editor'
+import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import type { Folder } from 'convex/folders/types'
-import { ItemCard } from './folder-view/item-card'
+import { ItemCard } from './item-card'
 
 export function FolderViewer({ item }: EditorViewerProps) {
   const { items, isLoading, category } = useFolderView({
     parentItem: item,
   })
 
-  if (isLoading) {
+  if (isLoading) { //TODO: impprove loading state
     return <PageEditorSkeleton />
   }
 

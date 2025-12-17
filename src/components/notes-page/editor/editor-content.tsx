@@ -1,19 +1,21 @@
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { PageEditorEmptyContent, PageEditorSkeleton } from './page-editor'
-import { getViewerComponent } from '~/lib/editor-registry'
+import { PageEditorEmptyContent } from '../viewer/page-editor-wrapper'
+import { shouldShowPageBar } from '~/lib/editor-registry'
+import { PageEditorWrapper } from '../viewer/page-editor-wrapper'
+import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 
 export function EditorContent() {
-  const { item, config, isLoading, search } = useCurrentItem()
-
-  if (isLoading) return <PageEditorSkeleton />
+  const { item, config, search } = useCurrentItem()
 
   if (!item || !config) {
     return <PageEditorEmptyContent />
   }
 
-  const ViewerComponent = item.type ? getViewerComponent(item.type) : null
+  const showPageBar = shouldShowPageBar(item.type)
 
-  if (!ViewerComponent) return <PageEditorEmptyContent />
+  if (showPageBar) {
+    return <PageEditorWrapper item={item} search={search} />
+  }
 
-  return <ViewerComponent item={item} search={search} />
+  return <SidebarItemEditor item={item} search={search} />
 }

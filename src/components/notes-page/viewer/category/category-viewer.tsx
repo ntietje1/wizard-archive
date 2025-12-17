@@ -3,11 +3,11 @@ import type { EditorViewerProps } from '~/lib/editor-registry'
 import { useTagsByCategory } from '~/hooks/useTagsByCategory'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { PageEditorSkeleton } from '../editor/page-editor'
+import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import type { TagCategory } from 'convex/tags/types'
-import { TagCard } from './folder-view/tag-card'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
+import { TagCard } from '../folder/tag-card'
 
 export function CategoryViewer({ item }: EditorViewerProps) {
   if (!isTagCategory(item)) {
@@ -21,7 +21,7 @@ export function CategoryViewer({ item }: EditorViewerProps) {
   const category = item as TagCategory
   const { data: tags, isLoading } = useTagsByCategory(category._id)
 
-  if (isLoading) {
+  if (isLoading) { //TODO: impprove loading state
     return <PageEditorSkeleton />
   }
 

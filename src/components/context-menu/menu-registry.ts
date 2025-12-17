@@ -28,6 +28,9 @@ export type ActionHandlers = {
   createCanvas: (ctx: MenuContext) => void
   createCategory: (ctx: MenuContext) => void
 
+  createPageNote: (ctx: MenuContext) => void
+  createPageMap: (ctx: MenuContext) => void
+
   goToCategory: (ctx: MenuContext) => void
   editCategory: (ctx: MenuContext) => void
 
@@ -149,6 +152,37 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
               p.isType('tagCategories')(ctx) ||
               p.atRoot(ctx)),
           action: actions.createCanvas,
+        },
+      ],
+    },
+    {
+      id: 'create-new-page-submenu',
+      label: 'New page...',
+      icon: Plus,
+      group: 'create',
+      priority: 6,
+      shouldShow: (ctx) =>
+        p.inSidebar(ctx) &&
+        (p.isType('notes')(ctx) || p.isType('tags')(ctx)),
+      action: () => {}, // No action for submenu parent
+      children: [
+        {
+          id: 'submenu-create-page-note',
+          label: 'Note',
+          icon: FilePlus,
+          group: 'create',
+          priority: 1,
+          shouldShow: () => true, // Always show in submenu
+          action: actions.createPageNote,
+        },
+        {
+          id: 'submenu-create-page-map',
+          label: 'Map',
+          icon: MapPin,
+          group: 'create',
+          priority: 2,
+          shouldShow: () => true, // Always show in submenu
+          action: actions.createPageMap,
         },
       ],
     },

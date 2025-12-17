@@ -11,7 +11,7 @@ interface MapDialogProps {
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
   parentId?: SidebarItemId
-  onSuccess?: () => void
+  onSuccess?: (mapSlug?: string) => void
 }
 
 export function MapDialog({

@@ -20,7 +20,7 @@ const schema = BlockNoteSchema.create({
   inlineContentSpecs: customInlineContentSpecs,
 })
 
-export function NotesViewer() {
+export function NotesByTagViewer() {
   const { nonSystemManagedTags } = useTags()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
@@ -49,7 +49,7 @@ export function NotesViewer() {
   }, [blocks.data])
 
   if (blocks.fetchStatus === 'fetching') {
-    return <NotesViewerLoading />
+    return <NotesByTagViewerLoading />
   }
 
   return (
@@ -102,7 +102,7 @@ export function NotesViewer() {
   )
 }
 
-function NotesViewerLoading() {
+function NotesByTagViewerLoading() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 p-4">
