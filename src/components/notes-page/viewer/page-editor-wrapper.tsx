@@ -10,26 +10,24 @@ import { useCampaign } from '~/contexts/CampaignContext'
 import type { EditorViewerProps } from '~/lib/editor-registry'
 import { SidebarItemEditor } from './sidebar-item-editor'
 
-export function PageEditorWrapper({ item, search }: EditorViewerProps) {
+export function PageEditorWrapper({
+  item,
+  search,
+}: EditorViewerProps<AnySidebarItem>) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
 
-  const {
-    pages,
-    currentPageItem,
-    pageSlug,
-    selectPage,
-    handleCreatePage,
-  } = usePageLayout({
-    itemId: item._id,
-    itemSlug: item.slug,
-    campaignId,
-  })
+  const { pages, currentPageItem, pageSlug, selectPage, handleCreatePage } =
+    usePageLayout({
+      itemId: item._id,
+      itemSlug: item.slug,
+      campaignId,
+    })
 
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       <PageTabs
-        pages={pages.data}
+        pages={pages.data ?? [item]}
         pageSlug={pageSlug}
         onSelectPage={selectPage}
         onCreatePage={handleCreatePage}
@@ -110,8 +108,6 @@ export function PageTabs({
     </div>
   )
 }
-
-
 
 export function PageEditorEmptyContent() {
   return (

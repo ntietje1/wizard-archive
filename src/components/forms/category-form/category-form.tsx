@@ -97,36 +97,23 @@ export function CategoryForm({
             }
           } else {
             onClose()
+            toast.success('Category created successfully')
           }
-          toast.success('Category created successfully')
         } else if (mode === 'edit' && category) {
-          if (isSystemCategory) {
-            // for system categories, we only update the color
-            const result = await updateCategory.mutateAsync({
-              categoryId: category._id,
-              defaultColor: value.defaultColor,
-            })
-            toast.success('Category updated successfully')
-            onClose()
-            if (onSuccess && result.slug) {
-              onSuccess(result.slug)
-            }
+          const result = await updateCategory.mutateAsync({
+            categoryId: category._id,
+            name: value.name.trim(),
+            iconName: value.iconName,
+            defaultColor: value.defaultColor,
+          })
+          if (onSuccess && result.slug) {
+            onSuccess(result.slug)
           } else {
-            const result = await updateCategory.mutateAsync({
-              categoryId: category._id,
-              name: value.name.trim(),
-              iconName: value.iconName,
-              defaultColor: value.defaultColor,
-            })
             toast.success('Category updated successfully')
             onClose()
-            if (onSuccess && result.slug) {
-              onSuccess(result.slug)
-            }
           }
           return
         }
-        onClose()
       } catch (error) {
         console.error(`Failed to ${mode} category:`, error)
         toast.error(`Failed to ${mode} category`)

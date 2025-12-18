@@ -124,22 +124,6 @@ export const useEditorNavigation = () => {
     [dmUsername, campaignSlug, navigate],
   )
 
-  const navigateToItemAndPage = useCallback(
-    (item: AnySidebarItem, pageSlug?: string) => {
-      if (!pageSlug) {
-        navigateToItem(item)
-      }
-      if (isNote(item)) {
-        navigateToNote(item.slug, pageSlug)
-      } else if (isTag(item)) {
-        navigateToTag(item.slug, pageSlug)
-      } else {
-        navigateToItem(item)
-      }
-    },
-    [navigateToNote, navigateToTag],
-  )
-
   const navigateToItem = useCallback(
     (item: AnySidebarItem) => {
       if (isNote(item)) {
@@ -164,6 +148,21 @@ export const useEditorNavigation = () => {
       navigateToCategory,
       navigateToFolder,
     ],
+  )
+
+  const navigateToItemAndPage = useCallback(
+    (item: AnySidebarItem, pageSlug?: string) => {
+      if (!pageSlug) {
+        navigateToItem(item)
+      } else if (isNote(item)) {
+        navigateToNote(item.slug, pageSlug)
+      } else if (isTag(item)) {
+        navigateToTag(item.slug, pageSlug)
+      } else {
+        navigateToItem(item)
+      }
+    },
+    [navigateToItem, navigateToNote, navigateToTag],
   )
 
   const clearEditorContent = useCallback(() => {

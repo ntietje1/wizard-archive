@@ -8,30 +8,27 @@ import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/Sideba
 import type { Folder } from 'convex/folders/types'
 import { ItemCard } from './item-card'
 
-export function FolderViewer({ item }: EditorViewerProps) {
+export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   const { items, isLoading, category } = useFolderView({
-    parentItem: item,
+    parentItem: folder,
   })
 
-  if (isLoading) { //TODO: impprove loading state
+  if (isLoading) {
+    //TODO: improve loading state
     return <PageEditorSkeleton />
   }
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
-    if (item.type === 'folders') {
-      return (
-        <SidebarItemContextMenu
-          className="h-full w-full"
-          item={item as Folder}
-          viewContext="folder-view"
-          category={category}
-        >
-          {children}
-        </SidebarItemContextMenu>
-      )
-    }
-
-    return <>{children}</>
+    return (
+      <SidebarItemContextMenu
+        className="h-full w-full"
+        item={folder}
+        viewContext="folder-view"
+        category={category}
+      >
+        {children}
+      </SidebarItemContextMenu>
+    )
   }
 
   if (items.length === 0) {

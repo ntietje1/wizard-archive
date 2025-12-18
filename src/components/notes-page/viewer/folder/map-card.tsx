@@ -132,7 +132,7 @@ export function MapCard({
           ) : imageUrl ? (
             <img
               src={imageUrl}
-              alt={map.name}
+              alt={map.name || defaultItemName(map)}
               className="w-full h-full object-cover"
             />
           ) : (

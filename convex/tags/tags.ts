@@ -403,7 +403,9 @@ export const updateTagCategory = async (
     updatedAt: Date.now(),
   }
 
-  if (input.name !== undefined) {
+  // Only allow name and iconName updates for User categories
+  // SystemCore categories can only have their defaultColor updated
+  if (input.name !== undefined && category.kind === CATEGORY_KIND.User) {
     updates.name = capitalizeFirstLetter(input.name)
     const uniqueSlug = await findUniqueSlug(
       input.name && input.name.trim() !== ''
@@ -422,7 +424,7 @@ export const updateTagCategory = async (
     updates.slug = uniqueSlug
   }
 
-  if (input.iconName !== undefined) {
+  if (input.iconName !== undefined && category.kind === CATEGORY_KIND.User) {
     updates.iconName = input.iconName
   }
 
@@ -497,76 +499,77 @@ export const updateTagAndContent = async (
 
       updates.slug = uniqueSlug
     }
-    if (input.iconName !== undefined) {
-      updates.iconName = input.iconName
-    }
-    if (input.color !== undefined) {
-      // null means explicitly clear the color
-      // undefined means don't update
-      updates.color = input.color === null ? undefined : input.color
-    }
-    if (input.description !== undefined) {
-      updates.description = input.description
-    }
-    if (input.imageStorageId !== undefined) {
-      if (input.imageStorageId) {
-        const url = await ctx.storage.getUrl(input.imageStorageId)
-        if (!url) {
-          throw new Error('Invalid storage reference')
-        }
+  }
+
+  if (input.iconName !== undefined) {
+    updates.iconName = input.iconName
+  }
+  if (input.color !== undefined) {
+    // null means explicitly clear the color
+    // undefined means don't update
+    updates.color = input.color === null ? undefined : input.color
+  }
+  if (input.description !== undefined) {
+    updates.description = input.description
+  }
+  if (input.imageStorageId !== undefined) {
+    if (input.imageStorageId) {
+      const url = await ctx.storage.getUrl(input.imageStorageId)
+      if (!url) {
+        throw new Error('Invalid storage reference')
       }
-      updates.imageStorageId = input.imageStorageId
     }
-    await ctx.db.patch(tagId, updates)
+    updates.imageStorageId = input.imageStorageId
+  }
+  await ctx.db.patch(tagId, updates)
 
-    if (updates.name !== undefined || updates.color !== undefined) {
-      const newName = updates.name
-      const newColor = updates.color
+  if (updates.name !== undefined || updates.color !== undefined) {
+    const newName = updates.name
+    const newColor = updates.color
 
-      const allBlocks = await ctx.db
-        .query('blocks')
-        .withIndex('by_campaign_note_block', (q) =>
-          q.eq('campaignId', tag.campaignId),
-        )
-        .collect()
+    const allBlocks = await ctx.db
+      .query('blocks')
+      .withIndex('by_campaign_note_block', (q) =>
+        q.eq('campaignId', tag.campaignId),
+      )
+      .collect()
 
-      const updateTagsInContent = (content: any): any => {
-        if (Array.isArray(content)) {
-          return content.map(updateTagsInContent)
-        } else if (content && typeof content === 'object') {
-          if (content.type === 'tag' && content.props?.tagId === tagId) {
-            return {
-              ...content,
-              props: {
-                ...content.props,
-                tagName: newName ?? content.props.tagName,
-                tagColor: newColor ?? content.props.tagColor,
-              },
-            }
+    const updateTagsInContent = (content: any): any => {
+      if (Array.isArray(content)) {
+        return content.map(updateTagsInContent)
+      } else if (content && typeof content === 'object') {
+        if (content.type === 'tag' && content.props?.tagId === tagId) {
+          return {
+            ...content,
+            props: {
+              ...content.props,
+              tagName: newName ?? content.props.tagName,
+              tagColor: newColor ?? content.props.tagColor,
+            },
           }
-
-          const updatedContent = { ...content }
-          if (content.content) {
-            updatedContent.content = updateTagsInContent(content.content)
-          }
-          if (content.children) {
-            updatedContent.children = updateTagsInContent(content.children)
-          }
-
-          return updatedContent
         }
-        return content
+
+        const updatedContent = { ...content }
+        if (content.content) {
+          updatedContent.content = updateTagsInContent(content.content)
+        }
+        if (content.children) {
+          updatedContent.children = updateTagsInContent(content.children)
+        }
+
+        return updatedContent
       }
+      return content
+    }
 
-      for (const block of allBlocks) {
-        const updatedContent = updateTagsInContent(block.content)
+    for (const block of allBlocks) {
+      const updatedContent = updateTagsInContent(block.content)
 
-        if (JSON.stringify(updatedContent) !== JSON.stringify(block.content)) {
-          await ctx.db.patch(block._id, {
-            content: updatedContent,
-            updatedAt: Date.now(),
-          })
-        }
+      if (JSON.stringify(updatedContent) !== JSON.stringify(block.content)) {
+        await ctx.db.patch(block._id, {
+          content: updatedContent,
+          updatedAt: Date.now(),
+        })
       }
     }
   }
@@ -873,34 +876,6 @@ export async function addTagToBlockHandler(
     }
 
     await addTagToBlock(ctx, existingBlock, tagId)
-  } else {
-    const targetBlock = await findBlockByBlockNoteId(ctx, noteId, blockId)
-
-    if (targetBlock) {
-      const inlineTagIds = extractTagIdsFromBlockContent(targetBlock)
-      if (inlineTagIds.includes(tagId)) {
-        throw new Error(
-          'Cannot manually add tag that already exists as inline tag in block content',
-        )
-      }
-
-      const blockDbId = await ctx.db.insert('blocks', {
-        noteId,
-        blockId,
-        position: undefined,
-        content: targetBlock,
-        isTopLevel: false,
-        campaignId: note.campaignId,
-        updatedAt: Date.now(),
-      })
-
-      const block = await ctx.db.get(blockDbId)
-      if (!block) {
-        throw new Error('Block not found')
-      }
-
-      await addTagToBlock(ctx, block, tagId)
-    }
   }
 
   return blockId

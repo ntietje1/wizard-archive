@@ -5,6 +5,7 @@ import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import {
   editorSchema,
+  type CustomBlock,
   type CustomBlockNoteEditor,
   type CustomPartialBlock,
 } from '~/lib/editor-schema'
@@ -16,7 +17,6 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useMemo, useEffect } from 'react'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import type { CustomBlock } from '~/lib/editor-schema'
 import { debounce } from 'lodash-es'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
@@ -25,41 +25,32 @@ import {
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
 import { NotesByTagViewer } from '~/components/notes-page/viewer/note/notes-by-tag-viewer'
+import type { Note } from 'convex/notes/types'
 
-export function NoteEditor({ item }: EditorViewerProps) {
-  if (!isNote(item)) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Invalid item type for note editor.
-      </div>
-    )
-  }
-
-  const noteId = item._id
+export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const { updateNoteContentWithSanitization } = useNoteActions()
 
   // Fetch note content
   const noteQuery = useQuery(
-    convexQuery(api.notes.queries.getNoteWithContent, { noteId }),
+    convexQuery(api.notes.queries.getNoteWithContent, { noteId: note._id }),
   )
 
-  const note = noteQuery.data
-  const initialContent = note?.content
+  const initialContent = noteQuery.data?.content
 
   // Debounced content update
   const updateContent = useMemo(
     () =>
       debounce((newContent: CustomBlock[]) => {
-        updateNoteContentWithSanitization(noteId, newContent)
+        updateNoteContentWithSanitization(note._id, newContent)
       }, 800),
-    [updateNoteContentWithSanitization, noteId],
+    [updateNoteContentWithSanitization, note._id],
   )
 
   useEffect(() => {
     return () => {
       updateContent.flush()
     }
-  }, [noteId, updateContent])
+  }, [note._id, updateContent])
 
   const hasContent = initialContent && initialContent.length > 0
 
@@ -81,6 +72,14 @@ export function NoteEditor({ item }: EditorViewerProps) {
             <Skeleton className="h-4 w-4/5" />
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (!isNote(note)) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        Invalid item type for note editor.
       </div>
     )
   }
@@ -125,4 +124,3 @@ export function NoteEditor({ item }: EditorViewerProps) {
     </ResizablePanelGroup>
   )
 }
-

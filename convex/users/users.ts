@@ -89,7 +89,8 @@ export async function updateUserProfileHandler(
     updates.lastName = identity.familyName
   }
 
-  if (Object.keys(updates).length > 0) {
+  // updatedAt is always included
+  if (Object.keys(updates).length > 1) {
     await ctx.db.patch(profile._id, updates)
   }
 

@@ -15,8 +15,8 @@ import { api } from 'convex/_generated/api'
 import { Button } from '~/components/shadcn/ui/button'
 import { Plus, Minus, RotateCcw } from 'lucide-react'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { isGameMap, isTag } from '~/lib/sidebar-item-utils'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import { isTag } from '~/lib/sidebar-item-utils'
+import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
@@ -36,8 +36,7 @@ interface PinPosition {
   y: number
 }
 
-export function MapViewer({ item }: EditorViewerProps) {
-  const map = isGameMap(item) ? item : null
+export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
@@ -51,11 +50,10 @@ export function MapViewer({ item }: EditorViewerProps) {
   } | null>(null)
 
   const convex = useConvex()
-  const mapId = map?._id
 
   // Query pins for rendering
   const pinsQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMapPins, mapId ? { mapId } : 'skip'),
+    convexQuery(api.gameMaps.queries.getMapPins, { mapId: map._id }),
   )
 
   const pins = pinsQuery.data || []
@@ -134,11 +132,11 @@ export function MapViewer({ item }: EditorViewerProps) {
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
-      if (!pendingPinItem || !mapId) return
+      if (!pendingPinItem || !map._id) return
 
       try {
         await createItemPinMutation.mutateAsync({
-          mapId,
+          mapId: map._id,
           x: position.x,
           y: position.y,
           itemId: pendingPinItem.itemId,
@@ -150,7 +148,7 @@ export function MapViewer({ item }: EditorViewerProps) {
         toast.error('Failed to place pin')
       }
     },
-    [pendingPinItem, mapId, createItemPinMutation],
+    [pendingPinItem, map._id, createItemPinMutation],
   )
 
   const handleMapClick = useCallback(
@@ -398,12 +396,11 @@ export function MapViewer({ item }: EditorViewerProps) {
           </p>
         </div>
       )}
-      {/* </div> */}
 
-      {pinContextMenu && mapId && (
+      {pinContextMenu && (
         <MapPinContextMenu
           pinId={pinContextMenu.pinId}
-          mapId={mapId}
+          mapId={map._id}
           position={pinContextMenu.position}
           onClose={() => setPinContextMenu(null)}
         />

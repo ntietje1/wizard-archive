@@ -1,13 +1,13 @@
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import type { ComponentType } from 'react'
 
-export interface EditorViewerProps {
-  item: AnySidebarItem
+export interface EditorViewerProps<T extends AnySidebarItem> {
+  item: T
   search?: unknown
 }
 
 export interface EditorItemConfig {
-  component: ComponentType<EditorViewerProps>
+  component: ComponentType<EditorViewerProps<AnySidebarItem>>
   showPageBar?: boolean
 }
 
@@ -27,7 +27,7 @@ export function getEditorConfig(
 
 export function getViewerComponent(
   itemType: SidebarItemType,
-): ComponentType<EditorViewerProps> | null {
+): ComponentType<EditorViewerProps<AnySidebarItem>> | null {
   return getEditorConfig(itemType)?.component ?? null
 }
 

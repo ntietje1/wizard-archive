@@ -112,10 +112,26 @@ export const updateNote = async (
     updates.slug = uniqueSlug
   }
 
+  if (input.parentId !== undefined) {
+    if (input.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        note.campaignId,
+        input.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
+      }
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.notes, parentItem.type)) {
+        throw new Error('Invalid parent type')
+      }
+    }
+    updates.parentId = input.parentId
+  }
+
   await ctx.db.patch(input.noteId, updates)
   return input.noteId
 }
-
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,

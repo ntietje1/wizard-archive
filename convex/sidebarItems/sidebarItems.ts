@@ -68,8 +68,6 @@ export const getSidebarItemsByCategory = async (
     .collect()
   allItems.push(...maps)
 
-  console.log('allItems', allItems)
-
   return allItems
 }
 
@@ -92,7 +90,11 @@ export const getSidebarItemsByParent = async (
   const allItems: AnySidebarItem[] = []
 
   // filter out system managed categories (also ensure only categories without parent Ids are included, but they shouldn't ever)
-  allItems.push(...allCategories.filter((c) => c.parentId === parentId && c.kind !== CATEGORY_KIND.SystemManaged))
+  allItems.push(
+    ...allCategories.filter(
+      (c) => c.parentId === parentId && c.kind !== CATEGORY_KIND.SystemManaged,
+    ),
+  )
 
   const tags = await ctx.db
     .query('tags')
