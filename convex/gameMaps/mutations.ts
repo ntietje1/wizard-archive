@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { Id } from '../_generated/dataModel'
+import { Doc, Id } from '../_generated/dataModel'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -7,7 +7,7 @@ import {
   getSidebarItemById,
   isValidSidebarParent,
 } from '../sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES, SidebarItemId } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { deleteMap as deleteMapFn } from './gameMaps'
@@ -89,14 +89,7 @@ export const updateMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const updates: {
-      name?: string
-      slug?: string
-      imageStorageId?: Id<'_storage'>
-      parentId?: SidebarItemId
-      categoryId?: Id<'tagCategories'>
-      updatedAt: number
-    } = {
+    const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
     }
 

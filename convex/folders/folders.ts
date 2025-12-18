@@ -5,7 +5,7 @@ import { MutationCtx } from '../_generated/server'
 import { Id } from '../_generated/dataModel'
 import { Folder } from './types'
 import { deleteNote } from '../notes/notes'
-import { deleteTagAndCleanupContent } from '../tags/tags'
+import { deleteTag } from '../tags/tags'
 
 export const getFolder = async (
   ctx: Ctx,
@@ -121,7 +121,7 @@ export async function deleteFolder(
     .collect()
 
   for (const childTag of childTags) {
-    await deleteTagAndCleanupContent(ctx, childTag._id)
+    await deleteTag(ctx, childTag._id)
   }
 
   // Finally, delete the folder itself

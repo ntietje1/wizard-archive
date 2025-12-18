@@ -1,8 +1,3 @@
-import { api } from 'convex/_generated/api'
-import type { ConvexReactClient } from 'convex/react'
-import type { Id } from 'convex/_generated/dataModel'
-import { MAX_NAME_LENGTH } from '../base-tag-form/types'
-
 export function validateTagDescription(
   value: string,
   maxLength: number,
@@ -23,25 +18,4 @@ export function validateTagName(
   if (v.length > maxLength)
     return `Name must be ${maxLength} characters or fewer`
   return undefined
-}
-
-export async function validateTagNameAsync(
-  convex: ConvexReactClient,
-  campaignId: Id<'campaigns'>,
-  categoryId: Id<'tagCategories'>,
-  name: string,
-  excludeTagId?: Id<'tags'>,
-): Promise<string | undefined> {
-  const syncErr = validateTagName(name, MAX_NAME_LENGTH)
-  if (syncErr) return syncErr
-  console.log('validateTagNameAsync', name, excludeTagId)
-
-  const exists = await convex.query(api.tags.queries.checkTagNameExists, {
-    campaignId,
-    categoryId,
-    tagName: name.trim(),
-    excludeTagId,
-  })
-
-  return exists ? 'This name is already taken.' : undefined
 }

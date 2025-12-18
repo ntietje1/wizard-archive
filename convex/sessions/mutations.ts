@@ -45,7 +45,7 @@ export const startSession = mutation({
       await ctx.db.patch(campaign.currentSessionId, { endedAt: Date.now() })
     }
 
-    const { tagId } = await insertTagAndNote(ctx, args, args.parentId)
+    const { tagId } = await insertTagAndNote(ctx, args)
     const sessionId = await ctx.db.insert('sessions', {
       campaignId: args.campaignId,
       tagId,

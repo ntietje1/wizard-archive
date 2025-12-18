@@ -1,17 +1,17 @@
 import { mutation } from '../_generated/server'
 import { v } from 'convex/values'
-import { Doc, Id } from '../_generated/dataModel'
+import { Id } from '../_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { deleteNote as deleteNoteFn } from './notes'
-import { findUniqueSlug, shortenId } from '../common/slug'
+import {
+  deleteNote as deleteNoteFn,
+  createNote as createNoteFn,
+  updateNote as updateNoteFn,
+} from './notes'
 import { saveTopLevelBlocksForChildNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
-import {
-  getSidebarItemById,
-  isValidSidebarParent,
-} from '../sidebarItems/sidebarItems'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export const updateNote = mutation({
@@ -21,45 +21,7 @@ export const updateNote = mutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const note = await ctx.db.get(args.noteId)
-    if (!note) {
-      throw new Error('Note not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const now = Date.now()
-    const updates: Partial<Doc<'notes'>> = {
-      updatedAt: now,
-    }
-
-    if (args.name !== undefined) {
-      updates.name = args.name
-
-      const slugBasis =
-        args.name && args.name.trim() !== ''
-          ? args.name
-          : shortenId(args.noteId)
-
-      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-        const conflict = await ctx.db
-          .query('notes')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', note.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null && conflict._id !== args.noteId
-      })
-
-      updates.slug = uniqueSlug
-    }
-
-    await ctx.db.patch(args.noteId, updates)
-    return args.noteId
+    return await updateNoteFn(ctx, args)
   },
 })
 
@@ -136,50 +98,7 @@ export const createNote = mutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const slugBasis =
-      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID() // use a uuid if the name is blank
-
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-      const conflict = await ctx.db
-        .query('notes')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', args.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.notes, parentItem.type)) {
-        throw new Error('Invalid parent type')
-      }
-    }
-
-    const noteId = await ctx.db.insert('notes', {
-      name: args.name || '',
-      slug: uniqueSlug,
-      parentId: args.parentId,
-      categoryId: args.categoryId,
-      updatedAt: Date.now(),
-      campaignId: args.campaignId,
-      type: 'notes',
-    })
-
-    return { noteId, slug: uniqueSlug }
+    return await createNoteFn(ctx, args)
   },
 })
 

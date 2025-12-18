@@ -83,7 +83,6 @@ export const createShare = async (
           campaignId,
           categoryId: category._id,
         },
-    category._id,
     true,
   )
 

@@ -125,7 +125,10 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToItemAndPage = useCallback(
-    (item: AnySidebarItem, pageSlug: string) => {
+    (item: AnySidebarItem, pageSlug?: string) => {
+      if (!pageSlug) {
+        navigateToItem(item)
+      }
       if (isNote(item)) {
         navigateToNote(item.slug, pageSlug)
       } else if (isTag(item)) {

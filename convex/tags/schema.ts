@@ -58,7 +58,6 @@ export const tagTables = {
   })
     .index('by_campaign_parent', ['campaignId', 'parentId'])
     .index('by_campaign_category', ['campaignId', 'categoryId'])
-    .index('by_campaign_name', ['campaignId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 

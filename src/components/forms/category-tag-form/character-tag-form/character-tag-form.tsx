@@ -10,7 +10,6 @@ import { useForm } from '@tanstack/react-form'
 import {
   validateTagDescription,
   validateTagName,
-  validateTagNameAsync,
 } from '../generic-tag-form/validators.ts'
 import {
   MAX_NAME_LENGTH,
@@ -218,17 +217,6 @@ export default function CharacterTagForm({
             validateTagName(value, MAX_NAME_LENGTH),
           onChange: ({ value }: { value: string }) =>
             validateTagName(value, MAX_NAME_LENGTH),
-          onChangeAsync: async ({ value }: { value: string }) => {
-            if (!campaign || !getCategory.data) return undefined
-            return validateTagNameAsync(
-              convex,
-              campaign._id,
-              getCategory.data._id,
-              value,
-              character?.tagId,
-            )
-          },
-          onChangeAsyncDebounceMs: 300,
         }}
       >
         {(field) => (

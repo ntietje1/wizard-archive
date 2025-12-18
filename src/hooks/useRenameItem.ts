@@ -12,11 +12,9 @@ import { useConvexMutation, useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { toast } from 'sonner'
-import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useSearch } from '@tanstack/react-router'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
-import { isNote, isGameMap } from '~/lib/sidebar-item-utils'
 
 export function useRenameItem(item: AnySidebarItem | null) {
   const { updateNote } = useNoteActions()
@@ -26,8 +24,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const { campaignWithMembership } = useCampaign()
   const convex = useConvex()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { item: currentItem } = useCurrentItem()
-  const { navigateToItem, navigateToPage } = useEditorNavigation()
+  const { navigateToItemAndPage } = useEditorNavigation()
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
@@ -40,11 +37,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const rename = useCallback(
     async (newName: string) => {
       if (!item || !newName || !campaignId) return
-
-      const oldSlug = item.slug
-      const isCurrentItem = currentItem?._id === item._id
-      const isCurrentPage =
-        search.page === oldSlug && (isNote(item) || isGameMap(item))
 
       try {
         switch (item.type) {
@@ -84,14 +76,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
 
         if (!updatedItem) return
 
-        // If this is the current page and slug changed, navigate to new page slug
-        if (isCurrentPage && updatedItem.slug !== oldSlug) {
-          navigateToPage(updatedItem.slug)
-        }
-        // If this is the current item and slug changed, navigate to item
-        else if (isCurrentItem && updatedItem.slug !== oldSlug) {
-          navigateToItem(updatedItem)
-        }
+        navigateToItemAndPage(updatedItem, search.page)
       } catch (error) {
         console.error(error)
         toast.error('Failed to update name')
@@ -107,10 +92,8 @@ export function useRenameItem(item: AnySidebarItem | null) {
       updateMap,
       updateFolder,
       updateCategory,
-      currentItem,
-      navigateToItem,
-      navigateToPage,
-      search.page,
+      navigateToItemAndPage,
+      search,
     ],
   )
 

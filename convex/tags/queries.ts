@@ -86,31 +86,6 @@ export const getTagsByCategory = query({
   },
 })
 
-export const checkTagNameExists = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    categoryId: v.id('tagCategories'),
-    tagName: v.string(),
-    excludeTagId: v.optional(v.id('tags')),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args): Promise<boolean> => {
-    console.log('checkTagNameExists', args)
-    const existing = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_name', (q) =>
-        q
-          .eq('campaignId', args.campaignId)
-          .eq('name', args.tagName.toLowerCase()),
-      )
-      .unique()
-
-    if (!existing) return false
-    if (args.excludeTagId && existing._id === args.excludeTagId) return false
-    return true
-  },
-})
-
 export const getTagCategoriesByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),

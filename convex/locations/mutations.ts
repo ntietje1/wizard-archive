@@ -1,10 +1,6 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import {
-  deleteTagAndCleanupContent,
-  insertTagAndNote,
-  updateTagAndContent,
-} from '../tags/tags'
+import { deleteTag, insertTagAndNote, updateTagAndContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Id } from '../_generated/dataModel'
@@ -38,7 +34,7 @@ export const createLocation = mutation({
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
-    const { tagId } = await insertTagAndNote(ctx, args, args.parentId)
+    const { tagId } = await insertTagAndNote(ctx, args)
 
     const locationId = await ctx.db.insert('locations', {
       campaignId: args.campaignId,
@@ -109,7 +105,7 @@ export const deleteLocation = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    await deleteTagAndCleanupContent(ctx, location.tagId)
+    await deleteTag(ctx, location.tagId)
     await ctx.db.delete(args.locationId)
 
     return args.locationId

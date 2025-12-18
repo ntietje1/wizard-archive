@@ -7,7 +7,7 @@ import {
   updateTagAndContent,
   insertTagCategory,
   updateTagCategory as updateTagCategoryFn,
-  deleteTagAndCleanupContent as deleteTagFn,
+  deleteTag as deleteTagFn,
   deleteTagCategory as deleteTagCategoryFn,
   removeTagFromBlockHandler,
   addTagToBlockHandler,
@@ -16,7 +16,10 @@ import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { blockNoteIdValidator } from '../blocks/schema'
-import { getSidebarItemById, isValidSidebarParent } from '../sidebarItems/sidebarItems'
+import {
+  getSidebarItemById,
+  isValidSidebarParent,
+} from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
@@ -26,7 +29,7 @@ export const createTag = mutation({
     tagId: v.id('tags'),
   }),
   handler: async (ctx, args): Promise<{ tagId: Id<'tags'> }> => {
-    return await insertTagAndNote(ctx, args, args.parentId)
+    return await insertTagAndNote(ctx, args)
   },
 })
 
@@ -117,13 +120,13 @@ export const createTagCategory = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-      return await insertTagCategory(ctx, {
-        campaignId: args.campaignId,
-        kind: CATEGORY_KIND.User,
-        name: args.name,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
+    return await insertTagCategory(ctx, {
+      campaignId: args.campaignId,
+      kind: CATEGORY_KIND.User,
+      name: args.name,
+      iconName: args.iconName,
+      defaultColor: args.defaultColor,
+    })
   },
 })
 export const updateTagCategory = mutation({

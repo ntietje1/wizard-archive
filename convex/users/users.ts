@@ -2,8 +2,7 @@ import { UserIdentity } from 'convex/server'
 import { MutationCtx } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
 import { Ctx } from '../common/types'
-import { UserProfile } from './types'
-import { Id } from '../_generated/dataModel'
+import { Doc, Id } from '../_generated/dataModel'
 import { findUniqueSlug } from '../common/slug'
 
 export async function getUserProfileByUserIdHandler(ctx: Ctx, userId: string) {
@@ -61,7 +60,9 @@ export async function updateUserProfileHandler(
   identity: UserIdentity,
 ): Promise<Id<'userProfiles'>> {
   const { profile } = await requireUserIdentity(ctx)
-  const updates: Partial<UserProfile> = {}
+  const updates: Partial<Doc<'userProfiles'>> = {
+    updatedAt: Date.now(),
+  }
 
   const username = identity.username as string
 
@@ -89,10 +90,7 @@ export async function updateUserProfileHandler(
   }
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.patch(profile._id, {
-      ...updates,
-      updatedAt: Date.now(),
-    })
+    await ctx.db.patch(profile._id, updates)
   }
 
   return profile._id
