@@ -14,8 +14,8 @@ export const defaultLocationFormValues: LocationFormValues = {
 }
 
 export const LOCATION_CONFIG: TagCategoryConfig = {
-  singular: SYSTEM_DEFAULT_CATEGORIES.Location.displayName,
-  plural: SYSTEM_DEFAULT_CATEGORIES.Location.pluralDisplayName,
+  singular: SYSTEM_DEFAULT_CATEGORIES.Location.name,
+  plural: SYSTEM_DEFAULT_CATEGORIES.Location.name,
   icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Location.iconName),
   categorySlug: SYSTEM_DEFAULT_CATEGORIES.Location.slug,
 }

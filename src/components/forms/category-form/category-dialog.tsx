@@ -1,9 +1,8 @@
 import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
 import type { Id } from 'convex/_generated/dataModel'
-import type { TagCategory } from 'convex/tags/types'
+import { type TagCategory, CATEGORY_KIND } from 'convex/tags/types'
 import { CategoryForm } from './category-form'
 import { Edit, Plus } from '~/lib/icons'
-import { CATEGORY_KIND } from 'convex/tags/types'
 
 interface CategoryDialogBaseProps {
   isOpen: boolean

@@ -4,7 +4,7 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types'
-import { canDropItem } from '../dnd-utils'
+import { canDropItem } from '~/lib/dnd-utils'
 
 interface DroppableRootProps {
   children: React.ReactNode

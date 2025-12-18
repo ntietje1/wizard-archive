@@ -25,6 +25,11 @@ export const getCharactersByCampaign = query({
       args.campaignId,
       SYSTEM_DEFAULT_CATEGORIES.Character.slug,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Character.slug}" not found`,
+      )
+    }
     const tags = await getTagsByCategory(ctx, category._id)
     const characters = await ctx.db
       .query('characters')
@@ -87,6 +92,11 @@ export const getCharacterByTagId = query({
       tag.campaignId,
       SYSTEM_DEFAULT_CATEGORIES.Character.slug,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Character.slug}" not found`,
+      )
+    }
 
     const character = await ctx.db
       .query('characters')

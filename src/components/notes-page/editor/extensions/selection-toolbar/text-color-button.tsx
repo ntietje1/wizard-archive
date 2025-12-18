@@ -7,7 +7,6 @@ import {
 import {
   useBlockNoteEditor,
   useComponentsContext,
-  useDictionary,
   useEditorContentOrSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
@@ -36,7 +35,6 @@ function checkTextColorInSchema(
 
 export const TextColorButton = () => {
   const Components = useComponentsContext()!
-  const dict = useDictionary()
   const editor = useBlockNoteEditor<
     BlockSchema,
     InlineContentSchema,
@@ -66,9 +64,11 @@ export const TextColorButton = () => {
         )
       }
 
-      color === 'default'
-        ? editor.removeStyles({ textColor: color })
-        : editor.addStyles({ textColor: color })
+      if (color === 'default') {
+        editor.removeStyles({ textColor: color })
+      } else {
+        editor.addStyles({ textColor: color })
+      }
 
       setTimeout(() => {
         // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap

@@ -17,7 +17,6 @@ import {
 import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import {
-  removeInvalidCharacters,
   validateCampaignName,
   validateCampaignSlugSync,
   validateCampaignSlugAsync,

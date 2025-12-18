@@ -2,6 +2,7 @@ import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
 import { MapPin } from '~/lib/icons'
 import { MapForm } from './map-form'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 interface MapDialogProps {
   isOpen: boolean
@@ -9,8 +10,8 @@ interface MapDialogProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
-  parentFolderId?: Id<'folders'>
-  onSuccess?: () => void
+  parentId?: SidebarItemId
+  onSuccess?: (mapSlug?: string) => void
 }
 
 export function MapDialog({
@@ -18,8 +19,8 @@ export function MapDialog({
   onClose,
   mapId,
   campaignId,
-  categoryId,
-  parentFolderId,
+  categoryId: _categoryId,
+  parentId,
   onSuccess,
 }: MapDialogProps) {
   if (!isOpen) return null
@@ -39,8 +40,7 @@ export function MapDialog({
       <MapForm
         mapId={mapId}
         campaignId={campaignId}
-        categoryId={categoryId}
-        parentFolderId={parentFolderId}
+        parentId={parentId}
         onClose={onClose}
         onSuccess={onSuccess}
       />

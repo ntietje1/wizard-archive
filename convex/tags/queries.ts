@@ -6,6 +6,7 @@ import {
   getTag as getTagFn,
   getTagsByCategory as getTagsByCategoryFn,
   getTagsByCampaign as getTagsByCampaignFn,
+  getTagCategory as getTagCategoryFn,
 } from './tags'
 import { tagCategoryValidator, tagValidator } from './schema'
 
@@ -44,6 +45,26 @@ export const getTag = query({
   },
 })
 
+export const getTagBySlug = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    slug: v.string(),
+  },
+  returns: tagValidator,
+  handler: async (ctx, args): Promise<Tag> => {
+    const tag = await ctx.db
+      .query('tags')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+      )
+      .unique()
+    if (!tag) {
+      throw new Error(`Tag not found: ${args.slug}`)
+    }
+    return await getTagFn(ctx, tag._id)
+  },
+})
+
 export const getTagsByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
@@ -62,30 +83,6 @@ export const getTagsByCategory = query({
   returns: v.array(tagValidator),
   handler: async (ctx, args): Promise<Tag[]> => {
     return await getTagsByCategoryFn(ctx, args.categoryId)
-  },
-})
-
-export const checkTagNameExists = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    categoryId: v.id('tagCategories'),
-    tagName: v.string(),
-    excludeTagId: v.optional(v.id('tags')),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args): Promise<boolean> => {
-    const existing = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_name', (q) =>
-        q
-          .eq('campaignId', args.campaignId)
-          .eq('name', args.tagName.toLowerCase()),
-      )
-      .unique()
-
-    if (!existing) return false
-    if (args.excludeTagId && existing._id === args.excludeTagId) return false
-    return true
   },
 })
 
@@ -144,5 +141,16 @@ export const getTagCategoryBySlug = query({
     }
 
     return category
+  },
+})
+
+export const getTagCategory = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    categoryId: v.id('tagCategories'),
+  },
+  returns: tagCategoryValidator,
+  handler: async (ctx, args): Promise<TagCategory> => {
+    return await getTagCategoryFn(ctx, args.campaignId, args.categoryId)
   },
 })

@@ -25,6 +25,11 @@ export const getLocationsByCampaign = query({
       args.campaignId,
       SYSTEM_DEFAULT_CATEGORIES.Location.slug,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Location.slug}" not found`,
+      )
+    }
     const tags = await getTagsByCategory(ctx, category._id)
     const locations = await ctx.db
       .query('locations')
@@ -87,6 +92,11 @@ export const getLocationByTagId = query({
       tag.campaignId,
       SYSTEM_DEFAULT_CATEGORIES.Location.slug,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Location.slug}" not found`,
+      )
+    }
 
     const location = await ctx.db
       .query('locations')

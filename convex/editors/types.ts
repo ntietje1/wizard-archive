@@ -19,7 +19,6 @@ export type SortDirection =
 export interface SortOptions {
   order: SortOrder
   direction: SortDirection
-  foldersAlwaysOnTop: boolean
 }
 
 export type Editor = {
@@ -30,5 +29,4 @@ export type Editor = {
   userId: Id<'userProfiles'>
   sortOrder: SortOrder
   sortDirection: SortDirection
-  foldersAlwaysOnTop: boolean
 }

@@ -4,7 +4,6 @@ import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
 
 export function NewFolderButton() {
   const { createFolder } = useFolderActions()
@@ -15,8 +14,8 @@ export function NewFolderButton() {
   const handleNewFolder = async () => {
     if (!campaignId) return
     try {
-      const folderId = await createFolder.mutateAsync({ campaignId })
-      setRenamingId(folderId as Id<'folders'>)
+      const result = await createFolder.mutateAsync({ campaignId })
+      setRenamingId(result.folderId)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')

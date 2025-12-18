@@ -10,7 +10,6 @@ import { useForm } from '@tanstack/react-form'
 import {
   validateTagDescription,
   validateTagName,
-  validateTagNameAsync,
 } from '../generic-tag-form/validators.ts'
 import {
   MAX_NAME_LENGTH,
@@ -20,8 +19,10 @@ import {
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
+import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Character } from 'convex/characters/types.ts'
 import {
   defaultCharacterFormValues,
@@ -40,7 +41,7 @@ interface CharacterTagFormProps {
   mode: 'create' | 'edit'
   character?: Character
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: SidebarItemId
   isOpen: boolean
   onClose: () => void
 }
@@ -49,13 +50,14 @@ export default function CharacterTagForm({
   mode,
   character,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
 }: CharacterTagFormProps) {
   const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToTag } = useEditorNavigation()
+  const { openParentFolders } = useOpenParentFolders()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
@@ -104,7 +106,7 @@ export default function CharacterTagForm({
   const getInitialValues = useCallback((): CharacterFormValues => {
     if (mode === 'edit' && character) {
       return {
-        name: character.displayName,
+        name: character.name || '',
         description: character.description || '',
         color: character.color ?? null,
         playerId: character.playerId || undefined,
@@ -126,7 +128,8 @@ export default function CharacterTagForm({
 
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, character?._id, getInitialValues])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?._id, parentId])
 
   async function handleSubmit(value: CharacterFormValues) {
     if (!campaign) {
@@ -154,24 +157,24 @@ export default function CharacterTagForm({
 
       if (mode === 'create') {
         const result = await createMutation.mutateAsync({
-          displayName: value.name.trim(),
           name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color ?? undefined,
-          imageStorageId: imageStorageId,
+          imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
-          parentFolderId,
+          parentId: parentId ?? getCategory.data._id,
           playerId: value.playerId || undefined,
         })
 
-        if (result.noteId) {
-          const note = await convex.query(api.notes.queries.getNote, {
-            noteId: result.noteId,
-          })
-          if (note?.slug) {
-            navigateToNote(note.slug)
-          }
+        // Open parent folders and get the tag to navigate to it
+        await openParentFolders(result.tagId)
+        const tag = await convex.query(api.tags.queries.getTag, {
+          campaignId: campaign._id,
+          tagId: result.tagId,
+        })
+        if (tag?.slug) {
+          navigateToTag(tag.slug)
         }
 
         toast.success(`${config.singular} created successfully`)
@@ -179,10 +182,10 @@ export default function CharacterTagForm({
       } else if (mode === 'edit' && character) {
         await updateCharacterMutation.mutateAsync({
           characterId: character.characterId,
-          displayName: value.name.trim(),
+          name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color,
-          imageStorageId: imageStorageId,
+          imageStorageId,
           playerId: value.playerId || undefined,
         })
 
@@ -214,17 +217,6 @@ export default function CharacterTagForm({
             validateTagName(value, MAX_NAME_LENGTH),
           onChange: ({ value }: { value: string }) =>
             validateTagName(value, MAX_NAME_LENGTH),
-          onChangeAsync: async ({ value }: { value: string }) => {
-            if (!campaign || !getCategory.data) return undefined
-            return validateTagNameAsync(
-              convex,
-              campaign._id,
-              getCategory.data._id,
-              value,
-              mode === 'edit' && character ? character.tagId : undefined,
-            )
-          },
-          onChangeAsyncDebounceMs: 300,
         }}
       >
         {(field) => (

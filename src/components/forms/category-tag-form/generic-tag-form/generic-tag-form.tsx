@@ -7,11 +7,7 @@ import {
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { useForm } from '@tanstack/react-form'
-import {
-  validateTagDescription,
-  validateTagName,
-  validateTagNameAsync,
-} from './validators.ts'
+import { validateTagDescription, validateTagName } from './validators.ts'
 import {
   MAX_NAME_LENGTH,
   MAX_DESCRIPTION_LENGTH,
@@ -31,18 +27,20 @@ import {
   SubmitButtons,
 } from './fields.tsx'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
+import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export default function GenericTagForm({
   mode,
   tag,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
 }: GenericTagFormProps) {
   const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToTag } = useEditorNavigation()
+  const { openParentFolders } = useOpenParentFolders()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
@@ -80,7 +78,7 @@ export default function GenericTagForm({
   const getInitialValues = useCallback((): BaseTagFormValues => {
     if (mode === 'edit' && tag) {
       return {
-        name: tag.displayName,
+        name: tag.name || '',
         description: tag.description || '',
         color: tag.color ?? null,
       }
@@ -99,7 +97,8 @@ export default function GenericTagForm({
 
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, tag?._id, getInitialValues])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tag?._id, parentId])
 
   async function handleSubmit(value: BaseTagFormValues) {
     if (!campaign) {
@@ -128,35 +127,36 @@ export default function GenericTagForm({
       if (mode === 'create') {
         const result = await createMutation
           .mutateAsync({
-            displayName: value.name.trim(),
             name: value.name.trim(),
             description: value.description.trim() || undefined,
             color: value.color ?? undefined,
-            imageStorageId: imageStorageId,
+            imageStorageId,
             campaignId: campaign._id,
             categoryId: getCategory.data._id,
-            parentFolderId,
+            parentId: parentId ?? getCategory.data._id,
           })
           .catch((error) => {
             console.error('Failed to create tag:', error)
             toast.error('Failed to create tag')
           })
-        if (result?.noteId) {
-          const note = await convex.query(api.notes.queries.getNote, {
-            noteId: result.noteId,
+        if (result?.tagId && campaign) {
+          await openParentFolders(result.tagId)
+          const tag = await convex.query(api.tags.queries.getTag, {
+            campaignId: campaign._id,
+            tagId: result.tagId,
           })
-          if (note?.slug) {
-            navigateToNote(note.slug)
+          if (tag?.slug) {
+            navigateToTag(tag.slug)
           }
           toast.success(`${config.singular} created successfully`)
         }
       } else if (mode === 'edit' && tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
-          displayName: value.name.trim(),
+          name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color,
-          imageStorageId: imageStorageId,
+          imageStorageId,
         })
 
         toast.success(`${config.singular} updated successfully`)
@@ -186,17 +186,6 @@ export default function GenericTagForm({
             validateTagName(value, MAX_NAME_LENGTH),
           onChange: ({ value }: { value: string }) =>
             validateTagName(value, MAX_NAME_LENGTH),
-          onChangeAsync: async ({ value }: { value: string }) => {
-            if (!campaign || !getCategory.data) return undefined
-            return validateTagNameAsync(
-              convex,
-              campaign._id,
-              getCategory.data._id,
-              value,
-              mode === 'edit' && tag ? tag._id : undefined,
-            )
-          },
-          onChangeAsyncDebounceMs: 300,
         }}
       >
         {(field) => (

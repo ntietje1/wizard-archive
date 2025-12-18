@@ -1,410 +1,99 @@
-import { useSearch } from '@tanstack/react-router'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useMemo } from 'react'
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
-import { useCurrentNote } from '~/hooks/useCurrentNote'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useMapActions } from '~/hooks/useMapActions'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useRenameItem } from '~/hooks/useRenameItem'
+import { useMenuActions } from '~/components/context-menu/actions'
+import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
+import { isTagCategory } from '~/lib/sidebar-item-utils'
+import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { useContextEnhancers } from '~/components/context-menu/hooks/useContextEnhancers'
+import { useMenuContext } from '~/components/context-menu/hooks/useMenuContext'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { EditorSearch } from '../../validate-search'
-import { UNTITLED_NOTE_TITLE } from 'convex/notes/types'
-import { UNTITLED_FOLDER_NAME } from 'convex/folders/types'
-import { UNTITLED_MAP_NAME } from 'convex/gameMaps/types'
-import { useCallback, useState } from 'react'
-import { toast } from 'sonner'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { Trash2, Folder } from '~/lib/icons'
-import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
-import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
-import { CATEGORY_KIND } from 'convex/tags/types'
-import usePersistedState from '~/hooks/usePersistedState'
-import {
-  VIEW_MODE,
-  CATEGORY_VIEW_MODE_STORAGE_KEY,
-  type ViewMode,
-} from '~/hooks/useCategoryView'
-import type { Id } from 'convex/_generated/dataModel'
+import { useMenuItemsFromContext } from '~/components/context-menu/hooks/useMenuItemsFromContext'
 
 export function FileTopbar() {
-  const search = useSearch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  }) as EditorSearch
-
-  const { navigateToNote, navigateToCategory, navigateToMap } =
-    useEditorNavigation()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-
-  // Determine content type and get data
-  if (search.note) {
-    return <NoteTopbar onClose={() => navigateToNote(null)} />
-  }
-
-  if (search.map && campaignId) {
-    return (
-      <MapTopbar
-        mapSlug={search.map}
-        campaignId={
-          campaignId as import('convex/_generated/dataModel').Id<'campaigns'>
-        }
-        onClose={() => navigateToMap('')}
-      />
-    )
-  }
-
-  if (search.category) {
-    return (
-      <CategoryTopbar
-        categorySlug={search.category}
-        folderId={search.folderId}
-        onClose={() => navigateToCategory('')}
-      />
-    )
-  }
-
-  // No content selected
-  return <EditableTopbar name="" isEmpty={true} onRename={async () => {}} />
-}
-
-function NoteTopbar({ onClose }: { onClose: () => void }) {
-  const { note, noteSlug } = useCurrentNote()
-  const { updateNote } = useNoteActions()
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const handleRename = useCallback(
-    async (newName: string) => {
-      if (!note.data) {
-        return
-      }
-
-      try {
-        await updateNote.mutateAsync({ noteId: note.data._id, name: newName })
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to update note')
-        throw error
-      }
-    },
-    [note.data, updateNote],
-  )
-
-  const handleDeleteSuccess = useCallback(() => {
-    onClose()
-  }, [onClose])
-
-  const menuItems: ContextMenuItem[] = note.data
-    ? [
-        {
-          type: 'action',
-          label: 'Delete note',
-          icon: <Trash2 className="h-4 w-4" />,
-          onClick: () => setIsDeleting(true),
-          className: 'text-red-600 focus:text-red-600',
-        },
-      ]
-    : []
-
-  const deleteDialog = note.data ? (
-    <NoteDeleteConfirmDialog
-      note={note.data}
-      isDeleting={isDeleting}
-      onClose={() => setIsDeleting(false)}
-      onConfirm={handleDeleteSuccess}
-    />
-  ) : null
-
-  if (noteSlug && note.status === 'pending') {
-    return <EditableTopbar name="" isLoading={true} onRename={handleRename} />
-  }
-
-  if (!note.data) {
-    return <EditableTopbar name="" isEmpty={true} onRename={handleRename} />
-  }
-
-  return (
-    <EditableTopbar
-      name={note.data.name ?? ''}
-      defaultName={UNTITLED_NOTE_TITLE}
-      onRename={handleRename}
-      onClose={onClose}
-      menuItems={menuItems}
-      deleteDialog={deleteDialog}
-    />
-  )
-}
-
-function MapTopbar({
-  mapSlug,
-  campaignId,
-  onClose,
-}: {
-  mapSlug: string
-  campaignId: import('convex/_generated/dataModel').Id<'campaigns'>
-  onClose: () => void
-}) {
-  const mapQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMapBySlug, {
-      campaignId,
-      slug: mapSlug,
-    }),
-  )
-
-  const { updateMap } = useMapActions()
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const handleRename = useCallback(
-    async (newName: string) => {
-      if (!mapQuery.data) {
-        return
-      }
-
-      try {
-        await updateMap.mutateAsync({ mapId: mapQuery.data._id, name: newName })
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to update map')
-        throw error
-      }
-    },
-    [mapQuery.data, updateMap],
-  )
-
-  const menuItems: ContextMenuItem[] = mapQuery.data
-    ? [
-        {
-          type: 'action',
-          label: 'Delete map',
-          icon: <Trash2 className="h-4 w-4" />,
-          onClick: () => setIsDeleting(true),
-          className: 'text-red-600 focus:text-red-600',
-        },
-      ]
-    : []
-
-  const deleteDialog = mapQuery.data ? (
-    <MapDeleteConfirmDialog
-      map={mapQuery.data}
-      isDeleting={isDeleting}
-      onClose={() => setIsDeleting(false)}
-    />
-  ) : null
-
-  if (mapQuery.isLoading) {
-    return <EditableTopbar name="" isLoading={true} onRename={handleRename} />
-  }
-
-  if (!mapQuery.data) {
-    return <EditableTopbar name="" isEmpty={true} onRename={handleRename} />
-  }
-
-  return (
-    <EditableTopbar
-      name={mapQuery.data.name || ''}
-      defaultName={UNTITLED_MAP_NAME}
-      onRename={handleRename}
-      onClose={onClose}
-      menuItems={menuItems}
-      deleteDialog={deleteDialog}
-    />
-  )
-}
-
-function CategoryTopbar({
-  categorySlug,
-  folderId,
-  onClose,
-}: {
-  categorySlug: string
-  folderId?: Id<'folders'>
-  onClose: () => void
-}) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-  const { navigateToCategory } = useEditorNavigation()
+  const { item, isLoading } = useCurrentItem()
+  const { clearEditorContent, navigateToItem } = useEditorNavigation()
+  const { rename } = useRenameItem(item)
+  const { Dialogs } = useMenuActions()
 
   const categoryQuery = useQuery(
     convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaignId
+      api.tags.queries.getTagCategory,
+      item && !isTagCategory(item) && item.categoryId
         ? {
-            campaignId,
-            slug: categorySlug,
+            campaignId: item.campaignId,
+            categoryId: item.categoryId,
           }
         : 'skip',
     ),
   )
 
-  const folderQuery = useQuery(
+  const category = isTagCategory(item) ? item : categoryQuery.data
+
+  const ancestors = useQuery(
     convexQuery(
-      api.folders.queries.getFolder,
-      folderId && campaignId
+      api.sidebarItems.queries.getSidebarItemAncestors,
+      item
         ? {
-            folderId: folderId,
+            campaignId: item.campaignId,
+            id: item._id,
           }
         : 'skip',
     ),
   )
 
-  const updateCategory = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
+  // Use enhancers to build context
+  const enhancers = useContextEnhancers({ category })
+  const menuContext = useMenuContext({
+    item: item || undefined,
+    viewContext: 'topbar',
+    enhancers,
   })
-  const { updateFolder } = useFolderActions()
-  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Handle folder rename
-  const handleFolderRename = useCallback(
-    async (newName: string) => {
-      if (!folderQuery.data) return
-      try {
-        await updateFolder.mutateAsync({
-          folderId: folderQuery.data._id,
-          name: newName,
-        })
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to update folder')
-        throw error
-      }
-    },
-    [folderQuery.data, updateFolder],
-  )
+  // Build menu items from context
+  const unifiedMenuItems = useMenuItemsFromContext(menuContext)
 
-  // Handle category rename
-  const handleCategoryRename = useCallback(
-    async (newName: string) => {
-      if (!categoryQuery.data) return
-      try {
-        const result = await updateCategory.mutateAsync({
-          categoryId: categoryQuery.data._id,
-          categoryName: newName,
-        })
-        // Redirect to new slug if it changed
-        if (result.slug && result.slug !== categorySlug) {
-          navigateToCategory(result.slug, folderId)
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to update category')
-        throw error
-      }
-    },
-    [
-      categoryQuery.data,
-      categorySlug,
-      folderId,
-      navigateToCategory,
-      updateCategory,
-    ],
-  )
-
-  // Menu items for folder
-  const folderMenuItems: ContextMenuItem[] = folderQuery.data
-    ? [
-        {
-          type: 'action',
-          label: 'Delete folder',
-          icon: <Trash2 className="h-4 w-4" />,
-          onClick: () => setIsDeleting(true),
-          className: 'text-red-600 focus:text-red-600',
-        },
+  const computedMenuItems: ContextMenuItem[] = useMemo(() => {
+    if (isTagCategory(item)) {
+      return [
+        ...unifiedMenuItems,
       ]
-    : []
-
-  const folderDeleteDialog = folderQuery.data ? (
-    <FolderDeleteConfirmDialog
-      folder={folderQuery.data}
-      isDeleting={isDeleting}
-      onClose={() => setIsDeleting(false)}
-    />
-  ) : null
-
-  // View mode state (only used when at root category)
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    `${CATEGORY_VIEW_MODE_STORAGE_KEY}-${categorySlug}`,
-    VIEW_MODE.folderized as ViewMode,
-  )
-
-  // Handle view mode toggle
-  const handleToggleViewMode = useCallback(() => {
-    setViewMode((prev: ViewMode) =>
-      prev === VIEW_MODE.flat ? VIEW_MODE.folderized : VIEW_MODE.flat,
-    )
-    // Navigate to root when toggling view mode
-    navigateToCategory(categorySlug, undefined)
-  }, [setViewMode, navigateToCategory, categorySlug])
-
-  // Menu items for category (only show view mode toggle at root)
-  const categoryMenuItems: ContextMenuItem[] = !folderId
-    ? [
-        {
-          type: 'action',
-          label:
-            viewMode === VIEW_MODE.folderized ? 'Hide Folders' : 'Show Folders',
-          icon: <Folder className="h-4 w-4" />,
-          onClick: handleToggleViewMode,
-        },
-      ]
-    : []
-
-  // If viewing a folder, show folder topbar
-  if (folderId && folderQuery.data) {
-    if (folderQuery.isLoading) {
-      return (
-        <EditableTopbar
-          name=""
-          isLoading={true}
-          onRename={handleFolderRename}
-        />
-      )
     }
+    return unifiedMenuItems
+  }, [item, unifiedMenuItems])
 
+  const defaultName = defaultItemName(item)
+
+  if (isLoading || !item) {
     return (
-      <EditableTopbar
-        name={folderQuery.data.name || ''}
-        defaultName={UNTITLED_FOLDER_NAME}
-        onRename={handleFolderRename}
-        onClose={onClose}
-        menuItems={folderMenuItems}
-        deleteDialog={folderDeleteDialog}
-      />
-    )
-  }
-
-  // Otherwise show category topbar
-  const isSystemCategory = categoryQuery.data?.kind !== CATEGORY_KIND.User
-
-  if (categoryQuery.isLoading) {
-    return (
-      <EditableTopbar
-        name=""
-        isLoading={true}
-        onRename={handleCategoryRename}
-      />
-    )
-  }
-
-  if (!categoryQuery.data) {
-    return (
-      <EditableTopbar name="" isEmpty={true} onRename={handleCategoryRename} />
+      <>
+        <EditableTopbar name="" isEmpty={true} onRename={rename} />
+        <Dialogs />
+      </>
     )
   }
 
   return (
-    <EditableTopbar
-      name={
-        categoryQuery.data.pluralDisplayName ||
-        categoryQuery.data.displayName ||
-        ''
-      }
-      defaultName="Category"
-      onRename={handleCategoryRename}
-      onClose={onClose}
-      menuItems={categoryMenuItems}
-      readOnly={isSystemCategory}
-    />
+    <SidebarItemContextMenu
+      item={item}
+      viewContext="topbar"
+      category={category}
+    >
+      <EditableTopbar
+        name={item.name}
+        defaultName={defaultName}
+        onRename={rename}
+        onClose={clearEditorContent}
+        onNavigateToItem={navigateToItem}
+        ancestors={ancestors.data ?? []}
+        menuItems={computedMenuItems}
+      />
+      <Dialogs />
+    </SidebarItemContextMenu>
   )
 }

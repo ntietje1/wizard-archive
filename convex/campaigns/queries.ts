@@ -51,7 +51,7 @@ export const getUserCampaigns = query({
         if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
           const rawNotes = await ctx.db
             .query('notes')
-            .withIndex('by_campaign_category_parent', (q) =>
+            .withIndex('by_campaign_parent', (q) =>
               q.eq('campaignId', campaign._id),
             )
             .collect()

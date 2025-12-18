@@ -60,7 +60,7 @@ type ContentCardProps = BaseContentCardProps &
 export function ContentCard({
   title,
   description,
-  color,
+  color: _color,
   icon,
   badges,
   actionButtons,

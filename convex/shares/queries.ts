@@ -28,6 +28,11 @@ export const getShareTagsByCampaign = query({
       args.campaignId,
       SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
     )
+    if (!category) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
+      )
+    }
     const tags = await getTagsByCategory(ctx, category._id)
     const shares = await ctx.db
       .query('shares')
