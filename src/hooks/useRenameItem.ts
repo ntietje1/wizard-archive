@@ -1,5 +1,8 @@
 import { useCallback } from 'react'
-import { SIDEBAR_ITEM_TYPES, type AnySidebarItem } from 'convex/sidebarItems/types'
+import {
+  SIDEBAR_ITEM_TYPES,
+  type AnySidebarItem,
+} from 'convex/sidebarItems/types'
 import { useNoteActions } from './useNoteActions'
 import { useTagActions } from './useTagActions'
 import { useMapActions } from './useMapActions'
@@ -25,7 +28,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const campaignId = campaignWithMembership.data?.campaign._id
   const { item: currentItem } = useCurrentItem()
   const { navigateToItem, navigateToPage } = useEditorNavigation()
-  
+
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
   }) as EditorSearch
@@ -40,7 +43,8 @@ export function useRenameItem(item: AnySidebarItem | null) {
 
       const oldSlug = item.slug
       const isCurrentItem = currentItem?._id === item._id
-      const isCurrentPage = search.page === oldSlug && (isNote(item) || isGameMap(item))
+      const isCurrentPage =
+        search.page === oldSlug && (isNote(item) || isGameMap(item))
 
       try {
         switch (item.type) {
@@ -84,7 +88,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
         if (isCurrentPage && updatedItem.slug !== oldSlug) {
           navigateToPage(updatedItem.slug)
         }
-        // If this is the current item (but not a page) and slug changed, navigate to item
+        // If this is the current item and slug changed, navigate to item
         else if (isCurrentItem && updatedItem.slug !== oldSlug) {
           navigateToItem(updatedItem)
         }
@@ -111,7 +115,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
   )
 
   return {
-    rename: (item?.type === 'tagCategories') ? undefined : rename,
+    rename: item?.type === 'tagCategories' ? undefined : rename,
   }
 }
-

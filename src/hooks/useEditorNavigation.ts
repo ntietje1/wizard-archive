@@ -124,6 +124,19 @@ export const useEditorNavigation = () => {
     [dmUsername, campaignSlug, navigate],
   )
 
+  const navigateToItemAndPage = useCallback(
+    (item: AnySidebarItem, pageSlug: string) => {
+      if (isNote(item)) {
+        navigateToNote(item.slug, pageSlug)
+      } else if (isTag(item)) {
+        navigateToTag(item.slug, pageSlug)
+      } else {
+        navigateToItem(item)
+      }
+    },
+    [navigateToNote, navigateToTag],
+  )
+
   const navigateToItem = useCallback(
     (item: AnySidebarItem) => {
       if (isNote(item)) {
@@ -172,6 +185,7 @@ export const useEditorNavigation = () => {
     navigateToCategory,
     navigateToFolder,
     navigateToItem,
+    navigateToItemAndPage,
     clearEditorContent,
   }
 }

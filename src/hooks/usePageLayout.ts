@@ -75,7 +75,10 @@ export function usePageLayout({
   const pages = {
     ...pagesQuery,
     data: allPagesArray,
-    status: pagesQuery.status === 'pending' || parentItemQuery.status === 'pending' ? 'pending' : pagesQuery.status,
+    status:
+      pagesQuery.status === 'pending' || parentItemQuery.status === 'pending'
+        ? 'pending'
+        : pagesQuery.status,
   }
 
   const [persistedPageSlug, setPersistedPageSlug] = usePersistedState<
@@ -87,7 +90,7 @@ export function usePageLayout({
   const effectivePageSlug = pageSlug ?? persistedPageSlug ?? undefined
   const currentPageItem = effectivePageSlug
     ? childPagesArray.find((p) => p.slug === effectivePageSlug)
-    : parentItem ?? undefined
+    : (parentItem ?? undefined)
 
   const currentPage = useQuery(
     convexQuery(
@@ -100,7 +103,7 @@ export function usePageLayout({
     if (!itemId || !campaignId) return
     const result = await createChildNote.mutateAsync({
       parentId: itemId,
-      name: 'New Page',
+      name: '',
       campaignId,
     })
     if (!result.slug) return
@@ -157,4 +160,3 @@ export function usePageLayout({
     updateCurrentPageContent,
   }
 }
-
