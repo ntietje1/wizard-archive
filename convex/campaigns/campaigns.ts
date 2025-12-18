@@ -2,10 +2,7 @@ import { Id } from '../_generated/dataModel'
 import { getUserIdentity, UserIdentityWithProfile } from '../common/identity'
 import { Ctx } from '../common/types'
 import { UserProfile } from '../users/types'
-import {
-  getUserProfileByUserIdHandler,
-  getUserProfileByUsernameHandler,
-} from '../users/users'
+import { getUserProfileByUsernameHandler } from '../users/users'
 import {
   Campaign,
   CAMPAIGN_MEMBER_ROLE,
@@ -117,13 +114,12 @@ export async function getCampaignMembership(
   const identityWithProfile = await getUserIdentity(ctx)
   if (!identityWithProfile)
     return { identityWithProfile: null, campaignWithMembership: null }
-  const { identity } = identityWithProfile
 
   const campaign = await getCampaign(ctx, campaignIdentifier)
 
   if (!campaign)
     return {
-      identityWithProfile: identityWithProfile,
+      identityWithProfile,
       campaignWithMembership: null,
     }
 
@@ -147,7 +143,7 @@ export async function getCampaignMembership(
 
   if (!campaignMember)
     return {
-      identityWithProfile: identityWithProfile,
+      identityWithProfile,
       campaignWithMembership: null,
     }
 
@@ -160,8 +156,8 @@ export async function getCampaignMembership(
   }
 
   return {
-    identityWithProfile: identityWithProfile,
-    campaignWithMembership: campaignWithMembership,
+    identityWithProfile,
+    campaignWithMembership,
   }
 }
 

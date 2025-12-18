@@ -1,7 +1,7 @@
 import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { Folder } from 'convex/notes/types'
+import type { Folder } from 'convex/folders/types'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
@@ -18,10 +18,7 @@ export function FolderDeleteConfirmDialog({
   onClose,
 }: FolderDeleteConfirmDialogProps) {
   const { deleteFolder } = useFolderActions()
-  const sidebarItemsByParent = useSidebarItemsByParent(
-    folder.categoryId,
-    folder._id,
-  )
+  const sidebarItemsByParent = useSidebarItemsByParent(folder._id)
   const hasDirectChildren =
     folder && (sidebarItemsByParent.data?.length || 0) > 0
   const handleConfirm = useCallback(async () => {
@@ -48,15 +45,17 @@ export function FolderDeleteConfirmDialog({
       title="Delete Folder"
       description={
         hasDirectChildren ? (
-          <p>
-            <strong className="text-red-600">This folder isn't empty!</strong>
+          <>
+            <strong className="text-red-600">
+              {"This folder isn't empty!"}
+            </strong>
             <br />
             <span>
               Are you sure you want to delete it and all its contents?
             </span>
-          </p>
+          </>
         ) : (
-          <p>Are you sure you want to delete this folder?</p>
+          <>Are you sure you want to delete this folder?</>
         )
       }
       confirmLabel="Delete Folder"

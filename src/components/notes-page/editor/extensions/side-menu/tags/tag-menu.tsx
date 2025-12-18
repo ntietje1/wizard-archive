@@ -16,7 +16,7 @@ const getTagMenuItems = (
   if (!tags) return []
 
   return tags.map((tag: Tag) => ({
-    title: tag.displayName,
+    title: tag.name || '',
     onItemClick: () => onAddTag(tag),
   }))
 }
@@ -33,7 +33,7 @@ export default function TagMenu({
 
     const tagContent = {
       tagId: tag._id,
-      tagName: tag.displayName,
+      tagName: tag.name || '',
       tagColor: getTagColor(tag),
     }
 

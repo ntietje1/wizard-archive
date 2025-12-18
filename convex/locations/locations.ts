@@ -1,7 +1,7 @@
 import { Location } from './types'
 import { Id } from '../_generated/dataModel'
 import { QueryCtx } from '../_generated/server'
-import { combineTagEntity } from '../tags/tags'
+import { combineTagEntity, getTagCategory } from '../tags/tags'
 
 export const combineLocationAndTag = (
   location: { _id: Id<'locations'> },
@@ -21,9 +21,6 @@ export const getLocation = async (
   if (!tag) {
     return null
   }
-  const category = await ctx.db.get(tag.categoryId)
-  if (!category) {
-    return null
-  }
+  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
   return combineLocationAndTag(location, tag, category)
 }

@@ -15,9 +15,11 @@ import {
   ContextMenuCheckboxItem,
   ContextMenuSeparator,
 } from '~/components/shadcn/ui/context-menu'
-import { useCurrentNote } from '~/hooks/useCurrentNote'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { usePageLayout } from '~/hooks/usePageLayout'
 import type { Share } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { isNote } from '~/lib/sidebar-item-utils'
 
 interface ShareSideMenuButtonProps {
   block: CustomBlock
@@ -38,15 +40,24 @@ export default function ShareSideMenuButton({
   freezeMenu,
   unfreezeMenu,
 }: ShareSideMenuButtonProps) {
-  const { note } = useCurrentNote()
+  const { item } = useCurrentItem()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
+  const campaignId = campaign?._id
+  const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
+  const { currentPage } = usePageLayout({
+    itemId: isPageLayout ? item?._id : undefined,
+    itemSlug: isPageLayout ? item?.slug : undefined,
+    campaignId: isPageLayout ? campaignId : undefined,
+  })
   const Components = useComponentsContext()!
 
   const blockTagState = useQuery(
     convexQuery(
-      api.notes.queries.getBlockTagState,
-      note.data?._id ? { noteId: note.data._id, blockId: block.id } : 'skip',
+      api.blocks.queries.getBlockTagState,
+      isNote(currentPage)
+        ? { noteId: currentPage._id, blockId: block.id }
+        : 'skip',
     ),
   )
 
@@ -85,30 +96,31 @@ export default function ShareSideMenuButton({
     (isShared && !isMutating) || (!isShared && isMutating)
 
   const toggleShareTag = async (share: Share) => {
-    if (!note.data || isMutating || isBlockNotFound) return
+    if (!isNote(currentPage) || isMutating || isBlockNotFound) return
 
     const isApplied = appliedTagIds.has(share.tagId)
     try {
       if (isApplied) {
         await removeShareFromBlock.mutateAsync({
-          noteId: note.data._id,
+          noteId: currentPage._id,
           blockId: block.id,
           shareId: share.shareId,
         })
       } else {
         await addShareToBlock.mutateAsync({
-          noteId: note.data._id,
+          noteId: currentPage._id,
           blockId: block.id,
           shareId: share.shareId,
         })
       }
     } catch (error) {
+      console.error(error)
       toast.error('Failed to toggle share')
     }
   }
 
   const handleButtonClick = (e: React.MouseEvent) => {
-    if (!note.data || isMutating) return
+    if (!item || isMutating) return
     if (e.ctrlKey || e.metaKey) return
 
     if (isBlockNotFound) {
@@ -150,6 +162,10 @@ export default function ShareSideMenuButton({
 
     return items
   }, [sharedAllTag, playerSharedTags, appliedTagIds])
+
+  if (!isPageLayout) {
+    return null
+  }
 
   return (
     <ContextMenu

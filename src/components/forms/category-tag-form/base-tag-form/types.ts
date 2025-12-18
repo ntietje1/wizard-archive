@@ -1,4 +1,4 @@
-import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Tag } from 'convex/tags/types'
 import type { LucideIcon } from '~/lib/icons'
 
@@ -28,7 +28,7 @@ interface TagDialogBaseProps {
   isOpen: boolean
   onClose: () => void
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: SidebarItemId
 }
 
 export type TagDialogProps<T extends Tag = Tag> =

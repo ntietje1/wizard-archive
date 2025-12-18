@@ -8,6 +8,9 @@
  * @module
  */
 
+import type * as blocks_blocks from "../blocks/blocks.js";
+import type * as blocks_queries from "../blocks/queries.js";
+import type * as blocks_types from "../blocks/types.js";
 import type * as campaigns_campaigns from "../campaigns/campaigns.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
@@ -30,11 +33,11 @@ import type * as gameMaps_gameMaps from "../gameMaps/gameMaps.js";
 import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
+import type * as gameMaps_validators from "../gameMaps/validators.js";
 import type * as locations_locations from "../locations/locations.js";
 import type * as locations_mutations from "../locations/mutations.js";
 import type * as locations_queries from "../locations/queries.js";
 import type * as locations_types from "../locations/types.js";
-import type * as notes_blocks from "../notes/blocks.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_mutations from "../notes/mutations.js";
 import type * as notes_notes from "../notes/notes.js";
@@ -48,6 +51,7 @@ import type * as shares_mutations from "../shares/mutations.js";
 import type * as shares_queries from "../shares/queries.js";
 import type * as shares_shares from "../shares/shares.js";
 import type * as shares_types from "../shares/types.js";
+import type * as sidebarItems_idValidator from "../sidebarItems/idValidator.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_sidebarItems from "../sidebarItems/sidebarItems.js";
 import type * as sidebarItems_types from "../sidebarItems/types.js";
@@ -79,6 +83,9 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "blocks/blocks": typeof blocks_blocks;
+  "blocks/queries": typeof blocks_queries;
+  "blocks/types": typeof blocks_types;
   "campaigns/campaigns": typeof campaigns_campaigns;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
@@ -101,11 +108,11 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/mutations": typeof gameMaps_mutations;
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/types": typeof gameMaps_types;
+  "gameMaps/validators": typeof gameMaps_validators;
   "locations/locations": typeof locations_locations;
   "locations/mutations": typeof locations_mutations;
   "locations/queries": typeof locations_queries;
   "locations/types": typeof locations_types;
-  "notes/blocks": typeof notes_blocks;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/mutations": typeof notes_mutations;
   "notes/notes": typeof notes_notes;
@@ -119,6 +126,7 @@ declare const fullApi: ApiFromModules<{
   "shares/queries": typeof shares_queries;
   "shares/shares": typeof shares_shares;
   "shares/types": typeof shares_types;
+  "sidebarItems/idValidator": typeof sidebarItems_idValidator;
   "sidebarItems/queries": typeof sidebarItems_queries;
   "sidebarItems/sidebarItems": typeof sidebarItems_sidebarItems;
   "sidebarItems/types": typeof sidebarItems_types;

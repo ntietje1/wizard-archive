@@ -85,7 +85,7 @@ export function SessionPanel() {
                 Current Session
               </div>
               <div className="truncate text-sm font-medium">
-                {currentSession.data?.displayName ?? 'None'}
+                {currentSession.data?.name ?? 'None'}
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function SessionPanel() {
                   >
                     <div className="flex w-full flex-col">
                       <span className="truncate text-sm font-medium">
-                        {s.displayName}
+                        {s.name || ''}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatSessionDate(s)}

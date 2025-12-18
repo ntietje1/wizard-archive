@@ -6,10 +6,26 @@ import {
 import { FileSidebar } from './sidebar'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { SessionPanel } from '../editor/session-panel/session-panel'
-import { RootContextMenu } from '~/components/context-menu/sidebar/generic/root-context-menu'
+import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { MapViewProvider } from '~/contexts/MapViewContext'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { isGameMap } from '~/lib/sidebar-item-utils'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
-  return (
+  // Check if viewing a map and provide context
+  const { item } = useCurrentItem()
+  const map = isGameMap(item) ? item : null
+  const mapId = map?._id
+
+  const pinsQuery = useQuery(
+    convexQuery(api.gameMaps.queries.getMapPins, mapId ? { mapId } : 'skip'),
+  )
+  const pins = pinsQuery.data || []
+
+  const content = (
     <div className="flex flex-1 min-h-0">
       <ResizablePanelGroup
         direction="horizontal"
@@ -31,10 +47,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0"
             >
-              <RootContextMenu className="flex flex-col flex-1 min-h-0">
+              <SidebarItemContextMenu
+                viewContext="sidebar"
+                className="flex flex-col flex-1 min-h-0"
+              >
                 <SidebarHeader />
                 <FileSidebar />
-              </RootContextMenu>
+              </SidebarItemContextMenu>
             </ResizablePanel>
             <div className="h-px w-full bg-border" />
             <SessionPanel />
@@ -51,4 +70,15 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </ResizablePanelGroup>
     </div>
   )
+
+  // Wrap with MapViewProvider if viewing a map
+  if (map) {
+    return (
+      <MapViewProvider map={map} pins={pins}>
+        {content}
+      </MapViewProvider>
+    )
+  }
+
+  return content
 }

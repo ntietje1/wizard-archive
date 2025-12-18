@@ -66,9 +66,11 @@ export const BackgroundColorButton = () => {
         )
       }
 
-      color === 'default'
-        ? editor.removeStyles({ backgroundColor: color })
-        : editor.addStyles({ backgroundColor: color })
+      if (color === 'default') {
+        editor.removeStyles({ backgroundColor: color })
+      } else {
+        editor.addStyles({ backgroundColor: color })
+      }
 
       setTimeout(() => {
         // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap

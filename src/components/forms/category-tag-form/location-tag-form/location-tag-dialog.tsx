@@ -22,7 +22,7 @@ export default function LocationTagDialog(
         mode={props.mode}
         location={location}
         config={props.config}
-        parentFolderId={props.parentFolderId}
+        parentId={props.parentId}
         isOpen={props.isOpen}
         onClose={props.onClose}
         onLocationCreated={props.onLocationCreated}

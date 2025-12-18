@@ -7,7 +7,7 @@ import {
   updateTagAndContent,
   insertTagCategory,
   updateTagCategory as updateTagCategoryFn,
-  deleteTagAndCleanupContent as deleteTagFn,
+  deleteTag as deleteTagFn,
   deleteTagCategory as deleteTagCategoryFn,
   removeTagFromBlockHandler,
   addTagToBlockHandler,
@@ -15,26 +15,29 @@ import {
 import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { blockNoteIdValidator } from '../notes/schema'
+import { blockNoteIdValidator } from '../blocks/schema'
+import {
+  getSidebarItemById,
+  isValidSidebarParent,
+} from '../sidebarItems/sidebarItems'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export const createTag = mutation({
   args: createTagAndNoteArgs,
   returns: v.object({
     tagId: v.id('tags'),
-    noteId: v.id('notes'),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
-    return await insertTagAndNote(ctx, args, args.parentFolderId)
+  handler: async (ctx, args): Promise<{ tagId: Id<'tags'> }> => {
+    return await insertTagAndNote(ctx, args)
   },
 })
 
 export const updateTag = mutation({
   args: {
     tagId: v.id('tags'),
-    displayName: v.optional(v.string()),
+    name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
     color: v.optional(v.union(v.string(), v.null())),
     description: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
@@ -42,7 +45,8 @@ export const updateTag = mutation({
   returns: v.id('tags'),
   handler: async (ctx, args): Promise<Id<'tags'>> => {
     await updateTagAndContent(ctx, args.tagId, {
-      displayName: args.displayName,
+      name: args.name,
+      iconName: args.iconName,
       color: args.color,
       description: args.description,
       imageStorageId: args.imageStorageId,
@@ -62,21 +66,49 @@ export const deleteTag = mutation({
   },
 })
 
-const createTagCategoryNameArgs = v.union(
-  v.object({
-    categoryName: v.string(),
-  }),
-  v.object({
-    // NOTE: auto-pluralize is currently ALWAYS on in create mode
-    displayName: v.string(),
-    pluralDisplayName: v.string(),
-  }),
-)
+export const moveTag = mutation({
+  args: {
+    tagId: v.id('tags'),
+    parentId: v.optional(sidebarItemIdValidator),
+  },
+  returns: v.id('tags'),
+  handler: async (ctx, args): Promise<Id<'tags'>> => {
+    const tag = await ctx.db.get(args.tagId)
+    if (!tag) {
+      throw new Error('Tag not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: tag.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        tag.campaignId,
+        args.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
+      }
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.tags, parentItem.type)) {
+        throw new Error(`Invalid parent type: ${parentItem.type}`)
+      }
+    }
+
+    await ctx.db.patch(args.tagId, {
+      parentId: args.parentId,
+    })
+    return args.tagId
+  },
+})
 
 export const createTagCategory = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: createTagCategoryNameArgs,
+    name: v.string(),
     iconName: v.string(),
     defaultColor: v.optional(v.string()),
   },
@@ -88,36 +120,19 @@ export const createTagCategory = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    if ('categoryName' in args.name) {
-      return await insertTagCategory(ctx, {
-        campaignId: args.campaignId,
-        kind: CATEGORY_KIND.User,
-        categoryName: args.name.categoryName,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
-    } else if ('displayName' in args.name && 'pluralDisplayName' in args.name) {
-      return await insertTagCategory(ctx, {
-        campaignId: args.campaignId,
-        kind: CATEGORY_KIND.User,
-        displayName: args.name.displayName,
-        pluralDisplayName: args.name.pluralDisplayName,
-        iconName: args.iconName,
-        defaultColor: args.defaultColor,
-      })
-    } else {
-      throw new Error(
-        'Must provide either categoryName or both displayName and pluralDisplayName',
-      )
-    }
+    return await insertTagCategory(ctx, {
+      campaignId: args.campaignId,
+      kind: CATEGORY_KIND.User,
+      name: args.name,
+      iconName: args.iconName,
+      defaultColor: args.defaultColor,
+    })
   },
 })
 export const updateTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),
-    categoryName: v.optional(v.string()),
-    displayName: v.optional(v.string()),
-    pluralDisplayName: v.optional(v.string()),
+    name: v.optional(v.string()),
     iconName: v.optional(v.string()),
     defaultColor: v.optional(v.string()),
   },
@@ -130,14 +145,13 @@ export const updateTagCategory = mutation({
     args,
   ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
     return await updateTagCategoryFn(ctx, args.categoryId, {
-      categoryName: args.categoryName,
-      displayName: args.displayName,
-      pluralDisplayName: args.pluralDisplayName,
+      name: args.name,
       iconName: args.iconName,
       defaultColor: args.defaultColor,
     })
   },
 })
+
 export const deleteTagCategory = mutation({
   args: {
     categoryId: v.id('tagCategories'),

@@ -76,6 +76,8 @@ export {
   Squirrel,
   Sun,
   Star,
+  SquareArrowOutUpRight,
+  Eye,
 } from 'lucide-react'
 
 export type { LucideIcon } from 'lucide-react'

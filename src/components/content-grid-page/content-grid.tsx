@@ -8,7 +8,7 @@ interface ContentGridProps {
 export function ContentGrid({ children, className = '' }: ContentGridProps) {
   return (
     <div
-      className={`grid gap-6 ${className}`}
+      className={`grid w-full min-h-full gap-6 ${className}`}
       style={{
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
       }}

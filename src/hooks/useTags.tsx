@@ -44,7 +44,7 @@ export function useBlockTags({
 
   const blockTagState = useQuery(
     convexQuery(
-      api.notes.queries.getBlockTagState,
+      api.blocks.queries.getBlockTagState,
       noteId ? { noteId, blockId } : 'skip',
     ),
   )
@@ -94,7 +94,7 @@ export function useBlockTags({
     const query = searchQuery.trim().toLowerCase()
     if (!query) return availableTags
     return availableTags.filter((tag) =>
-      tag.displayName.toLowerCase().includes(query),
+      (tag.name || '').toLowerCase().includes(query),
     )
   }, [availableTags, searchQuery])
 
@@ -110,12 +110,20 @@ export function useBlockTags({
 
   const handleAddTag = async (tagId: Id<'tags'>) => {
     if (!noteId || isMutating) return
-    await addTagToBlock.mutateAsync({ noteId, blockId, tagId })
+    await addTagToBlock.mutateAsync({
+      noteId,
+      blockId,
+      tagId,
+    })
   }
 
   const handleRemoveTag = async (tagId: Id<'tags'>) => {
     if (!noteId || isMutating) return
-    await removeTagFromBlock.mutateAsync({ noteId, blockId, tagId })
+    await removeTagFromBlock.mutateAsync({
+      noteId,
+      blockId,
+      tagId,
+    })
   }
 
   return {

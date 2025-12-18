@@ -1,5 +1,7 @@
 import { Id } from '../_generated/dataModel'
+import { slugify } from '../common/slug'
 import { Note } from '../notes/types'
+import { SidebarItem, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export const CATEGORY_KIND = {
   SystemManaged: 'system_managed', // both category and tags under it are immutable to users.
@@ -9,33 +11,29 @@ export const CATEGORY_KIND = {
 
 export const SYSTEM_DEFAULT_CATEGORIES = {
   Character: {
-    displayName: 'Character',
-    pluralDisplayName: 'Characters',
-    slug: 'characters',
+    name: 'Characters',
+    slug: slugify('Characters'),
     iconName: 'User',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#ef4444',
   },
   Location: {
-    displayName: 'Location',
-    pluralDisplayName: 'Locations',
-    slug: 'locations',
+    name: 'Locations',
+    slug: slugify('Locations'),
     iconName: 'MapPin',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#3B82F6',
   },
   Session: {
-    displayName: 'Session',
-    pluralDisplayName: 'Sessions',
-    slug: 'sessions',
+    name: 'Sessions',
+    slug: slugify('Sessions'),
     iconName: 'Calendar',
     kind: CATEGORY_KIND.SystemCore,
     defaultColor: '#22C55E',
   },
   Shared: {
-    displayName: 'Shares',
-    pluralDisplayName: 'Shares',
-    slug: 'shares',
+    name: 'Shared',
+    slug: slugify('Shared'),
     iconName: 'Share2',
     kind: CATEGORY_KIND.SystemManaged,
     defaultColor: '#F59E0B',
@@ -46,35 +44,23 @@ export const SHARED_TAG_COLOR = '#F59E0B'
 
 export type CategoryKind = (typeof CATEGORY_KIND)[keyof typeof CATEGORY_KIND]
 
-export type TagCategory = {
-  _id: Id<'tagCategories'>
-  _creationTime: number
-
-  slug: string
-  displayName: string
-  pluralDisplayName: string
+export type TagCategory = SidebarItem<
+  typeof SIDEBAR_ITEM_TYPES.tagCategories
+> & {
   kind: CategoryKind
-  campaignId: Id<'campaigns'>
-  iconName: string
   defaultColor?: string
-  updatedAt: number
   createdBy: Id<'campaignMembers'>
 }
 
-export type Tag = {
-  _id: Id<'tags'>
-  _creationTime: number
-
-  displayName: string
-  name: string
+export type Tag = Omit<
+  SidebarItem<typeof SIDEBAR_ITEM_TYPES.tags>,
+  'categoryId'
+> & {
   color?: string
   description?: string
-  campaignId: Id<'campaigns'>
-  categoryId: Id<'tagCategories'>
+  categoryId: Id<'tagCategories'> // Required for tags, not optional
   category?: TagCategory
   imageStorageId?: Id<'_storage'>
-  noteId?: Id<'notes'>
-  updatedAt: number
   createdBy: Id<'campaignMembers'>
 }
 

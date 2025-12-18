@@ -15,6 +15,6 @@ export const TagConfig: CustomInlineContentConfig = {
   content: 'none',
 }
 
-declare const TagInlineSpec: InlineContentSpec<typeof TagConfig>
+type TagInlineSpec = InlineContentSpec<typeof TagConfig>
 
-export type TagInlineSpecType = { tag: typeof TagInlineSpec }
+export type TagInlineSpecType = { tag: TagInlineSpec }

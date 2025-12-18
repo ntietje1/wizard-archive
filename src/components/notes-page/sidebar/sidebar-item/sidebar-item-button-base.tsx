@@ -12,7 +12,7 @@ export function SidebarItemButtonBase({
   isExpanded = false,
   isSelected = false,
   isRenaming = false,
-  showChevron = false,
+  showChevron = true,
   onSelect = () => {},
   onMoreOptions = () => {},
   onToggleExpanded = () => {},

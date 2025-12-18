@@ -1,13 +1,5 @@
-export function validateCategoryName(
-  autoPluralize: boolean,
-  categoryName: string,
-  displayName: string,
-  pluralDisplayName: string,
-): boolean {
-  if (autoPluralize) {
-    return !!categoryName.trim()
-  }
-  return !!displayName.trim() && !!pluralDisplayName.trim()
+export function validateCategoryName(name: string): boolean {
+  return !!name.trim()
 }
 
 export function validateCategoryDisplayName(

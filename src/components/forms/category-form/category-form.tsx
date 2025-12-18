@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvex, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation, useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -36,52 +36,22 @@ export function CategoryForm({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
   })
 
-  const deleteCategory = useMutation({
-    mutationFn: useConvexMutation(api.tags.mutations.deleteTagCategory),
-  })
-
   const iconOptions = getNonDefaultCategoryIcons()
-  const [autoPluralize, setAutoPluralize] = useState(true)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
   const isSystemCategory =
     mode === 'edit' && category?.kind === CATEGORY_KIND.SystemCore
 
-  // auto pluralize is always on in create mode
-  const effectiveAutoPluralize = mode === 'create' ? true : autoPluralize
-
-  const handleAutoPluralizeToggle = (checked: boolean) => {
-    if (mode === 'create') return
-    setAutoPluralize(checked)
-    if (checked) {
-      if (mode === 'edit' && category) {
-        form.setFieldValue('categoryName', category.pluralDisplayName)
-      }
-      form.setFieldValue('displayName', '')
-      form.setFieldValue('pluralDisplayName', '')
-    } else {
-      if (mode === 'edit' && category) {
-        form.setFieldValue('displayName', category.displayName)
-        form.setFieldValue('pluralDisplayName', category.pluralDisplayName)
-      }
-      form.setFieldValue('categoryName', '')
-    }
-  }
-
   const getInitialValues = () => {
     if (mode === 'edit' && category) {
       return {
-        categoryName: category.pluralDisplayName,
-        displayName: category.displayName,
-        pluralDisplayName: category.pluralDisplayName,
-        iconName: category.iconName,
+        name: category.name || '',
+        iconName: category.iconName || 'TagIcon',
         defaultColor: category.defaultColor || '#ef4444',
       }
     }
     return {
-      categoryName: '',
-      displayName: '',
-      pluralDisplayName: '',
+      name: '',
       iconName: 'TagIcon',
       defaultColor: '#ef4444',
     }
@@ -92,14 +62,7 @@ export function CategoryForm({
     onSubmit: async ({ value }) => {
       // for system categories, we don't need to validate the name
       if (!isSystemCategory) {
-        if (
-          !validateCategoryName(
-            effectiveAutoPluralize,
-            value.categoryName,
-            value.displayName,
-            value.pluralDisplayName,
-          )
-        ) {
+        if (!validateCategoryName(value.name)) {
           return
         }
       }
@@ -110,56 +73,47 @@ export function CategoryForm({
             toast.error('Campaign ID is required')
             return
           }
-          await createCategory.mutateAsync({
-            campaignId: campaignId,
-            name: {
-              categoryName: value.categoryName.trim(),
-            },
+          const categoryId = await createCategory.mutateAsync({
+            campaignId,
+            name: value.name.trim(),
+            iconName: value.iconName || 'TagIcon',
+            defaultColor: value.defaultColor,
+          })
+          if (onSuccess) {
+            try {
+              const createdCategory = await convex.query(
+                api.tags.queries.getTagCategory,
+                {
+                  campaignId,
+                  categoryId,
+                },
+              )
+              if (createdCategory?.slug) {
+                onSuccess(createdCategory.slug)
+              }
+            } catch (error) {
+              console.error('Failed to fetch created category:', error)
+              onClose()
+            }
+          } else {
+            onClose()
+            toast.success('Category created successfully')
+          }
+        } else if (mode === 'edit' && category) {
+          const result = await updateCategory.mutateAsync({
+            categoryId: category._id,
+            name: value.name.trim(),
             iconName: value.iconName,
             defaultColor: value.defaultColor,
           })
-          toast.success('Category created successfully')
-        } else if (mode === 'edit' && category) {
-          if (isSystemCategory) {
-            // for system categories, we only update the color
-            const result = await updateCategory.mutateAsync({
-              categoryId: category._id,
-              defaultColor: value.defaultColor,
-            })
-            toast.success('Category updated successfully')
-            onClose()
-            if (onSuccess && result.slug) {
-              onSuccess(result.slug)
-            }
-          } else if (effectiveAutoPluralize) {
-            const result = await updateCategory.mutateAsync({
-              categoryId: category._id,
-              categoryName: value.categoryName.trim(),
-              iconName: value.iconName,
-              defaultColor: value.defaultColor,
-            })
-            toast.success('Category updated successfully')
-            onClose()
-            if (onSuccess && result.slug) {
-              onSuccess(result.slug)
-            }
+          if (onSuccess && result.slug) {
+            onSuccess(result.slug)
           } else {
-            const result = await updateCategory.mutateAsync({
-              categoryId: category._id,
-              displayName: value.displayName.trim(),
-              pluralDisplayName: value.pluralDisplayName.trim(),
-              iconName: value.iconName,
-              defaultColor: value.defaultColor,
-            })
             toast.success('Category updated successfully')
             onClose()
-            if (onSuccess && result.slug) {
-              onSuccess(result.slug)
-            }
           }
           return
         }
-        onClose()
       } catch (error) {
         console.error(`Failed to ${mode} category:`, error)
         toast.error(`Failed to ${mode} category`)
@@ -184,141 +138,43 @@ export function CategoryForm({
       >
         {!isSystemCategory && (
           <>
-            {effectiveAutoPluralize ? (
-              <form.Field
-                name="categoryName"
-                validators={{
-                  onMount: ({ value }: { value: string }) =>
-                    validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                  onChange: ({ value }: { value: string }) =>
-                    validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                }}
-              >
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="category-name">Category Name*</Label>
-                    <Input
-                      id="category-name"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      placeholder="e.g., Items, Locations, or Faction"
-                      maxLength={MAX_NAME_LENGTH}
-                    />
-                    {field.state.meta.errors.length > 0 &&
-                      field.state.meta.isTouched && (
-                        <p className="text-sm text-red-500 flex items-center gap-1">
-                          <AlertCircle size={14} />
-                          {typeof field.state.meta.errors[0] === 'string'
-                            ? field.state.meta.errors[0]
-                            : 'Invalid category name'}
-                        </p>
-                      )}
-                    {field.state.meta.errors.length === 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {field.state.value.length}/{MAX_NAME_LENGTH}
+            <form.Field
+              name="name"
+              validators={{
+                onMount: ({ value }: { value: string }) =>
+                  validateCategoryDisplayName(value, MAX_NAME_LENGTH),
+                onChange: ({ value }: { value: string }) =>
+                  validateCategoryDisplayName(value, MAX_NAME_LENGTH),
+              }}
+            >
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor="category-name">Category Name*</Label>
+                  <Input
+                    id="category-name"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="e.g., Items, Locations, or Factions"
+                    maxLength={MAX_NAME_LENGTH}
+                  />
+                  {field.state.meta.errors.length > 0 &&
+                    field.state.meta.isTouched && (
+                      <p className="text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle size={14} />
+                        {typeof field.state.meta.errors[0] === 'string'
+                          ? field.state.meta.errors[0]
+                          : 'Invalid category name'}
                       </p>
                     )}
-                  </div>
-                )}
-              </form.Field>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <form.Field
-                  name="displayName"
-                  validators={{
-                    onMount: ({ value }: { value: string }) =>
-                      validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                    onChange: ({ value }: { value: string }) =>
-                      validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                  }}
-                >
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="category-singular">Singular Name*</Label>
-                      <Input
-                        id="category-singular"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        placeholder="e.g., Item"
-                        maxLength={MAX_NAME_LENGTH}
-                      />
-                      {field.state.meta.errors.length > 0 &&
-                        field.state.meta.isTouched && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle size={14} />
-                            {typeof field.state.meta.errors[0] === 'string'
-                              ? field.state.meta.errors[0]
-                              : 'Invalid category name'}
-                          </p>
-                        )}
-                      {field.state.meta.errors.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {field.state.value.length}/{MAX_NAME_LENGTH}
-                        </p>
-                      )}
-                    </div>
+                  {field.state.meta.errors.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {field.state.value.length}/{MAX_NAME_LENGTH}
+                    </p>
                   )}
-                </form.Field>
-
-                <form.Field
-                  name="pluralDisplayName"
-                  validators={{
-                    onMount: ({ value }: { value: string }) =>
-                      validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                    onChange: ({ value }: { value: string }) =>
-                      validateCategoryDisplayName(value, MAX_NAME_LENGTH),
-                  }}
-                >
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="category-plural">Plural Name*</Label>
-                      <Input
-                        id="category-plural"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        placeholder="e.g., Items"
-                        maxLength={MAX_NAME_LENGTH}
-                      />
-                      {field.state.meta.errors.length > 0 &&
-                        field.state.meta.isTouched && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle size={14} />
-                            {typeof field.state.meta.errors[0] === 'string'
-                              ? field.state.meta.errors[0]
-                              : 'Invalid category name'}
-                          </p>
-                        )}
-                      {field.state.meta.errors.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {field.state.value.length}/{MAX_NAME_LENGTH}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </form.Field>
-              </div>
-            )}
-
-            {mode === 'edit' && (
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="auto-pluralize"
-                  checked={autoPluralize}
-                  onChange={(e) => handleAutoPluralizeToggle(e.target.checked)}
-                  className="w-3 h-3 rounded border-slate-300"
-                />
-                <Label
-                  htmlFor="auto-pluralize"
-                  className="text-xs cursor-pointer inline-flex items-center gap-2"
-                >
-                  Auto-detect singular/plural forms
-                </Label>
-              </div>
-            )}
+                </div>
+              )}
+            </form.Field>
 
             <form.Field name="iconName">
               {(field) => (
@@ -354,7 +210,7 @@ export function CategoryForm({
           <div className="space-y-2">
             <Label>Category Name</Label>
             <div className="text-sm text-muted-foreground py-2 px-3 border rounded-md bg-slate-50">
-              {category.pluralDisplayName}
+              {category.name}
             </div>
             <p className="text-xs text-muted-foreground">
               System category names cannot be changed

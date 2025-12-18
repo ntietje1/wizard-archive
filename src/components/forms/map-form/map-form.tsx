@@ -4,12 +4,16 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
+import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
 import { toast } from 'sonner'
+import { useConvex } from '@convex-dev/react-query'
 
 export interface MapFormValues {
   name: string
@@ -18,10 +22,9 @@ export interface MapFormValues {
 interface MapFormProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  categoryId?: Id<'tagCategories'>
-  parentFolderId?: Id<'folders'>
+  parentId?: SidebarItemId
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (mapSlug?: string) => void
 }
 
 const defaultMapFormValues: MapFormValues = {
@@ -31,11 +34,13 @@ const defaultMapFormValues: MapFormValues = {
 export function MapForm({
   mapId,
   campaignId,
-  categoryId,
-  parentFolderId,
+  parentId,
   onClose,
   onSuccess,
 }: MapFormProps) {
+  const { openParentFolders } = useOpenParentFolders()
+  const { navigateToMap } = useEditorNavigation()
+  const convex = useConvex()
   const map = useQuery(
     convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
@@ -114,20 +119,35 @@ export function MapForm({
         toast.success('Map updated')
       } else if (campaignId) {
         // Create new map - require image
-        await createMutation.mutateAsync({
+        const newMapId = await createMutation.mutateAsync({
           campaignId,
           name: values.name,
           imageStorageId: finalImageStorageId,
-          categoryId,
-          parentFolderId,
+          parentId,
         })
+        await openParentFolders(newMapId)
+        // Get the created map's slug for onSuccess callback
+        let mapSlug: string | undefined
+        try {
+          const createdMap = await convex.query(api.gameMaps.queries.getMap, {
+            mapId: newMapId,
+          })
+          mapSlug = createdMap?.slug
+        } catch (error) {
+          console.error('Failed to get created map:', error)
+        }
+        
+        // Only navigate to map if onSuccess is not provided (onSuccess handles navigation)
+        if (!onSuccess && mapSlug) {
+          navigateToMap(mapSlug)
+        }
         toast.success('Map created')
+        onSuccess?.(mapSlug)
+        onClose()
       } else {
         toast.error('Invalid form state: missing map or campaign ID')
         return
       }
-      onSuccess?.()
-      onClose()
     } catch (error) {
       console.error(error)
       toast.error(mapId ? 'Failed to update map' : 'Failed to create map')

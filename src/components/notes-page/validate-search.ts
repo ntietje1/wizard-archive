@@ -2,9 +2,12 @@ import type { Id } from 'convex/_generated/dataModel'
 
 export type EditorSearch = {
   category?: string
-  folderId?: Id<'folders'>
+  folder?: string
+  folderId?: Id<'notes'> | Id<'folders'>
   map?: string
   note?: string
+  tag?: string
+  page?: string
 }
 
 export const validateSearch = (
@@ -18,6 +21,13 @@ export const validateSearch = (
     typeof search.note === 'string' &&
     search.note.trim().length > 0
       ? search.note.trim()
+      : undefined
+
+  const tag =
+    'tag' in search &&
+    typeof search.tag === 'string' &&
+    search.tag.trim().length > 0
+      ? search.tag.trim()
       : undefined
 
   const map =
@@ -34,14 +44,25 @@ export const validateSearch = (
       ? search.category.trim()
       : undefined
 
+  const folder =
+    'folder' in search &&
+    typeof search.folder === 'string' &&
+    search.folder.trim().length > 0
+      ? search.folder.trim()
+      : undefined
+
   // Mutual exclusivity: only one content type param can be present
-  // Priority: note > map > category
+  // Priority: note > tag > map > category > folder
   if (note) {
     result.note = note
+  } else if (tag) {
+    result.tag = tag
   } else if (map) {
     result.map = map
   } else if (category) {
     result.category = category
+  } else if (folder) {
+    result.folder = folder
   }
 
   // folderId is always allowed (used with category)
@@ -50,7 +71,17 @@ export const validateSearch = (
     typeof search.folderId === 'string' &&
     search.folderId.trim().length > 0
   ) {
-    result.folderId = search.folderId as Id<'folders'>
+    result.folderId = search.folderId as Id<'notes'> | Id<'folders'>
+  }
+
+  // page is allowed when note or tag is present
+  if (
+    (result.note || result.tag) &&
+    'page' in search &&
+    typeof search.page === 'string' &&
+    search.page.trim().length > 0
+  ) {
+    result.page = search.page.trim()
   }
 
   return result

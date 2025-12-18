@@ -2,7 +2,7 @@ import { Id } from '../_generated/dataModel'
 import { GameMap } from '../gameMaps/types'
 import { Note } from '../notes/types'
 import { Folder } from '../folders/types'
-import { TagCategory } from '../tags/types'
+import { TagCategory, Tag } from '../tags/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -10,6 +10,8 @@ export const SIDEBAR_ITEM_TYPES = {
   notes: 'notes',
   folders: 'folders',
   gameMaps: 'gameMaps',
+  tagCategories: 'tagCategories',
+  tags: 'tags',
 } as const
 
 export type SidebarItemType =
@@ -28,13 +30,20 @@ export type SidebarItem<T extends SidebarItemType> = {
   _creationTime: number
 
   name?: string
-  userId: Id<'userProfiles'>
+  iconName?: string
+  slug: string
   campaignId: Id<'campaigns'>
   categoryId?: Id<'tagCategories'>
-  category?: TagCategory
-  parentFolderId?: Id<'folders'>
+  parentId?: SidebarItemId
   updatedAt: number
   type: T
 }
 
-export type AnySidebarItem = Note | Folder | GameMap
+export type AnySidebarItem = Note | Folder | GameMap | TagCategory | Tag
+
+export type SidebarItemId =
+  | Id<'notes'>
+  | Id<'folders'>
+  | Id<'tagCategories'>
+  | Id<'tags'>
+  | Id<'gameMaps'>

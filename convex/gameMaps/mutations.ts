@@ -1,49 +1,44 @@
 import { v } from 'convex/values'
-import { Id } from '../_generated/dataModel'
+import { Doc, Id } from '../_generated/dataModel'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getFolder } from '../folders/folders'
-import { getNote } from '../notes/notes'
-import { getTagCategory } from '../tags/tags'
+import {
+  getSidebarItemById,
+  isValidSidebarParent,
+} from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
+import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { deleteMap as deleteMapFn } from './gameMaps'
 
 export const createMap = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     imageStorageId: v.id('_storage'),
+    parentId: v.optional(sidebarItemIdValidator),
     categoryId: v.optional(v.id('tagCategories')),
-    parentFolderId: v.optional(v.id('folders')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    const { identityWithProfile } = await requireCampaignMembership(
+    await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
-    const { profile } = identityWithProfile
 
-    if (args.categoryId) {
-      const category = await getTagCategory(
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
         ctx,
         args.campaignId,
-        args.categoryId,
+        args.parentId,
       )
-      if (!category) {
-        throw new Error('Category not found')
+      if (!parentItem) {
+        throw new Error('Parent not found')
       }
-    }
-
-    if (args.parentFolderId) {
-      const folder = await getFolder(ctx, args.parentFolderId)
-      if (!folder) {
-        throw new Error('Folder not found')
-      }
-      if (folder.campaignId !== args.campaignId) {
-        throw new Error('Folder must belong to the same campaign as the map')
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.gameMaps, parentItem.type)) {
+        throw new Error('Invalid parent type')
       }
     }
 
@@ -62,13 +57,13 @@ export const createMap = mutation({
 
     return await ctx.db.insert('gameMaps', {
       campaignId: args.campaignId,
-      userId: profile._id,
       name: args.name,
       slug: uniqueSlug,
       imageStorageId: args.imageStorageId,
+      parentId: args.parentId,
       categoryId: args.categoryId,
-      parentFolderId: args.parentFolderId,
       updatedAt: Date.now(),
+      type: SIDEBAR_ITEM_TYPES.gameMaps,
     })
   },
 })
@@ -78,7 +73,8 @@ export const updateMap = mutation({
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
-    parentFolderId: v.optional(v.union(v.id('folders'), v.null())),
+    parentId: v.optional(sidebarItemIdValidator),
+    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -93,13 +89,7 @@ export const updateMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const updates: {
-      name?: string
-      slug?: string
-      imageStorageId?: Id<'_storage'>
-      parentFolderId?: Id<'folders'>
-      updatedAt: number
-    } = {
+    const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
     }
 
@@ -124,17 +114,26 @@ export const updateMap = mutation({
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId
     }
-    if (args.parentFolderId !== undefined) {
-      updates.parentFolderId = args.parentFolderId ?? undefined
-      if (args.parentFolderId) {
-        const folder = await getFolder(ctx, args.parentFolderId)
-        if (!folder) {
-          throw new Error('Folder not found')
+    if (args.parentId !== undefined) {
+      updates.parentId = args.parentId ?? undefined
+      if (args.parentId) {
+        const parentItem = await getSidebarItemById(
+          ctx,
+          map.campaignId,
+          args.parentId,
+        )
+        if (!parentItem) {
+          throw new Error('Parent not found')
         }
-        if (folder.campaignId !== map.campaignId) {
-          throw new Error('Folder must belong to the same campaign as the map')
+        if (
+          !isValidSidebarParent(SIDEBAR_ITEM_TYPES.gameMaps, parentItem.type)
+        ) {
+          throw new Error('Invalid parent type')
         }
       }
+    }
+    if (args.categoryId !== undefined) {
+      updates.categoryId = args.categoryId
     }
 
     await ctx.db.patch(args.mapId, updates)
@@ -145,7 +144,8 @@ export const updateMap = mutation({
 export const moveMap = mutation({
   args: {
     mapId: v.id('gameMaps'),
-    parentFolderId: v.optional(v.id('folders')),
+    parentId: v.optional(sidebarItemIdValidator),
+    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -160,18 +160,23 @@ export const moveMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    if (args.parentFolderId) {
-      const folder = await getFolder(ctx, args.parentFolderId)
-      if (!folder) {
-        throw new Error('Folder not found')
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        map.campaignId,
+        args.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
       }
-      if (folder.campaignId !== map.campaignId) {
-        throw new Error('Folder must belong to the same campaign as the map')
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.gameMaps, parentItem.type)) {
+        throw new Error('Invalid parent type')
       }
     }
 
     await ctx.db.patch(args.mapId, {
-      parentFolderId: args.parentFolderId,
+      parentId: args.parentId,
+      categoryId: args.categoryId,
       updatedAt: Date.now(),
     })
     return args.mapId
@@ -184,28 +189,7 @@ export const deleteMap = mutation({
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    const map = await ctx.db.get(args.mapId)
-    if (!map) {
-      throw new Error('Map not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: map.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const pins = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map_itemType', (q) => q.eq('mapId', args.mapId))
-      .collect()
-
-    for (const pin of pins) {
-      await ctx.db.delete(pin._id)
-    }
-
-    await ctx.db.delete(args.mapId)
-    return args.mapId
+    return await deleteMapFn(ctx, args.mapId)
   },
 })
 
@@ -214,18 +198,7 @@ export const createItemPin = mutation({
     mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
-    iconName: v.string(),
-    color: v.optional(v.string()),
-    item: v.union(
-      v.object({
-        itemType: v.literal(SIDEBAR_ITEM_TYPES.notes),
-        noteId: v.id('notes'),
-      }),
-      v.object({
-        itemType: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
-        mapId: v.id('gameMaps'),
-      }),
-    ),
+    itemId: sidebarItemIdValidator,
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -239,47 +212,17 @@ export const createItemPin = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    let pinnedItemCampaignId: Id<'campaigns'>
-
-    if (args.item.itemType === SIDEBAR_ITEM_TYPES.notes) {
-      const item = args.item
-      const note = await getNote(ctx, item.noteId)
-      if (!note) {
-        throw new Error('Note not found')
-      }
-      pinnedItemCampaignId = note.campaignId
-      if (pinnedItemCampaignId !== map.campaignId) {
-        throw new Error('Pinned item and map must belong to the same campaign')
-      }
-      return await ctx.db.insert('mapPins', {
-        mapId: args.mapId,
-        itemType: SIDEBAR_ITEM_TYPES.notes,
-        noteId: item.noteId,
-        iconName: args.iconName,
-        color: args.color,
-        x: args.x,
-        y: args.y,
-      })
-    } else {
-      const item = args.item
-      const pinnedMap = await ctx.db.get(item.mapId)
-      if (!pinnedMap) {
-        throw new Error('Pinned map not found')
-      }
-      pinnedItemCampaignId = pinnedMap.campaignId
-      if (pinnedItemCampaignId !== map.campaignId) {
-        throw new Error('Pinned item and map must belong to the same campaign')
-      }
-      return await ctx.db.insert('mapPins', {
-        mapId: args.mapId,
-        itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-        pinnedMapId: item.mapId,
-        iconName: args.iconName,
-        color: args.color,
-        x: args.x,
-        y: args.y,
-      })
+    const item = await ctx.db.get(args.itemId)
+    if (!item) {
+      throw new Error('Item not found')
     }
+    return await ctx.db.insert('mapPins', {
+      mapId: args.mapId,
+      itemId: args.itemId,
+      x: args.x,
+      y: args.y,
+      updatedAt: Date.now(),
+    })
   },
 })
 
@@ -288,8 +231,6 @@ export const updateItemPin = mutation({
     mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
-    iconName: v.string(),
-    color: v.optional(v.string()),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
@@ -312,8 +253,7 @@ export const updateItemPin = mutation({
     await ctx.db.patch(args.mapPinId, {
       x: args.x,
       y: args.y,
-      iconName: args.iconName,
-      color: args.color,
+      updatedAt: Date.now(),
     })
 
     return args.mapPinId
@@ -324,8 +264,8 @@ export const removeItemPin = mutation({
   args: {
     mapPinId: v.id('mapPins'),
   },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
+  returns: v.id('mapPins'),
+  handler: async (ctx, args): Promise<Id<'mapPins'>> => {
     const pin = await ctx.db.get(args.mapPinId)
     if (!pin) {
       throw new Error('Pin not found')
@@ -343,6 +283,6 @@ export const removeItemPin = mutation({
     )
 
     await ctx.db.delete(args.mapPinId)
-    return null
+    return args.mapPinId
   },
 })

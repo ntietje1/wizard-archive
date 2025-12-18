@@ -1,7 +1,6 @@
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -18,8 +17,12 @@ import {
   SortAsc,
   SortDesc,
 } from '~/lib/icons'
-import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import type { SortDirection, SortOrder } from 'convex/editors/types'
+import {
+  SORT_DIRECTIONS,
+  SORT_ORDERS,
+  type SortDirection,
+  type SortOrder,
+} from 'convex/editors/types'
 import { useSortOptions } from '~/hooks/useSortOptions'
 
 export function SortMenu() {
@@ -31,10 +34,6 @@ export function SortMenu() {
 
   const handleSortDirectionChange = (value: string) => {
     setSortOptions({ ...sortOptions, direction: value as SortDirection })
-  }
-
-  const handleFoldersAlwaysOnTopChange = (value: boolean) => {
-    setSortOptions({ ...sortOptions, foldersAlwaysOnTop: value })
   }
 
   return (
@@ -88,13 +87,6 @@ export function SortMenu() {
             Descending
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem
-          checked={sortOptions.foldersAlwaysOnTop}
-          onCheckedChange={handleFoldersAlwaysOnTopChange}
-        >
-          Folders always on top
-        </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

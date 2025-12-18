@@ -1,7 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { tagValidatorFields } from '../tags/schema'
-import { tagBackedEntityFields } from '../tags/schema'
+import { tagBackedEntityFields, tagValidatorFields } from '../tags/schema'
 
 const locationTableFields = {
   ...tagBackedEntityFields,

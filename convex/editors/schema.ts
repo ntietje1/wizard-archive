@@ -18,7 +18,6 @@ const editorTableFields = {
   campaignId: v.id('campaigns'),
   sortOrder: sortOrderValidator,
   sortDirection: sortDirectionValidator,
-  foldersAlwaysOnTop: v.boolean(),
 }
 
 export const editorTables = {

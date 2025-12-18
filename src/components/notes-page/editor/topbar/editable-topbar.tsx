@@ -14,41 +14,47 @@ import {
 import { X, MoreVertical } from '~/lib/icons'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { ContextMenuItem } from '~/components/context-menu/base/context-menu'
+import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 interface EditableTopbarProps {
-  name: string
+  name?: string
   defaultName?: string
-  onRename: (newName: string) => Promise<void>
+  onRename?: (newName: string) => Promise<void>
+  onNavigateToItem?: (item: AnySidebarItem) => void
   onClose?: () => void
   isLoading?: boolean
   isEmpty?: boolean
+  ancestors?: AnySidebarItem[]
   menuItems?: ContextMenuItem[]
-  deleteDialog?: React.ReactNode
-  readOnly?: boolean
 }
 
 export function EditableTopbar({
   name,
   defaultName,
   onRename,
+  onNavigateToItem,
   onClose,
   isLoading = false,
   isEmpty = false,
+  ancestors = [],
   menuItems = [],
-  deleteDialog,
-  readOnly = false,
 }: EditableTopbarProps) {
-  const [title, setTitle] = useState(name)
+  const [title, setTitle] = useState(name ?? '')
   const [isEditing, setIsEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setTitle(name)
+    const newName = name ?? ''
+    setTitle(newName)
   }, [name])
 
   const handleTitleSubmit = useCallback(async () => {
-    const previousTitle = name
+    if (!onRename) {
+      return
+    }
+
+    const previousTitle = name ?? ''
 
     if (title === previousTitle) {
       setIsEditing(false)
@@ -87,8 +93,20 @@ export function EditableTopbar({
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-2 h-12 border-b bg-white w-full">
-        <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between px-4 py-2 h-12 border-b bg-white w-full gap-4">
+        <div className="flex items-center min-w-0 flex-1">
+          {ancestors.map((ancestor) => (
+            <div key={ancestor._id} className="flex items-center">
+              <button
+                onClick={() => onNavigateToItem?.(ancestor)}
+                className="hover:text-gray-900 transition-colors truncate max-w-[200px] px-1 text-gray-500"
+                title={ancestor.name}
+              >
+                {ancestor.name}
+              </button>
+              <span className="text-gray-400 px-1">/</span>
+            </div>
+          ))}
           {isEditing ? (
             <input
               ref={inputRef}
@@ -101,25 +119,25 @@ export function EditableTopbar({
                 if (e.key === 'Enter') {
                   handleTitleSubmit()
                 } else if (e.key === 'Escape') {
-                  setTitle(name)
+                  setTitle(name ?? '')
                   setIsEditing(false)
                 }
               }}
-              className="bg-transparent border-b border-transparent outline-none focus:ring-0 px-2 w-full"
+              className="bg-transparent border-b border-transparent outline-none focus:ring-0 px-1 flex-1 min-w-0"
               autoFocus
             />
           ) : (
-            <div className="truncate">
-              {readOnly ? (
+            <div className="truncate flex-1 min-w-0">
+              {!onRename ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="text-left px-2 max-w-full truncate cursor-not-allowed opacity-75">
+                    <span className="text-left px-1 inline-block cursor-not-allowed opacity-75">
                       {title || (
                         <span className="opacity-85">
                           {defaultName || 'Untitled'}
                         </span>
                       )}
-                    </div>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>System category names cannot be changed</p>
@@ -128,7 +146,7 @@ export function EditableTopbar({
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="text-left border-b border-transparent hover:border-gray-300 px-2 max-w-full truncate"
+                  className="text-left border-b border-transparent hover:border-gray-300 px-1 max-w-full truncate"
                 >
                   {title || (
                     <span className="opacity-85">
@@ -139,8 +157,9 @@ export function EditableTopbar({
               )}
             </div>
           )}
+        </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
             {menuItems.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -173,10 +192,8 @@ export function EditableTopbar({
                 <X className="h-4 w-4" />
               </Button>
             )}
-          </div>
         </div>
       </div>
-      {deleteDialog}
     </>
   )
 }

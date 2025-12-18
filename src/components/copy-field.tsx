@@ -37,7 +37,7 @@ export function CopyField({
     try {
       await navigator.clipboard.writeText(text)
       await onCopy?.(text)
-    } catch (_) {
+    } catch {
       toast.error('Copy failed')
     }
   }, [text, onCopy])

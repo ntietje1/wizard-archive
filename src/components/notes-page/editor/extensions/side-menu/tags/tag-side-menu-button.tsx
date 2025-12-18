@@ -12,7 +12,10 @@ import {
   DropdownMenuContent,
 } from '~/components/shadcn/ui/dropdown-menu'
 import type { Tag } from 'convex/tags/types'
-import { useCurrentNote } from '~/hooks/useCurrentNote'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { usePageLayout } from '~/hooks/usePageLayout'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { isNote } from '~/lib/sidebar-item-utils'
 
 interface TagSideMenuButtonProps {
   block: CustomBlock
@@ -25,7 +28,15 @@ export default function TagSideMenuButton({
   freezeMenu,
   unfreezeMenu,
 }: TagSideMenuButtonProps) {
-  const { note } = useCurrentNote()
+  const { item } = useCurrentItem()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
+  const { currentPage } = usePageLayout({
+    itemId: isPageLayout ? item?._id : undefined,
+    itemSlug: isPageLayout ? item?.slug : undefined,
+    campaignId: isPageLayout ? campaignId : undefined,
+  })
   const [query, setQuery] = useState('')
 
   const Components = useComponentsContext()!
@@ -39,15 +50,19 @@ export default function TagSideMenuButton({
     handleAddTag,
     handleRemoveTag,
   } = useBlockTags({
-    noteId: note.data?._id,
+    noteId: isNote(currentPage) ? currentPage._id : undefined,
     blockId: block.id,
     searchQuery: query,
   })
 
+  if (!isPageLayout) {
+    return null
+  }
+
   const handleAddTagWithToast = async (tagId: Tag['_id']) => {
     try {
       await handleAddTag(tagId)
-    } catch (error) {
+    } catch {
       toast.error('Failed to add tag')
     }
   }
@@ -55,7 +70,7 @@ export default function TagSideMenuButton({
   const handleRemoveTagWithToast = async (tagId: Tag['_id']) => {
     try {
       await handleRemoveTag(tagId)
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove tag')
     }
   }
@@ -112,7 +127,7 @@ export default function TagSideMenuButton({
                           className="inline-flex items-center py-1 transition-colors bg-[var(--tag-bg)] text-[var(--tag-fg)]"
                         >
                           <Lock aria-hidden className="opacity-0" />
-                          <span>{tag.displayName}</span>
+                          <span>{tag.name || ''}</span>
                           <Lock
                             aria-hidden
                             className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -128,7 +143,7 @@ export default function TagSideMenuButton({
                       <button
                         key={`manual-${tag._id}`}
                         type="button"
-                        aria-label={`Remove tag ${tag.displayName}`}
+                        aria-label={`Remove tag ${tag.name || ''}`}
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -148,7 +163,7 @@ export default function TagSideMenuButton({
                           className="inline-flex items-center py-1 transition-colors bg-[var(--tag-bg)] text-[var(--tag-fg)] hover:bg-red-500 hover:text-white group-hover:bg-red-500 group-hover:text-white"
                         >
                           <X aria-hidden className="opacity-0" />
-                          <span>{tag.displayName}</span>
+                          <span>{tag.name || ''}</span>
                           <X
                             aria-hidden
                             className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -189,7 +204,7 @@ export default function TagSideMenuButton({
                       <button
                         key={`available-${tag._id}`}
                         type="button"
-                        aria-label={`Add tag ${tag.displayName}`}
+                        aria-label={`Add tag ${tag.name || ''}`}
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -209,7 +224,7 @@ export default function TagSideMenuButton({
                           className="inline-flex items-center py-1 transition-colors bg-[var(--tag-bg)] text-[var(--tag-fg)] hover:!bg-green-500 hover:!text-white group-hover:!bg-green-500 group-hover:!text-white"
                         >
                           <PlusIcon aria-hidden className="opacity-0" />
-                          <span>{tag.displayName}</span>
+                          <span>{tag.name || ''}</span>
                           <PlusIcon
                             aria-hidden
                             className="opacity-0 transition-opacity group-hover:opacity-100"

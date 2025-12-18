@@ -9,8 +9,8 @@ import {
   type SortOptions,
 } from 'convex/editors/types'
 import {
-  SIDEBAR_ITEM_TYPES,
   type AnySidebarItem,
+  type SidebarItemId,
 } from 'convex/sidebarItems/types'
 import { useSortOptions } from './useSortOptions'
 
@@ -27,7 +27,7 @@ export const useSidebarItemsByCategory = (
       campaign?._id && enabled
         ? {
             campaignId: campaign._id,
-            categoryId: categoryId,
+            categoryId,
           }
         : 'skip',
     ),
@@ -39,8 +39,7 @@ export const useSidebarItemsByCategory = (
 }
 
 export const useSidebarItemsByParent = (
-  categoryId?: Id<'tagCategories'>,
-  parentId?: Id<'folders'>,
+  parentId?: SidebarItemId,
   enabled = true,
 ) => {
   const { sortOptions } = useSortOptions()
@@ -52,8 +51,7 @@ export const useSidebarItemsByParent = (
       campaign?._id && enabled
         ? {
             campaignId: campaign._id,
-            categoryId: categoryId,
-            parentId: parentId,
+            parentId,
           }
         : 'skip',
     ),
@@ -69,21 +67,11 @@ export const sortItemsByOptions = (
   items?: AnySidebarItem[],
 ) => {
   if (!items) return undefined
-  return [...items].sort((a, b) => {
-    if (
-      options.foldersAlwaysOnTop &&
-      a.type === SIDEBAR_ITEM_TYPES.folders &&
-      b.type !== SIDEBAR_ITEM_TYPES.folders
-    ) {
-      return -1
-    }
-    if (
-      options.foldersAlwaysOnTop &&
-      a.type !== SIDEBAR_ITEM_TYPES.folders &&
-      b.type === SIDEBAR_ITEM_TYPES.folders
-    ) {
-      return 1
-    }
+
+  const tagCategories = items.filter((item) => item.type === 'tagCategories')
+  const others = items.filter((item) => item.type !== 'tagCategories')
+
+  const sortFn = (a: AnySidebarItem, b: AnySidebarItem) => {
     switch (options.order) {
       case SORT_ORDERS.Alphabetical: {
         const nameA = a.name || ''
@@ -103,5 +91,10 @@ export const sortItemsByOptions = (
       default:
         return 0
     }
-  })
+  }
+
+  const sortedTagCategories = [...tagCategories].sort(sortFn)
+  const sortedOthers = [...others].sort(sortFn)
+
+  return [...sortedTagCategories, ...sortedOthers]
 }

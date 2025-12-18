@@ -1,77 +1,131 @@
-import { Id } from '../_generated/dataModel'
-import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 import { Ctx } from '../common/types'
-import { getSidebarItemsByParent } from '../sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { getTagCategory } from '../tags/tags'
+import { MutationCtx } from '../_generated/server'
+import { Id } from '../_generated/dataModel'
 import { Folder } from './types'
+import { deleteNote } from '../notes/notes'
+import { deleteTag } from '../tags/tags'
 
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,
-): Promise<Folder> => {
+): Promise<Folder | null> => {
   const folder = await ctx.db.get(folderId)
   if (!folder) {
-    throw new Error('Folder not found')
+    return null
   }
+
   await requireCampaignMembership(
     ctx,
     { campaignId: folder.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const category = folder.categoryId
-    ? await getTagCategory(ctx, folder.campaignId, folder.categoryId)
-    : undefined
-
-  return {
-    ...folder,
-    category,
-    type: SIDEBAR_ITEM_TYPES.folders,
-  }
+  return folder
 }
 
-export const getFolderWithChildren = async (
+export const getFolderBySlug = async (
   ctx: Ctx,
-  folderId: Id<'folders'>,
-): Promise<Folder> => {
-  const folder: Folder = await getFolder(ctx, folderId)
-  const children = await getSidebarItemsByParent(
+  campaignId: Id<'campaigns'>,
+  slug: string,
+): Promise<Folder | null> => {
+  await requireCampaignMembership(
     ctx,
-    folder.campaignId,
-    folder.categoryId,
-    folderId,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  return { ...folder, children }
+
+  const folder = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+
+  if (!folder) {
+    return null
+  }
+
+  return await getFolder(ctx, folder._id)
 }
 
-export const getFolderAncestors = async (
-  ctx: Ctx,
+export async function deleteFolder(
+  ctx: MutationCtx,
   folderId: Id<'folders'>,
-): Promise<Folder[]> => {
+): Promise<Id<'folders'>> {
   const folder = await ctx.db.get(folderId)
   if (!folder) {
     throw new Error('Folder not found')
   }
+
   await requireCampaignMembership(
     ctx,
     { campaignId: folder.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const ancestors: Folder[] = []
-  const visited = new Set<Id<'folders'>>([folderId])
-  let currentFolderId = folder.parentFolderId
+  // Cascade delete all children
+  // First, delete child folders (recursively)
+  const childFolders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+    )
+    .collect()
 
-  while (currentFolderId) {
-    if (visited.has(currentFolderId)) {
-      throw new Error('Circular folder reference detected')
+  for (const childFolder of childFolders) {
+    await deleteFolder(ctx, childFolder._id)
+  }
+
+  // Delete child notes
+  const childNotes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childNote of childNotes) {
+    await deleteNote(ctx, childNote._id)
+  }
+
+  // Delete child maps
+  const childMaps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childMap of childMaps) {
+    // Delete map pins first
+    const pins = await ctx.db
+      .query('mapPins')
+      .withIndex('by_map_item', (q) => q.eq('mapId', childMap._id))
+      .collect()
+
+    for (const pin of pins) {
+      await ctx.db.delete(pin._id)
     }
-    visited.add(currentFolderId)
-    const parentFolder: Folder = await getFolder(ctx, currentFolderId)
-    ancestors.unshift(parentFolder)
-    currentFolderId = parentFolder.parentFolderId
+
+    await ctx.db.delete(childMap._id)
   }
-  return ancestors
+
+  // Delete child tags
+  const childTags = await ctx.db
+    .query('tags')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childTag of childTags) {
+    await deleteTag(ctx, childTag._id)
+  }
+
+  // Finally, delete the folder itself
+  await ctx.db.delete(folderId)
+
+  return folderId
 }

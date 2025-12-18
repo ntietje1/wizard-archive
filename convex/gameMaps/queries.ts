@@ -2,12 +2,11 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getNote } from '../notes/notes'
 import type { GameMap, MapPinWithItem } from './types'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { mapValidator, mapPinWithItemValidator } from './schema'
+import { mapValidator } from './schema'
+import { mapPinWithItemValidator } from './validators'
 import { getMap as getMapFn, getMapBySlug as getMapBySlugFn } from './gameMaps'
-import { noteValidator } from '../notes/schema'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 
 export const getCampaignMaps = query({
   args: {
@@ -23,15 +22,12 @@ export const getCampaignMaps = query({
 
     const maps = await ctx.db
       .query('gameMaps')
-      .withIndex('by_campaign_category_parent', (q) =>
+      .withIndex('by_campaign_parent', (q) =>
         q.eq('campaignId', args.campaignId),
       )
       .collect()
 
-    return maps.map((m) => ({
-      ...m,
-      type: SIDEBAR_ITEM_TYPES.gameMaps,
-    }))
+    return maps
   },
 })
 
@@ -84,101 +80,22 @@ export const getMapPins = query({
 
     const pins = await ctx.db
       .query('mapPins')
-      .withIndex('by_map_itemType', (q) => q.eq('mapId', args.mapId))
+      .withIndex('by_map_item', (q) => q.eq('mapId', args.mapId))
       .collect()
 
     const pinsWithItems = await Promise.all(
       pins.map(async (pin) => {
-        if (pin.itemType === SIDEBAR_ITEM_TYPES.notes && pin.noteId) {
-          return {
-            ...pin,
-            itemType: SIDEBAR_ITEM_TYPES.notes,
-            item: await getNote(ctx, pin.noteId),
-          }
-        } else if (
-          pin.itemType === SIDEBAR_ITEM_TYPES.gameMaps &&
-          pin.pinnedMapId
-        ) {
-          return {
-            ...pin,
-            itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-            item: await getMapFn(ctx, pin.pinnedMapId),
-          }
+        const item = await getSidebarItemById(ctx, map.campaignId, pin.itemId)
+        if (!item) {
+          throw new Error('Item not found')
         }
-        return null
+        return {
+          ...pin,
+          item,
+        }
       }),
-    ).then((pins) => pins.filter((p): p is MapPinWithItem => p !== null))
-
-    return pinsWithItems
-  },
-})
-
-export const getPinableItems = query({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
-  returns: v.array(v.union(noteValidator, mapValidator)),
-  handler: async (ctx, args) => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const [notes, maps] = await Promise.all([
-      ctx.db
-        .query('notes')
-        .withIndex('by_campaign_category_parent', (q) =>
-          q.eq('campaignId', args.campaignId),
-        )
-        .collect(),
-      ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_category_parent', (q) =>
-          q.eq('campaignId', args.campaignId),
-        )
-        .collect(),
-    ])
-
-    // Get all categories for this campaign
-    const allCategories = await ctx.db
-      .query('tagCategories')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))
-      .collect()
-
-    const categoryMap = new Map(allCategories.map((c) => [c._id, c]))
-
-    // Get all tags for this campaign
-    const allTags = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_categoryId', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    const tagMap = new Map(allTags.map((t) => [t._id, t]))
-
-    const notesWithCategory = notes.map((note) => {
-      const category = note.categoryId
-        ? categoryMap.get(note.categoryId)
-        : undefined
-      const tag = note.tagId ? tagMap.get(note.tagId) : undefined
-      const tagWithCategory = tag && category ? { ...tag, category } : undefined
-
-      return {
-        ...note,
-        type: SIDEBAR_ITEM_TYPES.notes,
-        category,
-        tag: tagWithCategory,
-      }
-    })
-
-    const mapsWithCategory = maps.map((map) => ({
-      ...map,
-      type: SIDEBAR_ITEM_TYPES.gameMaps,
-      category: map.categoryId ? categoryMap.get(map.categoryId) : undefined,
-    }))
-
-    return [...notesWithCategory, ...mapsWithCategory]
+    return pinsWithItems
   },
 })

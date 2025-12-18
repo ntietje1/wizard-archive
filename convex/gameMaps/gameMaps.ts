@@ -3,7 +3,7 @@ import { Id } from '../_generated/dataModel'
 import { Ctx } from '../common/types'
 import { type GameMap } from './types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { MutationCtx } from '../_generated/server'
 
 export const getMap = async (
   ctx: Ctx,
@@ -20,10 +20,7 @@ export const getMap = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  return {
-    ...map,
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
-  }
+  return map
 }
 
 export const getMapBySlug = async (
@@ -44,12 +41,33 @@ export const getMapBySlug = async (
     )
     .unique()
 
+  return map
+}
+
+export const deleteMap = async (
+  ctx: MutationCtx,
+  mapId: Id<'gameMaps'>,
+): Promise<Id<'gameMaps'>> => {
+  const map = await ctx.db.get(mapId)
   if (!map) {
-    return null
+    throw new Error('Map not found')
   }
 
-  return {
-    ...map,
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: map.campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const pins = await ctx.db
+    .query('mapPins')
+    .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+    .collect()
+
+  for (const pin of pins) {
+    await ctx.db.delete(pin._id)
   }
+
+  await ctx.db.delete(mapId)
+  return mapId
 }

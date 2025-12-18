@@ -10,7 +10,6 @@ import { useForm } from '@tanstack/react-form'
 import {
   validateTagDescription,
   validateTagName,
-  validateTagNameAsync,
 } from '../generic-tag-form/validators.ts'
 import {
   MAX_NAME_LENGTH,
@@ -19,9 +18,11 @@ import {
 } from '../base-tag-form/types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
+import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Location } from 'convex/locations/types'
 import { defaultLocationFormValues, type LocationFormValues } from './types.ts'
 import {
@@ -36,7 +37,7 @@ interface LocationTagFormProps {
   mode: 'create' | 'edit'
   location?: Location
   config: TagCategoryConfig
-  parentFolderId?: Id<'folders'>
+  parentId?: SidebarItemId
   isOpen: boolean
   onClose: () => void
   onLocationCreated?: (locationId: Id<'locations'>) => void
@@ -46,14 +47,15 @@ export default function LocationTagForm({
   mode,
   location,
   config,
-  parentFolderId,
+  parentId,
   isOpen,
   onClose,
   onLocationCreated,
 }: LocationTagFormProps) {
   const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToTag } = useEditorNavigation()
+  const { openParentFolders } = useOpenParentFolders()
   const campaign = campaignWithMembership?.data?.campaign
 
   const createMutation = useMutation({
@@ -91,7 +93,7 @@ export default function LocationTagForm({
   const getInitialValues = useCallback((): LocationFormValues => {
     if (mode === 'edit' && location) {
       return {
-        name: location.displayName,
+        name: location.name || '',
         description: location.description || '',
         color: location.color ?? null,
       }
@@ -109,7 +111,8 @@ export default function LocationTagForm({
 
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, location?._id, getInitialValues])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?._id, parentId])
 
   async function handleSubmit(value: LocationFormValues) {
     if (!campaign) {
@@ -137,27 +140,27 @@ export default function LocationTagForm({
 
       if (mode === 'create') {
         const result = await createMutation.mutateAsync({
-          displayName: value.name.trim(),
           name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color ?? undefined,
-          imageStorageId: imageStorageId,
+          imageStorageId,
           campaignId: campaign._id,
           categoryId: getCategory.data._id,
-          parentFolderId,
+          parentId: parentId ?? getCategory.data._id,
         })
 
         if (onLocationCreated) {
           onLocationCreated(result.locationId)
         }
 
-        if (result.noteId) {
-          const note = await convex.query(api.notes.queries.getNote, {
-            noteId: result.noteId,
-          })
-          if (note?.slug) {
-            navigateToNote(note.slug)
-          }
+        // Open parent folders and get the tag to navigate to it
+        await openParentFolders(result.tagId)
+        const tag = await convex.query(api.tags.queries.getTag, {
+          campaignId: campaign._id,
+          tagId: result.tagId,
+        })
+        if (tag?.slug) {
+          navigateToTag(tag.slug)
         }
 
         if (!onLocationCreated) {
@@ -167,10 +170,10 @@ export default function LocationTagForm({
       } else if (mode === 'edit' && location) {
         await updateMutation.mutateAsync({
           locationId: location.locationId,
-          displayName: value.name.trim(),
+          name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color,
-          imageStorageId: imageStorageId,
+          imageStorageId,
         })
 
         toast.success(`${config.singular} updated successfully`)
@@ -201,17 +204,6 @@ export default function LocationTagForm({
             validateTagName(value, MAX_NAME_LENGTH),
           onChange: ({ value }: { value: string }) =>
             validateTagName(value, MAX_NAME_LENGTH),
-          onChangeAsync: async ({ value }: { value: string }) => {
-            if (!campaign || !getCategory.data) return undefined
-            return validateTagNameAsync(
-              convex,
-              campaign._id,
-              getCategory.data._id,
-              value,
-              mode === 'edit' && location ? location.tagId : undefined,
-            )
-          },
-          onChangeAsyncDebounceMs: 300,
         }}
       >
         {(field) => (

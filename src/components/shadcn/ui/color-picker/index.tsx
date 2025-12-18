@@ -374,7 +374,7 @@ export type ColorPickerOutputProps = ComponentProps<typeof SelectTrigger>
 const formats: Array<ColorMode> = ['hex', 'rgb', 'css', 'hsl']
 
 export const ColorPickerOutput = ({
-  className,
+  className: _className,
   ...props
 }: ColorPickerOutputProps) => {
   const { mode, setMode } = useColorPicker()

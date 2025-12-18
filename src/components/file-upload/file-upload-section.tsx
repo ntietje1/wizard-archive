@@ -2,8 +2,7 @@ import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button.tsx'
 import { X, Upload, Expand } from 'lucide-react'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
-import { useState } from 'react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   Dialog,
   DialogContent,
