@@ -52,8 +52,6 @@ export function useContextMenu(options: UseContextMenuOptions) {
   // Build context synchronously - can be called without an event
   const buildContext = useCallback(
     (item: AnySidebarItem | undefined): MenuContext | null => {
-      if (!item) return null
-
       const parentType = item ? getParentType(item) : SIDEBAR_ROOT_TYPE
 
       // Start with base context
@@ -69,10 +67,8 @@ export function useContextMenu(options: UseContextMenuOptions) {
           (ctx, enhancer) => enhancer.enhance(ctx),
           baseContext,
         ) ?? baseContext
-        
-      return createMenuContext(
-        enhancedContext as ContextBuilderOptions,
-      )
+
+      return createMenuContext(enhancedContext as ContextBuilderOptions)
     },
     [options, getParentType],
   )

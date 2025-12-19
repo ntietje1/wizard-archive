@@ -1,12 +1,5 @@
 import { Button } from '~/components/shadcn/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '~/components/shadcn/ui/dropdown-menu'
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -14,7 +7,6 @@ import {
 import { X, MoreVertical } from '~/lib/icons'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 interface EditableTopbarProps {
@@ -26,7 +18,7 @@ interface EditableTopbarProps {
   isLoading?: boolean
   isEmpty?: boolean
   ancestors?: AnySidebarItem[]
-  menuItems?: ContextMenuItem[]
+  onOpenMenu?: (e: React.MouseEvent) => void
 }
 
 export function EditableTopbar({
@@ -38,7 +30,7 @@ export function EditableTopbar({
   isLoading = false,
   isEmpty = false,
   ancestors = [],
-  menuItems = [],
+  onOpenMenu,
 }: EditableTopbarProps) {
   const [title, setTitle] = useState(name ?? '')
   const [isEditing, setIsEditing] = useState(false)
@@ -83,12 +75,6 @@ export function EditableTopbar({
 
   if (isEmpty) {
     return <TopbarEmpty />
-  }
-
-  const handleMenuItemClick = (item: ContextMenuItem) => {
-    if (item.type === 'action') {
-      item.onClick()
-    }
   }
 
   return (
@@ -160,38 +146,23 @@ export function EditableTopbar({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-            {menuItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {menuItems.map((item, index) =>
-                    item.type === 'divider' ? (
-                      <DropdownMenuSeparator key={`divider-${index}`} />
-                    ) : item.type === 'action' ? (
-                      <DropdownMenuItem
-                        key={`action-${item.label}-${index}`}
-                        onClick={() => handleMenuItemClick(item)}
-                        className={item.className}
-                      >
-                        {item.icon && (
-                          <span className="h-4 w-4 mr-2">{item.icon}</span>
-                        )}
-                        {item.label}
-                      </DropdownMenuItem>
-                    ) : null,
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {onClose && (
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+          {onOpenMenu && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenMenu(e)
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          )}
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </>

@@ -1,18 +1,18 @@
-import { useMemo } from 'react'
+import { useRef } from 'react'
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
-import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
-import { useContextEnhancers } from '~/components/context-menu/hooks/useContextEnhancers'
-import { useMenuContext } from '~/components/context-menu/hooks/useMenuContext'
+import {
+  TopbarContextMenu,
+  type TopbarContextMenuRef,
+} from '~/components/context-menu/topbar/TopbarContextMenu'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useMenuItemsFromContext } from '~/components/context-menu/hooks/useMenuItemsFromContext'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
@@ -46,16 +46,7 @@ export function FileTopbar() {
     ),
   )
 
-  // Use enhancers to build context
-  const enhancers = useContextEnhancers({ category })
-  const menuContext = useMenuContext({
-    item: item || undefined,
-    viewContext: 'topbar',
-    enhancers,
-  })
-
-  // Build menu items from context
-  const menuItems = useMenuItemsFromContext(menuContext)
+  const topbarContextMenuRef = useRef<TopbarContextMenuRef>(null)
 
   const defaultName = defaultItemName(item)
 
@@ -69,7 +60,11 @@ export function FileTopbar() {
   }
 
   return (
-    <TopbarContextMenu item={item} category={category}>
+    <TopbarContextMenu
+      ref={topbarContextMenuRef}
+      item={item}
+      category={category}
+    >
       <EditableTopbar
         name={item.name}
         defaultName={defaultName}
@@ -77,7 +72,12 @@ export function FileTopbar() {
         onClose={clearEditorContent}
         onNavigateToItem={navigateToItem}
         ancestors={ancestors.data ?? []}
-        menuItems={menuItems}
+        onOpenMenu={(e) => {
+          topbarContextMenuRef.current?.open({
+            x: e.clientX,
+            y: e.clientY,
+          })
+        }}
       />
       <Dialogs />
     </TopbarContextMenu>

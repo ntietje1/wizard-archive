@@ -56,7 +56,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) => p.inSidebar(ctx),
+      shouldShow: (ctx) => p.inSidebar(ctx) && ctx.item !== undefined,
       action: actions.open,
     },
 
