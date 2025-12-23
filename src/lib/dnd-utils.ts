@@ -1,14 +1,15 @@
+import {
+  SIDEBAR_ITEM_TYPES,
+  SIDEBAR_ROOT_TYPE
+  
+  
+  
+} from 'convex/sidebarItems/types'
+import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
+import type {SidebarItemId, SidebarItemOrRootType, SidebarItemType} from 'convex/sidebarItems/types';
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
-import {
-  SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
-  type SidebarItemId,
-  type SidebarItemOrRootType,
-  type SidebarItemType,
-} from 'convex/sidebarItems/types'
-import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
 
 // Sidebar-specific drag and drop data types
 export interface SidebarDragData {
@@ -16,7 +17,7 @@ export interface SidebarDragData {
   type: SidebarItemType
   parentId?: SidebarItemId
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
   name: string
   icon: LucideIcon
 }
@@ -25,8 +26,8 @@ export interface SidebarDropData {
   _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: SidebarItemId[]
-  accepts?: SidebarItemType[]
+  ancestorIds?: Array<SidebarItemId>
+  accepts?: Array<SidebarItemType>
 }
 
 // Internal interfaces for validation
@@ -35,14 +36,14 @@ interface DragItem {
   type: SidebarItemType
   parentId?: SidebarItemId
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
 }
 
 interface DropTarget {
   id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   categoryId?: Id<'tagCategories'>
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
 }
 
 /**

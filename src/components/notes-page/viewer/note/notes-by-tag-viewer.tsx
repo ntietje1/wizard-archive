@@ -1,19 +1,20 @@
 import React from 'react'
-import { useTags } from '~/hooks/useTags'
 import { api } from 'convex/_generated/api'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { BlockNoteSchema, BlockNoteEditor } from '@blocknote/core'
-import {
-  customInlineContentSpecs,
-  type CustomBlockNoteEditor,
-  type CustomPartialBlock,
-} from '~/lib/editor-schema'
-import type { Id } from 'convex/_generated/dataModel'
+import { BlockNoteEditor, BlockNoteSchema } from '@blocknote/core'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Tag } from 'convex/tags/types'
+import type {CustomBlockNoteEditor, CustomPartialBlock} from '~/lib/editor-schema';
+import {
+  
+  
+  customInlineContentSpecs
+} from '~/lib/editor-schema'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { Tag } from 'convex/tags/types'
+import { useTags } from '~/hooks/useTags'
 import { Button } from '~/components/shadcn/ui/button'
 
 const schema = BlockNoteSchema.create({
@@ -24,7 +25,7 @@ export function NotesByTagViewer() {
   const { nonSystemManagedTags } = useTags()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership?.data?.campaign
-  const [selectedTagIds, setSelectedTagIds] = React.useState<Id<'tags'>[]>([])
+  const [selectedTagIds, setSelectedTagIds] = React.useState<Array<Id<'tags'>>>([])
 
   const blocks = useQuery(
     convexQuery(
@@ -44,7 +45,7 @@ export function NotesByTagViewer() {
       schema,
       initialContent: blocks.data.map(
         (block) => block.content,
-      ) as CustomPartialBlock[],
+      ) as Array<CustomPartialBlock>,
     })
   }, [blocks.data])
 

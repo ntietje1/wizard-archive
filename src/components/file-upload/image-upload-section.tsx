@@ -1,5 +1,5 @@
-import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from './file-upload-section'
+import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 
 interface ImageUploadSectionProps {
   label?: string

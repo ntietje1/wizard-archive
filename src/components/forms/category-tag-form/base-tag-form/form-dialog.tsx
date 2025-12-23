@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
+import type {LucideIcon} from '~/lib/icons';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '~/components/shadcn/ui/dialog'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { type LucideIcon } from '~/lib/icons'
 
 interface FormDialogProps {
   isOpen: boolean

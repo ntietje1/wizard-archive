@@ -1,6 +1,6 @@
 import type {
-  InlineContentSpec,
   CustomInlineContentConfig,
+  InlineContentSpec,
 } from '@blocknote/core'
 
 export const TAG_INLINE_CONTENT_TYPE = 'tag' as const

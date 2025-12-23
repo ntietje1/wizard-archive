@@ -1,9 +1,9 @@
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { SidebarItemButton } from './sidebar-item-button'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 
 interface SidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
 }
 
 export const SidebarItem = ({ item, ancestorIds = [] }: SidebarItemProps) => {

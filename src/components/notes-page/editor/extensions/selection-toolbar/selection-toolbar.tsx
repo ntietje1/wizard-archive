@@ -1,14 +1,14 @@
 import {
-  FileCaptionButton,
+  BasicTextStyleButton,
   BlockTypeSelect,
+  CreateLinkButton,
+  FileCaptionButton,
+  FileReplaceButton,
   FormattingToolbar,
   FormattingToolbarController,
-  FileReplaceButton,
-  TextAlignButton,
   NestBlockButton,
+  TextAlignButton,
   UnnestBlockButton,
-  CreateLinkButton,
-  BasicTextStyleButton,
 } from '@blocknote/react'
 // import { TextColorButton } from './text-color-button'
 // import { BackgroundColorButton } from './background-color-button'

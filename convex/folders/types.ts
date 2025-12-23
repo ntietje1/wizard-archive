@@ -1,3 +1,3 @@
-import { SidebarItem, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import type { SIDEBAR_ITEM_TYPES, SidebarItem } from '../sidebarItems/types'
 
 export type Folder = SidebarItem<typeof SIDEBAR_ITEM_TYPES.folders>

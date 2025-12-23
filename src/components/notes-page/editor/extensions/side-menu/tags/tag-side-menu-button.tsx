@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { useBlockTags, getTagColor } from '~/hooks/useTags'
-import { Badge } from '~/components/shadcn/ui/badge'
-import { TagIcon, PlusIcon, Lock, X } from '~/lib/icons'
 import { useComponentsContext } from '@blocknote/react'
 import { toast } from 'sonner'
-import { Command, CommandInput } from '~/components/shadcn/ui/command'
 import type { CustomBlock } from '~/lib/editor-schema'
+import type { Tag } from 'convex/tags/types'
+import { getTagColor, useBlockTags } from '~/hooks/useTags'
+import { Badge } from '~/components/shadcn/ui/badge'
+import { Lock, PlusIcon, TagIcon, X } from '~/lib/icons'
+import { Command, CommandInput } from '~/components/shadcn/ui/command'
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import type { Tag } from 'convex/tags/types'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { usePageLayout } from '~/hooks/usePageLayout'
 import { useCampaign } from '~/contexts/CampaignContext'

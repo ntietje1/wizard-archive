@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
+import {
+  
+  createCampaignEnhancer,
+  createCategoryEnhancer,
+  createMapViewEnhancer
+} from '../context'
+import type {ContextEnhancer} from '../context';
+import type { TagCategory } from 'convex/tags/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useMapView } from '~/contexts/MapViewContext'
-import {
-  createCampaignEnhancer,
-  createMapViewEnhancer,
-  createCategoryEnhancer,
-  type ContextEnhancer,
-} from '../context'
-import type { TagCategory } from 'convex/tags/types'
 
 interface UseContextEnhancersOptions {
   category?: TagCategory
@@ -24,13 +25,13 @@ interface UseContextEnhancersOptions {
  */
 export function useContextEnhancers(
   options: UseContextEnhancersOptions = {},
-): ContextEnhancer[] {
+): Array<ContextEnhancer> {
   const { campaignWithMembership } = useCampaign()
   const { mapId, pinnedItemIds } = useMapView()
   const { category, includeMapView = true, includeCampaign = true } = options
 
   return useMemo(() => {
-    const enhancers: ContextEnhancer[] = []
+    const enhancers: Array<ContextEnhancer> = []
 
     if (includeCampaign) {
       enhancers.push(

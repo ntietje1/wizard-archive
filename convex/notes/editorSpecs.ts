@@ -1,13 +1,13 @@
-import {
-  defaultInlineContentSpecs,
+import type {
+  Block,
   BlockSchemaFromSpecs,
-  defaultBlockSpecs,
   InlineContentSchemaFromSpecs,
   StyleSchemaFromSpecs,
+  defaultBlockSpecs,
+  defaultInlineContentSpecs,
   defaultStyleSpecs,
-  Block,
 } from '@blocknote/core'
-import { TagInlineSpecType } from '../tags/editorSpecs'
+import type { TagInlineSpecType } from '../tags/editorSpecs'
 
 export type CustomInlineContentSpecs = typeof defaultInlineContentSpecs &
   TagInlineSpecType

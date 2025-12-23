@@ -1,17 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-import { LoadingPage } from '~/components/loading/loading-page'
 import { useForm } from '@tanstack/react-form'
-import { Input } from '~/components/shadcn/ui/input'
-import { Label } from '~/components/shadcn/ui/label'
+import { useConvex } from 'convex/react'
 import {
   removeInvalidCharacters,
   validateCampaignName,
   validateCampaignSlugAsync,
   validateCampaignSlugSync,
 } from '../../-components/campaign-form-validators'
-import { useConvex } from 'convex/react'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { LoadingPage } from '~/components/loading/loading-page'
+import { Input } from '~/components/shadcn/ui/input'
+import { Label } from '~/components/shadcn/ui/label'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/settings/',

@@ -1,8 +1,7 @@
 import { createContext, useContext, useMemo } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMap, MapPinWithItem  } from 'convex/gameMaps/types'
 
 interface MapViewContextType {
   mapId: Id<'gameMaps'> | null
@@ -18,7 +17,7 @@ export function MapViewProvider({
   children,
 }: {
   map: GameMap | null
-  pins: MapPinWithItem[]
+  pins: Array<MapPinWithItem>
   children: React.ReactNode
 }) {
   const value = useMemo(() => {

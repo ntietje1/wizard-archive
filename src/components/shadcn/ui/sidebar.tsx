@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { mergeProps } from '@base-ui/react/merge-props'
 import { useRender } from '@base-ui/react/use-render'
-import { cva, type VariantProps } from 'class-variance-authority'
+import {  cva } from 'class-variance-authority'
+import { PanelLeftIcon } from 'lucide-react'
+import type {VariantProps} from 'class-variance-authority';
 
 import { cn } from '~/lib/shadcn/utils'
 import { Button } from '~/components/shadcn/ui/button'
@@ -21,7 +23,6 @@ import {
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
 import { useIsMobile } from '~/hooks/shadcn/use-mobile'
-import { PanelLeftIcon } from 'lucide-react'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7

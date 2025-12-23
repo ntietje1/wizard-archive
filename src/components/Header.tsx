@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
 import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
+import type { ReactNode } from 'react'
 
 type HeaderProps = {
   children?: ReactNode

@@ -1,15 +1,17 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  SIDEBAR_ROOT_TYPE,
-  type AnySidebarItem,
-  type SidebarItemOrRootType,
+  
+  SIDEBAR_ROOT_TYPE
+  
 } from 'convex/sidebarItems/types'
-import type { MenuContext, ViewContext } from '../types'
 import {
-  createMenuContext,
-  type ContextEnhancer,
-  type ContextBuilderOptions,
+  
+  
+  createMenuContext
 } from '../context'
+import type {ContextBuilderOptions, ContextEnhancer} from '../context';
+import type {AnySidebarItem, SidebarItemOrRootType} from 'convex/sidebarItems/types';
+import type { MenuContext, ViewContext } from '../types'
 
 interface MenuState {
   isOpen: boolean
@@ -26,7 +28,7 @@ interface UseContextMenuOptions {
    * This allows components to contribute context without
    * modifying the hook signature.
    */
-  enhancers?: ContextEnhancer[]
+  enhancers?: Array<ContextEnhancer>
 }
 
 export function useContextMenu(options: UseContextMenuOptions) {

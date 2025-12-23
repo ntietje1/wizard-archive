@@ -1,7 +1,7 @@
 import type { Tag, TagCategory } from 'convex/tags/types'
-import { getCategoryIcon } from '~/lib/category-icons'
 import type { TagCategoryConfig } from '../base-tag-form/types'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 export interface GenericTagFormProps {
   mode: 'create' | 'edit'

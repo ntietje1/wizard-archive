@@ -1,5 +1,5 @@
 import { SignedIn, SignedOut } from '@clerk/tanstack-react-start'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { Button } from '~/components/shadcn/ui/button'
 
 export const Route = createFileRoute('/')({

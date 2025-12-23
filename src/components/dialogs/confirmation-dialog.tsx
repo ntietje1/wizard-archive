@@ -1,3 +1,4 @@
+import type {ReactNode} from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,6 @@ import {
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2 } from '~/lib/icons'
-import { type ReactNode } from 'react'
 
 interface ConfirmationDialogProps {
   isOpen: boolean

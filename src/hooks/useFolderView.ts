@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useSidebarItemsByParent } from './useSidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
-import { useSidebarItemsByParent } from './useSidebarItems'
+import { useCampaign } from '~/contexts/CampaignContext'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface UseFolderViewOptions {
@@ -13,7 +13,7 @@ interface UseFolderViewOptions {
 }
 
 interface UseFolderViewReturn {
-  items: AnySidebarItem[]
+  items: Array<AnySidebarItem>
   isLoading: boolean
   category?: TagCategory
 }
@@ -51,7 +51,7 @@ export function useFolderView({
   // Get category from either the parent category or the folder's category
   const category: TagCategory | undefined = useMemo(() => {
     if (isTagCategory(parentItem)) {
-      return parentItem as TagCategory
+      return parentItem
     }
     const category = categoryFromFolderQuery.data
     if (category && isTagCategory(category)) {

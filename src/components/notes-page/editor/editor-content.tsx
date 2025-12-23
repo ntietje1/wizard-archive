@@ -1,8 +1,7 @@
-import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { PageEditorEmptyContent } from '../viewer/page-editor-wrapper'
-import { shouldShowPageBar } from '~/lib/editor-registry'
-import { PageEditorWrapper } from '../viewer/page-editor-wrapper'
+import { PageEditorEmptyContent, PageEditorWrapper  } from '../viewer/page-editor-wrapper'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
+import { shouldShowPageBar } from '~/lib/editor-registry'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export function EditorContent() {
   const { item, config, search } = useCurrentItem()

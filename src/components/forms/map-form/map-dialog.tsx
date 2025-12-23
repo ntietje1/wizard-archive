@@ -1,8 +1,8 @@
 import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
-import { MapPin } from '~/lib/icons'
 import { MapForm } from './map-form'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { MapPin } from '~/lib/icons'
 
 interface MapDialogProps {
   isOpen: boolean

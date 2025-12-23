@@ -1,6 +1,6 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
+import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Folder } from 'convex/folders/types'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'

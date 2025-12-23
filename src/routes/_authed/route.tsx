@@ -1,16 +1,16 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { Outlet, createFileRoute } from '@tanstack/react-router'
 import {
+  SignIn,
   SignedIn,
   SignedOut,
-  SignIn,
   useUser,
 } from '@clerk/tanstack-react-start'
-import { Header } from '~/components/Header'
 import { useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { Header } from '~/components/Header'
 
 const useEnsureProfile = () => {
   const { user } = useUser()

@@ -1,3 +1,10 @@
+import {
+  SORT_DIRECTIONS,
+  SORT_ORDERS
+  
+  
+} from 'convex/editors/types'
+import type {SortDirection, SortOrder} from 'convex/editors/types';
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
@@ -10,19 +17,13 @@ import {
 import {
   ArrowDownAZ,
   ArrowUpAZ,
-  ClockArrowDown,
-  ClockArrowUp,
   CalendarArrowDown,
   CalendarArrowUp,
+  ClockArrowDown,
+  ClockArrowUp,
   SortAsc,
   SortDesc,
 } from '~/lib/icons'
-import {
-  SORT_DIRECTIONS,
-  SORT_ORDERS,
-  type SortDirection,
-  type SortOrder,
-} from 'convex/editors/types'
 import { useSortOptions } from '~/hooks/useSortOptions'
 
 export function SortMenu() {

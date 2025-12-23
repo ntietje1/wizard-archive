@@ -1,15 +1,15 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { Id } from '../_generated/dataModel'
 import { insertTagAndNote } from '../tags/tags'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
   endCurrentSession as endCurrentSessionHandler,
   getCurrentSession,
   getSession,
 } from './sessions'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import type { Id } from '../_generated/dataModel'
 
 export const startSession = mutation({
   args: {

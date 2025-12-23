@@ -1,12 +1,8 @@
-import { Share } from './types'
-import { Id } from '../_generated/dataModel'
-import { Ctx } from '../common/types'
-import { MutationCtx } from '../_generated/server'
 import {
   getCampaignMember,
   requireCampaignMembership,
 } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE, CampaignMember } from '../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   combineTagEntity,
   getEffectiveTagIdsForBlock,
@@ -16,6 +12,11 @@ import {
   insertTagAndNote,
 } from '../tags/tags'
 import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import type { Id } from '../_generated/dataModel'
+import type { Ctx } from '../common/types'
+import type { MutationCtx } from '../_generated/server'
+import type { CampaignMember } from '../campaigns/types';
+import type { Share } from './types'
 
 export const combineSharesAndTag = (
   share: { _id: Id<'shares'> },
@@ -130,7 +131,7 @@ export async function ensureSharedAllTag(
 export async function getPlayerSharedTags(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-): Promise<Share[]> {
+): Promise<Array<Share>> {
   const category = await getTagCategoryBySlug(
     ctx,
     campaignId,

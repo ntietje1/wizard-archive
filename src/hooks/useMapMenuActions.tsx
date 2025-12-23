@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { MenuContext } from '~/components/context-menu/types'
-import { useCampaign } from '~/contexts/CampaignContext'
 import type { Id } from 'convex/_generated/dataModel'
+import type { GameMap } from 'convex/gameMaps/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { useCampaign } from '~/contexts/CampaignContext'
 import { isGameMap } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 export function useMapMenuActions() {
   const { campaignWithMembership } = useCampaign()

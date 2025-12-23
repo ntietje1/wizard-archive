@@ -1,5 +1,5 @@
-import { Id } from '../_generated/dataModel'
-import { UserProfile } from '../users/types'
+import type { Id } from '../_generated/dataModel'
+import type { UserProfile } from '../users/types'
 
 export const CAMPAIGN_STATUS = {
   Active: 'Active',

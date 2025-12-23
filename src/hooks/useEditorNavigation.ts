@@ -1,8 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback } from 'react'
-import { useCampaign } from '~/contexts/CampaignContext'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { useCampaign } from '~/contexts/CampaignContext'
 import {
   isCategory,
   isFolder,

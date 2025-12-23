@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { convexQuery, useConvex, useConvexMutation  } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { Input } from '~/components/shadcn/ui/input'
@@ -12,8 +13,6 @@ import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
-import { toast } from 'sonner'
-import { useConvex } from '@convex-dev/react-query'
 
 export interface MapFormValues {
   name: string

@@ -1,14 +1,14 @@
+import { Plus } from 'lucide-react'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { SidebarItemEditor } from './sidebar-item-editor'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { EditorViewerProps } from '~/lib/editor-registry'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
-import { Plus } from 'lucide-react'
 import { cn } from '~/lib/shadcn/utils'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { usePageLayout } from '~/hooks/usePageLayout'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { useCampaign } from '~/contexts/CampaignContext'
-import type { EditorViewerProps } from '~/lib/editor-registry'
-import { SidebarItemEditor } from './sidebar-item-editor'
 
 export function PageEditorWrapper({
   item,
@@ -42,7 +42,7 @@ export function PageEditorWrapper({
 }
 
 interface PageTabsProps {
-  pages: AnySidebarItem[]
+  pages: Array<AnySidebarItem>
   pageSlug: string | undefined
   onSelectPage: (slug: string | undefined) => void
   onCreatePage: () => void

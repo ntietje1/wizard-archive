@@ -1,26 +1,26 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
-import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
-import { Input } from '~/components/shadcn/ui/input'
-import { Label } from '~/components/shadcn/ui/label'
-import { Button } from '~/components/shadcn/ui/button'
-import { Sword, Link } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   convexQuery,
   useConvex,
   useConvexMutation,
 } from '@convex-dev/react-query'
-import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
-import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import {
   validateCampaignName,
-  validateCampaignSlugSync,
   validateCampaignSlugAsync,
+  validateCampaignSlugSync,
 } from './campaign-form-validators'
+import type { CampaignWithMembership } from 'convex/campaigns/types'
+import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
+import { Input } from '~/components/shadcn/ui/input'
+import { Label } from '~/components/shadcn/ui/label'
+import { Button } from '~/components/shadcn/ui/button'
+import { Link, Sword } from '~/lib/icons'
+import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string

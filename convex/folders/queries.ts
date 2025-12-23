@@ -1,16 +1,16 @@
-import { query } from '../_generated/server'
 import { v } from 'convex/values'
-import { Folder } from './types'
+import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import {
-  getFolder as getFolderFn,
-  getFolderBySlug as getFolderBySlugFn,
-} from './folders'
-import { folderValidator } from './schema'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
-import { AnySidebarItem } from '../sidebarItems/types'
+import { folderValidator } from './schema'
+import {
+  getFolderBySlug as getFolderBySlugFn,
+  getFolder as getFolderFn,
+} from './folders'
+import type { AnySidebarItem } from '../sidebarItems/types'
+import type { Folder } from './types'
 
 export const getFolder = query({
   args: {
@@ -31,7 +31,7 @@ export const getFolderAncestors = query({
     folderId: v.id('folders'),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     const folder = await ctx.db.get(args.folderId)
     if (!folder) {
       throw new Error('Folder not found')

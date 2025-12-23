@@ -31,7 +31,7 @@ const DEFAULT_COLORS = [
 interface ColorPickerProps {
   selectedColor: string | null
   onColorChange: (color: string | null) => void
-  colors?: string[]
+  colors?: Array<string>
   disabled?: boolean
   allowDeselect?: boolean
 }

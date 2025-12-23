@@ -1,42 +1,43 @@
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import {
-  Calendar,
-  User,
-  MapPin,
-  Share2,
-  Notebook,
-  Shield,
-  Axe,
-  TagIcon,
-  Sword,
+  
+  SIDEBAR_ITEM_TYPES
+} from 'convex/sidebarItems/types'
+import type {AnySidebarItem} from 'convex/sidebarItems/types';
+import type { LucideIcon } from 'lucide-react'
+import {
   Apple,
+  Axe,
   Beef,
   Bird,
   BowArrow,
   Box,
+  Calendar,
   Cat,
   Cherry,
   Dog,
+  FileText,
   Flame,
+  Folder,
   Gem,
   Heart,
   Locate,
+  MapPin,
   MessageCircleWarning,
   Moon,
   Mountain,
   Music,
+  Notebook,
+  Share2,
+  Shield,
   Sparkles,
   Squirrel,
-  Sun,
   Star,
-  Folder,
-  FileText,
+  Sun,
+  Sword,
+  TagIcon,
+  User,
 } from '~/lib/icons'
-import type { LucideIcon } from 'lucide-react'
-import {
-  SIDEBAR_ITEM_TYPES,
-  type AnySidebarItem,
-} from 'convex/sidebarItems/types'
 
 const categoryIconsMap: Record<string, LucideIcon> = {
   [SYSTEM_DEFAULT_CATEGORIES.Character.iconName]: User,

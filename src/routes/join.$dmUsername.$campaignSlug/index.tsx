@@ -1,8 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useUser, SignIn } from '@clerk/tanstack-react-start'
+import { SignIn, useUser } from '@clerk/tanstack-react-start'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+} from 'convex/campaigns/types'
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -11,12 +16,7 @@ import {
   CardTitle,
 } from '~/components/shadcn/ui/card'
 import { Button } from '~/components/shadcn/ui/button'
-import { Shield, Users, Loader2 } from '~/lib/icons'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-} from 'convex/campaigns/types'
-import { useState } from 'react'
+import { Loader2, Shield, Users } from '~/lib/icons'
 import { Header } from '~/components/Header'
 
 export const Route = createFileRoute('/join/$dmUsername/$campaignSlug/')({

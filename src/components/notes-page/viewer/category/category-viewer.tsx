@@ -1,13 +1,13 @@
+import { PageEditorSkeleton } from '../page-editor-wrapper'
+import { TagCard } from '../folder/tag-card'
 import type { ReactNode } from 'react'
 import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { TagCategory } from 'convex/tags/types'
 import { useTagsByCategory } from '~/hooks/useTagsByCategory'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { TagCategory } from 'convex/tags/types'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
-import { TagCard } from '../folder/tag-card'
 
 export function CategoryViewer({
   item: category,
@@ -15,7 +15,7 @@ export function CategoryViewer({
   const { data: tags, isLoading } = useTagsByCategory(category._id)
 
   if (isLoading) {
-    //TODO: improve loading state
+    // TODO: improve loading state
     return <PageEditorSkeleton />
   }
 

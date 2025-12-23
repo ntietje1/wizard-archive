@@ -2,11 +2,11 @@ import { useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
-import { getEditorConfig } from '~/lib/editor-registry'
-import type { EditorSearch } from '~/components/notes-page/validate-search'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { useAuth } from '@clerk/tanstack-react-start'
+import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { getEditorConfig } from '~/lib/editor-registry'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 type ActiveSearchType = 'note' | 'tag' | 'map' | 'category' | 'folder' | null
 
@@ -17,7 +17,7 @@ export function useCurrentItem() {
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  }) as EditorSearch
+  })
 
   const activeSearchType: ActiveSearchType = search.note
     ? 'note'

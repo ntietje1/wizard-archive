@@ -1,16 +1,16 @@
 import { useDroppable } from '@dnd-kit/core'
-import { cn } from '~/lib/shadcn/utils'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import { canDropItem } from '~/lib/dnd-utils'
 import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import { cn } from '~/lib/shadcn/utils'
+import { canDropItem } from '~/lib/dnd-utils'
 
 interface DroppableSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
   children: React.ReactNode
 }
 
-function getDropData(item: AnySidebarItem, ancestorIds: SidebarItemId[]) {
+function getDropData(item: AnySidebarItem, ancestorIds: Array<SidebarItemId>) {
   const accepts = validSidebarChildren[item.type]
 
   return {

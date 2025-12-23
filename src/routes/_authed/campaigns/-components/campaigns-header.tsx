@@ -1,4 +1,4 @@
-import { Sword, Shield } from '~/lib/icons'
+import { Shield, Sword } from '~/lib/icons'
 
 export function CampaignsHeader() {
   return (

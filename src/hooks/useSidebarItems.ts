@@ -1,18 +1,16 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
-import type { Id } from 'convex/_generated/dataModel'
 import {
   SORT_DIRECTIONS,
-  SORT_ORDERS,
-  type SortOptions,
+  SORT_ORDERS
+  
 } from 'convex/editors/types'
-import {
-  type AnySidebarItem,
-  type SidebarItemId,
-} from 'convex/sidebarItems/types'
 import { useSortOptions } from './useSortOptions'
+import type {SortOptions} from 'convex/editors/types';
+import type {AnySidebarItem, SidebarItemId} from 'convex/sidebarItems/types';
+import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export const useSidebarItemsByCategory = (
   categoryId: Id<'tagCategories'>,
@@ -64,7 +62,7 @@ export const useSidebarItemsByParent = (
 
 export const sortItemsByOptions = (
   options: SortOptions,
-  items?: AnySidebarItem[],
+  items?: Array<AnySidebarItem>,
 ) => {
   if (!items) return undefined
 

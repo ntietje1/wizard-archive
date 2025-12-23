@@ -1,18 +1,5 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { CATEGORY_KIND } from './types'
-import { Id } from '../_generated/dataModel'
-import {
-  insertTagAndNote,
-  updateTagAndContent,
-  insertTagCategory,
-  updateTagCategory as updateTagCategoryFn,
-  deleteTag as deleteTagFn,
-  deleteTagCategory as deleteTagCategoryFn,
-  removeTagFromBlockHandler,
-  addTagToBlockHandler,
-} from './tags'
-import { createTagAndNoteArgs } from './schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { blockNoteIdValidator } from '../blocks/schema'
@@ -22,6 +9,19 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { createTagAndNoteArgs } from './schema'
+import {
+  addTagToBlockHandler,
+  deleteTagCategory as deleteTagCategoryFn,
+  deleteTag as deleteTagFn,
+  insertTagAndNote,
+  insertTagCategory,
+  removeTagFromBlockHandler,
+  updateTagAndContent,
+  updateTagCategory as updateTagCategoryFn,
+} from './tags'
+import { CATEGORY_KIND } from './types'
+import type { Id } from '../_generated/dataModel'
 
 export const createTag = mutation({
   args: createTagAndNoteArgs,

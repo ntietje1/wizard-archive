@@ -1,6 +1,6 @@
-import type { TagDialogProps } from '../base-tag-form/types.ts'
 import { TagFormDialog } from '../base-tag-form/tag-form-dialog.tsx'
 import GenericTagForm from './generic-tag-form.tsx'
+import type { TagDialogProps } from '../base-tag-form/types.ts'
 import type { Tag } from 'convex/tags/types.ts'
 
 export default function GenericTagDialog(props: TagDialogProps<Tag>) {

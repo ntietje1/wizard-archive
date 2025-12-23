@@ -3,22 +3,22 @@ import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getTag, getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
-import type { Location } from './types'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import { combineLocationAndTag, getLocation } from './locations'
 import { locationValidator } from './schema'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import type { Location } from './types'
 
 export const getLocationsByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
   },
   returns: v.array(locationValidator),
-  handler: async (ctx, args): Promise<Location[]> => {
+  handler: async (ctx, args): Promise<Array<Location>> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    ) //TODO: allow players to see locations that have been "introduced" to them
+    ) // TODO: allow players to see locations that have been "introduced" to them
 
     const category = await getTagCategoryBySlug(
       ctx,
@@ -67,7 +67,7 @@ export const getLocationById = query({
       ctx,
       { campaignId: location.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    ) //TODO: allow players to see locations that have been "introduced" to them
+    ) // TODO: allow players to see locations that have been "introduced" to them
 
     return location
   },

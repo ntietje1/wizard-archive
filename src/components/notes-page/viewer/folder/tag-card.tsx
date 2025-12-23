@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useDraggable } from '@dnd-kit/core'
-import { type SidebarDragData } from '~/lib/dnd-utils'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type {SidebarDragData} from '~/lib/dnd-utils';
+import type { ItemCardProps } from './item-card'
+import type { Tag } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
@@ -11,8 +13,6 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { getTagColor } from '~/hooks/useTags'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { ItemCardProps } from './item-card'
-import type { Tag } from 'convex/tags/types'
 
 export function TagCard({
   item: tag,

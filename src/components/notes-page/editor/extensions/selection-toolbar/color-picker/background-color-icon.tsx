@@ -1,5 +1,5 @@
-import { Highlighter } from '~/lib/icons'
 import { useMemo } from 'react'
+import { Highlighter } from '~/lib/icons'
 
 export const BackgroundColorIcon = (
   props: Partial<{

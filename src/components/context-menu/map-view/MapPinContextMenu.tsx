@@ -1,13 +1,14 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import type { MenuContext } from '../types'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
-import { ContextMenu, type ContextMenuRef } from '../components/ContextMenu'
+import { ContextMenu  } from '../components/ContextMenu'
 import { createMenuContext } from '../context'
+import type {ContextMenuRef} from '../components/ContextMenu';
+import type { MenuContext } from '../types'
+import type { Id } from 'convex/_generated/dataModel'
 
 interface PinPosition {
   x: number

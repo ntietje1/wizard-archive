@@ -1,20 +1,30 @@
-import { useCallback, useState, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { useConvex } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import {
+  SYSTEM_DEFAULT_CATEGORIES
+  
+  
+} from 'convex/tags/types'
 import type { MenuContext } from './types'
+import type { Id } from 'convex/_generated/dataModel'
+import type {Tag, TagCategory} from 'convex/tags/types';
+import type { Note } from 'convex/notes/types'
+import type { Folder } from 'convex/folders/types'
+import type { GameMap } from 'convex/gameMaps/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
-import { useConvex } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import {
-  isNote,
   isFolder,
-  isTag,
   isGameMap,
+  isNote,
+  isTag,
   isTagCategory,
 } from '~/lib/sidebar-item-utils'
 import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
@@ -22,19 +32,10 @@ import CharacterTagDialog from '~/components/forms/category-tag-form/character-t
 import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
-import {
-  SYSTEM_DEFAULT_CATEGORIES,
-  type Tag,
-  type TagCategory,
-} from 'convex/tags/types'
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import type { Note } from 'convex/notes/types'
-import type { Folder } from 'convex/folders/types'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarItemId, AnySidebarItem } from 'convex/sidebarItems/types'
 import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
 import type { ActionHandlers } from './menu-registry'
 import { useCurrentItem } from '~/hooks/useCurrentItem'

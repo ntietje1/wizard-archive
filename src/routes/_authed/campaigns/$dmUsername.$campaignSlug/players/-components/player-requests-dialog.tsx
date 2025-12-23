@@ -3,9 +3,12 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import {
   CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-  type CampaignMember,
+  CAMPAIGN_MEMBER_STATUS
+  
 } from 'convex/campaigns/types'
+import { toast } from 'sonner'
+import { useConvexMutation } from '@convex-dev/react-query'
+import type {CampaignMember} from 'convex/campaigns/types';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +18,8 @@ import {
 } from '~/components/shadcn/ui/dialog'
 import { Button } from '~/components/shadcn/ui/button'
 import { Check, RefreshCw, X } from '~/lib/icons'
-import { toast } from 'sonner'
 import { cn } from '~/lib/shadcn/utils'
 import { Badge } from '~/components/shadcn/ui/badge'
-import { useConvexMutation } from '@convex-dev/react-query'
 
 type PlayerRequestCardProps = {
   player: CampaignMember
@@ -100,7 +101,7 @@ function PlayerRequestCard({
 type PlayerRequestsDialogProps = {
   isOpen: boolean
   onClose: () => void
-  players: CampaignMember[]
+  players: Array<CampaignMember>
 }
 
 export function PlayerRequestsDialog({

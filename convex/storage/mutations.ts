@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
 import { FILE_STORAGE_STATUS } from './types'
-import { Id } from '../_generated/dataModel'
+import type { Id } from '../_generated/dataModel'
 
 export const generateUploadUrl = mutation({
   returns: v.string(),

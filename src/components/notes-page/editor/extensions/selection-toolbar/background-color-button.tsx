@@ -1,10 +1,4 @@
 import {
-  BlockNoteEditor,
-  type BlockSchema,
-  type InlineContentSchema,
-  type StyleSchema,
-} from '@blocknote/core'
-import {
   useBlockNoteEditor,
   useComponentsContext,
   useEditorContentOrSelectionChange,
@@ -13,6 +7,8 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { BackgroundColorIcon } from './color-picker/background-color-icon'
 import { ColorPicker } from './color-picker/color-picker'
+import type {BlockNoteEditor, BlockSchema, InlineContentSchema,
+  StyleSchema} from '@blocknote/core';
 
 function checkBackgroundColorInSchema(
   editor: BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema>,

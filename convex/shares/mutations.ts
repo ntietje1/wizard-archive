@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { blockNoteIdValidator } from '../blocks/schema'
 import { mutation } from '../_generated/server'
-import { getShare } from './shares'
 import {
   addTagToBlockHandler,
   getBlockLevelTags,
@@ -9,6 +8,7 @@ import {
 } from '../tags/tags'
 import { getCurrentSession } from '../sessions/sessions'
 import { findBlockByBlockNoteId } from '../blocks/blocks'
+import { getShare } from './shares'
 
 export const addShareBlock = mutation({
   args: {

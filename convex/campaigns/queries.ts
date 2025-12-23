@@ -1,24 +1,25 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import {
-  Campaign,
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-  CampaignMember,
-  CampaignWithMembership,
-} from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { Note } from '../notes/types'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { getUserProfileByUsernameHandler } from '../users/users'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS
+} from './types'
 import {
   getCampaign,
   getCampaignMember,
   requireCampaignMembership,
 } from './campaigns'
-import { getUserProfileByUsernameHandler } from '../users/users'
+import type { Note } from '../notes/types'
+import type {
+  Campaign,
+  CampaignMember,
+  CampaignWithMembership} from './types';
 
 export const getUserCampaigns = query({
-  handler: async (ctx): Promise<CampaignWithMembership[]> => {
+  handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
     const { profile } = await requireUserIdentity(ctx)
 
     const campaignMemberships = await ctx.db
@@ -47,7 +48,7 @@ export const getUserCampaigns = query({
           return null
         }
 
-        let notes: Note[] | undefined = undefined
+        let notes: Array<Note> | undefined = undefined
         if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
           const rawNotes = await ctx.db
             .query('notes')
@@ -58,7 +59,7 @@ export const getUserCampaigns = query({
           notes = rawNotes.map((note) => ({
             ...note,
             type: SIDEBAR_ITEM_TYPES.notes,
-          })) as Note[]
+          })) as Array<Note>
         }
 
         return {
@@ -183,7 +184,7 @@ export const checkCampaignSlugExists = query({
 
 export const getPlayersByCampaign = query({
   args: { campaignId: v.id('campaigns') },
-  handler: async (ctx, args): Promise<CampaignMember[]> => {
+  handler: async (ctx, args): Promise<Array<CampaignMember>> => {
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },

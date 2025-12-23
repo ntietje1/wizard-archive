@@ -1,13 +1,13 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/components/shadcn/ui/tooltip'
 import { SortMenu } from './sort-menu'
 import { NewNoteButton } from './new-note'
 import { NewFolderButton } from './new-folder'
 import { NewCategoryButton } from './new-category'
 import { CloseAllFoldersButton } from './close-all-folders'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/components/shadcn/ui/tooltip'
 
 export function SidebarHeader() {
   return (

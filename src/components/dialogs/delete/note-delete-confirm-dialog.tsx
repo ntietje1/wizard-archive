@@ -1,8 +1,8 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
-import { useNoteActions } from '~/hooks/useNoteActions'
 import { toast } from 'sonner'
+import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Note } from 'convex/notes/types'
+import { useNoteActions } from '~/hooks/useNoteActions'
 
 interface NoteDeleteConfirmDialogProps {
   note: Note

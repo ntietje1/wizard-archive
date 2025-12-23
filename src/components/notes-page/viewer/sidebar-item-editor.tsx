@@ -1,7 +1,8 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type {EditorViewerProps} from '~/lib/editor-registry';
 import {
-  getViewerComponent,
-  type EditorViewerProps,
+  
+  getViewerComponent
 } from '~/lib/editor-registry'
 
 export function SidebarItemEditor({

@@ -1,6 +1,6 @@
-import type { TagDialogProps } from '../base-tag-form/types.ts'
 import { TagFormDialog } from '../base-tag-form/tag-form-dialog.tsx'
 import LocationTagForm from './location-tag-form.tsx'
+import type { TagDialogProps } from '../base-tag-form/types.ts'
 import type { Location } from 'convex/locations/types'
 import type { Id } from 'convex/_generated/dataModel'
 

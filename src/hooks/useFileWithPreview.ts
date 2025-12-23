@@ -1,7 +1,7 @@
-import { useFileUpload } from './useFileUpload'
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { useFileUpload } from './useFileUpload'
 import type { Id } from 'convex/_generated/dataModel'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB

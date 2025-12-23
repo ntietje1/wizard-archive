@@ -1,29 +1,29 @@
-import { query } from '../_generated/server'
 import { v } from 'convex/values'
-import type { Block } from './types'
-import { Id } from '../_generated/dataModel'
+import { query } from '../_generated/server'
 import {
-  findBlock,
-  filterOutChildBlocks,
+  doesBlockMatchRequiredTags,
   extractTagIdsFromBlockContent,
+  filterOutChildBlocks,
+  findBlock,
   getBlockLevelTags,
   getNoteLevelTag,
-  doesBlockMatchRequiredTags,
 } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { hasAccessToBlock } from '../shares/shares'
 import { blockValidator } from './schema'
 import { getBlocksByCampaign } from './blocks'
+import type { Id } from '../_generated/dataModel'
+import type { Block } from './types'
 
-//TODO: add to the index to allow for more efficient query here
+// TODO: add to the index to allow for more efficient query here
 export const getBlocksByTags = query({
   args: {
     campaignId: v.id('campaigns'),
     tagIds: v.array(v.id('tags')),
   },
   returns: v.array(blockValidator),
-  handler: async (ctx, args): Promise<Block[]> => {
+  handler: async (ctx, args): Promise<Array<Block>> => {
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -49,9 +49,9 @@ export const getBlocksByTags = query({
         }
       }),
     )
-    const matchingBlocks: Block[] = checks.filter(Boolean) as Block[]
+    const matchingBlocks: Array<Block> = checks.filter(Boolean) as Array<Block>
 
-    const noteGroups = new Map<Id<'notes'>, Block[]>()
+    const noteGroups = new Map<Id<'notes'>, Array<Block>>()
     matchingBlocks.forEach((block) => {
       if (!noteGroups.has(block.noteId)) {
         noteGroups.set(block.noteId, [])
@@ -59,13 +59,13 @@ export const getBlocksByTags = query({
       noteGroups.get(block.noteId)!.push(block)
     })
 
-    const filteredResults: Block[] = []
+    const filteredResults: Array<Block> = []
     const matchedNoteIds = Array.from(noteGroups.keys())
-    const topByNote = new Map<Id<'notes'>, Block[]>()
+    const topByNote = new Map<Id<'notes'>, Array<Block>>()
     for (const b of allBlocks) {
       if (b.isTopLevel && matchedNoteIds.includes(b.noteId)) {
         const arr = topByNote.get(b.noteId) ?? []
-        arr.push(b as Block)
+        arr.push(b)
         topByNote.set(b.noteId, arr)
       }
     }
@@ -102,9 +102,9 @@ export const getBlockTagState = query({
     ctx,
     args,
   ): Promise<{
-    allTagIds: Id<'tags'>[]
-    inlineTagIds: Id<'tags'>[]
-    blockTagIds: Id<'tags'>[]
+    allTagIds: Array<Id<'tags'>>
+    inlineTagIds: Array<Id<'tags'>>
+    blockTagIds: Array<Id<'tags'>>
     noteTagId: Id<'tags'> | undefined
   } | null> => {
     const note = await ctx.db.get(args.noteId)

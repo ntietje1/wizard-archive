@@ -1,7 +1,14 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation, useConvex } from '@convex-dev/react-query'
+import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { useCallback, useState } from 'react'
+import { AlertCircle } from 'lucide-react'
+import { CATEGORY_KIND } from 'convex/tags/types'
+import { toast } from 'sonner'
+import { MAX_NAME_LENGTH } from '../category-tag-form/base-tag-form/types'
+import { validateCategoryDisplayName, validateCategoryName } from './validators'
+import type { CategoryFormProps } from './types'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -11,14 +18,7 @@ import {
   getCategoryIcon,
   getNonDefaultCategoryIcons,
 } from '~/lib/category-icons'
-import { useCallback, useState } from 'react'
-import type { CategoryFormProps } from './types'
-import { validateCategoryName, validateCategoryDisplayName } from './validators'
 import { CategoryDeleteConfirmDialog } from '~/components/dialogs/delete/category-delete-confirm-dialog'
-import { AlertCircle } from 'lucide-react'
-import { MAX_NAME_LENGTH } from '../category-tag-form/base-tag-form/types'
-import { CATEGORY_KIND } from 'convex/tags/types'
-import { toast } from 'sonner'
 
 export function CategoryForm({
   mode,

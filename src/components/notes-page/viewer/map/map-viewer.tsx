@@ -1,25 +1,27 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  TransformWrapper,
+  
   TransformComponent,
-  type ReactZoomPanPinchRef,
+  TransformWrapper
 } from 'react-zoom-pan-pinch'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   convexQuery,
   useConvex,
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { Button } from '~/components/shadcn/ui/button'
-import { Plus, Minus, RotateCcw } from 'lucide-react'
-import { getSidebarItemIcon } from '~/lib/category-icons'
-import { isTag } from '~/lib/sidebar-item-utils'
-import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
-import type { Id } from 'convex/_generated/dataModel'
+import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type {ReactZoomPanPinchRef} from 'react-zoom-pan-pinch';
+import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { EditorViewerProps } from '~/lib/editor-registry'
+import type {MapViewContextMenuRef} from '~/components/context-menu/map-view/MapViewContextMenu';
+import { Button } from '~/components/shadcn/ui/button'
+import { getSidebarItemIcon } from '~/lib/category-icons'
+import { isTag } from '~/lib/sidebar-item-utils'
 import { MapPinContextMenu } from '~/components/context-menu/map-view/MapPinContextMenu'
 import {
   Tooltip,
@@ -28,8 +30,8 @@ import {
 } from '~/components/shadcn/ui/tooltip'
 import { cn } from '~/lib/shadcn/utils'
 import {
-  MapViewContextMenu,
-  type MapViewContextMenuRef,
+  MapViewContextMenu
+  
 } from '~/components/context-menu/map-view/MapViewContextMenu'
 
 interface PinPosition {
@@ -326,7 +328,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                 {pins.map((pin: MapPinWithItem) => {
                   const Icon = getSidebarItemIcon(pin.item)
-                  //TODO: generalize the color logic
+                  // TODO: generalize the color logic
                   // For tags: use item.color or item.category?.defaultColor
                   // For other items: no color (transparent/default)
                   const color = isTag(pin.item)

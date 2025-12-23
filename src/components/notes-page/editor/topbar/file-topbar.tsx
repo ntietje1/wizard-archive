@@ -1,4 +1,9 @@
 import { useRef } from 'react'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import type {TopbarContextMenuRef} from '~/components/context-menu/topbar/TopbarContextMenu';
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
@@ -6,13 +11,9 @@ import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 import {
-  TopbarContextMenu,
-  type TopbarContextMenuRef,
+  TopbarContextMenu
+  
 } from '~/components/context-menu/topbar/TopbarContextMenu'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()

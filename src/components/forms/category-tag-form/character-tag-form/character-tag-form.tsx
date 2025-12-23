@@ -7,35 +7,37 @@ import {
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { useForm } from '@tanstack/react-form'
+import { toast } from 'sonner'
 import {
   validateTagDescription,
   validateTagName,
 } from '../generic-tag-form/validators.ts'
 import {
-  MAX_NAME_LENGTH,
   MAX_DESCRIPTION_LENGTH,
-  type TagCategoryConfig,
+  MAX_NAME_LENGTH
+  
 } from '../base-tag-form/types.ts'
+import {
+  ColorField,
+  DescriptionField,
+  ImageUploadField,
+  NameField,
+  SubmitButtons,
+} from '../generic-tag-form/fields.tsx'
+import {
+  
+  defaultCharacterFormValues
+} from './types.ts'
+import { PlayerField } from './fields.tsx'
+import type {TagCategoryConfig} from '../base-tag-form/types.ts';
+import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { Character } from 'convex/characters/types.ts'
+import type {CharacterFormValues} from './types.ts';
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
-import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
-import type { Character } from 'convex/characters/types.ts'
-import {
-  defaultCharacterFormValues,
-  type CharacterFormValues,
-} from './types.ts'
-import {
-  NameField,
-  DescriptionField,
-  ColorField,
-  ImageUploadField,
-  SubmitButtons,
-} from '../generic-tag-form/fields.tsx'
-import { PlayerField } from './fields.tsx'
 
 interface CharacterTagFormProps {
   mode: 'create' | 'edit'

@@ -1,18 +1,18 @@
-import { mutation } from '../_generated/server'
 import { v } from 'convex/values'
-import { Id } from '../_generated/dataModel'
+import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import {
-  deleteNote as deleteNoteFn,
-  createNote as createNoteFn,
-  updateNote as updateNoteFn,
-} from './notes'
 import { saveTopLevelBlocksForChildNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import {
+  createNote as createNoteFn,
+  deleteNote as deleteNoteFn,
+  updateNote as updateNoteFn,
+} from './notes'
+import type { Id } from '../_generated/dataModel'
 
 export const updateNote = mutation({
   args: {

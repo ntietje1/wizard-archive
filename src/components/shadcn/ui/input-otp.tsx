@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { OTPInput, OTPInputContext } from 'input-otp'
 
-import { cn } from '~/lib/shadcn/utils'
 import { MinusIcon } from 'lucide-react'
+import { cn } from '~/lib/shadcn/utils'
 
 function InputOTP({
   className,

@@ -1,7 +1,8 @@
 import {
-  SIDEBAR_ITEM_TYPES,
-  type AnySidebarItem,
+  
+  SIDEBAR_ITEM_TYPES
 } from 'convex/sidebarItems/types'
+import type {AnySidebarItem} from 'convex/sidebarItems/types';
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { Tag, TagCategory } from 'convex/tags/types'

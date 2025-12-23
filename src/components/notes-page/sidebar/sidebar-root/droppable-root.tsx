@@ -1,9 +1,9 @@
 import { useDroppable } from '@dnd-kit/core'
-import { cn } from '~/lib/shadcn/utils'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types'
+import { cn } from '~/lib/shadcn/utils'
 import { canDropItem } from '~/lib/dnd-utils'
 
 interface DroppableRootProps {

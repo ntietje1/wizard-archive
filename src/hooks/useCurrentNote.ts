@@ -2,10 +2,10 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { useAuth } from '@clerk/tanstack-react-start'
-import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useEditorNavigation } from './useEditorNavigation'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export const useCurrentNote = () => {
   const { campaignWithMembership } = useCampaign()
@@ -15,7 +15,7 @@ export const useCurrentNote = () => {
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  }) as EditorSearch
+  })
 
   const noteSlug = search.note
 

@@ -1,8 +1,8 @@
-import { Id } from '../_generated/dataModel'
-import { GameMap } from '../gameMaps/types'
-import { Note } from '../notes/types'
-import { Folder } from '../folders/types'
-import { TagCategory, Tag } from '../tags/types'
+import type { Id } from '../_generated/dataModel'
+import type { GameMap } from '../gameMaps/types'
+import type { Note } from '../notes/types'
+import type { Folder } from '../folders/types'
+import type { Tag, TagCategory } from '../tags/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 

@@ -1,21 +1,21 @@
-import type { MenuItemDef, MenuContext } from './types'
-import * as p from './predicates'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import {
+  Eye,
+  FileEdit,
   FilePlus,
   FolderPlus,
-  FileEdit,
-  Trash2,
-  Eye,
-  Tags,
   Grid2x2Plus,
   MapPin,
-  SquareArrowOutUpRight,
-  Plus,
-  Navigation,
   Move,
+  Navigation,
+  Plus,
+  SquareArrowOutUpRight,
+  Tags,
+  Trash2,
 } from 'lucide-react'
 import pluralize from 'pluralize'
+import * as p from './predicates'
+import type { MenuContext, MenuItemDef } from './types'
 
 export type ActionHandlers = {
   open: (ctx: MenuContext) => void
@@ -47,7 +47,7 @@ export type ActionHandlers = {
   moveMapPin: (ctx: MenuContext) => void
 }
 
-export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
+export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
   return [
     // ========== PRIMARY GROUP ==========
     {

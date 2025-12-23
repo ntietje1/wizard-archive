@@ -1,22 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type { GameMap } from 'convex/gameMaps/types'
+import type { ItemCardProps } from './item-card'
+import type {SidebarDragData, SidebarDropData} from '~/lib/dnd-utils';
 import {
-  type SidebarDragData,
-  type SidebarDropData,
-  canDropItem,
+  
+  
+  canDropItem
 } from '~/lib/dnd-utils'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { MapPin } from '~/lib/icons'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { GameMap } from 'convex/gameMaps/types'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { ItemCardProps } from './item-card'
 
 export function MapCard({
   item: map,

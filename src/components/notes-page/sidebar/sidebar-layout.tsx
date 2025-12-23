@@ -1,17 +1,17 @@
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
+import { SessionPanel } from '../editor/session-panel/session-panel'
+import { FileSidebar } from './sidebar'
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
-import { FileSidebar } from './sidebar'
-import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
-import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { isGameMap } from '~/lib/sidebar-item-utils'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {

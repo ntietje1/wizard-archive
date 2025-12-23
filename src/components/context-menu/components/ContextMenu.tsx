@@ -1,19 +1,19 @@
-import React, { useImperativeHandle, useRef, useState, forwardRef } from 'react'
-import type { MenuContext, MenuItemDef } from '../types'
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { buildMenu } from '../menu-builder'
+import { useMenuItems } from './ContextMenuProvider'
+import type { MenuContext, MenuItemDef } from '../types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import {
-  ContextMenu as ShadcnContextMenu,
-  ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuSub,
-  ContextMenuSubTrigger,
   ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+  ContextMenu as ShadcnContextMenu,
 } from '~/components/shadcn/ui/context-menu'
 import { cn } from '~/lib/shadcn/utils'
-import { useMenuItems } from './ContextMenuProvider'
 
 export interface ContextMenuRef {
   open: (position?: { x: number; y: number }) => void

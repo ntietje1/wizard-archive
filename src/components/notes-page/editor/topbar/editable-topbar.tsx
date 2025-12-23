@@ -1,13 +1,13 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
-import { X, MoreVertical } from '~/lib/icons'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { MoreVertical, X } from '~/lib/icons'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 interface EditableTopbarProps {
   name?: string
@@ -17,7 +17,7 @@ interface EditableTopbarProps {
   onClose?: () => void
   isLoading?: boolean
   isEmpty?: boolean
-  ancestors?: AnySidebarItem[]
+  ancestors?: Array<AnySidebarItem>
   onOpenMenu?: (e: React.MouseEvent) => void
 }
 

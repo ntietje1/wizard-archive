@@ -1,6 +1,6 @@
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
-import { getCategoryIcon } from '~/lib/category-icons'
 import type { TagCategoryConfig } from '../base-tag-form/types'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 export const SESSION_CONFIG: TagCategoryConfig = {
   categorySlug: SYSTEM_DEFAULT_CATEGORIES.Session.slug,

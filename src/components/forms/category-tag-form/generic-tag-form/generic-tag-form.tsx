@@ -7,25 +7,26 @@ import {
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { useForm } from '@tanstack/react-form'
+import { toast } from 'sonner'
+import {
+  
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  defaultBaseFormValues
+} from '../base-tag-form/types.ts'
 import { validateTagDescription, validateTagName } from './validators.ts'
 import {
-  MAX_NAME_LENGTH,
-  MAX_DESCRIPTION_LENGTH,
-  defaultBaseFormValues,
-  type BaseTagFormValues,
-} from '../base-tag-form/types.ts'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
-import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
-import type { GenericTagFormProps } from './types.ts'
-import {
-  NameField,
-  DescriptionField,
   ColorField,
+  DescriptionField,
   ImageUploadField,
+  NameField,
   SubmitButtons,
 } from './fields.tsx'
+import type {BaseTagFormValues} from '../base-tag-form/types.ts';
+import type { Id } from 'convex/_generated/dataModel'
+import type { GenericTagFormProps } from './types.ts'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 

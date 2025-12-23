@@ -1,8 +1,8 @@
-import { query } from '../_generated/server'
 import { v } from 'convex/values'
+import { query } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
-import { Editor } from './types'
 import { editorValidator } from './schema'
+import type { Editor } from './types'
 
 export const getCurrentEditor = query({
   args: { campaignId: v.optional(v.id('campaigns')) },

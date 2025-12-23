@@ -2,23 +2,23 @@ import { useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useComponentsContext } from '@blocknote/react'
-import { Share2 } from '~/lib/icons'
 import { toast } from 'sonner'
-import type { CustomBlock } from '~/lib/editor-schema'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import type { CustomBlock } from '~/lib/editor-schema'
+import type { Share } from 'convex/shares/types'
+import type { Id } from 'convex/_generated/dataModel'
+import { Share2 } from '~/lib/icons'
 import { useCampaign } from '~/contexts/CampaignContext'
 import {
   ContextMenu,
-  ContextMenuTrigger,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuLabel,
-  ContextMenuCheckboxItem,
   ContextMenuSeparator,
+  ContextMenuTrigger,
 } from '~/components/shadcn/ui/context-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { usePageLayout } from '~/hooks/usePageLayout'
-import type { Share } from 'convex/shares/types'
-import type { Id } from 'convex/_generated/dataModel'
 import { isNote } from '~/lib/sidebar-item-utils'
 
 interface ShareSideMenuButtonProps {
@@ -137,8 +137,8 @@ export default function ShareSideMenuButton({
     }
   }
 
-  const shareItems: ShareItem[] = useMemo(() => {
-    const items: ShareItem[] = []
+  const shareItems: Array<ShareItem> = useMemo(() => {
+    const items: Array<ShareItem> = []
 
     if (sharedAllTag) {
       items.push({

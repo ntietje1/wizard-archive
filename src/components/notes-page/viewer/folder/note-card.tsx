@@ -1,15 +1,15 @@
 import { useDraggable } from '@dnd-kit/core'
-import { type SidebarDragData } from '~/lib/dnd-utils'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type {SidebarDragData} from '~/lib/dnd-utils';
+import type { ItemCardProps } from './item-card'
+import type { Note } from 'convex/notes/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { FileText } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { ItemCardProps } from './item-card'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { Note } from 'convex/notes/types'
 
 export function NoteCard({
   item: note,

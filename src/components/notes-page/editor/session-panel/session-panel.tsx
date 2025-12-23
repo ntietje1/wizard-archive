@@ -1,22 +1,22 @@
 import { useMemo } from 'react'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useSession } from '~/hooks/useSession'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
+import { EllipsisIcon } from 'lucide-react'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import type { Session } from 'convex/sessions/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { EllipsisIcon } from 'lucide-react'
-import type { Session } from 'convex/sessions/types'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { useSession } from '~/hooks/useSession'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export function SessionPanel() {
   const { campaignWithMembership } = useCampaign()

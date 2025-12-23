@@ -1,10 +1,11 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { CATEGORY_KIND, type Tag } from 'convex/tags/types'
+import { CATEGORY_KIND  } from 'convex/tags/types'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { useMemo } from 'react'
+import type {Tag} from 'convex/tags/types';
 import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export function getTagColor(tag: Tag): string {
   return tag.color ?? tag.category?.defaultColor ?? '#808080'

@@ -1,17 +1,19 @@
-import { Id } from '../_generated/dataModel'
-import { getUserIdentity, UserIdentityWithProfile } from '../common/identity'
-import { Ctx } from '../common/types'
-import { UserProfile } from '../users/types'
+import { getUserIdentity } from '../common/identity'
 import { getUserProfileByUsernameHandler } from '../users/users'
 import {
-  Campaign,
   CAMPAIGN_MEMBER_ROLE,
-  CampaignMemberStatus,
-  CampaignMemberRole,
-  CampaignWithMembership,
-  CAMPAIGN_MEMBER_STATUS,
-  CampaignMember,
+  CAMPAIGN_MEMBER_STATUS
 } from './types'
+import type { Id } from '../_generated/dataModel'
+import type { UserIdentityWithProfile } from '../common/identity';
+import type { Ctx } from '../common/types'
+import type { UserProfile } from '../users/types'
+import type {
+  Campaign,
+  CampaignMember,
+  CampaignMemberRole,
+  CampaignMemberStatus,
+  CampaignWithMembership} from './types';
 
 export type CampaignIdentifier =
   | { dmUsername: string; campaignSlug: string }
@@ -79,7 +81,7 @@ export async function getCampaignMember(
 export async function getCampaignMembers(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-): Promise<CampaignMember[]> {
+): Promise<Array<CampaignMember>> {
   const members = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))

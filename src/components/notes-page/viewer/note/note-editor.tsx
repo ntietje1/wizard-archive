@@ -1,23 +1,25 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import TagMenu from '../../editor/extensions/side-menu/tags/tag-menu'
-import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
-import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
-import {
-  editorSchema,
-  type CustomBlock,
-  type CustomBlockNoteEditor,
-  type CustomPartialBlock,
-} from '~/lib/editor-schema'
-import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
-import type { EditorViewerProps } from '~/lib/editor-registry'
-import { isNote } from '~/lib/sidebar-item-utils'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useMemo, useEffect } from 'react'
-import { useNoteActions } from '~/hooks/useNoteActions'
+import { useEffect, useMemo } from 'react'
 import { debounce } from 'lodash-es'
+import TagMenu from '../../editor/extensions/side-menu/tags/tag-menu'
+import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
+import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
+import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
+import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { Note } from 'convex/notes/types'
+import {
+  
+  
+  
+  editorSchema
+} from '~/lib/editor-schema'
+import type {CustomBlock, CustomBlockNoteEditor, CustomPartialBlock} from '~/lib/editor-schema';
+import { isNote } from '~/lib/sidebar-item-utils'
+import { useNoteActions } from '~/hooks/useNoteActions'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
   ResizableHandle,
@@ -25,7 +27,6 @@ import {
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
 import { NotesByTagViewer } from '~/components/notes-page/viewer/note/notes-by-tag-viewer'
-import type { Note } from 'convex/notes/types'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const { updateNoteContentWithSanitization } = useNoteActions()
@@ -40,7 +41,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   // Debounced content update
   const updateContent = useMemo(
     () =>
-      debounce((newContent: CustomBlock[]) => {
+      debounce((newContent: Array<CustomBlock>) => {
         updateNoteContentWithSanitization(note._id, newContent)
       }, 800),
     [updateNoteContentWithSanitization, note._id],
@@ -57,7 +58,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
     schema: editorSchema,
     ...(hasContent && {
-      initialContent: initialContent as CustomPartialBlock[],
+      initialContent: initialContent as Array<CustomPartialBlock>,
     }),
   })
 

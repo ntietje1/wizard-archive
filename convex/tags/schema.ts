@@ -1,8 +1,8 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { CATEGORY_KIND } from './types'
 import { commonMetaFields } from '../common/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { CATEGORY_KIND } from './types'
 
 export const categoryKindValidator = v.union(
   v.literal(CATEGORY_KIND.SystemCore),

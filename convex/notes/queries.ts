@@ -1,14 +1,14 @@
-import { query } from '../_generated/server'
 import { v } from 'convex/values'
-import { Note } from './types'
+import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { getNote as getNoteFn, getNoteBySlug as getNoteBySlugFn } from './notes'
-import { noteValidator, noteWithContentValidator } from './schema'
 import { getTopLevelBlocksByChildNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
-import { AnySidebarItem } from '../sidebarItems/types'
+import { noteValidator, noteWithContentValidator } from './schema'
+import { getNoteBySlug as getNoteBySlugFn, getNote as getNoteFn } from './notes'
+import type { AnySidebarItem } from '../sidebarItems/types'
+import type { Note } from './types'
 
 export const getNote = query({
   args: {
@@ -29,7 +29,7 @@ export const getNoteAncestors = query({
     noteId: v.id('notes'),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     const note = await ctx.db.get(args.noteId)
     if (!note) {
       throw new Error('Note not found')
