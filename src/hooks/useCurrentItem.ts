@@ -79,11 +79,7 @@ export function useCurrentItem() {
   const folderQuery = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItem,
-      isLoaded &&
-        isSignedIn &&
-        search.category &&
-        search.folderId &&
-        campaignId
+      isLoaded && isSignedIn && search.category && search.folderId && campaignId
         ? { campaignId, id: search.folderId }
         : 'skip',
     ),
@@ -114,9 +110,8 @@ export function useCurrentItem() {
     (activeSearchType === 'category' &&
       (search.folderId
         ? folderQuery.status === 'pending'
-        : categoryQuery.status === 'pending'))
-    || (activeSearchType === 'folder' &&
-      folderBySlugQuery.status === 'pending')
+        : categoryQuery.status === 'pending')) ||
+    (activeSearchType === 'folder' && folderBySlugQuery.status === 'pending')
 
   return {
     item,
@@ -126,4 +121,3 @@ export function useCurrentItem() {
     search,
   }
 }
-

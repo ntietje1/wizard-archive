@@ -35,10 +35,7 @@ export const useTagsByCategory = (
   }
 }
 
-const sortTagsByOptions = (
-  options: SortOptions,
-  tags?: Tag[],
-) => {
+const sortTagsByOptions = (options: SortOptions, tags?: Tag[]) => {
   if (!tags) return undefined
 
   const sortFn = (a: Tag, b: Tag) => {
@@ -65,4 +62,3 @@ const sortTagsByOptions = (
 
   return [...tags].sort(sortFn)
 }
-

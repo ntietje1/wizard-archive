@@ -48,8 +48,7 @@ export default function PlayersContent() {
     if (!dmUsername || !campaignSlug) {
       return toast.error('Failed to copy join link')
     }
-    const joinUrl =
-      `${window.location.origin  }/join/${  dmUsername  }/${  campaignSlug}`
+    const joinUrl = `${window.location.origin}/join/${dmUsername}/${campaignSlug}`
     try {
       await navigator.clipboard.writeText(joinUrl)
       toast.success('Join link copied to clipboard')

@@ -15,11 +15,11 @@ export const ColorIcon = (
     () =>
       ({
         pointerEvents: 'none',
-        fontSize: `${(size * 0.75).toString()  }px`,
-        height: `${size.toString()  }px`,
-        lineHeight: `${size.toString()  }px`,
+        fontSize: `${(size * 0.75).toString()}px`,
+        height: `${size.toString()}px`,
+        lineHeight: `${size.toString()}px`,
         textAlign: 'center',
-        width: `${size.toString()  }px`,
+        width: `${size.toString()}px`,
       }) as const,
     [size],
   )

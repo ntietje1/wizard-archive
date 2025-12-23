@@ -136,7 +136,7 @@ export function MapForm({
         } catch (error) {
           console.error('Failed to get created map:', error)
         }
-        
+
         // Only navigate to map if onSuccess is not provided (onSuccess handles navigation)
         if (!onSuccess && mapSlug) {
           navigateToMap(mapSlug)
