@@ -22,14 +22,14 @@ import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skele
 
 export default function PlayersContent() {
   const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const isDm =
     campaignWithMembership.data?.member.role === CAMPAIGN_MEMBER_ROLE.DM
 
   const players = useQuery(
     convexQuery(
       api.campaigns.queries.getPlayersByCampaign,
-      campaign?._id ? { campaignId: campaign?._id } : 'skip',
+      campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
 
@@ -64,8 +64,7 @@ export default function PlayersContent() {
 
   if (
     campaignWithMembership.status === 'pending' ||
-    players.status === 'pending' ||
-    !players.data
+    players.status === 'pending'
   ) {
     return (
       <div className="h-full w-full">
@@ -83,7 +82,7 @@ export default function PlayersContent() {
     )
   }
 
-  const acceptedPlayers = players.data?.filter(
+  const acceptedPlayers = players.data.filter(
     (p) => p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
   )
 
@@ -95,15 +94,14 @@ export default function PlayersContent() {
       />
 
       <ContentGrid className="mt-4">
-        {acceptedPlayers &&
-          acceptedPlayers.length > 0 &&
+        {acceptedPlayers.length > 0 &&
           acceptedPlayers.map((player: CampaignMember) => (
             <ContentCard
               key={player._id}
-              title={player.userProfile?.name ?? 'Unknown'}
-              description={`@${player.userProfile?.username}`}
+              title={player.userProfile.name ?? 'Unknown'}
+              description={`@${player.userProfile.username}`}
               onClick={() => {
-                toast.info(`Player: ${player.userProfile?.username}`)
+                toast.info(`Player: ${player.userProfile.username}`)
               }}
               badges={[
                 {
@@ -122,7 +120,7 @@ export default function PlayersContent() {
                           setDeletingMemberId(player._id)
                         },
                         'aria-label': 'Remove player',
-                        variant: 'destructive-subtle',
+                        variant: 'destructive',
                       },
                     ]
                   : undefined
@@ -151,7 +149,7 @@ export default function PlayersContent() {
         onClose={() => {
           setIsRequestsOpen(false)
         }}
-        players={players.data ?? []}
+        players={players.data}
       />
 
       {deletingPlayer && (

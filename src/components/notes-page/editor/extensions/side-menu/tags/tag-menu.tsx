@@ -55,10 +55,12 @@ export default function TagMenu({
   return (
     <SuggestionMenuController
       triggerCharacter={'@'}
-      getItems={async (query) =>
-        filterSuggestionItems(
-          getTagMenuItems(onAddTag, nonSystemManagedTags),
-          query,
+      getItems={(query) => // TODO: make menu items async
+        Promise.resolve(
+          filterSuggestionItems(
+            getTagMenuItems(onAddTag, nonSystemManagedTags),
+            query,
+          ),
         )
       }
     />

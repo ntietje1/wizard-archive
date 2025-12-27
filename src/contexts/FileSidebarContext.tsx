@@ -133,7 +133,7 @@ export function FileSidebarProvider({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
-    const item = active.data.current as SidebarDragData
+    const item = active.data.current as SidebarDragData | null | undefined
     if (item) {
       setActiveDragItem(item)
 
@@ -172,8 +172,6 @@ export function FileSidebarProvider({
 
       const draggedItem = active.data.current as SidebarDragData
       const targetData = over.data.current as SidebarDropData
-
-      if (!targetData) return
 
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
@@ -257,16 +255,14 @@ export function FileSidebarProvider({
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {activeDragItem ? (
+          {activeDragItem && (
             <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
-              {activeDragItem.icon && (
-                <activeDragItem.icon className="w-5 h-5" />
-              )}
+              <activeDragItem.icon className="w-5 h-5" />
               <span className="text-sm text-foreground font-semibold">
                 {activeDragItem.name}
               </span>
             </div>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
     </FileSidebarContext.Provider>

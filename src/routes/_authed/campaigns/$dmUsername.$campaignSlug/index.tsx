@@ -11,7 +11,7 @@ export const Route = createFileRoute(
 
 function CampaignsIndexPage() {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
 
   if (campaignWithMembership.status === 'pending' || !campaign) {
     return <LoadingPage />

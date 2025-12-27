@@ -137,7 +137,7 @@ export const useEditorNavigation = () => {
       } else if (isFolder(item)) {
         navigateToFolder(item.slug)
       } else {
-        // @ts-ignore
+        // @ts-ignore - exhaustive check for unknown item types
         console.error('Invalid item type:', item.type)
       }
     },

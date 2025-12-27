@@ -815,7 +815,7 @@ export async function doesBlockMatchRequiredTags(
   blockDbId: Id<'blocks'>,
   requiredTagIds: Array<Id<'tags'>>,
 ): Promise<boolean> {
-  if (!requiredTagIds || requiredTagIds.length === 0) return true
+  if (requiredTagIds.length === 0) return true
   const effectiveTagIds = await getEffectiveTagIdsForBlock(ctx, blockDbId)
   return requiredTagIds.every((tagId) => effectiveTagIds.includes(tagId))
 }
@@ -1169,8 +1169,7 @@ export async function cleanupUnprocessedBlocks(
         : []
 
       const hasAnyTags =
-        (currentTagIds && currentTagIds.length > 0) ||
-        (inlineTagIdsNew && inlineTagIdsNew.length > 0)
+        currentTagIds.length > 0 || inlineTagIdsNew.length > 0
 
       if (!hasAnyTags) {
         await removeBlockAndTags(ctx, existingBlock)

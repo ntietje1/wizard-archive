@@ -18,7 +18,7 @@ export const useTagsByCategory = (
 ) => {
   const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const tags = useQuery(
     convexQuery(
       api.tags.queries.getTagsByCategory,

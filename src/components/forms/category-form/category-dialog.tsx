@@ -25,7 +25,7 @@ export type CategoryDialogProps =
 
 export function CategoryDialog(props: CategoryDialogProps) {
   const isSystemCategory =
-    props.mode === 'edit' && props.category?.kind === CATEGORY_KIND.SystemCore
+    props.mode === 'edit' && props.category.kind === CATEGORY_KIND.SystemCore
 
   return (
     <FormDialog
@@ -40,7 +40,6 @@ export function CategoryDialog(props: CategoryDialogProps) {
             : 'Update the category name, icon, and default color.'
       }
       icon={props.mode === 'create' ? Plus : Edit}
-      maxWidth="max-w-2xl"
     >
       <CategoryForm
         mode={props.mode}

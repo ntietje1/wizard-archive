@@ -44,7 +44,7 @@ function PlayerRequestCard({
         <div>
           <div className="flex items-center gap-2">
             <div className="font-medium text-slate-800">
-              @{player.userProfile?.name ?? 'Unknown'}
+              @{player.userProfile.name ?? 'Unknown'}
             </div>
             <Badge
               variant="secondary"
@@ -59,7 +59,7 @@ function PlayerRequestCard({
             </Badge>
           </div>
           <div className="text-xs text-slate-500">
-            @{player.userProfile?.username ?? 'unknown'}
+                        @{player.userProfile.username}
           </div>
         </div>
       </div>
@@ -173,7 +173,7 @@ export function PlayerRequestsDialog({
                   >
                     <div>
                       <div className="text-medium text-slate-800">
-                        @{p.userProfile?.username ?? 'Unknown'}
+                        @{p.userProfile.username}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

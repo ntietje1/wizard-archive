@@ -2,7 +2,7 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
 import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { CATEGORY_KIND } from 'convex/tags/types'
 import { toast } from 'sonner'
@@ -42,7 +42,13 @@ export function CategoryForm({
   const isSystemCategory =
     mode === 'edit' && category?.kind === CATEGORY_KIND.SystemCore
 
-  const getInitialValues = () => {
+  // Create a key that changes when form should reset - this forces React to remount with fresh defaults
+  const formKey = useMemo(() => {
+    return `category-form-${mode}-${category?._id || 'create'}`
+  }, [mode, category?._id])
+
+  // Get initial values based on current props
+  const defaultValues = useMemo(() => {
     if (mode === 'edit' && category) {
       return {
         name: category.name || '',
@@ -55,10 +61,10 @@ export function CategoryForm({
       iconName: 'TagIcon',
       defaultColor: '#ef4444',
     }
-  }
+  }, [mode, category])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       // for system categories, we don't need to validate the name
       if (!isSystemCategory) {
@@ -88,7 +94,7 @@ export function CategoryForm({
                   categoryId,
                 },
               )
-              if (createdCategory?.slug) {
+              if (createdCategory.slug) {
                 onSuccess(createdCategory.slug)
               }
             } catch (error) {
@@ -99,7 +105,7 @@ export function CategoryForm({
             onClose()
             toast.success('Category created successfully')
           }
-        } else if (mode === 'edit' && category) {
+        } else if (category) {
           const result = await updateCategory.mutateAsync({
             categoryId: category._id,
             name: value.name.trim(),
@@ -112,6 +118,9 @@ export function CategoryForm({
             toast.success('Category updated successfully')
             onClose()
           }
+          return
+        } else {
+          toast.error('Invalid form state: missing category')
           return
         }
       } catch (error) {
@@ -129,6 +138,7 @@ export function CategoryForm({
   return (
     <>
       <form
+        key={formKey}
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault()
@@ -206,7 +216,7 @@ export function CategoryForm({
           </>
         )}
 
-        {isSystemCategory && mode === 'edit' && category && (
+        {isSystemCategory && (
           <div className="space-y-2">
             <Label>Category Name</Label>
             <div className="text-sm text-muted-foreground py-2 px-3 border rounded-md bg-slate-50">

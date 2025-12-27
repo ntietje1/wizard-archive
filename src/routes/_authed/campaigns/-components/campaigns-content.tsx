@@ -39,7 +39,7 @@ export function CampaignsContent() {
     return <CampaignsContentError />
   }
 
-  if (campaigns.status === 'pending' || !campaigns.data) {
+  if (campaigns.status === 'pending') {
     return <CampaignsContentLoading />
   }
 
@@ -139,7 +139,7 @@ export function CampaignsContent() {
                             setDeletingCampaignId(campaign._id)
                           },
                           'aria-label': 'Delete campaign',
-                          variant: 'destructive-subtle',
+                          variant: 'destructive',
                         },
                       ]
                     : undefined

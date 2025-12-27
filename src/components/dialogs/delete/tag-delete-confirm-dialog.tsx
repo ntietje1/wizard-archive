@@ -43,7 +43,7 @@ export function TagDeleteConfirmDialog({
   }, [
     deleteTag,
     tag._id,
-    tag.name || '',
+    tag.name,
     categoryConfig.singular,
     onConfirm,
     onClose,

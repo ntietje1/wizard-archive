@@ -41,7 +41,7 @@ export const SlashMenu = ({ editor }: { editor: CustomBlockNoteEditor }) => {
     <SuggestionMenuController
       triggerCharacter={'/'}
       // Replaces the default Slash Menu items with our custom ones.
-      getItems={async (query) =>
+      getItems={(query) =>
         filterSuggestionItems(getCustomSlashMenuItems(editor), query)
       }
     />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
@@ -60,7 +60,7 @@ export default function CharacterTagForm({
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
 
   const createMutation = useMutation({
     mutationFn: useConvexMutation(api.characters.mutations.createCharacter),
@@ -75,7 +75,7 @@ export default function CharacterTagForm({
       api.campaigns.queries.getPlayersByCampaign,
       campaign?._id
         ? {
-            campaignId: campaign?._id,
+            campaignId: campaign._id,
           }
         : 'skip',
     ),
@@ -86,7 +86,7 @@ export default function CharacterTagForm({
       api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
-            campaignId: campaign?._id,
+            campaignId: campaign._id,
             slug: config.categorySlug,
           }
         : 'skip',
@@ -105,7 +105,9 @@ export default function CharacterTagForm({
     },
   })
 
-  const getInitialValues = useCallback((): CharacterFormValues => {
+
+  // Get initial values based on current props
+  const defaultValues = useMemo((): CharacterFormValues => {
     if (mode === 'edit' && character) {
       return {
         name: character.name || '',
@@ -119,19 +121,14 @@ export default function CharacterTagForm({
         color: null,
       }
     }
-  }, [character, mode])
+  }, [mode, character])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       await handleSubmit(value)
     },
   })
-
-  useEffect(() => {
-    form.reset(getInitialValues())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character?._id, parentId])
 
   async function handleSubmit(value: CharacterFormValues) {
     if (!campaign) {
@@ -175,13 +172,13 @@ export default function CharacterTagForm({
           campaignId: campaign._id,
           tagId: result.tagId,
         })
-        if (tag?.slug) {
+        if (tag.slug) {
           navigateToTag(tag.slug)
         }
 
         toast.success(`${config.singular} created successfully`)
         onClose()
-      } else if (mode === 'edit' && character) {
+      } else if (character) {
         await updateCharacterMutation.mutateAsync({
           characterId: character.characterId,
           name: value.name.trim(),
@@ -193,6 +190,9 @@ export default function CharacterTagForm({
 
         toast.success(`${config.singular} updated successfully`)
         onClose()
+      } else {
+        toast.error('Invalid form state: missing character')
+        return
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)

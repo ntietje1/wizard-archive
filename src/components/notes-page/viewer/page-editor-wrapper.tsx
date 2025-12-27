@@ -27,7 +27,7 @@ export function PageEditorWrapper({
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       <PageTabs
-        pages={pages.data ?? [item]}
+        pages={pages.data}
         pageSlug={pageSlug}
         onSelectPage={selectPage}
         onCreatePage={handleCreatePage}
@@ -60,7 +60,7 @@ export function PageTabs({
   return (
     <div className="flex items-center border-b px-4 bg-muted/20 overflow-x-auto no-scrollbar">
       {/* Parent item tab (first tab) */}
-      {parentItem && (
+      {pages.length > 0 && (
         <button
           key={parentItem._id}
           onClick={() => onSelectPage(undefined)}

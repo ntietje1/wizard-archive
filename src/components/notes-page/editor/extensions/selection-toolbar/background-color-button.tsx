@@ -81,11 +81,7 @@ export const BackgroundColorButton = () => {
       return false
     }
 
-    for (const block of selectedBlocks) {
-      if (block.content !== undefined) {
-        return true
-      }
-    }
+    return selectedBlocks.length > 0
 
     return false
   }, [backgroundColorInSchema, selectedBlocks])

@@ -250,8 +250,7 @@ function RouteComponent() {
     }
 
     // Request sent states
-    if (campaignMember?.role === CAMPAIGN_MEMBER_ROLE.Player) {
-      switch (campaignMember?.status) {
+    switch (campaignMember?.status) {
         case CAMPAIGN_MEMBER_STATUS.Pending:
           return {
             title: 'Request Sent',
@@ -340,7 +339,6 @@ function RouteComponent() {
               </Button>
             ),
           }
-      }
     }
 
     // Not requested yet states

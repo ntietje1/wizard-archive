@@ -16,7 +16,7 @@ interface FormDialogProps {
   description: string
   icon: LucideIcon
   children: ReactNode
-  maxWidth?: string
+  width?: string
   closable?: boolean
 }
 
@@ -27,7 +27,7 @@ export function FormDialog({
   description,
   icon: Icon,
   children,
-  maxWidth = 'max-w-md',
+  width = 'max-w-2xl sm:max-w-2xl',
   closable = true,
 }: FormDialogProps) {
   return (
@@ -41,19 +41,7 @@ export function FormDialog({
     >
       <DialogContent
         showCloseButton={closable}
-        className={`${maxWidth} max-h-[90vh] p-0 overflow-hidden`}
-        onEscapeKeyDown={(event) => {
-          if (!closable) {
-            event.preventDefault()
-            event.stopPropagation()
-          }
-        }}
-        onPointerDownOutside={(event) => {
-          if (!closable) {
-            event.preventDefault()
-            event.stopPropagation()
-          }
-        }}
+        className={`${width} max-h-[90vh] p-0 overflow-hidden`}
       >
         <ScrollArea className="max-h-[90vh] m-[1px] my-1">
           <DialogHeader className="px-6 pt-6 pb-4">

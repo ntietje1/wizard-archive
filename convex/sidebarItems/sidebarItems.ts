@@ -37,8 +37,8 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-    .then((tags) =>
-      tags.map((tag) => ({
+    .then((categoryTags) =>
+      categoryTags.map((tag) => ({
         ...tag,
         category,
       })),
@@ -103,8 +103,8 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-    .then((tags) =>
-      tags.map((tag) => ({
+    .then((parentTags) =>
+      parentTags.map((tag) => ({
         ...tag,
         category: allCategories.find((c) => c._id === tag.categoryId),
       })),
@@ -167,7 +167,7 @@ export const getSidebarItemById = async (
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategory(ctx, campaignId, id as Id<'tagCategories'>)
     default:
-      // @ts-ignore
+      // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', item.type)
       return null
   }
@@ -200,7 +200,7 @@ export async function getSidebarItemAncestors(
     }
 
     ancestors.unshift(parentItem)
-    currentParentId = parentItem?.parentId
+    currentParentId = parentItem.parentId
     previousParentItem = parentItem
   }
 

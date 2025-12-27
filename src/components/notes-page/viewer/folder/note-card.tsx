@@ -21,21 +21,19 @@ export function NoteCard({
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
 
-  const dragData: SidebarDragData | undefined = note
-    ? {
-        _id: note._id,
-        type: SIDEBAR_ITEM_TYPES.notes,
-        name: note.name || defaultItemName(note),
-        parentId: note.parentId,
-        categoryId: note.categoryId,
-        icon: FileText,
-      }
-    : undefined
+  const dragData: SidebarDragData = {
+    _id: note._id,
+    type: SIDEBAR_ITEM_TYPES.notes,
+    name: note.name || defaultItemName(note),
+    parentId: note.parentId,
+    categoryId: note.categoryId,
+    icon: FileText,
+  }
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: note?._id ?? '',
+    id: note._id,
     data: dragData,
-    disabled: isDisabled || !note,
+    disabled: isDisabled,
   })
 
   const handleCardActivate = () => {
@@ -48,7 +46,7 @@ export function NoteCard({
     }
   }
 
-  if (isLoading || !note) {
+  if (isLoading) {
     return (
       <Card className="bg-white border border-slate-200 w-full flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md">
         <div className="flex-1 min-w-0 flex flex-col justify-between">

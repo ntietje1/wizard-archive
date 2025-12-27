@@ -39,11 +39,12 @@ export function SortMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <SortDesc className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon">
+            <SortDesc className="h-4 w-4" />
+          </Button>
+        }
+      />
       <DropdownMenuContent align="start">
         <DropdownMenuRadioGroup
           value={sortOptions.order}

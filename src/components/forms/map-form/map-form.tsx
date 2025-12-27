@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvex, useConvexMutation  } from '@convex-dev/react-query'
@@ -64,7 +64,13 @@ export function MapForm({
     },
   })
 
-  const getInitialValues = useCallback((): MapFormValues => {
+  // Create a key that changes when form should reset - this forces React to remount with fresh defaults
+  const formKey = useMemo(() => {
+    return `map-form-${mapId || 'create'}-${map.data?.name || ''}`
+  }, [mapId, map.data?.name])
+
+  // Get initial values based on current props
+  const defaultValues = useMemo((): MapFormValues => {
     if (mapId && map.data) {
       return {
         name: map.data.name || '',
@@ -74,15 +80,11 @@ export function MapForm({
   }, [mapId, map.data])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       await handleSubmit(value)
     },
   })
-
-  useEffect(() => {
-    form.reset(getInitialValues())
-  }, [mapId, map.data, getInitialValues])
 
   async function handleSubmit(values: MapFormValues) {
     try {
@@ -97,7 +99,7 @@ export function MapForm({
           toast.error('Failed to save image')
           return
         }
-      } else if (map?.data?.imageStorageId && !imageUpload.removed) {
+      } else if (map.data?.imageStorageId && !imageUpload.removed) {
         // Keep existing image if it hasn't been removed
         finalImageStorageId = map.data.imageStorageId
       }
@@ -131,7 +133,7 @@ export function MapForm({
           const createdMap = await convex.query(api.gameMaps.queries.getMap, {
             mapId: newMapId,
           })
-          mapSlug = createdMap?.slug
+          mapSlug = createdMap.slug
         } catch (error) {
           console.error('Failed to get created map:', error)
         }
@@ -160,11 +162,12 @@ export function MapForm({
 
   const hasImage = !!(
     imageUpload.file ||
-    (map?.data?.imageStorageId && !imageUpload.removed)
+    (map.data?.imageStorageId && !imageUpload.removed)
   )
 
   return (
     <form
+      // key={formKey}
       onSubmit={(e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -193,7 +196,7 @@ export function MapForm({
               disabled={isSubmitting}
               autoFocus
             />
-            {field.state.meta.errors && (
+            {field.state.meta.errors[0] && (
               <p className="text-sm text-destructive">
                 {field.state.meta.errors[0]}
               </p>

@@ -17,7 +17,7 @@ const defaultSortOptions: SortOptions = {
 
 export const useSortOptions = () => {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const currentEditor = useQuery(
     convexQuery(
       api.editors.queries.getCurrentEditor,
@@ -35,8 +35,8 @@ export const useSortOptions = () => {
     if (!editor) return
 
     const nextOptions: SortOptions = {
-      order: editor.sortOrder ?? defaultSortOptions.order,
-      direction: editor.sortDirection ?? defaultSortOptions.direction,
+      order: editor.sortOrder,
+      direction: editor.sortDirection,
     }
 
     setSortOptions((prev) =>

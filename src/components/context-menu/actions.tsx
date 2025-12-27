@@ -8,6 +8,7 @@ import {
   
 } from 'convex/tags/types'
 import type { MenuContext } from './types'
+import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type {Tag, TagCategory} from 'convex/tags/types';
 import type { Note } from 'convex/notes/types'
@@ -37,7 +38,6 @@ import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-de
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
-import type { ActionHandlers } from './menu-registry'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export function useMenuActions() {
@@ -45,9 +45,6 @@ export function useMenuActions() {
     navigateToCategory,
     navigateToItem,
     navigateToMap,
-    navigateToPage,
-    navigateToNote,
-    navigateToTag,
     navigateToItemAndPage,
     clearEditorContent,
   } = useEditorNavigation()
@@ -57,7 +54,7 @@ export function useMenuActions() {
   const { createFolder } = useFolderActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
 
@@ -210,7 +207,7 @@ export function useMenuActions() {
 
         setRenamingId(noteId)
       },
-      [campaignId, createNote, openParentFolders, navigateToItemAndPage],
+      [campaignId, createNote, openParentFolders, navigateToItemAndPage, setRenamingId],
     ),
 
     createPageMap: useCallback((ctx: MenuContext) => {
@@ -261,7 +258,7 @@ export function useMenuActions() {
       }
     },
 
-    pinToMap: useCallback(async (ctx: MenuContext) => {
+    pinToMap: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !ctx.activeMapId) return
 
       // Check if already pinned using context data
@@ -322,7 +319,7 @@ export function useMenuActions() {
       [convex],
     ),
 
-    moveMapPin: useCallback(async () => {
+    moveMapPin: useCallback(() => {
       // For now, just show a toast. In the future, this could enable drag mode
       toast.info('Move pin not yet implemented')
     }, []),
@@ -547,6 +544,7 @@ export function useMenuActions() {
       campaign,
       currentItem,
       clearEditorContent,
+      handleCreatePageMapSuccess,
     ],
   )
 

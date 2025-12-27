@@ -36,7 +36,7 @@ export const viewingCanvas: Predicate = (ctx) =>
 export const hasParent =
   (...parents: Array<SidebarItemOrRootType>): Predicate =>
   (ctx) =>
-    ctx.parentType !== null && parents.includes(ctx.parentType)
+    parents.includes(ctx.parentType)
 
 export const underCategory: Predicate = (ctx) => Boolean(ctx.item?.categoryId)
 

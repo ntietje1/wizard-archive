@@ -101,7 +101,7 @@ export function FolderCard({
     }
   }
 
-  if (isLoading || !folder) {
+  if (isLoading) {
     return (
       <div className="h-[140px]">
         <div className="folder-wrapper">

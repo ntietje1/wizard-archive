@@ -33,7 +33,7 @@ export function MapCard({
   const imageUrlQuery = useQuery(
     convexQuery(
       api.storage.queries.getDownloadUrl,
-      map?.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
+      map.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
     ),
   )
 
@@ -89,7 +89,7 @@ export function MapCard({
     }
   }
 
-  if (isLoading || !map) {
+  if (isLoading) {
     return (
       <Card className="bg-white border border-slate-200 w-full">
         <div className="aspect-video bg-slate-100 relative">

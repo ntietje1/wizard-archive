@@ -17,7 +17,7 @@ type TagInlineContentProps = {
 
 function TagInlineContentRender({ inlineContent }: TagInlineContentProps) {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const hasCampaign = !!campaign?._id
   const hasTagId = !!inlineContent.props.tagId
   const tag = useQuery(

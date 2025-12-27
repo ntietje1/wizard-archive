@@ -28,12 +28,11 @@ export function useFolderView({
   const parentId: SidebarItemId | undefined = parentItem?._id
   const itemsByParent = useSidebarItemsByParent(parentId)
 
-  const data = itemsByParent.data ?? []
-
   // All items for rendering
   const items = useMemo(() => {
+    const data = itemsByParent.data ?? []
     return data
-  }, [data])
+  }, [itemsByParent.data])
 
   // Fetch category data if the current parent is a folder with a categoryId
   const categoryFromFolderQuery = useQuery(
@@ -41,7 +40,7 @@ export function useFolderView({
       api.sidebarItems.queries.getSidebarItem,
       parentItem &&
         !isTagCategory(parentItem) &&
-        parentItem?.categoryId &&
+        parentItem.categoryId &&
         campaignId
         ? { id: parentItem.categoryId, campaignId }
         : 'skip',
@@ -53,9 +52,9 @@ export function useFolderView({
     if (isTagCategory(parentItem)) {
       return parentItem
     }
-    const category = categoryFromFolderQuery.data
-    if (category && isTagCategory(category)) {
-      return category
+    const folderCategory = categoryFromFolderQuery.data
+    if (folderCategory && isTagCategory(folderCategory)) {
+      return folderCategory
     }
     return undefined
   }, [parentItem, categoryFromFolderQuery.data])

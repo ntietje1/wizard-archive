@@ -62,7 +62,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   const pins = pinsQuery.data || []
 
   useEffect(() => {
-    if (!map?.imageStorageId) {
+    if (!map.imageStorageId) {
       setImageUrl(null)
       return
     }
@@ -77,7 +77,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       .catch(() => {
         setImageUrl(null)
       })
-  }, [map?.imageStorageId, convex])
+  }, [map.imageStorageId, convex])
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -190,10 +190,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       e.preventDefault()
       e.stopPropagation()
       // Stop propagation at native level too
-      if (e.nativeEvent) {
-        e.nativeEvent.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-      }
+      e.nativeEvent.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
       const rect = imageRef.current?.getBoundingClientRect()
       if (!rect) return
@@ -235,10 +233,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       e.preventDefault()
       e.stopPropagation()
       // Stop propagation at native level too
-      if (e.nativeEvent) {
-        e.nativeEvent.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-      }
+      e.nativeEvent.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
       mapImageContextMenuRef.current?.open({
         x: e.clientX,
@@ -248,9 +244,6 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
     [pendingPinItem],
   )
 
-  if (!map) {
-    return null
-  }
 
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
@@ -338,7 +331,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                   return (
                     <Tooltip key={pin._id} open={isHovered}>
-                      <TooltipTrigger asChild>
+                      <TooltipTrigger>
                         <div
                           className={cn(
                             'absolute pointer-events-auto cursor-pointer transition-transform',
@@ -401,7 +394,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
       <MapViewContextMenu
         ref={mapImageContextMenuRef}
-        item={map || undefined}
+        item={map}
         className="absolute inset-0 pointer-events-none"
       >
         <div className="w-full h-full" />

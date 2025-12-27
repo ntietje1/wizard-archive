@@ -119,12 +119,6 @@ export async function getCampaignMembership(
 
   const campaign = await getCampaign(ctx, campaignIdentifier)
 
-  if (!campaign)
-    return {
-      identityWithProfile,
-      campaignWithMembership: null,
-    }
-
   const members = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))

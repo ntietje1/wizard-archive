@@ -36,7 +36,7 @@ export function buildMenu(items: Array<MenuItemDef>, ctx: MenuContext): BuiltMen
 
   // group items
   const groupMap = visible.reduce((map, item) => {
-    const group = item.group ?? 'default'
+    const group = item.group
     if (!map.has(group)) {
       map.set(group, [])
     }
@@ -45,8 +45,8 @@ export function buildMenu(items: Array<MenuItemDef>, ctx: MenuContext): BuiltMen
   }, new Map<string, Array<MenuItemDef>>())
 
   // sort items within each group
-  for (const items of groupMap.values()) {
-    items.sort((a, b) => a.priority - b.priority)
+  for (const groupItems of groupMap.values()) {
+    groupItems.sort((a, b) => a.priority - b.priority)
   }
 
   // sort groups

@@ -11,13 +11,12 @@ import SelectionToolbar from '../../editor/extensions/selection-toolbar/selectio
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '~/lib/editor-registry'
 import type { Note } from 'convex/notes/types'
-import {
-  
-  
-  
-  editorSchema
+import type {
+  CustomBlock,
+  CustomBlockNoteEditor,
+  CustomPartialBlock,
 } from '~/lib/editor-schema'
-import type {CustomBlock, CustomBlockNoteEditor, CustomPartialBlock} from '~/lib/editor-schema';
+import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'

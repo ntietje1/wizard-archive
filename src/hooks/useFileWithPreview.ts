@@ -57,12 +57,12 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   }, [isOpen])
 
   const verifyFile = useCallback(
-    (file: File): { success: boolean; error?: string } => {
+    (fileToVerify: File): { success: boolean; error?: string } => {
       if (fileTypeValidator) {
-        return fileTypeValidator(file)
+        return fileTypeValidator(fileToVerify)
       }
 
-      if (file.size > maxFileSize) {
+      if (fileToVerify.size > maxFileSize) {
         const maxSizeMB = maxFileSize / (1024 * 1024)
         setUploadError(`File must be less than ${maxSizeMB}MB`)
         return {
@@ -76,17 +76,17 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   )
 
   const handleUpload = useCallback(
-    async (file: File) => {
-      const { error } = verifyFile(file)
-      if (error) {
-        setUploadError(error)
-        throw new Error(error)
+    async (fileToUpload: File) => {
+      const { error: verifyError } = verifyFile(fileToUpload)
+      if (verifyError) {
+        setUploadError(verifyError)
+        throw new Error(verifyError)
       }
       setIsUploading(true)
       setUploadError('')
 
       try {
-        const storageIdResult = await uploadFile.mutateAsync(file)
+        const storageIdResult = await uploadFile.mutateAsync(fileToUpload)
         return storageIdResult
       } catch (error) {
         const errorMessage =
@@ -101,26 +101,26 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   )
 
   const handleFileSelect = useCallback(
-    (file: File) => {
-      const { error } = verifyFile(file)
-      if (error) {
-        setUploadError(error)
-        return { success: false, error }
+    (selectedFile: File) => {
+      const { error: verifyError } = verifyFile(selectedFile)
+      if (verifyError) {
+        setUploadError(verifyError)
+        return { success: false, error: verifyError }
       }
 
-      setFile(file)
+      setFile(selectedFile)
       setUploadError('')
 
       const reader = new FileReader()
       reader.onload = (event: ProgressEvent<FileReader>) => {
         setPreview(event.target?.result as string)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(selectedFile)
 
       if (uploadOnSelect) {
         setIsUploading(true)
         uploadFile
-          .mutateAsync(file)
+          .mutateAsync(selectedFile)
           .then((uploadedStorageId) => {
             setStorageId(uploadedStorageId)
           })
@@ -153,9 +153,8 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setIsDragActive(false)
 
       const files = e.dataTransfer.files
-      if (files && files[0]) {
-        handleFileSelect(files[0])
-      }
+      const firstFile = files[0]
+      handleFileSelect(firstFile)
     },
     [handleFileSelect],
   )
@@ -173,7 +172,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
 
   const handleSubmit = useCallback(async (): Promise<Id<'_storage'>> => {
     if (uploadOnSelect) {
-      // file should already have been uploaded, just commit
+      // File should already have been uploaded, just commit
       if (isUploading) {
         throw new Error('File is still uploading, please wait')
       }
@@ -183,7 +182,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       await commitUpload.mutateAsync({ storageId })
       return storageId
     } else {
-      // upload + commit
+      // Upload + commit
       if (!file) {
         throw new Error('No file selected')
       }
@@ -198,7 +197,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setStorageId(uploadedStorageId)
       return uploadedStorageId
     }
-  }, [file, handleUpload, uploadOnSelect, storageId, commitUpload, isUploading])
+  }, [file, handleUpload, uploadOnSelect, storageId, commitUpload, isUploading, verifyFile])
 
   return {
     file,

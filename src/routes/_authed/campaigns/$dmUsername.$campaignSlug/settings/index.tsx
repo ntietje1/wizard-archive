@@ -21,8 +21,8 @@ export const Route = createFileRoute(
 
 function CampaignSettingsPage() {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
-  const campaignStatus = campaignWithMembership?.status
+  const campaign = campaignWithMembership.data?.campaign
+  const campaignStatus = campaignWithMembership.status
   const convex = useConvex()
 
   const form = useForm({
@@ -41,7 +41,7 @@ function CampaignSettingsPage() {
   }
 
   const isDM =
-    campaignWithMembership?.data?.member?.role === CAMPAIGN_MEMBER_ROLE.DM
+    campaignWithMembership.data?.member.role === CAMPAIGN_MEMBER_ROLE.DM
 
   if (!isDM) {
     return (
@@ -91,7 +91,7 @@ function CampaignSettingsPage() {
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
-                {field.state.meta.errors?.length ? (
+                {field.state.meta.errors.length ? (
                   <p className="text-sm text-red-500 mt-1">
                     {field.state.meta.errors[0]}
                   </p>
@@ -134,7 +134,7 @@ function CampaignSettingsPage() {
                 return validateCampaignSlugAsync(
                   convex,
                   normalized,
-                  campaign?._id,
+                  campaign._id,
                 )
               },
               onChangeAsyncDebounceMs: 300,

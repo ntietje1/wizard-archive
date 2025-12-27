@@ -44,15 +44,13 @@ export function SessionPanel() {
   )
 
   const hasActiveSession = !!currentSession.data
-  const sortedSessions: Array<Session> = sessions.data ?? []
   const previousSessions: Array<Session> = useMemo(() => {
-    if (!sortedSessions) return []
+    const sortedSessions: Array<Session> = sessions.data ?? []
     const currentId = currentSession.data?.sessionId
     return sortedSessions.filter((s) => s.sessionId !== currentId)
-  }, [sortedSessions, currentSession.data?.sessionId])
+  }, [sessions.data, currentSession.data?.sessionId])
 
   const formatSessionDate = (s: Session): string => {
-    if (!s) return ''
     const date = s.description
       ? new Date(s.description)
       : new Date(s._creationTime)
@@ -128,11 +126,11 @@ export function SessionPanel() {
           )}
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger render={
             <Button variant="outline" size="lg" className="aspect-square">
               <EllipsisIcon className="size-5" />
             </Button>
-          </DropdownMenuTrigger>
+          }/>
           <DropdownMenuContent align="end">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="[&>svg]:hidden">
@@ -146,7 +144,6 @@ export function SessionPanel() {
                   <DropdownMenuItem
                     key={s.sessionId}
                     onClick={() => {
-                      // setSelectedSessionId(s.sessionId)
                       if (campaignId) {
                         setCurrentSession.mutate({
                           campaignId,

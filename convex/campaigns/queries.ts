@@ -41,7 +41,7 @@ export const getUserCampaigns = query({
     const campaignsWithNotes = await Promise.all(
       campaigns.map(async (campaign) => {
         const membership = campaignMemberships.find(
-          (membership) => membership.campaignId === campaign._id,
+          (m) => m.campaignId === campaign._id,
         )
 
         if (!membership) {
@@ -71,7 +71,7 @@ export const getUserCampaigns = query({
           noteCount: notes?.length || 0,
         }
       }),
-    ).then((campaigns) => campaigns.filter((campaign) => campaign !== null))
+    ).then((filteredCampaigns) => filteredCampaigns.filter((campaign) => campaign !== null))
 
     return campaignsWithNotes
   },
@@ -117,7 +117,7 @@ export const getPublicCampaignBySlug = query({
         .collect()
 
       const member = members.find(
-        (member) => member.userId === identityWithProfile.profile._id,
+        (m) => m.userId === identityWithProfile.profile._id,
       )
 
       if (member) {
@@ -201,7 +201,7 @@ export const getPlayersByCampaign = query({
       members.map(async (member) => {
         return getCampaignMember(ctx, member._id)
       }),
-    ).then((members) => members.filter((member) => member !== null))
+    ).then((filteredMembers) => filteredMembers.filter((member) => member !== null))
 
     return membersWithProfiles
   },

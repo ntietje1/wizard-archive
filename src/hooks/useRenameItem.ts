@@ -75,8 +75,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
           },
         )
 
-        if (!updatedItem) return
-
         navigateToItemAndPage(updatedItem, search.page)
       } catch (error) {
         console.error(error)

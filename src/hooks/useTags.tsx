@@ -13,7 +13,7 @@ export function getTagColor(tag: Tag): string {
 
 export function useTags() {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const tags = useQuery(
     convexQuery(
       api.tags.queries.getTagsByCampaign,
@@ -62,10 +62,13 @@ export function useBlockTags({
 
   const state = blockTagState.data
   const isBlockNotFound = state === null
-  const inlineTagIds = state?.inlineTagIds ?? []
-  const manualTagIds = state?.blockTagIds ?? []
+  const inlineTagIds = useMemo(() => state?.inlineTagIds ?? [], [state?.inlineTagIds])
+  const manualTagIds = useMemo(() => state?.blockTagIds ?? [], [state?.blockTagIds])
   const noteTagId = state?.noteTagId ?? null
-  const allBlockTagIds = new Set(state?.allTagIds ?? [])
+  const allBlockTagIds = useMemo(
+    () => new Set(state?.allTagIds ?? []),
+    [state?.allTagIds],
+  )
 
   // Locked tags cannot be removed (inline tags and note-level tag)
   const lockedTagIds = useMemo(

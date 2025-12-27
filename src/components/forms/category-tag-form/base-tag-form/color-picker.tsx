@@ -142,26 +142,29 @@ export function ColorPicker({
               }
             }}
           >
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                disabled={disabled}
-                className={cn(
-                  'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-200 transition hover:scale-110 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 disabled:cursor-not-allowed disabled:opacity-50',
-                  isCustomSelected && 'border-slate-300',
-                )}
-                style={{ backgroundColor: customColor }}
-                role="radio"
-                aria-checked={isCustomSelected}
-                aria-label="Open custom color picker"
-              >
-                {isCustomSelected ? (
-                  <Check className="h-4 w-4 text-white drop-shadow" />
-                ) : (
-                  <PipetteIcon className="h-4 w-4 text-white drop-shadow" />
-                )}
-              </button>
-            </PopoverTrigger>
+            <PopoverTrigger
+              render={(props) => (
+                <button
+                  {...props}
+                  type="button"
+                  disabled={disabled}
+                  className={cn(
+                    'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-200 transition hover:scale-110 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 disabled:cursor-not-allowed disabled:opacity-50',
+                    isCustomSelected && 'border-slate-300',
+                  )}
+                  style={{ backgroundColor: customColor }}
+                  role="radio"
+                  aria-checked={isCustomSelected}
+                  aria-label="Open custom color picker"
+                >
+                  {isCustomSelected ? (
+                    <Check className="h-4 w-4 text-white drop-shadow" />
+                  ) : (
+                    <PipetteIcon className="h-4 w-4 text-white drop-shadow" />
+                  )}
+                </button>
+              )}
+            />
             <PopoverContent
               side="top"
               align="start"
@@ -172,7 +175,7 @@ export function ColorPicker({
               )}
             >
               <AdvancedColorPicker
-                value={customColor ?? undefined}
+                value={customColor}
                 onChange={handleCustomChange}
               >
                 <div className="flex flex-col gap-4">

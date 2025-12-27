@@ -40,7 +40,7 @@ export const SidebarItemContextMenu = forwardRef<
   // Build context function - this will be called by ContextMenu when needed
   const buildContext = useCallback((): MenuContext | null => {
     return contextMenuHook.buildContext(item)
-  }, [item, contextMenuHook.buildContext])
+  }, [item, contextMenuHook])
 
   React.useImperativeHandle(ref, () => ({
     open: (position?: { x: number; y: number }) => {

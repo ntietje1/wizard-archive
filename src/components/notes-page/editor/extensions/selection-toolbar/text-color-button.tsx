@@ -79,11 +79,7 @@ export const TextColorButton = () => {
       return false
     }
 
-    for (const block of selectedBlocks) {
-      if (block.content !== undefined) {
-        return true
-      }
-    }
+    return selectedBlocks.length > 0
 
     return false
   }, [selectedBlocks, textColorInSchema])

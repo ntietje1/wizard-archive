@@ -72,7 +72,8 @@ const categoryIconsMap: Record<string, LucideIcon> = {
 }
 
 export const getCategoryIcon = (categoryName?: string): LucideIcon => {
-  return (categoryName && categoryIconsMap[categoryName]) || TagIcon
+  if (!categoryName) return TagIcon
+  return categoryIconsMap[categoryName] ?? TagIcon
 }
 
 export const getNonDefaultCategoryIcons = () => {
@@ -101,11 +102,11 @@ export const getSidebarItemIcon = (item: AnySidebarItem): LucideIcon => {
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return getCategoryIcon(item.iconName)
     case SIDEBAR_ITEM_TYPES.tags:
-      return getCategoryIcon(item.category?.iconName) || TagIcon
+      return getCategoryIcon(item.category?.iconName)
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] || FileText
+      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] ?? FileText
     default:
       return FileText
   }

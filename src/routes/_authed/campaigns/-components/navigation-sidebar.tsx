@@ -44,7 +44,7 @@ export const NavigationSidebar = () => {
           {navigationItems.map((item) => {
             return (
               <Tooltip key={item.name}>
-                <TooltipTrigger asChild>
+                <TooltipTrigger>
                   <Link
                     to={item.to}
                     params={{ dmUsername, campaignSlug }}

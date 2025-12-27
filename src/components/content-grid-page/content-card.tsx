@@ -23,7 +23,6 @@ interface BaseContentCardProps {
       | 'secondary'
       | 'destructive'
       | 'outline'
-      | 'destructive-subtle'
   }>
   actionButtons?: Array<{
     icon: LucideIcon
@@ -35,7 +34,6 @@ interface BaseContentCardProps {
       | 'secondary'
       | 'destructive'
       | 'outline'
-      | 'destructive-subtle'
   }>
   footer?: ReactNode
   className?: string
@@ -135,7 +133,7 @@ export function ContentCard({
                   className={`opacity-0 group-hover:opacity-100 transition-opacity`}
                   aria-label={button['aria-label']}
                 >
-                  {button.icon && <button.icon className="w-4 h-4" />}
+                  <button.icon className="w-4 h-4" />
                 </Button>
               ),
           )}

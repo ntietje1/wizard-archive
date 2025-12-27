@@ -20,7 +20,7 @@ export function FolderDeleteConfirmDialog({
   const { deleteFolder } = useFolderActions()
   const sidebarItemsByParent = useSidebarItemsByParent(folder._id)
   const hasDirectChildren =
-    folder && (sidebarItemsByParent.data?.length || 0) > 0
+    (sidebarItemsByParent.data?.length || 0) > 0
   const handleConfirm = useCallback(async () => {
     await deleteFolder
       .mutateAsync({ folderId: folder._id })

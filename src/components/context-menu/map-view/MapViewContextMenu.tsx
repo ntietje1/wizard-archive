@@ -33,7 +33,7 @@ export const MapViewContextMenu = forwardRef<
 
   const buildContext = useCallback((): MenuContext | null => {
     return contextMenuHook.buildContext(item)
-  }, [item, contextMenuHook.buildContext])
+  }, [item, contextMenuHook])
 
   React.useImperativeHandle(ref, () => ({
     open: (position?: { x: number; y: number }) => {

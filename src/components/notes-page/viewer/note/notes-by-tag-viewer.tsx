@@ -24,7 +24,7 @@ const schema = BlockNoteSchema.create({
 export function NotesByTagViewer() {
   const { nonSystemManagedTags } = useTags()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const [selectedTagIds, setSelectedTagIds] = React.useState<Array<Id<'tags'>>>([])
 
   const blocks = useQuery(
@@ -56,7 +56,7 @@ export function NotesByTagViewer() {
   return (
     <div className="h-full flex flex-col bg-white">
       <div className="mb-4 flex flex-wrap gap-2">
-        {nonSystemManagedTags?.map((tag: Tag) => (
+        {nonSystemManagedTags.map((tag: Tag) => (
           <Button
             key={tag._id}
             variant="outline"

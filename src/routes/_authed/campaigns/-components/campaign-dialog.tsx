@@ -72,7 +72,7 @@ export function CampaignDialog({
 
           toast.success('Campaign created successfully')
           onClose()
-        } else if (mode === 'edit' && campaign) {
+        } else if (campaign) {
           await updateCampaign.mutateAsync({
             campaignId: campaign._id,
             name: value.name.trim(),
@@ -82,6 +82,9 @@ export function CampaignDialog({
 
           toast.success('Campaign updated successfully')
           onClose()
+        } else {
+          toast.error('Invalid form state: missing campaign')
+          return
         }
       } catch (error) {
         console.error('Failed to save campaign:', error)
@@ -98,14 +101,14 @@ export function CampaignDialog({
         ...DEFAULT_CAMPAIGN_FORM_VALUES,
         slug: randomSlug,
       })
-    } else if (mode === 'edit' && campaign) {
+    } else if (campaign) {
       form.reset({
         name: campaign.name,
         description: campaign.description || '',
         slug: campaign.slug,
       })
     }
-  }, [mode, campaign, isOpen])
+  }, [mode, campaign, isOpen, form])
 
   // Clear form when dialog closes
   useEffect(() => {
@@ -116,7 +119,7 @@ export function CampaignDialog({
         slug: '',
       })
     }
-  }, [isOpen])
+  }, [isOpen, form])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return
@@ -134,7 +137,6 @@ export function CampaignDialog({
           : 'Update campaign details'
       }
       icon={Sword}
-      maxWidth="max-w-lg"
     >
       <form
         onSubmit={(e) => {
@@ -163,7 +165,7 @@ export function CampaignDialog({
                 disabled={form.state.isSubmitting}
                 required
               />
-              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>
@@ -241,7 +243,7 @@ export function CampaignDialog({
                   />
                 )}
               </div>
-              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>

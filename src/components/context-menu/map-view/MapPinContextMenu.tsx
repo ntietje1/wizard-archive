@@ -62,7 +62,7 @@ export function MapPinContextMenu({
     if (pin) {
       contextMenuRef.current?.open(position)
     }
-  }, [pin, position.x, position.y])
+  }, [pin, position])
 
   if (!pin) return null
 

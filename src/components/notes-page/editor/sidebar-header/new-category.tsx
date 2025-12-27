@@ -6,7 +6,7 @@ import { CategoryDialog } from '~/components/forms/category-form/category-dialog
 
 export function NewCategoryButton() {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   if (!campaign) return null

@@ -33,8 +33,8 @@ export default function TagSideMenuButton({
   const campaignId = campaignWithMembership.data?.campaign._id
   const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
   const { currentPage } = usePageLayout({
-    itemId: isPageLayout ? item?._id : undefined,
-    itemSlug: isPageLayout ? item?.slug : undefined,
+    itemId: isPageLayout ? item._id : undefined,
+    itemSlug: isPageLayout ? item.slug : undefined,
     campaignId: isPageLayout ? campaignId : undefined,
   })
   const [query, setQuery] = useState('')
@@ -85,13 +85,13 @@ export default function TagSideMenuButton({
         }
       }}
     >
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger render={
         <Components.SideMenu.Button
           label="Add Tags"
           className="!p-0 !px-0 !h-6 !w-6"
           icon={<TagIcon size={18} />}
         />
-      </DropdownMenuTrigger>
+      }/>
       <DropdownMenuContent
         side="bottom"
         align="start"
@@ -119,9 +119,9 @@ export default function TagSideMenuButton({
                         <Badge
                           variant="secondary"
                           style={{
-                            // @ts-ignore - allow CSS var injection
+                            // @ts-ignore - allow CSS var injection for custom properties
                             '--tag-bg': `${tagColor}20`,
-                            // @ts-ignore
+                            // @ts-ignore - allow CSS var injection for custom properties
                             '--tag-fg': `${tagColor}`,
                           }}
                           className="inline-flex items-center py-1 transition-colors bg-[var(--tag-bg)] text-[var(--tag-fg)]"
@@ -155,9 +155,9 @@ export default function TagSideMenuButton({
                         <Badge
                           variant="secondary"
                           style={{
-                            // @ts-ignore
+                            // @ts-ignore - allow CSS var injection for custom properties
                             '--tag-bg': `${tagColor}20`,
-                            // @ts-ignore
+                            // @ts-ignore - allow CSS var injection for custom properties
                             '--tag-fg': `${tagColor}`,
                           }}
                           className="inline-flex items-center py-1 transition-colors bg-[var(--tag-bg)] text-[var(--tag-fg)] hover:bg-red-500 hover:text-white group-hover:bg-red-500 group-hover:text-white"
@@ -183,13 +183,10 @@ export default function TagSideMenuButton({
                 value={query}
                 onValueChange={setQuery}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const first = filteredAvailableTags[0]
-                    if (first) {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleAddTagWithToast(first._id)
-                    }
+                  if (e.key === 'Enter' && filteredAvailableTags.length > 0) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleAddTagWithToast(filteredAvailableTags[0]._id)
                   }
                 }}
               />
@@ -213,9 +210,9 @@ export default function TagSideMenuButton({
                         disabled={isMutating}
                         className={`group inline-block focus-visible:outline-none disabled:opacity-60`}
                         style={{
-                          // @ts-ignore
+                          // @ts-ignore - allow CSS var injection for custom properties
                           '--tag-bg': `${tagColor}20`,
-                          // @ts-ignore
+                          // @ts-ignore - allow CSS var injection for custom properties
                           '--tag-fg': `${tagColor}`,
                         }}
                       >

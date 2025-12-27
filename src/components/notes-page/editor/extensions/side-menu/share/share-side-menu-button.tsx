@@ -13,6 +13,7 @@ import {
   ContextMenu,
   ContextMenuCheckboxItem,
   ContextMenuContent,
+  ContextMenuGroup,
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
@@ -42,12 +43,12 @@ export default function ShareSideMenuButton({
 }: ShareSideMenuButtonProps) {
   const { item } = useCurrentItem()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const campaignId = campaign?._id
   const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
   const { currentPage } = usePageLayout({
-    itemId: isPageLayout ? item?._id : undefined,
-    itemSlug: isPageLayout ? item?.slug : undefined,
+    itemId: isPageLayout ? item._id : undefined,
+    itemSlug: isPageLayout ? item.slug : undefined,
     campaignId: isPageLayout ? campaignId : undefined,
   })
   const Components = useComponentsContext()!
@@ -83,7 +84,10 @@ export default function ShareSideMenuButton({
   const playerSharedTags = shares.filter((s: Share) => s.memberId != null)
 
   const isBlockNotFound = blockTagState.data === null
-  const appliedTagIds = new Set<Id<'tags'>>(blockTagState.data?.allTagIds ?? [])
+  const appliedTagIds = useMemo(
+    () => new Set<Id<'tags'>>(blockTagState.data?.allTagIds ?? []),
+    [blockTagState.data?.allTagIds],
+  )
   const isShared = useMemo(() => {
     if (!sharedAllTag || isBlockNotFound) return false
     if (appliedTagIds.has(sharedAllTag.tagId)) return true
@@ -177,65 +181,67 @@ export default function ShareSideMenuButton({
         }
       }}
     >
-      <ContextMenuTrigger asChild>
-        <div onClick={handleButtonClick}>
+      <div onClick={handleButtonClick}>
+        <ContextMenuTrigger render={
           <Components.SideMenu.Button
             label={isShared ? 'Shared' : 'Share'}
             className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''} ${isBlockNotFound ? 'opacity-50 cursor-not-allowed' : ''}`}
             icon={<Share2 size={18} />}
-          />
-        </div>
-      </ContextMenuTrigger>
+            />
+        }/>
+      </div>
       <ContextMenuContent
         className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]"
-        onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
-        <ContextMenuSeparator />
-        {isBlockNotFound ? (
-          <div className="px-2 py-2">
-            <div className="text-xs text-muted-foreground">
-              Sharing is not available for empty notes. Add content to access
-              sharing.
+        <ContextMenuGroup>
+          <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
+          <ContextMenuSeparator />
+          {isBlockNotFound ? (
+            <div className="px-2 py-2">
+              <div className="text-xs text-muted-foreground">
+                Sharing is not available for empty notes. Add content to access
+                sharing.
+              </div>
             </div>
-          </div>
-        ) : (
-          shareItems.map((item) => {
-            const displayName = item.name || item.username || 'Player'
-            const displayText = item.name
-              ? item.name
-              : item.username
-                ? `@${item.username}`
-                : 'Player'
+          ) : (
+            shareItems.map((shareItem) => {
+              const displayName = shareItem.name || shareItem.username || 'Player'
+              const displayText = shareItem.name
+                ? shareItem.name
+                : shareItem.username
+                  ? `@${shareItem.username}`
+                  : 'Player'
 
-            return (
-              <ContextMenuCheckboxItem
-                key={item.key}
-                checked={item.applied}
-                disabled={isMutating}
-                onSelect={async (e) => {
-                  e.preventDefault()
-                  await toggleShareTag(item.share)
-                }}
-                className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
-              >
-                <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                  <span className="truncate font-medium" title={displayName}>
-                    {displayText}
-                  </span>
-                  {item.name && item.username && (
-                    <span
-                      className="truncate text-xs text-muted-foreground"
-                      title={`@${item.username}`}
-                    >
-                      @{item.username}
+              return (
+                <ContextMenuCheckboxItem
+                  key={shareItem.key}
+                  checked={shareItem.applied}
+                  disabled={isMutating}
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    await toggleShareTag(shareItem.share)
+                  }}
+                  className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
+                >
+                  <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
+                    <span className="truncate font-medium" title={displayName}>
+                      {displayText}
                     </span>
-                  )}
-                </span>
-              </ContextMenuCheckboxItem>
-            )
-          })
-        )}
+                    {shareItem.name && shareItem.username && (
+                      <span
+                        className="truncate text-xs text-muted-foreground"
+                        title={`@${shareItem.username}`}
+                      >
+                        @{shareItem.username}
+                      </span>
+                    )}
+                  </span>
+                </ContextMenuCheckboxItem>
+              )
+            })
+          )}
+        </ContextMenuGroup>
       </ContextMenuContent>
     </ContextMenu>
   )

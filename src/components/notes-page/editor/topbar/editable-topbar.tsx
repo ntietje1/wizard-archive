@@ -116,7 +116,7 @@ export function EditableTopbar({
             <div className="truncate flex-1 min-w-0">
               {!onRename ? (
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger>
                     <span className="text-left px-1 inline-block cursor-not-allowed opacity-75">
                       {title || (
                         <span className="opacity-85">

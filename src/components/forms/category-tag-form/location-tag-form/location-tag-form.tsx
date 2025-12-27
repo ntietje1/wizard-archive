@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
@@ -58,7 +58,7 @@ export default function LocationTagForm({
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
 
   const createMutation = useMutation({
     mutationFn: useConvexMutation(api.locations.mutations.createLocation),
@@ -73,7 +73,7 @@ export default function LocationTagForm({
       api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
-            campaignId: campaign?._id,
+            campaignId: campaign._id,
             slug: config.categorySlug,
           }
         : 'skip',
@@ -92,7 +92,7 @@ export default function LocationTagForm({
     },
   })
 
-  const getInitialValues = useCallback((): LocationFormValues => {
+  const defaultValues = useMemo((): LocationFormValues => {
     if (mode === 'edit' && location) {
       return {
         name: location.name || '',
@@ -102,19 +102,14 @@ export default function LocationTagForm({
     } else {
       return defaultLocationFormValues
     }
-  }, [location, mode])
+  }, [mode, location])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       await handleSubmit(value)
     },
   })
-
-  useEffect(() => {
-    form.reset(getInitialValues())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?._id, parentId])
 
   async function handleSubmit(value: LocationFormValues) {
     if (!campaign) {
@@ -161,7 +156,7 @@ export default function LocationTagForm({
           campaignId: campaign._id,
           tagId: result.tagId,
         })
-        if (tag?.slug) {
+        if (tag.slug) {
           navigateToTag(tag.slug)
         }
 
@@ -169,7 +164,7 @@ export default function LocationTagForm({
           toast.success(`${config.singular} created successfully`)
           onClose()
         }
-      } else if (mode === 'edit' && location) {
+      } else if (location) {
         await updateMutation.mutateAsync({
           locationId: location.locationId,
           name: value.name.trim(),
@@ -180,6 +175,9 @@ export default function LocationTagForm({
 
         toast.success(`${config.singular} updated successfully`)
         onClose()
+      } else {
+        toast.error('Invalid form state: missing location')
+        return
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)

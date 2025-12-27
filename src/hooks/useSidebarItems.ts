@@ -18,7 +18,7 @@ export const useSidebarItemsByCategory = (
 ) => {
   const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItemsByCategory,
@@ -42,7 +42,7 @@ export const useSidebarItemsByParent = (
 ) => {
   const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItemsByParent,

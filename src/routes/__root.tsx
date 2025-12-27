@@ -19,9 +19,6 @@ import type { QueryClient } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
 
 const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
-  const request = getWebRequest()
-  if (!request) throw new Error('No request found')
-
   const auth = await getAuth(getWebRequest())
   const token = await auth.getToken({ template: 'convex' })
 
