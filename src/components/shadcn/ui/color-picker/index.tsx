@@ -211,19 +211,19 @@ export const ColorPickerSelection = memo(
             hsl(${hue}, 100%, 50%)`
     }, [hue])
 
-    const handlePointerMove = useCallback(
-      (event: globalThis.PointerEvent) => {
-        if (!(isDragging && containerRef.current)) {
+    const updateColorFromPosition = useCallback(
+      (clientX: number, clientY: number) => {
+        if (!containerRef.current) {
           return
         }
         const rect = containerRef.current.getBoundingClientRect()
         const x = Math.max(
           0,
-          Math.min(1, (event.clientX - rect.left) / rect.width),
+          Math.min(1, (clientX - rect.left) / rect.width),
         )
         const y = Math.max(
           0,
-          Math.min(1, (event.clientY - rect.top) / rect.height),
+          Math.min(1, (clientY - rect.top) / rect.height),
         )
         setPositionX(x)
         setPositionY(y)
@@ -233,7 +233,17 @@ export const ColorPickerSelection = memo(
 
         setLightness(newLightness)
       },
-      [isDragging, setSaturation, setLightness],
+      [setSaturation, setLightness],
+    )
+
+    const handlePointerMove = useCallback(
+      (event: globalThis.PointerEvent) => {
+        if (!isDragging) {
+          return
+        }
+        updateColorFromPosition(event.clientX, event.clientY)
+      },
+      [isDragging, updateColorFromPosition],
     )
 
     useEffect(() => {
@@ -273,7 +283,7 @@ export const ColorPickerSelection = memo(
         onPointerDown={(e) => {
           e.preventDefault()
           setIsDragging(true)
-          handlePointerMove(e.nativeEvent)
+          updateColorFromPosition(e.clientX, e.clientY)
         }}
         ref={containerRef}
         style={{
@@ -307,10 +317,11 @@ export const ColorPickerHue = ({
   return (
     <SliderPrimitive.Root
       className={cn('relative flex h-4 w-full touch-none', className)}
+      min={0}
       max={360}
       onValueChange={(value) => {
         const newHue = Array.isArray(value) ? value[0] : value
-        if (typeof newHue === 'number') {
+        if (typeof newHue === 'number' && Number.isFinite(newHue)) {
           setHue(newHue)
         }
       }}
@@ -318,8 +329,10 @@ export const ColorPickerHue = ({
       value={[hue]}
       {...props}
     >
-      <SliderPrimitive.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[linear-gradient(90deg,#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF,#FF0000)]" />
-      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+      <SliderPrimitive.Control className="relative flex w-full touch-none items-center">
+        <SliderPrimitive.Track className="relative my-0.5 h-3 w-full grow rounded-full bg-[linear-gradient(90deg,#FF0000,#FFFF00,#00FF00,#00FFFF,#0000FF,#FF00FF,#FF0000)]" />
+        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+      </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   )
 }
@@ -341,10 +354,11 @@ export const ColorPickerAlpha = ({
   return (
     <SliderPrimitive.Root
       className={cn('relative flex h-4 w-full touch-none', className)}
+      min={0}
       max={100}
       onValueChange={(value) => {
         const newAlpha = Array.isArray(value) ? value[0] : value
-        if (typeof newAlpha === 'number') {
+        if (typeof newAlpha === 'number' && Number.isFinite(newAlpha)) {
           setAlpha(newAlpha)
         }
       }}
@@ -352,19 +366,21 @@ export const ColorPickerAlpha = ({
       value={[alpha]}
       {...props}
     >
-      <SliderPrimitive.Track
-        className="relative my-0.5 h-3 w-full grow rounded-full"
-        style={{
-          background:
-            'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center',
-        }}
-      >
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{ background: gradient }}
-        />
-      </SliderPrimitive.Track>
-      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+      <SliderPrimitive.Control className="relative flex w-full touch-none items-center">
+        <SliderPrimitive.Track
+          className="relative my-0.5 h-3 w-full grow rounded-full"
+          style={{
+            background:
+              'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center',
+          }}
+        >
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: gradient }}
+          />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" />
+      </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   )
 }
