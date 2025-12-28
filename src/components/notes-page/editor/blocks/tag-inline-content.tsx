@@ -1,9 +1,9 @@
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
 import { createReactInlineContentSpec } from '@blocknote/react'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
+import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 type TagInlineContentProps = {
   inlineContent: {
@@ -17,7 +17,7 @@ type TagInlineContentProps = {
 
 function TagInlineContentRender({ inlineContent }: TagInlineContentProps) {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const hasCampaign = !!campaign?._id
   const hasTagId = !!inlineContent.props.tagId
   const tag = useQuery(
@@ -25,7 +25,7 @@ function TagInlineContentRender({ inlineContent }: TagInlineContentProps) {
       api.tags.queries.getTag,
       hasCampaign && hasTagId
         ? {
-            campaignId: campaign!._id,
+            campaignId: campaign._id,
             tagId: (inlineContent.props.tagId || '') as Id<'tags'>,
           }
         : 'skip',

@@ -5,22 +5,22 @@ import type {
 import type { Predicate, ViewContext } from './types'
 
 export const isType =
-  (...types: SidebarItemType[]): Predicate =>
+  (...types: Array<SidebarItemType>): Predicate =>
   (ctx) =>
     ctx.item ? types.includes(ctx.item.type) : false
 
 export const isNotType =
-  (...types: SidebarItemType[]): Predicate =>
+  (...types: Array<SidebarItemType>): Predicate =>
   (ctx) =>
     ctx.item ? !types.includes(ctx.item.type) : true
 
 export const inView =
-  (...views: ViewContext[]): Predicate =>
+  (...views: Array<ViewContext>): Predicate =>
   (ctx) =>
     views.includes(ctx.viewContext)
 
 export const notInView =
-  (...views: ViewContext[]): Predicate =>
+  (...views: Array<ViewContext>): Predicate =>
   (ctx) =>
     !views.includes(ctx.viewContext)
 
@@ -34,9 +34,9 @@ export const viewingCanvas: Predicate = (ctx) =>
   ctx.viewContext === 'canvas-view'
 
 export const hasParent =
-  (...parents: SidebarItemOrRootType[]): Predicate =>
+  (...parents: Array<SidebarItemOrRootType>): Predicate =>
   (ctx) =>
-    ctx.parentType !== null && parents.includes(ctx.parentType)
+    parents.includes(ctx.parentType)
 
 export const underCategory: Predicate = (ctx) => Boolean(ctx.item?.categoryId)
 
@@ -71,3 +71,5 @@ export const mapIsNotActiveMap: Predicate = (ctx) => {
   if (!ctx.item || !ctx.activeMapId) return false
   return ctx.activeMapId !== ctx.item._id
 }
+
+export const hasPinContext: Predicate = (ctx) => Boolean(ctx.pinId && ctx.mapId)

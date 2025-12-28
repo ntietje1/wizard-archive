@@ -1,47 +1,28 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/components/shadcn/ui/tooltip'
-import { SortMenu } from './sort-menu'
-import { NewNoteButton } from './new-note'
-import { NewFolderButton } from './new-folder'
-import { NewCategoryButton } from './new-category'
 import { CloseAllFoldersButton } from './close-all-folders'
+import { NewCategoryButton } from './new-category'
+import { NewFolderButton } from './new-folder'
+import { NewNoteButton } from './new-note'
+import { SortMenu } from './sort-menu'
+import { TooltipButton } from '~/components/tooltips/tooltip-button'
 
 export function SidebarHeader() {
   return (
     <div className="flex items-center justify-center px-8 h-12 border-b bg-background">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <NewNoteButton />
-        </TooltipTrigger>
-        <TooltipContent>New note</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <NewFolderButton />
-        </TooltipTrigger>
-        <TooltipContent>New folder</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <NewCategoryButton />
-        </TooltipTrigger>
-        <TooltipContent>New category</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <CloseAllFoldersButton />
-        </TooltipTrigger>
-        <TooltipContent>Close all folders</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SortMenu />
-        </TooltipTrigger>
-        <TooltipContent>Change sort order</TooltipContent>
-      </Tooltip>
+      <TooltipButton tooltip="New note">
+        <NewNoteButton />
+      </TooltipButton>
+      <TooltipButton tooltip="New folder">
+        <NewFolderButton />
+      </TooltipButton>
+      <TooltipButton tooltip="New category">
+        <NewCategoryButton />
+      </TooltipButton>
+      <TooltipButton tooltip="Close all folders">
+        <CloseAllFoldersButton />
+      </TooltipButton>
+      <TooltipButton tooltip="Change sort order">
+        <SortMenu />
+      </TooltipButton>
     </div>
   )
 }

@@ -1,6 +1,6 @@
-import type { TagDialogProps } from '../base-tag-form/types.ts'
 import { TagFormDialog } from '../base-tag-form/tag-form-dialog.tsx'
 import CharacterTagForm from './character-tag-form.tsx'
+import type { TagDialogProps } from '../base-tag-form/types.ts'
 import type { Character } from 'convex/characters/types.ts'
 
 export default function CharacterTagDialog(props: TagDialogProps<Character>) {

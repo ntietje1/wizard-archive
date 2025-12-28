@@ -1,15 +1,12 @@
-import { useState, useCallback, useEffect } from 'react'
-import {
-  SIDEBAR_ROOT_TYPE,
-  type AnySidebarItem,
-  type SidebarItemOrRootType,
+import { useCallback, useEffect, useState } from 'react'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import { createMenuContext } from '../context'
+import type { ContextBuilderOptions, ContextEnhancer } from '../context'
+import type {
+  AnySidebarItem,
+  SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
 import type { MenuContext, ViewContext } from '../types'
-import {
-  createMenuContext,
-  type ContextEnhancer,
-  type ContextBuilderOptions,
-} from '../context'
 
 interface MenuState {
   isOpen: boolean
@@ -26,7 +23,7 @@ interface UseContextMenuOptions {
    * This allows components to contribute context without
    * modifying the hook signature.
    */
-  enhancers?: ContextEnhancer[]
+  enhancers?: Array<ContextEnhancer>
 }
 
 export function useContextMenu(options: UseContextMenuOptions) {
@@ -49,11 +46,9 @@ export function useContextMenu(options: UseContextMenuOptions) {
     [options.parentItem],
   )
 
-  const open = useCallback(
-    (event: React.MouseEvent, item: AnySidebarItem | undefined) => {
-      event.preventDefault()
-      event.stopPropagation()
-
+  // Build context synchronously - can be called without an event
+  const buildContext = useCallback(
+    (item: AnySidebarItem | undefined): MenuContext | null => {
       const parentType = item ? getParentType(item) : SIDEBAR_ROOT_TYPE
 
       // Start with base context
@@ -69,10 +64,19 @@ export function useContextMenu(options: UseContextMenuOptions) {
           (ctx, enhancer) => enhancer.enhance(ctx),
           baseContext,
         ) ?? baseContext
-        
-      const context = createMenuContext(
-        enhancedContext as ContextBuilderOptions,
-      )
+
+      return createMenuContext(enhancedContext as ContextBuilderOptions)
+    },
+    [options, getParentType],
+  )
+
+  const open = useCallback(
+    (event: React.MouseEvent, item: AnySidebarItem | undefined) => {
+      // Don't preventDefault here - let the ContextMenuTrigger handle it
+      // We just need to build the context
+      event.stopPropagation()
+
+      const context = buildContext(item)
 
       setMenu({
         isOpen: true,
@@ -80,7 +84,7 @@ export function useContextMenu(options: UseContextMenuOptions) {
         context,
       })
     },
-    [options, getParentType],
+    [buildContext],
   )
 
   const close = useCallback(() => {
@@ -107,6 +111,7 @@ export function useContextMenu(options: UseContextMenuOptions) {
     isOpen: menu.isOpen,
     position: menu.position,
     context: menu.context,
+    buildContext,
     open,
     close,
   }

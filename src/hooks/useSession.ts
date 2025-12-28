@@ -2,8 +2,8 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { useCampaign } from '~/contexts/CampaignContext'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export const useSession = () => {
   const { campaignWithMembership } = useCampaign()

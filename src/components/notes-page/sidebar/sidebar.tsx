@@ -1,14 +1,14 @@
+import { ClientOnly } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { ClientOnly } from '@tanstack/react-router'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
-import { toast } from 'sonner'
 
 function FileSidebarContent() {
   const sidebarItems = useSidebarItemsByParent()

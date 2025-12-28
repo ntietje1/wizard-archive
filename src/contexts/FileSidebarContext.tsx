@@ -1,34 +1,27 @@
-import type { Id } from 'convex/_generated/dataModel'
-import {
-  SIDEBAR_ROOT_TYPE,
-  type SidebarItemType,
-} from 'convex/sidebarItems/types'
-import { createContext, useCallback, useContext, useState, useRef } from 'react'
-import usePersistedState from '~/hooks/usePersistedState'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   MouseSensor,
   TouchSensor,
+  pointerWithin,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-  DragOverlay,
-  pointerWithin,
 } from '@dnd-kit/core'
-import {
-  canDropItem,
-  type SidebarDragData,
-  type SidebarDropData,
-  executeMove,
-} from '~/lib/dnd-utils'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useTagActions } from '~/hooks/useTagActions'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import type { SidebarItemType } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { useNoteActions } from '~/hooks/useNoteActions'
+import { canDropItem, executeMove } from '~/lib/dnd-utils'
+import { useTagActions } from '~/hooks/useTagActions'
+import { useFolderActions } from '~/hooks/useFolderActions'
+import usePersistedState from '~/hooks/usePersistedState'
 
 type FileSidebarContextType = {
   setRenamingId: (id: Id<SidebarItemType> | null) => void
@@ -130,7 +123,7 @@ export function FileSidebarProvider({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
-    const item = active.data.current as SidebarDragData
+    const item = active.data.current as SidebarDragData | null | undefined
     if (item) {
       setActiveDragItem(item)
 
@@ -169,8 +162,6 @@ export function FileSidebarProvider({
 
       const draggedItem = active.data.current as SidebarDragData
       const targetData = over.data.current as SidebarDropData
-
-      if (!targetData) return
 
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
@@ -254,16 +245,14 @@ export function FileSidebarProvider({
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {activeDragItem ? (
+          {activeDragItem && (
             <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
-              {activeDragItem.icon && (
-                <activeDragItem.icon className="w-5 h-5" />
-              )}
+              <activeDragItem.icon className="w-5 h-5" />
               <span className="text-sm text-foreground font-semibold">
                 {activeDragItem.name}
               </span>
             </div>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
     </FileSidebarContext.Provider>

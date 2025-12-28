@@ -1,17 +1,17 @@
 import {
-  FileCaptionButton,
+  BasicTextStyleButton,
   BlockTypeSelect,
+  CreateLinkButton,
+  FileCaptionButton,
+  FileReplaceButton,
   FormattingToolbar,
   FormattingToolbarController,
-  FileReplaceButton,
-  TextAlignButton,
   NestBlockButton,
+  TextAlignButton,
   UnnestBlockButton,
-  CreateLinkButton,
-  BasicTextStyleButton,
 } from '@blocknote/react'
-import { TextColorButton } from './text-color-button'
-import { BackgroundColorButton } from './background-color-button'
+// import { TextColorButton } from './text-color-button'
+// import { BackgroundColorButton } from './background-color-button'
 
 export default function SelectionToolbar() {
   return (
@@ -50,8 +50,8 @@ export default function SelectionToolbar() {
             key={'textAlignRightButton'}
           />
 
-          <TextColorButton key={'textColorButton'} />
-          <BackgroundColorButton key={'backgroundColorButton'} />
+          {/* <TextColorButton key={'textColorButton'} />
+          <BackgroundColorButton key={'backgroundColorButton'} /> */}
 
           <NestBlockButton key={'nestBlockButton'} />
           <UnnestBlockButton key={'unnestBlockButton'} />

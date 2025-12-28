@@ -1,12 +1,9 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import {
-  SORT_DIRECTIONS,
-  SORT_ORDERS,
-  type SortOptions,
-} from 'convex/editors/types'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
+import type { SortOptions } from 'convex/editors/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 
 const defaultSortOptions: SortOptions = {
@@ -16,7 +13,7 @@ const defaultSortOptions: SortOptions = {
 
 export const useSortOptions = () => {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const currentEditor = useQuery(
     convexQuery(
       api.editors.queries.getCurrentEditor,
@@ -34,8 +31,8 @@ export const useSortOptions = () => {
     if (!editor) return
 
     const nextOptions: SortOptions = {
-      order: editor.sortOrder ?? defaultSortOptions.order,
-      direction: editor.sortDirection ?? defaultSortOptions.direction,
+      order: editor.sortOrder,
+      direction: editor.sortDirection,
     }
 
     setSortOptions((prev) =>

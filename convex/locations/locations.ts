@@ -1,7 +1,7 @@
-import { Location } from './types'
-import { Id } from '../_generated/dataModel'
-import { QueryCtx } from '../_generated/server'
 import { combineTagEntity, getTagCategory } from '../tags/tags'
+import type { Id } from '../_generated/dataModel'
+import type { QueryCtx } from '../_generated/server'
+import type { Location } from './types'
 
 export const combineLocationAndTag = (
   location: { _id: Id<'locations'> },

@@ -6,17 +6,17 @@ import {
   requireCampaignMembership,
 } from '../campaigns/campaigns'
 import { getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
-import { Share } from './types'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import { shareValidator } from './schema'
 import { combineSharesAndTag } from './shares'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import type { Share } from './types'
 
 export const getShareTagsByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
   },
   returns: v.array(shareValidator),
-  handler: async (ctx, args): Promise<Share[]> => {
+  handler: async (ctx, args): Promise<Array<Share>> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },

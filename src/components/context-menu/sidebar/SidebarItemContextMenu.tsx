@@ -1,10 +1,11 @@
-import React, { forwardRef } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { ViewContext } from '../types'
-import type { TagCategory } from 'convex/tags/types'
+import React, { forwardRef, useCallback, useRef } from 'react'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
 import { ContextMenu } from '../components/ContextMenu'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { MenuContext, ViewContext } from '../types'
+import type { TagCategory } from 'convex/tags/types'
+import type { ContextMenuRef } from '../components/ContextMenu'
 
 interface SidebarItemContextMenuProps {
   item?: AnySidebarItem
@@ -27,45 +28,41 @@ export const SidebarItemContextMenu = forwardRef<
   // Use the enhancer hook to get common enhancers
   const enhancers = useContextEnhancers({ category })
 
-  const contextMenu = useContextMenu({
+  const contextMenuHook = useContextMenu({
     viewContext,
     item,
     parentItem,
     enhancers,
   })
 
+  const contextMenuRef = useRef<ContextMenuRef>(null)
+
+  // Build context function - this will be called by ContextMenu when needed
+  const buildContext = useCallback((): MenuContext | null => {
+    return contextMenuHook.buildContext(item)
+  }, [item, contextMenuHook])
+
   React.useImperativeHandle(ref, () => ({
     open: (position?: { x: number; y: number }) => {
-      if (!item) return
-      const syntheticEvent = {
-        clientX: position?.x ?? 0,
-        clientY: position?.y ?? 0,
-        preventDefault: () => {},
-        stopPropagation: () => {},
-      } as React.MouseEvent
-      contextMenu.open(syntheticEvent, item)
+      if (position) {
+        contextMenuRef.current?.open(position)
+      } else {
+        contextMenuRef.current?.open()
+      }
     },
-    close: contextMenu.close,
+    close: () => {
+      contextMenuRef.current?.close()
+    },
   }))
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    if (!item) return
-    contextMenu.open(e, item)
-  }
   return (
-    <>
-      <div onContextMenu={handleContextMenu} className={className}>
-        {children}
-      </div>
-
-      {contextMenu.isOpen && contextMenu.context && (
-        <ContextMenu
-          x={contextMenu.position.x}
-          y={contextMenu.position.y}
-          context={contextMenu.context}
-          onClose={contextMenu.close}
-        />
-      )}
-    </>
+    <ContextMenu
+      ref={contextMenuRef}
+      buildContext={buildContext}
+      onClose={contextMenuHook.close}
+      className={className}
+    >
+      {children}
+    </ContextMenu>
   )
 })

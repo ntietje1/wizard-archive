@@ -1,21 +1,13 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { Button } from '~/components/shadcn/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '~/components/shadcn/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
-import { X, MoreVertical } from '~/lib/icons'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { MoreVertical, X } from '~/lib/icons'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 interface EditableTopbarProps {
   name?: string
@@ -25,8 +17,8 @@ interface EditableTopbarProps {
   onClose?: () => void
   isLoading?: boolean
   isEmpty?: boolean
-  ancestors?: AnySidebarItem[]
-  menuItems?: ContextMenuItem[]
+  ancestors?: Array<AnySidebarItem>
+  onOpenMenu?: (e: React.MouseEvent) => void
 }
 
 export function EditableTopbar({
@@ -38,7 +30,7 @@ export function EditableTopbar({
   isLoading = false,
   isEmpty = false,
   ancestors = [],
-  menuItems = [],
+  onOpenMenu,
 }: EditableTopbarProps) {
   const [title, setTitle] = useState(name ?? '')
   const [isEditing, setIsEditing] = useState(false)
@@ -85,12 +77,6 @@ export function EditableTopbar({
     return <TopbarEmpty />
   }
 
-  const handleMenuItemClick = (item: ContextMenuItem) => {
-    if (item.type === 'action') {
-      item.onClick()
-    }
-  }
-
   return (
     <>
       <div className="flex items-center justify-between px-4 py-2 h-12 border-b bg-white w-full gap-4">
@@ -130,7 +116,7 @@ export function EditableTopbar({
             <div className="truncate flex-1 min-w-0">
               {!onRename ? (
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger>
                     <span className="text-left px-1 inline-block cursor-not-allowed opacity-75">
                       {title || (
                         <span className="opacity-85">
@@ -160,38 +146,23 @@ export function EditableTopbar({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-            {menuItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {menuItems.map((item, index) =>
-                    item.type === 'divider' ? (
-                      <DropdownMenuSeparator key={`divider-${index}`} />
-                    ) : item.type === 'action' ? (
-                      <DropdownMenuItem
-                        key={`action-${item.label}-${index}`}
-                        onClick={() => handleMenuItemClick(item)}
-                        className={item.className}
-                      >
-                        {item.icon && (
-                          <span className="h-4 w-4 mr-2">{item.icon}</span>
-                        )}
-                        {item.label}
-                      </DropdownMenuItem>
-                    ) : null,
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {onClose && (
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+          {onOpenMenu && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenMenu(e)
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          )}
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </>

@@ -1,7 +1,7 @@
-import { Id } from '../_generated/dataModel'
 import { slugify } from '../common/slug'
-import { Note } from '../notes/types'
-import { SidebarItem, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import type { Id } from '../_generated/dataModel'
+import type { Note } from '../notes/types'
+import type { SIDEBAR_ITEM_TYPES, SidebarItem } from '../sidebarItems/types'
 
 export const CATEGORY_KIND = {
   SystemManaged: 'system_managed', // both category and tags under it are immutable to users.

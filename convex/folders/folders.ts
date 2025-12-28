@@ -1,11 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { Ctx } from '../common/types'
-import { MutationCtx } from '../_generated/server'
-import { Id } from '../_generated/dataModel'
-import { Folder } from './types'
 import { deleteNote } from '../notes/notes'
 import { deleteTag } from '../tags/tags'
+import type { Ctx } from '../common/types'
+import type { MutationCtx } from '../_generated/server'
+import type { Id } from '../_generated/dataModel'
+import type { Folder } from './types'
 
 export const getFolder = async (
   ctx: Ctx,

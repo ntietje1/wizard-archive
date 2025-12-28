@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
@@ -7,25 +7,25 @@ import {
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { useForm } from '@tanstack/react-form'
+import { toast } from 'sonner'
+import {
+  MAX_DESCRIPTION_LENGTH,
+  MAX_NAME_LENGTH,
+  defaultBaseFormValues,
+} from '../base-tag-form/types.ts'
 import { validateTagDescription, validateTagName } from './validators.ts'
 import {
-  MAX_NAME_LENGTH,
-  MAX_DESCRIPTION_LENGTH,
-  defaultBaseFormValues,
-  type BaseTagFormValues,
-} from '../base-tag-form/types.ts'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
-import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
-import type { GenericTagFormProps } from './types.ts'
-import {
-  NameField,
-  DescriptionField,
   ColorField,
+  DescriptionField,
   ImageUploadField,
+  NameField,
   SubmitButtons,
 } from './fields.tsx'
+import type { BaseTagFormValues } from '../base-tag-form/types.ts'
+import type { Id } from 'convex/_generated/dataModel'
+import type { GenericTagFormProps } from './types.ts'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
@@ -41,7 +41,7 @@ export default function GenericTagForm({
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
 
   const createMutation = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTag),
@@ -56,7 +56,7 @@ export default function GenericTagForm({
       api.tags.queries.getTagCategoryBySlug,
       campaign?._id
         ? {
-            campaignId: campaign?._id,
+            campaignId: campaign._id,
             slug: config.categorySlug,
           }
         : 'skip',
@@ -75,7 +75,7 @@ export default function GenericTagForm({
     },
   })
 
-  const getInitialValues = useCallback((): BaseTagFormValues => {
+  const defaultValues = useMemo((): BaseTagFormValues => {
     if (mode === 'edit' && tag) {
       return {
         name: tag.name || '',
@@ -85,20 +85,15 @@ export default function GenericTagForm({
     } else {
       return defaultBaseFormValues
     }
-  }, [tag, mode])
+  }, [mode, tag])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       await handleSubmit(value)
       onClose()
     },
   })
-
-  useEffect(() => {
-    form.reset(getInitialValues())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag?._id, parentId])
 
   async function handleSubmit(value: BaseTagFormValues) {
     if (!campaign) {
@@ -139,18 +134,16 @@ export default function GenericTagForm({
             console.error('Failed to create tag:', error)
             toast.error('Failed to create tag')
           })
-        if (result?.tagId && campaign) {
+        if (result?.tagId) {
           await openParentFolders(result.tagId)
-          const tag = await convex.query(api.tags.queries.getTag, {
+          const createdTag = await convex.query(api.tags.queries.getTag, {
             campaignId: campaign._id,
             tagId: result.tagId,
           })
-          if (tag?.slug) {
-            navigateToTag(tag.slug)
-          }
+          navigateToTag(createdTag.slug)
           toast.success(`${config.singular} created successfully`)
         }
-      } else if (mode === 'edit' && tag) {
+      } else if (tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
           name: value.name.trim(),
@@ -160,6 +153,9 @@ export default function GenericTagForm({
         })
 
         toast.success(`${config.singular} updated successfully`)
+      } else {
+        toast.error('Invalid form state: missing tag')
+        return
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)

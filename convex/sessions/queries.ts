@@ -1,15 +1,15 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { sessionValidator } from './schema'
-import { Session } from './types'
-import {
-  combineSessionAndTag,
-  getCurrentSession as getCurrentSessionHandler,
-} from './sessions'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
 import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import {
+  combineSessionAndTag,
+  getCurrentSession as getCurrentSessionHandler,
+} from './sessions'
+import { sessionValidator } from './schema'
+import type { Session } from './types'
 
 export const getCurrentSession = query({
   args: {
@@ -26,7 +26,7 @@ export const getSessionsByCampaign = query({
     campaignId: v.id('campaigns'),
   },
   returns: v.array(sessionValidator),
-  handler: async (ctx, args): Promise<Session[]> => {
+  handler: async (ctx, args): Promise<Array<Session>> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },

@@ -1,13 +1,11 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import {
-  type CampaignMember,
-  CAMPAIGN_MEMBER_STATUS,
-} from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { ConfirmationDialog } from '../confirmation-dialog'
+import type { CampaignMember } from 'convex/campaigns/types'
 
 interface PlayerDeleteConfirmDialogProps {
   player: CampaignMember
@@ -47,7 +45,7 @@ export function PlayerDeleteConfirmDialog({
       })
   }, [updateMemberStatus, player._id, onConfirm, onClose])
 
-  const playerName = player.userProfile?.name ?? 'this player'
+  const playerName = player.userProfile.name ?? 'this player'
 
   return (
     <ConfirmationDialog

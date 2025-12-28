@@ -1,26 +1,26 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
-import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
-import { Input } from '~/components/shadcn/ui/input'
-import { Label } from '~/components/shadcn/ui/label'
-import { Button } from '~/components/shadcn/ui/button'
-import { Sword, Link } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   convexQuery,
   useConvex,
   useConvexMutation,
 } from '@convex-dev/react-query'
-import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
-import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import {
   validateCampaignName,
-  validateCampaignSlugSync,
   validateCampaignSlugAsync,
+  validateCampaignSlugSync,
 } from './campaign-form-validators'
+import type { CampaignWithMembership } from 'convex/campaigns/types'
+import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
+import { Input } from '~/components/shadcn/ui/input'
+import { Label } from '~/components/shadcn/ui/label'
+import { Button } from '~/components/shadcn/ui/button'
+import { Link, Sword } from '~/lib/icons'
+import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string
@@ -72,7 +72,7 @@ export function CampaignDialog({
 
           toast.success('Campaign created successfully')
           onClose()
-        } else if (mode === 'edit' && campaign) {
+        } else if (campaign) {
           await updateCampaign.mutateAsync({
             campaignId: campaign._id,
             name: value.name.trim(),
@@ -82,6 +82,9 @@ export function CampaignDialog({
 
           toast.success('Campaign updated successfully')
           onClose()
+        } else {
+          toast.error('Invalid form state: missing campaign')
+          return
         }
       } catch (error) {
         console.error('Failed to save campaign:', error)
@@ -98,14 +101,14 @@ export function CampaignDialog({
         ...DEFAULT_CAMPAIGN_FORM_VALUES,
         slug: randomSlug,
       })
-    } else if (mode === 'edit' && campaign) {
+    } else if (campaign) {
       form.reset({
         name: campaign.name,
         description: campaign.description || '',
         slug: campaign.slug,
       })
     }
-  }, [mode, campaign, isOpen])
+  }, [mode, campaign, isOpen, form])
 
   // Clear form when dialog closes
   useEffect(() => {
@@ -116,7 +119,7 @@ export function CampaignDialog({
         slug: '',
       })
     }
-  }, [isOpen])
+  }, [isOpen, form])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return
@@ -134,7 +137,6 @@ export function CampaignDialog({
           : 'Update campaign details'
       }
       icon={Sword}
-      maxWidth="max-w-lg"
     >
       <form
         onSubmit={(e) => {
@@ -163,7 +165,8 @@ export function CampaignDialog({
                 disabled={form.state.isSubmitting}
                 required
               />
-              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 &&
+              field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>
@@ -241,7 +244,8 @@ export function CampaignDialog({
                   />
                 )}
               </div>
-              {field.state.meta.errors?.length && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 &&
+              field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>

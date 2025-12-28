@@ -2,18 +2,18 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import type { GameMap, MapPinWithItem } from './types'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { mapValidator } from './schema'
 import { mapPinWithItemValidator } from './validators'
-import { getMap as getMapFn, getMapBySlug as getMapBySlugFn } from './gameMaps'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { getMapBySlug as getMapBySlugFn, getMap as getMapFn } from './gameMaps'
+import type { GameMap, MapPinWithItem } from './types'
 
 export const getCampaignMaps = query({
   args: {
     campaignId: v.id('campaigns'),
   },
   returns: v.array(mapValidator),
-  handler: async (ctx, args): Promise<GameMap[]> => {
+  handler: async (ctx, args): Promise<Array<GameMap>> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -66,7 +66,7 @@ export const getMapPins = query({
     mapId: v.id('gameMaps'),
   },
   returns: v.array(mapPinWithItemValidator),
-  handler: async (ctx, args): Promise<MapPinWithItem[]> => {
+  handler: async (ctx, args): Promise<Array<MapPinWithItem>> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')

@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { Users, Link, User, Trash2 } from '~/lib/icons'
 import { toast } from 'sonner'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
-  type CampaignMember,
 } from 'convex/campaigns/types'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { PlayerRequestsDialog } from './player-requests-dialog'
 import PlayersDmControls from './players-dm-controls'
+import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/contexts/CampaignContext'
+import { Link, Trash2, User, Users } from '~/lib/icons'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ContentCard } from '~/components/content-grid-page/content-card'
 import { EmptyState } from '~/components/content-grid-page/empty-state'
@@ -21,14 +21,14 @@ import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skele
 
 export default function PlayersContent() {
   const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const isDm =
     campaignWithMembership.data?.member.role === CAMPAIGN_MEMBER_ROLE.DM
 
   const players = useQuery(
     convexQuery(
       api.campaigns.queries.getPlayersByCampaign,
-      campaign?._id ? { campaignId: campaign?._id } : 'skip',
+      campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
   )
 
@@ -48,8 +48,7 @@ export default function PlayersContent() {
     if (!dmUsername || !campaignSlug) {
       return toast.error('Failed to copy join link')
     }
-    const joinUrl =
-      `${window.location.origin  }/join/${  dmUsername  }/${  campaignSlug}`
+    const joinUrl = `${window.location.origin}/join/${dmUsername}/${campaignSlug}`
     try {
       await navigator.clipboard.writeText(joinUrl)
       toast.success('Join link copied to clipboard')
@@ -64,8 +63,7 @@ export default function PlayersContent() {
 
   if (
     campaignWithMembership.status === 'pending' ||
-    players.status === 'pending' ||
-    !players.data
+    players.status === 'pending'
   ) {
     return (
       <div className="h-full w-full">
@@ -83,7 +81,7 @@ export default function PlayersContent() {
     )
   }
 
-  const acceptedPlayers = players.data?.filter(
+  const acceptedPlayers = players.data.filter(
     (p) => p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
   )
 
@@ -95,15 +93,14 @@ export default function PlayersContent() {
       />
 
       <ContentGrid className="mt-4">
-        {acceptedPlayers &&
-          acceptedPlayers.length > 0 &&
+        {acceptedPlayers.length > 0 &&
           acceptedPlayers.map((player: CampaignMember) => (
             <ContentCard
               key={player._id}
-              title={player.userProfile?.name ?? 'Unknown'}
-              description={`@${player.userProfile?.username}`}
+              title={player.userProfile.name ?? 'Unknown'}
+              description={`@${player.userProfile.username}`}
               onClick={() => {
-                toast.info(`Player: ${player.userProfile?.username}`)
+                toast.info(`Player: ${player.userProfile.username}`)
               }}
               badges={[
                 {
@@ -122,7 +119,7 @@ export default function PlayersContent() {
                           setDeletingMemberId(player._id)
                         },
                         'aria-label': 'Remove player',
-                        variant: 'destructive-subtle',
+                        variant: 'destructive',
                       },
                     ]
                   : undefined
@@ -151,7 +148,7 @@ export default function PlayersContent() {
         onClose={() => {
           setIsRequestsOpen(false)
         }}
-        players={players.data ?? []}
+        players={players.data}
       />
 
       {deletingPlayer && (

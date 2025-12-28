@@ -1,9 +1,9 @@
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   BaseTagFormValues,
   TagCategoryConfig,
 } from '../base-tag-form/types'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 
 export interface CharacterFormValues extends BaseTagFormValues {

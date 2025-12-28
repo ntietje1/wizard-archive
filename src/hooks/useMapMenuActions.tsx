@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { MenuContext } from '~/components/context-menu/types'
-import { useCampaign } from '~/contexts/CampaignContext'
 import type { Id } from 'convex/_generated/dataModel'
+import type { GameMap } from 'convex/gameMaps/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { useCampaign } from '~/contexts/CampaignContext'
 import { isGameMap } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 export function useMapMenuActions() {
   const { campaignWithMembership } = useCampaign()
@@ -21,30 +21,21 @@ export function useMapMenuActions() {
   )
 
   const actions = {
-    createMap: useCallback(
-      (ctx: MenuContext) => {
-        setCreateMapDialog({ parentId: ctx.item?._id })
-      },
-      [],
-    ),
+    createMap: useCallback((ctx: MenuContext) => {
+      setCreateMapDialog({ parentId: ctx.item?._id })
+    }, []),
 
-    editMap: useCallback(
-      (ctx: MenuContext) => {
-        if (isGameMap(ctx.item)) {
-          setEditMapDialog(ctx.item._id)
-        }
-      },
-      [],
-    ),
+    editMap: useCallback((ctx: MenuContext) => {
+      if (isGameMap(ctx.item)) {
+        setEditMapDialog(ctx.item._id)
+      }
+    }, []),
 
-    deleteMap: useCallback(
-      (ctx: MenuContext) => {
-        if (isGameMap(ctx.item)) {
-          setDeleteMapDialog(ctx.item)
-        }
-      },
-      [],
-    ),
+    deleteMap: useCallback((ctx: MenuContext) => {
+      if (isGameMap(ctx.item)) {
+        setDeleteMapDialog(ctx.item)
+      }
+    }, []),
   }
 
   const dialogsContent = useMemo(

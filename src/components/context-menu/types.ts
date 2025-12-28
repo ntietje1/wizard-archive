@@ -1,10 +1,11 @@
 import type {
   AnySidebarItem,
-  SidebarItemOrRootType,
   SidebarItemId,
+  SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 
 export type ViewContext =
@@ -34,6 +35,10 @@ export interface MenuContext {
   activeMapId?: string
   activeCanvasId?: string
   pinnedItemIds?: Set<SidebarItemId>
+
+  // Pin context (for map pin menus)
+  pinId?: Id<'mapPins'>
+  mapId?: Id<'gameMaps'>
 }
 
 export type Predicate = (ctx: MenuContext) => boolean
@@ -57,7 +62,7 @@ export interface MenuItemDef {
   priority: number // Lower = higher in menu
 
   // Submenus
-  children?: MenuItemDef[]
+  children?: Array<MenuItemDef>
 
   // Styling
   variant?: 'default' | 'danger' | 'success'
@@ -66,11 +71,11 @@ export interface MenuItemDef {
 
 export interface MenuGroup {
   id: string
-  items: MenuItemDef[]
+  items: Array<MenuItemDef>
 }
 
 export interface BuiltMenu {
-  groups: MenuGroup[]
-  flatItems: MenuItemDef[]
+  groups: Array<MenuGroup>
+  flatItems: Array<MenuItemDef>
   isEmpty: boolean
 }

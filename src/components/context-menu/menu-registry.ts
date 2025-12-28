@@ -1,19 +1,21 @@
-import type { MenuItemDef, MenuContext } from './types'
-import * as p from './predicates'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import {
+  Eye,
+  FileEdit,
   FilePlus,
   FolderPlus,
-  FileEdit,
-  Trash2,
-  Eye,
-  Tags,
   Grid2x2Plus,
   MapPin,
-  SquareArrowOutUpRight,
-  Plus,
+  Move,
   Navigation,
+  Plus,
+  SquareArrowOutUpRight,
+  Tags,
+  Trash2,
 } from 'lucide-react'
 import pluralize from 'pluralize'
+import * as p from './predicates'
+import type { MenuContext, MenuItemDef } from './types'
 
 export type ActionHandlers = {
   open: (ctx: MenuContext) => void
@@ -40,9 +42,12 @@ export type ActionHandlers = {
 
   pinToMap: (ctx: MenuContext) => void
   goToMapPin: (ctx: MenuContext) => void
+
+  removeMapPin: (ctx: MenuContext) => void
+  moveMapPin: (ctx: MenuContext) => void
 }
 
-export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
+export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
   return [
     // ========== PRIMARY GROUP ==========
     {
@@ -51,7 +56,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) => p.inSidebar(ctx),
+      shouldShow: (ctx) => p.inSidebar(ctx) && ctx.item !== undefined,
       action: actions.open,
     },
 
@@ -162,8 +167,7 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       group: 'create',
       priority: 6,
       shouldShow: (ctx) =>
-        p.inSidebar(ctx) &&
-        (p.isType('notes')(ctx) || p.isType('tags')(ctx)),
+        p.inSidebar(ctx) && (p.isType('notes')(ctx) || p.isType('tags')(ctx)),
       action: () => {}, // No action for submenu parent
       children: [
         {
@@ -212,36 +216,6 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
         (p.notInSidebar(ctx) || p.inView('topbar')(ctx)),
       action: actions.showInSidebar,
     },
-    {
-      id: 'pin-to-map',
-      label: 'Pin to Map',
-      icon: MapPin,
-      group: 'primary',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.inSidebar(ctx) &&
-        p.hasActiveMap(ctx) &&
-        !p.isType('tagCategories')(ctx) &&
-        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
-        !p.isPinnedOnActiveMap(ctx) &&
-        p.mapIsNotActiveMap(ctx),
-      action: actions.pinToMap,
-    },
-    {
-      id: 'go-to-map-pin',
-      label: 'Go to Map Pin',
-      icon: Navigation,
-      group: 'primary',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.inSidebar(ctx) &&
-        p.hasActiveMap(ctx) &&
-        !p.isType('tagCategories')(ctx) &&
-        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
-        p.isPinnedOnActiveMap(ctx) &&
-        p.mapIsNotActiveMap(ctx),
-      action: actions.goToMapPin,
-    },
 
     // ========== TYPE-SPECIFIC GROUP ==========
     {
@@ -275,6 +249,59 @@ export function createMenuItems(actions: ActionHandlers): MenuItemDef[] {
       action: actions.editTag,
     },
 
+    // ========== PIN ACTIONS GROUP ==========
+    {
+      id: 'pin-to-map',
+      label: 'Pin to Map',
+      icon: MapPin,
+      group: 'pin-actions',
+      priority: 1,
+      shouldShow: (ctx) =>
+        p.inSidebar(ctx) &&
+        p.hasActiveMap(ctx) &&
+        !p.isType('tagCategories')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
+        !p.isPinnedOnActiveMap(ctx) &&
+        p.mapIsNotActiveMap(ctx),
+      action: actions.pinToMap,
+    },
+    {
+      id: 'go-to-map-pin',
+      label: 'Go to Map Pin',
+      icon: Navigation,
+      group: 'pin-actions',
+      priority: 1,
+      shouldShow: (ctx) =>
+        p.inSidebar(ctx) &&
+        p.hasActiveMap(ctx) &&
+        !p.isType('tagCategories')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
+        p.isPinnedOnActiveMap(ctx) &&
+        p.mapIsNotActiveMap(ctx),
+      action: actions.goToMapPin,
+    },
+    {
+      id: 'move-map-pin',
+      label: 'Move Pin',
+      icon: Move,
+      group: 'pin-actions',
+      priority: 50,
+      shouldShow: (ctx) =>
+        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+      action: actions.moveMapPin,
+    },
+    {
+      id: 'remove-map-pin',
+      label: 'Remove Pin',
+      icon: Trash2,
+      group: 'pin-actions',
+      priority: 51,
+      variant: 'danger',
+      shouldShow: (ctx) =>
+        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+      action: actions.removeMapPin,
+    },
+
     // ========== DANGER GROUP ==========
     {
       id: 'delete',
@@ -297,5 +324,6 @@ export const groupConfig = {
   edit: { label: null, priority: 2 },
   navigation: { label: null, priority: 3 },
   'type-specific': { label: null, priority: 4 },
+  'pin-actions': { label: null, priority: 5 },
   danger: { label: null, priority: 99 },
 }

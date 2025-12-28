@@ -1,7 +1,7 @@
 import type {
   AnySidebarItem,
-  SidebarItemOrRootType,
   SidebarItemId,
+  SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
 import type { MenuContext, ViewContext } from './types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
@@ -26,7 +26,7 @@ export interface ContextEnhancer {
    * Enhances the base context with additional data.
    * Should merge new data into the existing partial context.
    */
-  enhance(context: Partial<MenuContext>): Partial<MenuContext>
+  enhance: (context: Partial<MenuContext>) => Partial<MenuContext>
 }
 
 /**
@@ -127,5 +127,9 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     activeMapId,
     activeCanvasId,
     pinnedItemIds,
+
+    // Pin context
+    pinId: options.pinId,
+    mapId: options.mapId,
   }
 }

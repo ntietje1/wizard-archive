@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useSidebarItemsByParent } from './useSidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
-import { useSidebarItemsByParent } from './useSidebarItems'
+import { useCampaign } from '~/contexts/CampaignContext'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface UseFolderViewOptions {
@@ -13,7 +13,7 @@ interface UseFolderViewOptions {
 }
 
 interface UseFolderViewReturn {
-  items: AnySidebarItem[]
+  items: Array<AnySidebarItem>
   isLoading: boolean
   category?: TagCategory
 }
@@ -28,12 +28,11 @@ export function useFolderView({
   const parentId: SidebarItemId | undefined = parentItem?._id
   const itemsByParent = useSidebarItemsByParent(parentId)
 
-  const data = itemsByParent.data ?? []
-
   // All items for rendering
   const items = useMemo(() => {
+    const data = itemsByParent.data ?? []
     return data
-  }, [data])
+  }, [itemsByParent.data])
 
   // Fetch category data if the current parent is a folder with a categoryId
   const categoryFromFolderQuery = useQuery(
@@ -41,7 +40,7 @@ export function useFolderView({
       api.sidebarItems.queries.getSidebarItem,
       parentItem &&
         !isTagCategory(parentItem) &&
-        parentItem?.categoryId &&
+        parentItem.categoryId &&
         campaignId
         ? { id: parentItem.categoryId, campaignId }
         : 'skip',
@@ -51,11 +50,11 @@ export function useFolderView({
   // Get category from either the parent category or the folder's category
   const category: TagCategory | undefined = useMemo(() => {
     if (isTagCategory(parentItem)) {
-      return parentItem as TagCategory
+      return parentItem
     }
-    const category = categoryFromFolderQuery.data
-    if (category && isTagCategory(category)) {
-      return category
+    const folderCategory = categoryFromFolderQuery.data
+    if (folderCategory && isTagCategory(folderCategory)) {
+      return folderCategory
     }
     return undefined
   }, [parentItem, categoryFromFolderQuery.data])

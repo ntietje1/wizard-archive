@@ -1,3 +1,14 @@
+import {
+  canItemHaveChildren,
+  defaultItemName,
+} from 'convex/sidebarItems/sidebarItems'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { SidebarItemButtonBase } from './sidebar-item-button-base'
+import { SidebarItem } from './sidebar-item'
+import { DraggableSidebarItem } from './draggable-sidebar-item'
+import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { useRenameItem } from '~/hooks/useRenameItem'
@@ -6,25 +17,17 @@ import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { canItemHaveChildren, defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import {
   Collapsible,
   CollapsibleContent,
 } from '~/components/shadcn/ui/collapsible'
-import { SidebarItem } from './sidebar-item'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import { DraggableSidebarItem } from './draggable-sidebar-item'
-import { DroppableSidebarItem } from './droppable-sidebar-item'
-import { isTagCategory, isNote } from '~/lib/sidebar-item-utils'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
+import { isNote, isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface SidebarItemButtonProps {
   item: AnySidebarItem
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
 }
 
 function getItemDisplayName(item: AnySidebarItem): string {

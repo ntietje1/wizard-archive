@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useDraggable } from '@dnd-kit/core'
-import { type SidebarDragData } from '~/lib/dnd-utils'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { ItemCardProps } from './item-card'
+import type { Tag } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
@@ -11,8 +13,6 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { getTagColor } from '~/hooks/useTags'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { ItemCardProps } from './item-card'
-import type { Tag } from 'convex/tags/types'
 
 export function TagCard({
   item: tag,
@@ -24,34 +24,31 @@ export function TagCard({
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
 
-  const tagColor = tag ? getTagColor(tag) : undefined
+  const tagColor = getTagColor(tag)
 
   const imageUrlQuery = useQuery(
     convexQuery(
       api.storage.queries.getDownloadUrl,
-      tag?.imageStorageId ? { storageId: tag.imageStorageId } : 'skip',
+      tag.imageStorageId ? { storageId: tag.imageStorageId } : 'skip',
     ),
   )
 
   const imageUrl = imageUrlQuery.data || null
 
   const tagCategory = category || tag.category
-  const dragData: SidebarDragData | undefined =
-    tag && tagCategory
-      ? {
-          _id: tag._id,
-          type: SIDEBAR_ITEM_TYPES.tags,
-          name: tag.name || '',
-          parentId: tag.parentId,
-          categoryId: tagCategory._id,
-          icon: getCategoryIcon(tagCategory.iconName ?? 'TagIcon'),
-        }
-      : undefined
+  const dragData: SidebarDragData = {
+    _id: tag._id,
+    type: SIDEBAR_ITEM_TYPES.tags,
+    name: tag.name || '',
+    parentId: tag.parentId,
+    categoryId: tagCategory?._id,
+    icon: getCategoryIcon(tagCategory?.iconName ?? 'TagIcon'),
+  }
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: tag?._id ?? '',
+    id: tag._id,
     data: dragData,
-    disabled: isDisabled || !tag,
+    disabled: isDisabled,
   })
 
   const hasImage = !!imageUrl && !imageUrlQuery.isLoading
@@ -68,7 +65,7 @@ export function TagCard({
     }
   }
 
-  if (isLoading || !tag) {
+  if (isLoading) {
     return (
       <Card className="bg-white border border-slate-200 w-full flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md">
         <div className="flex-1 min-w-0 flex flex-col justify-between">

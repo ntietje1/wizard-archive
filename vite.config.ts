@@ -1,4 +1,5 @@
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { devtools } from '@tanstack/devtools-vite'
 import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
@@ -9,10 +10,14 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
+    devtools(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart(),
   ],
+  optimizeDeps: {
+    exclude: ['@tanstack/router-devtools-core'],
+  },
   envPrefix: ['VITE_', 'CLERK_'],
 })

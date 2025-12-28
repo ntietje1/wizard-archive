@@ -1,42 +1,40 @@
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { LucideIcon } from 'lucide-react'
 import {
-  Calendar,
-  User,
-  MapPin,
-  Share2,
-  Notebook,
-  Shield,
-  Axe,
-  TagIcon,
-  Sword,
   Apple,
+  Axe,
   Beef,
   Bird,
   BowArrow,
   Box,
+  Calendar,
   Cat,
   Cherry,
   Dog,
+  FileText,
   Flame,
+  Folder,
   Gem,
   Heart,
   Locate,
+  MapPin,
   MessageCircleWarning,
   Moon,
   Mountain,
   Music,
+  Notebook,
+  Share2,
+  Shield,
   Sparkles,
   Squirrel,
-  Sun,
   Star,
-  Folder,
-  FileText,
+  Sun,
+  Sword,
+  TagIcon,
+  User,
 } from '~/lib/icons'
-import type { LucideIcon } from 'lucide-react'
-import {
-  SIDEBAR_ITEM_TYPES,
-  type AnySidebarItem,
-} from 'convex/sidebarItems/types'
 
 const categoryIconsMap: Record<string, LucideIcon> = {
   [SYSTEM_DEFAULT_CATEGORIES.Character.iconName]: User,
@@ -71,7 +69,8 @@ const categoryIconsMap: Record<string, LucideIcon> = {
 }
 
 export const getCategoryIcon = (categoryName?: string): LucideIcon => {
-  return (categoryName && categoryIconsMap[categoryName]) || TagIcon
+  if (!categoryName) return TagIcon
+  return categoryIconsMap[categoryName] ?? TagIcon
 }
 
 export const getNonDefaultCategoryIcons = () => {
@@ -100,11 +99,11 @@ export const getSidebarItemIcon = (item: AnySidebarItem): LucideIcon => {
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return getCategoryIcon(item.iconName)
     case SIDEBAR_ITEM_TYPES.tags:
-      return getCategoryIcon(item.category?.iconName) || TagIcon
+      return getCategoryIcon(item.category?.iconName)
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] || FileText
+      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] ?? FileText
     default:
       return FileText
   }

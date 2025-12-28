@@ -1,6 +1,6 @@
-import { Id } from '../_generated/dataModel'
-import { CampaignMember } from '../campaigns/types'
-import { Tag } from '../tags/types'
+import type { Id } from '../_generated/dataModel'
+import type { CampaignMember } from '../campaigns/types'
+import type { Tag } from '../tags/types'
 
 export type Share = Tag & {
   tagId: Id<'tags'>

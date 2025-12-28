@@ -1,14 +1,14 @@
 import { v } from 'convex/values'
-import { Tag, TagCategory } from './types'
 import { query } from '../_generated/server'
 import { getPlayerSharedTags, getSharedAllTag } from '../shares/shares'
 import {
-  getTag as getTagFn,
-  getTagsByCategory as getTagsByCategoryFn,
-  getTagsByCampaign as getTagsByCampaignFn,
   getTagCategory as getTagCategoryFn,
+  getTag as getTagFn,
+  getTagsByCampaign as getTagsByCampaignFn,
+  getTagsByCategory as getTagsByCategoryFn,
 } from './tags'
 import { tagCategoryValidator, tagValidator } from './schema'
+import type { Tag, TagCategory } from './types'
 
 export const getSharedTags = query({
   args: {
@@ -23,7 +23,7 @@ export const getSharedTags = query({
     args,
   ): Promise<{
     sharedAllTag: Tag
-    playerSharedTags: Tag[]
+    playerSharedTags: Array<Tag>
   }> => {
     const sharedAllTag = await getSharedAllTag(ctx, args.campaignId)
     const playerSharedTags = await getPlayerSharedTags(ctx, args.campaignId)
@@ -70,7 +70,7 @@ export const getTagsByCampaign = query({
     campaignId: v.id('campaigns'),
   },
   returns: v.array(tagValidator),
-  handler: async (ctx, args): Promise<Tag[]> => {
+  handler: async (ctx, args): Promise<Array<Tag>> => {
     return await getTagsByCampaignFn(ctx, args.campaignId)
   },
 })
@@ -81,7 +81,7 @@ export const getTagsByCategory = query({
     categoryId: v.id('tagCategories'),
   },
   returns: v.array(tagValidator),
-  handler: async (ctx, args): Promise<Tag[]> => {
+  handler: async (ctx, args): Promise<Array<Tag>> => {
     return await getTagsByCategoryFn(ctx, args.categoryId)
   },
 })
@@ -91,7 +91,7 @@ export const getTagCategoriesByCampaign = query({
     campaignId: v.id('campaigns'),
   },
   returns: v.array(tagCategoryValidator),
-  handler: async (ctx, args): Promise<TagCategory[]> => {
+  handler: async (ctx, args): Promise<Array<TagCategory>> => {
     const categories = await ctx.db
       .query('tagCategories')
       .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))

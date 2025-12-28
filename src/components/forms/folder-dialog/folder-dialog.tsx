@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
 import { Input } from '~/components/shadcn/ui/input'
@@ -36,12 +36,12 @@ export function FolderDialog({
   folderId,
   initialName,
 }: FolderDialogProps) {
-  const getInitialValues = (): FolderFormValues => {
+  const getInitialValues = useCallback((): FolderFormValues => {
     if (mode === 'edit' && initialName) {
       return { name: initialName }
     }
     return { name: '' }
-  }
+  }, [mode, initialName])
 
   const form = useForm({
     defaultValues: getInitialValues(),
@@ -54,7 +54,7 @@ export function FolderDialog({
   // Reset form when dialog mode/folder changes
   useEffect(() => {
     form.reset(getInitialValues())
-  }, [mode, folderId, initialName])
+  }, [mode, folderId, initialName, form, getInitialValues])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return

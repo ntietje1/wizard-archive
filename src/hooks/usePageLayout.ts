@@ -1,17 +1,17 @@
-import { useMemo, useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import { isNote, isGameMap } from '~/lib/sidebar-item-utils'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { debounce } from 'lodash-es'
 import { useNoteActions } from './useNoteActions'
 import { useEditorNavigation } from './useEditorNavigation'
-import { useSearch, useNavigate } from '@tanstack/react-router'
-import type { EditorSearch } from '~/components/notes-page/validate-search'
 import usePersistedState from './usePersistedState'
+import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
 import type { CustomBlock } from '~/lib/editor-schema'
-import { debounce } from 'lodash-es'
+import { isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/contexts/CampaignContext'
 
 type UsePageLayoutParams = {
@@ -33,7 +33,7 @@ export function usePageLayout({
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  }) as EditorSearch
+  })
 
   const pageSlug = search.page
 
@@ -65,10 +65,10 @@ export function usePageLayout({
     ),
   )
 
-  const childPagesArray: AnySidebarItem[] = pagesQuery.data ?? []
+  const childPagesArray: Array<AnySidebarItem> = pagesQuery.data ?? []
 
   // Combine parent item (as first page) with child pages
-  const allPagesArray: AnySidebarItem[] = parentItem
+  const allPagesArray: Array<AnySidebarItem> = parentItem
     ? [parentItem, ...childPagesArray]
     : childPagesArray
 
@@ -131,7 +131,7 @@ export function usePageLayout({
 
   const updateCurrentPageContent = useMemo(
     () =>
-      debounce((newContent: CustomBlock[]) => {
+      debounce((newContent: Array<CustomBlock>) => {
         if (!isNote(currentPageItem)) return
         updateNoteContentWithSanitization(currentPageItem._id, newContent)
       }, 800),

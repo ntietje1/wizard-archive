@@ -3,22 +3,22 @@ import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getTag, getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
-import { Character } from './types'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import { combineCharacterAndTag, getCharacter } from './characters'
 import { characterValidator } from './schema'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import type { Character } from './types'
 
 export const getCharactersByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
   },
   returns: v.array(characterValidator),
-  handler: async (ctx, args): Promise<Character[]> => {
+  handler: async (ctx, args): Promise<Array<Character>> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    ) //TODO: allow players to see characters that have been "introduced" to them
+    ) // TODO: allow players to see characters that have been "introduced" to them
 
     const category = await getTagCategoryBySlug(
       ctx,
@@ -67,7 +67,7 @@ export const getCharacterById = query({
       ctx,
       { campaignId: character.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    ) //TODO: allow players to see characters that have been "introduced" to them
+    ) // TODO: allow players to see characters that have been "introduced" to them
 
     return character
   },

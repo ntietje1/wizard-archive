@@ -1,8 +1,5 @@
-import {
-  DragHandleMenu,
-  type DragHandleMenuProps,
-  RemoveBlockItem,
-} from '@blocknote/react'
+import { DragHandleMenu, RemoveBlockItem } from '@blocknote/react'
+import type { DragHandleMenuProps } from '@blocknote/react'
 import type {
   CustomBlockSchema,
   CustomInlineContentSchema,

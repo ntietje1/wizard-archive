@@ -1,12 +1,12 @@
+import { PageEditorSkeleton } from '../page-editor-wrapper'
+import { ItemCard } from './item-card'
 import type { ReactNode } from 'react'
 import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { Folder } from 'convex/folders/types'
 import { useFolderView } from '~/hooks/useFolderView'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { Folder } from 'convex/folders/types'
-import { ItemCard } from './item-card'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   const { items, isLoading, category } = useFolderView({
@@ -14,7 +14,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   })
 
   if (isLoading) {
-    //TODO: improve loading state
+    // TODO: improve loading state
     return <PageEditorSkeleton />
   }
 

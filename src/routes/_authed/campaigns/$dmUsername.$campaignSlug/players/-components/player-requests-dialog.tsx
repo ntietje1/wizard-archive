@@ -4,8 +4,10 @@ import { api } from 'convex/_generated/api'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
-  type CampaignMember,
 } from 'convex/campaigns/types'
+import { toast } from 'sonner'
+import { useConvexMutation } from '@convex-dev/react-query'
+import type { CampaignMember } from 'convex/campaigns/types'
 import {
   Dialog,
   DialogContent,
@@ -15,10 +17,8 @@ import {
 } from '~/components/shadcn/ui/dialog'
 import { Button } from '~/components/shadcn/ui/button'
 import { Check, RefreshCw, X } from '~/lib/icons'
-import { toast } from 'sonner'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { Badge } from '~/components/shadcn/ui/badge'
-import { useConvexMutation } from '@convex-dev/react-query'
 
 type PlayerRequestCardProps = {
   player: CampaignMember
@@ -43,7 +43,7 @@ function PlayerRequestCard({
         <div>
           <div className="flex items-center gap-2">
             <div className="font-medium text-slate-800">
-              @{player.userProfile?.name ?? 'Unknown'}
+              @{player.userProfile.name ?? 'Unknown'}
             </div>
             <Badge
               variant="secondary"
@@ -58,7 +58,7 @@ function PlayerRequestCard({
             </Badge>
           </div>
           <div className="text-xs text-slate-500">
-            @{player.userProfile?.username ?? 'unknown'}
+            @{player.userProfile.username}
           </div>
         </div>
       </div>
@@ -100,7 +100,7 @@ function PlayerRequestCard({
 type PlayerRequestsDialogProps = {
   isOpen: boolean
   onClose: () => void
-  players: CampaignMember[]
+  players: Array<CampaignMember>
 }
 
 export function PlayerRequestsDialog({
@@ -172,7 +172,7 @@ export function PlayerRequestsDialog({
                   >
                     <div>
                       <div className="text-medium text-slate-800">
-                        @{p.userProfile?.username ?? 'Unknown'}
+                        @{p.userProfile.username}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

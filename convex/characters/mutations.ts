@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { insertTagAndNote, deleteTag, updateTagAndContent } from '../tags/tags'
+import { deleteTag, insertTagAndNote, updateTagAndContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { Id } from '../_generated/dataModel'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import type { Id } from '../_generated/dataModel'
 
 export const createCharacter = mutation({
   args: {

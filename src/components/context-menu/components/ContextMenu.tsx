@@ -1,195 +1,210 @@
-import React, { useEffect, useRef, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
-import type { MenuContext, MenuItemDef } from '../types'
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { buildMenu } from '../menu-builder'
+import { useMenuItems } from './ContextMenuProvider'
+import type { MenuContext, MenuItemDef } from '../types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-} from '~/components/shadcn/ui/dropdown-menu'
-import { cn } from '~/lib/utils'
-import { useMenuItems } from './ContextMenuProvider'
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+  ContextMenu as ShadcnContextMenu,
+} from '~/components/shadcn/ui/context-menu'
+import { cn } from '~/lib/shadcn/utils'
 
-export interface ContextMenuItem {
-  type: 'action' | 'divider'
-  label: string
-  icon?: ReactNode
-  onClick: () => void
-  className?: string
+export interface ContextMenuRef {
+  open: (position?: { x: number; y: number }) => void
+  close: () => void
 }
 
 interface Props {
-  x: number
-  y: number
-  context: MenuContext
+  buildContext: () => MenuContext | null
   onClose: () => void
+  children: React.ReactNode
+  className?: string
   menuClassName?: string
 }
 
-export function ContextMenu({
-  x,
-  y,
-  context,
-  onClose,
-  menuClassName = 'w-48 z-[9999]',
-}: Props) {
-  const { menuItems } = useMenuItems()
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [isOpen, setIsOpen] = React.useState(true)
+export const ContextMenu = forwardRef<ContextMenuRef, Props>(
+  (
+    {
+      buildContext,
+      onClose,
+      children,
+      className,
+      menuClassName = 'w-48 z-[9999]',
+    },
+    ref,
+  ) => {
+    const { menuItems } = useMenuItems()
+    const [isOpen, setIsOpen] = useState(false)
+    const [context, setContext] = useState<MenuContext | null>(null)
+    const wrapperRef = useRef<HTMLDivElement>(null)
+    const triggerRef = useRef<HTMLDivElement>(null)
+    const actionInProgressRef = useRef(false)
 
-  const builtMenu = buildMenu(menuItems, context)
+    const builtMenu = context
+      ? buildMenu(menuItems, context)
+      : { isEmpty: true, groups: [] }
 
-  // Adjust position to keep menu in viewport
-  const [position, setPosition] = React.useState({ x, y })
+    useImperativeHandle(ref, () => ({
+      open: (position?: { x: number; y: number }) => {
+        const newContext = buildContext()
+        if (!newContext) return
+        setContext(newContext)
 
-  useEffect(() => {
-    if (!menuRef.current) return
+        const clientX =
+          position?.x ?? triggerRef.current?.getBoundingClientRect().left ?? 0
+        const clientY =
+          position?.y ?? triggerRef.current?.getBoundingClientRect().bottom ?? 0
 
-    const rect = menuRef.current.getBoundingClientRect()
-    const newX =
-      x + rect.width > window.innerWidth
-        ? window.innerWidth - rect.width - 8
-        : x
-    const newY =
-      y + rect.height > window.innerHeight
-        ? window.innerHeight - rect.height - 8
-        : y
+        if (triggerRef.current) {
+          triggerRef.current.dispatchEvent(
+            new MouseEvent('contextmenu', {
+              bubbles: true,
+              cancelable: true,
+              clientX,
+              clientY,
+              button: 2,
+            }),
+          )
+        }
 
-    setPosition({ x: newX, y: newY })
-  }, [x, y])
+        setIsOpen(true)
+      },
+      close: () => {
+        setIsOpen(false)
+        onClose()
+      },
+    }))
 
-  if (builtMenu.isEmpty) return null
+    const handleOpenChange = (open: boolean) => {
+      setIsOpen(open)
+      if (open && !context) {
+        setContext(buildContext())
+      } else if (!open) {
+        setContext(null)
+        onClose()
+      }
+    }
 
-  const handleAction = async (item: MenuItemDef) => {
-    // Execute the action first
-    await item.action(context)
-    // Then close the menu
-    setIsOpen(false)
-    onClose()
-  }
+    const handleAction = async (item: MenuItemDef) => {
+      if (actionInProgressRef.current || !context) return
+      actionInProgressRef.current = true
+      try {
+        await item.action(context)
+      } catch (error) {
+        console.error('ContextMenu: Error executing action', error)
+      } finally {
+        actionInProgressRef.current = false
+        setIsOpen(false)
+        onClose()
+      }
+    }
 
-  const renderMenuItem = (item: MenuItemDef) => {
-    const disabled = item.isDisabled?.(context) || false
-    const checked = item.isChecked?.(context)
-    const label =
-      typeof item.label === 'function' ? item.label(context) : item.label
-    // Use category icon for create-tag items if available, otherwise use item icon
-    const IconComponent =
-      item.id === 'submenu-create-tag' && context.category?.iconName
-        ? getCategoryIcon(context.category.iconName)
-        : item.icon
+    const renderMenuItem = (item: MenuItemDef) => {
+      if (!context) return null
 
-    // If item has children, render as submenu
-    if (item.children && item.children.length > 0) {
+      const disabled = item.isDisabled?.(context) || false
+      const checked = item.isChecked?.(context)
+      const label =
+        typeof item.label === 'function' ? item.label(context) : item.label
+      const IconComponent =
+        item.id === 'submenu-create-tag' && context.category?.iconName
+          ? getCategoryIcon(context.category.iconName)
+          : item.icon
+
+      // If item has children, render as submenu
+      if (item.children && item.children.length > 0) {
+        return (
+          <ContextMenuSub key={item.id}>
+            <ContextMenuSubTrigger
+              className={cn(
+                item.variant === 'danger' && 'text-red-600 focus:text-red-600',
+                item.className,
+              )}
+              disabled={disabled}
+            >
+              {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
+              <span className="flex-1">{label}</span>
+              {item.shortcut && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  {item.shortcut}
+                </span>
+              )}
+              {checked !== undefined && (
+                <span className="ml-2">{checked ? '✓' : ''}</span>
+              )}
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              {item.children.map((child) => renderMenuItem(child))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )
+      }
+
+      // Regular menu item
       return (
-        <DropdownMenuSub key={item.id}>
-          <DropdownMenuSubTrigger
-            className={cn(
-              item.variant === 'danger' && 'text-red-600 focus:text-red-600',
-              item.className,
-            )}
-            disabled={disabled}
-          >
-            {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
-            <span className="flex-1">{label}</span>
-            {item.shortcut && (
-              <span className="text-xs text-muted-foreground ml-2">
-                {item.shortcut}
-              </span>
-            )}
-            {checked !== undefined && (
-              <span className="ml-2">{checked ? '✓' : ''}</span>
-            )}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {item.children.map((child) => renderMenuItem(child))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <ContextMenuItem
+          key={item.id}
+          variant={item.variant === 'danger' ? 'destructive' : 'default'}
+          className={cn(item.className)}
+          disabled={disabled}
+          onSelect={async (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (!disabled) await handleAction(item)
+          }}
+          onClick={async (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (!disabled) await handleAction(item)
+          }}
+        >
+          {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
+          <span className="flex-1">{label}</span>
+          {item.shortcut && (
+            <span className="text-xs text-muted-foreground ml-2">
+              {item.shortcut}
+            </span>
+          )}
+          {checked !== undefined && (
+            <span className="ml-2">{checked ? '✓' : ''}</span>
+          )}
+        </ContextMenuItem>
       )
     }
 
-    // Regular menu item
     return (
-      <DropdownMenuItem
-        key={item.id}
-        className={cn(
-          item.variant === 'danger' && 'text-red-600 focus:text-red-600',
-          item.className,
-        )}
-        disabled={disabled}
-        onSelect={async (e) => {
-          // Prevent default close behavior
-          e.preventDefault()
-          if (!disabled) {
-            // Execute action, then close
-            await handleAction(item)
-          }
-        }}
-        onClick={(e) => {
-          // Also prevent click from bubbling
-          e.stopPropagation()
-        }}
-      >
-        {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
-        <span className="flex-1">{label}</span>
-        {item.shortcut && (
-          <span className="text-xs text-muted-foreground ml-2">
-            {item.shortcut}
-          </span>
-        )}
-        {checked !== undefined && (
-          <span className="ml-2">{checked ? '✓' : ''}</span>
-        )}
-      </DropdownMenuItem>
+      <div ref={wrapperRef} className={cn('relative w-full', className)}>
+        <ShadcnContextMenu open={isOpen} onOpenChange={handleOpenChange}>
+          <ContextMenuTrigger
+            render={
+              <div ref={triggerRef} style={{ display: 'contents' }}>
+                {children}
+              </div>
+            }
+          />
+          {!builtMenu.isEmpty && context && (
+            <ContextMenuContent
+              className={cn(menuClassName, 'z-[9999]')}
+              side="bottom"
+              align="start"
+              sideOffset={4}
+            >
+              {builtMenu.groups.map((group, gi) => (
+                <React.Fragment key={group.id}>
+                  {gi > 0 && <ContextMenuSeparator />}
+                  {group.items.map((item) => renderMenuItem(item))}
+                </React.Fragment>
+              ))}
+            </ContextMenuContent>
+          )}
+        </ShadcnContextMenu>
+      </div>
     )
-  }
-
-  const menuContent = (
-    <div
-      ref={menuRef}
-      data-context-menu
-      style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none' }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <DropdownMenu
-        open={isOpen}
-        onOpenChange={(open) => {
-          setIsOpen(open)
-          if (!open) {
-            onClose()
-          }
-        }}
-        modal={false}
-      >
-        <DropdownMenuContent
-          data-context-menu
-          className={cn(menuClassName, 'z-[9999]')}
-          style={{
-            position: 'fixed',
-            top: position.y,
-            left: position.x,
-            pointerEvents: 'auto',
-          }}
-          sideOffset={0}
-          alignOffset={0}
-          align="end"
-        >
-          {builtMenu.groups.map((group, gi) => (
-            <React.Fragment key={group.id}>
-              {gi > 0 && <DropdownMenuSeparator />}
-              {group.items.map((item) => renderMenuItem(item))}
-            </React.Fragment>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  )
-
-  // Render via portal to avoid affecting layout
-  return createPortal(menuContent, document.body)
-}
+  },
+)

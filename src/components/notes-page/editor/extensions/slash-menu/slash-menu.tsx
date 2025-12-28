@@ -1,9 +1,9 @@
 import { filterSuggestionItems } from '@blocknote/core'
 import {
-  type DefaultReactSuggestionItem,
-  getDefaultReactSlashMenuItems,
   SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
 } from '@blocknote/react'
+import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 
 // // Custom Slash Menu item to insert a block after the current one.
@@ -40,7 +40,7 @@ export const SlashMenu = ({ editor }: { editor: CustomBlockNoteEditor }) => {
     <SuggestionMenuController
       triggerCharacter={'/'}
       // Replaces the default Slash Menu items with our custom ones.
-      getItems={async (query) =>
+      getItems={(query) =>
         filterSuggestionItems(getCustomSlashMenuItems(editor), query)
       }
     />

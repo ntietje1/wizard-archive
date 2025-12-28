@@ -1,18 +1,7 @@
-import { CustomBlock } from '../notes/editorSpecs'
-import { Doc, Id, TableNames } from '../_generated/dataModel'
-import { MutationCtx } from '../_generated/server'
-import {
-  Tag,
-  CATEGORY_KIND,
-  TagCategory,
-  SYSTEM_DEFAULT_CATEGORIES,
-} from './types'
-import { SIDEBAR_ITEM_TYPES, SidebarItemId } from '../sidebarItems/types'
-import type { Block } from '../blocks/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { Ctx } from '../common/types'
 import { createNote, deleteNote, getNote } from '../notes/notes'
 import { findBlockByBlockNoteId } from '../blocks/blocks'
 import {
@@ -20,6 +9,14 @@ import {
   isValidSidebarParent,
 } from '../sidebarItems/sidebarItems'
 import { deleteMap } from '../gameMaps/gameMaps'
+import { CATEGORY_KIND, SYSTEM_DEFAULT_CATEGORIES } from './types'
+import type { Ctx } from '../common/types'
+import type { SidebarItemId } from '../sidebarItems/types'
+import type { Tag, TagCategory } from './types'
+import type { MutationCtx } from '../_generated/server'
+import type { Doc, Id, TableNames } from '../_generated/dataModel'
+import type { CustomBlock } from '../notes/editorSpecs'
+import type { Block } from '../blocks/types'
 
 function capitalizeFirstLetter(str: string): string {
   if (!str) return str
@@ -217,7 +214,7 @@ export const insertTag = async (
 export async function ensureDefaultTagCategories(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
-): Promise<Id<'tagCategories'>[]> {
+): Promise<Array<Id<'tagCategories'>>> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -229,7 +226,7 @@ export async function ensureDefaultTagCategories(
     .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const ids: Id<'tagCategories'>[] = []
+  const ids: Array<Id<'tagCategories'>> = []
   for (const d of Object.values(SYSTEM_DEFAULT_CATEGORIES)) {
     const found = existing.find((c) => c.name === d.name)
     if (found) {
@@ -255,7 +252,7 @@ export async function ensureDefaultTagCategories(
 export async function getTagsByCampaign(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-): Promise<Tag[]> {
+): Promise<Array<Tag>> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -286,7 +283,7 @@ export async function getTagsByCampaign(
 export async function getTagsByCategory(
   ctx: Ctx,
   categoryId: Id<'tagCategories'>,
-): Promise<Tag[]> {
+): Promise<Array<Tag>> {
   const category = await ctx.db.get(categoryId)
   if (!category) {
     throw new Error('Category not found')
@@ -621,7 +618,7 @@ export const deleteTag = async (
     await deleteMap(ctx, map._id)
   }
 
-  //TODO: modify all tags in content to just be text without being an actual tag inline content
+  // TODO: modify all tags in content to just be text without being an actual tag inline content
   await ctx.db.delete(tagId)
   return tagId
 }
@@ -654,7 +651,7 @@ export const deleteTagCategory = async (
   if (tags.length > 0) {
     throw new Error('Cannot delete category with existing tags')
   }
-  //TODO: delete all other children
+  // TODO: delete all other children
 
   await ctx.db.delete(categoryId)
   return categoryId
@@ -683,7 +680,7 @@ export async function getNoteLevelTag(
     return null
   }
 
-  const tag = parentItem as Tag
+  const tag = parentItem
 
   const category = await ctx.db.get(tag.categoryId)
   if (!category) {
@@ -725,7 +722,7 @@ export async function getBlockLevelTag(
     return null
   }
 
-  return parentItem as Tag
+  return parentItem
 }
 
 export async function findBlock(
@@ -755,7 +752,7 @@ export async function findBlock(
 export async function getBlockLevelTags(
   ctx: Ctx,
   blockDbId: Id<'blocks'>,
-): Promise<Id<'tags'>[]> {
+): Promise<Array<Id<'tags'>>> {
   const block = await ctx.db.get(blockDbId)
   if (!block) {
     throw new Error('Block not found')
@@ -775,7 +772,7 @@ export async function getBlockLevelTags(
 export async function getInlineTagIdsForBlock(
   ctx: Ctx,
   blockDbId: Id<'blocks'>,
-): Promise<Id<'tags'>[]> {
+): Promise<Array<Id<'tags'>>> {
   const block = await ctx.db.get(blockDbId)
   if (!block) {
     throw new Error('Block not found')
@@ -794,7 +791,7 @@ export async function getNoteLevelTagIdForBlock(
 export async function getEffectiveTagIdsForBlock(
   ctx: Ctx,
   blockDbId: Id<'blocks'>,
-): Promise<Id<'tags'>[]> {
+): Promise<Array<Id<'tags'>>> {
   const [blockLevelTagIds, inlineTagIds, noteLevelTagId] = await Promise.all([
     getBlockLevelTags(ctx, blockDbId),
     getInlineTagIdsForBlock(ctx, blockDbId),
@@ -811,9 +808,9 @@ export async function getEffectiveTagIdsForBlock(
 export async function doesBlockMatchRequiredTags(
   ctx: Ctx,
   blockDbId: Id<'blocks'>,
-  requiredTagIds: Id<'tags'>[],
+  requiredTagIds: Array<Id<'tags'>>,
 ): Promise<boolean> {
-  if (!requiredTagIds || requiredTagIds.length === 0) return true
+  if (requiredTagIds.length === 0) return true
   const effectiveTagIds = await getEffectiveTagIdsForBlock(ctx, blockDbId)
   return requiredTagIds.every((tagId) => effectiveTagIds.includes(tagId))
 }
@@ -948,18 +945,18 @@ export async function removeTagFromBlockHandler(
 }
 
 export function extractAllBlocksWithTags(
-  content: CustomBlock[],
+  content: Array<CustomBlock>,
   noteTagId: Id<'tags'> | null,
 ): Map<
   string,
-  { block: CustomBlock; tagIds: Id<'tags'>[]; isTopLevel: boolean }
+  { block: CustomBlock; tagIds: Array<Id<'tags'>>; isTopLevel: boolean }
 > {
   const blocksMap = new Map<
     string,
-    { block: CustomBlock; tagIds: Id<'tags'>[]; isTopLevel: boolean }
+    { block: CustomBlock; tagIds: Array<Id<'tags'>>; isTopLevel: boolean }
   >()
 
-  function traverseBlocks(blocks: any[], isTopLevel: boolean = false) {
+  function traverseBlocks(blocks: Array<any>, isTopLevel: boolean = false) {
     if (!Array.isArray(blocks)) return
 
     blocks.forEach((block) => {
@@ -985,8 +982,8 @@ export function extractAllBlocksWithTags(
   return blocksMap
 }
 
-export function extractTagIdsFromBlockContent(block: any): Id<'tags'>[] {
-  const tagIds: Id<'tags'>[] = []
+export function extractTagIdsFromBlockContent(block: any): Array<Id<'tags'>> {
+  const tagIds: Array<Id<'tags'>> = []
 
   function traverseImmediate(content: any, depth: number = 0) {
     if (!content || depth > 2) return
@@ -1023,7 +1020,7 @@ export function extractTagIdsFromBlockContent(block: any): Id<'tags'>[] {
 export function computeTopLevelPositions(
   allBlocksWithTags: Map<
     string,
-    { block: CustomBlock; tagIds: Id<'tags'>[]; isTopLevel: boolean }
+    { block: CustomBlock; tagIds: Array<Id<'tags'>>; isTopLevel: boolean }
   >,
 ): Map<string, number> {
   const order = Array.from(allBlocksWithTags.entries())
@@ -1073,7 +1070,7 @@ export async function updateBlockTags(
   campaignId: Id<'campaigns'>,
   finalBlockDbId: Id<'blocks'>,
   existingBlockContent: CustomBlock | undefined,
-  inlineTagIds: Id<'tags'>[],
+  inlineTagIds: Array<Id<'tags'>>,
 ): Promise<void> {
   const currentTagIds = await getBlockLevelTags(ctx, finalBlockDbId)
 
@@ -1122,7 +1119,7 @@ export async function insertInlineBlockTags(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
   finalBlockDbId: Id<'blocks'>,
-  inlineTagIds: Id<'tags'>[],
+  inlineTagIds: Array<Id<'tags'>>,
 ): Promise<void> {
   const finalTagIds = [...new Set([...inlineTagIds])]
   for (const tagId of finalTagIds) {
@@ -1153,9 +1150,9 @@ async function removeBlockAndTags(
 
 export async function cleanupUnprocessedBlocks(
   ctx: MutationCtx,
-  existingBlocks: Block[],
+  existingBlocks: Array<Block>,
   processedBlockIds: Set<string>,
-  content: CustomBlock[],
+  content: Array<CustomBlock>,
   now: number,
 ): Promise<void> {
   for (const existingBlock of existingBlocks) {
@@ -1166,9 +1163,7 @@ export async function cleanupUnprocessedBlocks(
         ? extractTagIdsFromBlockContent(blockInNewContent)
         : []
 
-      const hasAnyTags =
-        (currentTagIds && currentTagIds.length > 0) ||
-        (inlineTagIdsNew && inlineTagIdsNew.length > 0)
+      const hasAnyTags = currentTagIds.length > 0 || inlineTagIdsNew.length > 0
 
       if (!hasAnyTags) {
         await removeBlockAndTags(ctx, existingBlock)
@@ -1205,10 +1200,10 @@ export function findBlockById(content: any, blockId: string): any | null {
 export function isBlockChildOf(
   blockId: string,
   parentBlockId: string,
-  content: CustomBlock[],
+  content: Array<CustomBlock>,
 ): boolean {
   function searchInBlocks(
-    blocks: any[],
+    blocks: Array<any>,
     targetBlockId: string,
     currentParentId?: string,
   ): boolean {
@@ -1233,9 +1228,9 @@ export function isBlockChildOf(
 }
 
 export function filterOutChildBlocks(
-  blocks: any[],
-  content: CustomBlock[],
-): any[] {
+  blocks: Array<any>,
+  content: Array<CustomBlock>,
+): Array<any> {
   const blockIds = blocks.map((b) => b.blockId)
 
   const filtered = blocks.filter((block) => {

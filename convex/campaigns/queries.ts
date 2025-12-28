@@ -1,24 +1,24 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import {
-  Campaign,
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-  CampaignMember,
-  CampaignWithMembership,
-} from './types'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { Note } from '../notes/types'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { getUserProfileByUsernameHandler } from '../users/users'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
 import {
   getCampaign,
   getCampaignMember,
   requireCampaignMembership,
 } from './campaigns'
-import { getUserProfileByUsernameHandler } from '../users/users'
+import {
+  campaignMemberValidator,
+  campaignWithMembershipValidator,
+} from './schema'
+import type { Note } from '../notes/types'
+import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
 
 export const getUserCampaigns = query({
-  handler: async (ctx): Promise<CampaignWithMembership[]> => {
+  returns: v.array(campaignWithMembershipValidator),
+  handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
     const { profile } = await requireUserIdentity(ctx)
 
     const campaignMemberships = await ctx.db
@@ -40,14 +40,14 @@ export const getUserCampaigns = query({
     const campaignsWithNotes = await Promise.all(
       campaigns.map(async (campaign) => {
         const membership = campaignMemberships.find(
-          (membership) => membership.campaignId === campaign._id,
+          (m) => m.campaignId === campaign._id,
         )
 
         if (!membership) {
           return null
         }
 
-        let notes: Note[] | undefined = undefined
+        let notes: Array<Note> | undefined = undefined
         if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
           const rawNotes = await ctx.db
             .query('notes')
@@ -58,7 +58,7 @@ export const getUserCampaigns = query({
           notes = rawNotes.map((note) => ({
             ...note,
             type: SIDEBAR_ITEM_TYPES.notes,
-          })) as Note[]
+          })) as Array<Note>
         }
 
         return {
@@ -70,7 +70,9 @@ export const getUserCampaigns = query({
           noteCount: notes?.length || 0,
         }
       }),
-    ).then((campaigns) => campaigns.filter((campaign) => campaign !== null))
+    ).then((filteredCampaigns) =>
+      filteredCampaigns.filter((campaign) => campaign !== null),
+    )
 
     return campaignsWithNotes
   },
@@ -116,7 +118,7 @@ export const getPublicCampaignBySlug = query({
         .collect()
 
       const member = members.find(
-        (member) => member.userId === identityWithProfile.profile._id,
+        (m) => m.userId === identityWithProfile.profile._id,
       )
 
       if (member) {
@@ -183,7 +185,8 @@ export const checkCampaignSlugExists = query({
 
 export const getPlayersByCampaign = query({
   args: { campaignId: v.id('campaigns') },
-  handler: async (ctx, args): Promise<CampaignMember[]> => {
+  returns: v.array(campaignMemberValidator),
+  handler: async (ctx, args): Promise<Array<CampaignMember>> => {
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -200,7 +203,9 @@ export const getPlayersByCampaign = query({
       members.map(async (member) => {
         return getCampaignMember(ctx, member._id)
       }),
-    ).then((members) => members.filter((member) => member !== null))
+    ).then((filteredMembers) =>
+      filteredMembers.filter((member) => member !== null),
+    )
 
     return membersWithProfiles
   },

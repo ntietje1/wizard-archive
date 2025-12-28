@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react'
-import type { TagCategoryConfig } from './types'
 import { FormDialog } from './form-dialog'
+import type { ReactNode } from 'react'
+import type { TagCategoryConfig } from './types'
 
 interface TagFormDialogProps {
   isOpen: boolean
@@ -17,7 +17,7 @@ export function TagFormDialog({
   mode,
   children,
 }: TagFormDialogProps) {
-  if (!config?.singular || !config?.plural) {
+  if (!config.singular || !config.plural) {
     console.error('TagFormDialog: config is missing singular or plural', config)
     return null
   }

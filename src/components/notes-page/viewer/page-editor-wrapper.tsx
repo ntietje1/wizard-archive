@@ -1,14 +1,14 @@
+import { Plus } from 'lucide-react'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { SidebarItemEditor } from './sidebar-item-editor'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { EditorViewerProps } from '~/lib/editor-registry'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
-import { Plus } from 'lucide-react'
-import { cn } from '~/lib/utils'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { cn } from '~/lib/shadcn/utils'
 import { usePageLayout } from '~/hooks/usePageLayout'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { useCampaign } from '~/contexts/CampaignContext'
-import type { EditorViewerProps } from '~/lib/editor-registry'
-import { SidebarItemEditor } from './sidebar-item-editor'
 
 export function PageEditorWrapper({
   item,
@@ -27,7 +27,7 @@ export function PageEditorWrapper({
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       <PageTabs
-        pages={pages.data ?? [item]}
+        pages={pages.data}
         pageSlug={pageSlug}
         onSelectPage={selectPage}
         onCreatePage={handleCreatePage}
@@ -42,7 +42,7 @@ export function PageEditorWrapper({
 }
 
 interface PageTabsProps {
-  pages: AnySidebarItem[]
+  pages: Array<AnySidebarItem>
   pageSlug: string | undefined
   onSelectPage: (slug: string | undefined) => void
   onCreatePage: () => void
@@ -60,7 +60,7 @@ export function PageTabs({
   return (
     <div className="flex items-center border-b px-4 bg-muted/20 overflow-x-auto no-scrollbar">
       {/* Parent item tab (first tab) */}
-      {parentItem && (
+      {pages.length > 0 && (
         <button
           key={parentItem._id}
           onClick={() => onSelectPage(undefined)}

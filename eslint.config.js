@@ -1,197 +1,27 @@
-import js from '@eslint/js'
-import typescript from '@typescript-eslint/eslint-plugin'
-import typescriptParser from '@typescript-eslint/parser'
-import react from 'eslint-plugin-react'
+//  @ts-check
+
+import { tanstackConfig } from '@tanstack/eslint-config'
 import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import globals from 'globals'
 
 export default [
-  js.configs.recommended,
-  {
-    files: ['**/*.{js,jsx}'],
-    languageOptions: {
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    plugins: {
-      '@typescript-eslint': typescript,
-      react,
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
-    rules: {
-      // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-var-requires': 'error',
-
-      // React rules
-      'react/react-in-jsx-scope': 'off', // Not needed with React 17+
-      'react/prop-types': 'off', // Using TypeScript for prop validation
-      'react/jsx-uses-react': 'off', // Not needed with React 17+
-      'react/jsx-uses-vars': 'error',
-      'react/jsx-key': 'error',
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-no-undef': 'error',
-      'react/no-children-prop': 'error',
-      'react/no-danger-with-children': 'error',
-      'react/no-deprecated': 'error',
-      'react/no-direct-mutation-state': 'error',
-      'react/no-find-dom-node': 'error',
-      'react/no-is-mounted': 'error',
-      'react/no-render-return-value': 'error',
-      'react/no-string-refs': 'error',
-      'react/no-unescaped-entities': 'error',
-      'react/no-unknown-property': 'error',
-      'react/no-unsafe': 'error',
-      'react/require-render-return': 'error',
-
-      // React Hooks rules
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-
-      // React Refresh rules
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
-
-      // General JavaScript/TypeScript rules
-      'no-console': 'off',
-      'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
-      'no-unused-expressions': 'error',
-      'prefer-const': 'error',
-      'no-var': 'error',
-      'object-shorthand': 'error',
-      'prefer-template': 'error',
-      'no-unused-vars': 'off', // Use TypeScript version instead
-      'no-case-declarations': 'error',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-    },
-  },
-  {
-    files: ['**/*.js'],
-    languageOptions: {
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        global: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-        exports: 'readonly',
-      },
-    },
-  },
-  {
-    files: ['**/*.{ts,tsx}'],
-    languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-        ...globals.es2021,
-        EventListener: 'readonly',
-        React: 'readonly',
-      },
-    },
-    plugins: {
-      '@typescript-eslint': typescript,
-      react,
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
-    rules: {
-      // TypeScript rules
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-var-requires': 'error',
-
-      // React rules
-      'react/react-in-jsx-scope': 'off', // Not needed with React 17+
-      'react/prop-types': 'off', // Using TypeScript for prop validation
-      'react/jsx-uses-react': 'off', // Not needed with React 17+
-      'react/jsx-uses-vars': 'error',
-      'react/jsx-key': 'error',
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-no-undef': 'error',
-      'react/no-children-prop': 'error',
-      'react/no-danger-with-children': 'error',
-      'react/no-deprecated': 'error',
-      'react/no-direct-mutation-state': 'error',
-      'react/no-find-dom-node': 'error',
-      'react/no-is-mounted': 'error',
-      'react/no-render-return-value': 'error',
-      'react/no-string-refs': 'error',
-      'react/no-unescaped-entities': 'error',
-      'react/no-unknown-property': 'error',
-      'react/no-unsafe': 'error',
-      'react/require-render-return': 'error',
-
-      // React Hooks rules
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-
-      // React Refresh rules
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
-
-      // General JavaScript/TypeScript rules
-      'no-console': 'off',
-      'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
-      'no-unused-expressions': 'error',
-      'prefer-const': 'error',
-      'no-var': 'error',
-      'object-shorthand': 'error',
-      'prefer-template': 'error',
-      'no-unused-vars': 'off', // Use TypeScript version instead
-      'no-case-declarations': 'error',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-    },
-  },
   {
     ignores: [
-      'node_modules/**',
-      'dist/**',
-      'build/**',
       '.output/**',
+      '.nitro/**',
       'convex/_generated/**',
       'src/routeTree.gen.ts',
-      '*.config.js',
-      '*.config.ts',
+      'src/components/shadcn/**',
+      'src/hooks/shadcn/**',
     ],
+  },
+  ...tanstackConfig,
+  {
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
 ]

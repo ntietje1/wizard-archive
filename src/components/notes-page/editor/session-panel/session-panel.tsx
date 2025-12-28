@@ -1,22 +1,22 @@
 import { useMemo } from 'react'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useSession } from '~/hooks/useSession'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
+import { EllipsisIcon } from 'lucide-react'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import type { Session } from 'convex/sessions/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { EllipsisIcon } from 'lucide-react'
-import type { Session } from 'convex/sessions/types'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { useSession } from '~/hooks/useSession'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export function SessionPanel() {
   const { campaignWithMembership } = useCampaign()
@@ -44,15 +44,13 @@ export function SessionPanel() {
   )
 
   const hasActiveSession = !!currentSession.data
-  const sortedSessions: Array<Session> = sessions.data ?? []
   const previousSessions: Array<Session> = useMemo(() => {
-    if (!sortedSessions) return []
+    const sortedSessions: Array<Session> = sessions.data ?? []
     const currentId = currentSession.data?.sessionId
     return sortedSessions.filter((s) => s.sessionId !== currentId)
-  }, [sortedSessions, currentSession.data?.sessionId])
+  }, [sessions.data, currentSession.data?.sessionId])
 
   const formatSessionDate = (s: Session): string => {
-    if (!s) return ''
     const date = s.description
       ? new Date(s.description)
       : new Date(s._creationTime)
@@ -128,11 +126,13 @@ export function SessionPanel() {
           )}
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="lg" className="aspect-square">
-              <EllipsisIcon className="size-5" />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="outline" size="lg" className="aspect-square">
+                <EllipsisIcon className="size-5" />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="[&>svg]:hidden">
@@ -146,7 +146,6 @@ export function SessionPanel() {
                   <DropdownMenuItem
                     key={s.sessionId}
                     onClick={() => {
-                      // setSelectedSessionId(s.sessionId)
                       if (campaignId) {
                         setCurrentSession.mutate({
                           campaignId,

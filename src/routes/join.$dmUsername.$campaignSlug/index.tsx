@@ -1,8 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useUser, SignIn } from '@clerk/tanstack-react-start'
+import { SignIn, useUser } from '@clerk/tanstack-react-start'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+} from 'convex/campaigns/types'
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -11,12 +16,7 @@ import {
   CardTitle,
 } from '~/components/shadcn/ui/card'
 import { Button } from '~/components/shadcn/ui/button'
-import { Shield, Users, Loader2 } from '~/lib/icons'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-} from 'convex/campaigns/types'
-import { useState } from 'react'
+import { Loader2, Shield, Users } from '~/lib/icons'
 import { Header } from '~/components/Header'
 
 export const Route = createFileRoute('/join/$dmUsername/$campaignSlug/')({
@@ -250,97 +250,95 @@ function RouteComponent() {
     }
 
     // Request sent states
-    if (campaignMember?.role === CAMPAIGN_MEMBER_ROLE.Player) {
-      switch (campaignMember?.status) {
-        case CAMPAIGN_MEMBER_STATUS.Pending:
-          return {
-            title: 'Request Sent',
-            description: (
-              <>
-                Your request to join <strong>{campaign.name}</strong> has been
-                sent. {"You'll gain access once the DM confirms your request."}
-              </>
-            ),
-            statusVariant: 'warning' as const,
-            titleColor: 'text-slate-900',
-            children: (
-              <div className="flex flex-col items-center space-y-4">
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                  <p className="text-sm text-amber-800 font-medium">
-                    This page will automatically update when you gain access.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2 text-xs text-slate-500">
-                  <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                  <span>Waiting for DM approval</span>
-                </div>
+    switch (campaignMember?.status) {
+      case CAMPAIGN_MEMBER_STATUS.Pending:
+        return {
+          title: 'Request Sent',
+          description: (
+            <>
+              Your request to join <strong>{campaign.name}</strong> has been
+              sent. {"You'll gain access once the DM confirms your request."}
+            </>
+          ),
+          statusVariant: 'warning' as const,
+          titleColor: 'text-slate-900',
+          children: (
+            <div className="flex flex-col items-center space-y-4">
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-sm text-amber-800 font-medium">
+                  This page will automatically update when you gain access.
+                </p>
               </div>
-            ),
-          }
+              <div className="flex items-center space-x-2 text-xs text-slate-500">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <span>Waiting for DM approval</span>
+              </div>
+            </div>
+          ),
+        }
 
-        case CAMPAIGN_MEMBER_STATUS.Accepted:
-          return {
-            title: "You're In!",
-            description: (
-              <>
-                You now have access to <strong>{campaign.name}</strong>.
-              </>
-            ),
-            statusVariant: 'success' as const,
-            titleColor: 'text-slate-900',
-            children: (
-              <Button
-                onClick={goToCampaignHome}
-                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg"
-              >
-                Go to Campaign
-              </Button>
-            ),
-          }
+      case CAMPAIGN_MEMBER_STATUS.Accepted:
+        return {
+          title: "You're In!",
+          description: (
+            <>
+              You now have access to <strong>{campaign.name}</strong>.
+            </>
+          ),
+          statusVariant: 'success' as const,
+          titleColor: 'text-slate-900',
+          children: (
+            <Button
+              onClick={goToCampaignHome}
+              className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg"
+            >
+              Go to Campaign
+            </Button>
+          ),
+        }
 
-        case CAMPAIGN_MEMBER_STATUS.Rejected:
-          return {
-            title: 'Request Rejected',
-            description: (
-              <>
-                Your request to join <strong>{campaign.name}</strong> has been
-                rejected.
-              </>
-            ),
-            statusVariant: 'error' as const,
-            titleColor: 'text-red-800',
-            children: (
-              <Button
-                onClick={goToHome}
-                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg"
-              >
-                Exit
-              </Button>
-            ),
-          }
+      case CAMPAIGN_MEMBER_STATUS.Rejected:
+        return {
+          title: 'Request Rejected',
+          description: (
+            <>
+              Your request to join <strong>{campaign.name}</strong> has been
+              rejected.
+            </>
+          ),
+          statusVariant: 'error' as const,
+          titleColor: 'text-red-800',
+          children: (
+            <Button
+              onClick={goToHome}
+              className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg"
+            >
+              Exit
+            </Button>
+          ),
+        }
 
-        case CAMPAIGN_MEMBER_STATUS.Removed:
-          return {
-            title: "You've Been Removed",
-            description: (
-              <p>
-                {"You've been removed from "}
-                <strong>{campaign.name}</strong>
-                {'.'}
-              </p>
-            ),
-            statusVariant: 'error' as const,
-            titleColor: 'text-red-800',
-            children: (
-              <Button
-                onClick={goToHome}
-                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg"
-              >
-                Exit
-              </Button>
-            ),
-          }
-      }
+      case CAMPAIGN_MEMBER_STATUS.Removed:
+        return {
+          title: "You've Been Removed",
+          description: (
+            <p>
+              {"You've been removed from "}
+              <strong>{campaign.name}</strong>
+              {'.'}
+            </p>
+          ),
+          statusVariant: 'error' as const,
+          titleColor: 'text-red-800',
+          children: (
+            <Button
+              onClick={goToHome}
+              className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg"
+            >
+              Exit
+            </Button>
+          ),
+        }
     }
 
     // Not requested yet states

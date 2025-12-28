@@ -1,35 +1,31 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import type { EditorViewerProps } from '~/lib/editor-registry'
-import {
-  TransformWrapper,
-  TransformComponent,
-  type ReactZoomPanPinchRef,
-} from 'react-zoom-pan-pinch'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   convexQuery,
   useConvex,
   useConvexMutation,
 } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { Button } from '~/components/shadcn/ui/button'
-import { Plus, Minus, RotateCcw } from 'lucide-react'
-import { getSidebarItemIcon } from '~/lib/category-icons'
-import { isTag } from '~/lib/sidebar-item-utils'
-import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
-import type { Id } from 'convex/_generated/dataModel'
+import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { MapPinContextMenu } from '~/components/context-menu/map-pin/MapPinContextMenu'
+import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { MapViewContextMenuRef } from '~/components/context-menu/map-view/MapViewContextMenu'
+import { Button } from '~/components/shadcn/ui/button'
+import { getSidebarItemIcon } from '~/lib/category-icons'
+import { isTag } from '~/lib/sidebar-item-utils'
+import { MapPinContextMenu } from '~/components/context-menu/map-view/MapPinContextMenu'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
-import { cn } from '~/lib/utils'
-import { ContextMenu } from '~/components/context-menu/components/ContextMenu'
-import { useContextEnhancers } from '~/components/context-menu/hooks/useContextEnhancers'
-import { useMenuContext } from '~/components/context-menu/hooks/useMenuContext'
+import { cn } from '~/lib/shadcn/utils'
+import { MapViewContextMenu } from '~/components/context-menu/map-view/MapViewContextMenu'
 
 interface PinPosition {
   x: number
@@ -59,7 +55,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   const pins = pinsQuery.data || []
 
   useEffect(() => {
-    if (!map?.imageStorageId) {
+    if (!map.imageStorageId) {
       setImageUrl(null)
       return
     }
@@ -74,7 +70,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       .catch(() => {
         setImageUrl(null)
       })
-  }, [map?.imageStorageId, convex])
+  }, [map.imageStorageId, convex])
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -187,10 +183,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       e.preventDefault()
       e.stopPropagation()
       // Stop propagation at native level too
-      if (e.nativeEvent) {
-        e.nativeEvent.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-      }
+      e.nativeEvent.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
       const rect = imageRef.current?.getBoundingClientRect()
       if (!rect) return
@@ -222,10 +216,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
     return pin.item.name || defaultItemName(pin.item)
   }, [])
 
-  const [mapImageContextMenu, setMapImageContextMenu] = useState<{
-    x: number
-    y: number
-  } | null>(null)
+  const mapImageContextMenuRef = useRef<MapViewContextMenuRef>(null)
 
   const handleMapImageContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -235,29 +226,16 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       e.preventDefault()
       e.stopPropagation()
       // Stop propagation at native level too
-      if (e.nativeEvent) {
-        e.nativeEvent.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-      }
+      e.nativeEvent.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
-      setMapImageContextMenu({
+      mapImageContextMenuRef.current?.open({
         x: e.clientX,
         y: e.clientY,
       })
     },
     [pendingPinItem],
   )
-
-  const enhancers = useContextEnhancers({ includeMapView: true })
-  const mapImageMenuContext = useMenuContext({
-    item: map || undefined,
-    viewContext: 'map-view',
-    enhancers,
-  })
-
-  if (!map) {
-    return null
-  }
 
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
@@ -335,7 +313,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                 {pins.map((pin: MapPinWithItem) => {
                   const Icon = getSidebarItemIcon(pin.item)
-                  //TODO: generalize the color logic
+                  // TODO: generalize the color logic
                   // For tags: use item.color or item.category?.defaultColor
                   // For other items: no color (transparent/default)
                   const color = isTag(pin.item)
@@ -345,7 +323,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                   return (
                     <Tooltip key={pin._id} open={isHovered}>
-                      <TooltipTrigger asChild>
+                      <TooltipTrigger>
                         <div
                           className={cn(
                             'absolute pointer-events-auto cursor-pointer transition-transform',
@@ -406,14 +384,13 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
         />
       )}
 
-      {mapImageContextMenu && mapImageMenuContext && (
-        <ContextMenu
-          x={mapImageContextMenu.x}
-          y={mapImageContextMenu.y}
-          context={mapImageMenuContext}
-          onClose={() => setMapImageContextMenu(null)}
-        />
-      )}
+      <MapViewContextMenu
+        ref={mapImageContextMenuRef}
+        item={map}
+        className="absolute inset-0 pointer-events-none"
+      >
+        <div className="w-full h-full" />
+      </MapViewContextMenu>
     </div>
   )
 }

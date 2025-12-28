@@ -1,9 +1,9 @@
-import { Id } from '../_generated/dataModel'
-import {
-  SidebarItem,
-  SIDEBAR_ITEM_TYPES,
-  SidebarItemId,
+import type { Id } from '../_generated/dataModel'
+import type {
   AnySidebarItem,
+  SIDEBAR_ITEM_TYPES,
+  SidebarItem,
+  SidebarItemId,
 } from '../sidebarItems/types'
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {

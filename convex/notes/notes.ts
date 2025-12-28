@@ -1,16 +1,17 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { Ctx } from '../common/types'
-import { Doc, Id } from '../_generated/dataModel'
-import { Note } from './types'
 import { deleteBlocksByNote } from '../blocks/blocks'
-import { MutationCtx } from '../_generated/server'
 import {
   getSidebarItemById,
   isValidSidebarParent,
 } from '../sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES, SidebarItemId } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
+import type { SidebarItemId } from '../sidebarItems/types'
+import type { MutationCtx } from '../_generated/server'
+import type { Note } from './types'
+import type { Doc, Id } from '../_generated/dataModel'
+import type { Ctx } from '../common/types'
 
 export const createNote = async (
   ctx: MutationCtx,

@@ -1,15 +1,12 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import { useSortOptions } from './useSortOptions'
+import type { SortOptions } from 'convex/editors/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Tag } from 'convex/tags/types'
-import {
-  SORT_DIRECTIONS,
-  SORT_ORDERS,
-  type SortOptions,
-} from 'convex/editors/types'
-import { useSortOptions } from './useSortOptions'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export const useTagsByCategory = (
   categoryId: Id<'tagCategories'>,
@@ -17,7 +14,7 @@ export const useTagsByCategory = (
 ) => {
   const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const tags = useQuery(
     convexQuery(
       api.tags.queries.getTagsByCategory,
@@ -35,10 +32,7 @@ export const useTagsByCategory = (
   }
 }
 
-const sortTagsByOptions = (
-  options: SortOptions,
-  tags?: Tag[],
-) => {
+const sortTagsByOptions = (options: SortOptions, tags?: Array<Tag>) => {
   if (!tags) return undefined
 
   const sortFn = (a: Tag, b: Tag) => {
@@ -65,4 +59,3 @@ const sortTagsByOptions = (
 
   return [...tags].sort(sortFn)
 }
-

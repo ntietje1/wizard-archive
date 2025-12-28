@@ -1,20 +1,18 @@
 import { useCallback } from 'react'
-import {
-  SIDEBAR_ITEM_TYPES,
-  type AnySidebarItem,
-} from 'convex/sidebarItems/types'
-import { useNoteActions } from './useNoteActions'
-import { useTagActions } from './useTagActions'
-import { useMapActions } from './useMapActions'
-import { useFolderActions } from './useFolderActions'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation, useConvex } from '@convex-dev/react-query'
+import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { toast } from 'sonner'
-import { useEditorNavigation } from './useEditorNavigation'
 import { useSearch } from '@tanstack/react-router'
+import { useEditorNavigation } from './useEditorNavigation'
+import { useFolderActions } from './useFolderActions'
+import { useMapActions } from './useMapActions'
+import { useTagActions } from './useTagActions'
+import { useNoteActions } from './useNoteActions'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export function useRenameItem(item: AnySidebarItem | null) {
   const { updateNote } = useNoteActions()
@@ -28,7 +26,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  }) as EditorSearch
+  })
 
   const updateCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
@@ -73,8 +71,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
             campaignId,
           },
         )
-
-        if (!updatedItem) return
 
         navigateToItemAndPage(updatedItem, search.page)
       } catch (error) {

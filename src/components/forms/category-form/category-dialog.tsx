@@ -1,7 +1,8 @@
+import { CATEGORY_KIND } from 'convex/tags/types'
 import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
-import type { Id } from 'convex/_generated/dataModel'
-import { type TagCategory, CATEGORY_KIND } from 'convex/tags/types'
 import { CategoryForm } from './category-form'
+import type { TagCategory } from 'convex/tags/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { Edit, Plus } from '~/lib/icons'
 
 interface CategoryDialogBaseProps {
@@ -24,7 +25,7 @@ export type CategoryDialogProps =
 
 export function CategoryDialog(props: CategoryDialogProps) {
   const isSystemCategory =
-    props.mode === 'edit' && props.category?.kind === CATEGORY_KIND.SystemCore
+    props.mode === 'edit' && props.category.kind === CATEGORY_KIND.SystemCore
 
   return (
     <FormDialog
@@ -39,7 +40,6 @@ export function CategoryDialog(props: CategoryDialogProps) {
             : 'Update the category name, icon, and default color.'
       }
       icon={props.mode === 'create' ? Plus : Edit}
-      maxWidth="max-w-2xl"
     >
       <CategoryForm
         mode={props.mode}

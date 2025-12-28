@@ -1,10 +1,10 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { Tag } from 'convex/tags/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { ConfirmationDialog } from '../confirmation-dialog'
+import type { Tag } from 'convex/tags/types'
 import type { TagCategoryConfig } from '~/components/forms/category-tag-form/base-tag-form/types'
 
 interface TagDeleteConfirmDialogProps {
@@ -43,7 +43,7 @@ export function TagDeleteConfirmDialog({
   }, [
     deleteTag,
     tag._id,
-    tag.name || '',
+    tag.name,
     categoryConfig.singular,
     onConfirm,
     onClose,

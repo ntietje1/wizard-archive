@@ -1,22 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
-import {
-  type SidebarDragData,
-  type SidebarDropData,
-  canDropItem,
-} from '~/lib/dnd-utils'
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type { GameMap } from 'convex/gameMaps/types'
+import type { ItemCardProps } from './item-card'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropItem } from '~/lib/dnd-utils'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { MapPin } from '~/lib/icons'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { GameMap } from 'convex/gameMaps/types'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { ItemCardProps } from './item-card'
 
 export function MapCard({
   item: map,
@@ -32,7 +29,7 @@ export function MapCard({
   const imageUrlQuery = useQuery(
     convexQuery(
       api.storage.queries.getDownloadUrl,
-      map?.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
+      map.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
     ),
   )
 
@@ -88,7 +85,7 @@ export function MapCard({
     }
   }
 
-  if (isLoading || !map) {
+  if (isLoading) {
     return (
       <Card className="bg-white border border-slate-200 w-full">
         <div className="aspect-video bg-slate-100 relative">

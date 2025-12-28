@@ -1,9 +1,9 @@
-import { UserIdentity } from 'convex/server'
-import { MutationCtx } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
-import { Ctx } from '../common/types'
-import { Doc, Id } from '../_generated/dataModel'
 import { findUniqueSlug } from '../common/slug'
+import type { UserIdentity } from 'convex/server'
+import type { MutationCtx } from '../_generated/server'
+import type { Ctx } from '../common/types'
+import type { Doc, Id } from '../_generated/dataModel'
 
 export async function getUserProfileByUserIdHandler(ctx: Ctx, userId: string) {
   const profile = await ctx.db

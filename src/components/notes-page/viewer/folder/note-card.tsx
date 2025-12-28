@@ -1,15 +1,15 @@
 import { useDraggable } from '@dnd-kit/core'
-import { type SidebarDragData } from '~/lib/dnd-utils'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { ItemCardProps } from './item-card'
+import type { Note } from 'convex/notes/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { FileText } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { ItemCardProps } from './item-card'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { Note } from 'convex/notes/types'
 
 export function NoteCard({
   item: note,
@@ -21,21 +21,19 @@ export function NoteCard({
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
 
-  const dragData: SidebarDragData | undefined = note
-    ? {
-        _id: note._id,
-        type: SIDEBAR_ITEM_TYPES.notes,
-        name: note.name || defaultItemName(note),
-        parentId: note.parentId,
-        categoryId: note.categoryId,
-        icon: FileText,
-      }
-    : undefined
+  const dragData: SidebarDragData = {
+    _id: note._id,
+    type: SIDEBAR_ITEM_TYPES.notes,
+    name: note.name || defaultItemName(note),
+    parentId: note.parentId,
+    categoryId: note.categoryId,
+    icon: FileText,
+  }
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: note?._id ?? '',
+    id: note._id,
     data: dragData,
-    disabled: isDisabled || !note,
+    disabled: isDisabled,
   })
 
   const handleCardActivate = () => {
@@ -48,7 +46,7 @@ export function NoteCard({
     }
   }
 
-  if (isLoading || !note) {
+  if (isLoading) {
     return (
       <Card className="bg-white border border-slate-200 w-full flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md">
         <div className="flex-1 min-w-0 flex flex-col justify-between">

@@ -1,9 +1,7 @@
-import { mutation } from '../_generated/server'
 import { v } from 'convex/values'
-import { Doc, Id } from '../_generated/dataModel'
+import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { deleteFolder as deleteFolderFn } from './folders'
 import { findUniqueSlug, shortenId } from '../common/slug'
 import {
   getSidebarItemById,
@@ -11,6 +9,8 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { deleteFolder as deleteFolderFn } from './folders'
+import type { Doc, Id } from '../_generated/dataModel'
 
 export const updateFolder = mutation({
   args: {

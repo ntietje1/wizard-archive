@@ -1,10 +1,10 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import type { GameMap } from 'convex/gameMaps/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { ConfirmationDialog } from '../confirmation-dialog'
+import type { GameMap } from 'convex/gameMaps/types'
 
 interface MapDeleteConfirmDialogProps {
   map: GameMap

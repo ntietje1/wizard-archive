@@ -1,43 +1,13 @@
 import * as React from 'react'
-import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
 
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 
 function ScrollArea({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
-  const [isScrollbarVisible, setIsScrollbarVisible] = React.useState(false)
-  const viewportRef = React.useRef<HTMLDivElement>(null)
-
-  React.useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
-
-    const checkScrollbarVisibility = () => {
-      const hasVerticalScrollbar = viewport.scrollHeight > viewport.clientHeight
-      setIsScrollbarVisible(hasVerticalScrollbar)
-    }
-
-    // Check initially
-    checkScrollbarVisibility()
-
-    // Set up ResizeObserver to detect content changes
-    const resizeObserver = new ResizeObserver(checkScrollbarVisibility)
-    resizeObserver.observe(viewport)
-
-    // Also observe the first child (content) for changes
-    const contentElement = viewport.firstElementChild
-    if (contentElement) {
-      resizeObserver.observe(contentElement)
-    }
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [children])
-
+}: ScrollAreaPrimitive.Root.Props) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -45,16 +15,8 @@ function ScrollArea({
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        ref={viewportRef}
         data-slot="scroll-area-viewport"
-        data-scrollbar-visible={isScrollbarVisible}
-        className={cn(
-          'focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow,padding-right] outline-none focus-visible:ring-[3px] focus-visible:outline-1',
-          // Override Radix's inner div styles that cause width issues
-          '[&>div]:!min-w-0 [&>div]:!block [&>div]:!table-auto',
-          // Conditional right padding when scrollbar is visible
-          'data-[scrollbar-visible=true]:pr-1.5',
-        )}
+        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -68,26 +30,23 @@ function ScrollBar({
   className,
   orientation = 'vertical',
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+}: ScrollAreaPrimitive.Scrollbar.Props) {
   return (
-    <ScrollAreaPrimitive.ScrollAreaScrollbar
+    <ScrollAreaPrimitive.Scrollbar
       data-slot="scroll-area-scrollbar"
+      data-orientation={orientation}
       orientation={orientation}
       className={cn(
-        'flex touch-none p-px transition-colors select-none',
-        orientation === 'vertical' &&
-          'h-full w-2 border-l border-l-transparent',
-        orientation === 'horizontal' &&
-          'h-2 flex-col border-t border-t-transparent',
+        'data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent flex touch-none p-px transition-colors select-none',
         className,
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb
+      <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="bg-border relative flex-1 rounded-full"
+        className="rounded-full bg-border relative flex-1"
       />
-    </ScrollAreaPrimitive.ScrollAreaScrollbar>
+    </ScrollAreaPrimitive.Scrollbar>
   )
 }
 

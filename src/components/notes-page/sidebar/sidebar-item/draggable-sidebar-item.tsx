@@ -1,19 +1,19 @@
 import { useDraggable } from '@dnd-kit/core'
-import { cn } from '~/lib/utils'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
+import { cn } from '~/lib/shadcn/utils'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: SidebarItemId[]
+  ancestorIds?: Array<SidebarItemId>
   children: React.ReactNode
 }
 
 function getDragData(
   item: AnySidebarItem,
-  ancestorIds: SidebarItemId[],
+  ancestorIds: Array<SidebarItemId>,
 ): SidebarDragData {
   return {
     _id: item._id,

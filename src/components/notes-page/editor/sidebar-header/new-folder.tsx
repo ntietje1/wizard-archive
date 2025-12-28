@@ -1,9 +1,9 @@
+import { toast } from 'sonner'
 import { Button } from '~/components/shadcn/ui/button'
 import { FolderPlus } from '~/lib/icons'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
-import { toast } from 'sonner'
 
 export function NewFolderButton() {
   const { createFolder } = useFolderActions()

@@ -48,7 +48,7 @@ export const useNoteActions = () => {
 }
 
 // remove undefined values (caused issues with undefined values in tables)
-//TODO: still causes issues sometimes
+// TODO: still causes issues sometimes
 const sanitizeNoteContent = (node: any): any => {
   if (typeof node === 'string') {
     return node

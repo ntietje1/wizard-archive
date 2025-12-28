@@ -1,6 +1,6 @@
-import { ConfirmationDialog } from '../confirmation-dialog'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
+import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Folder } from 'convex/folders/types'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
@@ -19,8 +19,7 @@ export function FolderDeleteConfirmDialog({
 }: FolderDeleteConfirmDialogProps) {
   const { deleteFolder } = useFolderActions()
   const sidebarItemsByParent = useSidebarItemsByParent(folder._id)
-  const hasDirectChildren =
-    folder && (sidebarItemsByParent.data?.length || 0) > 0
+  const hasDirectChildren = (sidebarItemsByParent.data?.length || 0) > 0
   const handleConfirm = useCallback(async () => {
     await deleteFolder
       .mutateAsync({ folderId: folder._id })

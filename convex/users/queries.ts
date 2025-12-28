@@ -1,8 +1,8 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { userProfileValidator } from './schema'
-import { UserProfile } from './types'
 import { getUserProfileByUserIdHandler } from './users'
+import type { UserProfile } from './types'
 
 export const getUserProfile = query({
   returns: v.union(v.null(), userProfileValidator),

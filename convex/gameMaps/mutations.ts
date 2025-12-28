@@ -1,5 +1,4 @@
 import { v } from 'convex/values'
-import { Doc, Id } from '../_generated/dataModel'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -11,6 +10,7 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { deleteMap as deleteMapFn } from './gameMaps'
+import type { Doc, Id } from '../_generated/dataModel'
 
 export const createMap = mutation({
   args: {

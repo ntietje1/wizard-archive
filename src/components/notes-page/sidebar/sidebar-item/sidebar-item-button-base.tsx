@@ -1,9 +1,9 @@
-import { ChevronDown, ChevronRight, MoreHorizontal } from '~/lib/icons'
-import { Button } from '~/components/shadcn/ui/button'
 import { EditableName } from './editable-item-name'
 import type { SidebarItemButtonProps } from './types'
+import { ChevronDown, ChevronRight, MoreHorizontal } from '~/lib/icons'
+import { Button } from '~/components/shadcn/ui/button'
 import { HoverToggleButton } from '~/components/hover-toggle-button'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 
 export function SidebarItemButtonBase({
   icon: Icon,

@@ -1,5 +1,5 @@
-import { Label } from '~/components/shadcn/ui/label'
 import type { Id } from 'convex/_generated/dataModel'
+import { Label } from '~/components/shadcn/ui/label'
 
 interface CampaignMember {
   _id: Id<'campaignMembers'>
@@ -17,7 +17,7 @@ interface PlayerFieldProps {
     handleChange: (value: any) => void
     handleBlur: () => void
   }
-  players: CampaignMember[]
+  players: Array<CampaignMember>
   isDisabled: boolean
 }
 

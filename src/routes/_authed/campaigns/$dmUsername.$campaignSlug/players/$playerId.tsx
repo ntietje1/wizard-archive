@@ -9,7 +9,7 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const playerId = useParams({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId',
-  })?.playerId
+  }).playerId
 
   return <div>{playerId}</div>
 }

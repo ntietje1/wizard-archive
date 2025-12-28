@@ -14,7 +14,7 @@ export interface Validator<T = unknown> {
   successMessage?: string
 }
 
-export const combineValidators = <T>(validators: Validator<T>[]) => {
+export const combineValidators = <T>(validators: Array<Validator<T>>) => {
   return (value: T): ValidationResult => {
     for (const validator of validators) {
       const result = validator.validate(value)

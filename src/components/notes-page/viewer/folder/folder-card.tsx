@@ -1,19 +1,16 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
-import {
-  type SidebarDragData,
-  type SidebarDropData,
-  canDropItem,
-} from '~/lib/dnd-utils'
+import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import type { ItemCardProps } from './item-card'
+import type { Folder } from 'convex/folders/types'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropItem } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Folder as FolderIcon } from '~/lib/icons'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import type { ItemCardProps } from './item-card'
 import '~/components/notes-page/viewer/folder/folder-card.css'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { Folder } from 'convex/folders/types'
 
 function FolderSvg() {
   return (
@@ -100,7 +97,7 @@ export function FolderCard({
     }
   }
 
-  if (isLoading || !folder) {
+  if (isLoading) {
     return (
       <div className="h-[140px]">
         <div className="folder-wrapper">

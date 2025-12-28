@@ -1,26 +1,25 @@
-import { Id } from '../_generated/dataModel'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { Ctx } from '../common/types'
-import {
-  AnySidebarItem,
-  SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
-  SidebarItemId,
-  SidebarItemOrRootType,
-  SidebarItemType,
-} from './types'
 import { getTag, getTagCategory } from '../tags/tags'
 import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder } from '../folders/folders'
 import { CATEGORY_KIND } from '../tags/types'
+import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
+import type {
+  AnySidebarItem,
+  SidebarItemId,
+  SidebarItemOrRootType,
+  SidebarItemType,
+} from './types'
+import type { Ctx } from '../common/types'
+import type { Id } from '../_generated/dataModel'
 
 export const getSidebarItemsByCategory = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   categoryId: Id<'tagCategories'>,
-): Promise<AnySidebarItem[]> => {
+): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -28,7 +27,7 @@ export const getSidebarItemsByCategory = async (
   )
   const category = await getTagCategory(ctx, campaignId, categoryId)
 
-  const allItems: AnySidebarItem[] = []
+  const allItems: Array<AnySidebarItem> = []
 
   const tags = await ctx.db
     .query('tags')
@@ -36,8 +35,8 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-    .then((tags) =>
-      tags.map((tag) => ({
+    .then((categoryTags) =>
+      categoryTags.map((tag) => ({
         ...tag,
         category,
       })),
@@ -75,7 +74,7 @@ export const getSidebarItemsByParent = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   parentId: SidebarItemId | undefined,
-): Promise<AnySidebarItem[]> => {
+): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -87,7 +86,7 @@ export const getSidebarItemsByParent = async (
     .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const allItems: AnySidebarItem[] = []
+  const allItems: Array<AnySidebarItem> = []
 
   // filter out system managed categories (also ensure only categories without parent Ids are included, but they shouldn't ever)
   allItems.push(
@@ -102,8 +101,8 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-    .then((tags) =>
-      tags.map((tag) => ({
+    .then((parentTags) =>
+      parentTags.map((tag) => ({
         ...tag,
         category: allCategories.find((c) => c._id === tag.categoryId),
       })),
@@ -153,7 +152,7 @@ export const getSidebarItemById = async (
     return null
   }
 
-  //TODO: make these consistent on whether they throw or return null
+  // TODO: make these consistent on whether they throw or return null
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.tags:
       return await getTag(ctx, id as Id<'tags'>)
@@ -166,7 +165,7 @@ export const getSidebarItemById = async (
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategory(ctx, campaignId, id as Id<'tagCategories'>)
     default:
-      // @ts-ignore
+      // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', item.type)
       return null
   }
@@ -176,8 +175,8 @@ export async function getSidebarItemAncestors(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   initialParentId: SidebarItemId | undefined,
-): Promise<AnySidebarItem[]> {
-  const ancestors: AnySidebarItem[] = []
+): Promise<Array<AnySidebarItem>> {
+  const ancestors: Array<AnySidebarItem> = []
   let currentParentId = initialParentId
   let previousParentItem: AnySidebarItem | null = null
 
@@ -199,7 +198,7 @@ export async function getSidebarItemAncestors(
     }
 
     ancestors.unshift(parentItem)
-    currentParentId = parentItem?.parentId
+    currentParentId = parentItem.parentId
     previousParentItem = parentItem
   }
 

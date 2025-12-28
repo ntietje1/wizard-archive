@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import type { LucideIcon } from '~/lib/icons'
 import {
   Card,
   CardContent,
@@ -7,36 +9,24 @@ import {
 } from '~/components/shadcn/ui/card'
 import { Button } from '~/components/shadcn/ui/button'
 import { Badge } from '~/components/shadcn/ui/badge'
-import { type ReactNode } from 'react'
-import type { LucideIcon } from '~/lib/icons'
 
 interface BaseContentCardProps {
   title: string
   description?: string
   color?: string
   icon?: LucideIcon
-  badges?: {
+  badges?: Array<{
     text: string
     icon?: LucideIcon
-    variant?:
-      | 'default'
-      | 'secondary'
-      | 'destructive'
-      | 'outline'
-      | 'destructive-subtle'
-  }[]
-  actionButtons?: {
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline'
+  }>
+  actionButtons?: Array<{
     icon: LucideIcon
     onClick: (e: React.MouseEvent) => void
     'aria-label'?: string
     disabled?: boolean
-    variant?:
-      | 'default'
-      | 'secondary'
-      | 'destructive'
-      | 'outline'
-      | 'destructive-subtle'
-  }[]
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline'
+  }>
   footer?: ReactNode
   className?: string
   hoverEffect?: {
@@ -135,7 +125,7 @@ export function ContentCard({
                   className={`opacity-0 group-hover:opacity-100 transition-opacity`}
                   aria-label={button['aria-label']}
                 >
-                  {button.icon && <button.icon className="w-4 h-4" />}
+                  <button.icon className="w-4 h-4" />
                 </Button>
               ),
           )}

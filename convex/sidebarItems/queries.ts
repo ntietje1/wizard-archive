@@ -3,12 +3,12 @@ import { query } from '../_generated/server'
 import { anySidebarItemValidator } from './schema'
 import { sidebarItemIdValidator } from './idValidator'
 import {
-  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
-  getSidebarItemsByParent as getSidebarItemsByParentFn,
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
+  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
+  getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
-import { AnySidebarItem } from './types'
+import type { AnySidebarItem } from './types'
 
 export const getSidebarItemsByCategory = query({
   args: {
@@ -16,7 +16,7 @@ export const getSidebarItemsByCategory = query({
     categoryId: v.id('tagCategories'),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     return await getSidebarItemsByCategoryFn(
       ctx,
       args.campaignId,
@@ -31,7 +31,7 @@ export const getSidebarItemsByParent = query({
     parentId: v.optional(sidebarItemIdValidator),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     return await getSidebarItemsByParentFn(ctx, args.campaignId, args.parentId)
   },
 })
@@ -42,7 +42,7 @@ export const getSidebarItemAncestors = query({
     campaignId: v.id('campaigns'),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<AnySidebarItem[]> => {
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     const item = await getSidebarItemById(ctx, args.campaignId, args.id)
     if (!item) {
       throw new Error('Sidebar item not found')

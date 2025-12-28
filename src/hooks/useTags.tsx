@@ -1,10 +1,11 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { CATEGORY_KIND, type Tag } from 'convex/tags/types'
+import { CATEGORY_KIND } from 'convex/tags/types'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useCampaign } from '~/contexts/CampaignContext'
 import { useMemo } from 'react'
+import type { Tag } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/contexts/CampaignContext'
 
 export function getTagColor(tag: Tag): string {
   return tag.color ?? tag.category?.defaultColor ?? '#808080'
@@ -12,7 +13,7 @@ export function getTagColor(tag: Tag): string {
 
 export function useTags() {
   const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership?.data?.campaign
+  const campaign = campaignWithMembership.data?.campaign
   const tags = useQuery(
     convexQuery(
       api.tags.queries.getTagsByCampaign,
@@ -61,10 +62,19 @@ export function useBlockTags({
 
   const state = blockTagState.data
   const isBlockNotFound = state === null
-  const inlineTagIds = state?.inlineTagIds ?? []
-  const manualTagIds = state?.blockTagIds ?? []
+  const inlineTagIds = useMemo(
+    () => state?.inlineTagIds ?? [],
+    [state?.inlineTagIds],
+  )
+  const manualTagIds = useMemo(
+    () => state?.blockTagIds ?? [],
+    [state?.blockTagIds],
+  )
   const noteTagId = state?.noteTagId ?? null
-  const allBlockTagIds = new Set(state?.allTagIds ?? [])
+  const allBlockTagIds = useMemo(
+    () => new Set(state?.allTagIds ?? []),
+    [state?.allTagIds],
+  )
 
   // Locked tags cannot be removed (inline tags and note-level tag)
   const lockedTagIds = useMemo(

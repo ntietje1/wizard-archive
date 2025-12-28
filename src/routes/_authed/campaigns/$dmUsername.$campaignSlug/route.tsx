@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { CampaignProvider } from '~/contexts/CampaignContext'
-import { ContextMenuProvider } from '~/components/context-menu/components/ContextMenuProvider'
+import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
+import { CampaignProvider } from '~/contexts/CampaignContext'
+import { ContextMenuProvider } from '~/components/context-menu/components/ContextMenuProvider'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
 
 export const Route = createFileRoute(

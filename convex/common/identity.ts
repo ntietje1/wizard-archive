@@ -1,6 +1,6 @@
-import { UserIdentity } from 'convex/server'
-import { Ctx } from './types'
-import { UserProfile } from '../users/types'
+import type { UserProfile } from '../users/types'
+import type { Ctx } from './types'
+import type { UserIdentity } from 'convex/server'
 
 export type UserIdentityWithProfile = {
   identity: UserIdentity

@@ -1,19 +1,16 @@
-import { useMemo } from 'react'
+import { useRef } from 'react'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import type { TopbarContextMenuRef } from '~/components/context-menu/topbar/TopbarContextMenu'
 import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
-import type { ContextMenuItem } from '~/components/context-menu/components/ContextMenu'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import { useContextEnhancers } from '~/components/context-menu/hooks/useContextEnhancers'
-import { useMenuContext } from '~/components/context-menu/hooks/useMenuContext'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import { useMenuItemsFromContext } from '~/components/context-menu/hooks/useMenuItemsFromContext'
+import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
@@ -47,25 +44,7 @@ export function FileTopbar() {
     ),
   )
 
-  // Use enhancers to build context
-  const enhancers = useContextEnhancers({ category })
-  const menuContext = useMenuContext({
-    item: item || undefined,
-    viewContext: 'topbar',
-    enhancers,
-  })
-
-  // Build menu items from context
-  const unifiedMenuItems = useMenuItemsFromContext(menuContext)
-
-  const computedMenuItems: ContextMenuItem[] = useMemo(() => {
-    if (isTagCategory(item)) {
-      return [
-        ...unifiedMenuItems,
-      ]
-    }
-    return unifiedMenuItems
-  }, [item, unifiedMenuItems])
+  const topbarContextMenuRef = useRef<TopbarContextMenuRef>(null)
 
   const defaultName = defaultItemName(item)
 
@@ -79,9 +58,9 @@ export function FileTopbar() {
   }
 
   return (
-    <SidebarItemContextMenu
+    <TopbarContextMenu
+      ref={topbarContextMenuRef}
       item={item}
-      viewContext="topbar"
       category={category}
     >
       <EditableTopbar
@@ -91,9 +70,14 @@ export function FileTopbar() {
         onClose={clearEditorContent}
         onNavigateToItem={navigateToItem}
         ancestors={ancestors.data ?? []}
-        menuItems={computedMenuItems}
+        onOpenMenu={(e) => {
+          topbarContextMenuRef.current?.open({
+            x: e.clientX,
+            y: e.clientY,
+          })
+        }}
       />
       <Dialogs />
-    </SidebarItemContextMenu>
+    </TopbarContextMenu>
   )
 }

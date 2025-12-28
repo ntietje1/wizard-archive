@@ -1,24 +1,24 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation, useConvex } from '@convex-dev/react-query'
+import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { useCallback, useMemo, useState } from 'react'
+import { AlertCircle } from 'lucide-react'
+import { CATEGORY_KIND } from 'convex/tags/types'
+import { toast } from 'sonner'
+import { MAX_NAME_LENGTH } from '../category-tag-form/base-tag-form/types'
+import { validateCategoryDisplayName, validateCategoryName } from './validators'
+import type { CategoryFormProps } from './types'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
-import { cn } from '~/lib/utils'
+import { cn } from '~/lib/shadcn/utils'
 import { ColorPicker } from '~/components/forms/category-tag-form/base-tag-form/color-picker'
 import {
   getCategoryIcon,
   getNonDefaultCategoryIcons,
 } from '~/lib/category-icons'
-import { useCallback, useState } from 'react'
-import type { CategoryFormProps } from './types'
-import { validateCategoryName, validateCategoryDisplayName } from './validators'
 import { CategoryDeleteConfirmDialog } from '~/components/dialogs/delete/category-delete-confirm-dialog'
-import { AlertCircle } from 'lucide-react'
-import { MAX_NAME_LENGTH } from '../category-tag-form/base-tag-form/types'
-import { CATEGORY_KIND } from 'convex/tags/types'
-import { toast } from 'sonner'
 
 export function CategoryForm({
   mode,
@@ -42,7 +42,13 @@ export function CategoryForm({
   const isSystemCategory =
     mode === 'edit' && category?.kind === CATEGORY_KIND.SystemCore
 
-  const getInitialValues = () => {
+  // Create a key that changes when form should reset - this forces React to remount with fresh defaults
+  const formKey = useMemo(() => {
+    return `category-form-${mode}-${category?._id || 'create'}`
+  }, [mode, category?._id])
+
+  // Get initial values based on current props
+  const defaultValues = useMemo(() => {
     if (mode === 'edit' && category) {
       return {
         name: category.name || '',
@@ -55,10 +61,10 @@ export function CategoryForm({
       iconName: 'TagIcon',
       defaultColor: '#ef4444',
     }
-  }
+  }, [mode, category])
 
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues,
     onSubmit: async ({ value }) => {
       // for system categories, we don't need to validate the name
       if (!isSystemCategory) {
@@ -88,9 +94,7 @@ export function CategoryForm({
                   categoryId,
                 },
               )
-              if (createdCategory?.slug) {
-                onSuccess(createdCategory.slug)
-              }
+              onSuccess(createdCategory.slug)
             } catch (error) {
               console.error('Failed to fetch created category:', error)
               onClose()
@@ -99,7 +103,7 @@ export function CategoryForm({
             onClose()
             toast.success('Category created successfully')
           }
-        } else if (mode === 'edit' && category) {
+        } else if (category) {
           const result = await updateCategory.mutateAsync({
             categoryId: category._id,
             name: value.name.trim(),
@@ -112,6 +116,9 @@ export function CategoryForm({
             toast.success('Category updated successfully')
             onClose()
           }
+          return
+        } else {
+          toast.error('Invalid form state: missing category')
           return
         }
       } catch (error) {
@@ -129,6 +136,7 @@ export function CategoryForm({
   return (
     <>
       <form
+        key={formKey}
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault()
@@ -206,7 +214,7 @@ export function CategoryForm({
           </>
         )}
 
-        {isSystemCategory && mode === 'edit' && category && (
+        {isSystemCategory && (
           <div className="space-y-2">
             <Label>Category Name</Label>
             <div className="text-sm text-muted-foreground py-2 px-3 border rounded-md bg-slate-50">

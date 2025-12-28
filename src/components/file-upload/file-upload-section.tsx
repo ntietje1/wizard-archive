@@ -1,15 +1,16 @@
+import { Expand, Upload, X } from 'lucide-react'
+import { useState } from 'react'
+import { ErrorAlert } from '../forms/category-tag-form/base-tag-form/error-alert'
+import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
+import type { ReactNode } from 'react'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button.tsx'
-import { X, Upload, Expand } from 'lucide-react'
-import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
-import { useState, type ReactNode } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from '~/components/shadcn/ui/dialog'
-import { ErrorAlert } from '../forms/category-tag-form/base-tag-form/error-alert'
 
 export interface FileUploadSectionProps {
   label?: string

@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useMemo } from 'react'
-import type { MenuItemDef } from '../types'
-import { createMenuItems, type ActionHandlers } from '../menu-registry'
+import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
+import type { ActionHandlers } from '../menu-registry'
+import type { MenuItemDef } from '../types'
 
 interface ContextMenuContextValue {
-  menuItems: MenuItemDef[]
+  menuItems: Array<MenuItemDef>
   actions: ActionHandlers
   Dialogs: React.ComponentType
 }

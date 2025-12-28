@@ -1,11 +1,11 @@
-import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from './file-upload-section'
+import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 
 interface PdfPreviewProps {
   previewUrl: string
 }
 
-//TODO: fix file name
+// TODO: fix file name
 function PdfPreview({ previewUrl: _previewUrl }: PdfPreviewProps) {
   const fileName = 'document.pdf'
 
