@@ -14,8 +14,7 @@ import {
 } from '../generic-tag-form/validators.ts'
 import {
   MAX_DESCRIPTION_LENGTH,
-  MAX_NAME_LENGTH
-  
+  MAX_NAME_LENGTH,
 } from '../base-tag-form/types.ts'
 import {
   ColorField,
@@ -24,16 +23,13 @@ import {
   NameField,
   SubmitButtons,
 } from '../generic-tag-form/fields.tsx'
-import {
-  
-  defaultCharacterFormValues
-} from './types.ts'
+import { defaultCharacterFormValues } from './types.ts'
 import { PlayerField } from './fields.tsx'
-import type {TagCategoryConfig} from '../base-tag-form/types.ts';
+import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Character } from 'convex/characters/types.ts'
-import type {CharacterFormValues} from './types.ts';
+import type { CharacterFormValues } from './types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
@@ -105,7 +101,6 @@ export default function CharacterTagForm({
     },
   })
 
-
   // Get initial values based on current props
   const defaultValues = useMemo((): CharacterFormValues => {
     if (mode === 'edit' && character) {
@@ -172,10 +167,7 @@ export default function CharacterTagForm({
           campaignId: campaign._id,
           tagId: result.tagId,
         })
-        if (tag.slug) {
-          navigateToTag(tag.slug)
-        }
-
+        navigateToTag(tag.slug)
         toast.success(`${config.singular} created successfully`)
         onClose()
       } else if (character) {

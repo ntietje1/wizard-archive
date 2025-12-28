@@ -7,8 +7,12 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { ColorIcon } from './color-picker/color-icon'
 import { ColorPicker } from './color-picker/color-picker'
-import type {BlockNoteEditor, BlockSchema, InlineContentSchema,
-  StyleSchema} from '@blocknote/core';
+import type {
+  BlockNoteEditor,
+  BlockSchema,
+  InlineContentSchema,
+  StyleSchema,
+} from '@blocknote/core'
 
 function checkTextColorInSchema(
   editor: BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema>,

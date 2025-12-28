@@ -3,12 +3,8 @@ import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import type {SidebarDragData, SidebarDropData} from '~/lib/dnd-utils';
-import {
-  
-  
-  canDropItem
-} from '~/lib/dnd-utils'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropItem } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Folder as FolderIcon } from '~/lib/icons'

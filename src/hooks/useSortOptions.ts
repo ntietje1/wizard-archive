@@ -1,13 +1,9 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import {
-  SORT_DIRECTIONS,
-  SORT_ORDERS
-  
-} from 'convex/editors/types'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
-import type {SortOptions} from 'convex/editors/types';
+import type { SortOptions } from 'convex/editors/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 
 const defaultSortOptions: SortOptions = {

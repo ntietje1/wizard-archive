@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { CATEGORY_KIND  } from 'convex/tags/types'
+import { CATEGORY_KIND } from 'convex/tags/types'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMemo } from 'react'
-import type {Tag} from 'convex/tags/types';
+import type { Tag } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/contexts/CampaignContext'
 
@@ -62,8 +62,14 @@ export function useBlockTags({
 
   const state = blockTagState.data
   const isBlockNotFound = state === null
-  const inlineTagIds = useMemo(() => state?.inlineTagIds ?? [], [state?.inlineTagIds])
-  const manualTagIds = useMemo(() => state?.blockTagIds ?? [], [state?.blockTagIds])
+  const inlineTagIds = useMemo(
+    () => state?.inlineTagIds ?? [],
+    [state?.inlineTagIds],
+  )
+  const manualTagIds = useMemo(
+    () => state?.blockTagIds ?? [],
+    [state?.blockTagIds],
+  )
   const noteTagId = state?.noteTagId ?? null
   const allBlockTagIds = useMemo(
     () => new Set(state?.allTagIds ?? []),

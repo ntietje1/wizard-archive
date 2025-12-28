@@ -1,11 +1,8 @@
 import { getUserIdentity } from '../common/identity'
 import { getUserProfileByUsernameHandler } from '../users/users'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS
-} from './types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
 import type { Id } from '../_generated/dataModel'
-import type { UserIdentityWithProfile } from '../common/identity';
+import type { UserIdentityWithProfile } from '../common/identity'
 import type { Ctx } from '../common/types'
 import type { UserProfile } from '../users/types'
 import type {
@@ -13,7 +10,8 @@ import type {
   CampaignMember,
   CampaignMemberRole,
   CampaignMemberStatus,
-  CampaignWithMembership} from './types';
+  CampaignWithMembership,
+} from './types'
 
 export type CampaignIdentifier =
   | { dmUsername: string; campaignSlug: string }

@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react'
 import type { LucideIcon } from '~/lib/icons'
 import {
   Card,
@@ -18,22 +18,14 @@ interface BaseContentCardProps {
   badges?: Array<{
     text: string
     icon?: LucideIcon
-    variant?:
-      | 'default'
-      | 'secondary'
-      | 'destructive'
-      | 'outline'
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline'
   }>
   actionButtons?: Array<{
     icon: LucideIcon
     onClick: (e: React.MouseEvent) => void
     'aria-label'?: string
     disabled?: boolean
-    variant?:
-      | 'default'
-      | 'secondary'
-      | 'destructive'
-      | 'outline'
+    variant?: 'default' | 'secondary' | 'destructive' | 'outline'
   }>
   footer?: ReactNode
   className?: string

@@ -1,8 +1,8 @@
 import { Expand, Upload, X } from 'lucide-react'
-import {  useState } from 'react'
+import { useState } from 'react'
 import { ErrorAlert } from '../forms/category-tag-form/base-tag-form/error-alert'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button.tsx'
 import {

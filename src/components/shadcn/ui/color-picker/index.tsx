@@ -217,14 +217,8 @@ export const ColorPickerSelection = memo(
           return
         }
         const rect = containerRef.current.getBoundingClientRect()
-        const x = Math.max(
-          0,
-          Math.min(1, (clientX - rect.left) / rect.width),
-        )
-        const y = Math.max(
-          0,
-          Math.min(1, (clientY - rect.top) / rect.height),
-        )
+        const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+        const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
         setPositionX(x)
         setPositionY(y)
         setSaturation(x * 100)

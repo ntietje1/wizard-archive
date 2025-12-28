@@ -182,19 +182,21 @@ export default function ShareSideMenuButton({
       }}
     >
       <div onClick={handleButtonClick}>
-        <ContextMenuTrigger render={
-          <Components.SideMenu.Button
-            label={isShared ? 'Shared' : 'Share'}
-            className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''} ${isBlockNotFound ? 'opacity-50 cursor-not-allowed' : ''}`}
-            icon={<Share2 size={18} />}
+        <ContextMenuTrigger
+          render={
+            <Components.SideMenu.Button
+              label={isShared ? 'Shared' : 'Share'}
+              className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''} ${isBlockNotFound ? 'opacity-50 cursor-not-allowed' : ''}`}
+              icon={<Share2 size={18} />}
             />
-        }/>
+          }
+        />
       </div>
-      <ContextMenuContent
-        className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]"
-      >
+      <ContextMenuContent className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]">
         <ContextMenuGroup>
-          <ContextMenuLabel className="pb-0 pt-0.5">Share with</ContextMenuLabel>
+          <ContextMenuLabel className="pb-0 pt-0.5">
+            Share with
+          </ContextMenuLabel>
           <ContextMenuSeparator />
           {isBlockNotFound ? (
             <div className="px-2 py-2">
@@ -205,7 +207,8 @@ export default function ShareSideMenuButton({
             </div>
           ) : (
             shareItems.map((shareItem) => {
-              const displayName = shareItem.name || shareItem.username || 'Player'
+              const displayName =
+                shareItem.name || shareItem.username || 'Player'
               const displayText = shareItem.name
                 ? shareItem.name
                 : shareItem.username

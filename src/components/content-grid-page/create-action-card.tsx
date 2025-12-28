@@ -1,6 +1,6 @@
-import type {LucideIcon} from '~/lib/icons';
+import type { LucideIcon } from '~/lib/icons'
 import { Card, CardContent } from '~/components/shadcn/ui/card'
-import {  Plus } from '~/lib/icons'
+import { Plus } from '~/lib/icons'
 
 interface CreateActionCardProps {
   onClick: () => void

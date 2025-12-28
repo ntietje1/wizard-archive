@@ -7,7 +7,7 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
-import type { SidebarItemId } from '../sidebarItems/types';
+import type { SidebarItemId } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Note } from './types'
 import type { Doc, Id } from '../_generated/dataModel'

@@ -1,7 +1,11 @@
 import { useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvex, useConvexMutation  } from '@convex-dev/react-query'
+import {
+  convexQuery,
+  useConvex,
+  useConvexMutation,
+} from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
@@ -63,11 +67,6 @@ export function MapForm({
       return { success: true }
     },
   })
-
-  // Create a key that changes when form should reset - this forces React to remount with fresh defaults
-  const formKey = useMemo(() => {
-    return `map-form-${mapId || 'create'}-${map.data?.name || ''}`
-  }, [mapId, map.data?.name])
 
   // Get initial values based on current props
   const defaultValues = useMemo((): MapFormValues => {

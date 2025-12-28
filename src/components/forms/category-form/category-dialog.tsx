@@ -1,7 +1,7 @@
-import { CATEGORY_KIND  } from 'convex/tags/types'
+import { CATEGORY_KIND } from 'convex/tags/types'
 import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
 import { CategoryForm } from './category-form'
-import type {TagCategory} from 'convex/tags/types';
+import type { TagCategory } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Edit, Plus } from '~/lib/icons'
 

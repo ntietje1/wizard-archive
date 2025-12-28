@@ -165,7 +165,8 @@ export function CampaignDialog({
                 disabled={form.state.isSubmitting}
                 required
               />
-              {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 &&
+              field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>
@@ -243,7 +244,8 @@ export function CampaignDialog({
                   />
                 )}
               </div>
-              {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
+              {field.state.meta.errors.length > 0 &&
+              field.state.meta.isTouched ? (
                 <p className="text-sm text-red-500">
                   {field.state.meta.errors[0]}
                 </p>

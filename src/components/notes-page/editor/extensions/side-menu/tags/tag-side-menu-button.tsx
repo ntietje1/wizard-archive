@@ -85,13 +85,15 @@ export default function TagSideMenuButton({
         }
       }}
     >
-      <DropdownMenuTrigger render={
-        <Components.SideMenu.Button
-          label="Add Tags"
-          className="!p-0 !px-0 !h-6 !w-6"
-          icon={<TagIcon size={18} />}
-        />
-      }/>
+      <DropdownMenuTrigger
+        render={
+          <Components.SideMenu.Button
+            label="Add Tags"
+            className="!p-0 !px-0 !h-6 !w-6"
+            icon={<TagIcon size={18} />}
+          />
+        }
+      />
       <DropdownMenuContent
         side="bottom"
         align="start"

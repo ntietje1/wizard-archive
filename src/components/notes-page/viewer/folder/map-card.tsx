@@ -6,12 +6,8 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
-import type {SidebarDragData, SidebarDropData} from '~/lib/dnd-utils';
-import {
-  
-  
-  canDropItem
-} from '~/lib/dnd-utils'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropItem } from '~/lib/dnd-utils'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'

@@ -1,11 +1,10 @@
 import { useMemo } from 'react'
 import {
-  
   createCampaignEnhancer,
   createCategoryEnhancer,
-  createMapViewEnhancer
+  createMapViewEnhancer,
 } from '../context'
-import type {ContextEnhancer} from '../context';
+import type { ContextEnhancer } from '../context'
 import type { TagCategory } from 'convex/tags/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useMapView } from '~/contexts/MapViewContext'

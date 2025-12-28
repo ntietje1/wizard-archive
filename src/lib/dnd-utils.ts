@@ -1,12 +1,13 @@
 import {
   SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE
-  
-  
-  
+  SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types'
 import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
-import type {SidebarItemId, SidebarItemOrRootType, SidebarItemType} from 'convex/sidebarItems/types';
+import type {
+  SidebarItemId,
+  SidebarItemOrRootType,
+  SidebarItemType,
+} from 'convex/sidebarItems/types'
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'

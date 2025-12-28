@@ -1,5 +1,5 @@
 import { FormDialog } from './form-dialog'
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react'
 import type { TagCategoryConfig } from './types'
 
 interface TagFormDialogProps {

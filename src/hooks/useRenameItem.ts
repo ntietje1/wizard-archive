@@ -1,8 +1,5 @@
 import { useCallback } from 'react'
-import {
-  
-  SIDEBAR_ITEM_TYPES
-} from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
@@ -13,7 +10,7 @@ import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
 import { useTagActions } from './useTagActions'
 import { useNoteActions } from './useNoteActions'
-import type {AnySidebarItem} from 'convex/sidebarItems/types';
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/contexts/CampaignContext'
 

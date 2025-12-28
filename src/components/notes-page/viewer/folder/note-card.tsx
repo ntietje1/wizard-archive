@@ -1,7 +1,7 @@
 import { useDraggable } from '@dnd-kit/core'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type {SidebarDragData} from '~/lib/dnd-utils';
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
 import { useFileSidebar } from '~/contexts/FileSidebarContext'

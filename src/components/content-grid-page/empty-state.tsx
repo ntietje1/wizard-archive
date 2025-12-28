@@ -1,4 +1,4 @@
-import type {LucideIcon} from '~/lib/icons';
+import type { LucideIcon } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 
 interface EmptyStateProps {

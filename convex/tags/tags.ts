@@ -9,15 +9,10 @@ import {
   isValidSidebarParent,
 } from '../sidebarItems/sidebarItems'
 import { deleteMap } from '../gameMaps/gameMaps'
-import {
-  CATEGORY_KIND,
-  SYSTEM_DEFAULT_CATEGORIES,
-} from './types'
+import { CATEGORY_KIND, SYSTEM_DEFAULT_CATEGORIES } from './types'
 import type { Ctx } from '../common/types'
-import type { SidebarItemId } from '../sidebarItems/types';
-import type {
-  Tag,
-  TagCategory} from './types';
+import type { SidebarItemId } from '../sidebarItems/types'
+import type { Tag, TagCategory } from './types'
 import type { MutationCtx } from '../_generated/server'
 import type { Doc, Id, TableNames } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
@@ -1168,8 +1163,7 @@ export async function cleanupUnprocessedBlocks(
         ? extractTagIdsFromBlockContent(blockInNewContent)
         : []
 
-      const hasAnyTags =
-        currentTagIds.length > 0 || inlineTagIdsNew.length > 0
+      const hasAnyTags = currentTagIds.length > 0 || inlineTagIdsNew.length > 0
 
       if (!hasAnyTags) {
         await removeBlockAndTags(ctx, existingBlock)

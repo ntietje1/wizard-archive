@@ -1,7 +1,7 @@
 import * as React from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import type {UseEmblaCarouselType} from 'embla-carousel-react';
+import type { UseEmblaCarouselType } from 'embla-carousel-react'
 
 import { cn } from '~/lib/shadcn/utils'
 import { Button } from '~/components/shadcn/ui/button'

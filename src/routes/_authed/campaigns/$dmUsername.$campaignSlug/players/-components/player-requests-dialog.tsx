@@ -3,12 +3,11 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import {
   CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS
-  
+  CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
 import { toast } from 'sonner'
 import { useConvexMutation } from '@convex-dev/react-query'
-import type {CampaignMember} from 'convex/campaigns/types';
+import type { CampaignMember } from 'convex/campaigns/types'
 import {
   Dialog,
   DialogContent,
@@ -59,7 +58,7 @@ function PlayerRequestCard({
             </Badge>
           </div>
           <div className="text-xs text-slate-500">
-                        @{player.userProfile.username}
+            @{player.userProfile.username}
           </div>
         </div>
       </div>

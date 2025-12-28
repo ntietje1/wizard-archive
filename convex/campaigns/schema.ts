@@ -68,3 +68,8 @@ export const campaignMemberValidator = v.object({
   ...campaignMemberValidatorFields,
   userProfile: v.optional(userProfileValidator),
 })
+
+export const campaignWithMembershipValidator = v.object({
+  campaign: campaignValidator,
+  member: campaignMemberValidator,
+})

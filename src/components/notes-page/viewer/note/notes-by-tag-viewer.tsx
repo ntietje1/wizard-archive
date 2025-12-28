@@ -6,12 +6,11 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Tag } from 'convex/tags/types'
-import type {CustomBlockNoteEditor, CustomPartialBlock} from '~/lib/editor-schema';
-import {
-  
-  
-  customInlineContentSpecs
+import type {
+  CustomBlockNoteEditor,
+  CustomPartialBlock,
 } from '~/lib/editor-schema'
+import { customInlineContentSpecs } from '~/lib/editor-schema'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useTags } from '~/hooks/useTags'
@@ -25,7 +24,9 @@ export function NotesByTagViewer() {
   const { nonSystemManagedTags } = useTags()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
-  const [selectedTagIds, setSelectedTagIds] = React.useState<Array<Id<'tags'>>>([])
+  const [selectedTagIds, setSelectedTagIds] = React.useState<Array<Id<'tags'>>>(
+    [],
+  )
 
   const blocks = useQuery(
     convexQuery(

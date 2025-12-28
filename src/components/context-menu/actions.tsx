@@ -2,15 +2,11 @@ import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import {
-  SYSTEM_DEFAULT_CATEGORIES
-  
-  
-} from 'convex/tags/types'
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
-import type {Tag, TagCategory} from 'convex/tags/types';
+import type { Tag, TagCategory } from 'convex/tags/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -207,7 +203,13 @@ export function useMenuActions() {
 
         setRenamingId(noteId)
       },
-      [campaignId, createNote, openParentFolders, navigateToItemAndPage, setRenamingId],
+      [
+        campaignId,
+        createNote,
+        openParentFolders,
+        navigateToItemAndPage,
+        setRenamingId,
+      ],
     ),
 
     createPageMap: useCallback((ctx: MenuContext) => {

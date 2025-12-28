@@ -14,8 +14,7 @@ import {
 } from '../generic-tag-form/validators.ts'
 import {
   MAX_DESCRIPTION_LENGTH,
-  MAX_NAME_LENGTH
-  
+  MAX_NAME_LENGTH,
 } from '../base-tag-form/types.ts'
 import {
   ColorField,
@@ -24,12 +23,12 @@ import {
   NameField,
   SubmitButtons,
 } from '../generic-tag-form/fields.tsx'
-import {  defaultLocationFormValues } from './types.ts'
-import type {TagCategoryConfig} from '../base-tag-form/types.ts';
+import { defaultLocationFormValues } from './types.ts'
+import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Location } from 'convex/locations/types'
-import type {LocationFormValues} from './types.ts';
+import type { LocationFormValues } from './types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'

@@ -1,14 +1,11 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import {
-  CAMPAIGN_MEMBER_STATUS
-  
-} from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConfirmationDialog } from '../confirmation-dialog'
-import type {CampaignMember} from 'convex/campaigns/types';
+import type { CampaignMember } from 'convex/campaigns/types'
 
 interface PlayerDeleteConfirmDialogProps {
   player: CampaignMember

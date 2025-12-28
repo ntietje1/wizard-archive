@@ -1,12 +1,5 @@
-import {
-  
-  BlockNoteSchema,
-  
-  defaultInlineContentSpecs
-} from '@blocknote/core'
-import type {Block, BlockNoteEditor,
-  PartialBlock
-} from '@blocknote/core';
+import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
+import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core'
 import { TagInlineContent } from '~/components/notes-page/editor/blocks/tag-inline-content'
 
 export const customInlineContentSpecs = {

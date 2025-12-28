@@ -145,7 +145,7 @@ export async function saveTopLevelBlocksForChildNote(
     ? await getSidebarItemById(ctx, note.campaignId, note.parentId)
     : null
   const noteLevelTag =
-    parentItem?.type === SIDEBAR_ITEM_TYPES.tags ? (parentItem) : null
+    parentItem?.type === SIDEBAR_ITEM_TYPES.tags ? parentItem : null
 
   const allBlocksWithTags = extractAllBlocksWithTags(
     content,

@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  
-  SIDEBAR_ROOT_TYPE
-  
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import { createMenuContext } from '../context'
+import type { ContextBuilderOptions, ContextEnhancer } from '../context'
+import type {
+  AnySidebarItem,
+  SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
-import {
-  
-  
-  createMenuContext
-} from '../context'
-import type {ContextBuilderOptions, ContextEnhancer} from '../context';
-import type {AnySidebarItem, SidebarItemOrRootType} from 'convex/sidebarItems/types';
 import type { MenuContext, ViewContext } from '../types'
 
 interface MenuState {

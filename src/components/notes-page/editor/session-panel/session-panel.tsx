@@ -126,11 +126,13 @@ export function SessionPanel() {
           )}
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger render={
-            <Button variant="outline" size="lg" className="aspect-square">
-              <EllipsisIcon className="size-5" />
-            </Button>
-          }/>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="outline" size="lg" className="aspect-square">
+                <EllipsisIcon className="size-5" />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="[&>svg]:hidden">

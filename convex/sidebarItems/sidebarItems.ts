@@ -5,15 +5,13 @@ import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder } from '../folders/folders'
 import { CATEGORY_KIND } from '../tags/types'
-import {
-  SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE
-} from './types'
+import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
 import type {
   AnySidebarItem,
   SidebarItemId,
   SidebarItemOrRootType,
-  SidebarItemType} from './types';
+  SidebarItemType,
+} from './types'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 

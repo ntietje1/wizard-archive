@@ -2,7 +2,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
-import type {GameMap} from './types';
+import type { GameMap } from './types'
 import type { MutationCtx } from '../_generated/server'
 
 export const getMap = async (

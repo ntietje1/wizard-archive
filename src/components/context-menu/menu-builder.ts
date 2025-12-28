@@ -23,7 +23,10 @@ function processMenuItem(
   }
 }
 
-export function buildMenu(items: Array<MenuItemDef>, ctx: MenuContext): BuiltMenu {
+export function buildMenu(
+  items: Array<MenuItemDef>,
+  ctx: MenuContext,
+): BuiltMenu {
   // filter to visible items and process submenus
   const visible = items
     .filter((item) => item.shouldShow(ctx))

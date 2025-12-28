@@ -4,9 +4,9 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
-import { ContextMenu  } from '../components/ContextMenu'
+import { ContextMenu } from '../components/ContextMenu'
 import { createMenuContext } from '../context'
-import type {ContextMenuRef} from '../components/ContextMenu';
+import type { ContextMenuRef } from '../components/ContextMenu'
 import type { MenuContext } from '../types'
 import type { Id } from 'convex/_generated/dataModel'
 

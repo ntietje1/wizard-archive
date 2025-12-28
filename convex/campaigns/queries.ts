@@ -3,22 +3,21 @@ import { query } from '../_generated/server'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { getUserProfileByUsernameHandler } from '../users/users'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS
-} from './types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
 import {
   getCampaign,
   getCampaignMember,
   requireCampaignMembership,
 } from './campaigns'
+import {
+  campaignMemberValidator,
+  campaignWithMembershipValidator,
+} from './schema'
 import type { Note } from '../notes/types'
-import type {
-  Campaign,
-  CampaignMember,
-  CampaignWithMembership} from './types';
+import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
 
 export const getUserCampaigns = query({
+  returns: v.array(campaignWithMembershipValidator),
   handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
     const { profile } = await requireUserIdentity(ctx)
 
@@ -71,7 +70,9 @@ export const getUserCampaigns = query({
           noteCount: notes?.length || 0,
         }
       }),
-    ).then((filteredCampaigns) => filteredCampaigns.filter((campaign) => campaign !== null))
+    ).then((filteredCampaigns) =>
+      filteredCampaigns.filter((campaign) => campaign !== null),
+    )
 
     return campaignsWithNotes
   },
@@ -184,6 +185,7 @@ export const checkCampaignSlugExists = query({
 
 export const getPlayersByCampaign = query({
   args: { campaignId: v.id('campaigns') },
+  returns: v.array(campaignMemberValidator),
   handler: async (ctx, args): Promise<Array<CampaignMember>> => {
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
@@ -201,7 +203,9 @@ export const getPlayersByCampaign = query({
       members.map(async (member) => {
         return getCampaignMember(ctx, member._id)
       }),
-    ).then((filteredMembers) => filteredMembers.filter((member) => member !== null))
+    ).then((filteredMembers) =>
+      filteredMembers.filter((member) => member !== null),
+    )
 
     return membersWithProfiles
   },

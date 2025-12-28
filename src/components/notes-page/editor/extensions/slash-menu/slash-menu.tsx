@@ -1,10 +1,9 @@
 import { filterSuggestionItems } from '@blocknote/core'
 import {
-  
   SuggestionMenuController,
-  getDefaultReactSlashMenuItems
+  getDefaultReactSlashMenuItems,
 } from '@blocknote/react'
-import type {DefaultReactSuggestionItem} from '@blocknote/react';
+import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 
 // // Custom Slash Menu item to insert a block after the current one.

@@ -15,7 +15,7 @@ import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
-import type { CampaignMember } from '../campaigns/types';
+import type { CampaignMember } from '../campaigns/types'
 import type { Share } from './types'
 
 export const combineSharesAndTag = (

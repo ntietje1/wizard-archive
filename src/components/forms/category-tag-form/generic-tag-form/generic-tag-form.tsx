@@ -9,10 +9,9 @@ import {
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import {
-  
   MAX_DESCRIPTION_LENGTH,
   MAX_NAME_LENGTH,
-  defaultBaseFormValues
+  defaultBaseFormValues,
 } from '../base-tag-form/types.ts'
 import { validateTagDescription, validateTagName } from './validators.ts'
 import {
@@ -22,7 +21,7 @@ import {
   NameField,
   SubmitButtons,
 } from './fields.tsx'
-import type {BaseTagFormValues} from '../base-tag-form/types.ts';
+import type { BaseTagFormValues } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
 import type { GenericTagFormProps } from './types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
@@ -141,12 +140,10 @@ export default function GenericTagForm({
             campaignId: campaign._id,
             tagId: result.tagId,
           })
-          if (createdTag.slug) {
-            navigateToTag(createdTag.slug)
-          }
+          navigateToTag(createdTag.slug)
           toast.success(`${config.singular} created successfully`)
         }
-      } else if (tag){
+      } else if (tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
           name: value.name.trim(),

@@ -1,8 +1,8 @@
 import React, { forwardRef, useCallback, useRef } from 'react'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
-import { ContextMenu  } from '../components/ContextMenu'
-import type {ContextMenuRef} from '../components/ContextMenu';
+import { ContextMenu } from '../components/ContextMenu'
+import type { ContextMenuRef } from '../components/ContextMenu'
 import type { MenuContext } from '../types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 

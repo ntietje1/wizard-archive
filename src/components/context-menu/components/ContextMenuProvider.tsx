@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react'
-import {  createMenuItems } from '../menu-registry'
+import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
-import type {ActionHandlers} from '../menu-registry';
+import type { ActionHandlers } from '../menu-registry'
 import type { MenuItemDef } from '../types'
 
 interface ContextMenuContextValue {

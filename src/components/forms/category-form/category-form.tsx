@@ -94,9 +94,7 @@ export function CategoryForm({
                   categoryId,
                 },
               )
-              if (createdCategory.slug) {
-                onSuccess(createdCategory.slug)
-              }
+              onSuccess(createdCategory.slug)
             } catch (error) {
               console.error('Failed to fetch created category:', error)
               onClose()

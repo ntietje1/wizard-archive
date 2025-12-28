@@ -31,6 +31,7 @@ export type Campaign = {
   _id: Id<'campaigns'>
   _creationTime: number
 
+  dmUserId: Id<'userProfiles'>
   dmUserProfile: UserProfile
   name: string
   description?: string

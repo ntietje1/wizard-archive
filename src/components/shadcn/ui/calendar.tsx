@@ -1,17 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import {
-  
-  DayPicker,
-  getDefaultClassNames
-} from 'react-day-picker'
+import { DayPicker, getDefaultClassNames } from 'react-day-picker'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from 'lucide-react'
-import type {DayButton} from 'react-day-picker';
+import type { DayButton } from 'react-day-picker'
 
 import { cn } from '~/lib/shadcn/utils'
 import { Button, buttonVariants } from '~/components/shadcn/ui/button'

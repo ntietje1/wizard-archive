@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  
-  TransformComponent,
-  TransformWrapper
-} from 'react-zoom-pan-pinch'
+import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   convexQuery,
@@ -14,11 +10,11 @@ import { api } from 'convex/_generated/api'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type {ReactZoomPanPinchRef} from 'react-zoom-pan-pinch';
+import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '~/lib/editor-registry'
-import type {MapViewContextMenuRef} from '~/components/context-menu/map-view/MapViewContextMenu';
+import type { MapViewContextMenuRef } from '~/components/context-menu/map-view/MapViewContextMenu'
 import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { isTag } from '~/lib/sidebar-item-utils'
@@ -29,10 +25,7 @@ import {
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
 import { cn } from '~/lib/shadcn/utils'
-import {
-  MapViewContextMenu
-  
-} from '~/components/context-menu/map-view/MapViewContextMenu'
+import { MapViewContextMenu } from '~/components/context-menu/map-view/MapViewContextMenu'
 
 interface PinPosition {
   x: number
@@ -243,7 +236,6 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
     },
     [pendingPinItem],
   )
-
 
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">

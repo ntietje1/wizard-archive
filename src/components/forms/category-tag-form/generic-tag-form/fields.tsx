@@ -2,11 +2,10 @@ import { ColorPicker } from '../base-tag-form/color-picker.tsx'
 import { ErrorAlertAndCharacterCount } from '../base-tag-form/error-alert.tsx'
 import {
   MAX_DESCRIPTION_LENGTH,
-  MAX_NAME_LENGTH
-  
+  MAX_NAME_LENGTH,
 } from '../base-tag-form/types.ts'
 import { SubmitButton } from './submit-button.tsx'
-import type {TagCategoryConfig} from '../base-tag-form/types.ts';
+import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { Label } from '~/components/shadcn/ui/label'
 import { Input } from '~/components/shadcn/ui/input'

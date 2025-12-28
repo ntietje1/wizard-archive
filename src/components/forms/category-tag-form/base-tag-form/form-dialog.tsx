@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type {LucideIcon} from '~/lib/icons';
+import type { LucideIcon } from '~/lib/icons'
 import {
   Dialog,
   DialogContent,

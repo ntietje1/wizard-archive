@@ -1,11 +1,8 @@
 import { filterSuggestionItems } from '@blocknote/core'
-import {
-  
-  SuggestionMenuController
-} from '@blocknote/react'
+import { SuggestionMenuController } from '@blocknote/react'
 import { toast } from 'sonner'
 import { TAG_INLINE_CONTENT_TYPE } from 'convex/tags/editorSpecs'
-import type {DefaultReactSuggestionItem} from '@blocknote/react';
+import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { Tag } from 'convex/tags/types'
 import { getTagColor, useTags } from '~/hooks/useTags'
@@ -55,7 +52,9 @@ export default function TagMenu({
   return (
     <SuggestionMenuController
       triggerCharacter={'@'}
-      getItems={(query) => // TODO: make menu items async
+      getItems={(
+        query, // TODO: make menu items async
+      ) =>
         Promise.resolve(
           filterSuggestionItems(
             getTagMenuItems(onAddTag, nonSystemManagedTags),

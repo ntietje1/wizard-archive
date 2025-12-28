@@ -13,12 +13,11 @@ import { campaignMemberStatusValidator } from './schema'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
-  CAMPAIGN_STATUS
+  CAMPAIGN_STATUS,
 } from './types'
 import { requireCampaignMembership } from './campaigns'
 import type { Id } from '../_generated/dataModel'
-import type {
-  CampaignMemberStatus} from './types';
+import type { CampaignMemberStatus } from './types'
 
 export const createCampaign = mutation({
   args: {

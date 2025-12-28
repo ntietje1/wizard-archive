@@ -1,11 +1,11 @@
 import { convexQuery } from '@convex-dev/react-query'
-import {  useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { createContext, useContext } from 'react'
 import { useAuth } from '@clerk/tanstack-react-start'
-import type {UseQueryResult} from '@tanstack/react-query';
-import type {CampaignWithMembership} from 'convex/campaigns/types';
+import type { UseQueryResult } from '@tanstack/react-query'
+import type { CampaignWithMembership } from 'convex/campaigns/types'
 
 type CampaignContextType = {
   dmUsername: string

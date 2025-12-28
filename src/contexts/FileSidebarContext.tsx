@@ -1,34 +1,24 @@
-import {
-  SIDEBAR_ROOT_TYPE
-  
-} from 'convex/sidebarItems/types'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import {
   DndContext,
-  
   DragOverlay,
-  
   MouseSensor,
   TouchSensor,
   pointerWithin,
   useSensor,
-  useSensors
+  useSensors,
 } from '@dnd-kit/core'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import type {DragEndEvent, DragStartEvent} from '@dnd-kit/core';
-import type {SidebarItemType} from 'convex/sidebarItems/types';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import type { SidebarItemType } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type {SidebarDragData, SidebarDropData} from '~/lib/dnd-utils';
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import {
-  
-  
-  canDropItem,
-  executeMove
-} from '~/lib/dnd-utils'
+import { canDropItem, executeMove } from '~/lib/dnd-utils'
 import { useTagActions } from '~/hooks/useTagActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'

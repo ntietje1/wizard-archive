@@ -3,7 +3,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useDraggable } from '@dnd-kit/core'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import type {SidebarDragData} from '~/lib/dnd-utils';
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Tag } from 'convex/tags/types'
 import { getCategoryIcon } from '~/lib/category-icons'

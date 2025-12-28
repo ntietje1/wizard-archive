@@ -1,10 +1,5 @@
-import {
-  SORT_DIRECTIONS,
-  SORT_ORDERS
-  
-  
-} from 'convex/editors/types'
-import type {SortDirection, SortOrder} from 'convex/editors/types';
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import type { SortDirection, SortOrder } from 'convex/editors/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
@@ -25,7 +20,7 @@ import {
   SortDesc,
 } from '~/lib/icons'
 import { useSortOptions } from '~/hooks/useSortOptions'
-import { EmptyContextMenu } from '~/components/context-menu/components/EmptyContextMenu';
+import { EmptyContextMenu } from '~/components/context-menu/components/EmptyContextMenu'
 
 export function SortMenu() {
   const { sortOptions, setSortOptions } = useSortOptions()
@@ -42,7 +37,8 @@ export function SortMenu() {
     <EmptyContextMenu>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="ghost" size="icon">
+          render={
+            <Button variant="ghost" size="icon">
               <SortDesc className="h-4 w-4" />
             </Button>
           }
@@ -52,7 +48,10 @@ export function SortMenu() {
             value={sortOptions.order}
             onValueChange={handleSortOrderChange}
           >
-            <DropdownMenuRadioItem value={SORT_ORDERS.Alphabetical} className="whitespace-nowrap">
+            <DropdownMenuRadioItem
+              value={SORT_ORDERS.Alphabetical}
+              className="whitespace-nowrap"
+            >
               {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                 <ArrowUpAZ className="mr-2 h-4 w-4" />
               ) : (
@@ -60,7 +59,10 @@ export function SortMenu() {
               )}
               Alphabetical
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value={SORT_ORDERS.DateCreated} className="whitespace-nowrap">
+            <DropdownMenuRadioItem
+              value={SORT_ORDERS.DateCreated}
+              className="whitespace-nowrap"
+            >
               {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                 <CalendarArrowUp className="mr-2 h-4 w-4" />
               ) : (
@@ -68,7 +70,10 @@ export function SortMenu() {
               )}
               Date Created
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value={SORT_ORDERS.DateModified} className="whitespace-nowrap">
+            <DropdownMenuRadioItem
+              value={SORT_ORDERS.DateModified}
+              className="whitespace-nowrap"
+            >
               {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                 <ClockArrowUp className="mr-2 h-4 w-4" />
               ) : (
@@ -82,11 +87,17 @@ export function SortMenu() {
             value={sortOptions.direction}
             onValueChange={handleSortDirectionChange}
           >
-            <DropdownMenuRadioItem value={SORT_DIRECTIONS.Ascending} className="whitespace-nowrap">
+            <DropdownMenuRadioItem
+              value={SORT_DIRECTIONS.Ascending}
+              className="whitespace-nowrap"
+            >
               <SortAsc className="mr-2 h-4 w-4" />
               Ascending
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value={SORT_DIRECTIONS.Descending} className="whitespace-nowrap">
+            <DropdownMenuRadioItem
+              value={SORT_DIRECTIONS.Descending}
+              className="whitespace-nowrap"
+            >
               <SortDesc className="mr-2 h-4 w-4" />
               Descending
             </DropdownMenuRadioItem>

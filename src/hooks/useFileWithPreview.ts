@@ -153,8 +153,10 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setIsDragActive(false)
 
       const files = e.dataTransfer.files
-      const firstFile = files[0]
-      handleFileSelect(firstFile)
+      if (files.length > 0) {
+        const firstFile = files[0]
+        handleFileSelect(firstFile)
+      }
     },
     [handleFileSelect],
   )
@@ -197,7 +199,15 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setStorageId(uploadedStorageId)
       return uploadedStorageId
     }
-  }, [file, handleUpload, uploadOnSelect, storageId, commitUpload, isUploading, verifyFile])
+  }, [
+    file,
+    handleUpload,
+    uploadOnSelect,
+    storageId,
+    commitUpload,
+    isUploading,
+    verifyFile,
+  ])
 
   return {
     file,
