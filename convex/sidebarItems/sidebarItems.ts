@@ -133,7 +133,10 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...maps)
 
-  return allItems
+  const systemManagedCategories = allCategories.filter((c) => c.kind === CATEGORY_KIND.SystemManaged)
+
+  return allItems.filter((item) => !systemManagedCategories.some((c) => c._id === item.categoryId))
+
 }
 
 export const getSidebarItemById = async (
