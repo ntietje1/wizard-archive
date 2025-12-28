@@ -35,6 +35,7 @@ import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-c
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useSession } from '~/hooks/useSession'
 
 export function useMenuActions() {
   const {
@@ -53,6 +54,10 @@ export function useMenuActions() {
   const campaign = campaignWithMembership.data?.campaign
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
+  const {
+    endCurrentSession,
+    startNewSession,
+  } = useSession()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
@@ -325,6 +330,31 @@ export function useMenuActions() {
       // For now, just show a toast. In the future, this could enable drag mode
       toast.info('Move pin not yet implemented')
     }, []),
+
+    startSession: useCallback(
+      (ctx: MenuContext) => {
+        if (!campaignId || !ctx.category) return
+
+        // Start new session
+        const now = new Date()
+        startNewSession({
+          categoryId: ctx.category._id,
+          color: '#6366F1',
+          description: now.toISOString(),
+          parentId: ctx.item?._id,
+        })
+        toast.success('Session started')
+      },
+      [campaignId, startNewSession],
+    ),
+
+    endSession: useCallback(() => {
+      if (!campaignId) return
+
+      // End current session
+      endCurrentSession.mutate({ campaignId })
+      toast.success('Session ended')
+    }, [campaignId, endCurrentSession]),
   }
 
   const dialogsContent = useMemo(

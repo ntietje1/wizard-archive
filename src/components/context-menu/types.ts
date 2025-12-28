@@ -36,6 +36,9 @@ export interface MenuContext {
   activeCanvasId?: string
   pinnedItemIds?: Set<SidebarItemId>
 
+  // Session state
+  hasActiveSession?: boolean
+
   // Pin context (for map pin menus)
   pinId?: Id<'mapPins'>
   mapId?: Id<'gameMaps'>

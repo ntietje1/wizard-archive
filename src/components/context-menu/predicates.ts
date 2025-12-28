@@ -1,3 +1,4 @@
+import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type {
   SidebarItemOrRootType,
   SidebarItemType,
@@ -73,3 +74,16 @@ export const mapIsNotActiveMap: Predicate = (ctx) => {
 }
 
 export const hasPinContext: Predicate = (ctx) => Boolean(ctx.pinId && ctx.mapId)
+
+export const isSessionCategory: Predicate = (ctx) => {
+  if (!ctx.category) return false
+  return ctx.category.slug === SYSTEM_DEFAULT_CATEGORIES.Session.slug
+}
+
+export const hasActiveSession: Predicate = (ctx) => {
+  return ctx.hasActiveSession === true
+}
+
+export const hasNoActiveSession: Predicate = (ctx) => {
+  return ctx.hasActiveSession !== true
+}

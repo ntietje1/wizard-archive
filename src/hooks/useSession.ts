@@ -1,6 +1,7 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
+import { useOpenParentFolders } from './useOpenParentFolders'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/contexts/CampaignContext'
@@ -8,6 +9,7 @@ import { useCampaign } from '~/contexts/CampaignContext'
 export const useSession = () => {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const { openParentFolders } = useOpenParentFolders()
   const currentSession = useQuery(
     convexQuery(
       api.sessions.queries.getCurrentSession,
@@ -46,7 +48,7 @@ export const useSession = () => {
     if (!campaignId) return
     const name = `Session ${nextSessionNumber}`
     const nowIso = new Date().toISOString()
-    startSession.mutate({
+    startSession.mutateAsync({
       name,
       color: args.color,
       description: args.description ?? nowIso,
@@ -54,6 +56,8 @@ export const useSession = () => {
       categoryId: args.categoryId,
       parentId: args.parentId ?? args.categoryId,
       endedAt: args.endedAt,
+    }).then(({ tagId }) => {
+      openParentFolders(tagId)
     })
   }
   return {

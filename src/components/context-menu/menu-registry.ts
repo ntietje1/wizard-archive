@@ -8,6 +8,8 @@ import {
   MapPin,
   Move,
   Navigation,
+  Pause,
+  Play,
   Plus,
   SquareArrowOutUpRight,
   Tags,
@@ -45,6 +47,9 @@ export type ActionHandlers = {
 
   removeMapPin: (ctx: MenuContext) => void
   moveMapPin: (ctx: MenuContext) => void
+
+  startSession: (ctx: MenuContext) => void
+  endSession: (ctx: MenuContext) => void
 }
 
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
@@ -69,6 +74,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 5,
       shouldShow: (ctx) =>
         !p.inView('topbar')(ctx) &&
+        !p.isSessionCategory(ctx) &&
         (p.isType('folders')(ctx) ||
           p.isType('tagCategories')(ctx) ||
           p.atRoot(ctx)),
@@ -215,6 +221,32 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
         (p.notInSidebar(ctx) || p.inView('topbar')(ctx)),
       action: actions.showInSidebar,
+    },
+
+    // ========== SESSION GROUP ==========
+    {
+      id: 'start-session',
+      label: 'Start Session',
+      icon: Play,
+      group: 'primary',
+      priority: 1,
+      shouldShow: (ctx) =>
+        p.isSessionCategory(ctx) &&
+        p.hasNoActiveSession(ctx) &&
+        (p.inSidebar(ctx) || p.atRoot(ctx) || p.isType('folders')(ctx)),
+      action: actions.startSession,
+    },
+    {
+      id: 'end-session',
+      label: 'End Session',
+      icon: Pause,
+      group: 'primary',
+      priority: 1,
+      shouldShow: (ctx) =>
+        p.isSessionCategory(ctx) &&
+        p.hasActiveSession(ctx) &&
+        (p.inSidebar(ctx) || p.atRoot(ctx) || p.isType('folders')(ctx)),
+      action: actions.endSession,
     },
 
     // ========== TYPE-SPECIFIC GROUP ==========

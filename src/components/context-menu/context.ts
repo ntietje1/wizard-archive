@@ -78,6 +78,21 @@ export function createCategoryEnhancer(
   }
 }
 
+/**
+ * Enhancer that adds session context
+ */
+export function createSessionEnhancer(
+  hasActiveSession?: boolean,
+): ContextEnhancer {
+  return {
+    id: 'session',
+    enhance: (ctx) => ({
+      ...ctx,
+      hasActiveSession,
+    }),
+  }
+}
+
 // ============================================================================
 // Context Builder
 // ============================================================================
@@ -108,6 +123,7 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     parentType,
     memberRole,
     pinnedItemIds,
+    hasActiveSession,
   } = options
 
   return {
@@ -127,6 +143,9 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     activeMapId,
     activeCanvasId,
     pinnedItemIds,
+
+    // Session state
+    hasActiveSession,
 
     // Pin context
     pinId: options.pinId,

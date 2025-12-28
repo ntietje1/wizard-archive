@@ -3,11 +3,13 @@ import {
   createCampaignEnhancer,
   createCategoryEnhancer,
   createMapViewEnhancer,
+  createSessionEnhancer,
 } from '../context'
 import type { ContextEnhancer } from '../context'
 import type { TagCategory } from 'convex/tags/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useMapView } from '~/contexts/MapViewContext'
+import { useSession } from '~/hooks/useSession'
 
 interface UseContextEnhancersOptions {
   category?: TagCategory
@@ -27,6 +29,7 @@ export function useContextEnhancers(
 ): Array<ContextEnhancer> {
   const { campaignWithMembership } = useCampaign()
   const { mapId, pinnedItemIds } = useMapView()
+  const { currentSession } = useSession()
   const { category, includeMapView = true, includeCampaign = true } = options
 
   return useMemo(() => {
@@ -49,6 +52,9 @@ export function useContextEnhancers(
       enhancers.push(createCategoryEnhancer(category))
     }
 
+    // Always include session enhancer
+    enhancers.push(createSessionEnhancer(!!currentSession.data))
+
     return enhancers
   }, [
     campaignWithMembership.data?.member.role,
@@ -56,6 +62,7 @@ export function useContextEnhancers(
     mapId,
     pinnedItemIds,
     category,
+    currentSession.data,
     includeMapView,
     includeCampaign,
   ])
