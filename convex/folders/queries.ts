@@ -5,10 +5,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
 import { folderValidator } from './schema'
-import {
-  getFolderBySlug as getFolderBySlugFn,
-  getFolder as getFolderFn,
-} from './folders'
+import { getFolder as getFolderFn } from './folders'
 import type { AnySidebarItem } from '../sidebarItems/types'
 import type { Folder } from './types'
 
@@ -48,20 +45,5 @@ export const getFolderAncestors = query({
       folder.campaignId,
       folder.parentId,
     )
-  },
-})
-
-export const getFolderBySlug = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    slug: v.string(),
-  },
-  returns: folderValidator,
-  handler: async (ctx, args): Promise<Folder> => {
-    const folder = await getFolderBySlugFn(ctx, args.campaignId, args.slug)
-    if (!folder) {
-      throw new Error('Folder not found')
-    }
-    return folder
   },
 })

@@ -1,9 +1,6 @@
-import type { Id } from 'convex/_generated/dataModel'
-
 export type EditorSearch = {
   category?: string
   folder?: string
-  folderId?: Id<'notes'> | Id<'folders'>
   map?: string
   note?: string
   tag?: string
@@ -63,15 +60,6 @@ export const validateSearch = (
     result.category = category
   } else if (folder) {
     result.folder = folder
-  }
-
-  // folderId is always allowed (used with category)
-  if (
-    'folderId' in search &&
-    typeof search.folderId === 'string' &&
-    search.folderId.trim().length > 0
-  ) {
-    result.folderId = search.folderId as Id<'notes'> | Id<'folders'>
   }
 
   // page is allowed when note or tag is present

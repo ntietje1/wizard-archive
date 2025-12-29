@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { useConvex, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCallback, useMemo, useState } from 'react'
 import { AlertCircle } from 'lucide-react'
@@ -27,7 +27,6 @@ export function CategoryForm({
   onClose,
   onSuccess,
 }: CategoryFormProps) {
-  const convex = useConvex()
   const createCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.createTagCategory),
   })
@@ -41,11 +40,6 @@ export function CategoryForm({
 
   const isSystemCategory =
     mode === 'edit' && category?.kind === CATEGORY_KIND.SystemCore
-
-  // Create a key that changes when form should reset - this forces React to remount with fresh defaults
-  const formKey = useMemo(() => {
-    return `category-form-${mode}-${category?._id || 'create'}`
-  }, [mode, category?._id])
 
   // Get initial values based on current props
   const defaultValues = useMemo(() => {
@@ -79,26 +73,14 @@ export function CategoryForm({
             toast.error('Campaign ID is required')
             return
           }
-          const categoryId = await createCategory.mutateAsync({
+          const { slug } = await createCategory.mutateAsync({
             campaignId,
             name: value.name.trim(),
             iconName: value.iconName || 'TagIcon',
             defaultColor: value.defaultColor,
           })
           if (onSuccess) {
-            try {
-              const createdCategory = await convex.query(
-                api.tags.queries.getTagCategory,
-                {
-                  campaignId,
-                  categoryId,
-                },
-              )
-              onSuccess(createdCategory.slug)
-            } catch (error) {
-              console.error('Failed to fetch created category:', error)
-              onClose()
-            }
+            onSuccess(slug)
           } else {
             onClose()
             toast.success('Category created successfully')
@@ -136,7 +118,6 @@ export function CategoryForm({
   return (
     <>
       <form
-        key={formKey}
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault()

@@ -1,9 +1,5 @@
 import { useMemo } from 'react'
-import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
-import { api } from 'convex/_generated/api'
 import { EllipsisIcon } from 'lucide-react'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type { Session } from 'convex/sessions/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
@@ -31,18 +27,6 @@ export function SessionPanel() {
     startNewSession,
   } = useSession()
 
-  const category = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaignId
-        ? {
-            campaignId,
-            slug: SYSTEM_DEFAULT_CATEGORIES.Session.slug,
-          }
-        : 'skip',
-    ),
-  )
-
   const hasActiveSession = !!currentSession.data
   const previousSessions: Array<Session> = useMemo(() => {
     const sortedSessions: Array<Session> = sessions.data ?? []
@@ -59,10 +43,9 @@ export function SessionPanel() {
   }
 
   const handleStart = () => {
-    if (!campaignId || !category.data) return
+    if (!campaignId) return
     const now = new Date()
     startNewSession({
-      categoryId: category.data._id,
       color: '#6366F1',
       description: now.toISOString(),
     })
@@ -115,12 +98,7 @@ export function SessionPanel() {
               Stop Session
             </Button>
           ) : (
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={handleStart}
-              disabled={!category.data}
-            >
+            <Button size="lg" className="w-full" onClick={handleStart}>
               Start Session
             </Button>
           )}

@@ -1,9 +1,10 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { insertTagAndNote } from '../tags/tags'
+import { getTagCategoryBySlug, insertTagAndNote } from '../tags/tags'
 import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
+import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import {
   endCurrentSession as endCurrentSessionHandler,
   getCurrentSession,
@@ -12,6 +13,7 @@ import {
 import type { Id } from '../_generated/dataModel'
 
 export const startSession = mutation({
+  // TODO: use category color and icon
   args: {
     name: v.optional(v.string()),
     iconName: v.optional(v.string()),
@@ -19,13 +21,13 @@ export const startSession = mutation({
     description: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     campaignId: v.id('campaigns'),
-    categoryId: v.id('tagCategories'),
     parentId: v.optional(sidebarItemIdValidator),
     endedAt: v.optional(v.number()),
   },
   returns: v.object({
     tagId: v.id('tags'),
     sessionId: v.id('sessions'),
+    slug: v.string(),
   }),
   handler: async (
     ctx,
@@ -33,6 +35,7 @@ export const startSession = mutation({
   ): Promise<{
     tagId: Id<'tags'>
     sessionId: Id<'sessions'>
+    slug: string
   }> => {
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
@@ -45,14 +48,28 @@ export const startSession = mutation({
       await ctx.db.patch(campaign.currentSessionId, { endedAt: Date.now() })
     }
 
-    const { tagId } = await insertTagAndNote(ctx, args)
+    const sessionCategory = await getTagCategoryBySlug(
+      ctx,
+      args.campaignId,
+      SYSTEM_DEFAULT_CATEGORIES.Session.slug,
+    )
+    if (!sessionCategory) {
+      throw new Error(
+        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Session.slug}" not found`,
+      )
+    }
+
+    const { tagId, tagSlug } = await insertTagAndNote(ctx, {
+      ...args,
+      categoryId: sessionCategory._id,
+    })
     const sessionId = await ctx.db.insert('sessions', {
       campaignId: args.campaignId,
       tagId,
       endedAt: args.endedAt,
     })
     await ctx.db.patch(args.campaignId, { currentSessionId: sessionId })
-    return { tagId, sessionId }
+    return { tagId, sessionId, slug: tagSlug }
   },
 })
 

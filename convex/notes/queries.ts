@@ -6,7 +6,7 @@ import { getTopLevelBlocksByChildNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { noteValidator, noteWithContentValidator } from './schema'
-import { getNoteBySlug as getNoteBySlugFn, getNote as getNoteFn } from './notes'
+import { getNote as getNoteFn } from './notes'
 import type { AnySidebarItem } from '../sidebarItems/types'
 import type { Note } from './types'
 
@@ -42,21 +42,6 @@ export const getNoteAncestors = query({
     )
 
     return await getSidebarItemAncestors(ctx, note.campaignId, note.parentId)
-  },
-})
-
-export const getNoteBySlug = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    slug: v.string(),
-  },
-  returns: noteValidator,
-  handler: async (ctx, args): Promise<Note> => {
-    const note = await getNoteBySlugFn(ctx, args.campaignId, args.slug)
-    if (!note) {
-      throw new Error('Note not found')
-    }
-    return note
   },
 })
 

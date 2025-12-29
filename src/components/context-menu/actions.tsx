@@ -33,7 +33,6 @@ import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import { createConfig } from '~/components/forms/category-tag-form/generic-tag-form/types'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useSession } from '~/hooks/useSession'
 
@@ -54,10 +53,7 @@ export function useMenuActions() {
   const campaign = campaignWithMembership.data?.campaign
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
-  const {
-    endCurrentSession,
-    startNewSession,
-  } = useSession()
+  const { endCurrentSession, startNewSession } = useSession()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
@@ -86,6 +82,7 @@ export function useMenuActions() {
   const [editTagDialog, setEditTagDialog] = useState<{
     tag: Tag
     category: TagCategory
+    parentId?: SidebarItemId
   } | null>(null)
 
   const handleCreatePageMapSuccess = useCallback(
@@ -261,6 +258,7 @@ export function useMenuActions() {
         setEditTagDialog({
           tag: ctx.item,
           category: ctx.category,
+          parentId: ctx.item._id,
         })
       }
     },
@@ -338,7 +336,6 @@ export function useMenuActions() {
         // Start new session
         const now = new Date()
         startNewSession({
-          categoryId: ctx.category._id,
           color: '#6366F1',
           description: now.toISOString(),
           parentId: ctx.item?._id,
@@ -392,7 +389,6 @@ export function useMenuActions() {
           <TagDeleteConfirmDialog
             key={`delete-tag-${deleteTagDialog.tag._id}`}
             tag={deleteTagDialog.tag}
-            categoryConfig={createConfig(deleteTagDialog.category)}
             isDeleting={true}
             onConfirm={() => {
               if (currentItem?._id === deleteTagDialog.tag._id) {
@@ -421,46 +417,56 @@ export function useMenuActions() {
           (() => {
             const { category, parentId } = createTagDialog
             const categorySlug = category.slug
-            const categoryConfig = createConfig(category)
             const dialogKey = `create-tag-${category._id}-${parentId || 'root'}`
 
-            if (categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug) {
+            if (
+              campaignId &&
+              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug
+            ) {
               return (
                 <CharacterTagDialog
                   key={dialogKey}
                   mode="create"
                   isOpen={true}
                   onClose={() => setCreateTagDialog(null)}
-                  config={categoryConfig}
+                  campaignId={campaignId}
+                  categoryId={category._id}
                   parentId={parentId}
                 />
               )
             }
 
-            if (categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+            if (
+              campaignId &&
+              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug
+            ) {
               return (
                 <LocationTagDialog
                   key={dialogKey}
                   mode="create"
                   isOpen={true}
                   onClose={() => setCreateTagDialog(null)}
-                  config={categoryConfig}
+                  campaignId={campaignId}
+                  categoryId={category._id}
                   parentId={parentId}
                 />
               )
             }
 
-            // For sessions and other categories, use generic dialog TODO: add session one
-            return (
-              <GenericTagDialog
-                key={dialogKey}
-                mode="create"
-                isOpen={true}
-                onClose={() => setCreateTagDialog(null)}
-                config={categoryConfig}
-                parentId={parentId}
-              />
-            )
+            // for other categories, use generic dialog
+            if (campaignId) {
+              return (
+                <GenericTagDialog
+                  key={dialogKey}
+                  mode="create"
+                  isOpen={true}
+                  onClose={() => setCreateTagDialog(null)}
+                  campaignId={campaignId}
+                  categoryId={category._id}
+                  parentId={parentId}
+                />
+              )
+            }
           })()}
 
         {createMapDialog && campaignId && (
@@ -516,48 +522,61 @@ export function useMenuActions() {
 
         {editTagDialog &&
           (() => {
-            const { category, tag } = editTagDialog
+            const { category, tag, parentId } = editTagDialog
             const categorySlug = category.slug
-            const categoryConfig = createConfig(category)
             const dialogKey = `edit-tag-${tag._id}`
 
-            if (categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug) {
+            if (
+              campaignId &&
+              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug
+            ) {
               return (
                 <CharacterTagDialog
                   key={dialogKey}
                   mode="edit"
                   isOpen={true}
                   onClose={() => setEditTagDialog(null)}
-                  config={categoryConfig}
+                  campaignId={campaignId}
+                  categoryId={category._id}
+                  parentId={parentId}
                   tag={tag as any}
                 />
               )
             }
 
-            if (categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug) {
+            if (
+              campaignId &&
+              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug
+            ) {
               return (
                 <LocationTagDialog
                   key={dialogKey}
                   mode="edit"
                   isOpen={true}
                   onClose={() => setEditTagDialog(null)}
-                  config={categoryConfig}
+                  campaignId={campaignId}
+                  categoryId={category._id}
+                  parentId={parentId}
                   tag={tag as any}
                 />
               )
             }
 
-            // For sessions and other categories, use generic dialog
-            return (
-              <GenericTagDialog
-                key={dialogKey}
-                mode="edit"
-                isOpen={true}
-                onClose={() => setEditTagDialog(null)}
-                config={categoryConfig}
-                tag={tag}
-              />
-            )
+            // for other categories, use generic dialog
+            if (campaignId) {
+              return (
+                <GenericTagDialog
+                  key={dialogKey}
+                  mode="edit"
+                  isOpen={true}
+                  onClose={() => setEditTagDialog(null)}
+                  campaignId={campaignId}
+                  categoryId={category._id}
+                  parentId={parentId}
+                  tag={tag}
+                />
+              )
+            }
           })()}
       </>
     ),

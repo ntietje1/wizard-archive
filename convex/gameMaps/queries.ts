@@ -5,7 +5,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { mapValidator } from './schema'
 import { mapPinWithItemValidator } from './validators'
-import { getMapBySlug as getMapBySlugFn, getMap as getMapFn } from './gameMaps'
+import { getMap as getMapFn } from './gameMaps'
 import type { GameMap, MapPinWithItem } from './types'
 
 export const getCampaignMaps = query({
@@ -38,26 +38,6 @@ export const getMap = query({
   returns: mapValidator,
   handler: async (ctx, args): Promise<GameMap> => {
     return getMapFn(ctx, args.mapId)
-  },
-})
-
-export const getMapBySlug = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    slug: v.string(),
-  },
-  returns: mapValidator,
-  handler: async (ctx, args): Promise<GameMap> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-    const map = await getMapBySlugFn(ctx, args.campaignId, args.slug)
-    if (!map) {
-      throw new Error('Map not found')
-    }
-    return map
   },
 })
 

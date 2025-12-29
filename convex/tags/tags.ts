@@ -66,6 +66,31 @@ export const getTag = async (ctx: Ctx, tagId: Id<'tags'>): Promise<Tag> => {
   }
 }
 
+export const getTagBySlug = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  slug: string,
+): Promise<Tag> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+  )
+
+  const tag = await ctx.db
+    .query('tags')
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+
+  if (!tag) {
+    throw new Error(`Tag not found: ${slug}`)
+  }
+
+  return await getTag(ctx, tag._id)
+}
+
 export async function getTagCategory(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
@@ -120,23 +145,28 @@ export const insertTagAndNote = async (
     parentId?: SidebarItemId
   },
   allowManagedTags: boolean = false,
-): Promise<{ tagId: Id<'tags'>; noteId: Id<'notes'> }> => {
+): Promise<{
+  tagId: Id<'tags'>
+  tagSlug: string
+  noteId: Id<'notes'>
+  noteSlug: string
+}> => {
   await requireCampaignMembership(
     ctx,
     { campaignId: input.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const tagId = await insertTag(ctx, input, allowManagedTags)
+  const { tagId, slug: tagSlug } = await insertTag(ctx, input, allowManagedTags)
 
-  const { noteId } = await createNote(ctx, {
+  const { noteId, slug: noteSlug } = await createNote(ctx, {
     campaignId: input.campaignId,
     name: 'Your Notes',
     parentId: tagId,
     categoryId: input.categoryId,
   })
 
-  return { tagId, noteId }
+  return { tagId, tagSlug, noteId, noteSlug }
 }
 
 export const insertTag = async (
@@ -152,7 +182,7 @@ export const insertTag = async (
     parentId?: SidebarItemId
   },
   allowManaged: boolean = false,
-): Promise<Id<'tags'>> => {
+): Promise<{ tagId: Id<'tags'>; slug: string }> => {
   const category = await ctx.db.get(input.categoryId)
   if (!category) {
     throw new Error('Category not found')
@@ -208,7 +238,7 @@ export const insertTag = async (
     type: 'tags',
   })
 
-  return tagId
+  return { tagId, slug: uniqueSlug }
 }
 
 export async function ensureDefaultTagCategories(
@@ -232,7 +262,7 @@ export async function ensureDefaultTagCategories(
     if (found) {
       ids.push(found._id)
     } else {
-      const id = await insertTagCategory(
+      const { categoryId: id } = await insertTagCategory(
         ctx,
         {
           campaignId,
@@ -326,7 +356,7 @@ export async function insertTagCategory(
     | 'parentId'
   >,
   allowSystem: boolean = false,
-): Promise<Id<'tagCategories'>> {
+): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> {
   const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: input.campaignId },
@@ -357,7 +387,7 @@ export async function insertTagCategory(
     return conflict !== null
   })
 
-  const id = await ctx.db.insert('tagCategories', {
+  const categoryId = await ctx.db.insert('tagCategories', {
     updatedAt: Date.now(),
     campaignId: input.campaignId,
     slug: uniqueSlug,
@@ -369,7 +399,7 @@ export async function insertTagCategory(
     type: 'tagCategories',
     parentId: undefined, // Categories cannot have parents
   })
-  return id
+  return { categoryId, slug: uniqueSlug }
 }
 
 export const updateTagCategory = async (
@@ -449,7 +479,7 @@ export const updateTagAndContent = async (
     description?: string
     imageStorageId?: Id<'_storage'>
   },
-) => {
+): Promise<{ tagId: Id<'tags'>; slug: string }> => {
   const tag = await ctx.db.get(tagId)
   if (!tag) {
     throw new Error('Tag not found')
@@ -570,6 +600,8 @@ export const updateTagAndContent = async (
       }
     }
   }
+
+  return { tagId, slug: updates.slug || tag.slug }
 }
 
 export const deleteTag = async (

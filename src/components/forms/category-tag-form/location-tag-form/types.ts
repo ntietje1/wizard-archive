@@ -1,9 +1,7 @@
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
-import type {
-  BaseTagFormValues,
-  TagCategoryConfig,
-} from '../base-tag-form/types'
-import { getCategoryIcon } from '~/lib/category-icons'
+import type { BaseTagFormValues } from '../base-tag-form/types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Location } from 'convex/locations/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 export interface LocationFormValues extends BaseTagFormValues {}
 
@@ -12,10 +10,13 @@ export const defaultLocationFormValues: LocationFormValues = {
   description: '',
   color: '#ef4444',
 }
-
-export const LOCATION_CONFIG: TagCategoryConfig = {
-  singular: SYSTEM_DEFAULT_CATEGORIES.Location.name,
-  plural: SYSTEM_DEFAULT_CATEGORIES.Location.name,
-  icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Location.iconName),
-  categorySlug: SYSTEM_DEFAULT_CATEGORIES.Location.slug,
+export interface LocationTagFormProps {
+  mode: 'create' | 'edit'
+  location: Location | null
+  campaignId: Id<'campaigns'>
+  categoryId: Id<'tagCategories'>
+  parentId: SidebarItemId | undefined
+  isOpen: boolean
+  onClose: () => void
+  onLocationCreated?: (locationId: Id<'locations'>) => void
 }

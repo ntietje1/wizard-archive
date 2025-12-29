@@ -39,7 +39,6 @@ export const useSession = () => {
   const nextSessionNumber = (sessions.data?.length ?? 0) + 1
 
   const startNewSession = (args: {
-    categoryId: Id<'tagCategories'>
     color?: string
     description?: string
     parentId?: SidebarItemId
@@ -48,17 +47,18 @@ export const useSession = () => {
     if (!campaignId) return
     const name = `Session ${nextSessionNumber}`
     const nowIso = new Date().toISOString()
-    startSession.mutateAsync({
-      name,
-      color: args.color,
-      description: args.description ?? nowIso,
-      campaignId,
-      categoryId: args.categoryId,
-      parentId: args.parentId ?? args.categoryId,
-      endedAt: args.endedAt,
-    }).then(({ tagId }) => {
-      openParentFolders(tagId)
-    })
+    startSession
+      .mutateAsync({
+        name,
+        color: args.color,
+        description: args.description ?? nowIso,
+        campaignId,
+        parentId: args.parentId,
+        endedAt: args.endedAt,
+      })
+      .then(({ tagId }) => {
+        openParentFolders(tagId)
+      })
   }
   return {
     currentSession,

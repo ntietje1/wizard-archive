@@ -40,7 +40,9 @@ type FileSidebarContextType = {
   exitCloseAllMode: () => void
 }
 
-export const FileSidebarContext = createContext<FileSidebarContextType | null>(null)
+export const FileSidebarContext = createContext<FileSidebarContextType | null>(
+  null,
+)
 
 export function FileSidebarProvider({
   children,

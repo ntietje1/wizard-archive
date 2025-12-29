@@ -17,8 +17,14 @@ export const updateFolder = mutation({
     folderId: v.id('folders'),
     name: v.optional(v.string()),
   },
-  returns: v.id('folders'),
-  handler: async (ctx, args): Promise<Id<'folders'>> => {
+  returns: v.object({
+    folderId: v.id('folders'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     const folder = await ctx.db.get(args.folderId)
     if (!folder) {
       throw new Error('Folder not found')
@@ -57,7 +63,7 @@ export const updateFolder = mutation({
     }
 
     await ctx.db.patch(args.folderId, updates)
-    return args.folderId
+    return { folderId: args.folderId, slug: updates.slug || folder.slug }
   },
 })
 

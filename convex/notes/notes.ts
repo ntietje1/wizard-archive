@@ -75,7 +75,7 @@ export const updateNote = async (
     name?: string
     parentId?: SidebarItemId
   },
-): Promise<Id<'notes'>> => {
+): Promise<{ noteId: Id<'notes'>; slug: string }> => {
   const note = await ctx.db.get(input.noteId)
   if (!note) {
     throw new Error('Note not found')
@@ -131,7 +131,7 @@ export const updateNote = async (
   }
 
   await ctx.db.patch(input.noteId, updates)
-  return input.noteId
+  return { noteId: input.noteId, slug: updates.slug || note.slug }
 }
 export const getNote = async (
   ctx: Ctx,

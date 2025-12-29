@@ -9,19 +9,21 @@ export default function LocationTagDialog(
     onLocationCreated?: (locationId: Id<'locations'>) => void
   },
 ) {
-  const location = props.mode === 'edit' ? props.tag : undefined
+  const location = props.mode === 'edit' ? props.tag : null
 
   return (
     <TagFormDialog
       mode={props.mode}
       isOpen={props.isOpen}
       onClose={props.onClose}
-      config={props.config}
+      campaignId={props.campaignId}
+      categoryId={props.categoryId}
     >
       <LocationTagForm
         mode={props.mode}
         location={location}
-        config={props.config}
+        campaignId={props.campaignId}
+        categoryId={props.categoryId}
         parentId={props.parentId}
         isOpen={props.isOpen}
         onClose={props.onClose}

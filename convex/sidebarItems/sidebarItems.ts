@@ -1,9 +1,14 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getTag, getTagCategory } from '../tags/tags'
-import { getNote } from '../notes/notes'
-import { getMap } from '../gameMaps/gameMaps'
-import { getFolder } from '../folders/folders'
+import {
+  getTag,
+  getTagBySlug,
+  getTagCategory,
+  getTagCategoryBySlug,
+} from '../tags/tags'
+import { getNote, getNoteBySlug } from '../notes/notes'
+import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
+import { getFolder, getFolderBySlug } from '../folders/folders'
 import { CATEGORY_KIND } from '../tags/types'
 import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
 import type {
@@ -133,10 +138,43 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...maps)
 
-  const systemManagedCategories = allCategories.filter((c) => c.kind === CATEGORY_KIND.SystemManaged)
+  const systemManagedCategories = allCategories.filter(
+    (c) => c.kind === CATEGORY_KIND.SystemManaged,
+  )
 
-  return allItems.filter((item) => !systemManagedCategories.some((c) => c._id === item.categoryId))
+  return allItems.filter(
+    (item) => !systemManagedCategories.some((c) => c._id === item.categoryId),
+  )
+}
 
+export const getSidebarItemBySlug = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  type: SidebarItemType,
+  slug: string,
+): Promise<AnySidebarItem | null> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+  )
+
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.tags:
+      return await getTagBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.folders:
+      return await getFolderBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.notes:
+      return await getNoteBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return await getMapBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.tagCategories:
+      return await getTagCategoryBySlug(ctx, campaignId, slug)
+    default:
+      // @ts-ignore - exhaustive check for unknown item types
+      console.log('Unknown item type', type)
+      return null
+  }
 }
 
 export const getSidebarItemById = async (

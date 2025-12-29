@@ -45,26 +45,6 @@ export const getTag = query({
   },
 })
 
-export const getTagBySlug = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    slug: v.string(),
-  },
-  returns: tagValidator,
-  handler: async (ctx, args): Promise<Tag> => {
-    const tag = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', args.campaignId).eq('slug', args.slug),
-      )
-      .unique()
-    if (!tag) {
-      throw new Error(`Tag not found: ${args.slug}`)
-    }
-    return await getTagFn(ctx, tag._id)
-  },
-})
-
 export const getTagsByCampaign = query({
   args: {
     campaignId: v.id('campaigns'),
@@ -119,28 +99,6 @@ export const checkCategorySlugExists = query({
     if (args.excludeCategoryId && existing._id === args.excludeCategoryId)
       return false
     return true
-  },
-})
-
-export const getTagCategoryBySlug = query({
-  args: {
-    campaignId: v.id('campaigns'),
-    slug: v.string(),
-  },
-  returns: tagCategoryValidator,
-  handler: async (ctx, args): Promise<TagCategory> => {
-    const category = await ctx.db
-      .query('tagCategories')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', args.campaignId).eq('slug', args.slug),
-      )
-      .unique()
-
-    if (!category) {
-      throw new Error(`Category not found: ${args.slug}`)
-    }
-
-    return category
   },
 })
 

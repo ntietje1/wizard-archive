@@ -24,30 +24,18 @@ import {
   SubmitButtons,
 } from '../generic-tag-form/fields.tsx'
 import { defaultLocationFormValues } from './types.ts'
-import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
-import type { Location } from 'convex/locations/types'
-import type { LocationFormValues } from './types.ts'
+import type { LocationFormValues, LocationTagFormProps } from './types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 
-interface LocationTagFormProps {
-  mode: 'create' | 'edit'
-  location?: Location
-  config: TagCategoryConfig
-  parentId?: SidebarItemId
-  isOpen: boolean
-  onClose: () => void
-  onLocationCreated?: (locationId: Id<'locations'>) => void
-}
-
 export default function LocationTagForm({
   mode,
   location,
-  config,
+  campaignId,
+  categoryId,
   parentId,
   isOpen,
   onClose,
@@ -67,16 +55,8 @@ export default function LocationTagForm({
     mutationFn: useConvexMutation(api.locations.mutations.updateLocation),
   })
 
-  const getCategory = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaign?._id
-        ? {
-            campaignId: campaign._id,
-            slug: config.categorySlug,
-          }
-        : 'skip',
-    ),
+  const categoryQuery = useQuery(
+    convexQuery(api.tags.queries.getTagCategory, { campaignId, categoryId }),
   )
 
   const imageUpload = useFileWithPreview({
@@ -116,7 +96,7 @@ export default function LocationTagForm({
       return
     }
 
-    if (!getCategory.data) {
+    if (!categoryQuery.data) {
       toast.error(`Category not found`)
       return
     }
@@ -135,34 +115,22 @@ export default function LocationTagForm({
       }
 
       if (mode === 'create') {
-        const result = await createMutation.mutateAsync({
+        const { tagId, locationId, slug } = await createMutation.mutateAsync({
           name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color ?? undefined,
           imageStorageId,
           campaignId: campaign._id,
-          categoryId: getCategory.data._id,
-          parentId: parentId ?? getCategory.data._id,
+          categoryId: categoryQuery.data._id,
+          parentId: parentId ?? categoryQuery.data._id,
         })
-
-        if (onLocationCreated) {
-          onLocationCreated(result.locationId)
-        }
-
-        // Open parent folders and get the tag to navigate to it
-        await openParentFolders(result.tagId)
-        const tag = await convex.query(api.tags.queries.getTag, {
-          campaignId: campaign._id,
-          tagId: result.tagId,
-        })
-        if (tag.slug) {
-          navigateToTag(tag.slug)
-        }
-
-        if (!onLocationCreated) {
-          toast.success(`${config.singular} created successfully`)
-          onClose()
-        }
+        onLocationCreated?.(locationId)
+        await openParentFolders(tagId)
+        navigateToTag(slug)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} created successfully`,
+        )
+        onClose()
       } else if (location) {
         await updateMutation.mutateAsync({
           locationId: location.locationId,
@@ -172,7 +140,9 @@ export default function LocationTagForm({
           imageStorageId,
         })
 
-        toast.success(`${config.singular} updated successfully`)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} updated successfully`,
+        )
         onClose()
       } else {
         toast.error('Invalid form state: missing location')
@@ -180,7 +150,7 @@ export default function LocationTagForm({
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)
-      toast.error(`Failed to ${mode} ${config.singular.toLowerCase()}`)
+      toast.error(`Failed to ${mode} ${categoryQuery.data.name || 'Tag'}`)
     }
   }
 
@@ -208,7 +178,7 @@ export default function LocationTagForm({
         {(field) => (
           <NameField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -225,7 +195,7 @@ export default function LocationTagForm({
         {(field) => (
           <DescriptionField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -237,7 +207,7 @@ export default function LocationTagForm({
           <ColorField
             field={field}
             isDisabled={isFormDisabled}
-            categoryDefaultColor={getCategory.data?.defaultColor}
+            categoryDefaultColor={categoryQuery.data?.defaultColor}
           />
         )}
       </form.Field>

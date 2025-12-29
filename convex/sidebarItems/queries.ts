@@ -1,10 +1,11 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { anySidebarItemValidator } from './schema'
+import { anySidebarItemValidator, sidebarItemTypeValidator } from './schema'
 import { sidebarItemIdValidator } from './idValidator'
 import {
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
+  getSidebarItemBySlug as getSidebarItemBySlugFn,
   getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
@@ -61,6 +62,27 @@ export const getSidebarItem = query({
     const item = await getSidebarItemById(ctx, args.campaignId, args.id)
     if (!item) {
       throw new Error('Sidebar item not found')
+    }
+    return item
+  },
+})
+
+export const getSidebarItemBySlug = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    type: sidebarItemTypeValidator,
+    slug: v.string(),
+  },
+  returns: v.union(anySidebarItemValidator, v.null()),
+  handler: async (ctx, args): Promise<AnySidebarItem | null> => {
+    const item = await getSidebarItemBySlugFn(
+      ctx,
+      args.campaignId,
+      args.type,
+      args.slug,
+    )
+    if (!item) {
+      return null
     }
     return item
   },

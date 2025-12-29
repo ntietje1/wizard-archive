@@ -21,6 +21,7 @@ export const createLocation = mutation({
   returns: v.object({
     tagId: v.id('tags'),
     locationId: v.id('locations'),
+    slug: v.string(),
   }),
   handler: async (
     ctx,
@@ -28,20 +29,21 @@ export const createLocation = mutation({
   ): Promise<{
     tagId: Id<'tags'>
     locationId: Id<'locations'>
+    slug: string
   }> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
-    const { tagId } = await insertTagAndNote(ctx, args)
+    const { tagId, tagSlug } = await insertTagAndNote(ctx, args)
 
     const locationId = await ctx.db.insert('locations', {
       campaignId: args.campaignId,
       tagId,
     })
 
-    return { tagId, locationId }
+    return { tagId, locationId, slug: tagSlug }
   },
 })
 

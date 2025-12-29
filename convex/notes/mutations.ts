@@ -19,8 +19,14 @@ export const updateNote = mutation({
     noteId: v.id('notes'),
     name: v.optional(v.string()),
   },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
+  returns: v.object({
+    noteId: v.id('notes'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     return await updateNoteFn(ctx, args)
   },
 })

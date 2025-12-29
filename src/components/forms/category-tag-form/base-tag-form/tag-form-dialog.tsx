@@ -1,11 +1,16 @@
+import { api } from 'convex/_generated/api'
+import { convexQuery } from '@convex-dev/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { FormDialog } from './form-dialog'
 import type { ReactNode } from 'react'
-import type { TagCategoryConfig } from './types'
+import type { Id } from 'convex/_generated/dataModel'
+import { getCategoryIcon } from '~/lib/category-icons'
 
 interface TagFormDialogProps {
   isOpen: boolean
   onClose: () => void
-  config: TagCategoryConfig
+  campaignId: Id<'campaigns'>
+  categoryId: Id<'tagCategories'>
   mode: 'create' | 'edit'
   children: ReactNode
 }
@@ -13,28 +18,32 @@ interface TagFormDialogProps {
 export function TagFormDialog({
   isOpen,
   onClose,
-  config,
+  campaignId,
+  categoryId,
   mode,
   children,
 }: TagFormDialogProps) {
-  if (!config.singular || !config.plural) {
-    console.error('TagFormDialog: config is missing singular or plural', config)
-    return null
-  }
+  const categoryQuery = useQuery(
+    convexQuery(api.tags.queries.getTagCategory, { campaignId, categoryId }),
+  )
+
+  const category = categoryQuery.data
 
   return (
     <FormDialog
       isOpen={isOpen}
       onClose={onClose}
       title={
-        mode === 'create' ? `New ${config.singular}` : `Edit ${config.singular}`
+        mode === 'create'
+          ? `New ${category?.name || 'Tag'}`
+          : `Edit ${category?.name || 'Tag'}`
       }
       description={
         mode === 'create'
-          ? `Add a new ${config.singular.toLowerCase()} to your campaign.`
-          : `Update ${config.singular.toLowerCase()} details.`
+          ? `Add a new ${category?.name || 'Tag'} to your campaign.`
+          : `Update ${category?.name || 'Tag'} details.`
       }
-      icon={config.icon}
+      icon={getCategoryIcon(category?.iconName)}
     >
       {children}
     </FormDialog>

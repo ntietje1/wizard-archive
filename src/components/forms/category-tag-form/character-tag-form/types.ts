@@ -1,10 +1,7 @@
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  BaseTagFormValues,
-  TagCategoryConfig,
-} from '../base-tag-form/types'
-import { getCategoryIcon } from '~/lib/category-icons'
+import type { BaseTagFormValues } from '../base-tag-form/types'
+import type { Character } from 'convex/characters/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 export interface CharacterFormValues extends BaseTagFormValues {
   playerId?: Id<'campaignMembers'>
@@ -16,10 +13,12 @@ export const defaultCharacterFormValues: CharacterFormValues = {
   color: '#ef4444',
   playerId: undefined,
 }
-
-export const CHARACTER_CONFIG: TagCategoryConfig = {
-  singular: SYSTEM_DEFAULT_CATEGORIES.Character.name,
-  plural: SYSTEM_DEFAULT_CATEGORIES.Character.name,
-  icon: getCategoryIcon(SYSTEM_DEFAULT_CATEGORIES.Character.iconName),
-  categorySlug: SYSTEM_DEFAULT_CATEGORIES.Character.slug,
+export interface CharacterTagFormProps {
+  mode: 'create' | 'edit'
+  character: Character | null
+  campaignId: Id<'campaigns'>
+  categoryId: Id<'tagCategories'>
+  parentId: SidebarItemId | undefined
+  isOpen: boolean
+  onClose: () => void
 }

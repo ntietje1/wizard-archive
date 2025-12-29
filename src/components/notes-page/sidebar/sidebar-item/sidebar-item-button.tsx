@@ -74,7 +74,6 @@ export function SidebarItemButton({
   const category = isTagCategory(item) ? item : categoryQuery.data
 
   const handleFinishRename = async (name: string) => {
-    if (!rename) return
     try {
       await rename(name)
       setRenamingId(null)

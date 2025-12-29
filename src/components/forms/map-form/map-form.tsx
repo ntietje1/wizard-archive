@@ -119,30 +119,18 @@ export function MapForm({
         toast.success('Map updated')
       } else if (campaignId) {
         // Create new map - require image
-        const newMapId = await createMutation.mutateAsync({
-          campaignId,
-          name: values.name,
-          imageStorageId: finalImageStorageId,
-          parentId,
-        })
+        const { mapId: newMapId, slug: newMapSlug } =
+          await createMutation.mutateAsync({
+            campaignId,
+            name: values.name,
+            imageStorageId: finalImageStorageId,
+            parentId,
+          })
         await openParentFolders(newMapId)
         // Get the created map's slug for onSuccess callback
-        let mapSlug: string | undefined
-        try {
-          const createdMap = await convex.query(api.gameMaps.queries.getMap, {
-            mapId: newMapId,
-          })
-          mapSlug = createdMap.slug
-        } catch (error) {
-          console.error('Failed to get created map:', error)
-        }
-
-        // Only navigate to map if onSuccess is not provided (onSuccess handles navigation)
-        if (!onSuccess && mapSlug) {
-          navigateToMap(mapSlug)
-        }
+        navigateToMap(newMapSlug)
         toast.success('Map created')
-        onSuccess?.(mapSlug)
+        onSuccess?.(newMapSlug)
         onClose()
       } else {
         toast.error('Invalid form state: missing map or campaign ID')
@@ -166,7 +154,6 @@ export function MapForm({
 
   return (
     <form
-      // key={formKey}
       onSubmit={(e) => {
         e.preventDefault()
         e.stopPropagation()

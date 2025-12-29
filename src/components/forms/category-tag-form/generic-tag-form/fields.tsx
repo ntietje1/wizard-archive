@@ -5,7 +5,6 @@ import {
   MAX_NAME_LENGTH,
 } from '../base-tag-form/types.ts'
 import { SubmitButton } from './submit-button.tsx'
-import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
 import { Label } from '~/components/shadcn/ui/label'
 import { Input } from '~/components/shadcn/ui/input'
@@ -34,13 +33,13 @@ interface ColorFieldState {
 
 interface NameFieldProps {
   field: FormFieldState
-  config: TagCategoryConfig
+  categoryName: string
   isDisabled: boolean
 }
 
 interface DescriptionFieldProps {
   field: FormFieldState
-  config: TagCategoryConfig
+  categoryName: string
   isDisabled: boolean
 }
 
@@ -66,21 +65,21 @@ interface SubmitButtonsProps {
   onClose: () => void
 }
 
-export function NameField({ field, config, isDisabled }: NameFieldProps) {
+export function NameField({ field, categoryName, isDisabled }: NameFieldProps) {
   return (
     <div className="space-y-2">
       <Label
-        htmlFor={`${config.singular.toLowerCase()}-name`}
+        htmlFor={`${categoryName.toLowerCase()}-name`}
         className="text-sm font-semibold"
       >
-        {config.singular} Name *
+        {categoryName} Name *
       </Label>
       <Input
-        id={`${config.singular.toLowerCase()}-name`}
+        id={`${categoryName.toLowerCase()}-name`}
         value={field.state.value}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
-        placeholder={`Enter ${config.singular.toLowerCase()} name...`}
+        placeholder={`Enter ${categoryName.toLowerCase()} name...`}
         maxLength={MAX_NAME_LENGTH}
         disabled={isDisabled}
         className="transition-colors"
@@ -99,23 +98,23 @@ export function NameField({ field, config, isDisabled }: NameFieldProps) {
 
 export function DescriptionField({
   field,
-  config,
+  categoryName,
   isDisabled,
 }: DescriptionFieldProps) {
   return (
     <div className="space-y-2">
       <Label
-        htmlFor={`${config.singular.toLowerCase()}-description`}
+        htmlFor={`${categoryName.toLowerCase()}-description`}
         className="text-sm font-semibold"
       >
         Description
       </Label>
       <Textarea
-        id={`${config.singular.toLowerCase()}-description`}
+        id={`${categoryName.toLowerCase()}-description`}
         value={field.state.value}
         onChange={(e) => field.handleChange(e.target.value)}
         onBlur={field.handleBlur}
-        placeholder={`Describe this ${config.singular.toLowerCase()}...`}
+        placeholder={`Describe this ${categoryName.toLowerCase()}...`}
         maxLength={MAX_DESCRIPTION_LENGTH}
         disabled={isDisabled}
         className="resize-none"

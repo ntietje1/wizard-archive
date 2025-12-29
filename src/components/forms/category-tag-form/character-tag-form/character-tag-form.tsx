@@ -1,11 +1,7 @@
 import { useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import {
-  convexQuery,
-  useConvex,
-  useConvexMutation,
-} from '@convex-dev/react-query'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import {
@@ -25,34 +21,22 @@ import {
 } from '../generic-tag-form/fields.tsx'
 import { defaultCharacterFormValues } from './types.ts'
 import { PlayerField } from './fields.tsx'
-import type { TagCategoryConfig } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
-import type { Character } from 'convex/characters/types.ts'
-import type { CharacterFormValues } from './types.ts'
+import type { CharacterFormValues, CharacterTagFormProps } from './types.ts'
 import { useCampaign } from '~/contexts/CampaignContext'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
-interface CharacterTagFormProps {
-  mode: 'create' | 'edit'
-  character?: Character
-  config: TagCategoryConfig
-  parentId?: SidebarItemId
-  isOpen: boolean
-  onClose: () => void
-}
-
 export default function CharacterTagForm({
   mode,
   character,
-  config,
+  campaignId,
+  categoryId,
   parentId,
   isOpen,
   onClose,
 }: CharacterTagFormProps) {
-  const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -77,16 +61,8 @@ export default function CharacterTagForm({
     ),
   )
 
-  const getCategory = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaign?._id
-        ? {
-            campaignId: campaign._id,
-            slug: config.categorySlug,
-          }
-        : 'skip',
-    ),
+  const categoryQuery = useQuery(
+    convexQuery(api.tags.queries.getTagCategory, { campaignId, categoryId }),
   )
 
   const imageUpload = useFileWithPreview({
@@ -131,7 +107,7 @@ export default function CharacterTagForm({
       return
     }
 
-    if (!getCategory.data) {
+    if (!categoryQuery.data) {
       toast.error(`Category not found`)
       return
     }
@@ -150,25 +126,22 @@ export default function CharacterTagForm({
       }
 
       if (mode === 'create') {
-        const result = await createMutation.mutateAsync({
+        const { tagId, slug } = await createMutation.mutateAsync({
           name: value.name.trim(),
           description: value.description.trim() || undefined,
           color: value.color ?? undefined,
           imageStorageId,
           campaignId: campaign._id,
-          categoryId: getCategory.data._id,
-          parentId: parentId ?? getCategory.data._id,
+          categoryId: categoryQuery.data._id,
+          parentId: parentId ?? categoryQuery.data._id,
           playerId: value.playerId || undefined,
         })
 
-        // Open parent folders and get the tag to navigate to it
-        await openParentFolders(result.tagId)
-        const tag = await convex.query(api.tags.queries.getTag, {
-          campaignId: campaign._id,
-          tagId: result.tagId,
-        })
-        navigateToTag(tag.slug)
-        toast.success(`${config.singular} created successfully`)
+        await openParentFolders(tagId)
+        navigateToTag(slug)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} created successfully`,
+        )
         onClose()
       } else if (character) {
         await updateCharacterMutation.mutateAsync({
@@ -180,7 +153,9 @@ export default function CharacterTagForm({
           playerId: value.playerId || undefined,
         })
 
-        toast.success(`${config.singular} updated successfully`)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} updated successfully`,
+        )
         onClose()
       } else {
         toast.error('Invalid form state: missing character')
@@ -188,7 +163,7 @@ export default function CharacterTagForm({
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)
-      toast.error(`Failed to ${mode} ${config.singular.toLowerCase()}`)
+      toast.error(`Failed to ${mode} ${categoryQuery.data.name || 'Tag'}`)
     }
   }
 
@@ -216,7 +191,7 @@ export default function CharacterTagForm({
         {(field) => (
           <NameField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -233,7 +208,7 @@ export default function CharacterTagForm({
         {(field) => (
           <DescriptionField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -245,7 +220,7 @@ export default function CharacterTagForm({
           <ColorField
             field={field}
             isDisabled={isFormDisabled}
-            categoryDefaultColor={getCategory.data?.defaultColor}
+            categoryDefaultColor={categoryQuery.data?.defaultColor}
           />
         )}
       </form.Field>

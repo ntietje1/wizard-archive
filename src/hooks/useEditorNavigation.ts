@@ -1,6 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/contexts/CampaignContext'
 import {
@@ -16,7 +15,7 @@ export const useEditorNavigation = () => {
   const { dmUsername, campaignSlug } = useCampaign()
 
   const navigateToNote = useCallback(
-    (slug: string | null, pageSlug?: string) => {
+    (slug: string | null, pageSlug?: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -27,8 +26,8 @@ export const useEditorNavigation = () => {
           tag: undefined,
           map: undefined,
           category: undefined,
-          folderId: undefined,
         },
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
@@ -36,7 +35,7 @@ export const useEditorNavigation = () => {
 
   // does NOT update the note slug, so must be used within a note and not to navigate to a page in a different note
   const navigateToPage = useCallback(
-    (pageSlug: string) => {
+    (pageSlug: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -44,13 +43,14 @@ export const useEditorNavigation = () => {
           ...prev,
           page: pageSlug,
         }),
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
   )
 
   const navigateToMap = useCallback(
-    (slug: string) => {
+    (slug: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -60,15 +60,15 @@ export const useEditorNavigation = () => {
           note: undefined,
           tag: undefined,
           category: undefined,
-          folderId: undefined,
         },
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
   )
 
   const navigateToTag = useCallback(
-    (slug: string | null, pageSlug?: string) => {
+    (slug: string | null, pageSlug?: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -79,34 +79,34 @@ export const useEditorNavigation = () => {
           note: undefined,
           map: undefined,
           category: undefined,
-          folderId: undefined,
         },
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
   )
 
   const navigateToCategory = useCallback(
-    (slug: string, folderId?: Id<'notes'> | Id<'folders'>) => {
+    (slug: string, folderSlug?: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
         search: {
           category: slug,
-          folderId,
+          folder: folderSlug || undefined,
           // Clear other content type params
           note: undefined,
           tag: undefined,
           map: undefined,
-          folder: undefined,
         },
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
   )
 
   const navigateToFolder = useCallback(
-    (slug: string) => {
+    (slug: string, replace?: boolean) => {
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -117,25 +117,25 @@ export const useEditorNavigation = () => {
           tag: undefined,
           map: undefined,
           category: undefined,
-          folderId: undefined,
         },
+        replace,
       })
     },
     [dmUsername, campaignSlug, navigate],
   )
 
   const navigateToItem = useCallback(
-    (item: AnySidebarItem) => {
+    (item: AnySidebarItem, replace?: boolean) => {
       if (isNote(item)) {
-        navigateToNote(item.slug)
+        navigateToNote(item.slug, undefined, replace)
       } else if (isTag(item)) {
-        navigateToTag(item.slug)
+        navigateToTag(item.slug, undefined, replace)
       } else if (isGameMap(item)) {
-        navigateToMap(item.slug)
+        navigateToMap(item.slug, replace)
       } else if (isCategory(item)) {
-        navigateToCategory(item.slug)
+        navigateToCategory(item.slug, undefined, replace)
       } else if (isFolder(item)) {
-        navigateToFolder(item.slug)
+        navigateToFolder(item.slug, replace)
       } else {
         // @ts-ignore - exhaustive check for unknown item types
         console.error('Invalid item type:', item.type)
@@ -151,15 +151,15 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToItemAndPage = useCallback(
-    (item: AnySidebarItem, pageSlug?: string) => {
+    (item: AnySidebarItem, pageSlug?: string, replace?: boolean) => {
       if (!pageSlug) {
-        navigateToItem(item)
+        navigateToItem(item, replace)
       } else if (isNote(item)) {
-        navigateToNote(item.slug, pageSlug)
+        navigateToNote(item.slug, pageSlug, replace)
       } else if (isTag(item)) {
-        navigateToTag(item.slug, pageSlug)
+        navigateToTag(item.slug, pageSlug, replace)
       } else {
-        navigateToItem(item)
+        navigateToItem(item, replace)
       }
     },
     [navigateToItem, navigateToNote, navigateToTag],
@@ -174,7 +174,7 @@ export const useEditorNavigation = () => {
         tag: undefined,
         map: undefined,
         category: undefined,
-        folderId: undefined,
+        folder: undefined,
       },
     })
   }, [dmUsername, campaignSlug, navigate])

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { useMutation } from '@tanstack/react-query'
-import { useConvex, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { useSearch } from '@tanstack/react-router'
@@ -10,17 +10,17 @@ import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
 import { useTagActions } from './useTagActions'
 import { useNoteActions } from './useNoteActions'
+import { useCurrentItem } from './useCurrentItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/contexts/CampaignContext'
 
 export function useRenameItem(item: AnySidebarItem | null) {
+  const { item: currentItem } = useCurrentItem()
   const { updateNote } = useNoteActions()
   const { updateTag } = useTagActions()
   const { updateMap } = useMapActions()
   const { updateFolder } = useFolderActions()
   const { campaignWithMembership } = useCampaign()
-  const convex = useConvex()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { navigateToItemAndPage } = useEditorNavigation()
 
@@ -36,43 +36,61 @@ export function useRenameItem(item: AnySidebarItem | null) {
     async (newName: string) => {
       if (!item || !newName || !campaignId) return
 
+      const previousSlug = item.slug
+      let newSlug: string = previousSlug
+
       try {
+        let response
         switch (item.type) {
           case SIDEBAR_ITEM_TYPES.notes:
-            await updateNote.mutateAsync({ noteId: item._id, name: newName })
+            response = await updateNote.mutateAsync({
+              noteId: item._id,
+              name: newName,
+            })
             break
           case SIDEBAR_ITEM_TYPES.tags:
-            await updateTag.mutateAsync({ tagId: item._id, name: newName })
+            response = await updateTag.mutateAsync({
+              tagId: item._id,
+              name: newName,
+            })
             break
           case SIDEBAR_ITEM_TYPES.gameMaps:
-            await updateMap.mutateAsync({ mapId: item._id, name: newName })
+            response = await updateMap.mutateAsync({
+              mapId: item._id,
+              name: newName,
+            })
             break
           case SIDEBAR_ITEM_TYPES.folders:
-            await updateFolder.mutateAsync({
+            response = await updateFolder.mutateAsync({
               folderId: item._id,
               name: newName,
             })
             break
-          case SIDEBAR_ITEM_TYPES.tagCategories: {
-            await updateCategory.mutateAsync({
+          case SIDEBAR_ITEM_TYPES.tagCategories:
+            response = await updateCategory.mutateAsync({
               categoryId: item._id,
               name: newName,
             })
             break
-          }
           default:
             break
         }
 
-        const updatedItem = await convex.query(
-          api.sidebarItems.queries.getSidebarItem,
-          {
-            id: item._id,
-            campaignId,
-          },
-        )
+        if (response && response.slug) {
+          newSlug = response.slug
+        }
 
-        navigateToItemAndPage(updatedItem, search.page)
+        if (
+          currentItem &&
+          currentItem._id === item._id &&
+          previousSlug !== newSlug
+        ) {
+          navigateToItemAndPage(
+            { ...item, slug: newSlug, name: newName },
+            search.page,
+            true,
+          )
+        }
       } catch (error) {
         console.error(error)
         toast.error('Failed to update name')
@@ -80,7 +98,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
       }
     },
     [
-      convex,
       item,
       campaignId,
       updateNote,
@@ -90,10 +107,11 @@ export function useRenameItem(item: AnySidebarItem | null) {
       updateCategory,
       navigateToItemAndPage,
       search,
+      currentItem,
     ],
   )
 
   return {
-    rename: item?.type === 'tagCategories' ? undefined : rename,
+    rename,
   }
 }

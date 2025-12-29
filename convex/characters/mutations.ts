@@ -21,6 +21,7 @@ export const createCharacter = mutation({
   returns: v.object({
     tagId: v.id('tags'),
     characterId: v.id('characters'),
+    slug: v.string(),
   }),
   handler: async (
     ctx,
@@ -28,6 +29,7 @@ export const createCharacter = mutation({
   ): Promise<{
     tagId: Id<'tags'>
     characterId: Id<'characters'>
+    slug: string
   }> => {
     await requireCampaignMembership(
       ctx,
@@ -35,7 +37,7 @@ export const createCharacter = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const { tagId } = await insertTagAndNote(ctx, args)
+    const { tagId, tagSlug } = await insertTagAndNote(ctx, args)
 
     if (args.playerId) {
       const player = await ctx.db.get(args.playerId)
@@ -53,7 +55,7 @@ export const createCharacter = mutation({
       playerId: args.playerId,
     })
 
-    return { tagId, characterId }
+    return { tagId, characterId, slug: tagSlug }
   },
 })
 

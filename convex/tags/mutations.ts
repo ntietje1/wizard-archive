@@ -27,9 +27,11 @@ export const createTag = mutation({
   args: createTagAndNoteArgs,
   returns: v.object({
     tagId: v.id('tags'),
+    slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ tagId: Id<'tags'> }> => {
-    return await insertTagAndNote(ctx, args)
+  handler: async (ctx, args): Promise<{ tagId: Id<'tags'>; slug: string }> => {
+    const { tagId, tagSlug } = await insertTagAndNote(ctx, args)
+    return { tagId, slug: tagSlug }
   },
 })
 
@@ -42,17 +44,18 @@ export const updateTag = mutation({
     description: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
   },
-  returns: v.id('tags'),
-  handler: async (ctx, args): Promise<Id<'tags'>> => {
-    await updateTagAndContent(ctx, args.tagId, {
+  returns: v.object({
+    tagId: v.id('tags'),
+    slug: v.string(),
+  }),
+  handler: async (ctx, args): Promise<{ tagId: Id<'tags'>; slug: string }> => {
+    return await updateTagAndContent(ctx, args.tagId, {
       name: args.name,
       iconName: args.iconName,
       color: args.color,
       description: args.description,
       imageStorageId: args.imageStorageId,
     })
-
-    return args.tagId
   },
 })
 
@@ -112,8 +115,14 @@ export const createTagCategory = mutation({
     iconName: v.string(),
     defaultColor: v.optional(v.string()),
   },
-  returns: v.id('tagCategories'),
-  handler: async (ctx, args): Promise<Id<'tagCategories'>> => {
+  returns: v.object({
+    categoryId: v.id('tagCategories'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ categoryId: Id<'tagCategories'>; slug: string }> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },

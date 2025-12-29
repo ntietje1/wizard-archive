@@ -32,12 +32,12 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 export default function GenericTagForm({
   mode,
   tag,
-  config,
+  campaignId,
+  categoryId,
   parentId,
   isOpen,
   onClose,
 }: GenericTagFormProps) {
-  const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -51,16 +51,8 @@ export default function GenericTagForm({
     mutationFn: useConvexMutation(api.tags.mutations.updateTag),
   })
 
-  const getCategory = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategoryBySlug,
-      campaign?._id
-        ? {
-            campaignId: campaign._id,
-            slug: config.categorySlug,
-          }
-        : 'skip',
-    ),
+  const categoryQuery = useQuery(
+    convexQuery(api.tags.queries.getTagCategory, { campaignId, categoryId }),
   )
 
   const imageUpload = useFileWithPreview({
@@ -101,7 +93,7 @@ export default function GenericTagForm({
       return
     }
 
-    if (!getCategory.data) {
+    if (!categoryQuery.data) {
       toast.error(`Category not found`)
       return
     }
@@ -120,29 +112,21 @@ export default function GenericTagForm({
       }
 
       if (mode === 'create') {
-        const result = await createMutation
-          .mutateAsync({
-            name: value.name.trim(),
-            description: value.description.trim() || undefined,
-            color: value.color ?? undefined,
-            imageStorageId,
-            campaignId: campaign._id,
-            categoryId: getCategory.data._id,
-            parentId: parentId ?? getCategory.data._id,
-          })
-          .catch((error) => {
-            console.error('Failed to create tag:', error)
-            toast.error('Failed to create tag')
-          })
-        if (result?.tagId) {
-          await openParentFolders(result.tagId)
-          const createdTag = await convex.query(api.tags.queries.getTag, {
-            campaignId: campaign._id,
-            tagId: result.tagId,
-          })
-          navigateToTag(createdTag.slug)
-          toast.success(`${config.singular} created successfully`)
-        }
+        const { tagId, slug } = await createMutation.mutateAsync({
+          name: value.name.trim(),
+          description: value.description.trim() || undefined,
+          color: value.color ?? undefined,
+          imageStorageId,
+          campaignId: campaign._id,
+          categoryId: categoryQuery.data._id,
+          parentId: parentId ?? categoryQuery.data._id,
+        })
+        await openParentFolders(tagId)
+        navigateToTag(slug)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} created successfully`,
+        )
+        onClose()
       } else if (tag) {
         await updateMutation.mutateAsync({
           tagId: tag._id,
@@ -152,14 +136,16 @@ export default function GenericTagForm({
           imageStorageId,
         })
 
-        toast.success(`${config.singular} updated successfully`)
+        toast.success(
+          `${categoryQuery.data.name || 'Tag'} updated successfully`,
+        )
       } else {
         toast.error('Invalid form state: missing tag')
         return
       }
     } catch (error) {
       console.error(`Failed to ${mode} tag:`, error)
-      toast.error(`Failed to ${mode} ${config.singular.toLowerCase()}`)
+      toast.error(`Failed to ${mode} ${categoryQuery.data.name || 'Tag'}`)
     }
   }
 
@@ -187,7 +173,7 @@ export default function GenericTagForm({
         {(field) => (
           <NameField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -204,7 +190,7 @@ export default function GenericTagForm({
         {(field) => (
           <DescriptionField
             field={field}
-            config={config}
+            categoryName={categoryQuery.data?.name || 'Tag'}
             isDisabled={isFormDisabled}
           />
         )}
@@ -216,7 +202,7 @@ export default function GenericTagForm({
           <ColorField
             field={field}
             isDisabled={isFormDisabled}
-            categoryDefaultColor={getCategory.data?.defaultColor}
+            categoryDefaultColor={categoryQuery.data?.defaultColor}
           />
         )}
       </form.Field>

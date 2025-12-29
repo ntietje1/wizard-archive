@@ -20,8 +20,14 @@ export const createMap = mutation({
     parentId: v.optional(sidebarItemIdValidator),
     categoryId: v.optional(v.id('tagCategories')),
   },
-  returns: v.id('gameMaps'),
-  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
+  returns: v.object({
+    mapId: v.id('gameMaps'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
@@ -55,7 +61,7 @@ export const createMap = mutation({
       return conflict !== null
     })
 
-    return await ctx.db.insert('gameMaps', {
+    const mapId = await ctx.db.insert('gameMaps', {
       campaignId: args.campaignId,
       name: args.name,
       slug: uniqueSlug,
@@ -65,6 +71,7 @@ export const createMap = mutation({
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.gameMaps,
     })
+    return { mapId, slug: uniqueSlug }
   },
 })
 
@@ -76,8 +83,14 @@ export const updateMap = mutation({
     parentId: v.optional(sidebarItemIdValidator),
     categoryId: v.optional(v.id('tagCategories')),
   },
-  returns: v.id('gameMaps'),
-  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
+  returns: v.object({
+    mapId: v.id('gameMaps'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     const map = await ctx.db.get(args.mapId)
     if (!map) {
       throw new Error('Map not found')
@@ -137,7 +150,7 @@ export const updateMap = mutation({
     }
 
     await ctx.db.patch(args.mapId, updates)
-    return args.mapId
+    return { mapId: args.mapId, slug: updates.slug || map.slug }
   },
 })
 
