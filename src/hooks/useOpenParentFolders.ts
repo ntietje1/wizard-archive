@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useCampaign } from '~/contexts/CampaignContext'
 
 /**

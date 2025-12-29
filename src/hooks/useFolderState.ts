@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 export function useFolderState(folderId: string) {
   const {

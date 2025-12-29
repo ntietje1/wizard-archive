@@ -1,5 +1,5 @@
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -40,7 +40,7 @@ type FileSidebarContextType = {
   exitCloseAllMode: () => void
 }
 
-const FileSidebarContext = createContext<FileSidebarContextType | null>(null)
+export const FileSidebarContext = createContext<FileSidebarContextType | null>(null)
 
 export function FileSidebarProvider({
   children,
@@ -257,12 +257,4 @@ export function FileSidebarProvider({
       </DndContext>
     </FileSidebarContext.Provider>
   )
-}
-
-export const useFileSidebar = () => {
-  const context = useContext(FileSidebarContext)
-  if (!context) {
-    throw new Error('useFileSidebar must be used within a FileSidebarProvider')
-  }
-  return context
 }

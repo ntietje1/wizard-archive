@@ -1,6 +1,6 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { FolderDot, FolderOpenDot } from '~/lib/icons'
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 export function CloseAllFoldersButton() {
   const { closeAllFoldersMode, toggleCloseAllFoldersMode } = useFileSidebar()

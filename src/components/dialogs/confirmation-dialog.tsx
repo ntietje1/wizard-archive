@@ -52,18 +52,6 @@ export function ConfirmationDialog({
       <DialogContent
         className="max-w-md max-h-[90vh] p-0 overflow-hidden flex flex-col"
         showCloseButton={!isLoading}
-        onEscapeKeyDown={(event) => {
-          if (isLoading) {
-            event.preventDefault()
-            event.stopPropagation()
-          }
-        }}
-        onPointerDownOutside={(event) => {
-          if (isLoading) {
-            event.preventDefault()
-            event.stopPropagation()
-          }
-        }}
       >
         <ScrollArea className="flex-1 max-h-[calc(90vh-80px)]">
           <DialogHeader className="px-6 pt-6 pb-4">

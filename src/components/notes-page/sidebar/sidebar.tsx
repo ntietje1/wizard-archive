@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
@@ -36,7 +36,7 @@ function FileSidebarContent() {
 
   return (
     <DroppableRoot className="flex-1 flex min-h-0">
-      <ScrollArea type="always" className="flex-1 min-h-0 overflow-y-auto p-1">
+      <ScrollArea className="flex-1 min-h-0 overflow-y-auto p-1">
         {sidebarItems.data?.map((item) => (
           <SidebarItem key={item._id} item={item} />
         ))}

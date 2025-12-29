@@ -3,7 +3,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { FilePlus } from '~/lib/icons'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useCampaign } from '~/contexts/CampaignContext'
-import { useFileSidebar } from '~/contexts/FileSidebarContext'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 export function NewNoteButton() {
   const { createNote } = useNoteActions()
