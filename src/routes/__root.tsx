@@ -70,17 +70,20 @@ export const Route = createRootRouteWithContext<{
     ],
   }),
   beforeLoad: async (ctx) => {
-    const auth = await fetchClerkAuth()
-    const { userId, token } = auth
-    // During SSR only (the only time serverHttpClient exists),
-    // set the Clerk auth token to make HTTP queries with.
-    if (token) {
-      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
+    if (typeof window === 'undefined') {
+      const auth = await fetchClerkAuth()
+      const { userId, token } = auth
+      if (token) {
+        ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
+      }
+      return {
+        userId,
+        token,
+      }
     }
-
     return {
-      userId,
-      token,
+      userId: undefined,
+      token: undefined,
     }
   },
   component: RootComponent,

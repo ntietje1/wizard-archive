@@ -1,6 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { useQueryClient } from '@tanstack/react-query';
+import { convexQuery } from '@convex-dev/react-query';
+import { api } from 'convex/_generated/api';
+import type { AnySidebarItem } from 'convex/sidebarItems/types';
 import { useCampaign } from '~/contexts/CampaignContext'
 import {
   isCategory,
@@ -12,7 +15,9 @@ import {
 
 export const useEditorNavigation = () => {
   const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const queryClient = useQueryClient()
 
   const navigateToNote = useCallback(
     (slug: string | null, pageSlug?: string, replace?: boolean) => {
@@ -124,8 +129,32 @@ export const useEditorNavigation = () => {
     [dmUsername, campaignSlug, navigate],
   )
 
+  const optimisticUpdateSidebarItem = useCallback(
+    (item: AnySidebarItem) => {
+      if (!campaignId) return;
+      queryClient.setQueryData(
+        [
+          convexQuery,
+          api.sidebarItems.queries.getSidebarItemBySlug,
+          { campaignId, type: item.type, slug: item.slug },
+        ],
+        item
+      );
+      queryClient.setQueryData(
+        [
+          convexQuery,
+          api.sidebarItems.queries.getSidebarItem,
+          { campaignId, id: item._id },
+        ],
+        item
+      );
+    },
+    [queryClient, campaignId],
+  )
+
   const navigateToItem = useCallback(
     (item: AnySidebarItem, replace?: boolean) => {
+      optimisticUpdateSidebarItem(item)
       if (isNote(item)) {
         navigateToNote(item.slug, undefined, replace)
       } else if (isTag(item)) {
@@ -147,11 +176,13 @@ export const useEditorNavigation = () => {
       navigateToMap,
       navigateToCategory,
       navigateToFolder,
+      optimisticUpdateSidebarItem,
     ],
   )
 
   const navigateToItemAndPage = useCallback(
     (item: AnySidebarItem, pageSlug?: string, replace?: boolean) => {
+      optimisticUpdateSidebarItem(item)
       if (!pageSlug) {
         navigateToItem(item, replace)
       } else if (isNote(item)) {
@@ -162,7 +193,7 @@ export const useEditorNavigation = () => {
         navigateToItem(item, replace)
       }
     },
-    [navigateToItem, navigateToNote, navigateToTag],
+    [navigateToItem, navigateToNote, navigateToTag, optimisticUpdateSidebarItem],
   )
 
   const clearEditorContent = useCallback(() => {

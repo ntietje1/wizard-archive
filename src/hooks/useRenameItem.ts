@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { useSearch } from '@tanstack/react-router'
@@ -23,6 +23,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { navigateToItemAndPage } = useEditorNavigation()
+  const queryClient = useQueryClient()
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
@@ -80,13 +81,34 @@ export function useRenameItem(item: AnySidebarItem | null) {
           newSlug = response.slug
         }
 
+        // Update the cache for getSidebarItemBySlug with the new slug
+        const updatedItem: AnySidebarItem = {
+          ...item,
+          slug: newSlug,
+          name: newName,
+        }
+        
+        if (campaignId) {
+          queryClient.setQueryData(
+            convexQuery(
+              api.sidebarItems.queries.getSidebarItemBySlug,
+              {
+                campaignId,
+                type: item.type,
+                slug: newSlug,
+              },
+            ).queryKey,
+            updatedItem,
+          )
+        }
+
         if (
           currentItem &&
           currentItem._id === item._id &&
           previousSlug !== newSlug
         ) {
           navigateToItemAndPage(
-            { ...item, slug: newSlug, name: newName },
+            updatedItem,
             search.page,
             true,
           )
@@ -108,6 +130,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
       navigateToItemAndPage,
       search,
       currentItem,
+      queryClient,
     ],
   )
 
