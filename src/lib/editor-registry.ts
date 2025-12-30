@@ -6,12 +6,14 @@ export interface EditorViewerProps<T extends AnySidebarItem> {
   search?: unknown
 }
 
-export interface EditorItemConfig {
-  component: ComponentType<EditorViewerProps<AnySidebarItem>>
+type EditorItemConfig<T extends SidebarItemType> = {
+  component: ComponentType<EditorViewerProps<Extract<AnySidebarItem, { type: T }>>>
   showPageBar?: boolean
 }
 
-type EditorDefaults = Record<SidebarItemType, EditorItemConfig>
+type EditorDefaults = {
+  [K in SidebarItemType]: EditorItemConfig<K>
+}
 
 let defaults: EditorDefaults | null = null
 
@@ -19,16 +21,18 @@ export function registerDefaults(config: EditorDefaults) {
   defaults = config
 }
 
-export function getEditorConfig(
-  itemType: SidebarItemType,
-): EditorItemConfig | null {
-  return defaults?.[itemType] ?? null
+export function getEditorConfig<T extends SidebarItemType>(
+  itemType: T,
+): EditorItemConfig<T> | null {
+  return (defaults?.[itemType] as EditorItemConfig<T> | undefined) ?? null
 }
 
 export function getViewerComponent(
   itemType: SidebarItemType,
 ): ComponentType<EditorViewerProps<AnySidebarItem>> | null {
-  return getEditorConfig(itemType)?.component ?? null
+  const config = getEditorConfig(itemType)
+  if (!config) return null
+  return config.component
 }
 
 export function shouldShowPageBar(itemType: SidebarItemType): boolean {

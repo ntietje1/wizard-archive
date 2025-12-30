@@ -57,13 +57,12 @@ export function useCurrentItem() {
     ),
   )
 
-  // Determine the current item
   const item: AnySidebarItem | null = sidebarItemQuery.data ?? null
 
   const itemType = item?.type as SidebarItemType | undefined
   const config = itemType ? getEditorConfig(itemType) : undefined
 
-  const isLoading = sidebarItemQuery.status === 'pending'
+  const isLoading = typeAndSlug !== null && sidebarItemQuery.isPending
 
   return {
     item,
