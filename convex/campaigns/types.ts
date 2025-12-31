@@ -39,7 +39,6 @@ export type Campaign = {
   playerCount: number
   slug: string
   status: CampaignStatus
-  noteCount?: number
   currentSessionId?: Id<'sessions'>
 }
 

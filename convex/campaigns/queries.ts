@@ -67,7 +67,6 @@ export const getUserCampaigns = query({
             ...membership,
             userProfile: profile,
           },
-          noteCount: notes?.length || 0,
         }
       }),
     ).then((filteredCampaigns) =>

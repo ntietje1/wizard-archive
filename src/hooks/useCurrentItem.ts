@@ -2,7 +2,6 @@ import { useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useAuth } from '@clerk/tanstack-react-start'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { getEditorConfig } from '~/lib/editor-registry'
@@ -11,7 +10,6 @@ import { useCampaign } from '~/contexts/CampaignContext'
 export function useCurrentItem() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { isLoaded, isSignedIn } = useAuth()
 
   const search = useSearch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
@@ -43,11 +41,10 @@ export function useCurrentItem() {
 
   const typeAndSlug = getTypeAndSlug()
 
-  // Unified query for slug-based items
   const sidebarItemQuery = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItemBySlug,
-      isLoaded && isSignedIn && typeAndSlug && campaignId
+      typeAndSlug && campaignId
         ? {
             campaignId,
             type: typeAndSlug.type,
@@ -61,7 +58,6 @@ export function useCurrentItem() {
 
   const itemType = item?.type as SidebarItemType | undefined
   const config = itemType ? getEditorConfig(itemType) : undefined
-
   const isLoading = typeAndSlug !== null && sidebarItemQuery.isPending
 
   return {

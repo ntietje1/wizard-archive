@@ -53,6 +53,7 @@ export const campaignTables = {
 const campaignValidatorFields = {
   _id: v.id('campaigns'),
   _creationTime: v.number(),
+  dmUserProfile: userProfileValidator,
   ...campaignTableFields,
 } as const
 

@@ -49,5 +49,6 @@
   },
 
   // Auto-save delay (optional, helps with performance)
-  "files.autoSave": "onFocusChange"
+  "files.autoSave": "onFocusChange",
+  "iis.configDir": ""
 }
