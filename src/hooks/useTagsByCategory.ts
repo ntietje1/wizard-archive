@@ -6,7 +6,7 @@ import { useSortOptions } from './useSortOptions'
 import type { SortOptions } from 'convex/editors/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Tag } from 'convex/tags/types'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export const useTagsByCategory = (
   categoryId: Id<'tagCategories'>,

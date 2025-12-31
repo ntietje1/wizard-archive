@@ -2,18 +2,9 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { createContext, useContext } from 'react'
 import { useAuth } from '@clerk/tanstack-react-start'
-import type { UseQueryResult } from '@tanstack/react-query'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
-
-type CampaignContextType = {
-  dmUsername: string
-  campaignSlug: string
-  campaignWithMembership: UseQueryResult<CampaignWithMembership, Error>
-}
-
-const CampaignContext = createContext<CampaignContextType | null>(null)
+import { CampaignContext } from './campaign-context'
+import type { CampaignContextType } from './campaign-context'
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
@@ -44,12 +35,4 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
       {children}
     </CampaignContext.Provider>
   )
-}
-
-export const useCampaign = () => {
-  const context = useContext(CampaignContext)
-  if (!context) {
-    throw new Error('useCampaign must be used within a CampaignProvider')
-  }
-  return context
 }

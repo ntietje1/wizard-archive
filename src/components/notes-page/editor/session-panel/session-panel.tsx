@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { useSession } from '~/hooks/useSession'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function SessionPanel() {
   const { campaignWithMembership } = useCampaign()

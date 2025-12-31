@@ -7,7 +7,9 @@ export interface EditorViewerProps<T extends AnySidebarItem> {
 }
 
 type EditorItemConfig<T extends SidebarItemType> = {
-  component: ComponentType<EditorViewerProps<Extract<AnySidebarItem, { type: T }>>>
+  component: ComponentType<
+    EditorViewerProps<Extract<AnySidebarItem, { type: T }>>
+  >
   showPageBar?: boolean
 }
 

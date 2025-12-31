@@ -7,8 +7,8 @@ import {
 } from '../context'
 import type { ContextEnhancer } from '../context'
 import type { TagCategory } from 'convex/tags/types'
-import { useCampaign } from '~/contexts/CampaignContext'
-import { useMapView } from '~/contexts/MapViewContext'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useMapView } from '~/hooks/useMapView'
 import { useSession } from '~/hooks/useSession'
 
 interface UseContextEnhancersOptions {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Tags } from 'lucide-react'
 import { Button } from '~/components/shadcn/ui/button'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 
 export function NewCategoryButton() {

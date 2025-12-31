@@ -8,7 +8,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/shadcn/utils'
 import { usePageLayout } from '~/hooks/usePageLayout'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function PageEditorWrapper({
   item,

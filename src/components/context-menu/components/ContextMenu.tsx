@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { buildMenu } from '../menu-builder'
-import { useMenuItems } from './ContextMenuProvider'
+import { useMenuItems } from '../hooks/useMenuItems'
 import type { MenuContext, MenuItemDef } from '../types'
 import { getCategoryIcon } from '~/lib/category-icons'
 import {

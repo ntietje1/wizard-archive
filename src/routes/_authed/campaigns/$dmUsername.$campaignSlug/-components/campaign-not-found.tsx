@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function CampaignNotFound() {
   return (

@@ -16,7 +16,7 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import {
   isFolder,
   isGameMap,

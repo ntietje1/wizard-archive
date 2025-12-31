@@ -1,15 +1,7 @@
-import { createContext, useContext, useMemo } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
+import { useMemo } from 'react'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
-
-interface MapViewContextType {
-  mapId: Id<'gameMaps'> | null
-  pinnedItemIds: Set<SidebarItemId>
-  map: GameMap | null
-}
-
-const MapViewContext = createContext<MapViewContextType | null>(null)
+import { MapViewContext } from '~/hooks/useMapView'
 
 export function MapViewProvider({
   map,
@@ -34,17 +26,5 @@ export function MapViewProvider({
 
   return (
     <MapViewContext.Provider value={value}>{children}</MapViewContext.Provider>
-  )
-}
-
-export function useMapView() {
-  const context = useContext(MapViewContext)
-  // Return default values when context is null (not viewing a map)
-  return (
-    context ?? {
-      mapId: null,
-      pinnedItemIds: new Set<SidebarItemId>(),
-      map: null,
-    }
   )
 }

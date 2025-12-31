@@ -5,7 +5,7 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMemo } from 'react'
 import type { Tag } from 'convex/tags/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function getTagColor(tag: Tag): string {
   return tag.color ?? tag.category?.defaultColor ?? '#808080'

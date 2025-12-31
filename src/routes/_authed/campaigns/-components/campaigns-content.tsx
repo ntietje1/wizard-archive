@@ -115,11 +115,6 @@ export function CampaignsContent() {
                     icon: User,
                     variant: 'secondary',
                   },
-                  {
-                    text: campaign.noteCount?.toString() ?? '0' + ' notes',
-                    icon: Notebook,
-                    variant: 'secondary',
-                  },
                 ]}
                 actionButtons={
                   campaignMember.role === 'DM'

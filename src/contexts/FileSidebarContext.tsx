@@ -1,5 +1,5 @@
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
-import { createContext, useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -13,6 +13,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { FileSidebarContext } from './file-sidebar-context'
+import type { FileSidebarContextType } from './file-sidebar-context'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import type { SidebarItemType } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -22,27 +24,6 @@ import { canDropItem, executeMove } from '~/lib/dnd-utils'
 import { useTagActions } from '~/hooks/useTagActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
-
-type FileSidebarContextType = {
-  setRenamingId: (id: Id<SidebarItemType> | null) => void
-  renamingId: Id<SidebarItemType> | null
-  setDeletingId: (id: Id<SidebarItemType> | null) => void
-  deletingId: Id<SidebarItemType> | null
-
-  folderStates: Record<string, boolean>
-  setFolderState: (folderId: string, isOpen: boolean) => void
-  openFolder: (folderId: string) => void
-  closeFolder: (folderId: string) => void
-  clearAllFolderStates: () => void
-  activeDragItem: SidebarDragData | null
-  closeAllFoldersMode: boolean
-  toggleCloseAllFoldersMode: () => void
-  exitCloseAllMode: () => void
-}
-
-export const FileSidebarContext = createContext<FileSidebarContextType | null>(
-  null,
-)
 
 export function FileSidebarProvider({
   children,

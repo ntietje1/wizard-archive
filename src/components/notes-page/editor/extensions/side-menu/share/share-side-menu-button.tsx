@@ -8,7 +8,7 @@ import type { CustomBlock } from '~/lib/editor-schema'
 import type { Share } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Share2 } from '~/lib/icons'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import {
   ContextMenu,
   ContextMenuCheckboxItem,

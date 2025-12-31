@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, Home, Settings, Users } from '~/lib/icons'
 import { cn } from '~/lib/shadcn/utils'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'

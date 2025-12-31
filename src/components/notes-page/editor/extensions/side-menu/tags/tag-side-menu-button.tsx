@@ -14,7 +14,7 @@ import {
 } from '~/components/shadcn/ui/dropdown-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { usePageLayout } from '~/hooks/usePageLayout'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { isNote } from '~/lib/sidebar-item-utils'
 
 interface TagSideMenuButtonProps {

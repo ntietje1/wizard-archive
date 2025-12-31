@@ -5,7 +5,7 @@ import { api } from 'convex/_generated/api'
 import { useSidebarItemsByParent } from './useSidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface UseFolderViewOptions {

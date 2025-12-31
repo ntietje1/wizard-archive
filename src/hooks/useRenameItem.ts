@@ -12,7 +12,7 @@ import { useTagActions } from './useTagActions'
 import { useNoteActions } from './useNoteActions'
 import { useCurrentItem } from './useCurrentItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function useRenameItem(item: AnySidebarItem | null) {
   const { item: currentItem } = useCurrentItem()
@@ -87,17 +87,14 @@ export function useRenameItem(item: AnySidebarItem | null) {
           slug: newSlug,
           name: newName,
         }
-        
+
         if (campaignId) {
           queryClient.setQueryData(
-            convexQuery(
-              api.sidebarItems.queries.getSidebarItemBySlug,
-              {
-                campaignId,
-                type: item.type,
-                slug: newSlug,
-              },
-            ).queryKey,
+            convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+              campaignId,
+              type: item.type,
+              slug: newSlug,
+            }).queryKey,
             updatedItem,
           )
         }
@@ -107,11 +104,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
           currentItem._id === item._id &&
           previousSlug !== newSlug
         ) {
-          navigateToItemAndPage(
-            updatedItem,
-            search.page,
-            true,
-          )
+          navigateToItemAndPage(updatedItem, search.page, true)
         }
       } catch (error) {
         console.error(error)

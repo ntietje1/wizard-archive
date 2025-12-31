@@ -12,7 +12,7 @@ import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import type { CustomBlock } from '~/lib/editor-schema'
 import { isGameMap, isNote } from '~/lib/sidebar-item-utils'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 type UsePageLayoutParams = {
   itemId: SidebarItemId | undefined
