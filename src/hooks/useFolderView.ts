@@ -29,10 +29,7 @@ export function useFolderView({
   const itemsByParent = useSidebarItemsByParent(parentId)
 
   // All items for rendering
-  const items = useMemo(() => {
-    const data = itemsByParent.data ?? []
-    return data
-  }, [itemsByParent.data])
+  const items = useMemo(() => itemsByParent.data ?? [], [itemsByParent.data])
 
   // Fetch category data if the current parent is a folder with a categoryId
   const categoryFromFolderQuery = useQuery(

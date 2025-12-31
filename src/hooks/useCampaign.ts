@@ -10,7 +10,7 @@ export type CampaignContextType = {
 
 export const CampaignContext = createContext<CampaignContextType | null>(null)
 
-export const useCampaign = () => {
+export const useCampaign = (): CampaignContextType => {
   const context = useContext(CampaignContext)
   if (!context) {
     throw new Error('useCampaign must be used within a CampaignProvider')

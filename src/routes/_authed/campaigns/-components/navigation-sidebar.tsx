@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import type { LucideIcon } from '~/lib/icons'
 import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, Home, Settings, Users } from '~/lib/icons'
 import { cn } from '~/lib/shadcn/utils'
@@ -9,7 +10,14 @@ import {
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
 
-const navigationItems = [
+type NavigationItem = {
+  name: string
+  to: string
+  icon: LucideIcon
+  exact?: boolean
+}
+
+const navigationItems: Array<NavigationItem> = [
   {
     name: 'Overview',
     to: '/campaigns/$dmUsername/$campaignSlug',

@@ -10,7 +10,7 @@ export interface MapViewContextType {
 }
 export const MapViewContext = createContext<MapViewContextType | null>(null)
 
-export function useMapView() {
+export function useMapView(): MapViewContextType {
   const context = useContext(MapViewContext)
   return (
     context ?? {
