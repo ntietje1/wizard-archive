@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { convexQuery } from '@convex-dev/react-query'
 import { Button } from '~/components/shadcn/ui/button'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { CopyField } from '~/components/copy-field'
 import { getOrigin } from '~/utils/origin'
 

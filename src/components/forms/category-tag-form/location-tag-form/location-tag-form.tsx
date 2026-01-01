@@ -26,7 +26,7 @@ import {
 import { defaultLocationFormValues } from './types.ts'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LocationFormValues, LocationTagFormProps } from './types.ts'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'

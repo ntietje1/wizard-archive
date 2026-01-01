@@ -24,7 +24,7 @@ import {
 import type { BaseTagFormValues } from '../base-tag-form/types.ts'
 import type { Id } from 'convex/_generated/dataModel'
 import type { GenericTagFormProps } from './types.ts'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview.ts'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation.ts'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'

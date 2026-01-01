@@ -7,7 +7,7 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { Button } from '~/components/shadcn/ui/button'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
 function FileSidebarContent() {

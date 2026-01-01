@@ -3,7 +3,7 @@ import { createReactInlineContentSpec } from '@blocknote/react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import type { Id } from 'convex/_generated/dataModel'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 type TagInlineContentProps = {
   inlineContent: {

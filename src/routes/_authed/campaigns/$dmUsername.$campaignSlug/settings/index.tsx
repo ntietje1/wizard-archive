@@ -8,7 +8,7 @@ import {
   validateCampaignSlugAsync,
   validateCampaignSlugSync,
 } from '../../-components/campaign-form-validators'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { LoadingPage } from '~/components/loading/loading-page'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'

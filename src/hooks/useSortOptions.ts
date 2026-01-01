@@ -4,7 +4,7 @@ import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 const defaultSortOptions: SortOptions = {
   order: SORT_ORDERS.DateCreated,

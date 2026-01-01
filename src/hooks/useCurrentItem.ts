@@ -5,7 +5,7 @@ import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { getEditorConfig } from '~/lib/editor-registry'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function useCurrentItem() {
   const { campaignWithMembership } = useCampaign()
@@ -25,10 +25,6 @@ export function useCurrentItem() {
     }
     if (search.map) {
       return { type: SIDEBAR_ITEM_TYPES.gameMaps, slug: search.map }
-    }
-    if (search.category && search.folder) {
-      // When inside a category, folder takes precedence
-      return { type: SIDEBAR_ITEM_TYPES.folders, slug: search.folder }
     }
     if (search.category) {
       return { type: SIDEBAR_ITEM_TYPES.tagCategories, slug: search.category }

@@ -1,18 +1,16 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query';
-import { convexQuery } from '@convex-dev/react-query';
-import { api } from 'convex/_generated/api';
-import {  SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types';
-import type {AnySidebarItem} from 'convex/sidebarItems/types';
-import type { EditorSearch } from '~/components/notes-page/validate-search';
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useQueryClient } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { useCampaign } from '~/hooks/useCampaign'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
-const createContentSearch = (
-  updates: Partial<EditorSearch>,
-): EditorSearch => {
+const createContentSearch = (updates: Partial<EditorSearch>): EditorSearch => {
   const search: EditorSearch = {
     note: undefined,
     tag: undefined,
@@ -153,7 +151,7 @@ export const useEditorNavigation = () => {
   const navigateToItem = useCallback(
     (item: AnySidebarItem, replace?: boolean) => {
       optimisticUpdateSidebarItem(item)
-      
+
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes:
           navigateToNote(item.slug, undefined, replace)
@@ -189,7 +187,7 @@ export const useEditorNavigation = () => {
   const navigateToItemAndPage = useCallback(
     (item: AnySidebarItem, pageSlug?: string, replace?: boolean) => {
       optimisticUpdateSidebarItem(item)
-      
+
       if (!pageSlug) {
         navigateToItem(item, replace)
         return
@@ -206,7 +204,12 @@ export const useEditorNavigation = () => {
           navigateToItem(item, replace)
       }
     },
-    [navigateToItem, navigateToNote, navigateToTag, optimisticUpdateSidebarItem],
+    [
+      navigateToItem,
+      navigateToNote,
+      navigateToTag,
+      optimisticUpdateSidebarItem,
+    ],
   )
 
   const clearEditorContent = useCallback(() => {

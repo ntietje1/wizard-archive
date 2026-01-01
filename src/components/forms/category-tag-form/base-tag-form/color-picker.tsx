@@ -195,5 +195,3 @@ export function ColorPicker({
     </div>
   )
 }
-
-export { DEFAULT_COLORS }

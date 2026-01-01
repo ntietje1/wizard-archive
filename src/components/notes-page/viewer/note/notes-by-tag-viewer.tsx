@@ -11,7 +11,7 @@ import type {
   CustomPartialBlock,
 } from '~/lib/editor-schema'
 import { customInlineContentSpecs } from '~/lib/editor-schema'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useTags } from '~/hooks/useTags'
 import { Button } from '~/components/shadcn/ui/button'

@@ -11,7 +11,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { CustomBlock } from '~/lib/editor-schema'
 import { isGameMap, isNote } from '~/lib/sidebar-item-utils'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 type UsePageLayoutParams = {
   itemId: SidebarItemId | undefined

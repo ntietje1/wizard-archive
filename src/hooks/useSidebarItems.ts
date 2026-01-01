@@ -6,7 +6,7 @@ import { useSortOptions } from './useSortOptions'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export const useSidebarItemsByCategory = (
   categoryId: Id<'tagCategories'>,

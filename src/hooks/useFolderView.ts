@@ -5,7 +5,7 @@ import { api } from 'convex/_generated/api'
 import { useSidebarItemsByParent } from './useSidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface UseFolderViewOptions {
@@ -29,10 +29,7 @@ export function useFolderView({
   const itemsByParent = useSidebarItemsByParent(parentId)
 
   // All items for rendering
-  const items = useMemo(() => {
-    const data = itemsByParent.data ?? []
-    return data
-  }, [itemsByParent.data])
+  const items = useMemo(() => itemsByParent.data ?? [], [itemsByParent.data])
 
   // Fetch category data if the current parent is a folder with a categoryId
   const categoryFromFolderQuery = useQuery(

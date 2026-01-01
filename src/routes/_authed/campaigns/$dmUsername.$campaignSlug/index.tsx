@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, MapPin, Settings, Sword, User, Users } from '~/lib/icons'
 import { LoadingPage } from '~/components/loading/loading-page'
 

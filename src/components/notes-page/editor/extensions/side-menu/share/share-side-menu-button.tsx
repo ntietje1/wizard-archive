@@ -8,7 +8,7 @@ import type { CustomBlock } from '~/lib/editor-schema'
 import type { Share } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Share2 } from '~/lib/icons'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -80,8 +80,8 @@ export default function ShareSideMenuButton({
   const isMutating = addShareToBlock.isPending || removeShareFromBlock.isPending
 
   const shares = sharesQuery.data ?? []
-  const sharedAllTag = shares.find((s: Share) => s.memberId == null)
-  const playerSharedTags = shares.filter((s: Share) => s.memberId != null)
+  const sharedAllTag = shares.find((s: Share) => s.memberId === undefined)
+  const playerSharedTags = shares.filter((s: Share) => s.memberId !== undefined)
 
   const isBlockNotFound = blockTagState.data === null
   const appliedTagIds = useMemo(

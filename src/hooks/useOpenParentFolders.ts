@@ -3,7 +3,7 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 
 /**
  * Hook to open all parent folders for a given sidebar item.

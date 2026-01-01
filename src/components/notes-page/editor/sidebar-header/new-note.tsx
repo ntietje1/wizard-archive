@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { Button } from '~/components/shadcn/ui/button'
 import { FilePlus } from '~/lib/icons'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useCampaign } from '~/contexts/CampaignContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 export function NewNoteButton() {
