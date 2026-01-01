@@ -11,7 +11,6 @@ const mapValidatorFields = {
   _id: v.id('gameMaps'),
   _creationTime: v.number(),
   ...mapTableFields,
-  type: v.literal('gameMaps'),
 } as const
 
 export const mapValidator = v.object(mapValidatorFields)

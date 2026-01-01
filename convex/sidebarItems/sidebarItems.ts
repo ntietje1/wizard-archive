@@ -279,6 +279,8 @@ export const validNoteChildren: Array<SidebarItemType> = [
 
 export const validMapChildren: Array<SidebarItemType> = []
 
+export const validFileChildren: Array<SidebarItemType> = []
+
 export const validSidebarChildren: Record<
   SidebarItemOrRootType,
   Array<SidebarItemType>
@@ -289,6 +291,7 @@ export const validSidebarChildren: Record<
   [SIDEBAR_ITEM_TYPES.folders]: validFolderChildren,
   [SIDEBAR_ITEM_TYPES.notes]: validNoteChildren,
   [SIDEBAR_ITEM_TYPES.gameMaps]: validMapChildren,
+  [SIDEBAR_ITEM_TYPES.files]: validFileChildren,
 }
 
 export const canItemHaveChildren = (type: SidebarItemType): boolean => {
@@ -308,10 +311,11 @@ export const defaultNameMap: Record<SidebarItemType, string> = {
   [SIDEBAR_ITEM_TYPES.folders]: 'Untitled Folder',
   [SIDEBAR_ITEM_TYPES.notes]: 'Untitled Note',
   [SIDEBAR_ITEM_TYPES.gameMaps]: 'Untitled Map',
+  [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
 }
 
 export const defaultItemName = (
   item: AnySidebarItem | null | undefined,
 ): string => {
-  return item ? defaultNameMap[item.type] : 'Untitled'
+  return item ? defaultNameMap[item.type] : 'Untitled Item'
 }

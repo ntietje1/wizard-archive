@@ -25,6 +25,7 @@ import type * as common_types from "../common/types.js";
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
 import type * as editors_types from "../editors/types.js";
+import type * as files_types from "../files/types.js";
 import type * as folders_folders from "../folders/folders.js";
 import type * as folders_mutations from "../folders/mutations.js";
 import type * as folders_queries from "../folders/queries.js";
@@ -100,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;
   "editors/types": typeof editors_types;
+  "files/types": typeof files_types;
   "folders/folders": typeof folders_folders;
   "folders/mutations": typeof folders_mutations;
   "folders/queries": typeof folders_queries;

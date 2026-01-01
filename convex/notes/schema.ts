@@ -20,7 +20,6 @@ const noteValidatorFields = {
   _id: v.id('notes'),
   _creationTime: v.number(),
   ...noteTableFields,
-  type: v.literal('notes'),
 } as const
 
 export const noteValidator = v.object(noteValidatorFields)

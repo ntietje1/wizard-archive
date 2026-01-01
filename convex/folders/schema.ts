@@ -20,7 +20,6 @@ const folderValidatorFields = {
   _id: v.id('folders'),
   _creationTime: v.number(),
   ...folderTableFields,
-  type: v.literal('folders'),
 } as const
 
 export const folderValidator = v.object(folderValidatorFields)
