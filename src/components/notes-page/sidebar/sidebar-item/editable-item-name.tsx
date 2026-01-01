@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface EditableNameProps {
   initialName: string
@@ -13,16 +13,25 @@ export function EditableName({
   isRenaming,
   onFinishRename,
 }: EditableNameProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [name, setName] = useState(initialName)
+  const [name, setName] = useState(
+    initialName === defaultName ? '' : initialName,
+  )
 
   useEffect(() => {
-    if (isRenaming && inputRef.current) {
-      setName(initialName)
-      inputRef.current.focus()
-      inputRef.current.select()
+    setName(initialName === defaultName ? '' : initialName)
+  }, [isRenaming, initialName, defaultName])
+
+  // ensures input is focused and selected when renaming
+  const inputRef = useCallback((node: HTMLInputElement | null) => {
+    if (node) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          node.focus()
+          node.select()
+        })
+      })
     }
-  }, [isRenaming, initialName])
+  }, [])
 
   if (isRenaming) {
     return (
@@ -33,12 +42,13 @@ export function EditableName({
         onChange={(e) => {
           setName(e.target.value)
         }}
-        onBlur={async () => await onFinishRename(name)}
+        onBlur={async () => await onFinishRename(name || defaultName)}
         onKeyDown={async (e) => {
           if (e.key === 'Enter') {
-            await onFinishRename(name)
+            await onFinishRename(name || defaultName)
           } else if (e.key === 'Escape') {
-            setName(initialName)
+            const resetValue = initialName === defaultName ? '' : initialName
+            setName(resetValue)
             await onFinishRename(initialName)
           }
           // Prevent space from triggering button click
