@@ -1,16 +1,10 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemBaseFields, sidebarItemIdValidator } from '../sidebarItems/baseFields'
 
 export const mapTableFields = {
-  name: v.optional(v.string()),
-  iconName: v.optional(v.string()),
-  slug: v.string(),
-  campaignId: v.id('campaigns'),
-  categoryId: v.optional(v.id('tagCategories')),
-  parentId: v.optional(sidebarItemIdValidator),
+  ...sidebarItemBaseFields,
   imageStorageId: v.optional(v.id('_storage')),
-  updatedAt: v.number(),
   type: v.literal('gameMaps'),
 }
 const mapValidatorFields = {

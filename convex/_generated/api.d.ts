@@ -51,7 +51,7 @@ import type * as shares_mutations from "../shares/mutations.js";
 import type * as shares_queries from "../shares/queries.js";
 import type * as shares_shares from "../shares/shares.js";
 import type * as shares_types from "../shares/types.js";
-import type * as sidebarItems_idValidator from "../sidebarItems/idValidator.js";
+import type * as sidebarItems_baseFields from "../sidebarItems/baseFields.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_sidebarItems from "../sidebarItems/sidebarItems.js";
 import type * as sidebarItems_types from "../sidebarItems/types.js";
@@ -126,7 +126,7 @@ declare const fullApi: ApiFromModules<{
   "shares/queries": typeof shares_queries;
   "shares/shares": typeof shares_shares;
   "shares/types": typeof shares_types;
-  "sidebarItems/idValidator": typeof sidebarItems_idValidator;
+  "sidebarItems/baseFields": typeof sidebarItems_baseFields;
   "sidebarItems/queries": typeof sidebarItems_queries;
   "sidebarItems/sidebarItems": typeof sidebarItems_sidebarItems;
   "sidebarItems/types": typeof sidebarItems_types;

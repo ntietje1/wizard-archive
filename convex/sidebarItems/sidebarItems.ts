@@ -54,7 +54,7 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...folders)
+  allItems.push(...(folders as Array<AnySidebarItem>))
 
   const notes = await ctx.db
     .query('notes')
@@ -62,7 +62,7 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...notes)
+  allItems.push(...(notes as Array<AnySidebarItem>))
 
   const maps = await ctx.db
     .query('gameMaps')
@@ -70,7 +70,7 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...maps)
+  allItems.push(...(maps as Array<AnySidebarItem>))
 
   return allItems
 }
@@ -120,7 +120,7 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...folders)
+  allItems.push(...(folders as Array<AnySidebarItem>))
 
   const notes = await ctx.db
     .query('notes')
@@ -128,7 +128,7 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...notes)
+  allItems.push(...(notes as Array<AnySidebarItem>))
 
   const maps = await ctx.db
     .query('gameMaps')
@@ -136,7 +136,7 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...maps)
+  allItems.push(...(maps as Array<AnySidebarItem>))
 
   const systemManagedCategories = allCategories.filter(
     (c) => c.kind === CATEGORY_KIND.SystemManaged,

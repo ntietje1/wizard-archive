@@ -12,6 +12,7 @@ export const SIDEBAR_ITEM_TYPES = {
   gameMaps: 'gameMaps',
   tagCategories: 'tagCategories',
   tags: 'tags',
+  // files: 'files',
 } as const
 
 export type SidebarItemType =
@@ -47,3 +48,4 @@ export type SidebarItemId =
   | Id<'tagCategories'>
   | Id<'tags'>
   | Id<'gameMaps'>
+  // | Id<'files'>

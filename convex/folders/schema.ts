@@ -1,15 +1,9 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
 
 const folderTableFields = {
-  name: v.optional(v.string()),
-  iconName: v.optional(v.string()),
-  slug: v.string(),
-  campaignId: v.id('campaigns'),
-  categoryId: v.optional(v.id('tagCategories')),
-  parentId: v.optional(sidebarItemIdValidator),
-  updatedAt: v.number(),
+  ...sidebarItemBaseFields,
   type: v.literal('folders'),
 }
 
