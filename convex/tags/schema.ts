@@ -22,6 +22,7 @@ export const tagTableFields = {
   color: v.optional(v.string()),
   description: v.optional(v.string()),
   categoryId: v.id('tagCategories'), // required for tags
+  imageStorageId: v.optional(v.id('_storage')),
   type: v.literal('tags'),
 }
 
