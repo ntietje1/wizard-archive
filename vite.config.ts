@@ -15,10 +15,10 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    react(),
     tanstackStart({
       customViteReactPlugin: true,
     }),
+    react(),
   ],
   optimizeDeps: {
     exclude: ['@tanstack/router-devtools-core'],
