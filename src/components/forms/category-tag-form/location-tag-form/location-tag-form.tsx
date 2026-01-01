@@ -41,7 +41,6 @@ export default function LocationTagForm({
   onClose,
   onLocationCreated,
 }: LocationTagFormProps) {
-  const convex = useConvex()
   const { campaignWithMembership } = useCampaign()
   const { navigateToTag } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -132,6 +131,8 @@ export default function LocationTagForm({
         )
         onClose()
       } else if (location) {
+        console.log('updateMutation', value)
+        console.log('location', location)
         await updateMutation.mutateAsync({
           locationId: location.locationId,
           name: value.name.trim(),
