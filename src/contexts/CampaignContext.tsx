@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { useAuth } from '@clerk/tanstack-react-start'
-import { CampaignContext } from './campaign-context'
-import type { CampaignContextType } from './campaign-context'
+import type { CampaignContextType } from '~/hooks/useCampaign'
+import { CampaignContext } from '~/hooks/useCampaign'
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
