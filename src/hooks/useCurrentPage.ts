@@ -1,31 +1,27 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { debounce } from 'lodash-es'
 import { useNoteActions } from './useNoteActions'
 import { useEditorNavigation } from './useEditorNavigation'
 import usePersistedState from './usePersistedState'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import type { CustomBlock } from '~/lib/editor-schema'
-import { isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 
-type UsePageLayoutParams = {
+type UseCurrentPageParams = {
   itemId: SidebarItemId | undefined
   itemSlug: string | undefined
   campaignId: Id<'campaigns'> | undefined
 }
 
-export function usePageLayout({
+export function useCurrentPage({
   itemId,
   itemSlug,
   campaignId,
-}: UsePageLayoutParams) {
-  const { createChildNote, updateNoteContentWithSanitization } =
-    useNoteActions()
+}: UseCurrentPageParams) {
+  const { createChildNote } = useNoteActions()
   const { navigateToPage } = useEditorNavigation()
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
@@ -51,7 +47,7 @@ export function usePageLayout({
 
   const parentItem = parentItemQuery.data
 
-  // Get all sidebar items (notes and maps) that are children of the parent
+  // Get all sidebar items that are children of the parent
   const pagesQuery = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItemsByParent,
@@ -80,23 +76,26 @@ export function usePageLayout({
         : pagesQuery.status,
   }
 
-  const [persistedPageSlug, setPersistedPageSlug] = usePersistedState<
+  const [_persistedPageSlug, setPersistedPageSlug] = usePersistedState<
     string | null
   >(`page-slug-${itemSlug ?? 'none'}`, null)
 
+  // Sync persisted state with URL (for cross-item persistence, not for browser navigation)
+  useEffect(() => {
+    if (pageSlug !== undefined) {
+      setPersistedPageSlug(pageSlug)
+    } else {
+      setPersistedPageSlug(null)
+    }
+  }, [pageSlug, setPersistedPageSlug])
+
   // if no page slug is provided, show parent item (undefined means parent)
   // if page slug is provided, find that child page
-  const effectivePageSlug = pageSlug ?? persistedPageSlug ?? undefined
+  // Only use URL state for browser navigation compatibility
+  const effectivePageSlug = pageSlug ?? undefined
   const currentPageItem = effectivePageSlug
     ? childPagesArray.find((p) => p.slug === effectivePageSlug)
     : (parentItem ?? undefined)
-
-  const currentPage = useQuery(
-    convexQuery(
-      api.notes.queries.getNoteWithContent,
-      isNote(currentPageItem) ? { noteId: currentPageItem._id } : 'skip',
-    ),
-  )
 
   const handleCreatePage = async () => {
     if (!itemId || !campaignId) return
@@ -113,7 +112,6 @@ export function usePageLayout({
   const selectPage = (slug: string | undefined) => {
     if (slug === undefined) {
       // Clear page slug to show parent item
-      setPersistedPageSlug(null)
       navigate({
         to: '/campaigns/$dmUsername/$campaignSlug/editor',
         params: { dmUsername, campaignSlug },
@@ -123,39 +121,15 @@ export function usePageLayout({
         }),
       })
     } else {
-      setPersistedPageSlug(slug)
       navigateToPage(slug)
     }
   }
 
-  const updateCurrentPageContent = useMemo(
-    () =>
-      debounce((newContent: Array<CustomBlock>) => {
-        if (!isNote(currentPageItem)) return
-        updateNoteContentWithSanitization(currentPageItem._id, newContent)
-      }, 800),
-    [updateNoteContentWithSanitization, currentPageItem],
-  )
-
-  useEffect(() => {
-    return () => {
-      updateCurrentPageContent.flush()
-    }
-  }, [currentPageItem?._id, updateCurrentPageContent])
-
-  const currentPageData = isNote(currentPageItem)
-    ? currentPage.data
-    : isGameMap(currentPageItem)
-      ? currentPageItem
-      : null
-
   return {
     pages,
-    currentPage: currentPageData,
     currentPageItem,
     pageSlug: effectivePageSlug,
     selectPage,
     handleCreatePage,
-    updateCurrentPageContent,
   }
 }

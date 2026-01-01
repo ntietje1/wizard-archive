@@ -84,6 +84,8 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
     )
   }
 
+  // TODO: query seems to be cached and not updated when note is updated
+
   return (
     <ResizablePanelGroup
       direction="horizontal"
@@ -98,6 +100,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
             <BlockNoteView
+              key={note._id}
               editor={editor}
               onChange={() => updateContent(editor.document)}
               theme="light"

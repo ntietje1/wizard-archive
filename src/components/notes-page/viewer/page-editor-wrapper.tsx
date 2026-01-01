@@ -6,7 +6,7 @@ import type { EditorViewerProps } from '~/lib/editor-registry'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/shadcn/utils'
-import { usePageLayout } from '~/hooks/usePageLayout'
+import { useCurrentPage } from '~/hooks/useCurrentPage'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useCampaign } from '~/hooks/useCampaign'
 
@@ -18,7 +18,7 @@ export function PageEditorWrapper({
   const campaignId = campaignWithMembership.data?.campaign._id
 
   const { pages, currentPageItem, pageSlug, selectPage, handleCreatePage } =
-    usePageLayout({
+    useCurrentPage({
       itemId: item._id,
       itemSlug: item.slug,
       campaignId,
