@@ -194,6 +194,18 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
               side="bottom"
               align="start"
               sideOffset={4}
+              data-no-dnd
+              onContextMenu={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                e.nativeEvent.stopImmediatePropagation()
+              }}
+              onPointerDown={(e) => {
+                if (e.button === 2) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }
+              }}
             >
               {builtMenu.groups.map((group, gi) => (
                 <React.Fragment key={group.id}>

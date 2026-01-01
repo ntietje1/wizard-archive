@@ -3,8 +3,6 @@ import { useCallback, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
-  MouseSensor,
-  TouchSensor,
   pointerWithin,
   useSensor,
   useSensors,
@@ -16,14 +14,15 @@ import { toast } from 'sonner'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import type { SidebarItemType } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { canDropItem, executeMove } from '~/lib/dnd-utils'
 import { useTagActions } from '~/hooks/useTagActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
+import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 
 export function FileSidebarProvider({
   children,
