@@ -32,6 +32,9 @@ export function useCurrentItem() {
     if (search.folder) {
       return { type: SIDEBAR_ITEM_TYPES.folders, slug: search.folder }
     }
+    if (search.file) {
+      return { type: SIDEBAR_ITEM_TYPES.files, slug: search.file }
+    }
     return null
   }
 

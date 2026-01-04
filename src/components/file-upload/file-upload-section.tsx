@@ -1,16 +1,10 @@
-import { Expand, Upload, X } from 'lucide-react'
-import { useState } from 'react'
-import { ErrorAlert } from '../forms/category-tag-form/base-tag-form/error-alert'
+import { File, FileText, Image, Music, Upload, Video } from 'lucide-react'
 import type { UseFileWithPreviewReturn } from '~/hooks/useFileWithPreview'
-import type { ReactNode } from 'react'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button.tsx'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '~/components/shadcn/ui/dialog'
+import { Card, CardContent } from '~/components/shadcn/ui/card'
+import { Badge } from '~/components/shadcn/ui/badge'
+import { Progress } from '~/components/shadcn/ui/progress'
 
 export interface FileUploadSectionProps {
   label?: string
@@ -18,11 +12,53 @@ export interface FileUploadSectionProps {
   handleFileSelect: (file: File) => void
   isSubmitting: boolean
   acceptPattern: string
-  fileTypeLabel: string
-  maxSizeLabel: string
   dragDropText: string
-  renderPreview: (previewUrl: string) => ReactNode
-  renderPreviewDialog: (previewUrl: string, onClose: () => void) => ReactNode
+}
+
+function getFileTypeIcon(
+  file: File | null,
+  fileMetadata?: { name: string; type: string; size: number } | null,
+) {
+  let mimeType = ''
+  let fileName = ''
+
+  if (file) {
+    mimeType = file.type.toLowerCase()
+    fileName = file.name.toLowerCase()
+  } else if (fileMetadata) {
+    mimeType = fileMetadata.type.toLowerCase()
+    fileName = fileMetadata.name.toLowerCase()
+  }
+
+  if (
+    mimeType.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)
+  ) {
+    return Image
+  }
+  if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+    return FileText
+  }
+  if (
+    mimeType.startsWith('video/') ||
+    /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)
+  ) {
+    return Video
+  }
+  if (
+    mimeType.startsWith('audio/') ||
+    /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)
+  ) {
+    return Music
+  }
+  return File
+}
+
+function formatFileSize(size: number): string {
+  if (size > 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`
+  }
+  return `${(size / 1024).toFixed(2)} KB`
 }
 
 export function FileUploadSection({
@@ -31,132 +67,132 @@ export function FileUploadSection({
   handleFileSelect,
   isSubmitting,
   acceptPattern,
-  fileTypeLabel,
-  maxSizeLabel,
   dragDropText,
-  renderPreview,
-  renderPreviewDialog,
 }: FileUploadSectionProps) {
-  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const fileName = fileUpload.fileMetadata?.name ?? fileUpload.file?.name
+  const fileSize = fileUpload.fileMetadata?.size
+    ? formatFileSize(fileUpload.fileMetadata.size)
+    : fileUpload.file?.size
+      ? formatFileSize(fileUpload.file.size)
+      : null
+  const FileIcon = getFileTypeIcon(fileUpload.file, fileUpload.fileMetadata)
 
   return (
     <div className="space-y-2">
       {label && <Label className="text-sm font-semibold pt-2">{label}</Label>}
 
-      {/* File Preview / Drag & Drop Zone */}
-      {fileUpload.preview ? (
-        <div className="relative">
-          <div className="relative group w-full h-40 rounded-lg overflow-hidden border-2 border-primary/20 bg-muted shadow-sm">
-            {/* Custom preview component */}
-            <div className="w-full h-full overflow-auto">
-              {renderPreview(fileUpload.preview)}
-            </div>
-
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={fileUpload.removeFile}
-                disabled={fileUpload.isUploading || isSubmitting}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={16} className="mr-1" />
-                Remove
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsPreviewDialogOpen(true)}
-                disabled={fileUpload.isUploading || isSubmitting}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Expand size={16} className="mr-1" />
-                View
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div
-          onDragEnter={fileUpload.handleDrag}
-          onDragLeave={fileUpload.handleDrag}
-          onDragOver={fileUpload.handleDrag}
-          onDrop={fileUpload.handleDrop}
-          className={`relative w-full h-40 rounded-lg border-2 border-dashed transition-all ${
-            fileUpload.isDragActive
+      {/* File Card */}
+      <Card
+        className={`group w-full border-2 transition-all ${
+          fileUpload.preview
+            ? fileUpload.isDragActive
               ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50'
-          } ${fileUpload.isUploading || isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-        >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center pointer-events-none">
-              <div className="flex justify-center mb-3">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Upload size={24} className="text-primary" />
+              : 'border-border'
+            : fileUpload.isDragActive
+              ? 'border-primary bg-primary/5'
+              : 'border-dashed border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50'
+        } ${fileUpload.isUploading || isSubmitting ? 'opacity-60' : ''}`}
+      >
+        <CardContent className="p-3 h-20 flex items-center">
+          {fileUpload.preview ? (
+            <div
+              onDragEnter={fileUpload.handleDrag}
+              onDragLeave={fileUpload.handleDrag}
+              onDragOver={fileUpload.handleDrag}
+              onDrop={fileUpload.handleDrop}
+              className="relative w-full h-full flex items-center gap-4 cursor-pointer"
+            >
+              {/* File Icon */}
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center border border-border">
+                  <FileIcon className="w-6 h-6 text-muted-foreground" />
                 </div>
               </div>
-              <p className="text-sm font-medium text-foreground">
-                {dragDropText}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {fileTypeLabel} • {maxSizeLabel}
-              </p>
+
+              {/* File Info */}
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <p className="font-medium text-sm truncate">{fileName}</p>
+                  {fileSize && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge variant="secondary" className="text-xs">
+                        {fileSize}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                {/* Upload Progress */}
+                {fileUpload.isUploading && (
+                  <Progress
+                    value={fileUpload.uploadProgress.percentage}
+                    className="h-1.5"
+                  />
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    fileUpload.fileInputRef.current?.click()
+                  }}
+                  disabled={fileUpload.isUploading || isSubmitting}
+                  className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150"
+                >
+                  Replace
+                </Button>
+              </div>
+              <input
+                ref={fileUpload.fileInputRef}
+                type="file"
+                accept={acceptPattern}
+                disabled={fileUpload.isUploading || isSubmitting}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    handleFileSelect(file)
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              />
             </div>
-          </div>
-          <input
-            ref={fileUpload.fileInputRef}
-            type="file"
-            accept={acceptPattern}
-            disabled={fileUpload.isUploading || isSubmitting}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              const file = e.target.files?.[0]
-              if (file) {
-                handleFileSelect(file)
-              }
-            }}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-          />
-        </div>
-      )}
-
-      {/* Upload Error */}
-      <ErrorAlert
-        error={fileUpload.uploadError}
-        shouldShowError={!!fileUpload.uploadError}
-      />
-
-      {/* Upload Progress */}
-      {fileUpload.isUploading && (
-        <div className="space-y-2">
-          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+          ) : (
             <div
-              className="h-full bg-primary rounded-full transition-all duration-300"
-              style={{
-                width: `${fileUpload.uploadProgress.percentage}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Preview Dialog */}
-      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogTitle className="sr-only">File Preview</DialogTitle>
-        <DialogDescription className="sr-only">
-          Preview the selected file
-        </DialogDescription>
-        <DialogContent
-          className="max-w-4xl w-full p-0 border-0 bg-black/90 [&>button]:hidden"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
-          {fileUpload.preview &&
-            renderPreviewDialog(fileUpload.preview, () =>
-              setIsPreviewDialogOpen(false),
-            )}
-        </DialogContent>
-      </Dialog>
+              onDragEnter={fileUpload.handleDrag}
+              onDragLeave={fileUpload.handleDrag}
+              onDragOver={fileUpload.handleDrag}
+              onDrop={fileUpload.handleDrop}
+              className="relative w-full h-full flex items-center justify-center cursor-pointer"
+            >
+              <div className="text-center pointer-events-none">
+                <div className="flex justify-center mb-3">
+                  <Upload className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">
+                  {dragDropText}
+                </p>
+              </div>
+              <input
+                ref={fileUpload.fileInputRef}
+                type="file"
+                accept={acceptPattern}
+                disabled={fileUpload.isUploading || isSubmitting}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    handleFileSelect(file)
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

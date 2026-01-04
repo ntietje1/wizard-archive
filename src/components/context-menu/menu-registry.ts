@@ -1,6 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import {
   Eye,
+  File,
   FileEdit,
   FilePlus,
   FolderPlus,
@@ -29,6 +30,7 @@ export type ActionHandlers = {
   createFolder: (ctx: MenuContext) => void
   createTag: (ctx: MenuContext) => void
   createMap: (ctx: MenuContext) => void
+  createFile: (ctx: MenuContext) => void
   createCanvas: (ctx: MenuContext) => void
   createCategory: (ctx: MenuContext) => void
 
@@ -39,6 +41,8 @@ export type ActionHandlers = {
   editCategory: (ctx: MenuContext) => void
 
   editMap: (ctx: MenuContext) => void
+
+  editFile: (ctx: MenuContext) => void
 
   editTag: (ctx: MenuContext) => void
 
@@ -108,6 +112,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
               'tags',
               'tagCategories',
               'gameMaps',
+              'files',
             )(ctx),
           action: actions.createCategory,
         },
@@ -119,7 +124,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 10,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps')(ctx) &&
+            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
             (p.isType('folders')(ctx) ||
               p.isType('tagCategories')(ctx) ||
               p.atRoot(ctx)),
@@ -132,7 +137,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 11,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps')(ctx) &&
+            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
             (p.isType('folders')(ctx) ||
               p.isType('tagCategories')(ctx) ||
               p.atRoot(ctx)),
@@ -145,11 +150,24 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 12,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps')(ctx) &&
+            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
             (p.isType('folders')(ctx) ||
               p.isType('tagCategories')(ctx) ||
               p.atRoot(ctx)),
           action: actions.createMap,
+        },
+        {
+          id: 'submenu-create-file',
+          label: 'File',
+          icon: File,
+          group: 'create',
+          priority: 14,
+          shouldShow: (ctx) =>
+            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) ||
+              p.isType('tagCategories')(ctx) ||
+              p.atRoot(ctx)),
+          action: actions.createFile,
         },
         {
           id: 'submenu-create-canvas',
@@ -158,7 +176,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 13,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps')(ctx) &&
+            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
             (p.isType('folders')(ctx) ||
               p.isType('tagCategories')(ctx) ||
               p.atRoot(ctx)),
@@ -206,7 +224,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 20,
       shouldShow: (ctx) =>
         p.inSidebar(ctx) &&
-        p.isType('notes', 'folders', 'tags', 'gameMaps')(ctx),
+        p.isType('notes', 'folders', 'tags', 'gameMaps', 'files')(ctx),
       action: actions.rename,
     },
 
@@ -218,7 +236,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'primary',
       priority: 0,
       shouldShow: (ctx) =>
-        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders', 'tags', 'files')(ctx) &&
         (p.notInSidebar(ctx) || p.inView('topbar')(ctx)),
       action: actions.showInSidebar,
     },
@@ -260,11 +278,20 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.editMap,
     },
     {
+      id: 'edit-file',
+      label: 'Edit File',
+      icon: FileEdit,
+      group: 'type-specific',
+      priority: 41,
+      shouldShow: (ctx) => p.isType('files')(ctx),
+      action: actions.editFile,
+    },
+    {
       id: 'edit-category',
       label: 'Edit Category',
       icon: FileEdit,
       group: 'type-specific',
-      priority: 41,
+      priority: 42,
       shouldShow: (ctx) => p.isType('tagCategories')(ctx) && p.hasCategory(ctx),
       action: actions.editCategory,
     },
@@ -276,7 +303,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           : 'Edit Tag',
       icon: FileEdit,
       group: 'type-specific',
-      priority: 42,
+      priority: 43,
       shouldShow: (ctx) => p.isType('tags')(ctx) && p.hasCategory(ctx),
       action: actions.editTag,
     },
@@ -344,7 +371,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       variant: 'danger',
       shouldShow: (ctx) =>
         (p.inSidebar(ctx) || p.inView('topbar')(ctx)) &&
-        p.isType('notes', 'folders', 'tags', 'gameMaps')(ctx),
+        p.isType('notes', 'folders', 'tags', 'gameMaps', 'files')(ctx),
       action: actions.delete,
     },
   ]

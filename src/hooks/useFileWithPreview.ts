@@ -9,17 +9,55 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export interface FileWithPreviewOptions {
   isOpen: boolean
   fileStorageId?: Id<'_storage'>
+  existingFileName?: string
   uploadOnSelect?: boolean
   fileTypeValidator?: (file: File) => { success: boolean; error?: string }
   maxFileSize?: number
 }
 
+export interface FileMetadata {
+  name: string
+  type: string
+  size: number
+}
+
 export type UseFileWithPreviewReturn = ReturnType<typeof useFileWithPreview>
+
+function getFileType(
+  file: File,
+): 'image' | 'pdf' | 'video' | 'audio' | 'other' {
+  const mimeType = file.type.toLowerCase()
+  const fileName = file.name.toLowerCase()
+
+  if (
+    mimeType.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)
+  ) {
+    return 'image'
+  }
+  if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+    return 'pdf'
+  }
+  if (
+    mimeType.startsWith('video/') ||
+    /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)
+  ) {
+    return 'video'
+  }
+  if (
+    mimeType.startsWith('audio/') ||
+    /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)
+  ) {
+    return 'audio'
+  }
+  return 'other'
+}
 
 export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   const {
     isOpen,
     fileStorageId,
+    existingFileName,
     uploadOnSelect = true,
     fileTypeValidator,
     maxFileSize = MAX_FILE_SIZE,
@@ -29,12 +67,24 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string>('')
+  const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
   const [isDragActive, setIsDragActive] = useState(false)
   const [isFileRemoved, setIsFileRemoved] = useState(false)
   const [storageId, setStorageId] = useState<Id<'_storage'> | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+
+  // Clean up object URLs
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (isOpen && fileStorageId && !isFileRemoved) {
@@ -43,16 +93,41 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
           storageId: fileStorageId,
         })
         .then((url) => {
-          if (url) setPreview(url)
+          if (url) {
+            setPreview(url)
+            // Try to get metadata if available
+            convex
+              .query(api.storage.queries.getStorageMetadata, {
+                storageId: fileStorageId,
+              })
+              .then((metadata) => {
+                if (metadata) {
+                  setFileMetadata({
+                    name: existingFileName || 'File', // Use existing file name if available
+                    type: metadata.contentType || 'application/octet-stream',
+                    size: metadata.size || 0,
+                  })
+                }
+              })
+              .catch(() => {
+                // Metadata not available, that's okay
+              })
+          }
         })
         .catch(console.error)
     }
-  }, [isOpen, fileStorageId, isFileRemoved, convex])
+  }, [isOpen, fileStorageId, isFileRemoved, existingFileName, convex])
 
   useEffect(() => {
     if (!isOpen) {
       setIsFileRemoved(false)
       setStorageId(undefined)
+      setPreview('')
+      setFileMetadata(null)
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
     }
   }, [isOpen])
 
@@ -111,11 +186,34 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setFile(selectedFile)
       setUploadError('')
 
-      const reader = new FileReader()
-      reader.onload = (event: ProgressEvent<FileReader>) => {
-        setPreview(event.target?.result as string)
+      // Store file metadata
+      setFileMetadata({
+        name: selectedFile.name,
+        type: selectedFile.type || 'application/octet-stream',
+        size: selectedFile.size,
+      })
+
+      // Clean up previous object URL
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
       }
-      reader.readAsDataURL(selectedFile)
+
+      // Create preview based on file type
+      const fileType = getFileType(selectedFile)
+      if (fileType === 'image') {
+        // Use data URL for images (works well for previews)
+        const reader = new FileReader()
+        reader.onload = (event: ProgressEvent<FileReader>) => {
+          setPreview(event.target?.result as string)
+        }
+        reader.readAsDataURL(selectedFile)
+      } else {
+        // Use object URL for videos, audio, PDFs, and other files
+        const objectUrl = URL.createObjectURL(selectedFile)
+        objectUrlRef.current = objectUrl
+        setPreview(objectUrl)
+      }
 
       if (uploadOnSelect) {
         setIsUploading(true)
@@ -164,9 +262,14 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   const removeFile = useCallback(() => {
     setFile(null)
     setPreview('')
+    setFileMetadata(null)
     setUploadError('')
     setIsFileRemoved(true)
     setStorageId(undefined)
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -212,6 +315,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   return {
     file,
     preview,
+    fileMetadata,
     isUploading,
     uploadError,
     isDragActive,

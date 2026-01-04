@@ -4,6 +4,7 @@ import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { Tag, TagCategory } from 'convex/tags/types'
 import type { GameMap } from 'convex/gameMaps/types'
+import type { File } from 'convex/files/types'
 
 /**
  * Type guard to check if a sidebar item is a specific type.
@@ -57,6 +58,13 @@ export function isGameMap(
   item: AnySidebarItem | null | undefined,
 ): item is GameMap {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.gameMaps)
+}
+
+/**
+ * Type guard to check if a sidebar item is a File.
+ */
+export function isFile(item: AnySidebarItem | null | undefined): item is File {
+  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
 }
 
 /**

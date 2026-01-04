@@ -10,6 +10,7 @@ import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
 import { useTagActions } from './useTagActions'
 import { useNoteActions } from './useNoteActions'
+import { useFileActions } from './useFileActions'
 import { useCurrentItem } from './useCurrentItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -20,6 +21,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const { updateTag } = useTagActions()
   const { updateMap } = useMapActions()
   const { updateFolder } = useFolderActions()
+  const { updateFile } = useFileActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { navigateToItemAndPage } = useEditorNavigation()
@@ -64,6 +66,12 @@ export function useRenameItem(item: AnySidebarItem | null) {
           case SIDEBAR_ITEM_TYPES.folders:
             response = await updateFolder.mutateAsync({
               folderId: item._id,
+              name: newName,
+            })
+            break
+          case SIDEBAR_ITEM_TYPES.files:
+            response = await updateFile.mutateAsync({
+              fileId: item._id,
               name: newName,
             })
             break
@@ -119,6 +127,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
       updateTag,
       updateMap,
       updateFolder,
+      updateFile,
       updateCategory,
       navigateToItemAndPage,
       search,

@@ -9,6 +9,7 @@ import {
 import { getNote, getNoteBySlug } from '../notes/notes'
 import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
 import { getFolder, getFolderBySlug } from '../folders/folders'
+import { getFile, getFileBySlug } from '../files/files'
 import { CATEGORY_KIND } from '../tags/types'
 import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
 import type {
@@ -71,6 +72,14 @@ export const getSidebarItemsByCategory = async (
     )
     .collect()
   allItems.push(...(maps as Array<AnySidebarItem>))
+
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_category', (q) =>
+      q.eq('campaignId', campaignId).eq('categoryId', categoryId),
+    )
+    .collect()
+  allItems.push(...(files as Array<AnySidebarItem>))
 
   return allItems
 }
@@ -138,6 +147,14 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...(maps as Array<AnySidebarItem>))
 
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId),
+    )
+    .collect()
+  allItems.push(...(files as Array<AnySidebarItem>))
+
   const systemManagedCategories = allCategories.filter(
     (c) => c.kind === CATEGORY_KIND.SystemManaged,
   )
@@ -170,6 +187,8 @@ export const getSidebarItemBySlug = async (
       return await getMapBySlug(ctx, campaignId, slug)
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategoryBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.files:
+      return await getFileBySlug(ctx, campaignId, slug)
     default:
       // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', type)
@@ -205,6 +224,8 @@ export const getSidebarItemById = async (
       return await getMap(ctx, id as Id<'gameMaps'>)
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategory(ctx, campaignId, id as Id<'tagCategories'>)
+    case SIDEBAR_ITEM_TYPES.files:
+      return await getFile(ctx, id as Id<'files'>)
     default:
       // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', item.type)
@@ -251,6 +272,7 @@ const validRootChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 const validCategoryChildren: Array<SidebarItemType> = [
@@ -258,11 +280,13 @@ const validCategoryChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 const validTagChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validFolderChildren: Array<SidebarItemType> = [
@@ -270,11 +294,13 @@ export const validFolderChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validNoteChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validMapChildren: Array<SidebarItemType> = []
