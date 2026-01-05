@@ -3,6 +3,7 @@ import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'
 import { TagCard } from './tag-card'
+import { FileCard } from './file-card'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { TagCategory } from 'convex/tags/types'
 
@@ -23,6 +24,8 @@ export function ItemCard({ item }: ItemCardProps<AnySidebarItem>) {
       return <MapCard item={item} />
     case SIDEBAR_ITEM_TYPES.tags:
       return <TagCard item={item} />
+    case SIDEBAR_ITEM_TYPES.files:
+      return <FileCard item={item} />
     default:
       console.error(`Unsupported item type: ${item.type}`)
       return null

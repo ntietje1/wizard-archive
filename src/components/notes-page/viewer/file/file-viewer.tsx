@@ -12,62 +12,23 @@ import type { EditorViewerProps } from '~/lib/editor-registry'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 function getFileType(
-  fileName: string | null | undefined,
   contentType: string | null | undefined,
-  url: string | null,
 ): 'image' | 'pdf' | 'video' | 'audio' | 'other' {
-  // First try to determine from MIME type (most reliable)
-  if (contentType) {
-    const mimeType = contentType.toLowerCase()
-    if (mimeType.startsWith('image/')) {
-      return 'image'
-    }
-    if (mimeType === 'application/pdf') {
-      return 'pdf'
-    }
-    if (mimeType.startsWith('video/')) {
-      return 'video'
-    }
-    if (mimeType.startsWith('audio/')) {
-      return 'audio'
-    }
+  if (!contentType) {
+    return 'other'
   }
-
-  // Fallback to file name extension
-  if (fileName) {
-    const nameLower = fileName.toLowerCase()
-    if (/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(nameLower)) {
-      return 'image'
-    }
-    if (nameLower.endsWith('.pdf')) {
-      return 'pdf'
-    }
-    if (/\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(nameLower)) {
-      return 'video'
-    }
-    if (/\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(nameLower)) {
-      return 'audio'
-    }
+  const mimeType = contentType.toLowerCase()
+  if (mimeType.startsWith('image/')) {
+    return 'image'
+  } else if (mimeType === 'application/pdf') {
+    return 'pdf'
+  } else if (mimeType.startsWith('video/')) {
+    return 'video'
+  } else if (mimeType.startsWith('audio/')) {
+    return 'audio'
+  } else {
+    return 'other'
   }
-
-  // Last resort: check URL
-  if (url) {
-    const urlLower = url.toLowerCase()
-    if (/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(urlLower)) {
-      return 'image'
-    }
-    if (urlLower.includes('.pdf') || urlLower.includes('application/pdf')) {
-      return 'pdf'
-    }
-    if (/\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(urlLower)) {
-      return 'video'
-    }
-    if (/\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(urlLower)) {
-      return 'audio'
-    }
-  }
-
-  return 'other'
 }
 
 export function FileViewer({ item: file }: EditorViewerProps<File>) {
@@ -131,7 +92,7 @@ export function FileViewer({ item: file }: EditorViewerProps<File>) {
   }
 
   const contentType = metadataQuery.data?.contentType ?? null
-  const fileType = getFileType(file.name, contentType, fileUrl)
+  const fileType = getFileType(contentType)
 
   switch (fileType) {
     case 'image':

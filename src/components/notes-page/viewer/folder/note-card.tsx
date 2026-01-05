@@ -7,8 +7,10 @@ import type { Note } from 'convex/notes/types'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { FileText } from '~/lib/icons'
+import { Button } from '~/components/shadcn/ui/button'
+import { FileText, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useContextMenu } from '~/hooks/useContextMenu'
 import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 
 export function NoteCard({
@@ -20,6 +22,7 @@ export function NoteCard({
   const { navigateToNote } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
+  const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const dragData: SidebarDragData = {
     _id: note._id,
@@ -48,16 +51,18 @@ export function NoteCard({
 
   if (isLoading) {
     return (
-      <Card className="bg-white border border-slate-200 w-full flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md">
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div className="overflow-hidden">
-            <div className="flex items-center gap-2 mb-2 min-w-0">
-              <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
-              <Skeleton className="h-6 w-32" />
+      <div className="w-full h-[140px]">
+        <Card className="w-full h-full flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            <div className="overflow-hidden">
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <Skeleton className="h-5 w-32" />
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+          <Skeleton className="w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
+        </Card>
+      </div>
     )
   }
 
@@ -66,10 +71,10 @@ export function NoteCard({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={isDragging ? 'opacity-50' : ''}
+      className={`w-full h-[140px] ${isDragging ? 'opacity-50' : ''}`}
     >
       <Card
-        className="bg-white border border-slate-200 w-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-3 relative rounded-md"
+        className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md"
         onClick={handleCardActivate}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -80,15 +85,32 @@ export function NoteCard({
         tabIndex={0}
         role="button"
       >
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
+        {/* Left Content Section */}
+        <div className="p-1 flex-1 min-w-0 flex flex-col justify-between">
           <div className="overflow-hidden">
             <div className="flex items-center gap-2 mb-2 min-w-0">
-              <FileText className="w-6 h-6 text-slate-600 select-none flex-shrink-0" />
-              <CardTitle className="text-xl text-slate-800 truncate select-none">
+              <CardTitle className="text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
                 {note.name || defaultItemName(note)}
               </CardTitle>
             </div>
           </div>
+        </div>
+
+        {/* Icon Section */}
+        <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-slate-100 flex items-center justify-center">
+          <FileText className="w-8 h-8 text-slate-400" />
+          {/* Three-dot menu button in top right */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-1 right-1 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleMoreOptions(e)
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
         </div>
       </Card>
     </div>
@@ -96,6 +118,7 @@ export function NoteCard({
 
   return (
     <SidebarItemContextMenu
+      ref={contextMenuRef}
       item={note}
       viewContext="folder-view"
       category={category}

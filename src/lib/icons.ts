@@ -78,6 +78,9 @@ export {
   Star,
   SquareArrowOutUpRight,
   Eye,
+  Image,
+  Video,
+  File,
 } from 'lucide-react'
 
 export type { LucideIcon } from 'lucide-react'

@@ -34,16 +34,16 @@
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 0.5px 1.5px rgba(23, 23, 66, 0.25));
-  transition: filter 0.2s ease;
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 1));
+  transition: filter 0.1s ease;
 }
 
 .folder-seam-cover {
   position: absolute;
-  top: 11px;
+  top: 11.5px;
   left: 20px;
   right: 20px;
-  bottom: 0px;
+  bottom: 1.5px;
   background-color: #ffffff;
   pointer-events: none;
   z-index: 1;
@@ -58,9 +58,11 @@
 }
 
 .folder-wrapper:hover .folder svg {
-  filter: drop-shadow(0 2px 2.5px rgba(23, 23, 66, 0.25));
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 0.75))
+    drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, 0.2));
 }
 
 .folder-wrapper.valid-drop-target .folder svg {
-  filter: drop-shadow(0 1px 3px rgba(251, 191, 36, 0.7));
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 0.75))
+    drop-shadow(0 1px 3px rgba(251, 191, 36, 0.7));
 }
