@@ -26,10 +26,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pins = pinsQuery.data || []
 
   const content = (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 min-w-0">
       <ResizablePanelGroup
         direction="horizontal"
-        className="flex-1"
+        className="flex-1 min-w-0"
         autoSaveId="notes-sidebar-layout"
       >
         <ResizablePanel
@@ -63,7 +63,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <ResizablePanel
           defaultSize={80}
           minSize={25}
-          className="flex flex-col min-h-0"
+          className="flex flex-col min-h-0 min-w-0"
         >
           {children}
         </ResizablePanel>
