@@ -100,12 +100,7 @@ export function SidebarItemButton({
   )
 
   const wrappedButton = (
-    <SidebarContextMenu
-      ref={contextMenuRef}
-      item={item}
-      viewContext="sidebar"
-      category={category}
-    >
+    <SidebarContextMenu ref={contextMenuRef} item={item} category={category}>
       {button}
     </SidebarContextMenu>
   )

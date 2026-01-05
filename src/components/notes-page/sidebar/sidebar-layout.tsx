@@ -47,10 +47,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0"
             >
-              <SidebarContextMenu
-                viewContext="sidebar"
-                className="flex flex-col flex-1 min-h-0"
-              >
+              <SidebarContextMenu className="flex flex-col flex-1 min-h-0">
                 <SidebarHeader />
                 <FileSidebar />
               </SidebarContextMenu>
