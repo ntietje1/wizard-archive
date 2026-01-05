@@ -1,48 +1,16 @@
 import { useEffect, useState } from 'react'
+import { isValidFileUrl } from '~/lib/file-url-validation'
 
 interface PdfFileViewerProps {
   pdfUrl: string
   title: string
 }
 
-// Validate PDF URL before rendering
-function isValidPdfUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    const convexUrl = (import.meta as any).env.VITE_CONVEX_URL
-
-    // Must use HTTPS
-    if (parsed.protocol !== 'https:') {
-      return false
-    }
-
-    try {
-      const convexParsed = new URL(convexUrl)
-      // Check if origin matches Convex deployment
-      if (parsed.origin !== convexParsed.origin) {
-        return false
-      }
-      // Check if path matches storage pattern: /api/storage/[storageId]
-      const storagePathPattern = /^\/api\/storage\/[^/]+$/
-      if (!storagePathPattern.test(parsed.pathname)) {
-        return false
-      }
-    } catch {
-      // If Convex URL is invalid, fall back to basic validation
-      return false
-    }
-
-    return true
-  } catch {
-    return false
-  }
-}
-
 export function PdfFileViewer({ pdfUrl, title }: PdfFileViewerProps) {
   const [isValid, setIsValid] = useState(false)
 
   useEffect(() => {
-    setIsValid(isValidPdfUrl(pdfUrl))
+    setIsValid(isValidFileUrl(pdfUrl))
   }, [pdfUrl])
 
   if (!isValid) {

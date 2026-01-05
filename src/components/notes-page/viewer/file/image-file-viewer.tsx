@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import { isValidFileUrl } from '~/lib/file-url-validation'
 import { Button } from '~/components/shadcn/ui/button'
 
 interface ImageFileViewerProps {
@@ -13,6 +14,11 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageError, setImageError] = useState(false)
+  const [isValid, setIsValid] = useState(false)
+
+  useEffect(() => {
+    setIsValid(isValidFileUrl(imageUrl))
+  }, [imageUrl])
 
   const handleZoomIn = useCallback(() => {
     transformWrapperRef.current?.zoomIn()
@@ -29,6 +35,19 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
   const handleImageError = useCallback(() => {
     setImageError(true)
   }, [])
+
+  if (!isValid) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+        <div className="text-center p-4">
+          <p className="text-lg font-medium text-red-500">Invalid Image URL</p>
+          <p className="text-sm mt-2">
+            The image URL does not meet security requirements.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">

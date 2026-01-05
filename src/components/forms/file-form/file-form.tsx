@@ -133,11 +133,19 @@ export function FileForm({
         return
       }
 
+      // Use file's actual name if name field is empty
+      const finalName =
+        values.name.trim() ||
+        fileUpload.file?.name ||
+        fileUpload.fileMetadata?.name ||
+        file.data?.name ||
+        ''
+
       if (fileId) {
         // Update existing file
         await updateMutation.mutateAsync({
           fileId,
-          name: values.name,
+          name: finalName,
           storageId: finalStorageId,
         })
         toast.success('File updated')
@@ -148,7 +156,7 @@ export function FileForm({
         const { fileId: newFileId, slug: newFileSlug } =
           await createMutation.mutateAsync({
             campaignId,
-            name: values.name,
+            name: finalName,
             storageId: finalStorageId,
             parentId,
           })
