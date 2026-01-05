@@ -1,11 +1,11 @@
-import { v } from "convex/values"
-import { defineTable } from "convex/server"
-import { sidebarItemBaseFields } from "../sidebarItems/baseFields"
+import { v } from 'convex/values'
+import { defineTable } from 'convex/server'
+import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
 
 const fileTableFields = {
-    ...sidebarItemBaseFields,
-    type: v.literal('files'),
-    storageId: v.id('_storage'),
+  ...sidebarItemBaseFields,
+  type: v.literal('files'),
+  storageId: v.id('_storage'),
 }
 
 export const filesTables = {
@@ -18,9 +18,9 @@ export const filesTables = {
 }
 
 const fileValidatorFields = {
-    _id: v.id('files'),
-    _creationTime: v.number(),
-    ...fileTableFields,
-  } as const
-  
-  export const fileValidator = v.object(fileValidatorFields)
+  _id: v.id('files'),
+  _creationTime: v.number(),
+  ...fileTableFields,
+} as const
+
+export const fileValidator = v.object(fileValidatorFields)

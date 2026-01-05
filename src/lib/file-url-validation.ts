@@ -1,6 +1,6 @@
 /**
  * Validates that a file URL meets security requirements.
- * 
+ *
  * Requirements:
  * - Must use HTTPS protocol
  * - Origin must match Convex deployment URL
@@ -37,4 +37,3 @@ export function isValidFileUrl(url: string): boolean {
     return false
   }
 }
-

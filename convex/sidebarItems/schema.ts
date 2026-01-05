@@ -4,7 +4,11 @@ import { noteValidator } from '../notes/schema'
 import { folderValidator } from '../folders/schema'
 import { tagCategoryValidator, tagValidator } from '../tags/schema'
 import { fileValidator } from '../files/schema'
-import { sidebarItemBaseFields, sidebarItemIdValidator, sidebarItemTypeValidator } from './baseFields'
+import {
+  sidebarItemBaseFields,
+  sidebarItemIdValidator,
+  sidebarItemTypeValidator,
+} from './baseFields'
 
 export const anySidebarItemValidator = v.union(
   noteValidator,
@@ -16,5 +20,8 @@ export const anySidebarItemValidator = v.union(
 )
 
 // Re-export for convenience
-export { sidebarItemTypeValidator, sidebarItemIdValidator, sidebarItemBaseFields }
-
+export {
+  sidebarItemTypeValidator,
+  sidebarItemIdValidator,
+  sidebarItemBaseFields,
+}

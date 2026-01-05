@@ -11,13 +11,11 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 /**
  * Validates that a file is a viewable media type and within size limits.
- * 
+ *
  * @param file - The file to validate
  * @returns Validation result with success status and optional error message
  */
-export function validateFileForUpload(
-  file: File,
-): FileValidationResult {
+export function validateFileForUpload(file: File): FileValidationResult {
   const mimeType = file.type.toLowerCase()
   const fileName = file.name.toLowerCase()
 
@@ -48,4 +46,3 @@ export function validateFileForUpload(
 
   return { success: true }
 }
-

@@ -1,6 +1,9 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
-import { sidebarItemBaseFields, sidebarItemIdValidator } from '../sidebarItems/baseFields'
+import {
+  sidebarItemBaseFields,
+  sidebarItemIdValidator,
+} from '../sidebarItems/baseFields'
 
 export const mapTableFields = {
   ...sidebarItemBaseFields,
