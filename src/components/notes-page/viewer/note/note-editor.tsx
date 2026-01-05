@@ -9,7 +9,7 @@ import TagMenu from '../../editor/extensions/side-menu/tags/tag-menu'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Note } from 'convex/notes/types'
 import type {
   CustomBlock,

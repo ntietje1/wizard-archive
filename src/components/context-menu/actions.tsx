@@ -45,7 +45,6 @@ export function useMenuActions() {
     navigateToCategory,
     navigateToItem,
     navigateToMap,
-    navigateToItemAndPage,
     clearEditorContent,
   } = useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
@@ -74,8 +73,6 @@ export function useMenuActions() {
   } | null>(null)
   const [createMapDialog, setCreateMapDialog] = useState<{
     parentId?: SidebarItemId
-    navigateToParent?: boolean
-    parentItem?: AnySidebarItem
   } | null>(null)
   const [createFileDialog, setCreateFileDialog] = useState<{
     parentId?: SidebarItemId
@@ -93,22 +90,6 @@ export function useMenuActions() {
     parentId?: SidebarItemId
   } | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
-
-  const handleCreatePageMapSuccess = useCallback(
-    async (
-      mapSlug: string | undefined,
-      parentId: SidebarItemId | undefined,
-      parentItem: AnySidebarItem | undefined,
-    ) => {
-      if (parentId) {
-        await openParentFolders(parentId)
-      }
-      if (parentItem && mapSlug) {
-        navigateToItemAndPage(parentItem, mapSlug)
-      }
-    },
-    [openParentFolders, navigateToItemAndPage],
-  )
 
   const actions: ActionHandlers = {
     open: useCallback(
@@ -202,42 +183,6 @@ export function useMenuActions() {
     createFile: (ctx: MenuContext) => {
       setCreateFileDialog({ parentId: ctx.item?._id })
     },
-
-    createPageNote: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId || !ctx.item) return
-
-        const parentId = ctx.item._id
-        const { noteId, slug } = await createNote.mutateAsync({
-          campaignId,
-          parentId,
-          categoryId: ctx.category?._id,
-        })
-
-        await openParentFolders(noteId)
-
-        navigateToItemAndPage(ctx.item, slug)
-
-        setRenamingId(noteId)
-      },
-      [
-        campaignId,
-        createNote,
-        openParentFolders,
-        navigateToItemAndPage,
-        setRenamingId,
-      ],
-    ),
-
-    createPageMap: useCallback((ctx: MenuContext) => {
-      if (!ctx.item) return
-      const parentId = ctx.item._id
-      setCreateMapDialog({
-        parentId,
-        navigateToParent: true,
-        parentItem: ctx.item,
-      })
-    }, []),
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
@@ -511,16 +456,6 @@ export function useMenuActions() {
             onClose={() => setCreateMapDialog(null)}
             campaignId={campaignId}
             parentId={createMapDialog.parentId}
-            onSuccess={
-              createMapDialog.navigateToParent && createMapDialog.parentItem
-                ? (mapSlug) =>
-                    handleCreatePageMapSuccess(
-                      mapSlug,
-                      createMapDialog.parentId,
-                      createMapDialog.parentItem,
-                    )
-                : undefined
-            }
           />
         )}
 
@@ -652,7 +587,6 @@ export function useMenuActions() {
       campaign,
       currentItem,
       clearEditorContent,
-      handleCreatePageMapSuccess,
       createFileDialog,
       deleteFileDialog,
     ],

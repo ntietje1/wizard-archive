@@ -1,5 +1,5 @@
 import type { Tag } from 'convex/tags/types'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { EditorViewerProps } from '../sidebar-item-editor'
 import { isTag } from '~/lib/sidebar-item-utils'
 
 export function TagEditor({ item: tag }: EditorViewerProps<Tag>) {

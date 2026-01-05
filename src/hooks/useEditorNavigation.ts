@@ -50,25 +50,10 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToNote = useCallback(
-    (slug: string | null, pageSlug?: string, replace?: boolean) => {
+    (slug: string | null, replace?: boolean) => {
       navigateToEditor(
         createContentSearch({
           note: slug || undefined,
-          page: pageSlug || undefined,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
-
-  // does NOT update the note slug, so must be used within a note and not to navigate to a page in a different note
-  const navigateToPage = useCallback(
-    (pageSlug: string, replace?: boolean) => {
-      navigateToEditor(
-        (prev) => ({
-          ...prev,
-          page: pageSlug,
         }),
         replace,
       )
@@ -89,11 +74,10 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToTag = useCallback(
-    (slug: string | null, pageSlug?: string, replace?: boolean) => {
+    (slug: string | null, replace?: boolean) => {
       navigateToEditor(
         createContentSearch({
           tag: slug || undefined,
-          page: pageSlug || undefined,
         }),
         replace,
       )
@@ -167,10 +151,10 @@ export const useEditorNavigation = () => {
 
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes:
-          navigateToNote(item.slug, undefined, replace)
+          navigateToNote(item.slug, replace)
           break
         case SIDEBAR_ITEM_TYPES.tags:
-          navigateToTag(item.slug, undefined, replace)
+          navigateToTag(item.slug, replace)
           break
         case SIDEBAR_ITEM_TYPES.gameMaps:
           navigateToMap(item.slug, replace)
@@ -201,34 +185,6 @@ export const useEditorNavigation = () => {
     ],
   )
 
-  const navigateToItemAndPage = useCallback(
-    (item: AnySidebarItem, pageSlug?: string, replace?: boolean) => {
-      optimisticUpdateSidebarItem(item)
-
-      if (!pageSlug) {
-        navigateToItem(item, replace)
-        return
-      }
-
-      switch (item.type) {
-        case SIDEBAR_ITEM_TYPES.notes:
-          navigateToNote(item.slug, pageSlug, replace)
-          break
-        case SIDEBAR_ITEM_TYPES.tags:
-          navigateToTag(item.slug, pageSlug, replace)
-          break
-        default:
-          navigateToItem(item, replace)
-      }
-    },
-    [
-      navigateToItem,
-      navigateToNote,
-      navigateToTag,
-      optimisticUpdateSidebarItem,
-    ],
-  )
-
   const clearEditorContent = useCallback(() => {
     navigateToEditor(createContentSearch({}))
   }, [navigateToEditor])
@@ -236,13 +192,11 @@ export const useEditorNavigation = () => {
   return {
     navigateToNote,
     navigateToTag,
-    navigateToPage,
     navigateToMap,
     navigateToCategory,
     navigateToFolder,
     navigateToFile,
     navigateToItem,
-    navigateToItemAndPage,
     clearEditorContent,
   }
 }
