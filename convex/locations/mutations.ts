@@ -3,7 +3,7 @@ import { mutation } from '../_generated/server'
 import { deleteTag, insertTagAndNote, updateTagAndContent } from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { getLocation } from './locations'
 import type { Id } from '../_generated/dataModel'
 

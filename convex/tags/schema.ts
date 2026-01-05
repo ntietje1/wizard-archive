@@ -1,7 +1,10 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { commonMetaFields } from '../common/schema'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import {
+  sidebarItemBaseFields,
+  sidebarItemIdValidator,
+} from '../sidebarItems/baseFields'
 import { CATEGORY_KIND } from './types'
 
 export const categoryKindValidator = v.union(
@@ -11,27 +14,18 @@ export const categoryKindValidator = v.union(
 )
 
 export const tagCategoryTableFields = {
-  name: v.optional(v.string()),
-  slug: v.string(),
-  kind: categoryKindValidator,
-  campaignId: v.id('campaigns'),
-  iconName: v.optional(v.string()),
-  defaultColor: v.optional(v.string()),
+  ...sidebarItemBaseFields,
   type: v.literal('tagCategories'),
-  parentId: v.optional(sidebarItemIdValidator),
-  categoryId: v.optional(v.id('tagCategories')),
+  kind: categoryKindValidator,
+  defaultColor: v.optional(v.string()),
 }
 
 export const tagTableFields = {
-  name: v.optional(v.string()),
-  iconName: v.optional(v.string()),
-  slug: v.string(),
+  ...sidebarItemBaseFields,
   color: v.optional(v.string()),
   description: v.optional(v.string()),
+  categoryId: v.id('tagCategories'), // required for tags
   imageStorageId: v.optional(v.id('_storage')),
-  campaignId: v.id('campaigns'),
-  categoryId: v.id('tagCategories'),
-  parentId: v.optional(sidebarItemIdValidator),
   type: v.literal('tags'),
 }
 

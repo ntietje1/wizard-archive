@@ -3,33 +3,32 @@ import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
 import { ContextMenu } from '../components/ContextMenu'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { MenuContext, ViewContext } from '../types'
+import type { MenuContext } from '../types'
 import type { TagCategory } from 'convex/tags/types'
 import type { ContextMenuRef } from '../components/ContextMenu'
 
-interface SidebarItemContextMenuProps {
+interface SidebarContextMenuProps {
   item?: AnySidebarItem
-  viewContext: ViewContext
   category?: TagCategory
   parentItem?: AnySidebarItem
   children: React.ReactNode
   className?: string
 }
 
-export interface SidebarItemContextMenuRef {
+export interface SidebarContextMenuRef {
   open: (position?: { x: number; y: number }) => void
   close: () => void
 }
 
-export const SidebarItemContextMenu = forwardRef<
-  SidebarItemContextMenuRef,
-  SidebarItemContextMenuProps
->(({ item, viewContext, category, parentItem, children, className }, ref) => {
+export const SidebarContextMenu = forwardRef<
+  SidebarContextMenuRef,
+  SidebarContextMenuProps
+>(({ item, category, parentItem, children, className }, ref) => {
   // Use the enhancer hook to get common enhancers
   const enhancers = useContextEnhancers({ category })
 
   const contextMenuHook = useContextMenu({
-    viewContext,
+    viewContext: 'sidebar',
     item,
     parentItem,
     enhancers,

@@ -3,6 +3,7 @@ import type { GameMap } from '../gameMaps/types'
 import type { Note } from '../notes/types'
 import type { Folder } from '../folders/types'
 import type { Tag, TagCategory } from '../tags/types'
+import type { File } from '../files/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -12,6 +13,7 @@ export const SIDEBAR_ITEM_TYPES = {
   gameMaps: 'gameMaps',
   tagCategories: 'tagCategories',
   tags: 'tags',
+  files: 'files',
 } as const
 
 export type SidebarItemType =
@@ -39,7 +41,7 @@ export type SidebarItem<T extends SidebarItemType> = {
   type: T
 }
 
-export type AnySidebarItem = Note | Folder | GameMap | TagCategory | Tag
+export type AnySidebarItem = Note | Folder | GameMap | TagCategory | Tag | File
 
 export type SidebarItemId =
   | Id<'notes'>
@@ -47,3 +49,4 @@ export type SidebarItemId =
   | Id<'tagCategories'>
   | Id<'tags'>
   | Id<'gameMaps'>
+  | Id<'files'>

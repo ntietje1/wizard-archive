@@ -11,9 +11,11 @@ import { canDropItem } from '~/lib/dnd-utils'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { MapPin } from '~/lib/icons'
+import { Button } from '~/components/shadcn/ui/button'
+import { MapPin, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { useContextMenu } from '~/hooks/useContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 
 export function MapCard({
   item: map,
@@ -25,6 +27,7 @@ export function MapCard({
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
   const { active, over } = useDndContext()
+  const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const imageUrlQuery = useQuery(
     convexQuery(
@@ -87,15 +90,17 @@ export function MapCard({
 
   if (isLoading) {
     return (
-      <Card className="bg-white border border-slate-200 w-full">
-        <div className="aspect-video bg-slate-100 relative">
-          <Skeleton className="w-full h-full" />
-        </div>
-        <div className="p-4">
-          <Skeleton className="h-6 w-32 mb-2" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </Card>
+      <div className="w-full h-[140px]">
+        <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
+          <div className="flex items-center justify-between mb-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="w-6 h-6 rounded" />
+          </div>
+          <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
+            <Skeleton className="w-full h-full" />
+          </div>
+        </Card>
+      </div>
     )
   }
 
@@ -107,10 +112,10 @@ export function MapCard({
       }}
       {...listeners}
       {...attributes}
-      className={isDragging ? 'opacity-20' : ''}
+      className={`w-full h-[140px] ${isDragging ? 'opacity-20' : ''}`}
     >
       <Card
-        className={`bg-white border border-slate-200 w-full cursor-pointer transition-all hover:shadow-md group relative overflow-hidden ${
+        className={`w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md ${
           isValidDropTarget ? 'ring-2 ring-primary' : ''
         }`}
         onClick={handleCardActivate}
@@ -123,7 +128,26 @@ export function MapCard({
         tabIndex={0}
         role="button"
       >
-        <div className="aspect-video bg-slate-100 relative overflow-hidden">
+        {/* Top Section: Title + Menu Button */}
+        <div className="flex items-center justify-between mb-1 min-w-0">
+          <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+            {map.name || defaultItemName(map)}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleMoreOptions(e)
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Image Section */}
+        <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
           {imageUrlQuery.isLoading && map.imageStorageId ? (
             <Skeleton className="w-full h-full" />
           ) : imageUrl ? (
@@ -134,32 +158,18 @@ export function MapCard({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-              <MapPin className="w-16 h-16 text-slate-400" />
+              <MapPin className="w-12 h-12 text-slate-400" />
             </div>
           )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-        </div>
-        <div className="p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
-              <CardTitle className="text-lg text-slate-800 truncate">
-                {map.name || defaultItemName(map)}
-              </CardTitle>
-            </div>
-          </div>
         </div>
       </Card>
     </div>
   )
 
   return (
-    <SidebarItemContextMenu
-      item={map}
-      viewContext="folder-view"
-      category={category}
-    >
+    <FolderViewContextMenu ref={contextMenuRef} item={map} category={category}>
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

@@ -7,10 +7,12 @@ import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { canDropItem } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { Folder as FolderIcon } from '~/lib/icons'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { Button } from '~/components/shadcn/ui/button'
+import { Folder as FolderIcon, MoreVertical } from '~/lib/icons'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 import '~/components/notes-page/viewer/folder/folder-card.css'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useContextMenu } from '~/hooks/useContextMenu'
 
 function FolderSvg() {
   return (
@@ -56,6 +58,7 @@ export function FolderCard({
 }: ItemCardProps<Folder>) {
   const { active, over } = useDndContext()
   const { navigateToFolder } = useEditorNavigation()
+  const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const categoryId = folder.categoryId
   const dropData: SidebarDropData = {
@@ -103,9 +106,8 @@ export function FolderCard({
         <div className="folder-wrapper">
           <FolderSvg />
           <div className="folder-content p-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
-              <Skeleton className="h-6 w-32" />
+            <div className="flex items-center gap-2 mb-2 min-w-0">
+              <Skeleton className="h-5 w-32" />
             </div>
           </div>
         </div>
@@ -124,7 +126,7 @@ export function FolderCard({
       className={`h-[140px] ${isDragging ? 'opacity-20' : ''}`}
     >
       <div
-        className={`folder-wrapper group transition-all ${
+        className={`folder-wrapper group transition-all relative ${
           isValidDropTarget ? 'valid-drop-target' : ''
         }`}
         onClick={handleCardActivate}
@@ -139,25 +141,38 @@ export function FolderCard({
       >
         <FolderSvg />
 
-        <div className="folder-content p-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <FolderIcon className="w-6 h-6 text-amber-600 select-none flex-shrink-0" />
-            <CardTitle className="text-xl text-slate-800 truncate select-none">
+        <div className="folder-content px-2">
+          <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
+            <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
               {folder.name || defaultItemName(folder)}
             </CardTitle>
           </div>
         </div>
+
+        {/* Three-dot menu button in top right */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-5 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          aria-label="Open folder menu"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleMoreOptions(e)
+          }}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   )
 
   return (
-    <SidebarItemContextMenu
+    <FolderViewContextMenu
+      ref={contextMenuRef}
       item={folder}
-      viewContext="folder-view"
       category={category}
     >
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

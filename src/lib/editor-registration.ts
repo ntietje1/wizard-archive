@@ -4,6 +4,7 @@ import { FolderViewer } from '~/components/notes-page/viewer/folder/folder-viewe
 import { CategoryViewer } from '~/components/notes-page/viewer/category/category-viewer'
 import { NoteEditor } from '~/components/notes-page/viewer/note/note-editor'
 import { TagEditor } from '~/components/notes-page/viewer/tag/tag-editor'
+import { FileViewer } from '~/components/notes-page/viewer/file/file-viewer'
 
 export function initializeEditorRegistry() {
   registerDefaults({
@@ -25,6 +26,10 @@ export function initializeEditorRegistry() {
     },
     tagCategories: {
       component: CategoryViewer,
+      showPageBar: false,
+    },
+    files: {
+      component: FileViewer,
       showPageBar: false,
     },
   })

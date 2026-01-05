@@ -9,7 +9,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { isGameMap } from '~/lib/sidebar-item-utils'
@@ -26,10 +26,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pins = pinsQuery.data || []
 
   const content = (
-    <div className="flex flex-1 min-h-0">
+    <div className="flex flex-1 min-h-0 min-w-0">
       <ResizablePanelGroup
         direction="horizontal"
-        className="flex-1"
+        className="flex-1 min-w-0"
         autoSaveId="notes-sidebar-layout"
       >
         <ResizablePanel
@@ -47,13 +47,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0"
             >
-              <SidebarItemContextMenu
-                viewContext="sidebar"
-                className="flex flex-col flex-1 min-h-0"
-              >
+              <SidebarContextMenu className="flex flex-col flex-1 min-h-0">
                 <SidebarHeader />
                 <FileSidebar />
-              </SidebarItemContextMenu>
+              </SidebarContextMenu>
             </ResizablePanel>
             <div className="h-px w-full bg-border" />
             <SessionPanel />
@@ -63,7 +60,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         <ResizablePanel
           defaultSize={80}
           minSize={25}
-          className="flex flex-col min-h-0"
+          className="flex flex-col min-h-0 min-w-0"
         >
           {children}
         </ResizablePanel>

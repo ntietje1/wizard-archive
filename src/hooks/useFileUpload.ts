@@ -65,7 +65,10 @@ export const useFileUpload = () => {
               }
               const storageId = response.storageId as unknown as Id<'_storage'>
               try {
-                await trackUploadMutation.mutateAsync({ storageId })
+                await trackUploadMutation.mutateAsync({
+                  storageId,
+                  originalFileName: file.name,
+                })
                 setUploadProgress({ loaded: 0, total: 0, percentage: 0 })
                 resolve(storageId)
               } catch (error) {

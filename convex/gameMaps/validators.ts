@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 
 export const mapPinWithItemValidator = v.object({

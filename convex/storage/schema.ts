@@ -6,6 +6,7 @@ export const fileStorageTableFields = {
   userId: v.id('userProfiles'),
   status: v.union(v.literal('uncommitted'), v.literal('committed')),
   updatedAt: v.number(),
+  originalFileName: v.optional(v.string()),
 }
 
 export const fileStorageTables = {

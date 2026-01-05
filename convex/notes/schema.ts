@@ -1,15 +1,9 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
 
 const noteTableFields = {
-  name: v.optional(v.string()),
-  iconName: v.optional(v.string()),
-  slug: v.string(),
-  campaignId: v.id('campaigns'),
-  categoryId: v.optional(v.id('tagCategories')),
-  parentId: v.optional(sidebarItemIdValidator),
-  updatedAt: v.number(),
+  ...sidebarItemBaseFields,
   type: v.literal('notes'),
 }
 
@@ -26,7 +20,6 @@ const noteValidatorFields = {
   _id: v.id('notes'),
   _creationTime: v.number(),
   ...noteTableFields,
-  type: v.literal('notes'),
 } as const
 
 export const noteValidator = v.object(noteValidatorFields)

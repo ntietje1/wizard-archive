@@ -6,7 +6,7 @@ import type { Folder } from 'convex/folders/types'
 import { useFolderView } from '~/hooks/useFolderView'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   const { items, isLoading, category } = useFolderView({
@@ -20,14 +20,13 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
-      <SidebarItemContextMenu
-        className="h-full w-full"
+      <FolderViewContextMenu
+        className="flex flex-col h-full w-full min-h-0"
         item={folder}
-        viewContext="folder-view"
         category={category}
       >
         {children}
-      </SidebarItemContextMenu>
+      </FolderViewContextMenu>
     )
   }
 
@@ -43,18 +42,20 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
 
   return (
     <Wrapper>
-      <ScrollArea className="flex flex-1 min-h-0">
-        <ContentGrid className="p-6">
-          {items.map((childItem) => {
-            return (
-              <ItemCard
-                key={childItem._id}
-                item={childItem}
-                category={category}
-              />
-            )
-          })}
-        </ContentGrid>
+      <ScrollArea className="flex-1 w-full overflow-x-hidden">
+        <div className="w-full min-w-0">
+          <ContentGrid className="p-6 min-h-0">
+            {items.map((childItem) => {
+              return (
+                <ItemCard
+                  key={childItem._id}
+                  item={childItem}
+                  category={category}
+                />
+              )
+            })}
+          </ContentGrid>
+        </div>
       </ScrollArea>
     </Wrapper>
   )

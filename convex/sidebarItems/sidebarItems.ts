@@ -9,6 +9,7 @@ import {
 import { getNote, getNoteBySlug } from '../notes/notes'
 import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
 import { getFolder, getFolderBySlug } from '../folders/folders'
+import { getFile, getFileBySlug } from '../files/files'
 import { CATEGORY_KIND } from '../tags/types'
 import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
 import type {
@@ -54,7 +55,7 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...folders)
+  allItems.push(...(folders as Array<AnySidebarItem>))
 
   const notes = await ctx.db
     .query('notes')
@@ -62,7 +63,7 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...notes)
+  allItems.push(...(notes as Array<AnySidebarItem>))
 
   const maps = await ctx.db
     .query('gameMaps')
@@ -70,7 +71,15 @@ export const getSidebarItemsByCategory = async (
       q.eq('campaignId', campaignId).eq('categoryId', categoryId),
     )
     .collect()
-  allItems.push(...maps)
+  allItems.push(...(maps as Array<AnySidebarItem>))
+
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_category', (q) =>
+      q.eq('campaignId', campaignId).eq('categoryId', categoryId),
+    )
+    .collect()
+  allItems.push(...(files as Array<AnySidebarItem>))
 
   return allItems
 }
@@ -120,7 +129,7 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...folders)
+  allItems.push(...(folders as Array<AnySidebarItem>))
 
   const notes = await ctx.db
     .query('notes')
@@ -128,7 +137,7 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...notes)
+  allItems.push(...(notes as Array<AnySidebarItem>))
 
   const maps = await ctx.db
     .query('gameMaps')
@@ -136,7 +145,15 @@ export const getSidebarItemsByParent = async (
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
-  allItems.push(...maps)
+  allItems.push(...(maps as Array<AnySidebarItem>))
+
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_parent', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId),
+    )
+    .collect()
+  allItems.push(...(files as Array<AnySidebarItem>))
 
   const systemManagedCategories = allCategories.filter(
     (c) => c.kind === CATEGORY_KIND.SystemManaged,
@@ -170,6 +187,8 @@ export const getSidebarItemBySlug = async (
       return await getMapBySlug(ctx, campaignId, slug)
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategoryBySlug(ctx, campaignId, slug)
+    case SIDEBAR_ITEM_TYPES.files:
+      return await getFileBySlug(ctx, campaignId, slug)
     default:
       // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', type)
@@ -205,6 +224,8 @@ export const getSidebarItemById = async (
       return await getMap(ctx, id as Id<'gameMaps'>)
     case SIDEBAR_ITEM_TYPES.tagCategories:
       return await getTagCategory(ctx, campaignId, id as Id<'tagCategories'>)
+    case SIDEBAR_ITEM_TYPES.files:
+      return await getFile(ctx, id as Id<'files'>)
     default:
       // @ts-ignore - exhaustive check for unknown item types
       console.log('Unknown item type', item.type)
@@ -251,6 +272,7 @@ const validRootChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 const validCategoryChildren: Array<SidebarItemType> = [
@@ -258,11 +280,13 @@ const validCategoryChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 const validTagChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validFolderChildren: Array<SidebarItemType> = [
@@ -270,14 +294,18 @@ export const validFolderChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.folders,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validNoteChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.notes,
   SIDEBAR_ITEM_TYPES.gameMaps,
+  SIDEBAR_ITEM_TYPES.files,
 ]
 
 export const validMapChildren: Array<SidebarItemType> = []
+
+export const validFileChildren: Array<SidebarItemType> = []
 
 export const validSidebarChildren: Record<
   SidebarItemOrRootType,
@@ -289,6 +317,7 @@ export const validSidebarChildren: Record<
   [SIDEBAR_ITEM_TYPES.folders]: validFolderChildren,
   [SIDEBAR_ITEM_TYPES.notes]: validNoteChildren,
   [SIDEBAR_ITEM_TYPES.gameMaps]: validMapChildren,
+  [SIDEBAR_ITEM_TYPES.files]: validFileChildren,
 }
 
 export const canItemHaveChildren = (type: SidebarItemType): boolean => {
@@ -308,10 +337,11 @@ export const defaultNameMap: Record<SidebarItemType, string> = {
   [SIDEBAR_ITEM_TYPES.folders]: 'Untitled Folder',
   [SIDEBAR_ITEM_TYPES.notes]: 'Untitled Note',
   [SIDEBAR_ITEM_TYPES.gameMaps]: 'Untitled Map',
+  [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
 }
 
 export const defaultItemName = (
   item: AnySidebarItem | null | undefined,
 ): string => {
-  return item ? defaultNameMap[item.type] : 'Untitled'
+  return item ? defaultNameMap[item.type] : 'Untitled Item'
 }

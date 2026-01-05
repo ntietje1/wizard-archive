@@ -118,6 +118,28 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
   )
 }
 
+/**
+ * Validates if external files can be dropped on a target item.
+ */
+export function canDropFilesOnTarget(targetData: DropTarget | null): boolean {
+  if (!targetData) return false
+
+  // Check if target accepts files as children
+  const validChildTypes = validSidebarChildren[targetData.type]
+  if (!validChildTypes.includes(SIDEBAR_ITEM_TYPES.files)) {
+    return false
+  }
+
+  if (
+    targetData.categoryId ||
+    targetData.type === SIDEBAR_ITEM_TYPES.tagCategories
+  ) {
+    return false
+  }
+
+  return true
+}
+
 interface MoveMutations {
   moveNote: (params: {
     noteId: Id<'notes'>

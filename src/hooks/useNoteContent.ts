@@ -39,4 +39,3 @@ export function useNoteContent(noteId: Id<'notes'> | undefined) {
     isLoading: noteQuery.isPending,
   }
 }
-

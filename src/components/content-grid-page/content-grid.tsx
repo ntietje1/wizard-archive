@@ -8,9 +8,9 @@ interface ContentGridProps {
 export function ContentGrid({ children, className = '' }: ContentGridProps) {
   return (
     <div
-      className={`grid w-full min-h-full gap-6 ${className}`}
+      className={`grid w-full min-h-full max-w-full min-w-0 gap-6 items-start mb-10 ${className}`}
       style={{
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
       }}
     >
       {children}

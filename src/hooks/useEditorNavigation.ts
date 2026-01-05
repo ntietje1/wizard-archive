@@ -17,6 +17,7 @@ const createContentSearch = (updates: Partial<EditorSearch>): EditorSearch => {
     map: undefined,
     category: undefined,
     folder: undefined,
+    file: undefined,
     ...updates,
   }
   return search
@@ -125,6 +126,18 @@ export const useEditorNavigation = () => {
     [navigateToEditor],
   )
 
+  const navigateToFile = useCallback(
+    (slug: string, replace?: boolean) => {
+      navigateToEditor(
+        createContentSearch({
+          file: slug,
+        }),
+        replace,
+      )
+    },
+    [navigateToEditor],
+  )
+
   const optimisticUpdateSidebarItem = useCallback(
     (item: AnySidebarItem) => {
       if (!campaignId) return
@@ -168,6 +181,9 @@ export const useEditorNavigation = () => {
         case SIDEBAR_ITEM_TYPES.folders:
           navigateToFolder(item.slug, replace)
           break
+        case SIDEBAR_ITEM_TYPES.files:
+          navigateToFile(item.slug, replace)
+          break
         default: {
           // @ts-ignore - exhaustive check for unknown item types
           console.error('Invalid item type:', item.type)
@@ -180,6 +196,7 @@ export const useEditorNavigation = () => {
       navigateToMap,
       navigateToCategory,
       navigateToFolder,
+      navigateToFile,
       optimisticUpdateSidebarItem,
     ],
   )
@@ -223,6 +240,7 @@ export const useEditorNavigation = () => {
     navigateToMap,
     navigateToCategory,
     navigateToFolder,
+    navigateToFile,
     navigateToItem,
     navigateToItemAndPage,
     clearEditorContent,

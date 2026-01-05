@@ -3,6 +3,12 @@ import { mapValidator } from '../gameMaps/schema'
 import { noteValidator } from '../notes/schema'
 import { folderValidator } from '../folders/schema'
 import { tagCategoryValidator, tagValidator } from '../tags/schema'
+import { fileValidator } from '../files/schema'
+import {
+  sidebarItemBaseFields,
+  sidebarItemIdValidator,
+  sidebarItemTypeValidator,
+} from './baseFields'
 
 export const anySidebarItemValidator = v.union(
   noteValidator,
@@ -10,12 +16,12 @@ export const anySidebarItemValidator = v.union(
   mapValidator,
   tagCategoryValidator,
   tagValidator,
+  fileValidator,
 )
 
-export const sidebarItemTypeValidator = v.union(
-  v.literal('notes'),
-  v.literal('folders'),
-  v.literal('gameMaps'),
-  v.literal('tagCategories'),
-  v.literal('tags'),
-)
+// Re-export for convenience
+export {
+  sidebarItemTypeValidator,
+  sidebarItemIdValidator,
+  sidebarItemBaseFields,
+}

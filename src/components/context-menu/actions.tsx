@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
@@ -11,6 +12,7 @@ import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { File } from 'convex/files/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -18,6 +20,7 @@ import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/hooks/useCampaign'
 import {
+  isFile,
   isFolder,
   isGameMap,
   isNote,
@@ -29,6 +32,7 @@ import CharacterTagDialog from '~/components/forms/category-tag-form/character-t
 import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
+import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
@@ -73,6 +77,10 @@ export function useMenuActions() {
     navigateToParent?: boolean
     parentItem?: AnySidebarItem
   } | null>(null)
+  const [createFileDialog, setCreateFileDialog] = useState<{
+    parentId?: SidebarItemId
+  } | null>(null)
+  const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
   const [createCategoryDialog, setCreateCategoryDialog] = useState(false)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
     null,
@@ -84,6 +92,7 @@ export function useMenuActions() {
     category: TagCategory
     parentId?: SidebarItemId
   } | null>(null)
+  const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
 
   const handleCreatePageMapSuccess = useCallback(
     async (
@@ -133,6 +142,8 @@ export function useMenuActions() {
         })
       } else if (isGameMap(item)) {
         setDeleteMapDialog(item)
+      } else if (isFile(item)) {
+        setDeleteFileDialog(item)
       }
     },
 
@@ -186,6 +197,10 @@ export function useMenuActions() {
 
     createMap: (ctx: MenuContext) => {
       setCreateMapDialog({ parentId: ctx.item?._id })
+    },
+
+    createFile: (ctx: MenuContext) => {
+      setCreateFileDialog({ parentId: ctx.item?._id })
     },
 
     createPageNote: useCallback(
@@ -250,6 +265,12 @@ export function useMenuActions() {
     editMap: (ctx: MenuContext) => {
       if (isGameMap(ctx.item)) {
         setEditMapDialog(ctx.item._id)
+      }
+    },
+
+    editFile: (ctx: MenuContext) => {
+      if (isFile(ctx.item)) {
+        setEditFileDialog(ctx.item._id)
       }
     },
 
@@ -413,6 +434,20 @@ export function useMenuActions() {
           />
         )}
 
+        {deleteFileDialog && (
+          <FileDeleteConfirmDialog
+            key={`delete-file-${deleteFileDialog._id}`}
+            file={deleteFileDialog}
+            isDeleting={true}
+            onConfirm={() => {
+              if (currentItem?._id === deleteFileDialog._id) {
+                clearEditorContent()
+              }
+            }}
+            onClose={() => setDeleteFileDialog(null)}
+          />
+        )}
+
         {createTagDialog &&
           (() => {
             const { category, parentId } = createTagDialog
@@ -489,6 +524,16 @@ export function useMenuActions() {
           />
         )}
 
+        {createFileDialog && campaignId && (
+          <FileDialog
+            key={`create-file-${createFileDialog.parentId || 'root'}`}
+            isOpen={true}
+            onClose={() => setCreateFileDialog(null)}
+            campaignId={campaignId}
+            parentId={createFileDialog.parentId}
+          />
+        )}
+
         {createCategoryDialog && campaign && (
           <CategoryDialog
             key="create-category"
@@ -506,6 +551,17 @@ export function useMenuActions() {
             isOpen={true}
             onClose={() => setEditMapDialog(null)}
             campaignId={campaignId}
+          />
+        )}
+
+        {editFileDialog && campaignId && (
+          <FileDialog
+            key={`edit-file-${editFileDialog}`}
+            fileId={editFileDialog}
+            isOpen={true}
+            onClose={() => setEditFileDialog(null)}
+            campaignId={campaignId}
+            onSuccess={() => setEditFileDialog(null)}
           />
         )}
 
@@ -589,6 +645,7 @@ export function useMenuActions() {
       createMapDialog,
       createCategoryDialog,
       editMapDialog,
+      editFileDialog,
       editCategoryDialog,
       editTagDialog,
       campaignId,
@@ -596,6 +653,8 @@ export function useMenuActions() {
       currentItem,
       clearEditorContent,
       handleCreatePageMapSuccess,
+      createFileDialog,
+      deleteFileDialog,
     ],
   )
 

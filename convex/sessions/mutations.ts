@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { getTagCategoryBySlug, insertTagAndNote } from '../tags/tags'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { anySidebarItemValidator, sidebarItemTypeValidator } from './schema'
-import { sidebarItemIdValidator } from './idValidator'
+import { sidebarItemIdValidator } from './baseFields'
 import {
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,

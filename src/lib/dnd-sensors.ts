@@ -48,4 +48,3 @@ export class TouchSensor extends LibTouchSensor {
     },
   ]
 }
-

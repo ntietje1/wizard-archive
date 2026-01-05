@@ -4,6 +4,7 @@ export type EditorSearch = {
   map?: string
   note?: string
   tag?: string
+  file?: string
   page?: string
 }
 
@@ -12,7 +13,6 @@ export const validateSearch = (
 ): EditorSearch => {
   const result: EditorSearch = {}
 
-  // Extract all potential content type params
   const note =
     'note' in search &&
     typeof search.note === 'string' &&
@@ -48,8 +48,13 @@ export const validateSearch = (
       ? search.folder.trim()
       : undefined
 
-  // Mutual exclusivity: only one content type param can be present
-  // Priority: note > tag > map > category > folder
+  const file =
+    'file' in search &&
+    typeof search.file === 'string' &&
+    search.file.trim().length > 0
+      ? search.file.trim()
+      : undefined
+
   if (note) {
     result.note = note
   } else if (tag) {
@@ -60,6 +65,8 @@ export const validateSearch = (
     result.category = category
   } else if (folder) {
     result.folder = folder
+  } else if (file) {
+    result.file = file
   }
 
   // page is allowed when note or tag is present

@@ -7,7 +7,7 @@ import {
   getSidebarItemById,
   isValidSidebarParent,
 } from '../sidebarItems/sidebarItems'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { createTagAndNoteArgs } from './schema'
 import {

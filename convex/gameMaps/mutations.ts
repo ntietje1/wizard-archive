@@ -8,7 +8,7 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
-import { sidebarItemIdValidator } from '../sidebarItems/idValidator'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 

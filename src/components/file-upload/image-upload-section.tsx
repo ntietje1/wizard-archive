@@ -21,27 +21,7 @@ export function ImageUploadSection({
       handleFileSelect={handleFileSelect}
       isSubmitting={isSubmitting}
       acceptPattern="image/*"
-      fileTypeLabel="PNG, JPG, GIF, or other image formats"
-      maxSizeLabel="Max 10MB"
       dragDropText="Drag an image here or click to browse"
-      renderPreview={(url) => (
-        <img src={url} alt="Preview" className="w-full h-full object-cover" />
-      )}
-      renderPreviewDialog={(url, onClose) => (
-        <img
-          src={url}
-          alt="Full preview"
-          className="w-full h-auto max-h-[90vh] object-contain cursor-pointer"
-          tabIndex={0}
-          role="button"
-          aria-label="Close preview"
-          onClick={() => onClose()}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ')
-              onClose()
-          }}
-        />
-      )}
     />
   )
 }
