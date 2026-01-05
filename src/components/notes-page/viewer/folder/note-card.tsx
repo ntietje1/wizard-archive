@@ -104,6 +104,7 @@ export function NoteCard({
             variant="ghost"
             size="sm"
             className="absolute top-1 right-1 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="More options"
             onClick={(e) => {
               e.stopPropagation()
               handleMoreOptions(e)

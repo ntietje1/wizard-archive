@@ -154,6 +154,7 @@ export function FolderCard({
           variant="ghost"
           size="sm"
           className="absolute top-5 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          aria-label="Open folder menu"
           onClick={(e) => {
             e.stopPropagation()
             handleMoreOptions(e)
