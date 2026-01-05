@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 
 interface OtherFileViewerProps {
@@ -7,11 +6,7 @@ interface OtherFileViewerProps {
 }
 
 export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
-  const [isValid, setIsValid] = useState(false)
-
-  useEffect(() => {
-    setIsValid(isValidFileUrl(fileUrl))
-  }, [fileUrl])
+  const isValid = isValidFileUrl(fileUrl)
 
   if (!isValid) {
     return (

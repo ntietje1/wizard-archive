@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 
 interface AudioFileViewerProps {
@@ -6,12 +5,7 @@ interface AudioFileViewerProps {
 }
 
 export function AudioFileViewer({ audioUrl }: AudioFileViewerProps) {
-  const [isValid, setIsValid] = useState(false)
-
-  useEffect(() => {
-    setIsValid(isValidFileUrl(audioUrl))
-  }, [audioUrl])
-
+  const isValid = isValidFileUrl(audioUrl)
   if (!isValid) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">

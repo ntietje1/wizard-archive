@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 
 interface PdfFileViewerProps {
@@ -7,11 +6,7 @@ interface PdfFileViewerProps {
 }
 
 export function PdfFileViewer({ pdfUrl, title }: PdfFileViewerProps) {
-  const [isValid, setIsValid] = useState(false)
-
-  useEffect(() => {
-    setIsValid(isValidFileUrl(pdfUrl))
-  }, [pdfUrl])
+  const isValid = isValidFileUrl(pdfUrl)
 
   if (!isValid) {
     return (

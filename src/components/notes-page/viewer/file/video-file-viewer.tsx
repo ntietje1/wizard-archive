@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 
 interface VideoFileViewerProps {
@@ -6,11 +5,7 @@ interface VideoFileViewerProps {
 }
 
 export function VideoFileViewer({ videoUrl }: VideoFileViewerProps) {
-  const [isValid, setIsValid] = useState(false)
-
-  useEffect(() => {
-    setIsValid(isValidFileUrl(videoUrl))
-  }, [videoUrl])
+  const isValid = isValidFileUrl(videoUrl)
 
   if (!isValid) {
     return (

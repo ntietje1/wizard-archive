@@ -9,7 +9,11 @@
 export function isValidFileUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
-    const convexUrl = (import.meta as any).env.VITE_CONVEX_URL
+    const convexUrl = import.meta.env.VITE_CONVEX_URL
+
+    if (!convexUrl) {
+      return false
+    }
 
     // Must use HTTPS
     if (parsed.protocol !== 'https:') {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
@@ -14,11 +14,7 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageError, setImageError] = useState(false)
-  const [isValid, setIsValid] = useState(false)
-
-  useEffect(() => {
-    setIsValid(isValidFileUrl(imageUrl))
-  }, [imageUrl])
+  const isValid = isValidFileUrl(imageUrl)
 
   const handleZoomIn = useCallback(() => {
     transformWrapperRef.current?.zoomIn()
