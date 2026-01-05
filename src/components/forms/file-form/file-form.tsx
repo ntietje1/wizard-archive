@@ -13,6 +13,7 @@ import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/components/file-upload/generic-file-upload-section'
+import { validateFileForUpload } from '~/lib/file-validation'
 
 export interface FileFormValues {
   name: string
@@ -56,40 +57,7 @@ export function FileForm({
     fileStorageId: file.data?.storageId,
     existingFileName: file.data?.name,
     uploadOnSelect: true,
-    fileTypeValidator: (fileToValidate: File) => {
-      // Accept any viewable media file
-      const mimeType = fileToValidate.type.toLowerCase()
-      const fileName = fileToValidate.name.toLowerCase()
-
-      // Check if it's a viewable media type
-      const isViewable =
-        mimeType.startsWith('image/') ||
-        mimeType.startsWith('video/') ||
-        mimeType.startsWith('audio/') ||
-        mimeType === 'application/pdf' ||
-        /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|pdf|mp4|webm|ogg|mov|avi|wmv|flv|mp3|wav|aac|flac|m4a)$/i.test(
-          fileName,
-        )
-
-      if (!isViewable) {
-        return {
-          success: false,
-          error:
-            'Please upload a valid file type (image, video, audio, or PDF)',
-        }
-      }
-
-      // Check file size (10MB max)
-      const maxSize = 10 * 1024 * 1024 // 10MB
-      if (fileToValidate.size > maxSize) {
-        return {
-          success: false,
-          error: 'File must be less than 10MB',
-        }
-      }
-
-      return { success: true }
-    },
+    fileTypeValidator: validateFileForUpload,
   })
 
   // Get initial values based on current props
