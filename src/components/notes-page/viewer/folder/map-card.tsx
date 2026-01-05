@@ -15,7 +15,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { MapPin, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 
 export function MapCard({
   item: map,
@@ -168,13 +168,8 @@ export function MapCard({
   )
 
   return (
-    <SidebarItemContextMenu
-      ref={contextMenuRef}
-      item={map}
-      viewContext="folder-view"
-      category={category}
-    >
+    <FolderViewContextMenu ref={contextMenuRef} item={map} category={category}>
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

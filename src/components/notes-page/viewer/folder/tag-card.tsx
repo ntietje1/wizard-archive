@@ -12,7 +12,7 @@ import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { getTagColor } from '~/hooks/useTags'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 
 export function TagCard({
   item: tag,
@@ -145,12 +145,11 @@ export function TagCard({
   )
 
   return (
-    <SidebarItemContextMenu
+    <FolderViewContextMenu
       item={tag}
-      viewContext="folder-view"
       category={tagCategory}
     >
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

@@ -11,7 +11,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { FileText, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 
 export function NoteCard({
   item: note,
@@ -117,13 +117,8 @@ export function NoteCard({
   )
 
   return (
-    <SidebarItemContextMenu
-      ref={contextMenuRef}
-      item={note}
-      viewContext="folder-view"
-      category={category}
-    >
+    <FolderViewContextMenu ref={contextMenuRef} item={note} category={category}>
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

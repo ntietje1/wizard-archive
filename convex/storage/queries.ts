@@ -31,6 +31,7 @@ export const getStorageMetadata = query({
     v.object({
       contentType: v.union(v.string(), v.null()),
       size: v.number(),
+      originalFileName: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -53,6 +54,7 @@ export const getStorageMetadata = query({
     return {
       contentType: metadata.contentType ?? null,
       size: metadata.size,
+      originalFileName: fileStorage.originalFileName ?? null,
     }
   },
 })

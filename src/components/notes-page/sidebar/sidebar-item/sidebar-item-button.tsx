@@ -22,7 +22,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from '~/components/shadcn/ui/collapsible'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import { isNote, isTagCategory } from '~/lib/sidebar-item-utils'
 
 interface SidebarItemButtonProps {
@@ -100,14 +100,14 @@ export function SidebarItemButton({
   )
 
   const wrappedButton = (
-    <SidebarItemContextMenu
+    <SidebarContextMenu
       ref={contextMenuRef}
       item={item}
       viewContext="sidebar"
       category={category}
     >
       {button}
-    </SidebarItemContextMenu>
+    </SidebarContextMenu>
   )
 
   return (

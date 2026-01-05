@@ -55,7 +55,6 @@ export function FileForm({
   const fileUpload = useFileWithPreview({
     isOpen: true,
     fileStorageId: file.data?.storageId,
-    existingFileName: file.data?.name,
     uploadOnSelect: true,
     fileTypeValidator: validateFileForUpload,
   })

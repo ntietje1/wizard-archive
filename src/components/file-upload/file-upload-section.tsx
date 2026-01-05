@@ -61,6 +61,13 @@ function formatFileSize(size: number): string {
   return `${(size / 1024).toFixed(2)} KB`
 }
 
+function getFileExtension(fileName: string | undefined | null): string | null {
+  if (!fileName) return null
+  const lastDot = fileName.lastIndexOf('.')
+  if (lastDot === -1 || lastDot === fileName.length - 1) return null
+  return fileName.slice(lastDot + 1).toUpperCase()
+}
+
 export function FileUploadSection({
   label,
   fileUpload,
@@ -118,6 +125,14 @@ export function FileUploadSection({
                       <Badge variant="secondary" className="text-xs">
                         {fileSize}
                       </Badge>
+                      {fileName && getFileExtension(fileName) && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs font-mono shrink-0"
+                        >
+                          {getFileExtension(fileName)}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>

@@ -6,7 +6,7 @@ import type { TagCategory } from 'convex/tags/types'
 import { useTagsByCategory } from '~/hooks/useTagsByCategory'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
 
 export function CategoryViewer({
@@ -29,14 +29,13 @@ export function CategoryViewer({
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
-      <SidebarItemContextMenu
+      <FolderViewContextMenu
         className="h-full w-full"
         item={category}
-        viewContext="folder-view"
         category={category}
       >
         {children}
-      </SidebarItemContextMenu>
+      </FolderViewContextMenu>
     )
   }
 

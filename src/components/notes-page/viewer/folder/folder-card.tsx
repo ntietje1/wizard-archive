@@ -9,7 +9,7 @@ import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { Folder as FolderIcon, MoreVertical } from '~/lib/icons'
-import { SidebarItemContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 import '~/components/notes-page/viewer/folder/folder-card.css'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
@@ -166,13 +166,12 @@ export function FolderCard({
   )
 
   return (
-    <SidebarItemContextMenu
+    <FolderViewContextMenu
       ref={contextMenuRef}
       item={folder}
-      viewContext="folder-view"
       category={category}
     >
       {cardContent}
-    </SidebarItemContextMenu>
+    </FolderViewContextMenu>
   )
 }

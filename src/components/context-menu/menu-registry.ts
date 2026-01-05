@@ -237,7 +237,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 0,
       shouldShow: (ctx) =>
         p.isType('notes', 'gameMaps', 'folders', 'tags', 'files')(ctx) &&
-        (p.notInSidebar(ctx) || p.inView('topbar')(ctx)),
+        (p.notInSidebar(ctx) || p.inView('topbar', 'folder-view')(ctx)),
       action: actions.showInSidebar,
     },
 
@@ -370,7 +370,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 100,
       variant: 'danger',
       shouldShow: (ctx) =>
-        (p.inSidebar(ctx) || p.inView('topbar')(ctx)) &&
+        (p.inSidebar(ctx) || p.inView('folder-view')(ctx)) &&
         p.isType('notes', 'folders', 'tags', 'gameMaps', 'files')(ctx),
       action: actions.delete,
     },

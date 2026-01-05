@@ -123,7 +123,10 @@ export function useFileDropHandler() {
               const storageId = response.storageId as unknown as Id<'_storage'>
 
               try {
-                await trackUploadMutation.mutateAsync({ storageId })
+                await trackUploadMutation.mutateAsync({
+                  storageId,
+                  originalFileName: file.name,
+                })
                 resolve(storageId)
               } catch (error) {
                 console.error('Failed to track upload', error)

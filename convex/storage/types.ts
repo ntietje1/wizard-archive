@@ -6,6 +6,7 @@ export type FileStorage = {
   userId: Id<'userProfiles'>
   storageId: Id<'_storage'>
   status: FileStorageStatus
+  originalFileName?: string
 }
 
 export const FILE_STORAGE_STATUS = {

@@ -9,7 +9,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export interface FileWithPreviewOptions {
   isOpen: boolean
   fileStorageId?: Id<'_storage'>
-  existingFileName?: string
   uploadOnSelect?: boolean
   fileTypeValidator?: (file: File) => { success: boolean; error?: string }
   maxFileSize?: number
@@ -57,7 +56,6 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   const {
     isOpen,
     fileStorageId,
-    existingFileName,
     uploadOnSelect = true,
     fileTypeValidator,
     maxFileSize = MAX_FILE_SIZE,
@@ -103,7 +101,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
               .then((metadata) => {
                 if (metadata) {
                   setFileMetadata({
-                    name: existingFileName || 'File', // Use existing file name if available
+                    name: metadata.originalFileName || 'File',
                     type: metadata.contentType || 'application/octet-stream',
                     size: metadata.size || 0,
                   })
@@ -116,7 +114,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
         })
         .catch(console.error)
     }
-  }, [isOpen, fileStorageId, isFileRemoved, existingFileName, convex])
+  }, [isOpen, fileStorageId, isFileRemoved, convex])
 
   useEffect(() => {
     if (!isOpen) {

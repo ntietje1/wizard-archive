@@ -14,6 +14,7 @@ export const generateUploadUrl = mutation({
 export const trackUpload = mutation({
   args: {
     storageId: v.id('_storage'),
+    originalFileName: v.optional(v.string()),
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
@@ -23,6 +24,7 @@ export const trackUpload = mutation({
       userId: profile._id,
       updatedAt: Date.now(),
       storageId: args.storageId,
+      originalFileName: args.originalFileName,
     })
   },
 })

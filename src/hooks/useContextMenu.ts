@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import type { SidebarItemContextMenuRef as UnifiedContextMenuRef } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
+import type { SidebarContextMenuRef as UnifiedContextMenuRef } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 
 export function useContextMenu() {
   const contextMenuRef = useRef<UnifiedContextMenuRef>(null)

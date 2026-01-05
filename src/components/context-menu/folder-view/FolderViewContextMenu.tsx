@@ -7,36 +7,32 @@ import type { MenuContext } from '../types'
 import type { TagCategory } from 'convex/tags/types'
 import type { ContextMenuRef } from '../components/ContextMenu'
 
-interface SidebarContextMenuProps {
+interface FolderViewContextMenuProps {
   item?: AnySidebarItem
   category?: TagCategory
-  parentItem?: AnySidebarItem
   children: React.ReactNode
   className?: string
 }
 
-export interface SidebarContextMenuRef {
+export interface FolderViewContextMenuRef {
   open: (position?: { x: number; y: number }) => void
   close: () => void
 }
 
-export const SidebarContextMenu = forwardRef<
-  SidebarContextMenuRef,
-  SidebarContextMenuProps
->(({ item, category, parentItem, children, className }, ref) => {
-  // Use the enhancer hook to get common enhancers
+export const FolderViewContextMenu = forwardRef<
+  FolderViewContextMenuRef,
+  FolderViewContextMenuProps
+>(({ item, category, children, className }, ref) => {
   const enhancers = useContextEnhancers({ category })
 
   const contextMenuHook = useContextMenu({
-    viewContext: 'sidebar',
+    viewContext: 'folder-view',
     item,
-    parentItem,
     enhancers,
   })
 
   const contextMenuRef = useRef<ContextMenuRef>(null)
 
-  // Build context function - this will be called by ContextMenu when needed
   const buildContext = useCallback((): MenuContext | null => {
     return contextMenuHook.buildContext(item)
   }, [item, contextMenuHook])
