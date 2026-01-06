@@ -18,17 +18,17 @@ export function SidebarItemEditor({
 }: EditorViewerProps<AnySidebarItem>) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return <NoteEditor item={item} search={search} />
+      return <NoteEditor key={item._id} item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.tags:
-      return <TagEditor item={item} search={search} />
+      return <TagEditor key={item._id} item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return <MapViewer item={item} search={search} />
+      return <MapViewer key={item._id} item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.folders:
-      return <FolderViewer item={item} search={search} />
+      return <FolderViewer key={item._id} item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.tagCategories:
-      return <CategoryViewer item={item} search={search} />
+      return <CategoryViewer key={item._id} item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.files:
-      return <FileViewer item={item} search={search} />
+      return <FileViewer key={item._id} item={item} search={search} />
     default: {
       // @ts-ignore - exhaustive check for unknown item types
       console.error(`No viewer available for item type: ${item.type}`)

@@ -7,20 +7,16 @@ import { useNoteActions } from './useNoteActions'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from '~/lib/editor-schema'
 
-export function useNoteContent(noteId: Id<'notes'> | undefined) {
+export function useNoteContent(noteId: Id<'notes'>) {
   const { updateNoteContentWithSanitization } = useNoteActions()
 
-  const noteQuery = useQuery(
-    convexQuery(
-      api.notes.queries.getNoteWithContent,
-      noteId ? { noteId } : 'skip',
-    ),
-  )
+  const noteQuery = useQuery({
+    ...convexQuery(api.notes.queries.getNoteWithContent, { noteId }),
+  })
 
   const updateContent = useMemo(
     () =>
       debounce((newContent: Array<CustomBlock>) => {
-        if (!noteId) return
         updateNoteContentWithSanitization(noteId, newContent)
       }, 800),
     [updateNoteContentWithSanitization, noteId],
@@ -30,12 +26,10 @@ export function useNoteContent(noteId: Id<'notes'> | undefined) {
     return () => {
       updateContent.flush()
     }
-  }, [noteId, updateContent])
+  }, [updateContent])
 
   return {
-    content: noteQuery.data?.content,
-    note: noteQuery.data,
+    noteQuery,
     updateContent,
-    isLoading: noteQuery.isPending,
   }
 }

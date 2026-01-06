@@ -145,10 +145,7 @@ export function TagCard({
   )
 
   return (
-    <FolderViewContextMenu
-      item={tag}
-      category={tagCategory}
-    >
+    <FolderViewContextMenu item={tag} category={tagCategory}>
       {cardContent}
     </FolderViewContextMenu>
   )
