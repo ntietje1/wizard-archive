@@ -4,7 +4,6 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
-import { getEditorConfig } from '~/lib/editor-registry'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function useCurrentItem() {
@@ -56,13 +55,11 @@ export function useCurrentItem() {
   const item: AnySidebarItem | null = sidebarItemQuery.data ?? null
 
   const itemType = item?.type as SidebarItemType | undefined
-  const config = itemType ? getEditorConfig(itemType) : undefined
   const isLoading = typeAndSlug !== null && sidebarItemQuery.isPending
 
   return {
     item,
     itemType,
-    config,
     isLoading,
     search,
   }

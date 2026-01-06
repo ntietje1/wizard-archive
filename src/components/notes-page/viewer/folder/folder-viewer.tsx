@@ -1,12 +1,12 @@
-import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { ItemCard } from './item-card'
 import type { ReactNode } from 'react'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Folder } from 'convex/folders/types'
 import { useFolderView } from '~/hooks/useFolderView'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   const { items, isLoading, category } = useFolderView({
@@ -15,7 +15,11 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
 
   if (isLoading) {
     // TODO: improve loading state
-    return <PageEditorSkeleton />
+    return (
+      <div className="h-full flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {

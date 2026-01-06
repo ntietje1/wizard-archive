@@ -1,13 +1,13 @@
-import { PageEditorSkeleton } from '../page-editor-wrapper'
 import { TagCard } from '../folder/tag-card'
 import type { ReactNode } from 'react'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { TagCategory } from 'convex/tags/types'
 import { useTagsByCategory } from '~/hooks/useTagsByCategory'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 import { isTagCategory } from '~/lib/sidebar-item-utils'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 export function CategoryViewer({
   item: category,
@@ -16,7 +16,11 @@ export function CategoryViewer({
 
   if (isLoading) {
     // TODO: improve loading state
-    return <PageEditorSkeleton />
+    return (
+      <div className="h-full flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
   }
 
   if (!isTagCategory(category)) {

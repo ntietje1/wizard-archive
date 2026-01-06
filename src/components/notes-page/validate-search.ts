@@ -5,7 +5,6 @@ export type EditorSearch = {
   note?: string
   tag?: string
   file?: string
-  page?: string
 }
 
 export const validateSearch = (
@@ -67,16 +66,6 @@ export const validateSearch = (
     result.folder = folder
   } else if (file) {
     result.file = file
-  }
-
-  // page is allowed when note or tag is present
-  if (
-    (result.note || result.tag) &&
-    'page' in search &&
-    typeof search.page === 'string' &&
-    search.page.trim().length > 0
-  ) {
-    result.page = search.page.trim()
   }
 
   return result

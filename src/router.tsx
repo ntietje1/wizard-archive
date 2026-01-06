@@ -7,7 +7,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { routeTree } from './routeTree.gen'
 import ErrorPage from './components/error/error-page'
 import NotFoundPage from './components/not-found/not-found'
-import { initializeEditorRegistry } from './lib/editor-registration'
 
 export function createRouter() {
   const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
@@ -15,8 +14,6 @@ export function createRouter() {
     throw new Error('missing VITE_CONVEX_URL envar')
   }
 
-  // Initialize registries once during router creation
-  initializeEditorRegistry()
   const convex = new ConvexReactClient(CONVEX_URL, {
     unsavedChangesWarning: false,
   })

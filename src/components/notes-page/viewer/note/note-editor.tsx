@@ -1,16 +1,12 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import { useEffect, useMemo } from 'react'
-import { debounce } from 'lodash-es'
+import { useMemo } from 'react'
 import TagMenu from '../../editor/extensions/side-menu/tags/tag-menu'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
-import type { EditorViewerProps } from '~/lib/editor-registry'
-import type { Note } from 'convex/notes/types'
+import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { Note, NoteWithContent } from 'convex/notes/types'
 import type {
   CustomBlock,
   CustomBlockNoteEditor,
@@ -18,7 +14,6 @@ import type {
 } from '~/lib/editor-schema'
 import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
-import { useNoteActions } from '~/hooks/useNoteActions'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
   ResizableHandle,
@@ -26,42 +21,12 @@ import {
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
 import { NotesByTagViewer } from '~/components/notes-page/viewer/note/notes-by-tag-viewer'
+import { useNoteContent } from '~/hooks/useNoteContent'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
-  const { updateNoteContentWithSanitization } = useNoteActions()
+  const { noteQuery, updateContent } = useNoteContent(note._id)
 
-  // Fetch note content
-  const noteQuery = useQuery(
-    convexQuery(api.notes.queries.getNoteWithContent, { noteId: note._id }),
-  )
-
-  const initialContent = noteQuery.data?.content
-
-  // Debounced content update
-  const updateContent = useMemo(
-    () =>
-      debounce((newContent: Array<CustomBlock>) => {
-        updateNoteContentWithSanitization(note._id, newContent)
-      }, 800),
-    [updateNoteContentWithSanitization, note._id],
-  )
-
-  useEffect(() => {
-    return () => {
-      updateContent.flush()
-    }
-  }, [note._id, updateContent])
-
-  const hasContent = initialContent && initialContent.length > 0
-
-  const editor: CustomBlockNoteEditor = useCreateBlockNote({
-    schema: editorSchema,
-    ...(hasContent && {
-      initialContent: initialContent as Array<CustomPartialBlock>,
-    }),
-  })
-
-  if (noteQuery.isLoading) {
+  if (noteQuery.isPending || !noteQuery.data) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 p-4">
@@ -84,7 +49,33 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
     )
   }
 
-  // TODO: query seems to be cached and not updated when note is updated
+  return (
+    <NoteEditorBase
+      key={noteQuery.data._id}
+      noteWithContent={noteQuery.data}
+      updateContent={updateContent}
+    />
+  )
+}
+
+export const NoteEditorBase = ({
+  noteWithContent,
+  updateContent,
+}: {
+  noteWithContent: NoteWithContent
+  updateContent: (newContent: Array<CustomBlock>) => void
+}) => {
+  const initialContent = useMemo(
+    () =>
+      noteWithContent.content.length > 0
+        ? (noteWithContent.content as Array<CustomPartialBlock>)
+        : undefined,
+    [noteWithContent],
+  )
+  const editor: CustomBlockNoteEditor = useCreateBlockNote({
+    schema: editorSchema,
+    initialContent,
+  })
 
   return (
     <ResizablePanelGroup
@@ -100,7 +91,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
             <BlockNoteView
-              key={note._id}
+              key={noteWithContent._id}
               editor={editor}
               onChange={() => updateContent(editor.document)}
               theme="light"

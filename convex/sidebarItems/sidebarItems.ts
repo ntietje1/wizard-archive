@@ -283,11 +283,7 @@ const validCategoryChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.files,
 ]
 
-const validTagChildren: Array<SidebarItemType> = [
-  SIDEBAR_ITEM_TYPES.notes,
-  SIDEBAR_ITEM_TYPES.gameMaps,
-  SIDEBAR_ITEM_TYPES.files,
-]
+const validTagChildren: Array<SidebarItemType> = []
 
 export const validFolderChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.tags,
@@ -297,11 +293,7 @@ export const validFolderChildren: Array<SidebarItemType> = [
   SIDEBAR_ITEM_TYPES.files,
 ]
 
-export const validNoteChildren: Array<SidebarItemType> = [
-  SIDEBAR_ITEM_TYPES.notes,
-  SIDEBAR_ITEM_TYPES.gameMaps,
-  SIDEBAR_ITEM_TYPES.files,
-]
+export const validNoteChildren: Array<SidebarItemType> = []
 
 export const validMapChildren: Array<SidebarItemType> = []
 

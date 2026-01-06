@@ -8,7 +8,7 @@ import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { noteValidator, noteWithContentValidator } from './schema'
 import { getNote as getNoteFn } from './notes'
 import type { AnySidebarItem } from '../sidebarItems/types'
-import type { Note } from './types'
+import type { Note, NoteWithContent } from './types'
 
 export const getNote = query({
   args: {
@@ -50,7 +50,7 @@ export const getNoteWithContent = query({
     noteId: v.id('notes'),
   },
   returns: v.union(noteWithContentValidator, v.null()),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<NoteWithContent | null> => {
     const note = await getNoteFn(ctx, args.noteId)
     if (!note) {
       return null

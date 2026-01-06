@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useCurrentPage } from '~/hooks/useCurrentPage'
 import { useCampaign } from '~/hooks/useCampaign'
 import { isNote } from '~/lib/sidebar-item-utils'
 
@@ -29,14 +28,7 @@ export default function TagSideMenuButton({
   unfreezeMenu,
 }: TagSideMenuButtonProps) {
   const { item } = useCurrentItem()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
   const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
-  const { currentPageItem } = useCurrentPage({
-    itemId: isPageLayout ? item._id : undefined,
-    itemSlug: isPageLayout ? item.slug : undefined,
-    campaignId: isPageLayout ? campaignId : undefined,
-  })
   const [query, setQuery] = useState('')
 
   const Components = useComponentsContext()!
@@ -50,7 +42,7 @@ export default function TagSideMenuButton({
     handleAddTag,
     handleRemoveTag,
   } = useBlockTags({
-    noteId: isNote(currentPageItem) ? currentPageItem._id : undefined,
+    noteId: isNote(item) ? item._id : undefined,
     blockId: block.id,
     searchQuery: query,
   })

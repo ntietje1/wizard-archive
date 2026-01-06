@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { useSearch } from '@tanstack/react-router'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
@@ -24,12 +23,8 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const { updateFile } = useFileActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { navigateToItemAndPage } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const queryClient = useQueryClient()
-
-  const search = useSearch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  })
 
   const updateCategory = useMutation({
     mutationFn: useConvexMutation(api.tags.mutations.updateTagCategory),
@@ -112,7 +107,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
           currentItem._id === item._id &&
           previousSlug !== newSlug
         ) {
-          navigateToItemAndPage(updatedItem, search.page, true)
+          navigateToItem(updatedItem, true)
         }
       } catch (error) {
         console.error(error)
@@ -129,8 +124,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
       updateFolder,
       updateFile,
       updateCategory,
-      navigateToItemAndPage,
-      search,
+      navigateToItem,
       currentItem,
       queryClient,
     ],

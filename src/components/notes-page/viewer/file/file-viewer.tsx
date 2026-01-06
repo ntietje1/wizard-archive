@@ -8,7 +8,7 @@ import { OtherFileViewer } from './other-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
 import { VideoFileViewer } from './video-file-viewer'
 import type { File } from 'convex/files/types'
-import type { EditorViewerProps } from '~/lib/editor-registry'
+import type { EditorViewerProps } from '../sidebar-item-editor'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 function getFileType(
