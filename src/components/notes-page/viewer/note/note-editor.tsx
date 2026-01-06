@@ -51,6 +51,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
 
   return (
     <NoteEditorBase
+      key={noteQuery.data._id}
       noteWithContent={noteQuery.data}
       updateContent={updateContent}
     />
