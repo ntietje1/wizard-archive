@@ -15,7 +15,6 @@ import { FolderViewContextMenu } from '~/components/context-menu/folder-view/Fol
 
 export function NoteCard({
   item: note,
-  category,
   onClick,
   isLoading,
 }: ItemCardProps<Note>) {
@@ -29,7 +28,6 @@ export function NoteCard({
     type: SIDEBAR_ITEM_TYPES.notes,
     name: note.name || defaultItemName(note),
     parentId: note.parentId,
-    categoryId: note.categoryId,
     icon: FileText,
   }
 
@@ -118,7 +116,7 @@ export function NoteCard({
   )
 
   return (
-    <FolderViewContextMenu ref={contextMenuRef} item={note} category={category}>
+    <FolderViewContextMenu ref={contextMenuRef} item={note}>
       {cardContent}
     </FolderViewContextMenu>
   )

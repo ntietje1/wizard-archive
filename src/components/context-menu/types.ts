@@ -2,11 +2,18 @@ import type {
   AnySidebarItem,
   SidebarItemId,
   SidebarItemOrRootType,
+  SidebarItemShareStatus,
 } from 'convex/sidebarItems/types'
-import type { TagCategory } from 'convex/tags/types'
-import type { CampaignMemberRole } from 'convex/campaigns/types'
+import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
+
+export interface ShareState {
+  shareStatus: SidebarItemShareStatus
+  sharedMemberIds: Set<Id<'campaignMembers'>> // Only populated if individually_shared
+  playerMembers: Array<CampaignMember>
+  isLoading: boolean
+}
 
 export type ViewContext =
   | 'sidebar'
@@ -24,9 +31,6 @@ export interface MenuContext {
   viewContext: ViewContext
   parentType: SidebarItemOrRootType
 
-  // Category context
-  category?: TagCategory
-
   // User/permissions
   currentUserId?: string
   memberRole?: CampaignMemberRole
@@ -42,6 +46,9 @@ export interface MenuContext {
   // Pin context (for map pin menus)
   pinId?: Id<'mapPins'>
   mapId?: Id<'gameMaps'>
+
+  // Share state (for sidebar items)
+  shareState?: ShareState
 }
 
 export type Predicate = (ctx: MenuContext) => boolean
@@ -64,8 +71,8 @@ export interface MenuItemDef {
   group: string
   priority: number // Lower = higher in menu
 
-  // Submenus
-  children?: Array<MenuItemDef>
+  // Submenus - can be static array or dynamic function
+  children?: Array<MenuItemDef> | ((ctx: MenuContext) => Array<MenuItemDef>)
 
   // Styling
   variant?: 'default' | 'danger' | 'success'

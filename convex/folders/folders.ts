@@ -1,7 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
-import { deleteTag } from '../tags/tags'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
@@ -110,18 +109,6 @@ export async function deleteFolder(
     }
 
     await ctx.db.delete(childMap._id)
-  }
-
-  // Delete child tags
-  const childTags = await ctx.db
-    .query('tags')
-    .withIndex('by_campaign_parent', (q) =>
-      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
-    )
-    .collect()
-
-  for (const childTag of childTags) {
-    await deleteTag(ctx, childTag._id)
   }
 
   // Finally, delete the folder itself

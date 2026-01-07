@@ -2,9 +2,6 @@ import {
   canItemHaveChildren,
   defaultItemName,
 } from 'convex/sidebarItems/sidebarItems'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarItem } from './sidebar-item'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
@@ -23,7 +20,7 @@ import {
   CollapsibleContent,
 } from '~/components/shadcn/ui/collapsible'
 import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import { isNote, isTagCategory } from '~/lib/sidebar-item-utils'
+import { isNote } from '~/lib/sidebar-item-utils'
 
 interface SidebarItemButtonProps {
   item: AnySidebarItem
@@ -31,9 +28,6 @@ interface SidebarItemButtonProps {
 }
 
 function getItemDisplayName(item: AnySidebarItem): string {
-  if (isTagCategory(item)) {
-    return item.name || 'Category'
-  }
   return item.name || defaultItemName(item)
 }
 
@@ -57,21 +51,6 @@ export function SidebarItemButton({
   const displayName = getItemDisplayName(item)
   const isSelected = currentItem?._id === item._id
   const handleSelect = () => navigateToItem(item)
-
-  // If item is a category, use it directly; otherwise query the category
-  const categoryQuery = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategory,
-      !isTagCategory(item) && item.categoryId
-        ? {
-            campaignId: item.campaignId,
-            categoryId: item.categoryId,
-          }
-        : 'skip',
-    ),
-  )
-
-  const category = isTagCategory(item) ? item : categoryQuery.data
 
   const handleFinishRename = async (name: string) => {
     try {
@@ -100,7 +79,7 @@ export function SidebarItemButton({
   )
 
   const wrappedButton = (
-    <SidebarContextMenu ref={contextMenuRef} item={item} category={category}>
+    <SidebarContextMenu ref={contextMenuRef} item={item}>
       {button}
     </SidebarContextMenu>
   )

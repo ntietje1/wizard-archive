@@ -19,7 +19,7 @@ import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link, Sword } from '~/lib/icons'
-import { FormDialog } from '~/components/forms/category-tag-form/base-tag-form/form-dialog'
+import { FormDialog } from '~/components/forms/base-form/form-dialog'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {

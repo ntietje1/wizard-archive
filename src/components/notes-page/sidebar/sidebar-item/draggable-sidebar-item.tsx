@@ -19,7 +19,6 @@ function getDragData(
     _id: item._id,
     type: item.type,
     parentId: item.parentId,
-    categoryId: item.categoryId,
     ancestorIds,
     name: item.name || defaultItemName(item),
     icon: getSidebarItemIcon(item),

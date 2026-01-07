@@ -1,60 +1,248 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getCampaignMembers,
   requireCampaignMembership,
 } from '../campaigns/campaigns'
-import { getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
-import { shareValidator } from './schema'
-import { combineSharesAndTag } from './shares'
-import type { Share } from './types'
+import { campaignMemberValidator } from '../campaigns/schema'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import {
+  sidebarItemIdValidator,
+  sidebarItemShareStatusValidator,
+  sidebarItemTypeValidator,
+} from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/types'
+import { blockShareValidator, sidebarItemShareValidator } from './schema'
+import {
+  getBlockSharesForBlock,
+  getBlockSharesForMember,
+  getSharesForSession,
+  getSidebarItemSharesForItem,
+  getSidebarItemSharesForMember,
+  isBlockSharedWithMember,
+  isSidebarItemSharedWithMember,
+} from './shares'
+import type { CampaignMember } from '../campaigns/types'
+import type { SidebarItemShareStatus } from '../sidebarItems/types'
+import type { BlockShare, SidebarItemShare } from './types'
 
-export const getShareTagsByCampaign = query({
+export const getSidebarItemShares = query({
   args: {
     campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
   },
-  returns: v.array(shareValidator),
-  handler: async (ctx, args): Promise<Array<Share>> => {
+  returns: v.array(sidebarItemShareValidator),
+  handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+    return await getSidebarItemSharesForItem(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+    )
+  },
+})
+
+/**
+ * Get share status for a sidebar item along with player members.
+ * Returns shareStatus and player members in a single query to avoid waterfalls.
+ *
+ * Share status optimization:
+ * - 'all_shared': Item visible to all players (shares array will be empty)
+ * - 'not_shared': Item visible to no players (shares array will be empty)
+ * - 'individually_shared': Must query sidebarItemShares table for specific shares
+ */
+export const getSidebarItemWithShares = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+  },
+  returns: v.object({
+    shareStatus: sidebarItemShareStatusValidator,
+    shares: v.array(sidebarItemShareValidator), // Only populated if individually_shared
+    playerMembers: v.array(campaignMemberValidator),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    shareStatus: SidebarItemShareStatus
+    shares: Array<SidebarItemShare>
+    playerMembers: Array<CampaignMember>
+  }> => {
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const category = await getTagCategoryBySlug(
-      ctx,
-      args.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
+    // Get the sidebar item to retrieve its shareStatus
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item) {
+      throw new Error('Sidebar item not found')
+    }
+
+    // Get share status (default to 'not_shared' for legacy items)
+    const shareStatus: SidebarItemShareStatus =
+      item.shareStatus ?? SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED
+
+    // Get player members (always needed for UI)
+    const allMembers = await getCampaignMembers(ctx, args.campaignId)
+    const playerMembers = allMembers.filter(
+      (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
-    if (!category) {
-      throw new Error(
-        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
+
+    // Only  fetch individual shares if status is 'individually_shared'
+    let shares: Array<SidebarItemShare> = []
+    if (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      shares = await getSidebarItemSharesForItem(
+        ctx,
+        args.campaignId,
+        args.sidebarItemId,
       )
     }
-    const tags = await getTagsByCategory(ctx, category._id)
-    const shares = await ctx.db
-      .query('shares')
-      .withIndex('by_campaign_tag', (q) => q.eq('campaignId', args.campaignId))
-      .collect()
 
-    const sharesByTagId = new Map(shares.map((c) => [c.tagId, c]))
-    const members = await getCampaignMembers(ctx, args.campaignId)
+    return {
+      shareStatus,
+      shares,
+      playerMembers,
+    }
+  },
+})
 
-    return tags
-      .map((t) => {
-        const share = sharesByTagId.get(t._id)
-        if (!share) {
-          console.warn(`Share not found for tag ${t._id}`)
-          return null
-        }
-        return {
-          ...combineSharesAndTag(share, t, category),
-          member: members.find((m) => m._id === share.memberId),
-        }
-      })
-      .filter((s) => s !== null)
-      .sort((a, b) => b._creationTime - a._creationTime)
+export const getMySharedSidebarItems = query({
+  args: {
+    campaignId: v.id('campaigns'),
+  },
+  returns: v.array(sidebarItemShareValidator),
+  handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+    return await getSidebarItemSharesForMember(
+      ctx,
+      args.campaignId,
+      campaignWithMembership.member._id,
+    )
+  },
+})
+
+export const getBlockShares = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    blockId: v.id('blocks'),
+  },
+  returns: v.array(blockShareValidator),
+  handler: async (ctx, args): Promise<Array<BlockShare>> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+    return await getBlockSharesForBlock(ctx, args.campaignId, args.blockId)
+  },
+})
+
+export const getMySharedBlocks = query({
+  args: {
+    campaignId: v.id('campaigns'),
+  },
+  returns: v.array(blockShareValidator),
+  handler: async (ctx, args): Promise<Array<BlockShare>> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+    return await getBlockSharesForMember(
+      ctx,
+      args.campaignId,
+      campaignWithMembership.member._id,
+    )
+  },
+})
+
+export const checkSidebarItemAccess = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemType: sidebarItemTypeValidator,
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args): Promise<boolean> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+
+    // DMs have access to everything
+    if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+      return true
+    }
+
+    return await isSidebarItemSharedWithMember(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+      campaignWithMembership.member._id,
+    )
+  },
+})
+
+export const checkBlockAccess = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    blockId: v.id('blocks'),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args): Promise<boolean> => {
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+
+    // DMs have access to everything
+    if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+      return true
+    }
+
+    return await isBlockSharedWithMember(
+      ctx,
+      args.campaignId,
+      args.blockId,
+      campaignWithMembership.member._id,
+    )
+  },
+})
+
+export const getSessionShares = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    sessionId: v.id('sessions'),
+  },
+  returns: v.object({
+    sidebarItemShares: v.array(sidebarItemShareValidator),
+    blockShares: v.array(blockShareValidator),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    sidebarItemShares: Array<SidebarItemShare>
+    blockShares: Array<BlockShare>
+  }> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+    return await getSharesForSession(ctx, args.campaignId, args.sessionId)
   },
 })

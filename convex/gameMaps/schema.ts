@@ -38,7 +38,6 @@ export const mapTables = {
     ...mapTableFields,
   })
     .index('by_campaign_parent', ['campaignId', 'parentId'])
-    .index('by_campaign_category', ['campaignId', 'categoryId'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 
   mapPins: defineTable({

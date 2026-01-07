@@ -5,32 +5,7 @@ import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useSortOptions } from './useSortOptions'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/hooks/useCampaign'
-
-export const useSidebarItemsByCategory = (
-  categoryId: Id<'tagCategories'>,
-  enabled = true,
-) => {
-  const { sortOptions } = useSortOptions()
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const sidebarItems = useQuery(
-    convexQuery(
-      api.sidebarItems.queries.getSidebarItemsByCategory,
-      campaign?._id && enabled
-        ? {
-            campaignId: campaign._id,
-            categoryId,
-          }
-        : 'skip',
-    ),
-  )
-  return {
-    ...sidebarItems,
-    data: sortItemsByOptions(sortOptions, sidebarItems.data),
-  }
-}
 
 export const useSidebarItemsByParent = (
   parentId?: SidebarItemId,
@@ -62,9 +37,6 @@ export const sortItemsByOptions = (
 ) => {
   if (!items) return undefined
 
-  const tagCategories = items.filter((item) => item.type === 'tagCategories')
-  const others = items.filter((item) => item.type !== 'tagCategories')
-
   const sortFn = (a: AnySidebarItem, b: AnySidebarItem) => {
     switch (options.order) {
       case SORT_ORDERS.Alphabetical: {
@@ -87,8 +59,5 @@ export const sortItemsByOptions = (
     }
   }
 
-  const sortedTagCategories = [...tagCategories].sort(sortFn)
-  const sortedOthers = [...others].sort(sortFn)
-
-  return [...sortedTagCategories, ...sortedOthers]
+  return [...items].sort(sortFn)
 }

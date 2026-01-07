@@ -9,7 +9,7 @@ import { FolderViewContextMenu } from '~/components/context-menu/folder-view/Fol
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
-  const { items, isLoading, category } = useFolderView({
+  const { items, isLoading } = useFolderView({
     parentItem: folder,
   })
 
@@ -27,7 +27,6 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
       <FolderViewContextMenu
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
-        category={category}
       >
         {children}
       </FolderViewContextMenu>
@@ -50,13 +49,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
         <div className="w-full min-w-0">
           <ContentGrid className="p-6 min-h-0">
             {items.map((childItem) => {
-              return (
-                <ItemCard
-                  key={childItem._id}
-                  item={childItem}
-                  category={category}
-                />
-              )
+              return <ItemCard key={childItem._id} item={childItem} />
             })}
           </ContentGrid>
         </div>

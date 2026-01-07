@@ -5,21 +5,28 @@ function processMenuItem(
   item: MenuItemDef,
   ctx: MenuContext,
 ): MenuItemDef | null {
-  const filteredChildren = item.children
-    ? item.children
+  // Resolve children (can be static array or dynamic function)
+  const resolvedChildren =
+    typeof item.children === 'function' ? item.children(ctx) : item.children
+
+  const filteredChildren = resolvedChildren
+    ? resolvedChildren
         .filter((child) => child.shouldShow(ctx))
         .map((child) => processMenuItem(child, ctx))
         .filter((child): child is MenuItemDef => child !== null)
         .sort((a, b) => a.priority - b.priority) // Sort children by priority
     : undefined
 
-  if (item.children && (!filteredChildren || filteredChildren.length === 0)) {
-    return null
-  }
+  // If children resolve to empty, show the item without a submenu
+  // (don't hide items just because they have no children)
+  const finalChildren =
+    filteredChildren && filteredChildren.length > 0
+      ? filteredChildren
+      : undefined
 
   return {
     ...item,
-    children: filteredChildren,
+    children: finalChildren,
   }
 }
 

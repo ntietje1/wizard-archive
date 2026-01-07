@@ -18,8 +18,9 @@ export const createNote = async (
   input: {
     name?: string
     campaignId: Id<'campaigns'>
-    categoryId?: Id<'tagCategories'>
     parentId?: SidebarItemId
+    iconName?: string
+    color?: string
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
   await requireCampaignMembership(
@@ -59,7 +60,8 @@ export const createNote = async (
     name: input.name || '',
     slug: uniqueSlug,
     parentId: input.parentId,
-    categoryId: input.categoryId,
+    iconName: input.iconName,
+    color: input.color,
     updatedAt: Date.now(),
     campaignId: input.campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
@@ -74,6 +76,8 @@ export const updateNote = async (
     noteId: Id<'notes'>
     name?: string
     parentId?: SidebarItemId
+    iconName?: string
+    color?: string | null
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
   const note = await ctx.db.get(input.noteId)
@@ -128,6 +132,14 @@ export const updateNote = async (
       }
     }
     updates.parentId = input.parentId
+  }
+
+  if (input.iconName !== undefined) {
+    updates.iconName = input.iconName
+  }
+
+  if (input.color !== undefined) {
+    updates.color = input.color === null ? undefined : input.color
   }
 
   await ctx.db.patch(input.noteId, updates)

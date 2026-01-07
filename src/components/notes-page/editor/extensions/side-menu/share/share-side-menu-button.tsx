@@ -4,9 +4,11 @@ import { api } from 'convex/_generated/api'
 import { useComponentsContext } from '@blocknote/react'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { BLOCK_SHARE_STATUS } from 'convex/blocks/types'
 import type { CustomBlock } from '~/lib/editor-schema'
-import type { Share } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignMember } from 'convex/campaigns/types'
+import type { BlockShareStatus } from 'convex/blocks/types'
 import { Share2 } from '~/lib/icons'
 import { useCampaign } from '~/hooks/useCampaign'
 import {
@@ -29,10 +31,8 @@ interface ShareSideMenuButtonProps {
 
 interface ShareItem {
   key: string
-  name?: string
-  username?: string
-  share: Share
-  applied: boolean
+  member: CampaignMember
+  isShared: boolean
 }
 
 export default function ShareSideMenuButton({
@@ -43,71 +43,131 @@ export default function ShareSideMenuButton({
   const { item } = useCurrentItem()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
-  const isPageLayout = item?.type === 'notes' || item?.type === 'tags'
+  const isPageLayout = item?.type === 'notes'
   const Components = useComponentsContext()!
 
-  const blockTagState = useQuery(
+  // Single query that returns block, shareStatus, shares (if individually_shared), and player members
+  const blockWithSharesQuery = useQuery(
     convexQuery(
-      api.blocks.queries.getBlockTagState,
+      api.blocks.queries.getBlockWithShares,
       isNote(item) ? { noteId: item._id, blockId: block.id } : 'skip',
     ),
   )
 
-  const sharesQuery = useQuery(
-    convexQuery(
-      api.shares.queries.getShareTagsByCampaign,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
-    ),
-  )
-
-  const addShareToBlock = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.addShareBlock),
+  // Mutation for setting share status (left-click toggle)
+  const setBlockShareStatus = useMutation({
+    mutationFn: useConvexMutation(api.shares.mutations.setBlockShareStatus),
   })
 
-  const removeShareFromBlock = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.removeShareFromBlock),
+  // Mutations for individual sharing (right-click menu)
+  const shareBlock = useMutation({
+    mutationFn: useConvexMutation(api.shares.mutations.shareBlock),
   })
 
-  const isMutating = addShareToBlock.isPending || removeShareFromBlock.isPending
+  const unshareBlock = useMutation({
+    mutationFn: useConvexMutation(api.shares.mutations.unshareBlock),
+  })
 
-  const shares = sharesQuery.data ?? []
-  const sharedAllTag = shares.find((s: Share) => s.memberId === undefined)
-  const playerSharedTags = shares.filter((s: Share) => s.memberId !== undefined)
+  const isMutating =
+    setBlockShareStatus.isPending ||
+    shareBlock.isPending ||
+    unshareBlock.isPending
 
-  const isBlockNotFound = blockTagState.data === null
-  const appliedTagIds = useMemo(
-    () => new Set<Id<'tags'>>(blockTagState.data?.allTagIds ?? []),
-    [blockTagState.data?.allTagIds],
+  // Extract data from the combined query
+  const blockData = blockWithSharesQuery.data
+
+  // Get share status (default to 'not_shared' for legacy blocks)
+  const shareStatus: BlockShareStatus =
+    blockData?.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+
+  const playerMembers: Array<CampaignMember> = useMemo(
+    () => blockData?.playerMembers ?? [],
+    [blockData?.playerMembers],
   )
-  const isShared = useMemo(() => {
-    if (!sharedAllTag || isBlockNotFound) return false
-    if (appliedTagIds.has(sharedAllTag.tagId)) return true
-    return playerSharedTags.some((share: Share) =>
-      appliedTagIds.has(share.tagId),
-    )
-  }, [appliedTagIds, sharedAllTag, playerSharedTags, isBlockNotFound])
 
-  const isOptimisticShared =
-    (isShared && !isMutating) || (!isShared && isMutating)
+  // For individually_shared blocks, we need to check the shares array
+  const sharedMemberIds: Set<Id<'campaignMembers'>> = useMemo(() => {
+    if (shareStatus !== BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      return new Set<Id<'campaignMembers'>>()
+    }
+    const shares = blockData?.shares ?? []
+    return new Set<Id<'campaignMembers'>>(shares.map((s) => s.campaignMemberId))
+  }, [blockData?.shares, shareStatus])
 
-  const toggleShareTag = async (share: Share) => {
-    if (!isNote(item) || isMutating || isBlockNotFound) return
+  // Block is available if the query returned data (block exists in DB)
+  const isBlockAvailable = blockData !== null && blockData !== undefined
 
-    const isApplied = appliedTagIds.has(share.tagId)
+  // Determine if a member has access based on shareStatus
+  const memberHasAccess = (memberId: Id<'campaignMembers'>): boolean => {
+    switch (shareStatus) {
+      case BLOCK_SHARE_STATUS.ALL_SHARED:
+        return true
+      case BLOCK_SHARE_STATUS.NOT_SHARED:
+        return false
+      case BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED:
+        return sharedMemberIds.has(memberId)
+      default:
+        return false
+    }
+  }
+
+  // Toggle individual share (right-click menu)
+  const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
+    if (!campaign?._id || !isNote(item) || isMutating || !blockData) return
+
+    const blockId = blockData.block._id
+    const isCurrentlyShared = memberHasAccess(memberId)
+
     try {
-      if (isApplied) {
-        await removeShareFromBlock.mutateAsync({
-          noteId: item._id,
-          blockId: block.id,
-          shareId: share.shareId,
+      if (isCurrentlyShared) {
+        await unshareBlock.mutateAsync({
+          campaignId: campaign._id,
+          blockId,
+          campaignMemberId: memberId,
         })
       } else {
-        await addShareToBlock.mutateAsync({
-          noteId: item._id,
-          blockId: block.id,
-          shareId: share.shareId,
+        await shareBlock.mutateAsync({
+          campaignId: campaign._id,
+          blockId,
+          campaignMemberId: memberId,
         })
       }
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to toggle share')
+    }
+  }
+
+  // Toggle share status (left-click)
+  // all_shared -> not_shared
+  // not_shared -> all_shared
+  // individually_shared -> not_shared
+  const toggleShareStatus = async () => {
+    if (!campaign?._id || !isNote(item) || isMutating || !blockData) return
+
+    const blockId = blockData.block._id
+
+    let newStatus: BlockShareStatus
+    switch (shareStatus) {
+      case BLOCK_SHARE_STATUS.ALL_SHARED:
+        newStatus = BLOCK_SHARE_STATUS.NOT_SHARED
+        break
+      case BLOCK_SHARE_STATUS.NOT_SHARED:
+        newStatus = BLOCK_SHARE_STATUS.ALL_SHARED
+        break
+      case BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED:
+        newStatus = BLOCK_SHARE_STATUS.NOT_SHARED
+        break
+      default:
+        newStatus = BLOCK_SHARE_STATUS.ALL_SHARED
+    }
+
+    try {
+      await setBlockShareStatus.mutateAsync({
+        campaignId: campaign._id,
+        blockId,
+        status: newStatus,
+      })
     } catch (error) {
       console.error(error)
       toast.error('Failed to toggle share')
@@ -118,48 +178,71 @@ export default function ShareSideMenuButton({
     if (!item || isMutating) return
     if (e.ctrlKey || e.metaKey) return
 
-    if (isBlockNotFound) {
-      toast.error(
-        'Sharing is not available for empty notes. Add content to access sharing.',
-      )
+    if (!isBlockAvailable) {
+      toast.error('Block not saved yet. Add content and save first.')
       return
     }
 
     e.preventDefault()
     e.stopPropagation()
-    if (sharedAllTag) {
-      toggleShareTag(sharedAllTag)
-    }
+    toggleShareStatus()
   }
 
   const shareItems: Array<ShareItem> = useMemo(() => {
-    const items: Array<ShareItem> = []
-
-    if (sharedAllTag) {
-      items.push({
-        key: `all-${sharedAllTag._id}`,
-        name: 'All players',
-        share: sharedAllTag,
-        applied: appliedTagIds.has(sharedAllTag._id),
-      })
-    }
-
-    playerSharedTags.forEach((share: Share) => {
-      const profile = share.member?.userProfile
-      items.push({
-        key: `player-${share._id}`,
-        name: profile?.name,
-        username: profile?.username,
-        share,
-        applied: appliedTagIds.has(share.tagId),
-      })
+    return playerMembers.map((member: CampaignMember) => {
+      // Inline memberHasAccess logic to avoid lint warning
+      let isShared: boolean
+      switch (shareStatus) {
+        case BLOCK_SHARE_STATUS.ALL_SHARED:
+          isShared = true
+          break
+        case BLOCK_SHARE_STATUS.NOT_SHARED:
+          isShared = false
+          break
+        case BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED:
+          isShared = sharedMemberIds.has(member._id)
+          break
+        default:
+          isShared = false
+      }
+      return {
+        key: `player-${member._id}`,
+        member,
+        isShared,
+      }
     })
-
-    return items
-  }, [sharedAllTag, playerSharedTags, appliedTagIds])
+  }, [playerMembers, shareStatus, sharedMemberIds])
 
   if (!isPageLayout) {
     return null
+  }
+
+  // Visual state classes based on shareStatus
+  const getButtonColorClass = (): string => {
+    if (!isBlockAvailable) return 'opacity-50 cursor-not-allowed'
+
+    switch (shareStatus) {
+      case BLOCK_SHARE_STATUS.ALL_SHARED:
+        return '!text-blue-600' // Blue for fully shared
+      case BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED:
+        return '!text-amber-500' // Amber/orange for partially shared
+      case BLOCK_SHARE_STATUS.NOT_SHARED:
+      default:
+        return '' // Default color for not shared
+    }
+  }
+
+  // Label based on shareStatus
+  const getButtonLabel = (): string => {
+    switch (shareStatus) {
+      case BLOCK_SHARE_STATUS.ALL_SHARED:
+        return 'Shared'
+      case BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED:
+        return 'Partial'
+      case BLOCK_SHARE_STATUS.NOT_SHARED:
+      default:
+        return 'Share'
+    }
   }
 
   return (
@@ -176,8 +259,8 @@ export default function ShareSideMenuButton({
         <ContextMenuTrigger
           render={
             <Components.SideMenu.Button
-              label={isShared ? 'Shared' : 'Share'}
-              className={`!p-0 !px-0 !h-6 !w-6 ${isOptimisticShared ? '!text-blue-600' : ''} ${isBlockNotFound ? 'opacity-50 cursor-not-allowed' : ''}`}
+              label={getButtonLabel()}
+              className={`!p-0 !px-0 !h-6 !w-6 ${getButtonColorClass()}`}
               icon={<Share2 size={18} />}
             />
           }
@@ -189,51 +272,61 @@ export default function ShareSideMenuButton({
             Share with
           </ContextMenuLabel>
           <ContextMenuSeparator />
-          {isBlockNotFound ? (
+          {!isBlockAvailable ? (
             <div className="px-2 py-2">
               <div className="text-xs text-muted-foreground">
-                Sharing is not available for empty notes. Add content to access
-                sharing.
+                Block not saved yet. Add content and save first.
+              </div>
+            </div>
+          ) : playerMembers.length === 0 ? (
+            <div className="px-2 py-2">
+              <div className="text-xs text-muted-foreground">
+                No players in this campaign yet.
               </div>
             </div>
           ) : (
-            shareItems.map((shareItem) => {
-              const displayName =
-                shareItem.name || shareItem.username || 'Player'
-              const displayText = shareItem.name
-                ? shareItem.name
-                : shareItem.username
-                  ? `@${shareItem.username}`
-                  : 'Player'
+            <>
+              {shareItems.map((shareItem) => {
+                const profile = shareItem.member.userProfile
+                const displayName = profile.name || profile.username || 'Player'
+                const displayText = profile.name
+                  ? profile.name
+                  : profile.username
+                    ? `@${profile.username}`
+                    : 'Player'
 
-              return (
-                <ContextMenuCheckboxItem
-                  key={shareItem.key}
-                  checked={shareItem.applied}
-                  disabled={isMutating}
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    await toggleShareTag(shareItem.share)
-                  }}
-                  className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
-                >
-                  <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                    <span className="truncate font-medium" title={displayName}>
-                      {displayText}
-                    </span>
-                    {shareItem.name && shareItem.username && (
+                return (
+                  <ContextMenuCheckboxItem
+                    key={shareItem.key}
+                    checked={shareItem.isShared}
+                    disabled={isMutating}
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      await toggleShareWithMember(shareItem.member._id)
+                    }}
+                    className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
+                  >
+                    <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
                       <span
-                        className="truncate text-xs text-muted-foreground"
-                        title={`@${shareItem.username}`}
+                        className="truncate font-medium"
+                        title={displayName}
                       >
-                        @{shareItem.username}
+                        {displayText}
                       </span>
-                    )}
-                  </span>
-                </ContextMenuCheckboxItem>
-              )
-            })
+                      {profile.name && profile.username && (
+                        <span
+                          className="truncate text-xs text-muted-foreground"
+                          title={`@${profile.username}`}
+                        >
+                          @{profile.username}
+                        </span>
+                      )}
+                    </span>
+                  </ContextMenuCheckboxItem>
+                )
+              })}
+            </>
           )}
         </ContextMenuGroup>
       </ContextMenuContent>

@@ -19,14 +19,8 @@ export function useCurrentItem() {
     if (search.note) {
       return { type: SIDEBAR_ITEM_TYPES.notes, slug: search.note }
     }
-    if (search.tag) {
-      return { type: SIDEBAR_ITEM_TYPES.tags, slug: search.tag }
-    }
     if (search.map) {
       return { type: SIDEBAR_ITEM_TYPES.gameMaps, slug: search.map }
-    }
-    if (search.category) {
-      return { type: SIDEBAR_ITEM_TYPES.tagCategories, slug: search.category }
     }
     if (search.folder) {
       return { type: SIDEBAR_ITEM_TYPES.folders, slug: search.folder }

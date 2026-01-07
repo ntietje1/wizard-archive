@@ -61,7 +61,6 @@ function getFileTypeIcon(
 
 export function FileCard({
   item: file,
-  category,
   onClick,
   isLoading,
 }: ItemCardProps<File>) {
@@ -85,7 +84,6 @@ export function FileCard({
     type: SIDEBAR_ITEM_TYPES.files,
     name: file.name || defaultItemName(file),
     parentId: file.parentId,
-    categoryId: file.categoryId,
     icon: FileIcon,
   }
 
@@ -179,7 +177,7 @@ export function FileCard({
   )
 
   return (
-    <FolderViewContextMenu ref={contextMenuRef} item={file} category={category}>
+    <FolderViewContextMenu ref={contextMenuRef} item={file}>
       {cardContent}
     </FolderViewContextMenu>
   )

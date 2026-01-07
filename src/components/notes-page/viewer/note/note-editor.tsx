@@ -1,7 +1,7 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { useMemo } from 'react'
-import TagMenu from '../../editor/extensions/side-menu/tags/tag-menu'
+import MentionMenu from '../../editor/extensions/side-menu/mentions/mention-menu'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
@@ -15,12 +15,6 @@ import type {
 import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '~/components/shadcn/ui/resizable'
-import { NotesByTagViewer } from '~/components/notes-page/viewer/note/notes-by-tag-viewer'
 import { useNoteContent } from '~/hooks/useNoteContent'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
@@ -78,43 +72,23 @@ export const NoteEditorBase = ({
   })
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      autoSaveId="note-editor-content"
-      className="flex-1 min-h-0"
-    >
-      <ResizablePanel
-        defaultSize={50}
-        minSize={25}
-        className="flex min-h-0 flex-col"
-      >
-        <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
-            <BlockNoteView
-              key={noteWithContent._id}
-              editor={editor}
-              onChange={() => updateContent(editor.document)}
-              theme="light"
-              sideMenu={false}
-              formattingToolbar={false}
-              slashMenu={false}
-            >
-              <TagMenu editor={editor} />
-              <SideMenuController sideMenu={SideMenuRenderer} />
-              <SelectionToolbar />
-              <SlashMenu editor={editor} />
-            </BlockNoteView>
-          </div>
-        </div>
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel
-        defaultSize={50}
-        minSize={25}
-        className="flex min-h-0 flex-col"
-      >
-        <NotesByTagViewer />
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
+        <BlockNoteView
+          key={noteWithContent._id}
+          editor={editor}
+          onChange={() => updateContent(editor.document)}
+          theme="light"
+          sideMenu={false}
+          formattingToolbar={false}
+          slashMenu={false}
+        >
+          <MentionMenu editor={editor} />
+          <SideMenuController sideMenu={SideMenuRenderer} />
+          <SelectionToolbar />
+          <SlashMenu editor={editor} />
+        </BlockNoteView>
+      </div>
+    </div>
   )
 }

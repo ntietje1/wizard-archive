@@ -17,7 +17,6 @@ import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { MapViewContextMenuRef } from '~/components/context-menu/map-view/MapViewContextMenu'
 import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { isTag } from '~/lib/sidebar-item-utils'
 import { MapPinContextMenu } from '~/components/context-menu/map-view/MapPinContextMenu'
 import {
   Tooltip,
@@ -31,6 +30,8 @@ interface PinPosition {
   x: number
   y: number
 }
+
+const DEFAULT_PIN_COLOR = '#808080'
 
 export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -313,12 +314,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                 {pins.map((pin: MapPinWithItem) => {
                   const Icon = getSidebarItemIcon(pin.item)
-                  // TODO: generalize the color logic
-                  // For tags: use item.color or item.category?.defaultColor
-                  // For other items: no color (transparent/default)
-                  const color = isTag(pin.item)
-                    ? (pin.item.color ?? pin.item.category?.defaultColor)
-                    : undefined
+                  // Use color from item if available
+                  const color = pin.item.color
                   const isHovered = hoveredPinId === pin._id
 
                   return (
@@ -341,11 +338,9 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
                         >
                           <div
                             className="rounded-full p-1.5 shadow-lg border-2 border-white"
-                            style={
-                              color
-                                ? { backgroundColor: color }
-                                : { backgroundColor: '#808080' }
-                            }
+                            style={{
+                              backgroundColor: color ?? DEFAULT_PIN_COLOR,
+                            }}
                           >
                             <Icon className="w-4 h-4 text-white" />
                           </div>

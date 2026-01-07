@@ -12,13 +12,52 @@ import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
+export const moveFile = mutation({
+  args: {
+    fileId: v.id('files'),
+    parentId: v.optional(sidebarItemIdValidator),
+  },
+  returns: v.id('files'),
+  handler: async (ctx, args): Promise<Id<'files'>> => {
+    const file = await ctx.db.get(args.fileId)
+    if (!file) {
+      throw new Error('File not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: file.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        file.campaignId,
+        args.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
+      }
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.files, parentItem.type)) {
+        throw new Error('Invalid parent type for files')
+      }
+    }
+
+    await ctx.db.patch(args.fileId, {
+      parentId: args.parentId,
+      updatedAt: Date.now(),
+    })
+    return args.fileId
+  },
+})
+
 export const createFile = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     storageId: v.id('_storage'),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -67,7 +106,6 @@ export const createFile = mutation({
       slug: uniqueSlug,
       storageId: args.storageId,
       parentId: args.parentId,
-      categoryId: args.categoryId,
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.files,
     })
@@ -81,7 +119,8 @@ export const updateFile = mutation({
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -145,10 +184,12 @@ export const updateFile = mutation({
         }
       }
     }
-    if (args.categoryId !== undefined) {
-      updates.categoryId = args.categoryId
+    if (args.iconName !== undefined) {
+      updates.iconName = args.iconName ?? undefined
     }
-
+    if (args.color !== undefined) {
+      updates.color = args.color ?? undefined
+    }
     await ctx.db.patch(args.fileId, updates)
     return { fileId: args.fileId, slug: updates.slug || file.slug }
   },

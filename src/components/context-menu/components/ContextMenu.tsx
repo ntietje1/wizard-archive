@@ -2,7 +2,6 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { buildMenu } from '../menu-builder'
 import { useMenuItems } from '../hooks/useMenuItems'
 import type { MenuContext, MenuItemDef } from '../types'
-import { getCategoryIcon } from '~/lib/category-icons'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -112,13 +111,16 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
       const checked = item.isChecked?.(context)
       const label =
         typeof item.label === 'function' ? item.label(context) : item.label
-      const IconComponent =
-        item.id === 'submenu-create-tag' && context.category?.iconName
-          ? getCategoryIcon(context.category.iconName)
-          : item.icon
+      const IconComponent = item.icon
+
+      // Resolve children (can be static array or dynamic function)
+      const menuChildren =
+        typeof item.children === 'function'
+          ? item.children(context)
+          : item.children
 
       // If item has children, render as submenu
-      if (item.children && item.children.length > 0) {
+      if (menuChildren && menuChildren.length > 0) {
         return (
           <ContextMenuSub key={item.id}>
             <ContextMenuSubTrigger
@@ -140,7 +142,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
               )}
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
-              {item.children.map((child) => renderMenuItem(child))}
+              {menuChildren.map((child) => renderMenuItem(child))}
             </ContextMenuSubContent>
           </ContextMenuSub>
         )

@@ -126,7 +126,7 @@ export function EditableTopbar({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>System category names cannot be changed</p>
+                    <p>This item cannot be renamed</p>
                   </TooltipContent>
                 </Tooltip>
               ) : (

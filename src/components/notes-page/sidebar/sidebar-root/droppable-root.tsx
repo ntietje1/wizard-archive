@@ -18,7 +18,6 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
     data: {
       accepts: SIDEBAR_ITEM_TYPES,
       _id: SIDEBAR_ROOT_TYPE,
-      categoryId: undefined,
       ancestorIds: [],
       type: SIDEBAR_ROOT_TYPE,
     },
@@ -30,7 +29,6 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
   const rootTargetData = {
     id: SIDEBAR_ROOT_TYPE,
     type: SIDEBAR_ROOT_TYPE,
-    categoryId: undefined,
     ancestorIds: [],
   }
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)

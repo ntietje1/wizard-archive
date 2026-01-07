@@ -1,10 +1,10 @@
 import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core'
-import { TagInlineContent } from '~/components/notes-page/editor/blocks/tag-inline-content'
+import { MentionInlineContent } from '~/components/notes-page/editor/blocks/mention-inline-content'
 
 export const customInlineContentSpecs = {
   ...defaultInlineContentSpecs,
-  tag: TagInlineContent,
+  mention: MentionInlineContent,
 }
 
 export const editorSchema = BlockNoteSchema.create({

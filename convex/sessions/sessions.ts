@@ -1,23 +1,16 @@
-import { combineTagEntity, getTagCategory } from '../tags/tags'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Session } from './types'
-
-export const combineSessionAndTag = (
-  session: { _id: Id<'sessions'> },
-  tag: { _id: Id<'tags'> },
-  category?: { _id: Id<'tagCategories'> },
-): Session => combineTagEntity<Session>('sessionId', session, tag, category)
 
 export const getCurrentSession = async (
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Session | null> => {
-  const currentSessionId = (await ctx.db.get(campaignId))?.currentSessionId
-  if (!currentSessionId) {
+  const campaign = await ctx.db.get(campaignId)
+  if (!campaign?.currentSessionId) {
     return null
   }
-  return getSession(ctx, currentSessionId)
+  return getSession(ctx, campaign.currentSessionId)
 }
 
 export const getSession = async (
@@ -28,12 +21,39 @@ export const getSession = async (
   if (!session) {
     return null
   }
-  const tag = await ctx.db.get(session.tagId)
-  if (!tag) {
-    return null
+  return session
+}
+
+export const startSession = async (
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  name?: string,
+): Promise<Id<'sessions'>> => {
+  const campaign = await ctx.db.get(campaignId)
+  if (!campaign) {
+    throw new Error('Campaign not found')
   }
-  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
-  return combineSessionAndTag(session, tag, category)
+
+  // End current session if one exists
+  if (campaign.currentSessionId) {
+    const existingSession = await ctx.db.get(campaign.currentSessionId)
+    if (existingSession) {
+      await ctx.db.patch(campaign.currentSessionId, {
+        endedAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    }
+  }
+
+  const sessionId = await ctx.db.insert('sessions', {
+    campaignId,
+    name,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+  })
+
+  await ctx.db.patch(campaignId, { currentSessionId: sessionId })
+  return sessionId
 }
 
 export const endCurrentSession = async (
@@ -42,21 +62,26 @@ export const endCurrentSession = async (
 ): Promise<Id<'sessions'>> => {
   const currentSession = await getCurrentSession(ctx, campaignId)
   if (!currentSession) {
-    throw new Error('Session not found')
+    throw new Error('No active session')
   }
-  const session = await ctx.db
-    .query('sessions')
-    .withIndex('by_campaign_tag_endedAt', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('tagId', currentSession.tagId)
-        .eq('endedAt', undefined),
-    )
-    .unique()
-  if (!session) {
-    throw new Error('Session not found')
-  }
-  await ctx.db.patch(session._id, { endedAt: Date.now() })
+
+  await ctx.db.patch(currentSession._id, {
+    endedAt: Date.now(),
+    updatedAt: Date.now(),
+  })
   await ctx.db.patch(campaignId, { currentSessionId: undefined })
-  return session._id
+  return currentSession._id
+}
+
+export const getSessionsByCampaign = async (
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+): Promise<Array<Session>> => {
+  const sessions = await ctx.db
+    .query('sessions')
+    .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignId))
+    .order('desc')
+    .collect()
+
+  return sessions
 }

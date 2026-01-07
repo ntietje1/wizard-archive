@@ -4,11 +4,14 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { IconPicker } from '../sidebar-item-form/icon-picker'
+import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
+import { getIconByName } from '~/lib/category-icons'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
@@ -17,6 +20,8 @@ import { validateFileForUpload } from '~/lib/file-validation'
 
 export interface FileFormValues {
   name: string
+  iconName: string | null
+  color: string | null
 }
 
 interface FileFormProps {
@@ -29,6 +34,8 @@ interface FileFormProps {
 
 const defaultFileFormValues: FileFormValues = {
   name: '',
+  iconName: null,
+  color: null,
 }
 
 export function FileForm({
@@ -64,6 +71,8 @@ export function FileForm({
     if (fileId && file.data) {
       return {
         name: file.data.name || '',
+        iconName: file.data.iconName ?? null,
+        color: file.data.color ?? null,
       }
     }
     return defaultFileFormValues
@@ -114,6 +123,8 @@ export function FileForm({
           fileId,
           name: finalName,
           storageId: finalStorageId,
+          iconName: values.iconName,
+          color: values.color,
         })
         toast.success('File updated')
         onSuccess?.(file.data?.slug)
@@ -197,6 +208,54 @@ export function FileForm({
           </div>
         )}
       </form.Field>
+
+      {/* Icon and Color Row */}
+      <div className="flex items-end gap-4">
+        {/* Icon Field */}
+        <form.Field name="iconName">
+          {(field) => (
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker
+                value={field.state.value ?? undefined}
+                onChange={(iconName) => field.handleChange(iconName)}
+                defaultIcon="File"
+              />
+            </div>
+          )}
+        </form.Field>
+
+        {/* Color Field */}
+        <form.Field name="color">
+          {(field) => (
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker
+                value={field.state.value}
+                onChange={(color) => field.handleChange(color)}
+              />
+            </div>
+          )}
+        </form.Field>
+
+        {/* Preview */}
+        <div className="flex-1">
+          <Label className="text-muted-foreground text-xs">Preview</Label>
+          <form.Subscribe selector={(s) => s.values}>
+            {(values) => {
+              const PreviewIcon = getIconByName(values.iconName ?? 'File')
+              return (
+                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                  <PreviewIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate text-sm">
+                    {values.name || 'Untitled File'}
+                  </span>
+                </div>
+              )
+            }}
+          </form.Subscribe>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label>File</Label>

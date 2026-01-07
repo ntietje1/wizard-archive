@@ -7,10 +7,10 @@ import type {
   defaultInlineContentSpecs,
   defaultStyleSpecs,
 } from '@blocknote/core'
-import type { TagInlineSpecType } from '../tags/editorSpecs'
+import type { MentionInlineSpecType } from '../mentions/editorSpecs'
 
 export type CustomInlineContentSpecs = typeof defaultInlineContentSpecs &
-  TagInlineSpecType
+  MentionInlineSpecType
 export type CustomInlineContentSchema =
   InlineContentSchemaFromSpecs<CustomInlineContentSpecs>
 

@@ -1,4 +1,4 @@
-import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
+import { FormDialog } from '../base-form/form-dialog'
 import { MapForm } from './map-form'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
@@ -9,7 +9,6 @@ interface MapDialogProps {
   onClose: () => void
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  categoryId?: Id<'tagCategories'>
   parentId?: SidebarItemId
   onSuccess?: (mapSlug?: string) => void
 }
@@ -19,7 +18,6 @@ export function MapDialog({
   onClose,
   mapId,
   campaignId,
-  categoryId: _categoryId,
   parentId,
   onSuccess,
 }: MapDialogProps) {

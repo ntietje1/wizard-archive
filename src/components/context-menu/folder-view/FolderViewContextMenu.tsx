@@ -1,15 +1,16 @@
-import React, { forwardRef, useCallback, useRef } from 'react'
+import React, { forwardRef, useCallback, useMemo, useRef } from 'react'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
+import { createShareEnhancer } from '../context'
 import { ContextMenu } from '../components/ContextMenu'
+import type { ContextEnhancer } from '../context'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { MenuContext } from '../types'
-import type { TagCategory } from 'convex/tags/types'
 import type { ContextMenuRef } from '../components/ContextMenu'
+import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
 
 interface FolderViewContextMenuProps {
   item?: AnySidebarItem
-  category?: TagCategory
   children: React.ReactNode
   className?: string
 }
@@ -22,8 +23,17 @@ export interface FolderViewContextMenuRef {
 export const FolderViewContextMenu = forwardRef<
   FolderViewContextMenuRef,
   FolderViewContextMenuProps
->(({ item, category, children, className }, ref) => {
-  const enhancers = useContextEnhancers({ category })
+>(({ item, children, className }, ref) => {
+  const baseEnhancers = useContextEnhancers()
+
+  // Get share state for this item
+  const shareState = useSidebarItemShares(item?._id)
+
+  // Combine base enhancers with share enhancer
+  const enhancers: Array<ContextEnhancer> = useMemo(
+    () => [...baseEnhancers, createShareEnhancer(shareState)],
+    [baseEnhancers, shareState],
+  )
 
   const contextMenuHook = useContextMenu({
     viewContext: 'folder-view',

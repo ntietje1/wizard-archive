@@ -4,8 +4,6 @@ export const sidebarItemIdValidator = v.union(
   v.id('notes'),
   v.id('folders'),
   v.id('gameMaps'),
-  v.id('tagCategories'),
-  v.id('tags'),
   v.id('files'),
 )
 
@@ -13,9 +11,17 @@ export const sidebarItemTypeValidator = v.union(
   v.literal('notes'),
   v.literal('folders'),
   v.literal('gameMaps'),
-  v.literal('tagCategories'),
-  v.literal('tags'),
   v.literal('files'),
+)
+
+// Share status enum for sidebar items
+// - 'all_shared': Visible to all players (no need to query sidebarItemShares)
+// - 'not_shared': Visible to no players (no need to query sidebarItemShares)
+// - 'individually_shared': Visible to specific players (must query sidebarItemShares)
+export const sidebarItemShareStatusValidator = v.union(
+  v.literal('all_shared'),
+  v.literal('not_shared'),
+  v.literal('individually_shared'),
 )
 
 export const sidebarItemBaseFields = {
@@ -23,8 +29,9 @@ export const sidebarItemBaseFields = {
   slug: v.string(),
   campaignId: v.id('campaigns'),
   iconName: v.optional(v.string()),
+  color: v.optional(v.string()),
   type: sidebarItemTypeValidator,
   parentId: v.optional(sidebarItemIdValidator),
-  categoryId: v.optional(v.id('tagCategories')),
   updatedAt: v.number(),
+  shareStatus: v.optional(sidebarItemShareStatusValidator), // Default: 'not_shared'
 }

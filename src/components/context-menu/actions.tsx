@@ -2,58 +2,41 @@ import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
+import { SIDEBAR_ITEM_SHARE_STATUS } from 'convex/sidebarItems/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Tag, TagCategory } from 'convex/tags/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { File } from 'convex/files/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/hooks/useCampaign'
-import {
-  isFile,
-  isFolder,
-  isGameMap,
-  isNote,
-  isTag,
-  isTagCategory,
-} from '~/lib/sidebar-item-utils'
-import GenericTagDialog from '~/components/forms/category-tag-form/generic-tag-form/generic-tag-dialog'
-import CharacterTagDialog from '~/components/forms/category-tag-form/character-tag-form/character-tag-dialog'
-import LocationTagDialog from '~/components/forms/category-tag-form/location-tag-form/location-tag-dialog'
+import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
-import { CategoryDialog } from '~/components/forms/category-form/category-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
+import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { TagDeleteConfirmDialog } from '~/components/dialogs/delete/tag-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useSession } from '~/hooks/useSession'
 
 export function useMenuActions() {
-  const {
-    navigateToCategory,
-    navigateToItem,
-    navigateToMap,
-    clearEditorContent,
-  } = useEditorNavigation()
+  const { navigateToItem, navigateToMap, clearEditorContent } =
+    useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createNote } = useNoteActions()
   const { createFolder } = useFolderActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const campaign = campaignWithMembership.data?.campaign
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
   const { endCurrentSession, startNewSession } = useSession()
@@ -62,34 +45,20 @@ export function useMenuActions() {
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
     null,
   )
-  const [deleteTagDialog, setDeleteTagDialog] = useState<{
-    tag: Tag
-    category: TagCategory
-  } | null>(null)
   const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
-  const [createTagDialog, setCreateTagDialog] = useState<{
-    category: TagCategory
-    parentId?: SidebarItemId
-  } | null>(null)
   const [createMapDialog, setCreateMapDialog] = useState<{
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'> | Id<'notes'> | Id<'gameMaps'> | Id<'files'>
   } | null>(null)
   const [createFileDialog, setCreateFileDialog] = useState<{
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'> | Id<'notes'> | Id<'gameMaps'> | Id<'files'>
   } | null>(null)
   const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
-  const [createCategoryDialog, setCreateCategoryDialog] = useState(false)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
     null,
   )
-  const [editCategoryDialog, setEditCategoryDialog] =
-    useState<TagCategory | null>(null)
-  const [editTagDialog, setEditTagDialog] = useState<{
-    tag: Tag
-    category: TagCategory
-    parentId?: SidebarItemId
-  } | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
+  const [editSidebarItemDialog, setEditSidebarItemDialog] =
+    useState<AnySidebarItem | null>(null)
 
   const actions: ActionHandlers = {
     open: useCallback(
@@ -116,11 +85,6 @@ export function useMenuActions() {
         setDeleteNoteDialog(item)
       } else if (isFolder(item)) {
         setDeleteFolderDialog(item)
-      } else if (isTag(item) && ctx.category) {
-        setDeleteTagDialog({
-          tag: item,
-          category: ctx.category,
-        })
       } else if (isGameMap(item)) {
         setDeleteMapDialog(item)
       } else if (isFile(item)) {
@@ -144,7 +108,6 @@ export function useMenuActions() {
         const { noteId } = await createNote.mutateAsync({
           campaignId,
           parentId,
-          categoryId: ctx.category?._id,
         })
         await openParentFolders(noteId)
         setRenamingId(noteId)
@@ -160,21 +123,12 @@ export function useMenuActions() {
         const result = await createFolder.mutateAsync({
           campaignId,
           parentId,
-          categoryId: ctx.category?._id,
         })
         await openParentFolders(result.folderId)
         setRenamingId(result.folderId)
       },
       [campaignId, createFolder, openParentFolders, setRenamingId],
     ),
-
-    createTag: (ctx: MenuContext) => {
-      if (!ctx.category) return
-      setCreateTagDialog({
-        category: ctx.category,
-        parentId: ctx.item?._id,
-      })
-    },
 
     createMap: (ctx: MenuContext) => {
       setCreateMapDialog({ parentId: ctx.item?._id })
@@ -186,25 +140,6 @@ export function useMenuActions() {
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
-    },
-
-    createCategory: () => {
-      setCreateCategoryDialog(true)
-    },
-
-    goToCategory: useCallback(
-      (ctx: MenuContext) => {
-        if (ctx.category?.slug) {
-          navigateToCategory(ctx.category.slug)
-        }
-      },
-      [navigateToCategory],
-    ),
-
-    editCategory: (ctx: MenuContext) => {
-      if (isTagCategory(ctx.item)) {
-        setEditCategoryDialog(ctx.item)
-      }
     },
 
     editMap: (ctx: MenuContext) => {
@@ -219,13 +154,9 @@ export function useMenuActions() {
       }
     },
 
-    editTag: (ctx: MenuContext) => {
-      if (isTag(ctx.item) && ctx.category) {
-        setEditTagDialog({
-          tag: ctx.item,
-          category: ctx.category,
-          parentId: ctx.item._id,
-        })
+    editItem: (ctx: MenuContext) => {
+      if (ctx.item) {
+        setEditSidebarItemDialog(ctx.item)
       }
     },
 
@@ -239,7 +170,6 @@ export function useMenuActions() {
       }
 
       // Dispatch event to map viewer to enter pin placement mode
-      // Icon and color will be determined from the item when placing the pin
       const event = new CustomEvent('map-pin-placement-request', {
         detail: {
           itemId: ctx.item._id,
@@ -295,21 +225,13 @@ export function useMenuActions() {
       toast.info('Move pin not yet implemented')
     }, []),
 
-    startSession: useCallback(
-      (ctx: MenuContext) => {
-        if (!campaignId || !ctx.category) return
+    startSession: useCallback(() => {
+      if (!campaignId) return
 
-        // Start new session
-        const now = new Date()
-        startNewSession({
-          color: '#6366F1',
-          description: now.toISOString(),
-          parentId: ctx.item?._id,
-        })
-        toast.success('Session started')
-      },
-      [campaignId, startNewSession],
-    ),
+      // Start new session
+      startNewSession({})
+      toast.success('Session started')
+    }, [campaignId, startNewSession]),
 
     endSession: useCallback(() => {
       if (!campaignId) return
@@ -318,6 +240,85 @@ export function useMenuActions() {
       endCurrentSession.mutate({ campaignId })
       toast.success('Session ended')
     }, [campaignId, endCurrentSession]),
+
+    toggleShareWithAll: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId || !ctx.item || !ctx.shareState) return
+
+        const { shareStatus, playerMembers } = ctx.shareState
+
+        try {
+          // all_shared -> not_shared
+          // individually_shared -> not_shared
+          if (
+            shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
+            shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED
+          ) {
+            await convex.mutation(
+              api.shares.mutations.setSidebarItemShareStatus,
+              {
+                campaignId,
+                sidebarItemId: ctx.item._id,
+                status: SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED,
+              },
+            )
+            toast.success('Unshared from all players')
+          } else {
+            // not_shared -> all_shared
+            await convex.mutation(
+              api.shares.mutations.setSidebarItemShareStatus,
+              {
+                campaignId,
+                sidebarItemId: ctx.item._id,
+                status: SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED,
+              },
+            )
+            toast.success(`Shared with ${playerMembers.length} player(s)`)
+          }
+        } catch (error) {
+          console.error('Failed to toggle share:', error)
+          toast.error('Failed to toggle share')
+        }
+      },
+      [campaignId, convex],
+    ),
+
+    toggleShareWithMember: useCallback(
+      async (ctx: MenuContext, memberId: Id<'campaignMembers'>) => {
+        if (!campaignId || !ctx.item || !ctx.shareState) return
+
+        const { shareStatus, sharedMemberIds } = ctx.shareState
+
+        // Determine if currently shared with this member
+        const isCurrentlyShared =
+          shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
+          (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+            sharedMemberIds.has(memberId))
+
+        try {
+          if (isCurrentlyShared) {
+            await convex.mutation(api.shares.mutations.unshareSidebarItem, {
+              campaignId,
+              sidebarItemId: ctx.item._id,
+              campaignMemberId: memberId,
+            })
+            toast.success('Unshared from player')
+          } else {
+            await convex.mutation(api.shares.mutations.shareSidebarItem, {
+              campaignId,
+              sidebarItemId: ctx.item._id,
+              sidebarItemType: ctx.item.type,
+              campaignMemberId: memberId,
+            })
+            toast.success('Shared with player')
+          }
+        } catch (error) {
+          console.error('Failed to toggle individual share:', error)
+          toast.error('Failed to toggle share')
+        }
+      },
+      [campaignId, convex],
+    ),
   }
 
   const dialogsContent = useMemo(
@@ -351,20 +352,6 @@ export function useMenuActions() {
           />
         )}
 
-        {deleteTagDialog && (
-          <TagDeleteConfirmDialog
-            key={`delete-tag-${deleteTagDialog.tag._id}`}
-            tag={deleteTagDialog.tag}
-            isDeleting={true}
-            onConfirm={() => {
-              if (currentItem?._id === deleteTagDialog.tag._id) {
-                clearEditorContent()
-              }
-            }}
-            onClose={() => setDeleteTagDialog(null)}
-          />
-        )}
-
         {deleteMapDialog && (
           <MapDeleteConfirmDialog
             key={`delete-map-${deleteMapDialog._id}`}
@@ -393,62 +380,6 @@ export function useMenuActions() {
           />
         )}
 
-        {createTagDialog &&
-          (() => {
-            const { category, parentId } = createTagDialog
-            const categorySlug = category.slug
-            const dialogKey = `create-tag-${category._id}-${parentId || 'root'}`
-
-            if (
-              campaignId &&
-              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug
-            ) {
-              return (
-                <CharacterTagDialog
-                  key={dialogKey}
-                  mode="create"
-                  isOpen={true}
-                  onClose={() => setCreateTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                />
-              )
-            }
-
-            if (
-              campaignId &&
-              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug
-            ) {
-              return (
-                <LocationTagDialog
-                  key={dialogKey}
-                  mode="create"
-                  isOpen={true}
-                  onClose={() => setCreateTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                />
-              )
-            }
-
-            // for other categories, use generic dialog
-            if (campaignId) {
-              return (
-                <GenericTagDialog
-                  key={dialogKey}
-                  mode="create"
-                  isOpen={true}
-                  onClose={() => setCreateTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                />
-              )
-            }
-          })()}
-
         {createMapDialog && campaignId && (
           <MapDialog
             key={`create-map-${createMapDialog.parentId || 'root'}`}
@@ -466,16 +397,6 @@ export function useMenuActions() {
             onClose={() => setCreateFileDialog(null)}
             campaignId={campaignId}
             parentId={createFileDialog.parentId}
-          />
-        )}
-
-        {createCategoryDialog && campaign && (
-          <CategoryDialog
-            key="create-category"
-            mode="create"
-            isOpen={true}
-            onClose={() => setCreateCategoryDialog(false)}
-            campaignId={campaign._id}
           />
         )}
 
@@ -500,91 +421,25 @@ export function useMenuActions() {
           />
         )}
 
-        {editCategoryDialog && campaign && (
-          <CategoryDialog
-            key={`edit-category-${editCategoryDialog._id}`}
-            mode="edit"
+        {editSidebarItemDialog && (
+          <SidebarItemEditDialog
+            key={`edit-sidebar-item-${editSidebarItemDialog._id}`}
+            item={editSidebarItemDialog}
             isOpen={true}
-            onClose={() => setEditCategoryDialog(null)}
-            category={editCategoryDialog}
-            onSuccess={() => setEditCategoryDialog(null)}
+            onClose={() => setEditSidebarItemDialog(null)}
           />
         )}
-
-        {editTagDialog &&
-          (() => {
-            const { category, tag, parentId } = editTagDialog
-            const categorySlug = category.slug
-            const dialogKey = `edit-tag-${tag._id}`
-
-            if (
-              campaignId &&
-              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Character.slug
-            ) {
-              return (
-                <CharacterTagDialog
-                  key={dialogKey}
-                  mode="edit"
-                  isOpen={true}
-                  onClose={() => setEditTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                  tag={tag as any}
-                />
-              )
-            }
-
-            if (
-              campaignId &&
-              categorySlug === SYSTEM_DEFAULT_CATEGORIES.Location.slug
-            ) {
-              return (
-                <LocationTagDialog
-                  key={dialogKey}
-                  mode="edit"
-                  isOpen={true}
-                  onClose={() => setEditTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                  tag={tag as any}
-                />
-              )
-            }
-
-            // for other categories, use generic dialog
-            if (campaignId) {
-              return (
-                <GenericTagDialog
-                  key={dialogKey}
-                  mode="edit"
-                  isOpen={true}
-                  onClose={() => setEditTagDialog(null)}
-                  campaignId={campaignId}
-                  categoryId={category._id}
-                  parentId={parentId}
-                  tag={tag}
-                />
-              )
-            }
-          })()}
       </>
     ),
     [
       deleteNoteDialog,
       deleteFolderDialog,
-      deleteTagDialog,
       deleteMapDialog,
-      createTagDialog,
       createMapDialog,
-      createCategoryDialog,
       editMapDialog,
       editFileDialog,
-      editCategoryDialog,
-      editTagDialog,
+      editSidebarItemDialog,
       campaignId,
-      campaign,
       currentItem,
       clearEditorContent,
       createFileDialog,
