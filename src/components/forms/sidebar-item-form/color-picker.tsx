@@ -7,24 +7,21 @@ import {
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
 import { cn } from '~/lib/shadcn/utils'
+import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 const COLOR_OPTIONS = [
-  { name: 'Default', value: 'teal', className: 'bg-teal-500' },
-  { name: 'Red', value: 'red', className: 'bg-red-500' },
-  { name: 'Orange', value: 'orange', className: 'bg-orange-500' },
-  { name: 'Yellow', value: 'yellow', className: 'bg-yellow-500' },
-  { name: 'Green', value: 'green', className: 'bg-green-500' },
-  { name: 'Blue', value: 'blue', className: 'bg-blue-500' },
-  { name: 'Purple', value: 'purple', className: 'bg-purple-500' },
-  { name: 'Pink', value: 'pink', className: 'bg-pink-500' },
-  { name: 'Gray', value: 'gray', className: 'bg-gray-500' },
+  { name: 'Default', hex: '#14b8a6' },
+  { name: 'Red', hex: '#ef4444' },
+  { name: 'Orange', hex: '#f97316' },
+  { name: 'Yellow', hex: '#eab308' },
+  { name: 'Green', hex: '#22c55e' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Purple', hex: '#a855f7' },
+  { name: 'Pink', hex: '#ec4899' },
+  { name: 'Gray', hex: '#6b7280' },
 ] as const
 
-function getColorClassName(color: string | undefined | null): string {
-  if (!color) return 'bg-teal-500'
-  const found = COLOR_OPTIONS.find((c) => c.value === color)
-  return found?.className ?? 'bg-teal-500'
-}
+const DEFAULT_COLOR = '#14b8a6'
 
 interface ColorPickerProps {
   value: string | undefined | null
@@ -33,7 +30,7 @@ interface ColorPickerProps {
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false)
-  const currentColorClass = getColorClassName(value)
+  const currentColorHex = validateHexColorOrDefault(value, DEFAULT_COLOR)
 
   return (
     <div className="h-9 w-9 flex-shrink-0">
@@ -49,10 +46,8 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               <div className="relative flex items-center justify-center w-full h-full">
                 <Palette className="h-4 w-4" />
                 <div
-                  className={cn(
-                    'absolute bottom-1 right-1 h-2 w-2 rounded-full ring-1 ring-background',
-                    currentColorClass,
-                  )}
+                  className="absolute bottom-1 right-1 h-2 w-2 rounded-full ring-1 ring-background"
+                  style={{ backgroundColor: currentColorHex }}
                 />
               </div>
             </Button>
@@ -61,7 +56,8 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         <PopoverContent className="w-48 p-2" align="start" sideOffset={4}>
           <div className="grid grid-cols-3 gap-2">
             {COLOR_OPTIONS.map((color) => {
-              const isSelected = value === color.value
+              const valueHex = validateHexColorOrDefault(value, DEFAULT_COLOR)
+              const isSelected = valueHex === color.hex
 
               return (
                 <button
@@ -74,13 +70,14 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                       'ring-2 ring-amber-500 dark:ring-amber-400 ring-offset-1',
                   )}
                   onClick={() => {
-                    onChange(color.value)
+                    onChange(color.hex)
                     setOpen(false)
                   }}
                   title={color.name}
                 >
                   <div
-                    className={cn('h-5 w-5 rounded-full', color.className)}
+                    className="h-5 w-5 rounded-full"
+                    style={{ backgroundColor: color.hex }}
                   />
                 </button>
               )

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useEditorMode } from '~/hooks/useEditorMode'
+import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 type MentionInlineContentProps = {
   inlineContent: {
@@ -19,6 +21,7 @@ type MentionInlineContentProps = {
 function MentionInlineContentRender({
   inlineContent,
 }: MentionInlineContentProps) {
+  const { editorMode } = useEditorMode()
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
   const hasCampaign = !!campaign?._id
@@ -39,12 +42,34 @@ function MentionInlineContentRender({
   const displayName = item.data?.name ?? inlineContent.props.displayName
   const color = item.data?.color ?? inlineContent.props.color
 
+  const DEFAULT_COLOR = '#14b8a6'
+
+  // Convert color to hex with alpha channel for background
+  const getBackgroundColor = (
+    colorValue: string | undefined | null,
+  ): string | undefined => {
+    if (!colorValue) return undefined
+
+    const baseColor = validateHexColorOrDefault(colorValue, DEFAULT_COLOR)
+
+    if (baseColor.length === 9) {
+      // already has alpha
+      return `${baseColor.slice(0, 7)}35`
+    } else if (baseColor.length === 7) {
+      // no alpha, add it
+      return `${baseColor}35`
+    } else {
+      console.log('invalid hex color', baseColor)
+      return `${DEFAULT_COLOR}35`
+    }
+  }
+
   return (
     <span
       className="opacity-65"
-      style={color ? { backgroundColor: `${color}35` } : undefined}
+      style={color ? { backgroundColor: getBackgroundColor(color) } : undefined}
     >
-      @{displayName}
+      {editorMode === 'editor' ? `[[${displayName}]]` : displayName}
     </span>
   )
 }

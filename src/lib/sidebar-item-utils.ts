@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -59,4 +59,36 @@ export function getSidebarItemAs<T extends AnySidebarItem['type']>(
   type: T,
 ): Extract<AnySidebarItem, { type: T }> | undefined {
   return isSidebarItemType(item, type) ? item : undefined
+}
+
+export function getItemTypeLabel(type: SidebarItemType): string {
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      return 'Note'
+    case SIDEBAR_ITEM_TYPES.folders:
+      return 'Folder'
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return 'Map'
+    case SIDEBAR_ITEM_TYPES.files:
+      return 'File'
+    default:
+      return 'Item'
+  }
+}
+
+export function isValidHexColor(color: string | undefined | null): boolean {
+  if (!color) return false
+  // Check if it's a valid hex color (#RRGGBB or #RRGGBBAA)
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/.test(color)
+}
+
+export const validateHexColorOrDefault = (
+  colorValue: string | undefined | null,
+  defaultColor: string = '#14b8a6',
+): string => {
+  if (!colorValue) return defaultColor
+
+  const isValidHex = isValidHexColor(colorValue)
+
+  return isValidHex ? colorValue : defaultColor
 }

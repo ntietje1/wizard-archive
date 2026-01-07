@@ -25,6 +25,7 @@ import {
 } from '~/components/shadcn/ui/tooltip'
 import { cn } from '~/lib/shadcn/utils'
 import { MapViewContextMenu } from '~/components/context-menu/map-view/MapViewContextMenu'
+import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 interface PinPosition {
   x: number
@@ -314,8 +315,11 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
 
                 {pins.map((pin: MapPinWithItem) => {
                   const Icon = getSidebarItemIcon(pin.item)
-                  // Use color from item if available
-                  const color = pin.item.color
+                  const color = validateHexColorOrDefault(
+                    pin.item.color,
+                    DEFAULT_PIN_COLOR,
+                  )
+
                   const isHovered = hoveredPinId === pin._id
 
                   return (
@@ -339,7 +343,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
                           <div
                             className="rounded-full p-1.5 shadow-lg border-2 border-white"
                             style={{
-                              backgroundColor: color ?? DEFAULT_PIN_COLOR,
+                              backgroundColor: color,
                             }}
                           >
                             <Icon className="w-4 h-4 text-white" />

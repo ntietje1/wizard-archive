@@ -1,26 +1,35 @@
 import { filterSuggestionItems } from '@blocknote/core'
-import { SuggestionMenuController } from '@blocknote/react'
 import { toast } from 'sonner'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { MENTION_INLINE_CONTENT_TYPE } from 'convex/mentions/editorSpecs'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import CustomMentionMenu from './custom-mention-menu'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { useCampaign } from '~/hooks/useCampaign'
+import { buildBreadcrumbs } from '~/lib/mention-menu-utils'
+import { getItemTypeLabel } from '~/lib/sidebar-item-utils'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 const getMentionMenuItems = (
   onAddMention: (item: AnySidebarItem) => void,
   items?: Array<AnySidebarItem>,
+  itemsMap?: Map<SidebarItemId, AnySidebarItem>,
 ): Array<DefaultReactSuggestionItem> => {
-  if (!items) return []
+  if (!items || !itemsMap) return []
 
-  return items.map((item: AnySidebarItem) => ({
-    title: item.name || defaultItemName(item),
-    onItemClick: () => onAddMention(item),
-  }))
+  return items.map((item: AnySidebarItem) => {
+    const breadcrumbs = buildBreadcrumbs(item, itemsMap)
+    const typeLabel = getItemTypeLabel(item.type)
+    const subtext = breadcrumbs
+
+    return {
+      key: item._id,
+      title: item.name || defaultItemName(item),
+      subtext,
+      badge: typeLabel,
+      onItemClick: () => onAddMention(item),
+    }
+  })
 }
 
 export default function MentionMenu({
@@ -28,18 +37,7 @@ export default function MentionMenu({
 }: {
   editor?: CustomBlockNoteEditor
 }) {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-
-  // Get all sidebar items that can be mentioned
-  const sidebarItemsQuery = useQuery(
-    convexQuery(
-      api.sidebarItems.queries.getAllSidebarItems,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
-    ),
-  )
-
-  const sidebarItems = sidebarItemsQuery.data ?? []
+  const { data: sidebarItems, itemsMap } = useAllSidebarItems()
 
   const onAddMention = (item: AnySidebarItem) => {
     if (!editor) return
@@ -66,12 +64,11 @@ export default function MentionMenu({
   }
 
   return (
-    <SuggestionMenuController
-      triggerCharacter={'@'}
+    <CustomMentionMenu
       getItems={(query) =>
         Promise.resolve(
           filterSuggestionItems(
-            getMentionMenuItems(onAddMention, sidebarItems),
+            getMentionMenuItems(onAddMention, sidebarItems, itemsMap),
             query,
           ),
         )

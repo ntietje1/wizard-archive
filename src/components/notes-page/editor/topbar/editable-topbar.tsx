@@ -6,8 +6,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
-import { MoreVertical, X } from '~/lib/icons'
+import { Eye, MoreVertical, Pencil, X } from '~/lib/icons'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
+import { useEditorMode } from '~/hooks/useEditorMode'
 
 interface EditableTopbarProps {
   name?: string
@@ -34,12 +35,17 @@ export function EditableTopbar({
 }: EditableTopbarProps) {
   const [title, setTitle] = useState(name ?? '')
   const [isEditing, setIsEditing] = useState(false)
+  const { editorMode, setEditorMode } = useEditorMode()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const newName = name ?? ''
     setTitle(newName)
   }, [name])
+
+  const handleEditorModeToggle = useCallback(() => {
+    setEditorMode(editorMode === 'editor' ? 'viewer' : 'editor')
+  }, [editorMode, setEditorMode])
 
   const handleTitleSubmit = useCallback(async () => {
     if (!onRename) {
@@ -146,6 +152,13 @@ export function EditableTopbar({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="ghost" size="icon" onClick={handleEditorModeToggle}>
+            {editorMode === 'editor' ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <Pencil className="h-4 w-4" />
+            )}
+          </Button>
           {onOpenMenu && (
             <Button
               variant="ghost"

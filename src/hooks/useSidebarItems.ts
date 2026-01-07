@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -28,6 +29,33 @@ export const useSidebarItemsByParent = (
   return {
     ...sidebarItems,
     data: sortItemsByOptions(sortOptions, sidebarItems.data),
+  }
+}
+
+export const useAllSidebarItems = (enabled = true) => {
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership.data?.campaign
+
+  const sidebarItemsQuery = useQuery(
+    convexQuery(
+      api.sidebarItems.queries.getAllSidebarItems,
+      campaign?._id && enabled ? { campaignId: campaign._id } : 'skip',
+    ),
+  )
+
+  const itemsMap = useMemo(() => {
+    const sidebarItems = sidebarItemsQuery.data ?? []
+    const map = new Map<SidebarItemId, AnySidebarItem>()
+    sidebarItems.forEach((item) => {
+      map.set(item._id, item)
+    })
+    return map
+  }, [sidebarItemsQuery.data])
+
+  return {
+    ...sidebarItemsQuery,
+    data: sidebarItemsQuery.data ?? [],
+    itemsMap,
   }
 }
 
