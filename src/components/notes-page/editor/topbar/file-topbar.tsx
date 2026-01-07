@@ -9,7 +9,6 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useMenuActions } from '~/components/context-menu/actions'
-import { isTagCategory } from '~/lib/sidebar-item-utils'
 import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
 
 export function FileTopbar() {
@@ -17,20 +16,6 @@ export function FileTopbar() {
   const { clearEditorContent, navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem(item)
   const { Dialogs } = useMenuActions()
-
-  const categoryQuery = useQuery(
-    convexQuery(
-      api.tags.queries.getTagCategory,
-      item && !isTagCategory(item) && item.categoryId
-        ? {
-            campaignId: item.campaignId,
-            categoryId: item.categoryId,
-          }
-        : 'skip',
-    ),
-  )
-
-  const category = isTagCategory(item) ? item : categoryQuery.data
 
   const ancestors = useQuery(
     convexQuery(
@@ -58,11 +43,7 @@ export function FileTopbar() {
   }
 
   return (
-    <TopbarContextMenu
-      ref={topbarContextMenuRef}
-      item={item}
-      category={category}
-    >
+    <TopbarContextMenu ref={topbarContextMenuRef} item={item}>
       <EditableTopbar
         name={item.name}
         defaultName={defaultName}

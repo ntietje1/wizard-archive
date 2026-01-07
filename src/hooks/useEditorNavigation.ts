@@ -13,9 +13,7 @@ const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 const createContentSearch = (updates: Partial<EditorSearch>): EditorSearch => {
   const search: EditorSearch = {
     note: undefined,
-    tag: undefined,
     map: undefined,
-    category: undefined,
     folder: undefined,
     file: undefined,
     ...updates,
@@ -66,31 +64,6 @@ export const useEditorNavigation = () => {
       navigateToEditor(
         createContentSearch({
           map: slug,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
-
-  const navigateToTag = useCallback(
-    (slug: string | null, replace?: boolean) => {
-      navigateToEditor(
-        createContentSearch({
-          tag: slug || undefined,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
-
-  const navigateToCategory = useCallback(
-    (slug: string, folderSlug?: string, replace?: boolean) => {
-      navigateToEditor(
-        createContentSearch({
-          category: slug,
-          folder: folderSlug || undefined,
         }),
         replace,
       )
@@ -153,14 +126,8 @@ export const useEditorNavigation = () => {
         case SIDEBAR_ITEM_TYPES.notes:
           navigateToNote(item.slug, replace)
           break
-        case SIDEBAR_ITEM_TYPES.tags:
-          navigateToTag(item.slug, replace)
-          break
         case SIDEBAR_ITEM_TYPES.gameMaps:
           navigateToMap(item.slug, replace)
-          break
-        case SIDEBAR_ITEM_TYPES.tagCategories:
-          navigateToCategory(item.slug, undefined, replace)
           break
         case SIDEBAR_ITEM_TYPES.folders:
           navigateToFolder(item.slug, replace)
@@ -176,9 +143,7 @@ export const useEditorNavigation = () => {
     },
     [
       navigateToNote,
-      navigateToTag,
       navigateToMap,
-      navigateToCategory,
       navigateToFolder,
       navigateToFile,
       optimisticUpdateSidebarItem,
@@ -191,9 +156,7 @@ export const useEditorNavigation = () => {
 
   return {
     navigateToNote,
-    navigateToTag,
     navigateToMap,
-    navigateToCategory,
     navigateToFolder,
     navigateToFile,
     navigateToItem,

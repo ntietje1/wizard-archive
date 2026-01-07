@@ -30,25 +30,19 @@ export function SessionPanel() {
   const hasActiveSession = !!currentSession.data
   const previousSessions: Array<Session> = useMemo(() => {
     const sortedSessions: Array<Session> = sessions.data ?? []
-    const currentId = currentSession.data?.sessionId
-    return sortedSessions.filter((s) => s.sessionId !== currentId)
-  }, [sessions.data, currentSession.data?.sessionId])
+    const currentId = currentSession.data?._id
+    return sortedSessions.filter((s) => s._id !== currentId)
+  }, [sessions.data, currentSession.data?._id])
 
   const formatSessionDate = (s: Session): string => {
-    const date = s.description
-      ? new Date(s.description)
-      : new Date(s._creationTime)
+    const date = new Date(s.startedAt)
     if (Number.isNaN(date.getTime())) return ''
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
   }
 
   const handleStart = () => {
     if (!campaignId) return
-    const now = new Date()
-    startNewSession({
-      color: '#6366F1',
-      description: now.toISOString(),
-    })
+    startNewSession()
   }
 
   const handleStop = () => {
@@ -122,19 +116,19 @@ export function SessionPanel() {
                 )}
                 {previousSessions.map((s) => (
                   <DropdownMenuItem
-                    key={s.sessionId}
+                    key={s._id}
                     onClick={() => {
                       if (campaignId) {
                         setCurrentSession.mutate({
                           campaignId,
-                          sessionId: s.sessionId,
+                          sessionId: s._id,
                         })
                       }
                     }}
                   >
                     <div className="flex w-full flex-col">
                       <span className="truncate text-sm font-medium">
-                        {s.name || ''}
+                        {s.name || 'Unnamed Session'}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatSessionDate(s)}

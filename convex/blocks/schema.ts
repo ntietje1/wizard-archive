@@ -1,9 +1,19 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import {
+  sidebarItemIdValidator,
+  sidebarItemTypeValidator,
+} from '../sidebarItems/baseFields'
 
 export const blockNoteIdValidator = v.string()
 
 export const customBlockValidator = v.any() // BlockNote block content
+
+export const blockShareStatusValidator = v.union(
+  v.literal('all_shared'),
+  v.literal('not_shared'),
+  v.literal('individually_shared'),
+)
 
 const blockTableFields = {
   noteId: v.id('notes'),
@@ -13,12 +23,14 @@ const blockTableFields = {
   isTopLevel: v.boolean(),
   campaignId: v.id('campaigns'),
   updatedAt: v.number(),
+  shareStatus: v.optional(blockShareStatusValidator),
 }
 
-const blockTagTableFields = {
+const blockMentionTableFields = {
   campaignId: v.id('campaigns'),
   blockId: v.id('blocks'),
-  tagId: v.id('tags'),
+  sidebarItemId: sidebarItemIdValidator,
+  sidebarItemType: sidebarItemTypeValidator,
 }
 
 export const blocksTables = {
@@ -26,9 +38,13 @@ export const blocksTables = {
     ...blockTableFields,
   }).index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId']),
 
-  blockTags: defineTable({
-    ...blockTagTableFields,
-  }).index('by_campaign_block_tag', ['campaignId', 'blockId', 'tagId']),
+  blockMentions: defineTable({
+    ...blockMentionTableFields,
+  }).index('by_campaign_block_item', [
+    'campaignId',
+    'blockId',
+    'sidebarItemId',
+  ]),
 }
 
 const blockValidatorFields = {
@@ -37,12 +53,12 @@ const blockValidatorFields = {
   ...blockTableFields,
 } as const
 
-const blockTagValidatorFields = {
-  _id: v.id('blockTags'),
+const blockMentionValidatorFields = {
+  _id: v.id('blockMentions'),
   _creationTime: v.number(),
-  ...blockTagTableFields,
+  ...blockMentionTableFields,
 } as const
 
 export const blockValidator = v.object(blockValidatorFields)
 
-export const blockTagValidator = v.object(blockTagValidatorFields)
+export const blockMentionValidator = v.object(blockMentionValidatorFields)

@@ -1,24 +1,26 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { tagBackedEntityFields, tagValidatorFields } from '../tags/schema'
 
 const sessionTableFields = {
-  ...tagBackedEntityFields,
+  campaignId: v.id('campaigns'),
+  name: v.optional(v.string()),
+  startedAt: v.number(),
   endedAt: v.optional(v.number()),
+  updatedAt: v.number(),
 }
 
 export const sessionTables = {
   sessions: defineTable({
     ...sessionTableFields,
-  }).index('by_campaign_tag_endedAt', ['campaignId', 'tagId', 'endedAt']),
+  })
+    .index('by_campaign_startedAt', ['campaignId', 'startedAt'])
+    .index('by_campaign_endedAt', ['campaignId', 'endedAt']),
 }
 
 const sessionValidatorFields = {
-  ...tagValidatorFields,
+  _id: v.id('sessions'),
+  _creationTime: v.number(),
   ...sessionTableFields,
 } as const
 
-export const sessionValidator = v.object({
-  ...sessionValidatorFields,
-  sessionId: v.id('sessions'), // additional field to be explicit about which field is the id
-})
+export const sessionValidator = v.object(sessionValidatorFields)

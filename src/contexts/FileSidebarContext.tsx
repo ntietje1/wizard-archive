@@ -18,7 +18,6 @@ import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { canDropItem, executeMove } from '~/lib/dnd-utils'
-import { useTagActions } from '~/hooks/useTagActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
@@ -41,7 +40,6 @@ export function FileSidebarProvider({
 
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
-  const { moveTag } = useTagActions()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
@@ -148,11 +146,7 @@ export function FileSidebarProvider({
       const targetId =
         targetData._id === SIDEBAR_ROOT_TYPE
           ? undefined
-          : (targetData._id as
-              | Id<'notes'>
-              | Id<'folders'>
-              | Id<'tagCategories'>
-              | Id<'tags'>)
+          : (targetData._id as Id<'notes'> | Id<'folders'>)
 
       await executeMove(
         draggedItem.type,
@@ -162,7 +156,6 @@ export function FileSidebarProvider({
           moveNote: (params) => moveNote.mutateAsync(params),
           moveMap: (params) => moveMap.mutateAsync(params),
           moveFolder: (params) => moveFolder.mutateAsync(params),
-          moveTag: (params) => moveTag.mutateAsync(params),
         },
         {
           openFolder: (id) => openFolder(id),
@@ -172,7 +165,7 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveMap, moveFolder, moveTag, openFolder],
+    [moveNote, moveMap, moveFolder, openFolder],
   )
 
   const handleDragCancel = useCallback(() => {

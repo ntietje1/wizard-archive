@@ -1,4 +1,3 @@
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import type {
   SidebarItemOrRootType,
   SidebarItemType,
@@ -39,23 +38,9 @@ export const hasParent =
   (ctx) =>
     parents.includes(ctx.parentType)
 
-export const underCategory: Predicate = (ctx) => Boolean(ctx.item?.categoryId)
-
 export const underFolder: Predicate = (ctx) => Boolean(ctx.item?.parentId)
 
-export const folderHasCategoryId: Predicate = (ctx) => {
-  if (!ctx.item || ctx.item.type !== 'folders') return false
-  return Boolean(ctx.item.categoryId)
-}
-
 export const atRoot: Predicate = (ctx) => ctx.parentType === 'root'
-
-export const hasCategory: Predicate = (ctx) => Boolean(ctx.category)
-
-export const inCategory =
-  (categorySlug: string): Predicate =>
-  (ctx) =>
-    ctx.category?.slug === categorySlug
 
 export const always: Predicate = () => true
 
@@ -74,11 +59,6 @@ export const mapIsNotActiveMap: Predicate = (ctx) => {
 }
 
 export const hasPinContext: Predicate = (ctx) => Boolean(ctx.pinId && ctx.mapId)
-
-export const isSessionCategory: Predicate = (ctx) => {
-  if (!ctx.category) return false
-  return ctx.category.slug === SYSTEM_DEFAULT_CATEGORIES.Session.slug
-}
 
 export const hasActiveSession: Predicate = (ctx) => {
   return ctx.hasActiveSession === true

@@ -1,12 +1,6 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
-import { ensureDefaultTagCategories } from '../tags/tags'
-import {
-  ensureAllPlayerSharedTags,
-  ensurePlayerSharedTag,
-  ensureSharedAllTag,
-} from '../shares/shares'
 import { getUserProfileByUsernameHandler } from '../users/users'
 import { findUniqueSlug } from '../common/slug'
 import { campaignMemberStatusValidator } from './schema'
@@ -59,9 +53,6 @@ export const createCampaign = mutation({
       updatedAt: now,
     })
 
-    await ensureDefaultTagCategories(ctx, campaignId)
-    await ensureSharedAllTag(ctx, campaignId)
-    await ensureAllPlayerSharedTags(ctx, campaignId)
     return campaignId
   },
 })
@@ -106,15 +97,13 @@ export const joinCampaign = mutation({
 
     const now = Date.now()
 
-    const memberId = await ctx.db.insert('campaignMembers', {
+    await ctx.db.insert('campaignMembers', {
       userId: profile._id,
       campaignId: campaign._id,
       role: CAMPAIGN_MEMBER_ROLE.Player,
       status: CAMPAIGN_MEMBER_STATUS.Pending,
       updatedAt: now,
     })
-
-    await ensurePlayerSharedTag(ctx, campaign._id, memberId).catch()
 
     return CAMPAIGN_MEMBER_STATUS.Pending
   },
@@ -187,6 +176,19 @@ export const deleteCampaign = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    // Delete block mentions
+    const blockMentions = await ctx.db
+      .query('blockMentions')
+      .withIndex('by_campaign_block_item', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
+      .collect()
+
+    for (const mention of blockMentions) {
+      await ctx.db.delete(mention._id)
+    }
+
+    // Delete blocks
     const blocks = await ctx.db
       .query('blocks')
       .withIndex('by_campaign_note_block', (q) =>
@@ -198,6 +200,7 @@ export const deleteCampaign = mutation({
       await ctx.db.delete(block._id)
     }
 
+    // Delete notes
     const notes = await ctx.db
       .query('notes')
       .withIndex('by_campaign_parent', (q) =>
@@ -209,42 +212,86 @@ export const deleteCampaign = mutation({
       await ctx.db.delete(note._id)
     }
 
-    const tagCategories = await ctx.db
-      .query('tagCategories')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))
+    // Delete folders
+    const folders = await ctx.db
+      .query('folders')
+      .withIndex('by_campaign_parent', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
       .collect()
 
-    for (const category of tagCategories) {
-      await ctx.db.delete(category._id)
+    for (const folder of folders) {
+      await ctx.db.delete(folder._id)
     }
 
-    const campaignTags = await ctx.db
-      .query('tags')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', args.campaignId))
+    // Delete maps and pins
+    const maps = await ctx.db
+      .query('gameMaps')
+      .withIndex('by_campaign_parent', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
       .collect()
 
-    for (const tag of campaignTags) {
-      await ctx.db.delete(tag._id)
+    for (const map of maps) {
+      const pins = await ctx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', map._id))
+        .collect()
+      for (const pin of pins) {
+        await ctx.db.delete(pin._id)
+      }
+      await ctx.db.delete(map._id)
     }
 
-    const locations = await ctx.db
-      .query('locations')
-      .withIndex('by_campaign_tag', (q) => q.eq('campaignId', args.campaignId))
+    // Delete files
+    const files = await ctx.db
+      .query('files')
+      .withIndex('by_campaign_parent', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
       .collect()
 
-    for (const location of locations) {
-      await ctx.db.delete(location._id)
+    for (const file of files) {
+      await ctx.db.delete(file._id)
     }
 
-    const characters = await ctx.db
-      .query('characters')
-      .withIndex('by_campaign_tag', (q) => q.eq('campaignId', args.campaignId))
+    // Delete sidebar item shares
+    const sidebarItemShares = await ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
       .collect()
 
-    for (const character of characters) {
-      await ctx.db.delete(character._id)
+    for (const share of sidebarItemShares) {
+      await ctx.db.delete(share._id)
     }
 
+    // Delete block shares
+    const blockShares = await ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_block_member', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
+      .collect()
+
+    for (const share of blockShares) {
+      await ctx.db.delete(share._id)
+    }
+
+    // Delete sessions
+    const sessions = await ctx.db
+      .query('sessions')
+      .withIndex('by_campaign_startedAt', (q) =>
+        q.eq('campaignId', args.campaignId),
+      )
+      .collect()
+
+    for (const session of sessions) {
+      await ctx.db.delete(session._id)
+    }
+
+    // Delete campaign members
     const campaignMembers = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign', (q) => q.eq('campaignId', args.campaignId))

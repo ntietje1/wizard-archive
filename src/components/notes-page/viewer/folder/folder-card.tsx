@@ -52,7 +52,6 @@ function FolderSvg() {
 
 export function FolderCard({
   item: folder,
-  category,
   onClick,
   isLoading,
 }: ItemCardProps<Folder>) {
@@ -60,11 +59,9 @@ export function FolderCard({
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const categoryId = folder.categoryId
   const dropData: SidebarDropData = {
     _id: folder._id,
     type: SIDEBAR_ITEM_TYPES.folders,
-    categoryId,
   }
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folder._id,
@@ -79,7 +76,6 @@ export function FolderCard({
     type: SIDEBAR_ITEM_TYPES.folders,
     name: folder.name || defaultItemName(folder),
     parentId: folder.parentId,
-    categoryId,
     icon: FolderIcon,
   }
   const {
@@ -167,11 +163,7 @@ export function FolderCard({
   )
 
   return (
-    <FolderViewContextMenu
-      ref={contextMenuRef}
-      item={folder}
-      category={category}
-    >
+    <FolderViewContextMenu ref={contextMenuRef} item={folder}>
       {cardContent}
     </FolderViewContextMenu>
   )

@@ -1,15 +1,15 @@
-import React, { forwardRef, useCallback, useRef } from 'react'
+import React, { forwardRef, useCallback, useMemo, useRef } from 'react'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextEnhancers } from '../hooks/useContextEnhancers'
+import { createShareEnhancer } from '../context'
 import { ContextMenu } from '../components/ContextMenu'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { MenuContext } from '../types'
-import type { TagCategory } from 'convex/tags/types'
 import type { ContextMenuRef } from '../components/ContextMenu'
+import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
 
 interface TopbarContextMenuProps {
   item?: AnySidebarItem
-  category?: TagCategory
   children: React.ReactNode
   className?: string
 }
@@ -22,8 +22,17 @@ export interface TopbarContextMenuRef {
 export const TopbarContextMenu = forwardRef<
   TopbarContextMenuRef,
   TopbarContextMenuProps
->(({ item, category, children, className }, ref) => {
-  const enhancers = useContextEnhancers({ category })
+>(({ item, children, className }, ref) => {
+  const baseEnhancers = useContextEnhancers()
+
+  // Get share state for this item
+  const shareState = useSidebarItemShares(item?._id)
+
+  // Combine base enhancers with share enhancer
+  const enhancers = useMemo(
+    () => [...baseEnhancers, createShareEnhancer(shareState)],
+    [baseEnhancers, shareState],
+  )
 
   const contextMenuHook = useContextMenu({
     viewContext: 'topbar',

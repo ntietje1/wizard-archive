@@ -17,7 +17,6 @@ function getDropData(item: AnySidebarItem, ancestorIds: Array<SidebarItemId>) {
   return {
     accepts,
     _id: item._id,
-    categoryId: item.categoryId,
     ancestorIds,
     type: item.type,
   }
@@ -33,7 +32,6 @@ function canAcceptFiles(
   const targetData = {
     id: item._id,
     type: item.type,
-    categoryId: item.categoryId,
     ancestorIds,
   }
   return canDropFilesOnTarget(targetData)

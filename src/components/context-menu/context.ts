@@ -3,9 +3,8 @@ import type {
   SidebarItemId,
   SidebarItemOrRootType,
 } from 'convex/sidebarItems/types'
-import type { MenuContext, ViewContext } from './types'
+import type { MenuContext, ShareState, ViewContext } from './types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
-import type { TagCategory } from 'convex/tags/types'
 
 // ============================================================================
 // Context Enhancers
@@ -64,21 +63,6 @@ export function createMapViewEnhancer(
 }
 
 /**
- * Enhancer that adds category context
- */
-export function createCategoryEnhancer(
-  category?: TagCategory,
-): ContextEnhancer {
-  return {
-    id: 'category',
-    enhance: (ctx) => ({
-      ...ctx,
-      category,
-    }),
-  }
-}
-
-/**
  * Enhancer that adds session context
  */
 export function createSessionEnhancer(
@@ -89,6 +73,19 @@ export function createSessionEnhancer(
     enhance: (ctx) => ({
       ...ctx,
       hasActiveSession,
+    }),
+  }
+}
+
+/**
+ * Enhancer that adds share state for sidebar items
+ */
+export function createShareEnhancer(shareState?: ShareState): ContextEnhancer {
+  return {
+    id: 'share',
+    enhance: (ctx) => ({
+      ...ctx,
+      shareState,
     }),
   }
 }
@@ -116,7 +113,6 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
   const {
     item,
     viewContext,
-    category,
     currentUserId,
     activeMapId,
     activeCanvasId,
@@ -124,6 +120,7 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     memberRole,
     pinnedItemIds,
     hasActiveSession,
+    shareState,
   } = options
 
   return {
@@ -131,9 +128,6 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     item,
     viewContext,
     parentType,
-
-    // Category context
-    category,
 
     // Permissions
     currentUserId,
@@ -150,5 +144,8 @@ export function createMenuContext(options: ContextBuilderOptions): MenuContext {
     // Pin context
     pinId: options.pinId,
     mapId: options.mapId,
+
+    // Share state
+    shareState,
   }
 }

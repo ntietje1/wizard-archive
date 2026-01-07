@@ -19,7 +19,6 @@ import { FolderViewContextMenu } from '~/components/context-menu/folder-view/Fol
 
 export function MapCard({
   item: map,
-  category,
   onClick,
   isLoading,
 }: ItemCardProps<GameMap>) {
@@ -38,17 +37,13 @@ export function MapCard({
 
   const imageUrl = imageUrlQuery.data || null
 
-  const categoryId = map.categoryId
-  const dragData: SidebarDragData | undefined = categoryId
-    ? {
-        _id: map._id,
-        type: SIDEBAR_ITEM_TYPES.gameMaps,
-        name: map.name || defaultItemName(map),
-        parentId: map.parentId,
-        categoryId,
-        icon: MapPin,
-      }
-    : undefined
+  const dragData: SidebarDragData = {
+    _id: map._id,
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
+    name: map.name || defaultItemName(map),
+    parentId: map.parentId,
+    icon: MapPin,
+  }
 
   const {
     setNodeRef: setDragRef,
@@ -58,21 +53,17 @@ export function MapCard({
   } = useDraggable({
     id: map._id,
     data: dragData,
-    disabled: isDisabled || !categoryId,
+    disabled: isDisabled,
   })
 
-  const dropData: SidebarDropData | undefined = categoryId
-    ? {
-        _id: map._id,
-        type: SIDEBAR_ITEM_TYPES.gameMaps,
-        categoryId,
-      }
-    : undefined
+  const dropData: SidebarDropData = {
+    _id: map._id,
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
+  }
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: map._id,
     data: dropData,
-    disabled: !categoryId,
   })
 
   const isValidDropTarget =
@@ -168,7 +159,7 @@ export function MapCard({
   )
 
   return (
-    <FolderViewContextMenu ref={contextMenuRef} item={map} category={category}>
+    <FolderViewContextMenu ref={contextMenuRef} item={map}>
       {cardContent}
     </FolderViewContextMenu>
   )

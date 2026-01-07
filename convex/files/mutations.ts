@@ -18,7 +18,6 @@ export const createFile = mutation({
     name: v.optional(v.string()),
     storageId: v.id('_storage'),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -67,7 +66,6 @@ export const createFile = mutation({
       slug: uniqueSlug,
       storageId: args.storageId,
       parentId: args.parentId,
-      categoryId: args.categoryId,
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.files,
     })
@@ -81,7 +79,6 @@ export const updateFile = mutation({
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -145,10 +142,6 @@ export const updateFile = mutation({
         }
       }
     }
-    if (args.categoryId !== undefined) {
-      updates.categoryId = args.categoryId
-    }
-
     await ctx.db.patch(args.fileId, updates)
     return { fileId: args.fileId, slug: updates.slug || file.slug }
   },

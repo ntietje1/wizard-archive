@@ -1,4 +1,3 @@
-import { SYSTEM_DEFAULT_CATEGORIES } from 'convex/tags/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { LucideIcon } from 'lucide-react'
@@ -13,6 +12,7 @@ import {
   Cat,
   Cherry,
   Dog,
+  File,
   FileText,
   Flame,
   Folder,
@@ -32,54 +32,51 @@ import {
   Star,
   Sun,
   Sword,
-  TagIcon,
   User,
 } from '~/lib/icons'
 
-const categoryIconsMap: Record<string, LucideIcon> = {
-  [SYSTEM_DEFAULT_CATEGORIES.Character.iconName]: User,
-  [SYSTEM_DEFAULT_CATEGORIES.Location.iconName]: MapPin,
-  [SYSTEM_DEFAULT_CATEGORIES.Session.iconName]: Calendar,
-  [SYSTEM_DEFAULT_CATEGORIES.Shared.iconName]: Share2,
-  ['TagIcon']: TagIcon,
-  ['Sword']: Sword,
-  ['Shield']: Shield,
-  ['Notebook']: Notebook,
-  ['Apple']: Apple,
-  ['Axe']: Axe,
-  ['Beef']: Beef,
-  ['Bird']: Bird,
-  ['BowArrow']: BowArrow,
-  ['Box']: Box,
-  ['Cat']: Cat,
-  ['Cherry']: Cherry,
-  ['Dog']: Dog,
-  ['Flame']: Flame,
-  ['Gem']: Gem,
-  ['Heart']: Heart,
-  ['Locate']: Locate,
-  ['MessageCircleWarning']: MessageCircleWarning,
-  ['Moon']: Moon,
-  ['Mountain']: Mountain,
-  ['Music']: Music,
-  ['Sparkles']: Sparkles,
-  ['Squirrel']: Squirrel,
-  ['Sun']: Sun,
-  ['Star']: Star,
+// Map of icon names to LucideIcon components
+const iconNameMap: Record<string, LucideIcon> = {
+  User,
+  MapPin,
+  Calendar,
+  Share2,
+  Sword,
+  Shield,
+  Notebook,
+  Apple,
+  Axe,
+  Beef,
+  Bird,
+  BowArrow,
+  Box,
+  Cat,
+  Cherry,
+  Dog,
+  Flame,
+  Gem,
+  Heart,
+  Locate,
+  MessageCircleWarning,
+  Moon,
+  Mountain,
+  Music,
+  Sparkles,
+  Squirrel,
+  Sun,
+  Star,
+  File,
+  FileText,
+  Folder,
 }
 
-export const getCategoryIcon = (categoryName?: string): LucideIcon => {
-  if (!categoryName) return TagIcon
-  return categoryIconsMap[categoryName] ?? TagIcon
+export const getIconByName = (iconName?: string): LucideIcon => {
+  if (!iconName) return FileText
+  return iconNameMap[iconName] ?? FileText
 }
 
-export const getNonDefaultCategoryIcons = () => {
-  return Object.keys(categoryIconsMap).filter(
-    (iconName) =>
-      !Object.values(SYSTEM_DEFAULT_CATEGORIES)
-        .map((c) => c.iconName)
-        .includes(iconName),
-  )
+export const getAvailableIconNames = (): Array<string> => {
+  return Object.keys(iconNameMap)
 }
 
 // Default icons for each sidebar item type
@@ -87,24 +84,19 @@ const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
   [SIDEBAR_ITEM_TYPES.folders]: Folder,
   [SIDEBAR_ITEM_TYPES.notes]: FileText,
   [SIDEBAR_ITEM_TYPES.gameMaps]: MapPin,
-  [SIDEBAR_ITEM_TYPES.tags]: TagIcon,
+  [SIDEBAR_ITEM_TYPES.files]: File,
 }
 
 /**
  * Gets the appropriate icon for any sidebar item.
- * Uses category icons for categories and tags, default icons for other types.
+ * Uses custom iconName if set, otherwise falls back to default for the item type.
  */
 export const getSidebarItemIcon = (item: AnySidebarItem): LucideIcon => {
-  switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.tagCategories:
-      return getCategoryIcon(item.iconName)
-    case SIDEBAR_ITEM_TYPES.tags:
-      return getCategoryIcon(item.category?.iconName)
-    case SIDEBAR_ITEM_TYPES.folders:
-    case SIDEBAR_ITEM_TYPES.notes:
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] ?? FileText
-    default:
-      return FileText
+  // If item has a custom icon, use it
+  if (item.iconName) {
+    return getIconByName(item.iconName)
   }
+
+  // Otherwise use the default for the item type
+  return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] ?? FileText
 }

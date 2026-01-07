@@ -1,100 +1,68 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import {
-  doesBlockMatchRequiredTags,
-  extractTagIdsFromBlockContent,
-  filterOutChildBlocks,
-  findBlock,
-  getBlockLevelTags,
-  getNoteLevelTag,
-} from '../tags/tags'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { hasAccessToBlock } from '../shares/shares'
-import { blockValidator } from './schema'
-import { getBlocksByCampaign } from './blocks'
-import type { Id } from '../_generated/dataModel'
-import type { Block } from './types'
+import {
+  getCampaignMembers,
+  requireCampaignMembership,
+} from '../campaigns/campaigns'
+import {
+  extractMentionsFromBlockContent,
+  getBlockMentions,
+} from '../mentions/mentions'
+import { getBlockSharesForBlock } from '../shares/shares'
+import { blockShareValidator } from '../shares/schema'
+import { campaignMemberValidator } from '../campaigns/schema'
+import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
+import {
+  blockMentionValidator,
+  blockShareStatusValidator,
+  blockValidator,
+} from './schema'
+import { findBlockByBlockNoteId, getBlocksByCampaign } from './blocks'
+import { BLOCK_SHARE_STATUS } from './types'
+import type { SidebarItemId } from '../sidebarItems/types'
+import type { Block, BlockMention, BlockShareStatus } from './types'
+import type { BlockShare } from '../shares/types'
+import type { CampaignMember } from '../campaigns/types'
 
-// TODO: add to the index to allow for more efficient query here
-export const getBlocksByTags = query({
+// TODO: make this more efficient by using an index instead of querying all blocks
+export const getBlocksByMentionedItem = query({
   args: {
     campaignId: v.id('campaigns'),
-    tagIds: v.array(v.id('tags')),
+    sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.array(blockValidator),
   handler: async (ctx, args): Promise<Array<Block>> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
+    await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
 
+    // Find all mentions of this sidebar item
     const allBlocks = await getBlocksByCampaign(ctx, args.campaignId)
+    const matchingBlocks: Array<Block> = []
 
-    const checks = await Promise.all(
-      allBlocks.map(async (block) => {
-        try {
-          const [hasSharedTag, matchesRequired] = await Promise.all([
-            hasAccessToBlock(ctx, campaignWithMembership.member._id, block._id),
-            doesBlockMatchRequiredTags(ctx, block._id, args.tagIds),
-          ])
-          return hasSharedTag && matchesRequired ? block : null
-        } catch (error) {
-          console.warn(
-            `Error checking block access/tags for block ${block._id}:`,
-            error,
-          )
-          return null
-        }
-      }),
-    )
-    const matchingBlocks: Array<Block> = checks.filter(Boolean) as Array<Block>
-
-    const noteGroups = new Map<Id<'notes'>, Array<Block>>()
-    matchingBlocks.forEach((block) => {
-      if (!noteGroups.has(block.noteId)) {
-        noteGroups.set(block.noteId, [])
-      }
-      noteGroups.get(block.noteId)!.push(block)
-    })
-
-    const filteredResults: Array<Block> = []
-    const matchedNoteIds = Array.from(noteGroups.keys())
-    const topByNote = new Map<Id<'notes'>, Array<Block>>()
-    for (const b of allBlocks) {
-      if (b.isTopLevel && matchedNoteIds.includes(b.noteId)) {
-        const arr = topByNote.get(b.noteId) ?? []
-        arr.push(b)
-        topByNote.set(b.noteId, arr)
+    for (const block of allBlocks) {
+      const mentions = await getBlockMentions(ctx, args.campaignId, block._id)
+      if (mentions.some((m) => m.sidebarItemId === args.sidebarItemId)) {
+        matchingBlocks.push(block)
       }
     }
-    for (const [noteId, noteBlocks] of noteGroups) {
-      const topLevelBlocks = (topByNote.get(noteId) ?? []).sort(
-        (a, b) => (a.position || 0) - (b.position || 0),
-      )
 
-      const topLevelContent = topLevelBlocks.map((block) => block.content)
-
-      const filtered = filterOutChildBlocks(noteBlocks, topLevelContent)
-      filteredResults.push(...filtered)
-    }
-
-    return filteredResults
+    return matchingBlocks
   },
 })
 
-export const getBlockTagState = query({
+export const getBlockMentionState = query({
   args: {
     noteId: v.id('notes'),
     blockId: v.string(),
   },
   returns: v.union(
     v.object({
-      allTagIds: v.array(v.id('tags')),
-      inlineTagIds: v.array(v.id('tags')),
-      blockTagIds: v.array(v.id('tags')),
-      noteTagId: v.optional(v.id('tags')),
+      mentions: v.array(blockMentionValidator),
+      inlineMentionIds: v.array(sidebarItemIdValidator),
     }),
     v.null(),
   ),
@@ -102,10 +70,8 @@ export const getBlockTagState = query({
     ctx,
     args,
   ): Promise<{
-    allTagIds: Array<Id<'tags'>>
-    inlineTagIds: Array<Id<'tags'>>
-    blockTagIds: Array<Id<'tags'>>
-    noteTagId: Id<'tags'> | undefined
+    mentions: Array<BlockMention>
+    inlineMentionIds: Array<SidebarItemId>
   } | null> => {
     const note = await ctx.db.get(args.noteId)
     if (!note) throw new Error('Note not found')
@@ -115,30 +81,114 @@ export const getBlockTagState = query({
       { campaignId: note.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
-    const block = await findBlock(ctx, args.noteId, args.blockId)
+
+    const block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockId)
     if (!block) {
       return null
     }
-    const [blockTagIds, noteLevelTag] = await Promise.all([
-      getBlockLevelTags(ctx, block._id),
-      getNoteLevelTag(ctx, note._id),
-    ])
-    const inlineTagIds = extractTagIdsFromBlockContent(block.content)
-    const noteTagId = noteLevelTag?._id
 
-    const allTagIds = [
-      ...new Set([
-        ...blockTagIds,
-        ...inlineTagIds,
-        ...(noteTagId ? [noteTagId] : []),
-      ]),
-    ]
+    const mentions = await getBlockMentions(ctx, note.campaignId, block._id)
+    const inlineMentions = extractMentionsFromBlockContent(block.content)
+    const inlineMentionIds = inlineMentions.map((m) => m.sidebarItemId)
 
     return {
-      allTagIds,
-      inlineTagIds,
-      blockTagIds,
-      noteTagId,
+      mentions,
+      inlineMentionIds,
+    }
+  },
+})
+
+export const getBlockById = query({
+  args: {
+    blockId: v.id('blocks'),
+  },
+  returns: v.union(blockValidator, v.null()),
+  handler: async (ctx, args): Promise<Block | null> => {
+    const block = await ctx.db.get(args.blockId)
+    if (!block) return null
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: block.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+
+    return block
+  },
+})
+
+/**
+ * Get a block by its BlockNote string ID along with its share status and player members.
+ * This query finds the block DIRECTLY by BlockNote ID - no mention tables involved.
+ * Returns null if the block hasn't been saved to the database yet.
+ *
+ * Share status optimization:
+ * - 'all_shared': Block visible to all players (shares array will be empty)
+ * - 'not_shared': Block visible to no players (shares array will be empty)
+ * - 'individually_shared': Must query blockShares table for specific shares
+ */
+export const getBlockWithShares = query({
+  args: {
+    noteId: v.id('notes'),
+    blockId: v.string(), // BlockNote string ID (NOT database ID)
+  },
+  returns: v.union(
+    v.object({
+      block: blockValidator,
+      shareStatus: blockShareStatusValidator,
+      shares: v.array(blockShareValidator), // Only populated if individually_shared
+      playerMembers: v.array(campaignMemberValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    block: Block
+    shareStatus: BlockShareStatus
+    shares: Array<BlockShare>
+    playerMembers: Array<CampaignMember>
+  } | null> => {
+    // 1. Get note and validate DM membership
+    const note = await ctx.db.get(args.noteId)
+    if (!note) throw new Error('Note not found')
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: note.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    // 2. Find block DIRECTLY by BlockNote ID using findBlockByBlockNoteId()
+    //    Uses index: by_campaign_note_block - NO mention tables involved
+    const block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockId)
+    if (!block) {
+      // Block not saved to DB yet
+      return null
+    }
+
+    // 3. Get share status (default to 'not_shared' for legacy blocks)
+    const shareStatus: BlockShareStatus =
+      block.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+
+    // 4. Get player members (always needed for UI)
+    const allMembers = await getCampaignMembers(ctx, note.campaignId)
+    const playerMembers = allMembers.filter(
+      (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
+    )
+
+    // 5. Only fetch individual shares if status is 'individually_shared'
+    let shares: Array<BlockShare> = []
+    if (shareStatus === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      shares = await getBlockSharesForBlock(ctx, note.campaignId, block._id)
+    }
+
+    return {
+      block,
+      shareStatus,
+      shares,
+      playerMembers,
     }
   },
 })

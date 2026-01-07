@@ -2,10 +2,13 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { saveTopLevelBlocksForChildNote } from '../blocks/blocks'
+import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import {
+  getSidebarItemById,
+  isValidSidebarParent,
+} from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import {
   createNote as createNoteFn,
@@ -18,6 +21,8 @@ export const updateNote = mutation({
   args: {
     noteId: v.id('notes'),
     name: v.optional(v.string()),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     noteId: v.id('notes'),
@@ -49,8 +54,6 @@ export const moveNote = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Determine categoryId from parent and update both
-    let categoryId: Id<'tagCategories'> | undefined
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -60,21 +63,15 @@ export const moveNote = mutation({
       if (!parentItem) {
         throw new Error('Parent not found')
       }
-      if (parentItem.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-        throw new Error('Maps cannot be parents of notes')
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.notes, parentItem.type)) {
+        throw new Error('Invalid parent type for notes')
       }
-      // If parent is a category, use it directly; otherwise use parent's categoryId
-      categoryId =
-        parentItem.type === SIDEBAR_ITEM_TYPES.tagCategories
-          ? parentItem._id
-          : parentItem.categoryId
-    } else {
-      throw new Error(
-        'categoryId is required - provide a parentId to derive it',
-      )
     }
 
-    await ctx.db.patch(args.noteId, { parentId: args.parentId, categoryId })
+    await ctx.db.patch(args.noteId, {
+      parentId: args.parentId,
+      updatedAt: Date.now(),
+    })
     return args.noteId
   },
 })
@@ -92,9 +89,10 @@ export const deleteNote = mutation({
 export const createNote = mutation({
   args: {
     name: v.optional(v.string()),
-    categoryId: v.optional(v.id('tagCategories')),
     parentId: v.optional(sidebarItemIdValidator),
     campaignId: v.id('campaigns'),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     noteId: v.id('notes'),
@@ -126,7 +124,7 @@ export const updateNoteContent = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    await saveTopLevelBlocksForChildNote(ctx, args.noteId, args.content)
+    await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
     return args.noteId
   },
 })

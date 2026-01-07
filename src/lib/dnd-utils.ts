@@ -17,7 +17,6 @@ export interface SidebarDragData {
   _id: Id<SidebarItemType>
   type: SidebarItemType
   parentId?: SidebarItemId
-  categoryId?: Id<'tagCategories'>
   ancestorIds?: Array<SidebarItemId>
   name: string
   icon: LucideIcon
@@ -26,7 +25,6 @@ export interface SidebarDragData {
 export interface SidebarDropData {
   _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
-  categoryId?: Id<'tagCategories'>
   ancestorIds?: Array<SidebarItemId>
   accepts?: Array<SidebarItemType>
 }
@@ -36,14 +34,12 @@ interface DragItem {
   _id: Id<SidebarItemType>
   type: SidebarItemType
   parentId?: SidebarItemId
-  categoryId?: Id<'tagCategories'>
   ancestorIds?: Array<SidebarItemId>
 }
 
 interface DropTarget {
   id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
-  categoryId?: Id<'tagCategories'>
   ancestorIds?: Array<SidebarItemId>
 }
 
@@ -58,19 +54,6 @@ export function validateDrop(
 ): boolean {
   if (!draggedItem || !targetData) return false
   if (targetData.id === draggedItem._id) return false
-
-  // items cannot be dragged outside their category
-  if (targetData.categoryId && !draggedItem.categoryId) {
-    return false
-  }
-  if (draggedItem.categoryId && !targetData.categoryId) {
-    return false
-  }
-  if (draggedItem.categoryId && targetData.categoryId) {
-    if (draggedItem.categoryId !== targetData.categoryId) {
-      return false
-    }
-  }
 
   // prevent dropping on same parent
   if (targetData.type === rootType && !draggedItem.parentId) return false
@@ -105,13 +88,11 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
       _id: draggedItem._id,
       type: draggedItem.type,
       parentId: draggedItem.parentId,
-      categoryId: draggedItem.categoryId,
       ancestorIds: draggedItem.ancestorIds || [],
     },
     {
       id: targetData._id,
       type: targetData.type,
-      categoryId: targetData.categoryId,
       ancestorIds: targetData.ancestorIds || [],
     },
     SIDEBAR_ROOT_TYPE,
@@ -130,13 +111,6 @@ export function canDropFilesOnTarget(targetData: DropTarget | null): boolean {
     return false
   }
 
-  if (
-    targetData.categoryId ||
-    targetData.type === SIDEBAR_ITEM_TYPES.tagCategories
-  ) {
-    return false
-  }
-
   return true
 }
 
@@ -151,10 +125,6 @@ interface MoveMutations {
   }) => Promise<any>
   moveFolder?: (params: {
     folderId: Id<'folders'>
-    parentId?: SidebarItemId
-  }) => Promise<any>
-  moveTag?: (params: {
-    tagId: Id<'tags'>
     parentId?: SidebarItemId
   }) => Promise<any>
 }
@@ -189,18 +159,6 @@ export async function executeMove(
         folderId: itemId as Id<'folders'>,
         parentId: targetId,
       })
-      break
-    case SIDEBAR_ITEM_TYPES.tags:
-      if (!mutations.moveTag) {
-        throw new Error('moveTag mutation not provided')
-      }
-      await mutations.moveTag({
-        tagId: itemId as Id<'tags'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.tagCategories:
-      console.error('Moving tag categories is not supported')
       break
     default:
       throw new Error(`Invalid item type: ${itemType}`)

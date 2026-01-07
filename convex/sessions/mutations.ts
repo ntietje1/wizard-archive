@@ -1,75 +1,28 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { getTagCategoryBySlug, insertTagAndNote } from '../tags/tags'
-import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import {
   endCurrentSession as endCurrentSessionHandler,
   getCurrentSession,
   getSession,
+  startSession as startSessionHandler,
 } from './sessions'
-import type { Id } from '../_generated/dataModel'
+import type { Doc, Id } from '../_generated/dataModel'
 
 export const startSession = mutation({
-  // TODO: use category color and icon
   args: {
-    name: v.optional(v.string()),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
-    description: v.optional(v.string()),
-    imageStorageId: v.optional(v.id('_storage')),
     campaignId: v.id('campaigns'),
-    parentId: v.optional(sidebarItemIdValidator),
-    endedAt: v.optional(v.number()),
+    name: v.optional(v.string()),
   },
-  returns: v.object({
-    tagId: v.id('tags'),
-    sessionId: v.id('sessions'),
-    slug: v.string(),
-  }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{
-    tagId: Id<'tags'>
-    sessionId: Id<'sessions'>
-    slug: string
-  }> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
+  returns: v.id('sessions'),
+  handler: async (ctx, args): Promise<Id<'sessions'>> => {
+    await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
-    const { campaign } = campaignWithMembership
-
-    if (campaign.currentSessionId) {
-      await ctx.db.patch(campaign.currentSessionId, { endedAt: Date.now() })
-    }
-
-    const sessionCategory = await getTagCategoryBySlug(
-      ctx,
-      args.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Session.slug,
-    )
-    if (!sessionCategory) {
-      throw new Error(
-        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Session.slug}" not found`,
-      )
-    }
-
-    const { tagId, tagSlug } = await insertTagAndNote(ctx, {
-      ...args,
-      categoryId: sessionCategory._id,
-    })
-    const sessionId = await ctx.db.insert('sessions', {
-      campaignId: args.campaignId,
-      tagId,
-      endedAt: args.endedAt,
-    })
-    await ctx.db.patch(args.campaignId, { currentSessionId: sessionId })
-    return { tagId, sessionId, slug: tagSlug }
+    return await startSessionHandler(ctx, args.campaignId, args.name)
   },
 })
 
@@ -79,6 +32,11 @@ export const endCurrentSession = mutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
     return await endCurrentSessionHandler(ctx, args.campaignId)
   },
 })
@@ -90,23 +48,57 @@ export const setCurrentSession = mutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    const newSession = await getSession(ctx, args.sessionId)
-    if (!newSession || newSession.campaignId !== args.campaignId) {
-      throw new Error('Session not found')
-    }
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    const newSession = await getSession(ctx, args.sessionId)
+    if (!newSession || newSession.campaignId !== args.campaignId) {
+      throw new Error('Session not found')
+    }
+
     const currentSession = await getCurrentSession(ctx, args.campaignId)
-    if (currentSession && currentSession.sessionId !== args.sessionId) {
-      await ctx.db.patch(currentSession.sessionId, { endedAt: Date.now() })
+    if (currentSession && currentSession._id !== args.sessionId) {
+      await ctx.db.patch(currentSession._id, { endedAt: Date.now() })
     }
 
     await ctx.db.patch(args.sessionId, { endedAt: undefined })
     await ctx.db.patch(args.campaignId, { currentSessionId: args.sessionId })
     return args.sessionId
+  },
+})
+
+export const updateSession = mutation({
+  args: {
+    sessionId: v.id('sessions'),
+    name: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const session = await ctx.db.get(args.sessionId)
+    if (!session) {
+      throw new Error('Session not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: session.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const updates: Partial<Doc<'sessions'>> = {
+      updatedAt: Date.now(),
+    }
+    if (args.name !== undefined) {
+      updates.name = args.name
+    }
+
+    if (Object.keys(updates).length > 1) {
+      await ctx.db.patch(args.sessionId, updates)
+    }
+
+    return null
   },
 })

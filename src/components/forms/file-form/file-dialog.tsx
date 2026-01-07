@@ -1,5 +1,5 @@
 import { File } from 'lucide-react'
-import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
+import { FormDialog } from '../base-form/form-dialog'
 import { FileForm } from './file-form'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'

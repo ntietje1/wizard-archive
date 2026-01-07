@@ -1,28 +1,62 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { tagBackedEntityFields, tagValidatorFields } from '../tags/schema'
-import { campaignMemberValidator } from '../campaigns/schema'
+import {
+  sidebarItemIdValidator,
+  sidebarItemTypeValidator,
+} from '../sidebarItems/baseFields'
 
-const shareTableFields = {
-  ...tagBackedEntityFields,
-  memberId: v.optional(v.id('campaignMembers')),
+const sidebarItemShareTableFields = {
+  campaignId: v.id('campaigns'),
+  sidebarItemId: sidebarItemIdValidator,
+  sidebarItemType: sidebarItemTypeValidator,
+  campaignMemberId: v.id('campaignMembers'),
+  sessionId: v.optional(v.id('sessions')),
+}
+
+const blockShareTableFields = {
+  campaignId: v.id('campaigns'),
+  blockId: v.id('blocks'),
+  campaignMemberId: v.id('campaignMembers'),
+  sessionId: v.optional(v.id('sessions')),
 }
 
 export const shareTables = {
-  shares: defineTable({
-    ...shareTableFields,
+  sidebarItemShares: defineTable({
+    ...sidebarItemShareTableFields,
   })
-    .index('by_campaign_tag', ['campaignId', 'tagId'])
-    .index('by_campaign_member', ['campaignId', 'memberId']),
+    .index('by_campaign_session', ['campaignId', 'sessionId'])
+    .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
+    .index('by_campaign_item_member', [
+      'campaignId',
+      'sidebarItemId',
+      'campaignMemberId',
+    ]),
+
+  blockShares: defineTable({
+    ...blockShareTableFields,
+  })
+    .index('by_campaign_session', ['campaignId', 'sessionId'])
+    .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
+    .index('by_campaign_block_member', [
+      'campaignId',
+      'blockId',
+      'campaignMemberId',
+    ]),
 }
 
-const shareValidatorFields = {
-  ...tagValidatorFields,
-  ...shareTableFields,
+const sidebarItemShareValidatorFields = {
+  _id: v.id('sidebarItemShares'),
+  _creationTime: v.number(),
+  ...sidebarItemShareTableFields,
 } as const
 
-export const shareValidator = v.object({
-  ...shareValidatorFields,
-  shareId: v.id('shares'), // additional field to be explicit about which field is the id
-  member: v.optional(campaignMemberValidator),
-})
+const blockShareValidatorFields = {
+  _id: v.id('blockShares'),
+  _creationTime: v.number(),
+  ...blockShareTableFields,
+} as const
+
+export const sidebarItemShareValidator = v.object(
+  sidebarItemShareValidatorFields,
+)
+export const blockShareValidator = v.object(blockShareValidatorFields)

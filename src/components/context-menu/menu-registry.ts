@@ -1,4 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { SIDEBAR_ITEM_SHARE_STATUS } from 'convex/sidebarItems/types'
 import {
   Eye,
   File,
@@ -9,16 +10,38 @@ import {
   MapPin,
   Move,
   Navigation,
-  Pause,
-  Play,
   Plus,
+  Share2,
   SquareArrowOutUpRight,
-  Tags,
   Trash2,
 } from 'lucide-react'
-import pluralize from 'pluralize'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
+import type { Id } from 'convex/_generated/dataModel'
+
+// Helper to get a friendly type name for the item
+function getTypeName(ctx: MenuContext): string {
+  if (!ctx.item) return 'Item'
+  switch (ctx.item.type) {
+    case 'notes':
+      return 'Note'
+    case 'folders':
+      return 'Folder'
+    case 'gameMaps':
+      return 'Map'
+    case 'files':
+      return 'File'
+    default:
+      return 'Item'
+  }
+}
+
+// Helper to check if shared with ALL players based on shareStatus enum
+function isSharedWithAll(ctx: MenuContext): boolean {
+  const shareState = ctx.shareState
+  if (!shareState) return false
+  return shareState.shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED
+}
 
 export type ActionHandlers = {
   open: (ctx: MenuContext) => void
@@ -28,20 +51,13 @@ export type ActionHandlers = {
 
   createNote: (ctx: MenuContext) => void
   createFolder: (ctx: MenuContext) => void
-  createTag: (ctx: MenuContext) => void
   createMap: (ctx: MenuContext) => void
   createFile: (ctx: MenuContext) => void
   createCanvas: (ctx: MenuContext) => void
-  createCategory: (ctx: MenuContext) => void
-
-  goToCategory: (ctx: MenuContext) => void
-  editCategory: (ctx: MenuContext) => void
 
   editMap: (ctx: MenuContext) => void
-
   editFile: (ctx: MenuContext) => void
-
-  editTag: (ctx: MenuContext) => void
+  editItem: (ctx: MenuContext) => void
 
   pinToMap: (ctx: MenuContext) => void
   goToMapPin: (ctx: MenuContext) => void
@@ -51,6 +67,13 @@ export type ActionHandlers = {
 
   startSession: (ctx: MenuContext) => void
   endSession: (ctx: MenuContext) => void
+
+  // Share actions
+  toggleShareWithAll: (ctx: MenuContext) => void
+  toggleShareWithMember: (
+    ctx: MenuContext,
+    memberId: Id<'campaignMembers'>,
+  ) => void
 }
 
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
@@ -75,44 +98,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 5,
       shouldShow: (ctx) =>
         !p.inView('topbar')(ctx) &&
-        !p.isSessionCategory(ctx) &&
-        (p.isType('folders')(ctx) ||
-          p.isType('tagCategories')(ctx) ||
-          p.atRoot(ctx)),
+        !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+        (p.isType('folders')(ctx) || p.atRoot(ctx)),
       action: () => {}, // No action for submenu parent
       children: [
-        // "New Tag"
-        {
-          id: 'submenu-create-tag',
-          label: (ctx) =>
-            ctx.category?.name ? pluralize.singular(ctx.category.name) : 'Tag',
-          icon: Tags,
-          group: 'create',
-          priority: 1,
-          shouldShow: (ctx) =>
-            (p.isType('tagCategories')(ctx) && p.hasCategory(ctx)) ||
-            (p.isType('folders')(ctx) && p.hasCategory(ctx)),
-          action: actions.createTag,
-        },
-        // "New Category"
-        {
-          id: 'submenu-create-category',
-          label: 'Category',
-          icon: Tags,
-          group: 'create',
-          priority: 2,
-          shouldShow: (ctx) =>
-            p.atRoot(ctx) &&
-            !p.isType(
-              'notes',
-              'folders',
-              'tags',
-              'tagCategories',
-              'gameMaps',
-              'files',
-            )(ctx),
-          action: actions.createCategory,
-        },
         // Note, Folder, Map, Canvas
         {
           id: 'submenu-create-note',
@@ -121,10 +110,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 10,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
-            (p.isType('folders')(ctx) ||
-              p.isType('tagCategories')(ctx) ||
-              p.atRoot(ctx)),
+            !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) || p.atRoot(ctx)),
           action: actions.createNote,
         },
         {
@@ -134,10 +121,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 11,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
-            (p.isType('folders')(ctx) ||
-              p.isType('tagCategories')(ctx) ||
-              p.atRoot(ctx)),
+            !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) || p.atRoot(ctx)),
           action: actions.createFolder,
         },
         {
@@ -147,10 +132,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 12,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
-            (p.isType('folders')(ctx) ||
-              p.isType('tagCategories')(ctx) ||
-              p.atRoot(ctx)),
+            !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) || p.atRoot(ctx)),
           action: actions.createMap,
         },
         {
@@ -160,10 +143,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 14,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
-            (p.isType('folders')(ctx) ||
-              p.isType('tagCategories')(ctx) ||
-              p.atRoot(ctx)),
+            !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) || p.atRoot(ctx)),
           action: actions.createFile,
         },
         {
@@ -173,10 +154,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
           group: 'create',
           priority: 13,
           shouldShow: (ctx) =>
-            !p.isType('notes', 'tags', 'gameMaps', 'files')(ctx) &&
-            (p.isType('folders')(ctx) ||
-              p.isType('tagCategories')(ctx) ||
-              p.atRoot(ctx)),
+            !p.isType('notes', 'gameMaps', 'files')(ctx) &&
+            (p.isType('folders')(ctx) || p.atRoot(ctx)),
           action: actions.createCanvas,
         },
       ],
@@ -191,8 +170,77 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 20,
       shouldShow: (ctx) =>
         p.inSidebar(ctx) &&
-        p.isType('notes', 'folders', 'tags', 'gameMaps', 'files')(ctx),
+        p.isType('notes', 'folders', 'gameMaps', 'files')(ctx),
       action: actions.rename,
+    },
+
+    // ========== SHARE GROUP ==========
+    {
+      id: 'share-item',
+      label: (ctx) => {
+        const typeName = getTypeName(ctx)
+        // Only say "Unshare" if shared with ALL players
+        if (isSharedWithAll(ctx)) {
+          return `Unshare ${typeName}`
+        }
+        return `Share ${typeName}`
+      },
+      icon: Share2,
+      group: 'share',
+      priority: 25,
+      shouldShow: (ctx) =>
+        ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM &&
+        ctx.item !== undefined &&
+        p.isType('notes', 'folders', 'gameMaps', 'files')(ctx),
+      isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
+      action: actions.toggleShareWithAll,
+      // Dynamic children for individual player sharing (empty = no submenu)
+      children: (ctx): Array<MenuItemDef> => {
+        const shareState = ctx.shareState
+        if (!shareState || shareState.playerMembers.length === 0) {
+          return []
+        }
+
+        const allPlayersItem: MenuItemDef = {
+          id: 'share-all-players',
+          label: 'All Players',
+          group: 'share',
+          priority: 0,
+          shouldShow: () => true,
+          isChecked: () => isSharedWithAll(ctx),
+          action: actions.toggleShareWithAll,
+        }
+
+        const playerItems: Array<MenuItemDef> = shareState.playerMembers.map(
+          (member) => {
+            const profile = member.userProfile
+            const displayText = profile.name
+              ? profile.name
+              : profile.username
+                ? `@${profile.username}`
+                : 'Player'
+
+            // Check if shared with this member based on shareStatus
+            const isShared =
+              shareState.shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
+              (shareState.shareStatus ===
+                SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+                shareState.sharedMemberIds.has(member._id))
+
+            return {
+              id: `share-player-${member._id}`,
+              label: displayText,
+              group: 'share',
+              priority: 1,
+              shouldShow: () => true,
+              isChecked: () => isShared,
+              action: () => actions.toggleShareWithMember(ctx, member._id),
+            }
+          },
+        )
+
+        return [allPlayersItem, ...playerItems]
+      },
     },
 
     // ========== NAVIGATION GROUP ==========
@@ -203,36 +251,36 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'primary',
       priority: 0,
       shouldShow: (ctx) =>
-        p.isType('notes', 'gameMaps', 'folders', 'tags', 'files')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders', 'files')(ctx) &&
         (p.notInSidebar(ctx) || p.inView('topbar', 'folder-view')(ctx)),
       action: actions.showInSidebar,
     },
 
-    // ========== SESSION GROUP ==========
-    {
-      id: 'start-session',
-      label: 'Start Session',
-      icon: Play,
-      group: 'primary',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.isSessionCategory(ctx) &&
-        p.hasNoActiveSession(ctx) &&
-        (p.inSidebar(ctx) || p.atRoot(ctx) || p.isType('folders')(ctx)),
-      action: actions.startSession,
-    },
-    {
-      id: 'end-session',
-      label: 'End Session',
-      icon: Pause,
-      group: 'primary',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.isSessionCategory(ctx) &&
-        p.hasActiveSession(ctx) &&
-        (p.inSidebar(ctx) || p.atRoot(ctx) || p.isType('folders')(ctx)),
-      action: actions.endSession,
-    },
+    // // ========== SESSION GROUP ==========
+    // {
+    //   id: 'start-session',
+    //   label: 'Start Session',
+    //   icon: Play,
+    //   group: 'primary',
+    //   priority: 1,
+    //   shouldShow: (ctx) =>
+    //     p.hasNoActiveSession(ctx) &&
+    //     p.atRoot(ctx) &&
+    //     ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+    //   action: actions.startSession,
+    // },
+    // {
+    //   id: 'end-session',
+    //   label: 'End Session',
+    //   icon: Pause,
+    //   group: 'primary',
+    //   priority: 1,
+    //   shouldShow: (ctx) =>
+    //     p.hasActiveSession(ctx) &&
+    //     p.atRoot(ctx) &&
+    //     ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+    //   action: actions.endSession,
+    // },
 
     // ========== TYPE-SPECIFIC GROUP ==========
     {
@@ -254,25 +302,13 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.editFile,
     },
     {
-      id: 'edit-category',
-      label: 'Edit Category',
+      id: 'edit-item',
+      label: 'Edit',
       icon: FileEdit,
       group: 'type-specific',
       priority: 42,
-      shouldShow: (ctx) => p.isType('tagCategories')(ctx) && p.hasCategory(ctx),
-      action: actions.editCategory,
-    },
-    {
-      id: 'edit-tag',
-      label: (ctx) =>
-        ctx.category?.name
-          ? `Edit ${pluralize.singular(ctx.category.name)}`
-          : 'Edit Tag',
-      icon: FileEdit,
-      group: 'type-specific',
-      priority: 43,
-      shouldShow: (ctx) => p.isType('tags')(ctx) && p.hasCategory(ctx),
-      action: actions.editTag,
+      shouldShow: (ctx) => p.isType('notes')(ctx),
+      action: actions.editItem,
     },
 
     // ========== PIN ACTIONS GROUP ==========
@@ -285,8 +321,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       shouldShow: (ctx) =>
         p.inSidebar(ctx) &&
         p.hasActiveMap(ctx) &&
-        !p.isType('tagCategories')(ctx) &&
-        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders')(ctx) &&
         !p.isPinnedOnActiveMap(ctx) &&
         p.mapIsNotActiveMap(ctx),
       action: actions.pinToMap,
@@ -300,8 +335,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       shouldShow: (ctx) =>
         p.inSidebar(ctx) &&
         p.hasActiveMap(ctx) &&
-        !p.isType('tagCategories')(ctx) &&
-        p.isType('notes', 'gameMaps', 'folders', 'tags')(ctx) &&
+        p.isType('notes', 'gameMaps', 'folders')(ctx) &&
         p.isPinnedOnActiveMap(ctx) &&
         p.mapIsNotActiveMap(ctx),
       action: actions.goToMapPin,
@@ -337,8 +371,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 100,
       variant: 'danger',
       shouldShow: (ctx) =>
-        (p.inSidebar(ctx) || p.inView('folder-view')(ctx)) &&
-        p.isType('notes', 'folders', 'tags', 'gameMaps', 'files')(ctx),
+        p.isType('notes', 'folders', 'gameMaps', 'files')(ctx),
       action: actions.delete,
     },
   ]
@@ -348,8 +381,9 @@ export const groupConfig = {
   primary: { label: null, priority: 0 },
   create: { label: null, priority: 1 },
   edit: { label: null, priority: 2 },
-  navigation: { label: null, priority: 3 },
-  'type-specific': { label: null, priority: 4 },
-  'pin-actions': { label: null, priority: 5 },
+  share: { label: null, priority: 3 },
+  navigation: { label: null, priority: 4 },
+  'type-specific': { label: null, priority: 5 },
+  'pin-actions': { label: null, priority: 6 },
   danger: { label: null, priority: 99 },
 }

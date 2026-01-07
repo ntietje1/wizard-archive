@@ -1,242 +1,267 @@
-import {
-  getCampaignMember,
-  requireCampaignMembership,
-} from '../campaigns/campaigns'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import {
-  combineTagEntity,
-  getEffectiveTagIdsForBlock,
-  getTagCategory,
-  getTagCategoryBySlug,
-  getTagsByCategory,
-  insertTagAndNote,
-} from '../tags/tags'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
+import { getCurrentSession } from '../sessions/sessions'
 import type { Id } from '../_generated/dataModel'
-import type { Ctx } from '../common/types'
-import type { MutationCtx } from '../_generated/server'
-import type { CampaignMember } from '../campaigns/types'
-import type { Share } from './types'
+import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'
+import type { BlockShare, SidebarItemShare } from './types'
 
-export const combineSharesAndTag = (
-  share: { _id: Id<'shares'> },
-  tag: { _id: Id<'tags'> },
-  category?: { _id: Id<'tagCategories'> },
-): Share => combineTagEntity<Share>('shareId', share, tag, category)
+// ============ Sidebar Item Shares ============
 
-export const getShare = async (
-  ctx: Ctx,
-  shareId: Id<'shares'>,
-): Promise<Share | null> => {
-  const share = await ctx.db.get(shareId)
-  if (!share) {
-    return null
-  }
-  let member: CampaignMember | undefined
-  if (share.memberId) {
-    member = (await getCampaignMember(ctx, share.memberId)) || undefined
-  }
-  const tag = await ctx.db.get(share.tagId)
-  if (!tag) {
-    return null
-  }
-  const category = await getTagCategory(ctx, tag.campaignId, tag.categoryId)
-  return { ...combineSharesAndTag(share, tag, category), member }
-}
-
-export const createShare = async (
+export async function shareSidebarItemWithMember(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
-  memberId: Id<'campaignMembers'> | null,
-): Promise<{
-  tagId: Id<'tags'>
-  shareId: Id<'shares'>
-}> => {
-  const category = await getTagCategoryBySlug(
-    ctx,
-    campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
-  )
-  if (!category) {
-    throw new Error(
-      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
-    )
-  }
+  sidebarItemId: SidebarItemId,
+  sidebarItemType: SidebarItemType,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<Id<'sidebarItemShares'>> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  const { tagId } = await insertTagAndNote(
-    ctx,
-    memberId
-      ? {
-          name: 'Shared: (Player)',
-          color: '#F59E0B',
-          description: 'Visible to a specific player',
-          campaignId,
-          categoryId: category._id,
-        }
-      : {
-          name: 'Shared: (All)',
-          color: '#F59E0B',
-          description: 'Visible to all players',
-          campaignId,
-          categoryId: category._id,
-        },
-    true,
-  )
 
-  const shareId = await ctx.db.insert('shares', {
+  // Check if share already exists
+  const existingShare = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('sidebarItemId', sidebarItemId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  if (existingShare) {
+    return existingShare._id
+  }
+
+  // Get current session if any
+  const currentSession = await getCurrentSession(ctx, campaignId)
+
+  return await ctx.db.insert('sidebarItemShares', {
     campaignId,
-    tagId,
-    memberId: memberId || undefined,
+    sidebarItemId,
+    sidebarItemType,
+    campaignMemberId,
+    sessionId: currentSession?._id,
   })
-
-  return { tagId, shareId }
 }
 
-export async function getSharedAllTag(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-): Promise<Share> {
-  const allShare = await ctx.db
-    .query('shares')
-    .withIndex('by_campaign_member', (q) =>
-      q.eq('campaignId', campaignId).eq('memberId', undefined),
-    )
-    .unique()
-  if (!allShare) {
-    throw new Error('All shared tag should exist but was not found')
-  }
-  const share = await getShare(ctx, allShare._id)
-  if (!share) {
-    throw new Error('All shared tag should exist but was not found')
-  }
-  return share
-}
-
-export async function ensureSharedAllTag(
+export async function unshareSidebarItemFromMember(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
-): Promise<Id<'tags'>> {
-  try {
-    return (await getSharedAllTag(ctx, campaignId))._id
-  } catch (error) {
-    console.error('Missing shared all tag', error)
-    return await createShare(ctx, campaignId, null).then((s) => s.tagId)
-  }
-}
-
-export async function getPlayerSharedTags(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-): Promise<Array<Share>> {
-  const category = await getTagCategoryBySlug(
-    ctx,
-    campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
-  )
-  if (!category) {
-    throw new Error(
-      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
-    )
-  }
-  const tags = await getTagsByCategory(ctx, category._id)
-  const shares = await ctx.db
-    .query('shares')
-    .withIndex('by_campaign_tag', (q) => q.eq('campaignId', campaignId))
-    .collect()
-
-  const sharesByTagId = new Map(shares.map((c) => [c.tagId, c]))
-
-  return tags
-    .map((t) => {
-      const share = sharesByTagId.get(t._id)
-      if (!share) {
-        console.warn(`Share not found for tag ${t._id}`)
-        return null
-      }
-      return combineSharesAndTag(share, t, category)
-    })
-    .filter((s) => s !== null)
-    .filter((s) => !!s.memberId)
-    .sort((a, b) => b._creationTime - a._creationTime)
-}
-
-export async function getPlayerSharedTag(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  memberId: Id<'campaignMembers'>,
-): Promise<Share> {
-  const category = await getTagCategoryBySlug(
-    ctx,
-    campaignId,
-    SYSTEM_DEFAULT_CATEGORIES.Shared.slug,
-  )
-  if (!category) {
-    throw new Error(
-      `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Shared.slug}" not found`,
-    )
-  }
-  const playerShare = await ctx.db
-    .query('shares')
-    .withIndex('by_campaign_member', (q) =>
-      q.eq('campaignId', campaignId).eq('memberId', memberId),
-    )
-    .unique()
-  if (!playerShare) {
-    throw new Error('Player shared tag should exist but was not found')
-  }
-  const playerSharedTag = await ctx.db.get(playerShare.tagId)
-  if (!playerSharedTag) {
-    throw new Error('Player shared tag should exist but was not found')
-  }
-  return combineSharesAndTag(playerShare, playerSharedTag, category)
-}
-
-export async function ensurePlayerSharedTag(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  memberId: Id<'campaignMembers'>,
-): Promise<Id<'tags'>> {
-  try {
-    return (await getPlayerSharedTag(ctx, campaignId, memberId))._id
-  } catch (error) {
-    console.error('Missing player shared tag', error)
-    return await createShare(ctx, campaignId, memberId).then((s) => s.tagId)
-  }
-}
-
-export async function ensureAllPlayerSharedTags(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  sidebarItemId: SidebarItemId,
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
-  const campaignMembers = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
-    .collect()
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
 
-  for (const member of campaignMembers) {
-    await ensurePlayerSharedTag(ctx, campaignId, member._id)
+  const share = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('sidebarItemId', sidebarItemId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  if (share) {
+    await ctx.db.delete(share._id)
   }
 }
 
-export async function hasAccessToBlock(
-  ctx: Ctx,
-  memberId: Id<'campaignMembers'>,
-  blockId: Id<'blocks'>,
+export async function getSidebarItemSharesForItem(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  sidebarItemId: SidebarItemId,
+): Promise<Array<SidebarItemShare>> {
+  return await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q.eq('campaignId', campaignId).eq('sidebarItemId', sidebarItemId),
+    )
+    .collect()
+}
+
+export async function getSidebarItemSharesForMember(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<Array<SidebarItemShare>> {
+  return await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_member', (q) =>
+      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
+    )
+    .collect()
+}
+
+export async function isSidebarItemSharedWithMember(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  sidebarItemId: SidebarItemId,
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<boolean> {
+  const share = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('sidebarItemId', sidebarItemId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  return share !== null
+}
+
+// ============ Block Shares ============
+
+export async function shareBlockWithMember(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  blockId: Id<'blocks'>,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<Id<'blockShares'>> {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  // Verify block exists
   const block = await ctx.db.get(blockId)
-  if (!block) {
+  if (!block || block.campaignId !== campaignId) {
     throw new Error('Block not found')
   }
-  const campaignId = block.campaignId
-  const sharedAllTag = await getSharedAllTag(ctx, campaignId)
-  const playerSharedTag = await getPlayerSharedTag(ctx, campaignId, memberId)
-  const blockTagIds = await getEffectiveTagIdsForBlock(ctx, blockId)
-  return (
-    blockTagIds.includes(sharedAllTag._id) ||
-    blockTagIds.includes(playerSharedTag._id)
+
+  // Check if share already exists
+  const existingShare = await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  if (existingShare) {
+    return existingShare._id
+  }
+
+  // Get current session if any
+  const currentSession = await getCurrentSession(ctx, campaignId)
+
+  return await ctx.db.insert('blockShares', {
+    campaignId,
+    blockId,
+    campaignMemberId,
+    sessionId: currentSession?._id,
+  })
+}
+
+export async function unshareBlockFromMember(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  blockId: Id<'blocks'>,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<void> {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
+
+  const share = await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  if (share) {
+    await ctx.db.delete(share._id)
+  }
+}
+
+export async function getBlockSharesForBlock(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  blockId: Id<'blocks'>,
+): Promise<Array<BlockShare>> {
+  return await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q.eq('campaignId', campaignId).eq('blockId', blockId),
+    )
+    .collect()
+}
+
+export async function getBlockSharesForMember(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<Array<BlockShare>> {
+  return await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_member', (q) =>
+      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
+    )
+    .collect()
+}
+
+export async function isBlockSharedWithMember(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  blockId: Id<'blocks'>,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<boolean> {
+  const share = await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+
+  return share !== null
+}
+
+// ============ Session-based queries ============
+
+export async function getSharesForSession(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  sessionId: Id<'sessions'>,
+): Promise<{
+  sidebarItemShares: Array<SidebarItemShare>
+  blockShares: Array<BlockShare>
+}> {
+  const [sidebarItemShares, blockShares] = await Promise.all([
+    ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_session', (q) =>
+        q.eq('campaignId', campaignId).eq('sessionId', sessionId),
+      )
+      .collect(),
+    ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_session', (q) =>
+        q.eq('campaignId', campaignId).eq('sessionId', sessionId),
+      )
+      .collect(),
+  ])
+
+  return { sidebarItemShares, blockShares }
 }

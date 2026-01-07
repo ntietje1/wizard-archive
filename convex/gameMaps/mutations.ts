@@ -18,7 +18,6 @@ export const createMap = mutation({
     name: v.optional(v.string()),
     imageStorageId: v.id('_storage'),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -67,7 +66,6 @@ export const createMap = mutation({
       slug: uniqueSlug,
       imageStorageId: args.imageStorageId,
       parentId: args.parentId,
-      categoryId: args.categoryId,
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.gameMaps,
     })
@@ -81,7 +79,6 @@ export const updateMap = mutation({
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -145,10 +142,6 @@ export const updateMap = mutation({
         }
       }
     }
-    if (args.categoryId !== undefined) {
-      updates.categoryId = args.categoryId
-    }
-
     await ctx.db.patch(args.mapId, updates)
     return { mapId: args.mapId, slug: updates.slug || map.slug }
   },
@@ -158,7 +151,6 @@ export const moveMap = mutation({
   args: {
     mapId: v.id('gameMaps'),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
@@ -189,7 +181,6 @@ export const moveMap = mutation({
 
     await ctx.db.patch(args.mapId, {
       parentId: args.parentId,
-      categoryId: args.categoryId,
       updatedAt: Date.now(),
     })
     return args.mapId

@@ -1,80 +1,299 @@
 import { v } from 'convex/values'
-import { blockNoteIdValidator } from '../blocks/schema'
 import { mutation } from '../_generated/server'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
-  addTagToBlockHandler,
-  getBlockLevelTags,
-  removeTagFromBlockHandler,
-} from '../tags/tags'
-import { getCurrentSession } from '../sessions/sessions'
-import { findBlockByBlockNoteId } from '../blocks/blocks'
-import { getShare } from './shares'
+  sidebarItemIdValidator,
+  sidebarItemShareStatusValidator,
+  sidebarItemTypeValidator,
+} from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/types'
+import { blockShareStatusValidator } from '../blocks/schema'
+import { BLOCK_SHARE_STATUS } from '../blocks/types'
+import {
+  shareBlockWithMember,
+  shareSidebarItemWithMember,
+  unshareBlockFromMember,
+  unshareSidebarItemFromMember,
+} from './shares'
+import type { Id } from '../_generated/dataModel'
+import type { BlockShareStatus } from '../blocks/types'
+import type { SidebarItemShareStatus } from '../sidebarItems/types'
 
-export const addShareBlock = mutation({
+/**
+ * Set the share status for a sidebar item (used for left-click toggle).
+ * - all_shared -> not_shared
+ * - not_shared -> all_shared
+ * - individually_shared -> not_shared (and clears individual shares)
+ */
+export const setSidebarItemShareStatus = mutation({
   args: {
-    noteId: v.id('notes'),
-    blockId: blockNoteIdValidator,
-    shareId: v.id('shares'),
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    status: sidebarItemShareStatusValidator,
   },
-  returns: blockNoteIdValidator,
-  handler: async (ctx, args): Promise<string> => {
-    const share = await getShare(ctx, args.shareId)
-    if (!share) {
-      throw new Error('Share tag not found')
-    }
-    const currentSession = await getCurrentSession(ctx, share.campaignId)
-    if (currentSession) {
-      await addTagToBlockHandler(
-        ctx,
-        args.noteId,
-        args.blockId,
-        currentSession.tagId,
-      )
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
     }
 
-    return await addTagToBlockHandler(
+    // Update the item's share status
+    await ctx.db.patch(args.sidebarItemId, {
+      shareStatus: args.status,
+    })
+
+    // If setting to not_shared, clear any individual shares
+    if (args.status === SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED) {
+      const shares = await ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q
+            .eq('campaignId', args.campaignId)
+            .eq('sidebarItemId', args.sidebarItemId),
+        )
+        .collect()
+
+      for (const share of shares) {
+        await ctx.db.delete(share._id)
+      }
+    }
+
+    return null
+  },
+})
+
+/**
+ * Share a sidebar item with a specific member.
+ * Sets shareStatus to 'individually_shared'.
+ */
+export const shareSidebarItem = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemType: sidebarItemTypeValidator,
+    campaignMemberId: v.id('campaignMembers'),
+  },
+  returns: v.id('sidebarItemShares'),
+  handler: async (ctx, args): Promise<Id<'sidebarItemShares'>> => {
+    await requireCampaignMembership(
       ctx,
-      args.noteId,
-      args.blockId,
-      share.tagId,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    // Set status to individually_shared
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
+    }
+
+    if (item.shareStatus !== SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      await ctx.db.patch(args.sidebarItemId, {
+        shareStatus: SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED,
+      })
+    }
+
+    return await shareSidebarItemWithMember(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+      args.sidebarItemType,
+      args.campaignMemberId,
     )
   },
 })
 
-export const removeShareFromBlock = mutation({
+/**
+ * Unshare a sidebar item from a specific member.
+ * If no shares remain, sets shareStatus to 'not_shared'.
+ */
+export const unshareSidebarItem = mutation({
   args: {
-    noteId: v.id('notes'),
-    blockId: blockNoteIdValidator,
-    shareId: v.id('shares'),
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    campaignMemberId: v.id('campaignMembers'),
   },
-  returns: blockNoteIdValidator,
-  handler: async (ctx, args): Promise<string> => {
-    const share = await getShare(ctx, args.shareId)
-    if (!share) {
-      throw new Error('Share tag not found')
-    }
-    const currentSession = await getCurrentSession(ctx, share.campaignId)
-    if (currentSession) {
-      const block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockId)
-      if (!block) {
-        throw new Error('Block not found')
-      }
-      const tagIds = await getBlockLevelTags(ctx, block._id)
-      const hasCurrentSessionTag = tagIds.includes(currentSession.tagId)
-      if (hasCurrentSessionTag) {
-        await removeTagFromBlockHandler(
-          ctx,
-          args.noteId,
-          args.blockId,
-          currentSession.tagId,
-        )
-      }
-    }
-    return await removeTagFromBlockHandler(
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
       ctx,
-      args.noteId,
-      args.blockId,
-      share.tagId,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
+    }
+
+    await unshareSidebarItemFromMember(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+      args.campaignMemberId,
+    )
+
+    // Check if any shares remain
+    const remainingShares = await ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q
+          .eq('campaignId', args.campaignId)
+          .eq('sidebarItemId', args.sidebarItemId),
+      )
+      .first()
+
+    // If no shares remain, set status to not_shared
+    if (!remainingShares) {
+      await ctx.db.patch(args.sidebarItemId, {
+        shareStatus: SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED,
+      })
+    }
+
+    return null
+  },
+})
+
+/**
+ * Set the share status for a block (used for left-click toggle).
+ * - all_shared -> not_shared
+ * - not_shared -> all_shared
+ * - individually_shared -> not_shared (and clears individual shares)
+ */
+export const setBlockShareStatus = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    blockId: v.id('blocks'),
+    status: blockShareStatusValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const block = await ctx.db.get(args.blockId)
+    if (!block || block.campaignId !== args.campaignId) {
+      throw new Error('Block not found')
+    }
+
+    // Update the block's share status
+    await ctx.db.patch(args.blockId, {
+      shareStatus: args.status,
+    })
+
+    // If setting to not_shared, clear any individual shares
+    if (args.status === BLOCK_SHARE_STATUS.NOT_SHARED) {
+      const shares = await ctx.db
+        .query('blockShares')
+        .withIndex('by_campaign_block_member', (q) =>
+          q.eq('campaignId', args.campaignId).eq('blockId', args.blockId),
+        )
+        .collect()
+
+      for (const share of shares) {
+        await ctx.db.delete(share._id)
+      }
+    }
+
+    return null
+  },
+})
+
+/**
+ * Share a block with a specific member.
+ * Sets shareStatus to 'individually_shared'.
+ */
+export const shareBlock = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    blockId: v.id('blocks'),
+    campaignMemberId: v.id('campaignMembers'),
+  },
+  returns: v.id('blockShares'),
+  handler: async (ctx, args): Promise<Id<'blockShares'>> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    // Set status to individually_shared
+    const block = await ctx.db.get(args.blockId)
+    if (!block || block.campaignId !== args.campaignId) {
+      throw new Error('Block not found')
+    }
+
+    if (block.shareStatus !== BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      await ctx.db.patch(args.blockId, {
+        shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+      })
+    }
+
+    return await shareBlockWithMember(
+      ctx,
+      args.campaignId,
+      args.blockId,
+      args.campaignMemberId,
+    )
+  },
+})
+
+/**
+ * Unshare a block from a specific member.
+ * If no shares remain, sets shareStatus to 'not_shared'.
+ */
+export const unshareBlock = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    blockId: v.id('blocks'),
+    campaignMemberId: v.id('campaignMembers'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const block = await ctx.db.get(args.blockId)
+    if (!block || block.campaignId !== args.campaignId) {
+      throw new Error('Block not found')
+    }
+
+    await unshareBlockFromMember(
+      ctx,
+      args.campaignId,
+      args.blockId,
+      args.campaignMemberId,
+    )
+
+    // Check if any shares remain
+    const remainingShares = await ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_block_member', (q) =>
+        q.eq('campaignId', args.campaignId).eq('blockId', args.blockId),
+      )
+      .first()
+
+    // If no shares remain, set status to not_shared
+    if (!remainingShares) {
+      await ctx.db.patch(args.blockId, {
+        shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
+      })
+    }
+
+    return null
   },
 })

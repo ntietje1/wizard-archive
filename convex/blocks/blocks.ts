@@ -2,14 +2,11 @@ import { getNote } from '../notes/notes'
 import {
   cleanupUnprocessedBlocks,
   computeTopLevelPositions,
-  extractAllBlocksWithTags,
-  insertInlineBlockTags,
-  updateBlockTags,
+  extractAllBlocksWithMentions,
+  insertBlockMentions,
+  updateBlockMentions,
   upsertBlock,
-} from '../tags/tags'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { Tag } from '../tags/types'
+} from '../mentions/mentions'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type { Ctx } from '../common/types'
@@ -98,20 +95,20 @@ export async function getBlocksByCampaign(
     .collect()
 }
 
-async function deleteBlockAndTags(
+async function deleteBlockAndMentions(
   ctx: MutationCtx,
   blockId: Id<'blocks'>,
   campaignId: Id<'campaigns'>,
 ): Promise<void> {
-  const blockTags = await ctx.db
-    .query('blockTags')
-    .withIndex('by_campaign_block_tag', (q) =>
+  const blockMentions = await ctx.db
+    .query('blockMentions')
+    .withIndex('by_campaign_block_item', (q) =>
       q.eq('campaignId', campaignId).eq('blockId', blockId),
     )
     .collect()
 
-  for (const blockTag of blockTags) {
-    await ctx.db.delete(blockTag._id)
+  for (const blockMention of blockMentions) {
+    await ctx.db.delete(blockMention._id)
   }
   await ctx.db.delete(blockId)
 }
@@ -124,11 +121,11 @@ export async function deleteBlocksByNote(
   const blocks = await getBlocksByNote(ctx, noteId, campaignId)
 
   for (const block of blocks) {
-    await deleteBlockAndTags(ctx, block._id, campaignId)
+    await deleteBlockAndMentions(ctx, block._id, campaignId)
   }
 }
 
-export async function saveTopLevelBlocksForChildNote(
+export async function saveTopLevelBlocksForNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
   content: Array<CustomBlock>,
@@ -140,17 +137,7 @@ export async function saveTopLevelBlocksForChildNote(
     throw new Error('Note not found')
   }
 
-  // Check if note's parentId is a tag
-  const parentItem = note.parentId
-    ? await getSidebarItemById(ctx, note.campaignId, note.parentId)
-    : null
-  const noteLevelTag =
-    parentItem?.type === SIDEBAR_ITEM_TYPES.tags ? parentItem : null
-
-  const allBlocksWithTags = extractAllBlocksWithTags(
-    content,
-    noteLevelTag?._id || null,
-  )
+  const allBlocksWithMentions = extractAllBlocksWithMentions(content)
 
   const existingBlocks = await ctx.db
     .query('blocks')
@@ -164,12 +151,12 @@ export async function saveTopLevelBlocksForChildNote(
   )
 
   const processedBlockIds = new Set<string>()
-  const positions = computeTopLevelPositions(allBlocksWithTags)
+  const positions = computeTopLevelPositions(allBlocksWithMentions)
 
   for (const [
     blockId,
-    { block, tagIds: inlineTagIds, isTopLevel },
-  ] of allBlocksWithTags) {
+    { block, mentions, isTopLevel },
+  ] of allBlocksWithMentions) {
     processedBlockIds.add(blockId)
     const existingBlock = existingBlocksMap.get(blockId)
 
@@ -184,20 +171,15 @@ export async function saveTopLevelBlocksForChildNote(
     })
 
     if (existingBlock) {
-      await updateBlockTags(
+      await updateBlockMentions(
         ctx,
         note.campaignId,
         finalBlockDbId,
         existingBlock.content,
-        inlineTagIds,
+        mentions,
       )
     } else {
-      await insertInlineBlockTags(
-        ctx,
-        note.campaignId,
-        finalBlockDbId,
-        inlineTagIds,
-      )
+      await insertBlockMentions(ctx, note.campaignId, finalBlockDbId, mentions)
     }
   }
 

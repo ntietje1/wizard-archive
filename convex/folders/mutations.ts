@@ -71,7 +71,6 @@ export const moveFolder = mutation({
   args: {
     folderId: v.id('folders'),
     parentId: v.optional(sidebarItemIdValidator),
-    categoryId: v.optional(v.id('tagCategories')),
   },
   returns: v.id('folders'),
   handler: async (ctx, args): Promise<Id<'folders'>> => {
@@ -102,7 +101,6 @@ export const moveFolder = mutation({
 
     await ctx.db.patch(args.folderId, {
       parentId: args.parentId,
-      categoryId: args.categoryId,
     })
     return args.folderId
   },
@@ -121,7 +119,6 @@ export const deleteFolder = mutation({
 export const createFolder = mutation({
   args: {
     name: v.optional(v.string()),
-    categoryId: v.optional(v.id('tagCategories')),
     parentId: v.optional(sidebarItemIdValidator),
     campaignId: v.id('campaigns'),
   },
@@ -170,7 +167,6 @@ export const createFolder = mutation({
       name: args.name || '',
       slug: uniqueSlug,
       parentId: args.parentId,
-      categoryId: args.categoryId,
       updatedAt: Date.now(),
       campaignId: args.campaignId,
       type: 'folders',

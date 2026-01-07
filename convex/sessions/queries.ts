@@ -2,11 +2,9 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getTagCategoryBySlug, getTagsByCategory } from '../tags/tags'
-import { SYSTEM_DEFAULT_CATEGORIES } from '../tags/types'
 import {
-  combineSessionAndTag,
   getCurrentSession as getCurrentSessionHandler,
+  getSessionsByCampaign as getSessionsByCampaignHandler,
 } from './sessions'
 import { sessionValidator } from './schema'
 import type { Session } from './types'
@@ -17,6 +15,11 @@ export const getCurrentSession = query({
   },
   returns: v.union(v.null(), sessionValidator),
   handler: async (ctx, args): Promise<Session | null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
     return await getCurrentSessionHandler(ctx, args.campaignId)
   },
 })
@@ -32,37 +35,6 @@ export const getSessionsByCampaign = query({
       { campaignId: args.campaignId },
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
-
-    const category = await getTagCategoryBySlug(
-      ctx,
-      args.campaignId,
-      SYSTEM_DEFAULT_CATEGORIES.Session.slug,
-    )
-    if (!category) {
-      throw new Error(
-        `System tag category "${SYSTEM_DEFAULT_CATEGORIES.Session.slug}" not found`,
-      )
-    }
-    const tags = await getTagsByCategory(ctx, category._id)
-    const sessions = await ctx.db
-      .query('sessions')
-      .withIndex('by_campaign_tag_endedAt', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    const sessionsByTagId = new Map(sessions.map((c) => [c.tagId, c]))
-
-    return tags
-      .map((t) => {
-        const session = sessionsByTagId.get(t._id)
-        if (!session) {
-          console.warn(`Session not found for tag ${t._id}`)
-          return null
-        }
-        return combineSessionAndTag(session, t, category)
-      })
-      .filter((s) => s !== null)
-      .sort((a, b) => b._creationTime - a._creationTime)
+    return await getSessionsByCampaignHandler(ctx, args.campaignId)
   },
 })

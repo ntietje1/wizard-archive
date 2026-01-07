@@ -2,7 +2,6 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
-import type { Tag, TagCategory } from 'convex/tags/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 
@@ -36,22 +35,6 @@ export function isFolder(
 }
 
 /**
- * Type guard to check if a sidebar item is a TagCategory.
- */
-export function isTagCategory(
-  item: AnySidebarItem | null | undefined,
-): item is TagCategory {
-  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.tagCategories)
-}
-
-/**
- * Type guard to check if a sidebar item is a Tag.
- */
-export function isTag(item: AnySidebarItem | null | undefined): item is Tag {
-  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.tags)
-}
-
-/**
  * Type guard to check if a sidebar item is a GameMap.
  */
 export function isGameMap(
@@ -65,15 +48,6 @@ export function isGameMap(
  */
 export function isFile(item: AnySidebarItem | null | undefined): item is File {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
-}
-
-/**
- * Type guard to check if a sidebar item is a Category.
- */
-export function isCategory(
-  item: AnySidebarItem | null | undefined,
-): item is TagCategory {
-  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.tagCategories)
 }
 
 /**

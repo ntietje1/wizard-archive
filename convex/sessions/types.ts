@@ -1,8 +1,11 @@
 import type { Id } from '../_generated/dataModel'
-import type { Tag } from '../tags/types'
 
-export type Session = Tag & {
-  tagId: Id<'tags'>
-  sessionId: Id<'sessions'>
+export type Session = {
+  _id: Id<'sessions'>
+  _creationTime: number
+  campaignId: Id<'campaigns'>
+  name?: string
+  startedAt: number
   endedAt?: number
+  updatedAt: number
 }

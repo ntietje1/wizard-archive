@@ -3,26 +3,21 @@ import { query } from '../_generated/server'
 import { anySidebarItemValidator, sidebarItemTypeValidator } from './schema'
 import { sidebarItemIdValidator } from './baseFields'
 import {
+  getAllSidebarItems as getAllSidebarItemsFn,
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
   getSidebarItemBySlug as getSidebarItemBySlugFn,
-  getSidebarItemsByCategory as getSidebarItemsByCategoryFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
 import type { AnySidebarItem } from './types'
 
-export const getSidebarItemsByCategory = query({
+export const getAllSidebarItems = query({
   args: {
     campaignId: v.id('campaigns'),
-    categoryId: v.id('tagCategories'),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getSidebarItemsByCategoryFn(
-      ctx,
-      args.campaignId,
-      args.categoryId,
-    )
+    return await getAllSidebarItemsFn(ctx, args.campaignId)
   },
 })
 

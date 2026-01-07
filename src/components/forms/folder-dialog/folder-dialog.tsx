@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { FormDialog } from '../category-tag-form/base-tag-form/form-dialog'
+import { FormDialog } from '../base-form/form-dialog'
+import type { Id } from 'convex/_generated/dataModel'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { FolderEdit, FolderPlus } from '~/lib/icons'
@@ -24,7 +25,7 @@ type FolderDialogProps =
       isOpen: boolean
       onClose: () => void
       onSubmit: (values: FolderFormValues) => Promise<void>
-      folderId: string
+      folderId: Id<'folders'>
       initialName: string
     }
 
