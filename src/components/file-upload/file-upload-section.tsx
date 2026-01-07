@@ -117,12 +117,12 @@ export function FileUploadSection({
               </div>
 
               {/* File Info */}
-              <div className="flex-1 min-w-0 space-y-2">
-                <div>
+              <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
+                <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{fileName}</p>
                   {fileSize && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Badge variant="secondary" className="text-xs">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <Badge variant="secondary" className="text-xs shrink-0">
                         {fileSize}
                       </Badge>
                       {fileName && getFileExtension(fileName) && (
@@ -146,13 +146,14 @@ export function FileUploadSection({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 relative z-20">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
+                    e.preventDefault()
                     fileUpload.fileInputRef.current?.click()
                   }}
                   disabled={fileUpload.isUploading || isSubmitting}
@@ -161,6 +162,15 @@ export function FileUploadSection({
                   Replace
                 </Button>
               </div>
+              {fileUpload.preview && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    window.open(fileUpload.preview, '_blank')
+                  }}
+                  className="absolute inset-0 w-full h-full z-10 cursor-pointer"
+                />
+              )}
               <input
                 ref={fileUpload.fileInputRef}
                 type="file"
@@ -172,7 +182,8 @@ export function FileUploadSection({
                     handleFileSelect(file)
                   }
                 }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-0"
+                style={{ pointerEvents: fileUpload.preview ? 'none' : 'auto' }}
               />
             </div>
           ) : (
