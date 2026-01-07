@@ -34,35 +34,35 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
             </Button>
           }
         />
-      <PopoverContent className="w-64 p-2" align="start" sideOffset={4}>
-        <div className="grid grid-cols-6 gap-1">
-          {iconNames.map((iconName) => {
-            const IconComponent = getIconByName(iconName)
-            const isSelected = value === iconName
-            const isDefault = !value && iconName === defaultIcon
+        <PopoverContent className="w-64 p-2" align="start" sideOffset={4}>
+          <div className="grid grid-cols-6 gap-1">
+            {iconNames.map((iconName) => {
+              const IconComponent = getIconByName(iconName)
+              const isSelected = value === iconName
+              const isDefault = !value && iconName === defaultIcon
 
-            return (
-              <button
-                key={iconName}
-                type="button"
-                className={cn(
-                  'relative flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  (isSelected || isDefault) &&
-                    'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-500 dark:ring-amber-400',
-                )}
-                onClick={() => {
-                  onChange(iconName === defaultIcon ? null : iconName)
-                  setOpen(false)
-                }}
-                title={iconName}
-              >
-                <IconComponent className="h-4 w-4" />
-              </button>
-            )
-          })}
-        </div>
-      </PopoverContent>
+              return (
+                <button
+                  key={iconName}
+                  type="button"
+                  className={cn(
+                    'relative flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    (isSelected || isDefault) &&
+                      'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-500 dark:ring-amber-400',
+                  )}
+                  onClick={() => {
+                    onChange(iconName === defaultIcon ? null : iconName)
+                    setOpen(false)
+                  }}
+                  title={iconName}
+                >
+                  <IconComponent className="h-4 w-4" />
+                </button>
+              )
+            })}
+          </div>
+        </PopoverContent>
       </Popover>
     </div>
   )

@@ -2,7 +2,6 @@ import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
-import { ContextMenuProvider } from '~/components/context-menu/components/ContextMenuProvider'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
 
 export const Route = createFileRoute(
@@ -16,12 +15,10 @@ function RouteComponent() {
     <CampaignProvider>
       <CampaignNotFoundWrapper>
         <FileSidebarProvider>
-          <ContextMenuProvider>
-            <div className="flex flex-1 min-h-0">
-              <NavigationSidebar />
-              <Outlet />
-            </div>
-          </ContextMenuProvider>
+          <div className="flex flex-1 min-h-0">
+            <NavigationSidebar />
+            <Outlet />
+          </div>
         </FileSidebarProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>

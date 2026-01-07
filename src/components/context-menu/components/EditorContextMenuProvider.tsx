@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
-import { ContextMenuContext } from '../hooks/useMenuItems'
+import { EditorContextMenuContext } from '../hooks/useEditorMenuItems'
+import { PlaceHolderContextMenu } from './EmptyContextMenu'
 
 interface ProviderProps {
   children: React.ReactNode
 }
 
-export function ContextMenuProvider({ children }: ProviderProps) {
+export function EditorContextMenuProvider({ children }: ProviderProps) {
   const menuActions = useMenuActions()
 
   const value = useMemo(
@@ -22,9 +23,9 @@ export function ContextMenuProvider({ children }: ProviderProps) {
   const { Dialogs } = menuActions
 
   return (
-    <ContextMenuContext.Provider value={value}>
-      {children}
+    <EditorContextMenuContext.Provider value={value}>
+      <PlaceHolderContextMenu>{children}</PlaceHolderContextMenu>
       <Dialogs />
-    </ContextMenuContext.Provider>
+    </EditorContextMenuContext.Provider>
   )
 }

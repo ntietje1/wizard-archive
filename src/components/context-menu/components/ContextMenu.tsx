@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { buildMenu } from '../menu-builder'
-import { useMenuItems } from '../hooks/useMenuItems'
+import { useEditorMenuItems } from '../hooks/useEditorMenuItems'
 import type { MenuContext, MenuItemDef } from '../types'
 import {
   ContextMenuContent,
@@ -38,7 +38,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
     },
     ref,
   ) => {
-    const { menuItems } = useMenuItems()
+    const { menuItems } = useEditorMenuItems()
     const [isOpen, setIsOpen] = useState(false)
     const [context, setContext] = useState<MenuContext | null>(null)
     const wrapperRef = useRef<HTMLDivElement>(null)
