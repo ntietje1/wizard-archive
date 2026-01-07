@@ -12,6 +12,46 @@ import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
+export const moveFile = mutation({
+  args: {
+    fileId: v.id('files'),
+    parentId: v.optional(sidebarItemIdValidator),
+  },
+  returns: v.id('files'),
+  handler: async (ctx, args): Promise<Id<'files'>> => {
+    const file = await ctx.db.get(args.fileId)
+    if (!file) {
+      throw new Error('File not found')
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: file.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    if (args.parentId) {
+      const parentItem = await getSidebarItemById(
+        ctx,
+        file.campaignId,
+        args.parentId,
+      )
+      if (!parentItem) {
+        throw new Error('Parent not found')
+      }
+      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.files, parentItem.type)) {
+        throw new Error('Invalid parent type for files')
+      }
+    }
+
+    await ctx.db.patch(args.fileId, {
+      parentId: args.parentId,
+      updatedAt: Date.now(),
+    })
+    return args.fileId
+  },
+})
+
 export const createFile = mutation({
   args: {
     campaignId: v.id('campaigns'),

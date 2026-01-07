@@ -45,6 +45,10 @@ export function FileSidebarProvider({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
   })
 
+  const moveFile = useMutation({
+    mutationFn: useConvexMutation(api.files.mutations.moveFile),
+  })
+
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
   )
@@ -156,6 +160,7 @@ export function FileSidebarProvider({
           moveNote: (params) => moveNote.mutateAsync(params),
           moveMap: (params) => moveMap.mutateAsync(params),
           moveFolder: (params) => moveFolder.mutateAsync(params),
+          moveFile: (params) => moveFile.mutateAsync(params),
         },
         {
           openFolder: (id) => openFolder(id),

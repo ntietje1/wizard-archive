@@ -127,6 +127,10 @@ interface MoveMutations {
     folderId: Id<'folders'>
     parentId?: SidebarItemId
   }) => Promise<any>
+  moveFile: (params: {
+    fileId: Id<'files'>
+    parentId?: SidebarItemId
+  }) => Promise<any>
 }
 
 export async function executeMove(
@@ -157,6 +161,12 @@ export async function executeMove(
       }
       await mutations.moveFolder({
         folderId: itemId as Id<'folders'>,
+        parentId: targetId,
+      })
+      break
+    case SIDEBAR_ITEM_TYPES.files:
+      await mutations.moveFile({
+        fileId: itemId as Id<'files'>,
         parentId: targetId,
       })
       break
