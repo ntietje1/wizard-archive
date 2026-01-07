@@ -170,7 +170,7 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveMap, moveFolder, openFolder],
+    [moveNote, moveMap, moveFolder, openFolder, moveFile],
   )
 
   const handleDragCancel = useCallback(() => {
