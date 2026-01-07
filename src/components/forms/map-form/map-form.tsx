@@ -1,15 +1,14 @@
 import { useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import {
-  convexQuery,
-  useConvex,
-  useConvexMutation,
-} from '@convex-dev/react-query'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { IconPicker } from '../sidebar-item-form/icon-picker'
+import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { getIconByName } from '~/lib/category-icons'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -20,6 +19,8 @@ import { ImageUploadSection } from '~/components/file-upload/image-upload-sectio
 
 export interface MapFormValues {
   name: string
+  iconName: string | null
+  color: string | null
 }
 
 interface MapFormProps {
@@ -32,6 +33,8 @@ interface MapFormProps {
 
 const defaultMapFormValues: MapFormValues = {
   name: '',
+  iconName: null,
+  color: null,
 }
 
 export function MapForm({
@@ -43,7 +46,6 @@ export function MapForm({
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToMap } = useEditorNavigation()
-  const convex = useConvex()
   const map = useQuery(
     convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
@@ -73,6 +75,8 @@ export function MapForm({
     if (mapId && map.data) {
       return {
         name: map.data.name || '',
+        iconName: map.data.iconName ?? null,
+        color: map.data.color ?? null,
       }
     }
     return defaultMapFormValues
@@ -115,6 +119,8 @@ export function MapForm({
           mapId,
           name: values.name,
           imageStorageId: finalImageStorageId,
+          iconName: values.iconName,
+          color: values.color,
         })
         toast.success('Map updated')
       } else if (campaignId) {
@@ -190,6 +196,54 @@ export function MapForm({
           </div>
         )}
       </form.Field>
+
+      {/* Icon and Color Row */}
+      <div className="flex items-end gap-4">
+        {/* Icon Field */}
+        <form.Field name="iconName">
+          {(field) => (
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker
+                value={field.state.value ?? undefined}
+                onChange={(iconName) => field.handleChange(iconName)}
+                defaultIcon="MapPin"
+              />
+            </div>
+          )}
+        </form.Field>
+
+        {/* Color Field */}
+        <form.Field name="color">
+          {(field) => (
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker
+                value={field.state.value}
+                onChange={(color) => field.handleChange(color)}
+              />
+            </div>
+          )}
+        </form.Field>
+
+        {/* Preview */}
+        <div className="flex-1">
+          <Label className="text-muted-foreground text-xs">Preview</Label>
+          <form.Subscribe selector={(s) => s.values}>
+            {(values) => {
+              const PreviewIcon = getIconByName(values.iconName ?? 'MapPin')
+              return (
+                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                  <PreviewIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate text-sm">
+                    {values.name || 'Untitled Map'}
+                  </span>
+                </div>
+              )
+            }}
+          </form.Subscribe>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label>Map Image</Label>

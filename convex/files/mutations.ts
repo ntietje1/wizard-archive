@@ -79,6 +79,8 @@ export const updateFile = mutation({
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(sidebarItemIdValidator),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -141,6 +143,12 @@ export const updateFile = mutation({
           throw new Error('Invalid parent type')
         }
       }
+    }
+    if (args.iconName !== undefined) {
+      updates.iconName = args.iconName ?? undefined
+    }
+    if (args.color !== undefined) {
+      updates.color = args.color ?? undefined
     }
     await ctx.db.patch(args.fileId, updates)
     return { fileId: args.fileId, slug: updates.slug || file.slug }

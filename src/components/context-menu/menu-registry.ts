@@ -5,6 +5,7 @@ import {
   File,
   FileEdit,
   FilePlus,
+  FileTypeIcon,
   FolderPlus,
   Grid2x2Plus,
   MapPin,
@@ -161,19 +162,6 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       ],
     },
 
-    // ========== EDIT GROUP ==========
-    {
-      id: 'rename',
-      label: 'Rename',
-      icon: FileEdit,
-      group: 'edit',
-      priority: 20,
-      shouldShow: (ctx) =>
-        p.inSidebar(ctx) &&
-        p.isType('notes', 'folders', 'gameMaps', 'files')(ctx),
-      action: actions.rename,
-    },
-
     // ========== SHARE GROUP ==========
     {
       id: 'share-item',
@@ -187,7 +175,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       },
       icon: Share2,
       group: 'share',
-      priority: 25,
+      priority: 20,
       shouldShow: (ctx) =>
         ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM &&
         ctx.item !== undefined &&
@@ -282,35 +270,6 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     //   action: actions.endSession,
     // },
 
-    // ========== TYPE-SPECIFIC GROUP ==========
-    {
-      id: 'edit-map',
-      label: 'Edit Map',
-      icon: FileEdit,
-      group: 'type-specific',
-      priority: 40,
-      shouldShow: (ctx) => p.isType('gameMaps')(ctx),
-      action: actions.editMap,
-    },
-    {
-      id: 'edit-file',
-      label: 'Edit File',
-      icon: FileEdit,
-      group: 'type-specific',
-      priority: 41,
-      shouldShow: (ctx) => p.isType('files')(ctx),
-      action: actions.editFile,
-    },
-    {
-      id: 'edit-item',
-      label: 'Edit',
-      icon: FileEdit,
-      group: 'type-specific',
-      priority: 42,
-      shouldShow: (ctx) => p.isType('notes')(ctx),
-      action: actions.editItem,
-    },
-
     // ========== PIN ACTIONS GROUP ==========
     {
       id: 'pin-to-map',
@@ -362,6 +321,47 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.removeMapPin,
     },
 
+    // ========== EDIT GROUP ==========
+    {
+      id: 'rename',
+      label: 'Rename',
+      icon: FileTypeIcon,
+      group: 'edit',
+      priority: 90,
+      shouldShow: (ctx) =>
+        p.inSidebar(ctx) &&
+        p.isType('notes', 'folders', 'gameMaps', 'files')(ctx),
+      action: actions.rename,
+    },
+    {
+      id: 'edit-map',
+      label: 'Edit Map',
+      icon: FileEdit,
+      group: 'edit',
+      priority: 99,
+      shouldShow: (ctx) => p.isType('gameMaps')(ctx),
+      action: actions.editMap,
+    },
+    {
+      id: 'edit-file',
+      label: 'Edit File',
+      icon: FileEdit,
+      group: 'edit',
+      priority: 99,
+      shouldShow: (ctx) => p.isType('files')(ctx),
+      action: actions.editFile,
+    },
+    {
+      id: 'edit-item',
+      label: (ctx) => `Edit ${getTypeName(ctx)}`,
+      icon: FileEdit,
+      group: 'edit',
+      priority: 99,
+      shouldShow: (ctx) =>
+        ctx.item !== undefined && p.isType('notes', 'folders')(ctx),
+      action: actions.editItem,
+    },
+
     // ========== DANGER GROUP ==========
     {
       id: 'delete',
@@ -380,8 +380,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
 export const groupConfig = {
   primary: { label: null, priority: 0 },
   create: { label: null, priority: 1 },
-  edit: { label: null, priority: 2 },
-  share: { label: null, priority: 3 },
+  share: { label: null, priority: 2 },
+  edit: { label: null, priority: 3 },
   navigation: { label: null, priority: 4 },
   'type-specific': { label: null, priority: 5 },
   'pin-actions': { label: null, priority: 6 },

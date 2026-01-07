@@ -81,6 +81,7 @@ export {
   Image,
   Video,
   File,
+  FileTypeIcon,
 } from 'lucide-react'
 
 export type { LucideIcon } from 'lucide-react'

@@ -79,6 +79,8 @@ export const updateMap = mutation({
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(sidebarItemIdValidator),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -141,6 +143,12 @@ export const updateMap = mutation({
           throw new Error('Invalid parent type')
         }
       }
+    }
+    if (args.iconName !== undefined) {
+      updates.iconName = args.iconName ?? undefined
+    }
+    if (args.color !== undefined) {
+      updates.color = args.color ?? undefined
     }
     await ctx.db.patch(args.mapId, updates)
     return { mapId: args.mapId, slug: updates.slug || map.slug }

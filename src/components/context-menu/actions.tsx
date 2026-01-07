@@ -11,7 +11,7 @@ import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
-import type { SidebarItemType } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -21,6 +21,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
+import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
@@ -56,6 +57,8 @@ export function useMenuActions() {
     null,
   )
   const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
+  const [editSidebarItemDialog, setEditSidebarItemDialog] =
+    useState<AnySidebarItem | null>(null)
 
   const actions: ActionHandlers = {
     open: useCallback(
@@ -151,9 +154,10 @@ export function useMenuActions() {
       }
     },
 
-    editItem: (_ctx: MenuContext) => {
-      // For now, this is a no-op. Could be extended to edit notes
-      toast.info('Edit functionality coming soon')
+    editItem: (ctx: MenuContext) => {
+      if (ctx.item) {
+        setEditSidebarItemDialog(ctx.item)
+      }
     },
 
     pinToMap: useCallback((ctx: MenuContext) => {
@@ -416,6 +420,15 @@ export function useMenuActions() {
             onSuccess={() => setEditFileDialog(null)}
           />
         )}
+
+        {editSidebarItemDialog && (
+          <SidebarItemEditDialog
+            key={`edit-sidebar-item-${editSidebarItemDialog._id}`}
+            item={editSidebarItemDialog}
+            isOpen={true}
+            onClose={() => setEditSidebarItemDialog(null)}
+          />
+        )}
       </>
     ),
     [
@@ -425,6 +438,7 @@ export function useMenuActions() {
       createMapDialog,
       editMapDialog,
       editFileDialog,
+      editSidebarItemDialog,
       campaignId,
       currentItem,
       clearEditorContent,
