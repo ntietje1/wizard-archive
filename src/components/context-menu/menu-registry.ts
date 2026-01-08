@@ -339,7 +339,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) => p.isType('gameMaps')(ctx),
+      shouldShow: (ctx) => !p.inSidebar(ctx) && p.isType('gameMaps')(ctx),
       action: actions.editMap,
     },
     {
@@ -348,7 +348,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) => p.isType('files')(ctx),
+      shouldShow: (ctx) => !p.inSidebar(ctx) && p.isType('files')(ctx),
       action: actions.editFile,
     },
     {
@@ -358,7 +358,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        ctx.item !== undefined && p.isType('notes', 'folders')(ctx),
+        !p.inSidebar(ctx) && p.isType('notes', 'folders')(ctx),
       action: actions.editItem,
     },
 
