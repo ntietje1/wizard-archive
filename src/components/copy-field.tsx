@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
+import { Separator } from './shadcn/ui/separator'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
 import { cn } from '~/lib/shadcn/utils'
@@ -70,16 +71,23 @@ export function CopyField({
         readOnly
         value={text}
         placeholder={placeholder}
-        className={cn('rounded-r-none', inputProps?.className)}
+        className={cn(
+          'rounded-r-none border-none pr-0 truncate',
+          inputProps?.className,
+        )}
         onFocus={handleFocusSelectAll}
         onClick={handleClickSelectAll}
         {...inputProps}
       />
+      <Separator orientation="vertical" className="h-8" />
       <Button
         variant="outline"
         onClick={handleCopy}
         disabled={disabled || !text}
-        className={cn('rounded-l-none h-9', buttonProps?.className)}
+        className={cn(
+          'rounded-l-none rounded-r-sm border-none h-8',
+          buttonProps?.className,
+        )}
         {...buttonProps}
       >
         <Link className="w-4 h-4" /> {buttonLabel}
