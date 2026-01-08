@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignUpRouteRouteImport } from './routes/sign-up/route'
 import { Route as SignInRouteRouteImport } from './routes/sign-in/route'
+import { Route as AuthRedirectRouteRouteImport } from './routes/auth-redirect/route'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedCampaignsRouteRouteImport } from './routes/_authed/campaigns/route'
@@ -33,6 +34,11 @@ const SignUpRouteRoute = SignUpRouteRouteImport.update({
 const SignInRouteRoute = SignInRouteRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRedirectRouteRoute = AuthRedirectRouteRouteImport.update({
+  id: '/auth-redirect',
+  path: '/auth-redirect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
@@ -113,6 +119,7 @@ const AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth-redirect': typeof AuthRedirectRouteRoute
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
   '/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth-redirect': typeof AuthRedirectRouteRoute
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
   '/campaigns': typeof AuthedCampaignsIndexRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
+  '/auth-redirect': typeof AuthRedirectRouteRoute
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
   '/_authed/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth-redirect'
     | '/sign-in'
     | '/sign-up'
     | '/campaigns'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth-redirect'
     | '/sign-in'
     | '/sign-up'
     | '/campaigns'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/auth-redirect'
     | '/sign-in'
     | '/sign-up'
     | '/_authed/campaigns'
@@ -208,6 +220,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
+  AuthRedirectRouteRoute: typeof AuthRedirectRouteRoute
   SignInRouteRoute: typeof SignInRouteRoute
   SignUpRouteRoute: typeof SignUpRouteRoute
   JoinDmUsernameCampaignSlugIndexRoute: typeof JoinDmUsernameCampaignSlugIndexRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth-redirect': {
+      id: '/auth-redirect'
+      path: '/auth-redirect'
+      fullPath: '/auth-redirect'
+      preLoaderRoute: typeof AuthRedirectRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -409,6 +429,7 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
+  AuthRedirectRouteRoute: AuthRedirectRouteRoute,
   SignInRouteRoute: SignInRouteRoute,
   SignUpRouteRoute: SignUpRouteRoute,
   JoinDmUsernameCampaignSlugIndexRoute: JoinDmUsernameCampaignSlugIndexRoute,

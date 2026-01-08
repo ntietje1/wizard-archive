@@ -6,9 +6,11 @@ export const Route = createFileRoute('/sign-in')({
 })
 
 function RouteComponent() {
+  const redirectUrl = '/auth-redirect'
+
   return (
     <div className="flex items-center justify-center h-screen">
-      <SignIn routing="virtual" />
+      <SignIn routing="virtual" fallbackRedirectUrl={redirectUrl} />
     </div>
   )
 }

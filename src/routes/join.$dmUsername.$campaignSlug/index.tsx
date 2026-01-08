@@ -7,7 +7,7 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Card,
   CardContent,
@@ -68,8 +68,14 @@ function StatusIcon({ variant }: StatusIconProps) {
 function RouteComponent() {
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = Route.useParams()
-  const { user, isLoaded: isUserLoaded } = useUser()
+  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser()
   const [showSignIn, setShowSignIn] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isUserLoaded && !isSignedIn) {
+      sessionStorage.setItem('joinCampaignRedirectUrl', window.location.href)
+    }
+  }, [isUserLoaded, isSignedIn])
 
   const campaignQuery = useQuery(
     convexQuery(api.campaigns.queries.getPublicCampaignBySlug, {

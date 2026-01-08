@@ -6,9 +6,11 @@ export const Route = createFileRoute('/sign-up')({
 })
 
 function SignUpPage() {
+  const redirectUrl = '/auth-redirect'
+
   return (
     <div className="flex items-center justify-center h-screen">
-      <SignUp routing="virtual" />
+      <SignUp routing="virtual" fallbackRedirectUrl={redirectUrl} />
     </div>
   )
 }
