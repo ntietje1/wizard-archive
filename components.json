@@ -10,6 +10,9 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "lucide",
+  "menuColor": "default",
+  "menuAccent": "bold",
   "aliases": {
     "components": "~/components/shadcn",
     "utils": "~/lib/shadcn/utils",
@@ -17,8 +20,5 @@
     "lib": "~/lib/shadcn",
     "hooks": "~/hooks/shadcn"
   },
-  "iconLibrary": "lucide",
-  "menuColor": "default",
-  "menuAccent": "bold",
   "registries": {}
 }

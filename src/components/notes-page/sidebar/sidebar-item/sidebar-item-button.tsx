@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   canItemHaveChildren,
   defaultItemName,
@@ -15,12 +16,11 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { getSidebarItemIcon } from '~/lib/category-icons'
+import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import {
   Collapsible,
   CollapsibleContent,
 } from '~/components/shadcn/ui/collapsible'
-import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
-import { isNote } from '~/lib/sidebar-item-utils'
 
 interface SidebarItemButtonProps {
   item: AnySidebarItem
@@ -31,10 +31,10 @@ function getItemDisplayName(item: AnySidebarItem): string {
   return item.name || defaultItemName(item)
 }
 
-export function SidebarItemButton({
+const SidebarItemButtonComponent = ({
   item,
   ancestorIds = [],
-}: SidebarItemButtonProps) {
+}: SidebarItemButtonProps) => {
   const { renamingId, setRenamingId } = useFileSidebar()
   const { rename } = useRenameItem(item)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
@@ -91,19 +91,25 @@ export function SidebarItemButton({
           open={isExpanded}
           onOpenChange={toggleExpanded}
           className="w-full"
+          disabled={!canItemHaveChildren(item.type)}
         >
           {wrappedButton}
-          {hasChildren && (
-            <CollapsibleContent>
-              <div className={isNote(item) ? 'relative pl-4' : 'ml-4'}>
-                {children.data?.map((childItem) => (
-                  <SidebarItem
-                    key={childItem._id}
-                    item={childItem}
-                    ancestorIds={currentAncestors}
-                  />
-                ))}
-              </div>
+          {canItemHaveChildren(item.type) && (
+            <CollapsibleContent
+              transition={{ duration: 0.15, ease: 'easeInOut' }}
+              keepRendered
+            >
+              {hasChildren && (
+                <div className="ml-4">
+                  {children.data?.map((childItem) => (
+                    <SidebarItem
+                      key={childItem._id}
+                      item={childItem}
+                      ancestorIds={currentAncestors}
+                    />
+                  ))}
+                </div>
+              )}
             </CollapsibleContent>
           )}
         </Collapsible>
@@ -111,3 +117,5 @@ export function SidebarItemButton({
     </DroppableSidebarItem>
   )
 }
+
+export const SidebarItemButton = memo(SidebarItemButtonComponent)
