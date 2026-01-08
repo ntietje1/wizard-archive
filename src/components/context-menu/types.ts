@@ -75,7 +75,7 @@ export interface MenuItemDef {
   children?: Array<MenuItemDef> | ((ctx: MenuContext) => Array<MenuItemDef>)
 
   // Styling
-  variant?: 'default' | 'danger' | 'success'
+  variant?: 'default' | 'danger' | 'share'
   className?: string
 }
 

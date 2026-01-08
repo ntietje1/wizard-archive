@@ -166,15 +166,15 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     {
       id: 'share-item',
       label: (ctx) => {
-        const typeName = getTypeName(ctx)
         // Only say "Unshare" if shared with ALL players
         if (isSharedWithAll(ctx)) {
-          return `Unshare ${typeName}`
+          return `Unshare...`
         }
-        return `Share ${typeName}`
+        return `Share...`
       },
       icon: Share2,
       group: 'share',
+      variant: 'share',
       priority: 20,
       shouldShow: (ctx) =>
         ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM &&

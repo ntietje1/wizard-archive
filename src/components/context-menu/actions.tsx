@@ -249,11 +249,7 @@ export function useMenuActions() {
 
         try {
           // all_shared -> not_shared
-          // individually_shared -> not_shared
-          if (
-            shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
-            shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED
-          ) {
+          if (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED) {
             await convex.mutation(
               api.shares.mutations.setSidebarItemShareStatus,
               {
@@ -265,6 +261,7 @@ export function useMenuActions() {
             toast.success('Unshared from all players')
           } else {
             // not_shared -> all_shared
+            // individually_shared -> all_shared
             await convex.mutation(
               api.shares.mutations.setSidebarItemShareStatus,
               {

@@ -13,6 +13,7 @@ import {
   ContextMenu as ShadcnContextMenu,
 } from '~/components/shadcn/ui/context-menu'
 import { cn } from '~/lib/shadcn/utils'
+import { CheckIcon } from '~/lib/icons'
 
 export interface ContextMenuRef {
   open: (position?: { x: number; y: number }) => void
@@ -126,6 +127,8 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
             <ContextMenuSubTrigger
               className={cn(
                 item.variant === 'danger' && 'text-red-600 focus:text-red-600',
+                item.variant === 'share' &&
+                  'text-amber-600 focus:text-amber-600',
                 item.className,
               )}
               disabled={disabled}
@@ -137,9 +140,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
                   {item.shortcut}
                 </span>
               )}
-              {checked !== undefined && (
-                <span className="ml-2">{checked ? '✓' : ''}</span>
-              )}
+              {checked && <CheckIcon className="ml-2 h-4 w-4" />}
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               {menuChildren.map((child) => renderMenuItem(child))}
@@ -173,9 +174,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
               {item.shortcut}
             </span>
           )}
-          {checked !== undefined && (
-            <span className="ml-2">{checked ? '✓' : ''}</span>
-          )}
+          {checked && <CheckIcon className="ml-2 h-4 w-4" />}
         </ContextMenuItem>
       )
     }

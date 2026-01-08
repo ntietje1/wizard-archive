@@ -17,8 +17,6 @@ import {
   unshareSidebarItemFromMember,
 } from './shares'
 import type { Id } from '../_generated/dataModel'
-import type { BlockShareStatus } from '../blocks/types'
-import type { SidebarItemShareStatus } from '../sidebarItems/types'
 
 /**
  * Set the share status for a sidebar item (used for left-click toggle).
