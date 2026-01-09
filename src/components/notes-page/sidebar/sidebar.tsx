@@ -1,4 +1,3 @@
-import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarItem } from './sidebar-item/sidebar-item'
@@ -10,7 +9,7 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
 
-function FileSidebarContent() {
+export function FileSidebar() {
   const sidebarItems = useSidebarItemsByParent()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
@@ -56,14 +55,6 @@ function FileSidebarContent() {
         </div>
       </ScrollArea>
     </DroppableRoot>
-  )
-}
-
-export function FileSidebar() {
-  return (
-    <ClientOnly fallback={<SidebarLoading />}>
-      <FileSidebarContent />
-    </ClientOnly>
   )
 }
 

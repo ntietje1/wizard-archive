@@ -1,4 +1,4 @@
-import { ClientOnly, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
@@ -17,17 +17,15 @@ export const Route = createFileRoute(
 
 function EditorLayout() {
   return (
-    <ClientOnly>
-      <EditorContextMenuProvider>
-        <SidebarLayout>
-          <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-            <EditorModeProvider>
-              <FileTopbar />
-              <EditorContent />
-            </EditorModeProvider>
-          </div>
-        </SidebarLayout>
-      </EditorContextMenuProvider>
-    </ClientOnly>
+    <EditorContextMenuProvider>
+      <SidebarLayout>
+        <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+          <EditorModeProvider>
+            <FileTopbar />
+            <EditorContent />
+          </EditorModeProvider>
+        </div>
+      </SidebarLayout>
+    </EditorContextMenuProvider>
   )
 }

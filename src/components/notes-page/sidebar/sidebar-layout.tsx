@@ -15,7 +15,6 @@ import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { isGameMap } from '~/lib/sidebar-item-utils'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
-  // Check if viewing a map and provide context
   const { item } = useCurrentItem()
   const map = isGameMap(item) ? item : null
   const mapId = map?._id
@@ -68,14 +67,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     </div>
   )
 
-  // Wrap with MapViewProvider if viewing a map
-  if (map) {
-    return (
-      <MapViewProvider map={map} pins={pins}>
-        {content}
-      </MapViewProvider>
-    )
-  }
-
-  return content
+  return (
+    <MapViewProvider map={map ?? null} pins={pins}>
+      {content}
+    </MapViewProvider>
+  )
 }
