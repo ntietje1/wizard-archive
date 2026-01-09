@@ -1,10 +1,11 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
 import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 const fileTableFields = {
   ...sidebarItemBaseFields,
-  type: v.literal('files'),
+  type: v.literal(SIDEBAR_ITEM_TYPES.files),
   storageId: v.id('_storage'),
 }
 

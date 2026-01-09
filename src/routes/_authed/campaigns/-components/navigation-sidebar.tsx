@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { LucideIcon } from '~/lib/icons'
+import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, Settings, Users } from '~/lib/icons'
 import { cn } from '~/lib/shadcn/utils'
@@ -9,33 +10,37 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 
 type NavigationItem = {
   name: string
-  to: string
   icon: LucideIcon
+  to: string
+  search?: EditorSearch
 }
-
-const navigationItems: Array<NavigationItem> = [
-  {
-    name: 'Notes',
-    to: '/campaigns/$dmUsername/$campaignSlug/editor',
-    icon: FileText,
-  },
-  {
-    name: 'Players',
-    to: '/campaigns/$dmUsername/$campaignSlug/players',
-    icon: Users,
-  },
-  {
-    name: 'Settings',
-    to: '/campaigns/$dmUsername/$campaignSlug/settings',
-    icon: Settings,
-  },
-]
 
 export const NavigationSidebar = () => {
   const { dmUsername, campaignSlug } = useCampaign()
+  const { lastSelectedItemSearch } = useLastEditorItem()
+
+  const navigationItems: Array<NavigationItem> = [
+    {
+      name: 'Notes',
+      to: '/campaigns/$dmUsername/$campaignSlug/editor',
+      icon: FileText,
+      search: lastSelectedItemSearch,
+    },
+    {
+      name: 'Players',
+      to: '/campaigns/$dmUsername/$campaignSlug/players',
+      icon: Users,
+    },
+    {
+      name: 'Settings',
+      to: '/campaigns/$dmUsername/$campaignSlug/settings',
+      icon: Settings,
+    },
+  ]
 
   return (
     <div className="w-16 h-full min-h-0 bg-white border-r border-slate-200 flex flex-col items-center py-4">
@@ -49,6 +54,7 @@ export const NavigationSidebar = () => {
                   <Link
                     to={item.to}
                     params={{ dmUsername, campaignSlug }}
+                    search={item.search}
                     className={cn(
                       'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
                       'text-slate-600 hover:bg-slate-100 hover:text-slate-900',

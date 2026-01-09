@@ -169,7 +169,7 @@ export const createFolder = mutation({
       parentId: args.parentId,
       updatedAt: Date.now(),
       campaignId: args.campaignId,
-      type: 'folders',
+      type: SIDEBAR_ITEM_TYPES.folders,
     })
 
     return { folderId, slug: uniqueSlug }

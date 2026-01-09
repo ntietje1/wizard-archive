@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { SIDEBAR_ITEM_TYPES } from './types'
 
 export const sidebarItemIdValidator = v.union(
   v.id('notes'),
@@ -8,16 +9,12 @@ export const sidebarItemIdValidator = v.union(
 )
 
 export const sidebarItemTypeValidator = v.union(
-  v.literal('notes'),
-  v.literal('folders'),
-  v.literal('gameMaps'),
-  v.literal('files'),
+  v.literal(SIDEBAR_ITEM_TYPES.notes),
+  v.literal(SIDEBAR_ITEM_TYPES.folders),
+  v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
+  v.literal(SIDEBAR_ITEM_TYPES.files),
 )
 
-// Share status enum for sidebar items
-// - 'all_shared': Visible to all players (no need to query sidebarItemShares)
-// - 'not_shared': Visible to no players (no need to query sidebarItemShares)
-// - 'individually_shared': Visible to specific players (must query sidebarItemShares)
 export const sidebarItemShareStatusValidator = v.union(
   v.literal('all_shared'),
   v.literal('not_shared'),
@@ -33,5 +30,5 @@ export const sidebarItemBaseFields = {
   type: sidebarItemTypeValidator,
   parentId: v.optional(sidebarItemIdValidator),
   updatedAt: v.number(),
-  shareStatus: v.optional(sidebarItemShareStatusValidator), // Default: 'not_shared'
+  shareStatus: v.optional(sidebarItemShareStatusValidator),
 }

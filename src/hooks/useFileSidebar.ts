@@ -1,13 +1,12 @@
 import { createContext, useContext } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemType } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 
 export type FileSidebarContextType = {
-  setRenamingId: (id: Id<SidebarItemType> | null) => void
-  renamingId: Id<SidebarItemType> | null
-  setDeletingId: (id: Id<SidebarItemType> | null) => void
-  deletingId: Id<SidebarItemType> | null
+  setRenamingId: (id: SidebarItemId | null) => void
+  renamingId: SidebarItemId | null
+  setDeletingId: (id: SidebarItemId | null) => void
+  deletingId: SidebarItemId | null
 
   folderStates: Record<string, boolean>
   setFolderState: (folderId: string, isOpen: boolean) => void

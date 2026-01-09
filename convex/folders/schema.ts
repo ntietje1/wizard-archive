@@ -1,10 +1,11 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 const folderTableFields = {
   ...sidebarItemBaseFields,
-  type: v.literal('folders'),
+  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
 }
 
 export const foldersTables = {

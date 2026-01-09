@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { useLastEditorItem } from './useLastEditorItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -26,6 +27,7 @@ export const useEditorNavigation = () => {
   const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const queryClient = useQueryClient()
+  const { setLastSelectedItem } = useLastEditorItem()
 
   const routeParams = useMemo(
     () => ({ dmUsername, campaignSlug }),
@@ -121,6 +123,7 @@ export const useEditorNavigation = () => {
   const navigateToItem = useCallback(
     (item: AnySidebarItem, replace?: boolean) => {
       optimisticUpdateSidebarItem(item)
+      setLastSelectedItem({ type: item.type, slug: item.slug })
 
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes:
@@ -147,12 +150,14 @@ export const useEditorNavigation = () => {
       navigateToFolder,
       navigateToFile,
       optimisticUpdateSidebarItem,
+      setLastSelectedItem,
     ],
   )
 
   const clearEditorContent = useCallback(() => {
     navigateToEditor(createContentSearch({}))
-  }, [navigateToEditor])
+    setLastSelectedItem(null)
+  }, [navigateToEditor, setLastSelectedItem])
 
   return {
     navigateToNote,

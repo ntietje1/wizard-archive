@@ -7,14 +7,21 @@ import type { File } from '../files/types'
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
 export const SIDEBAR_ITEM_TYPES = {
-  notes: 'notes',
-  folders: 'folders',
-  gameMaps: 'gameMaps',
-  files: 'files',
+  notes: 'note',
+  folders: 'folder',
+  gameMaps: 'gameMap',
+  files: 'file',
 } as const
 
 export type SidebarItemType =
   (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
+
+type SidebarItemTypeToTableNameMap = {
+  [K in keyof typeof SIDEBAR_ITEM_TYPES as (typeof SIDEBAR_ITEM_TYPES)[K]]: K
+}
+
+type SidebarItemTypeToTableName<T extends SidebarItemType> =
+  SidebarItemTypeToTableNameMap[T]
 
 export const SIDEBAR_ITEM_OR_ROOT_TYPES = {
   ...SIDEBAR_ITEM_TYPES,
@@ -34,7 +41,7 @@ export type SidebarItemShareStatus =
   (typeof SIDEBAR_ITEM_SHARE_STATUS)[keyof typeof SIDEBAR_ITEM_SHARE_STATUS]
 
 export type SidebarItem<T extends SidebarItemType> = {
-  _id: Id<T>
+  _id: Id<SidebarItemTypeToTableName<T>>
   _creationTime: number
 
   name?: string

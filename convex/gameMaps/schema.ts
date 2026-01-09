@@ -4,11 +4,12 @@ import {
   sidebarItemBaseFields,
   sidebarItemIdValidator,
 } from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 
 export const mapTableFields = {
   ...sidebarItemBaseFields,
   imageStorageId: v.optional(v.id('_storage')),
-  type: v.literal('gameMaps'),
+  type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
 }
 const mapValidatorFields = {
   _id: v.id('gameMaps'),
