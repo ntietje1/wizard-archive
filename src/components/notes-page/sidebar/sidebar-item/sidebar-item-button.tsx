@@ -96,7 +96,7 @@ const SidebarItemButtonComponent = ({
           {wrappedButton}
           {canItemHaveChildren(item.type) && (
             <CollapsibleContent
-              transition={{ duration: 0.15, ease: 'easeInOut' }}
+              transition={{ duration: 0.1, ease: 'easeInOut' }}
               keepRendered
             >
               {hasChildren && (
