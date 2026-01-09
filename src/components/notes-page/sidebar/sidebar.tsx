@@ -35,23 +35,25 @@ function FileSidebarContent() {
   }
 
   return (
-    <DroppableRoot className="flex-1 flex min-h-0">
-      <ScrollArea className="flex-1 min-h-0 overflow-y-auto p-1">
-        {sidebarItems.data?.map((item) => (
-          <SidebarItem key={item._id} item={item} />
-        ))}
+    <DroppableRoot className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+      <ScrollArea className="flex-1 min-h-0 min-w-0 w-full mr-[1px]">
+        <div className="p-1 min-w-0 w-full max-w-full">
+          {sidebarItems.data?.map((item) => (
+            <SidebarItem key={item._id} item={item} />
+          ))}
 
-        {sidebarItems.data && sidebarItems.data.length === 0 && (
-          <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
-            <Button
-              className="max-w-24"
-              variant="outline"
-              onClick={handleCreateNote}
-            >
-              New note
-            </Button>
-          </div>
-        )}
+          {sidebarItems.data && sidebarItems.data.length === 0 && (
+            <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
+              <Button
+                className="max-w-24"
+                variant="outline"
+                onClick={handleCreateNote}
+              >
+                New note
+              </Button>
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </DroppableRoot>
   )

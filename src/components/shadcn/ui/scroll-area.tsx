@@ -1,53 +1,97 @@
+'use client'
+
 import * as React from 'react'
-import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
+
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui-components/react/scroll-area'
 
 import { cn } from '~/lib/shadcn/utils'
 
-function ScrollArea({
-  className,
-  children,
-  ...props
-}: ScrollAreaPrimitive.Root.Props) {
-  return (
-    <ScrollAreaPrimitive.Root
-      data-slot="scroll-area"
-      className={cn('relative', className)}
-      {...props}
-    >
-      <ScrollAreaPrimitive.Viewport
-        data-slot="scroll-area-viewport"
-        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
-      >
-        {children}
-      </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
-  )
+export type ScrollAreaContextProps = {
+  type: 'auto' | 'always' | 'scroll' | 'hover'
 }
 
-function ScrollBar({
-  className,
-  orientation = 'vertical',
-  ...props
-}: ScrollAreaPrimitive.Scrollbar.Props) {
+const ScrollAreaContext = React.createContext<ScrollAreaContextProps>({
+  type: 'hover',
+})
+
+const ScrollArea = React.forwardRef<
+  React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+    type?: 'auto' | 'always' | 'scroll' | 'hover'
+    viewportClassName?: string
+  }
+>(
+  (
+    { className, children, type = 'hover', viewportClassName, ...props },
+    ref,
+  ) => {
+    const viewportRef = React.useRef<HTMLDivElement>(null)
+
+    return (
+      <ScrollAreaContext.Provider value={{ type }}>
+        <ScrollAreaPrimitive.Root
+          ref={ref}
+          data-slot="scroll-area"
+          className={cn(
+            'relative flex overflow-hidden w-full',
+            viewportClassName,
+            className,
+          )}
+          {...props}
+        >
+          <ScrollAreaPrimitive.Viewport
+            ref={viewportRef}
+            data-slot="scroll-area-viewport"
+            className={cn(
+              'focus-ring size-full rounded-[inherit] overflow-x-hidden w-full max-w-full',
+              viewportClassName,
+            )}
+            style={{ overflowX: 'hidden' }}
+          >
+            <div className="w-full max-w-full min-w-0">{children}</div>
+          </ScrollAreaPrimitive.Viewport>
+          <ScrollBar />
+          <ScrollAreaPrimitive.Corner />
+        </ScrollAreaPrimitive.Root>
+      </ScrollAreaContext.Provider>
+    )
+  },
+)
+
+ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
+
+const ScrollBar = React.forwardRef<
+  React.ComponentRef<typeof ScrollAreaPrimitive.Scrollbar>,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>
+>(({ className, orientation = 'vertical', ...props }, ref) => {
+  const { type } = React.useContext(ScrollAreaContext)
+
   return (
     <ScrollAreaPrimitive.Scrollbar
-      data-slot="scroll-area-scrollbar"
-      data-orientation={orientation}
+      ref={ref}
       orientation={orientation}
+      data-slot="scroll-area-scrollbar"
       className={cn(
-        'data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent flex touch-none p-px transition-colors select-none',
+        'flex touch-none transition-[colors,opacity] duration-150 ease-out select-none shrink-0 !relative',
+        orientation === 'vertical' && 'h-full w-1',
+        orientation === 'horizontal' && 'h-1 flex-col',
+        type === 'hover' && 'opacity-0 data-[hovering]:opacity-100',
+        type === 'scroll' && 'opacity-0 data-[scrolling]:opacity-100',
         className,
       )}
       {...props}
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="rounded-full bg-border relative flex-1"
+        className={cn(
+          'bg-border relative flex-1 rounded-full',
+          orientation === 'vertical' && 'my-1',
+        )}
       />
     </ScrollAreaPrimitive.Scrollbar>
   )
-}
+})
+
+ScrollBar.displayName = ScrollAreaPrimitive.Scrollbar.displayName
 
 export { ScrollArea, ScrollBar }
