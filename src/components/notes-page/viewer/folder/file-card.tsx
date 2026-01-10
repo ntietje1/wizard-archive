@@ -22,7 +22,7 @@ import {
 } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -177,8 +177,12 @@ export function FileCard({
   )
 
   return (
-    <FolderViewContextMenu ref={contextMenuRef} item={file}>
+    <EditorContextMenu
+      ref={contextMenuRef}
+      viewContext="folder-view"
+      item={file}
+    >
       {cardContent}
-    </FolderViewContextMenu>
+    </EditorContextMenu>
   )
 }

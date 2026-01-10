@@ -5,8 +5,8 @@ import type { Folder } from 'convex/folders/types'
 import { useFolderView } from '~/hooks/useFolderView'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { FolderViewContextMenu } from '~/components/context-menu/folder-view/FolderViewContextMenu'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
   const { items, isLoading } = useFolderView({
@@ -24,12 +24,13 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
 
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
-      <FolderViewContextMenu
+      <EditorContextMenu
+        viewContext="folder-view"
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
       >
         {children}
-      </FolderViewContextMenu>
+      </EditorContextMenu>
     )
   }
 

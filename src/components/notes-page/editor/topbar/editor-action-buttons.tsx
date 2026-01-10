@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
-import type { TopbarContextMenuRef } from '~/components/context-menu/topbar/TopbarContextMenu'
-import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
+import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorMode } from '~/hooks/useEditorMode'
@@ -25,7 +25,7 @@ export function EditorViewModeToggleButton() {
 
 export function ContextMenuButton() {
   const { item } = useCurrentItem()
-  const topbarContextMenuRef = useRef<TopbarContextMenuRef>(null)
+  const topbarContextMenuRef = useRef<EditorContextMenuRef>(null)
 
   const baseButton = (
     <Button
@@ -48,9 +48,13 @@ export function ContextMenuButton() {
     return baseButton
   }
   return (
-    <TopbarContextMenu ref={topbarContextMenuRef} item={item}>
+    <EditorContextMenu
+      ref={topbarContextMenuRef}
+      viewContext="topbar"
+      item={item}
+    >
       {baseButton}
-    </TopbarContextMenu>
+    </EditorContextMenu>
   )
 }
 

@@ -1,7 +1,6 @@
 import type {
   AnySidebarItem,
   SidebarItemId,
-  SidebarItemOrRootType,
   SidebarItemShareStatus,
 } from 'convex/sidebarItems/types'
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
@@ -29,7 +28,6 @@ export interface MenuContext {
   // Core data
   item: AnySidebarItem | undefined
   viewContext: ViewContext
-  parentType: SidebarItemOrRootType
 
   // User/permissions
   currentUserId?: string

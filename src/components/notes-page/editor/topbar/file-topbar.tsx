@@ -12,7 +12,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
@@ -42,7 +42,7 @@ export function FileTopbar() {
   }
 
   return (
-    <TopbarContextMenu item={item}>
+    <EditorContextMenu viewContext="topbar" item={item}>
       <div className="flex items-center px-4 py-2 h-12 border-b bg-white w-full min-w-0 overflow-hidden gap-4">
         <EditableBreadcrumb
           initialName={item.name || ''}
@@ -58,7 +58,7 @@ export function FileTopbar() {
           <CloseButton />
         </div>
       </div>
-    </TopbarContextMenu>
+    </EditorContextMenu>
   )
 }
 

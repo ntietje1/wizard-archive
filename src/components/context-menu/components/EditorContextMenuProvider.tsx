@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
-import { EditorContextMenuContext } from '../hooks/useEditorMenuItems'
+import { EditorContextMenuContext } from '../hooks/useEditorContextMenu'
 import { PlaceHolderContextMenu } from './EmptyContextMenu'
 
 interface ProviderProps {

@@ -1,8 +1,10 @@
-import type {
-  SidebarItemOrRootType,
-  SidebarItemType,
-} from 'convex/sidebarItems/types'
+import type { SidebarItemType } from 'convex/sidebarItems/types'
 import type { Predicate, ViewContext } from './types'
+
+export const always: Predicate = () => true
+export const never: Predicate = () => false
+
+export const isSidebarItem: Predicate = (ctx) => ctx.item !== undefined
 
 export const isType =
   (...types: Array<SidebarItemType>): Predicate =>
@@ -28,23 +30,10 @@ export const inSidebar: Predicate = (ctx) => ctx.viewContext === 'sidebar'
 
 export const notInSidebar: Predicate = (ctx) => ctx.viewContext !== 'sidebar'
 
-export const viewingMap: Predicate = (ctx) => ctx.viewContext === 'map-view'
-
 export const viewingCanvas: Predicate = (ctx) =>
   ctx.viewContext === 'canvas-view'
 
-export const hasParent =
-  (...parents: Array<SidebarItemOrRootType>): Predicate =>
-  (ctx) =>
-    parents.includes(ctx.parentType)
-
-export const underFolder: Predicate = (ctx) => Boolean(ctx.item?.parentId)
-
-export const atRoot: Predicate = (ctx) => ctx.parentType === 'root'
-
-export const always: Predicate = () => true
-
-export const never: Predicate = () => false
+export const atRoot: Predicate = (ctx) => !ctx.item || !ctx.item.parentId
 
 export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMapId)
 

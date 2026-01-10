@@ -14,17 +14,17 @@ import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import type { MapViewContextMenuRef } from '~/components/context-menu/map-view/MapViewContextMenu'
+import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useMapView } from '~/hooks/useMapView'
 import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { MapPinContextMenu } from '~/components/context-menu/map-view/MapPinContextMenu'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
 import { cn } from '~/lib/shadcn/utils'
-import { MapViewContextMenu } from '~/components/context-menu/map-view/MapViewContextMenu'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 interface PinPosition {
@@ -33,6 +33,56 @@ interface PinPosition {
 }
 
 const DEFAULT_PIN_COLOR = '#808080'
+
+interface MapPinContextMenuWrapperProps {
+  pinId: Id<'mapPins'>
+  mapId: Id<'gameMaps'>
+  position: PinPosition
+  onClose: () => void
+}
+
+function MapPinContextMenuWrapper({
+  pinId,
+  mapId,
+  position,
+  onClose,
+}: MapPinContextMenuWrapperProps) {
+  const contextMenuRef = useRef<EditorContextMenuRef>(null)
+  const { setPinId } = useMapView()
+
+  const pinsQuery = useQuery(
+    convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
+  )
+  const pin = pinsQuery.data?.find((p) => p._id === pinId)
+
+  // Set pinId in context and open menu at position when component mounts
+  useEffect(() => {
+    if (pin) {
+      setPinId(pinId)
+      contextMenuRef.current?.open(position)
+    }
+    return () => {
+      setPinId(null)
+    }
+  }, [pin, pinId, position, setPinId])
+
+  if (!pin) return null
+
+  return (
+    <EditorContextMenu
+      ref={contextMenuRef}
+      viewContext="map-view"
+      item={pin.item}
+      className="absolute inset-0 pointer-events-none"
+      onClose={() => {
+        setPinId(null)
+        onClose()
+      }}
+    >
+      <div className="w-full h-full" />
+    </EditorContextMenu>
+  )
+}
 
 export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -48,6 +98,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   } | null>(null)
 
   const convex = useConvex()
+  const { setPinId } = useMapView()
 
   // Query pins for rendering
   const pinsQuery = useQuery(
@@ -218,7 +269,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
     return pin.item.name || defaultItemName(pin.item)
   }, [])
 
-  const mapImageContextMenuRef = useRef<MapViewContextMenuRef>(null)
+  const mapImageContextMenuRef = useRef<EditorContextMenuRef>(null)
 
   const handleMapImageContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -375,7 +426,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       )}
 
       {pinContextMenu && (
-        <MapPinContextMenu
+        <MapPinContextMenuWrapper
           pinId={pinContextMenu.pinId}
           mapId={map._id}
           position={pinContextMenu.position}
@@ -383,13 +434,18 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
         />
       )}
 
-      <MapViewContextMenu
+      <EditorContextMenu
         ref={mapImageContextMenuRef}
+        viewContext="map-view"
         item={map}
         className="absolute inset-0 pointer-events-none"
+        onClose={() => {
+          // Clear pinId when map context menu closes
+          setPinId(null)
+        }}
       >
         <div className="w-full h-full" />
-      </MapViewContextMenu>
+      </EditorContextMenu>
     </div>
   )
 }

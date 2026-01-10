@@ -7,6 +7,8 @@ export interface MapViewContextType {
   mapId: Id<'gameMaps'> | null
   pinnedItemIds: Set<SidebarItemId>
   map: GameMap | null
+  pinId: Id<'mapPins'> | null
+  setPinId: (pinId: Id<'mapPins'> | null) => void
 }
 export const MapViewContext = createContext<MapViewContextType | null>(null)
 
@@ -17,6 +19,8 @@ export function useMapView(): MapViewContextType {
       mapId: null,
       pinnedItemIds: new Set<SidebarItemId>(),
       map: null,
+      pinId: null,
+      setPinId: () => {},
     }
   )
 }

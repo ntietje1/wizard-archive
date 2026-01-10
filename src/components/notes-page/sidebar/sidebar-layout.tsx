@@ -9,10 +9,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
-import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { isGameMap } from '~/lib/sidebar-item-utils'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { item } = useCurrentItem()
@@ -46,10 +46,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
               minSize={50}
               className="flex flex-col min-h-0 min-w-0"
             >
-              <SidebarContextMenu className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+              <EditorContextMenu
+                viewContext="sidebar"
+                className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden"
+              >
                 <SidebarHeader />
                 <FileSidebar />
-              </SidebarContextMenu>
+              </EditorContextMenu>
             </ResizablePanel>
             <div className="h-px w-full bg-border" />
             <SessionPanel />

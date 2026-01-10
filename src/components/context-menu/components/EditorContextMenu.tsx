@@ -1,7 +1,17 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { buildMenu } from '../menu-builder'
-import { useEditorMenuItems } from '../hooks/useEditorMenuItems'
-import type { MenuContext, MenuItemDef } from '../types'
+import {
+  useBuildMenuContext,
+  useEditorMenuItems,
+} from '../hooks/useEditorContextMenu'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { MenuContext, MenuItemDef, ViewContext } from '../types'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -15,31 +25,35 @@ import {
 import { cn } from '~/lib/shadcn/utils'
 import { CheckIcon } from '~/lib/icons'
 
-export interface ContextMenuRef {
+export interface EditorContextMenuRef {
   open: (position?: { x: number; y: number }) => void
   close: () => void
 }
 
 interface Props {
-  buildContext: () => MenuContext | null
-  onClose: () => void
+  viewContext: ViewContext
+  item?: AnySidebarItem
   children: React.ReactNode
   className?: string
   menuClassName?: string
+  // Optional custom onClose handler
+  onClose?: () => void
 }
 
-export const ContextMenu = forwardRef<ContextMenuRef, Props>(
+export const EditorContextMenu = forwardRef<EditorContextMenuRef, Props>(
   (
     {
-      buildContext,
-      onClose,
+      viewContext,
+      item,
       children,
       className,
       menuClassName = 'w-48 z-[9999]',
+      onClose,
     },
     ref,
   ) => {
     const { menuItems } = useEditorMenuItems()
+    const buildContext = useBuildMenuContext({ viewContext, item })
     const [isOpen, setIsOpen] = useState(false)
     const [context, setContext] = useState<MenuContext | null>(null)
     const wrapperRef = useRef<HTMLDivElement>(null)
@@ -52,7 +66,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
 
     useImperativeHandle(ref, () => ({
       open: (position?: { x: number; y: number }) => {
-        const newContext = buildContext()
+        const newContext = buildContext(item)
         if (!newContext) return
         setContext(newContext)
 
@@ -77,67 +91,70 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
       },
       close: () => {
         setIsOpen(false)
-        onClose()
+        onClose?.()
       },
     }))
 
     const handleOpenChange = (open: boolean) => {
       setIsOpen(open)
       if (open && !context) {
-        setContext(buildContext())
+        setContext(buildContext(item))
       } else if (!open) {
         setContext(null)
-        onClose()
+        onClose?.()
       }
     }
 
-    const handleAction = async (item: MenuItemDef) => {
+    const handleAction = async (menuItem: MenuItemDef) => {
       if (actionInProgressRef.current || !context) return
       actionInProgressRef.current = true
       try {
-        await item.action(context)
+        await menuItem.action(context)
       } catch (error) {
         console.error('ContextMenu: Error executing action', error)
       } finally {
         actionInProgressRef.current = false
         setIsOpen(false)
-        onClose()
+        onClose?.()
       }
     }
 
-    const renderMenuItem = (item: MenuItemDef) => {
+    const renderMenuItem = (menuItem: MenuItemDef) => {
       if (!context) return null
 
-      const disabled = item.isDisabled?.(context) || false
-      const checked = item.isChecked?.(context)
+      const disabled = menuItem.isDisabled?.(context) || false
+      const checked = menuItem.isChecked?.(context)
       const label =
-        typeof item.label === 'function' ? item.label(context) : item.label
-      const IconComponent = item.icon
+        typeof menuItem.label === 'function'
+          ? menuItem.label(context)
+          : menuItem.label
+      const IconComponent = menuItem.icon
 
       // Resolve children (can be static array or dynamic function)
       const menuChildren =
-        typeof item.children === 'function'
-          ? item.children(context)
-          : item.children
+        typeof menuItem.children === 'function'
+          ? menuItem.children(context)
+          : menuItem.children
 
       // If item has children, render as submenu
       if (menuChildren && menuChildren.length > 0) {
         return (
-          <ContextMenuSub key={item.id}>
+          <ContextMenuSub key={menuItem.id}>
             <ContextMenuSubTrigger
               className={cn(
-                item.variant === 'danger' && 'text-red-600 focus:text-red-600',
-                item.variant === 'share' &&
+                menuItem.variant === 'danger' &&
+                  'text-red-600 focus:text-red-600',
+                menuItem.variant === 'share' &&
                   'text-amber-600 focus:text-amber-600',
-                item.className,
+                menuItem.className,
               )}
               disabled={disabled}
             >
               {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
               <span className="flex-1">{label}</span>
-              {item.shortcut && (
+              {menuItem.shortcut && (
                 <span className="text-xs text-muted-foreground ml-2">
-                  {item.shortcut}
+                  {menuItem.shortcut}
                 </span>
               )}
               {checked && <CheckIcon className="ml-2 h-4 w-4" />}
@@ -152,26 +169,26 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
       // Regular menu item
       return (
         <ContextMenuItem
-          key={item.id}
-          variant={item.variant === 'danger' ? 'destructive' : 'default'}
-          className={cn(item.className)}
+          key={menuItem.id}
+          variant={menuItem.variant === 'danger' ? 'destructive' : 'default'}
+          className={cn(menuItem.className)}
           disabled={disabled}
           onSelect={async (e) => {
             e.preventDefault()
             e.stopPropagation()
-            if (!disabled) await handleAction(item)
+            if (!disabled) await handleAction(menuItem)
           }}
           onClick={async (e) => {
             e.preventDefault()
             e.stopPropagation()
-            if (!disabled) await handleAction(item)
+            if (!disabled) await handleAction(menuItem)
           }}
         >
           {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
           <span className="flex-1">{label}</span>
-          {item.shortcut && (
+          {menuItem.shortcut && (
             <span className="text-xs text-muted-foreground ml-2">
-              {item.shortcut}
+              {menuItem.shortcut}
             </span>
           )}
           {checked && <CheckIcon className="ml-2 h-4 w-4" />}
@@ -211,7 +228,7 @@ export const ContextMenu = forwardRef<ContextMenuRef, Props>(
               {builtMenu.groups.map((group, gi) => (
                 <React.Fragment key={group.id}>
                   {gi > 0 && <ContextMenuSeparator />}
-                  {group.items.map((item) => renderMenuItem(item))}
+                  {group.items.map((menuItem) => renderMenuItem(menuItem))}
                 </React.Fragment>
               ))}
             </ContextMenuContent>

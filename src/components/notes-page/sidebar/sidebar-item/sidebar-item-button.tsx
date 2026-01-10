@@ -16,11 +16,11 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { SidebarContextMenu } from '~/components/context-menu/sidebar/SidebarItemContextMenu'
 import {
   Collapsible,
   CollapsibleContent,
 } from '~/components/shadcn/ui/collapsible'
+import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 interface SidebarItemButtonProps {
   item: AnySidebarItem
@@ -79,9 +79,9 @@ const SidebarItemButtonComponent = ({
   )
 
   const wrappedButton = (
-    <SidebarContextMenu ref={contextMenuRef} item={item}>
+    <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
       {button}
-    </SidebarContextMenu>
+    </EditorContextMenu>
   )
 
   return (
