@@ -1,7 +1,3 @@
-/**
- * Validates a file for upload.
- * Checks file type and size according to application requirements.
- */
 export interface FileValidationResult {
   success: boolean
   error?: string
@@ -9,34 +5,36 @@ export interface FileValidationResult {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-/**
- * Validates that a file is a viewable media type and within size limits.
- *
- * @param file - The file to validate
- * @returns Validation result with success status and optional error message
- */
-export function validateFileForUpload(file: File): FileValidationResult {
+export function isMediaFile(file: File): boolean {
   const mimeType = file.type.toLowerCase()
-  const fileName = file.name.toLowerCase()
-
-  // Check if it's a viewable media type
-  const isViewable =
+  return (
     mimeType.startsWith('image/') ||
     mimeType.startsWith('video/') ||
     mimeType.startsWith('audio/') ||
-    mimeType === 'application/pdf' ||
-    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|pdf|mp4|webm|ogg|mov|avi|wmv|flv|mp3|wav|aac|flac|m4a)$/i.test(
-      fileName,
-    )
+    mimeType === 'application/pdf'
+  )
+}
 
-  if (!isViewable) {
+export function isTextFile(file: File): boolean {
+  return (
+    file.type.startsWith('text/') ||
+    file.name.toLowerCase().endsWith('.txt') ||
+    file.name.toLowerCase().endsWith('.md')
+  )
+}
+
+export function validateFileForUpload(file: File): FileValidationResult {
+  const isText = isTextFile(file)
+  const isMedia = isMediaFile(file)
+
+  if (!isMedia && !isText) {
     return {
       success: false,
-      error: 'Please upload a valid file type (image, video, audio, or PDF)',
+      error:
+        'Please upload a valid file type (image, video, audio, PDF, or text file)',
     }
   }
 
-  // Check file size (10MB max)
   if (file.size > MAX_FILE_SIZE) {
     return {
       success: false,
