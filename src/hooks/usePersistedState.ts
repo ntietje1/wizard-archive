@@ -3,13 +3,14 @@ import { useCallback, useEffect, useState } from 'react'
 const isBrowser = typeof window !== 'undefined'
 
 function usePersistedState<T>(
-  key: string,
+  key: string | null,
   initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(initialValue)
 
   useEffect(() => {
     if (!isBrowser) return
+    if (!key) return
     try {
       const item = window.localStorage.getItem(key)
       if (item) {
@@ -23,6 +24,7 @@ function usePersistedState<T>(
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
+      if (!key) return
       try {
         setStoredValue((prev) => {
           const valueToStore =
@@ -49,6 +51,7 @@ function usePersistedState<T>(
 
   useEffect(() => {
     if (!isBrowser) return
+    if (!key) return
     const handleStorageChange = (event: StorageEvent | CustomEvent) => {
       if (event instanceof StorageEvent) {
         // Handle cross-tab/window storage events

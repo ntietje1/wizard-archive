@@ -14,7 +14,7 @@ import type { LucideIcon } from '~/lib/icons'
 
 // Sidebar-specific drag and drop data types
 export interface SidebarDragData {
-  _id: Id<SidebarItemType>
+  _id: SidebarItemId
   type: SidebarItemType
   parentId?: SidebarItemId
   ancestorIds?: Array<SidebarItemId>
@@ -23,7 +23,7 @@ export interface SidebarDragData {
 }
 
 export interface SidebarDropData {
-  _id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
+  _id: SidebarItemId | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   ancestorIds?: Array<SidebarItemId>
   accepts?: Array<SidebarItemType>
@@ -31,14 +31,14 @@ export interface SidebarDropData {
 
 // Internal interfaces for validation
 interface DragItem {
-  _id: Id<SidebarItemType>
+  _id: SidebarItemId
   type: SidebarItemType
   parentId?: SidebarItemId
   ancestorIds?: Array<SidebarItemId>
 }
 
 interface DropTarget {
-  id: Id<SidebarItemType> | typeof SIDEBAR_ROOT_TYPE
+  id: SidebarItemId | typeof SIDEBAR_ROOT_TYPE
   type: SidebarItemOrRootType
   ancestorIds?: Array<SidebarItemId>
 }
@@ -62,7 +62,7 @@ export function validateDrop(
   }
 
   // items cannot be dropped on their own children
-  if (targetData.ancestorIds?.includes(draggedItem._id as SidebarItemId)) {
+  if (targetData.ancestorIds?.includes(draggedItem._id)) {
     return false
   }
 
@@ -123,7 +123,7 @@ interface MoveMutations {
     mapId: Id<'gameMaps'>
     parentId?: SidebarItemId
   }) => Promise<any>
-  moveFolder?: (params: {
+  moveFolder: (params: {
     folderId: Id<'folders'>
     parentId?: SidebarItemId
   }) => Promise<any>
@@ -135,7 +135,7 @@ interface MoveMutations {
 
 export async function executeMove(
   itemType: SidebarItemType,
-  itemId: Id<SidebarItemType>,
+  itemId: SidebarItemId,
   targetId: SidebarItemId | undefined,
   mutations: MoveMutations,
   callbacks?: {
@@ -156,9 +156,6 @@ export async function executeMove(
       })
       break
     case SIDEBAR_ITEM_TYPES.folders:
-      if (!mutations.moveFolder) {
-        throw new Error('moveFolder mutation not provided')
-      }
       await mutations.moveFolder({
         folderId: itemId as Id<'folders'>,
         parentId: targetId,

@@ -10,7 +10,7 @@ export function useLastEditorItem() {
   const [lastSelectedItem, setLastSelectedItem] = usePersistedState<{
     type: SidebarItemType
     slug: string
-  } | null>(`last-editor-item-${campaignId}`, null)
+  } | null>(campaignId ? `last-editor-item-${campaignId}` : null, null)
 
   const lastSelectedItemSearch: EditorSearch | undefined = lastSelectedItem
     ? { [lastSelectedItem.type]: lastSelectedItem.slug }

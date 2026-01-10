@@ -12,8 +12,7 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import type { SidebarItemType } from 'convex/sidebarItems/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
@@ -22,21 +21,27 @@ import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
 import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function FileSidebarProvider({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [renamingId, setRenamingId] = useState<Id<SidebarItemType> | null>(null)
-  const [deletingId, setDeletingId] = useState<Id<SidebarItemType> | null>(null)
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const [renamingId, setRenamingId] = useState<SidebarItemId | null>(null)
+  const [deletingId, setDeletingId] = useState<SidebarItemId | null>(null)
 
   const [folderStates, setFolderStates] = usePersistedState<
     Record<string, boolean>
-  >('file-sidebar-folder-states', {})
+  >(campaignId ? `file-sidebar-folder-states-${campaignId}` : null, {})
 
   const [closeAllFoldersMode, setCloseAllFoldersMode] =
-    usePersistedState<boolean>('file-sidebar-close-all-folders-mode', false)
+    usePersistedState<boolean>(
+      campaignId ? `file-sidebar-close-all-folders-mode-${campaignId}` : null,
+      false,
+    )
 
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
@@ -148,9 +153,7 @@ export function FileSidebarProvider({
       const targetData = over.data.current as SidebarDropData
 
       const targetId =
-        targetData._id === SIDEBAR_ROOT_TYPE
-          ? undefined
-          : (targetData._id as Id<'notes'> | Id<'folders'>)
+        targetData._id === SIDEBAR_ROOT_TYPE ? undefined : targetData._id
 
       await executeMove(
         draggedItem.type,

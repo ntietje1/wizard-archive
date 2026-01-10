@@ -1,21 +1,23 @@
-import { useRef } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { TopbarContextMenuRef } from '~/components/context-menu/topbar/TopbarContextMenu'
-import { EditableTopbar } from '~/components/notes-page/editor/topbar/editable-topbar'
+import { EditableBreadcrumb } from './editable-breadcrumb'
+import {
+  CloseButton,
+  ContextMenuButton,
+  EditorViewModeToggleButton,
+} from './editor-action-buttons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
-import { useMenuActions } from '~/components/context-menu/actions'
+import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { TopbarContextMenu } from '~/components/context-menu/topbar/TopbarContextMenu'
 
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
-  const { clearEditorContent, navigateToItem } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem(item)
-  const { Dialogs } = useMenuActions()
 
   const ancestors = useQuery(
     convexQuery(
@@ -29,36 +31,55 @@ export function FileTopbar() {
     ),
   )
 
-  const topbarContextMenuRef = useRef<TopbarContextMenuRef>(null)
-
   const defaultName = defaultItemName(item)
 
-  if (isLoading || !item) {
-    return (
-      <>
-        <EditableTopbar name="" isEmpty={true} onRename={rename} />
-        <Dialogs />
-      </>
-    )
+  if (isLoading) {
+    return <TopbarLoading />
+  }
+
+  if (!item) {
+    return <TopbarEmpty />
   }
 
   return (
-    <TopbarContextMenu ref={topbarContextMenuRef} item={item}>
-      <EditableTopbar
-        name={item.name}
-        defaultName={defaultName}
-        onRename={rename}
-        onClose={clearEditorContent}
-        onNavigateToItem={navigateToItem}
-        ancestors={ancestors.data ?? []}
-        onOpenMenu={(e) => {
-          topbarContextMenuRef.current?.open({
-            x: e.clientX,
-            y: e.clientY,
-          })
-        }}
-      />
-      <Dialogs />
+    <TopbarContextMenu item={item}>
+      <div className="flex items-center px-4 py-2 h-12 border-b bg-white w-full min-w-0 overflow-hidden gap-4">
+        <EditableBreadcrumb
+          initialName={item.name || ''}
+          defaultName={defaultName || 'Untitled'}
+          onRename={rename}
+          ancestors={ancestors.data ?? []}
+          onNavigateToItem={navigateToItem}
+        />
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <EditorViewModeToggleButton />
+          <ContextMenuButton />
+          <CloseButton />
+        </div>
+      </div>
     </TopbarContextMenu>
+  )
+}
+
+function TopbarLoading() {
+  return (
+    <div className="border-b p-2 h-12">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-32" />
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-8 w-8" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TopbarEmpty() {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 h-12 border-b bg-white w-full min-w-0 max-w-full overflow-hidden">
+      <div className="flex items-center justify-between w-full h-12" />
+    </div>
   )
 }
