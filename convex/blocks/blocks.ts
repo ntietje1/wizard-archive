@@ -7,6 +7,8 @@ import {
   updateBlockMentions,
   upsertBlock,
 } from '../mentions/mentions'
+import { requireCampaignMembership } from '../campaigns/campaigns'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type { Ctx } from '../common/types'
@@ -136,6 +138,12 @@ export async function saveTopLevelBlocksForNote(
   if (!note) {
     throw new Error('Note not found')
   }
+
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: note.campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
 
   const allBlocksWithMentions = extractAllBlocksWithMentions(content)
 

@@ -5,335 +5,382 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { useFileActions } from './useFileActions'
 import { useNoteActions } from './useNoteActions'
+import { useFolderActions } from './useFolderActions'
 import { useOpenParentFolders } from './useOpenParentFolders'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { DropResult, FolderStructure } from '~/lib/folder-reader'
 import {
   isMediaFile,
   isTextFile,
   validateFileForUpload,
 } from '~/lib/file-validation'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
-import { Progress } from '~/components/shadcn/ui/progress'
+import {
+  FileProgressContent,
+  FolderProgressContent,
+  ToastContent,
+} from '~/components/toasts/file-progress-toasts'
+import { getDropResultStats } from '~/lib/folder-reader'
+import { getErrorMessage, uploadFile } from '~/lib/file-upload'
 
-interface FileDropHandlerOptions {
+interface DropOptions {
   campaignId: Id<'campaigns'>
   parentId?: SidebarItemId
 }
 
-interface UploadInfo {
+export interface UploadProgress {
   toastId: string | number
-  progress: number
+  totalFiles: number
+  totalFolders: number
+  processedFiles: number
+  processedFolders: number
+  skippedFiles: number
 }
 
-// Constants
 const TOAST_STYLE = { width: '100%', maxWidth: '100%' } as const
-const TOAST_SUCCESS_DURATION = 3000
-const TOAST_ERROR_DURATION = 5000
-
-// Toast helper functions
-const createToastContent = (
-  fileName: string,
-  message: string,
-  progress?: number,
-) => (
-  <div className="space-y-2 w-full min-w-[300px]">
-    <div className="font-medium text-sm">{fileName}</div>
-    {progress !== undefined && (
-      <Progress value={progress} className="h-1.5 w-full" />
-    )}
-    <div className="text-xs text-muted-foreground">{message}</div>
-  </div>
-)
-
-const showUploadProgressToast = (
-  fileName: string,
-  progress: number,
-  toastId?: string | number,
-) => {
-  const content = createToastContent(
-    fileName,
-    `Uploading... ${progress}%`,
-    progress,
-  )
-  return toast.loading(content, {
-    id: toastId,
-    duration: Infinity,
-    style: TOAST_STYLE,
-  })
-}
-
-const showLoadingToast = (fileName: string, message: string) => {
-  const content = createToastContent(fileName, message)
-  return toast.loading(content, {
-    duration: Infinity,
-    style: TOAST_STYLE,
-  })
-}
-
-const showSuccessToast = (fileName: string, message: string) => {
-  const content = createToastContent(fileName, message)
-  toast.success(content, {
-    duration: TOAST_SUCCESS_DURATION,
-    style: TOAST_STYLE,
-  })
-}
-
-const showErrorToast = (
-  fileName: string,
-  message: string,
-  toastId?: string | number,
-) => {
-  const content = createToastContent(fileName, message)
-  if (toastId) {
-    toast.dismiss(toastId)
-  }
-  toast.error(content, {
-    duration: TOAST_ERROR_DURATION,
-    style: TOAST_STYLE,
-  })
-}
-
-const getErrorMessage = (error: unknown): string => {
-  return error instanceof Error ? error.message : 'An unexpected error occurred'
-}
 
 export function useFileDropHandler() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { createFile } = useFileActions()
-  const { createNote, updateNoteContent } = useNoteActions()
+  const { createNoteWithContent } = useNoteActions()
+  const { createFolder } = useFolderActions()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToFile, navigateToNote } = useEditorNavigation()
 
   const generateUploadUrl = useMutation({
     mutationFn: useConvexMutation(api.storage.mutations.generateUploadUrl),
   })
-
-  const trackUploadMutation = useMutation({
+  const trackUpload = useMutation({
     mutationFn: useConvexMutation(api.storage.mutations.trackUpload),
   })
-
   const commitUpload = useMutation({
     mutationFn: useConvexMutation(api.storage.mutations.commitUpload),
   })
 
-  const activeUploadsRef = useRef<Map<string, UploadInfo>>(new Map())
-
-  const cleanupUpload = useCallback((fileName: string) => {
-    const uploadInfo = activeUploadsRef.current.get(fileName)
-    if (uploadInfo) {
-      toast.dismiss(uploadInfo.toastId)
-      activeUploadsRef.current.delete(fileName)
-    }
-  }, [])
-
-  const uploadFileWithProgress = useCallback(
-    async (file: File): Promise<Id<'_storage'>> => {
-      const fileName = file.name
-      const uploadUrl = await generateUploadUrl.mutateAsync({})
-
-      const toastId = showUploadProgressToast(fileName, 0)
-
-      activeUploadsRef.current.set(fileName, {
-        toastId,
-        progress: 0,
-      })
-
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-
-        const handleError = (message: string, error?: unknown) => {
-          cleanupUpload(fileName)
-          showErrorToast(fileName, message, toastId)
-          if (error) {
-            console.error(message, error)
-          }
-          reject(new Error(message))
-        }
-
-        xhr.upload.addEventListener(
-          'progress',
-          (event: ProgressEvent<XMLHttpRequestUpload>) => {
-            if (event.lengthComputable) {
-              const percentComplete = Math.round(
-                (event.loaded / event.total) * 100,
-              )
-
-              const uploadInfo = activeUploadsRef.current.get(fileName)
-              if (uploadInfo) {
-                uploadInfo.progress = percentComplete
-                showUploadProgressToast(fileName, percentComplete, toastId)
-              }
-            }
-          },
-        )
-
-        xhr.addEventListener('load', async () => {
-          if (xhr.status !== 200) {
-            handleError(`Upload failed with status ${xhr.status}`)
-            return
-          }
-
-          try {
-            const response = JSON.parse(xhr.responseText) as {
-              storageId: string
-            }
-            const storageId = response.storageId as unknown as Id<'_storage'>
-
-            try {
-              await trackUploadMutation.mutateAsync({
-                storageId,
-                originalFileName: file.name,
-              })
-              resolve(storageId)
-            } catch (error) {
-              handleError('Failed to track upload', error)
-            }
-          } catch (error) {
-            handleError('Failed to parse upload response', error)
-          }
-        })
-
-        xhr.addEventListener('error', () => {
-          handleError('Upload failed')
-        })
-
-        xhr.addEventListener('abort', () => {
-          handleError('Upload cancelled')
-        })
-
-        xhr.open('POST', uploadUrl, true)
-        xhr.setRequestHeader('Content-Type', file.type)
-        xhr.send(file)
-      })
-    },
-    [generateUploadUrl, trackUploadMutation, cleanupUpload],
+  const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
+    new Map(),
   )
 
-  const handleTextFileUpload = useCallback(
-    async (file: File, parentId?: SidebarItemId): Promise<void> => {
-      if (!campaignId) return
-
+  const uploadSingleFile = useCallback(
+    async (
+      file: File,
+      targetCampaignId: Id<'campaigns'>,
+      parentId?: SidebarItemId,
+      silent = false,
+    ): Promise<boolean> => {
       const fileName = file.name
+      const uploadId = crypto.randomUUID()
       const validation = validateFileForUpload(file)
       if (!validation.success) {
-        toast.error(`${fileName}: ${validation.error}`)
-        return
+        if (!silent) toast.error(`${fileName}: ${validation.error}`)
+        return false
       }
 
-      const toastId = showLoadingToast(fileName, 'Processing text file...')
-
-      try {
-        const blocks = await convertTextToBlocks(file)
-        const { noteId, slug } = await createNote.mutateAsync({
-          campaignId,
-          name: fileName,
-          parentId,
-        })
-
-        await updateNoteContent.mutateAsync({
-          noteId,
-          content: blocks,
-        })
-
-        await openParentFolders(noteId)
-        navigateToNote(slug, true)
-
-        toast.dismiss(toastId)
-        showSuccessToast(fileName, 'Note created successfully')
-      } catch (error) {
-        console.error(`Failed to process text file ${fileName}:`, error)
-        showErrorToast(
-          fileName,
-          getErrorMessage(error) || 'Failed to create note',
-          toastId,
+      let toastId: string | number | undefined
+      if (!silent) {
+        toastId = toast.loading(
+          <ToastContent
+            title={fileName}
+            message={isTextFile(file) ? 'Processing...' : 'Uploading... 0%'}
+            progress={isTextFile(file) ? undefined : 0}
+          />,
+          { duration: Infinity, style: TOAST_STYLE },
         )
-      }
-    },
-    [
-      campaignId,
-      createNote,
-      updateNoteContent,
-      openParentFolders,
-      navigateToNote,
-    ],
-  )
-
-  const handleMediaFileUpload = useCallback(
-    async (file: File, parentId?: SidebarItemId): Promise<void> => {
-      if (!campaignId) return
-
-      const fileName = file.name
-      const validation = validateFileForUpload(file)
-      if (!validation.success) {
-        toast.error(`${fileName}: ${validation.error}`)
-        return
+        activeUploadsRef.current.set(uploadId, { toastId })
       }
 
       try {
-        const storageId = await uploadFileWithProgress(file)
-        await commitUpload.mutateAsync({ storageId })
+        if (isTextFile(file)) {
+          const blocks = await convertTextToBlocks(file)
+          const { noteId, slug } = await createNoteWithContent.mutateAsync({
+            campaignId: targetCampaignId,
+            name: fileName,
+            parentId,
+            content: blocks,
+          })
 
-        const { fileId: newFileId, slug: newFileSlug } =
-          await createFile.mutateAsync({
-            campaignId,
+          if (!silent) {
+            toast.dismiss(toastId)
+            toast.success(
+              <ToastContent title={fileName} message="Note created" />,
+              { duration: 3000, style: TOAST_STYLE },
+            )
+            await openParentFolders(noteId)
+            navigateToNote(slug, true)
+          }
+        } else if (isMediaFile(file)) {
+          const uploadUrl = await generateUploadUrl.mutateAsync({})
+          const storageId = await uploadFile(file, uploadUrl, {
+            onProgress: silent
+              ? undefined
+              : (pct) => {
+                  if (toastId) {
+                    toast.loading(
+                      <ToastContent
+                        title={fileName}
+                        message={`Uploading... ${pct}%`}
+                        progress={pct}
+                      />,
+                      {
+                        id: toastId,
+                        duration: Infinity,
+                        style: TOAST_STYLE,
+                      },
+                    )
+                  }
+                },
+          })
+
+          await trackUpload.mutateAsync({
+            storageId,
+            originalFileName: fileName,
+          })
+          await commitUpload.mutateAsync({ storageId })
+          const { fileId, slug } = await createFile.mutateAsync({
+            campaignId: targetCampaignId,
             name: fileName,
             storageId,
             parentId,
           })
 
-        await openParentFolders(newFileId)
-        navigateToFile(newFileSlug)
+          if (!silent) {
+            toast.dismiss(toastId)
+            toast.success(
+              <ToastContent title={fileName} message="File created" />,
+              { duration: 3000, style: TOAST_STYLE },
+            )
+            await openParentFolders(fileId)
+            navigateToFile(slug)
+          }
+        } else {
+          if (silent) {
+            console.warn(`${fileName}: unsupported file type`)
+          }
+          return false
+        }
 
-        cleanupUpload(fileName)
-        showSuccessToast(fileName, 'File created successfully')
+        return true
       } catch (error) {
-        console.error(`Failed to process file ${fileName}:`, error)
-        cleanupUpload(fileName)
-        showErrorToast(fileName, getErrorMessage(error))
+        if (!silent && toastId) {
+          toast.dismiss(toastId)
+          toast.error(
+            <ToastContent title={fileName} message={getErrorMessage(error)} />,
+            { duration: 5000, style: TOAST_STYLE },
+          )
+        }
+        throw error
+      } finally {
+        if (!silent) activeUploadsRef.current.delete(uploadId)
       }
     },
     [
-      campaignId,
-      uploadFileWithProgress,
+      createNoteWithContent,
+      generateUploadUrl,
+      trackUpload,
       commitUpload,
       createFile,
       openParentFolders,
       navigateToFile,
-      cleanupUpload,
+      navigateToNote,
     ],
   )
 
-  const handleFileDrop = useCallback(
+  const uploadFolderRecursive = useCallback(
     async (
-      files: Array<File>,
-      options?: FileDropHandlerOptions,
-    ): Promise<void> => {
+      folder: FolderStructure,
+      targetCampaignId: Id<'campaigns'>,
+      parentId: SidebarItemId | undefined,
+      progress: UploadProgress,
+    ): Promise<Id<'folders'>> => {
+      const { folderId } = await createFolder.mutateAsync({
+        campaignId: targetCampaignId,
+        name: folder.name,
+        parentId,
+      })
+
+      progress.processedFolders++
+      toast.loading(<FolderProgressContent progress={progress} />, {
+        id: progress.toastId,
+        duration: Infinity,
+        style: TOAST_STYLE,
+      })
+
+      for (const { file, relativePath } of folder.files) {
+        try {
+          const validation = validateFileForUpload(file)
+          const success = await uploadSingleFile(
+            file,
+            targetCampaignId,
+            folderId,
+            true,
+          )
+          if (!success && validation.success) {
+            console.warn(`${file.name}: unsupported file type`)
+          }
+          progress[success ? 'processedFiles' : 'skippedFiles']++
+        } catch (error) {
+          console.error(`Failed to process ${relativePath}:`, error)
+          progress.skippedFiles++
+        }
+        toast.loading(<FolderProgressContent progress={progress} />, {
+          id: progress.toastId,
+          duration: Infinity,
+          style: TOAST_STYLE,
+        })
+      }
+
+      for (const subfolder of folder.subfolders) {
+        await uploadFolderRecursive(
+          subfolder,
+          targetCampaignId,
+          folderId,
+          progress,
+        )
+      }
+
+      return folderId
+    },
+    [createFolder, uploadSingleFile],
+  )
+
+  const handleDrop = useCallback(
+    async (dropResult: DropResult, options?: DropOptions): Promise<void> => {
       const targetCampaignId = options?.campaignId || campaignId
       if (!targetCampaignId) {
         toast.error('No campaign selected')
         return
       }
 
-      const parentId = options?.parentId
+      const { files, rootFolders } = dropResult
+      const hasFolders = rootFolders.length > 0
+      const isSingleFile = files.length === 1 && !hasFolders
 
-      for (const file of files) {
-        if (isTextFile(file)) {
-          await handleTextFileUpload(file, parentId)
-        } else if (isMediaFile(file)) {
-          await handleMediaFileUpload(file, parentId)
-        } else {
-          toast.error(`Unsupported file type: ${file.name}`)
+      // Single file: individual toast with navigation
+      if (isSingleFile) {
+        const success = await uploadSingleFile(
+          files[0].file,
+          targetCampaignId,
+          options?.parentId,
+          false,
+        )
+        if (!success)
+          toast.error(`Unsupported file type: ${files[0].file.name}`)
+        return
+      }
+
+      // Multiple items: batch progress toast
+      const stats = getDropResultStats(dropResult)
+      const toastId = toast.loading(
+        hasFolders ? (
+          <FolderProgressContent
+            progress={{
+              toastId: '',
+              totalFiles: stats.totalFiles,
+              totalFolders: stats.totalFolders,
+              processedFiles: 0,
+              processedFolders: 0,
+              skippedFiles: 0,
+            }}
+          />
+        ) : (
+          <FileProgressContent
+            totalFiles={stats.totalFiles}
+            processedFiles={0}
+            skippedFiles={0}
+          />
+        ),
+        { duration: Infinity, style: TOAST_STYLE },
+      )
+
+      const progress: UploadProgress = {
+        toastId,
+        totalFiles: stats.totalFiles,
+        totalFolders: stats.totalFolders,
+        processedFiles: 0,
+        processedFolders: 0,
+        skippedFiles: 0,
+      }
+
+      try {
+        // Process root-level files
+        for (const { file, relativePath } of files) {
+          try {
+            const validation = validateFileForUpload(file)
+            const success = await uploadSingleFile(
+              file,
+              targetCampaignId,
+              options?.parentId,
+              true,
+            )
+            if (!success && validation.success) {
+              console.warn(`${file.name}: unsupported file type`)
+            }
+            progress[success ? 'processedFiles' : 'skippedFiles']++
+          } catch (error) {
+            console.error(`Failed to process ${relativePath}:`, error)
+            progress.skippedFiles++
+          }
+          toast.loading(
+            hasFolders ? (
+              <FolderProgressContent progress={progress} />
+            ) : (
+              <FileProgressContent
+                totalFiles={stats.totalFiles}
+                processedFiles={progress.processedFiles}
+                skippedFiles={progress.skippedFiles}
+              />
+            ),
+            { id: toastId, duration: Infinity, style: TOAST_STYLE },
+          )
         }
+
+        // Process folders
+        let lastFolderId: Id<'folders'> | undefined
+        for (const folder of rootFolders) {
+          lastFolderId = await uploadFolderRecursive(
+            folder,
+            targetCampaignId,
+            options?.parentId,
+            progress,
+          )
+        }
+
+        // Show success
+        toast.dismiss(toastId)
+        const skippedText =
+          progress.skippedFiles > 0 ? ` (${progress.skippedFiles} skipped)` : ''
+        const message = hasFolders
+          ? `Created ${progress.processedFolders} folder${progress.processedFolders !== 1 ? 's' : ''} and ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
+          : `Uploaded ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
+        toast.success(
+          <ToastContent title="Upload complete" message={message} />,
+          { duration: 3000, style: TOAST_STYLE },
+        )
+
+        // Open parent folders in sidebar
+        if (lastFolderId) {
+          await openParentFolders(lastFolderId)
+        } else if (options?.parentId) {
+          await openParentFolders(options.parentId)
+        }
+      } catch (error) {
+        console.error('Failed to process drop:', error)
+        toast.dismiss(toastId)
+        toast.error(
+          <ToastContent
+            title="Upload failed"
+            message={getErrorMessage(error)}
+          />,
+          { duration: 5000, style: TOAST_STYLE },
+        )
       }
     },
-    [campaignId, handleMediaFileUpload, handleTextFileUpload],
+    [campaignId, uploadSingleFile, uploadFolderRecursive, openParentFolders],
   )
 
-  return {
-    handleFileDrop,
-  }
+  return { handleDrop }
 }

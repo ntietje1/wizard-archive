@@ -106,6 +106,29 @@ export const createNote = mutation({
   },
 })
 
+export const createNoteWithContent = mutation({
+  args: {
+    name: v.optional(v.string()),
+    parentId: v.optional(sidebarItemIdValidator),
+    campaignId: v.id('campaigns'),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    content: v.array(customBlockValidator),
+  },
+  returns: v.object({
+    noteId: v.id('notes'),
+    slug: v.string(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+    const { noteId, slug } = await createNoteFn(ctx, args)
+    await saveTopLevelBlocksForNote(ctx, noteId, args.content)
+    return { noteId, slug }
+  },
+})
+
 export const updateNoteContent = mutation({
   args: {
     noteId: v.id('notes'),
@@ -113,17 +136,6 @@ export const updateNoteContent = mutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const note = await ctx.db.get(args.noteId)
-    if (!note) {
-      throw new Error('Note not found')
-    }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
     return args.noteId
   },

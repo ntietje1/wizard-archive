@@ -2,15 +2,13 @@ import { useCallback, useRef, useState } from 'react'
 import { useCampaign } from './useCampaign'
 import { useFileDropHandler } from './useFileDropHandler'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { DropResult } from '~/lib/folder-reader'
+import { processDataTransferItems } from '~/lib/folder-reader'
 
-/**
- * Hook to handle native file drag-and-drop events.
- * Distinguishes between file drags (from OS) and internal dnd-kit drags.
- */
 export function useFileDragDrop(parentId?: SidebarItemId) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { handleFileDrop } = useFileDropHandler()
+  const { handleDrop: handleDropFiles } = useFileDropHandler()
 
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const dragDepthRef = useRef(0)
@@ -23,7 +21,6 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       if (!isFileDrag(e)) return
-
       e.preventDefault()
       e.stopPropagation()
       dragDepthRef.current++
@@ -44,20 +41,16 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
   const handleDragLeave = useCallback(
     (e: React.DragEvent) => {
       if (!isFileDrag(e)) return
-
       e.preventDefault()
       e.stopPropagation()
       dragDepthRef.current--
-
-      if (dragDepthRef.current === 0) {
-        setIsDraggingFiles(false)
-      }
+      if (dragDepthRef.current === 0) setIsDraggingFiles(false)
     },
     [isFileDrag],
   )
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       if (!isFileDrag(e)) return
 
       e.preventDefault()
@@ -65,15 +58,16 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
       dragDepthRef.current = 0
       setIsDraggingFiles(false)
 
-      const files = Array.from(e.dataTransfer.files)
-      if (files.length === 0 || !campaignId) return
+      if (!campaignId) return
 
-      handleFileDrop(files, {
-        campaignId,
-        parentId,
-      })
+      const dropResult: DropResult = await processDataTransferItems(
+        e.dataTransfer.items,
+      )
+      if (dropResult.files.length > 0 || dropResult.rootFolders.length > 0) {
+        handleDropFiles(dropResult, { campaignId, parentId })
+      }
     },
-    [isFileDrag, campaignId, handleFileDrop, parentId],
+    [isFileDrag, campaignId, handleDropFiles, parentId],
   )
 
   return {
