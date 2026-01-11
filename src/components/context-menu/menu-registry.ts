@@ -169,7 +169,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       variant: 'share',
       priority: 20,
       shouldShow: (ctx) =>
-        ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM && p.isSidebarItem(ctx),
+        ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM &&
+        p.isSidebarItem(ctx) &&
+        p.isNotType(SIDEBAR_ITEM_TYPES.folders)(ctx),
       isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
       action: actions.toggleShareWithAll,
       // Dynamic children for individual player sharing (empty = no submenu)
