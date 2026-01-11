@@ -7,7 +7,10 @@ import {
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/baseFields'
-import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/types'
+import {
+  SIDEBAR_ITEM_SHARE_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from '../sidebarItems/types'
 import { blockShareStatusValidator } from '../blocks/schema'
 import { BLOCK_SHARE_STATUS } from '../blocks/types'
 import {
@@ -41,6 +44,10 @@ export const setSidebarItemShareStatus = mutation({
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
+    }
+
+    if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+      throw new Error('Cannot share folders')
     }
 
     // Update the item's share status
