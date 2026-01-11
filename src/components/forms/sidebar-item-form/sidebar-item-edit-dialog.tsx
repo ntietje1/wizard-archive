@@ -10,6 +10,7 @@ import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -82,10 +83,6 @@ export function SidebarItemEditDialog({
   const form = useForm({
     defaultValues: getInitialValues(),
     onSubmit: async ({ value }) => {
-      if (isNotUnique) {
-        return
-      }
-
       try {
         await updateMutation.mutateAsync({
           itemId: item._id,
@@ -102,10 +99,10 @@ export function SidebarItemEditDialog({
     },
   })
 
-  const { isNotUnique } = useNameValidation({
+  const { isNotUnique, isLoading, shouldValidate, checkNameUnique } = useNameValidation({
     name: form.state.values.name,
     initialName: item.name ?? '',
-    isActive: true,
+    isActive: isOpen,
     campaignId: item.campaignId,
     parentId: item.parentId,
     excludeId: item._id,
@@ -146,12 +143,8 @@ export function SidebarItemEditDialog({
         <form.Field
           name="name"
           validators={{
-            onChange: () => {
-              if (isNotUnique) {
-                return 'A name with this value already exists here'
-              }
-              return undefined
-            },
+            onChangeAsync: ({ value }) => checkNameUnique(value),
+            onChangeAsyncDebounceMs: 300,
           }}
         >
           {(field) => (
@@ -160,20 +153,18 @@ export function SidebarItemEditDialog({
               <Input
                 id="item-name"
                 value={field.state.value}
-                onChange={(e) => {
-                  field.handleChange(e.target.value)
-                }}
+                onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder={`Enter ${typeName.toLowerCase()} name`}
                 disabled={form.state.isSubmitting}
                 autoFocus
                 aria-invalid={field.state.meta.errors.length > 0}
               />
-              {field.state.meta.errors[0] && (
-                <p className="text-sm text-destructive">
-                  {field.state.meta.errors[0]}
-                </p>
-              )}
+              <FormFieldValidation
+                isLoading={isLoading || field.state.meta.isValidating}
+                isNotUnique={field.state.meta.errors.length > 0}
+                shouldValidate={shouldValidate || field.state.meta.isValidating}
+              />
             </div>
           )}
         </form.Field>
@@ -229,19 +220,26 @@ export function SidebarItemEditDialog({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={form.state.isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={form.state.isSubmitting}>
-            {form.state.isSubmitting ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
+        <form.Subscribe selector={(s) => s.canSubmit}>
+          {(canSubmit) => (
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={form.state.isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={form.state.isSubmitting || !canSubmit}
+              >
+                {form.state.isSubmitting ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          )}
+        </form.Subscribe>
       </form>
     </FormDialog>
   )

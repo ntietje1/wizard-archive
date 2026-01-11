@@ -9,6 +9,7 @@ import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
 import { getIconByName } from '~/lib/category-icons'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -90,7 +91,7 @@ export function MapForm({
     },
   })
 
-  const { isNotUnique } = useNameValidation({
+  const { isLoading: isValidating, shouldValidate, checkNameUnique } = useNameValidation({
     name: form.state.values.name,
     initialName: map.data?.name ?? '',
     isActive: !!mapId,
@@ -124,10 +125,6 @@ export function MapForm({
       }
 
       if (mapId) {
-        // Prevent submission if name is invalid
-        if (isNotUnique) {
-          return
-        }
         // Update existing map
         try {
           await updateMutation.mutateAsync({
@@ -194,35 +191,44 @@ export function MapForm({
             if (!value || value.trim().length === 0) {
               return 'Map name is required'
             }
-            if (isNotUnique) {
-              return 'A name with this value already exists here'
-            }
             return undefined
           },
+          onChangeAsync: ({ value }) => checkNameUnique(value),
+          onChangeAsyncDebounceMs: 300,
         }}
       >
-        {(field) => (
-          <div className="space-y-2">
-            <Label htmlFor={field.name}>Map Name</Label>
-            <Input
-              id={field.name}
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value)
-              }}
-              onBlur={field.handleBlur}
-              placeholder="Enter map name"
-              disabled={isSubmitting}
-              autoFocus
-              aria-invalid={field.state.meta.errors.length > 0}
-            />
-            {field.state.meta.errors[0] && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
-            )}
-          </div>
-        )}
+        {(field) => {
+          const hasRequiredError = field.state.meta.errors.some(
+            (e) => e === 'Map name is required',
+          )
+          const hasUniqueError = field.state.meta.errors.some((e) =>
+            e?.includes('already exists'),
+          )
+          return (
+            <div className="space-y-2">
+              <Label htmlFor={field.name}>Map Name</Label>
+              <Input
+                id={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                placeholder="Enter map name"
+                disabled={isSubmitting}
+                autoFocus
+                aria-invalid={field.state.meta.errors.length > 0}
+              />
+              {hasRequiredError ? (
+                <p className="text-sm text-destructive">Map name is required</p>
+              ) : (
+                <FormFieldValidation
+                  isLoading={isValidating || field.state.meta.isValidating}
+                  isNotUnique={hasUniqueError}
+                  shouldValidate={shouldValidate || field.state.meta.isValidating}
+                />
+              )}
+            </div>
+          )
+        }}
       </form.Field>
 
       {/* Icon and Color Row */}
@@ -289,10 +295,11 @@ export function MapForm({
       <form.Subscribe
         selector={(s) => ({
           name: s.values.name,
+          canSubmit: s.canSubmit,
         })}
       >
-        {({ name }) => {
-          const isDisabled = !name || !hasImage || isSubmitting
+        {({ name, canSubmit }) => {
+          const isDisabled = !name || !hasImage || isSubmitting || (mapId && !canSubmit)
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button

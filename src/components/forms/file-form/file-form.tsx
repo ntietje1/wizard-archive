@@ -9,6 +9,7 @@ import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -86,7 +87,11 @@ export function FileForm({
     },
   })
 
-  const { isNotUnique } = useNameValidation({
+  const {
+    isLoading: isValidating,
+    shouldValidate,
+    checkNameUnique,
+  } = useNameValidation({
     name: form.state.values.name,
     initialName: file.data?.name ?? '',
     isActive: !!fileId && !!file.data,
@@ -128,10 +133,6 @@ export function FileForm({
         ''
 
       if (fileId) {
-        // Prevent submission if name is invalid
-        if (isNotUnique) {
-          return
-        }
         // Update existing file
         try {
           await updateMutation.mutateAsync({
@@ -201,12 +202,8 @@ export function FileForm({
       <form.Field
         name="name"
         validators={{
-          onChange: () => {
-            if (isNotUnique) {
-              return 'A name with this value already exists here'
-            }
-            return undefined
-          },
+          onChangeAsync: ({ value }) => checkNameUnique(value),
+          onChangeAsyncDebounceMs: 300,
         }}
       >
         {(field) => (
@@ -215,20 +212,18 @@ export function FileForm({
             <Input
               id={field.name}
               value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value)
-              }}
+              onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               placeholder="Enter file name"
               disabled={isDisabled}
               autoFocus
               aria-invalid={field.state.meta.errors.length > 0}
             />
-            {field.state.meta.errors[0] && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
-            )}
+            <FormFieldValidation
+              isLoading={isValidating || field.state.meta.isValidating}
+              isNotUnique={field.state.meta.errors.length > 0}
+              shouldValidate={shouldValidate || field.state.meta.isValidating}
+            />
           </div>
         )}
       </form.Field>
@@ -296,19 +291,26 @@ export function FileForm({
         ) : null}
       </div>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          disabled={isDisabled}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={!hasFile || isDisabled}>
-          {fileId ? 'Update' : 'Create'}
-        </Button>
-      </div>
+      <form.Subscribe selector={(s) => s.canSubmit}>
+        {(canSubmit) => (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isDisabled}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!hasFile || isDisabled || (fileId && !canSubmit)}
+            >
+              {fileId ? 'Update' : 'Create'}
+            </Button>
+          </div>
+        )}
+      </form.Subscribe>
     </form>
   )
 }

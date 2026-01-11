@@ -4,6 +4,7 @@ import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
 
 interface EditableNameProps {
   initialName: string
@@ -24,14 +25,13 @@ export function EditableName({
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
-  const [hasError, setHasError] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     setName(initialName)
-    setHasError(false)
   }, [initialName])
 
-  const { isNotUnique, isLoading } = useNameValidation({
+  const { isNotUnique, isLoading, shouldValidate } = useNameValidation({
     name,
     initialName,
     isActive: isEditing,
@@ -40,38 +40,48 @@ export function EditableName({
     excludeId,
   })
 
-  // Update error state based on validation
-  useEffect(() => {
-    setHasError(isNotUnique)
-  }, [isNotUnique])
-
   const handleNameSubmit = useCallback(async () => {
+    // Prevent submission while loading validation or already submitting
+    if (isLoading || isSubmitting) {
+      return
+    }
+
+    // If name unchanged, just close editing
     if (name === initialName) {
       setIsEditing(false)
       return
     }
 
-    // Prevent submission if name is invalid
-    if (isNotUnique && !isLoading) {
-      setHasError(true)
+    // Prevent submission if name is taken
+    if (isNotUnique) {
       return
     }
 
-    await onRename(name)
-      .then(() => {
-        setIsEditing(false)
-      })
-      .catch((error) => {
-        console.error(error)
-        setHasError(true)
-      })
-  }, [name, initialName, onRename, isNotUnique, isLoading])
+    setIsSubmitting(true)
+    try {
+      await onRename(name)
+      setIsEditing(false)
+    } catch (error) {
+      console.error(error)
+      // Reset to original name on error
+      setName(initialName)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [name, initialName, onRename, isNotUnique, isLoading, isSubmitting])
 
   const handleFocus = useCallback(() => {
     if (!isEditing) {
       setIsEditing(true)
     }
   }, [isEditing])
+
+  const handleCancel = useCallback(() => {
+    setName(initialName)
+    setIsEditing(false)
+  }, [initialName])
+
+  const hasError = isNotUnique
 
   return (
     <div className="truncate min-w-0 flex-shrink-0 relative">
@@ -83,10 +93,8 @@ export function EditableName({
         value={name}
         placeholder={defaultName}
         readOnly={!isEditing}
-        onChange={(e) => {
-          setName(e.target.value)
-          setHasError(false)
-        }}
+        disabled={isSubmitting}
+        onChange={(e) => setName(e.target.value)}
         onFocus={handleFocus}
         onBlur={handleNameSubmit}
         onKeyDown={(e) => {
@@ -94,15 +102,14 @@ export function EditableName({
             e.preventDefault()
             handleNameSubmit()
           } else if (e.key === 'Escape') {
-            setName(initialName)
-            setIsEditing(false)
-            setHasError(false)
+            handleCancel()
           }
         }}
         className={cn(
           'absolute inset-0 min-w-0 flex-shrink-0 w-full cursor-text',
           isEditing ? 'underline' : 'hover:underline',
-          hasError || isNotUnique ? 'text-destructive' : '',
+          hasError && 'text-destructive underline-offset-2',
+          isSubmitting && 'opacity-50',
         )}
       />
       {!name && !isEditing && (
@@ -110,6 +117,11 @@ export function EditableName({
           {defaultName}
         </span>
       )}
+      <NameValidationFeedback
+        isLoading={isLoading}
+        isNotUnique={isNotUnique}
+        shouldValidate={shouldValidate}
+      />
     </div>
   )
 }
