@@ -28,6 +28,7 @@ export default [
         'error',
         { allowConstantExport: true },
       ],
+      '@typescript-eslint/no-unnecessary-condition': 'off',
     },
   },
 ]

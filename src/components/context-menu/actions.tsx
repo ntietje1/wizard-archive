@@ -1,14 +1,19 @@
 import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
+import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_SHARE_STATUS } from 'convex/sidebarItems/types'
+import {
+  SIDEBAR_ITEM_SHARE_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from 'convex/sidebarItems/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
-import type { Folder } from 'convex/folders/types'
+import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -27,6 +32,7 @@ import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-de
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useSession } from '~/hooks/useSession'
+import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
 
 export function useMenuActions() {
   const { navigateToItem, navigateToMap, clearEditorContent } =
@@ -316,6 +322,262 @@ export function useMenuActions() {
       },
       [campaignId, convex],
     ),
+
+    downloadFile: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !isFile(ctx.item)) return
+
+        try {
+          const url = await convex.query(api.files.queries.getFileDownloadUrl, {
+            fileId: ctx.item._id,
+          })
+
+          if (!url) {
+            toast.error('Failed to get download URL')
+            return
+          }
+
+          const fileName = ctx.item.name ?? defaultItemName(ctx.item)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          toast.success('Download started')
+        } catch (error) {
+          console.error('Failed to download file:', error)
+          toast.error('Failed to download file')
+        }
+      },
+      [convex],
+    ),
+
+    downloadNote: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !isNote(ctx.item)) return
+
+        try {
+          const noteWithContent = await convex.query(
+            api.notes.queries.getNoteWithContent,
+            { noteId: ctx.item._id },
+          )
+
+          if (!noteWithContent) {
+            toast.error('Failed to get note content')
+            return
+          }
+
+          const markdown = await convertBlocksToMarkdown(
+            noteWithContent.content,
+          )
+          const baseName =
+            noteWithContent.name ?? defaultItemName(noteWithContent)
+          const fileName = baseName.endsWith('.md')
+            ? baseName
+            : `${baseName}.md`
+
+          const blob = new Blob([markdown], { type: 'text/markdown' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+
+          toast.success('Download started')
+        } catch (error) {
+          console.error('Failed to download note:', error)
+          toast.error('Failed to download note')
+        }
+      },
+      [convex],
+    ),
+
+    downloadMap: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !isGameMap(ctx.item)) return
+
+        try {
+          const url = await convex.query(
+            api.gameMaps.queries.getMapDownloadUrl,
+            {
+              mapId: ctx.item._id,
+            },
+          )
+
+          if (!url) {
+            toast.error('Map has no image')
+            return
+          }
+
+          const mapName = ctx.item.name ?? defaultItemName(ctx.item)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = mapName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          toast.success('Download started')
+        } catch (error) {
+          console.error('Failed to download map:', error)
+          toast.error('Failed to download map')
+        }
+      },
+      [convex],
+    ),
+
+    downloadFolder: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !isFolder(ctx.item)) return
+
+        const toastId = toast.loading('Preparing download...')
+
+        try {
+          const { folderName, items } = await convex.query(
+            api.folders.queries.getFolderContentsForDownload,
+            { folderId: ctx.item._id },
+          )
+
+          if (items.length === 0) {
+            toast.dismiss(toastId)
+            toast.info('Folder is empty')
+            return
+          }
+
+          toast.loading('Downloading items...', { id: toastId })
+
+          const zip = new JSZip()
+
+          const downloadPromises = items.map(async (item: DownloadableItem) => {
+            try {
+              if (
+                item.type === SIDEBAR_ITEM_TYPES.files ||
+                item.type === SIDEBAR_ITEM_TYPES.gameMaps
+              ) {
+                if (!item.downloadUrl) {
+                  console.warn(`No download URL for: ${item.path}`)
+                  return
+                }
+                const response = await fetch(item.downloadUrl)
+                if (!response.ok) {
+                  console.warn(`Failed to fetch: ${item.path}`)
+                  return
+                }
+                const blob = await response.blob()
+                zip.file(item.path, blob)
+              } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+                const markdown = await convertBlocksToMarkdown(item.content)
+                zip.file(item.path, markdown)
+              } else {
+                console.warn(`Unknown item type`, item)
+                return
+              }
+            } catch (error) {
+              console.warn(`Failed to process: ${item.path}`, error)
+            }
+          })
+
+          await Promise.all(downloadPromises)
+
+          toast.loading('Creating zip file...', { id: toastId })
+
+          const zipBlob = await zip.generateAsync({ type: 'blob' })
+          const zipFileName = `${folderName}.zip`
+
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(zipBlob)
+          link.download = zipFileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+
+          toast.dismiss(toastId)
+          toast.success(`Downloaded ${items.length} item(s)`)
+        } catch (error) {
+          console.error('Failed to download folder:', error)
+          toast.dismiss(toastId)
+          toast.error('Failed to download folder')
+        }
+      },
+      [convex],
+    ),
+
+    downloadAll: useCallback(async () => {
+      if (!campaignId) return
+
+      const toastId = toast.loading('Preparing download...')
+
+      try {
+        const { items } = await convex.query(
+          api.folders.queries.getRootContentsForDownload,
+          { campaignId },
+        )
+
+        if (items.length === 0) {
+          toast.dismiss(toastId)
+          toast.info('No items to download')
+          return
+        }
+
+        toast.loading('Downloading items...', { id: toastId })
+
+        const zip = new JSZip()
+
+        const downloadPromises = items.map(async (item: DownloadableItem) => {
+          try {
+            if (
+              item.type === SIDEBAR_ITEM_TYPES.files ||
+              item.type === SIDEBAR_ITEM_TYPES.gameMaps
+            ) {
+              if (!item.downloadUrl) {
+                console.warn(`No download URL for: ${item.path}`)
+                return
+              }
+              const response = await fetch(item.downloadUrl)
+              if (!response.ok) {
+                console.warn(`Failed to fetch: ${item.path}`)
+                return
+              }
+              const blob = await response.blob()
+              zip.file(item.path, blob)
+            } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+              const markdown = await convertBlocksToMarkdown(item.content)
+              zip.file(item.path, markdown)
+            } else {
+              console.warn(`Unknown item type`, item)
+              return
+            }
+          } catch (error) {
+            console.warn(`Failed to process: ${item.path}`, error)
+          }
+        })
+
+        await Promise.all(downloadPromises)
+
+        toast.loading('Creating zip file...', { id: toastId })
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        const zipFileName = 'campaign-export.zip'
+
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(zipBlob)
+        link.download = zipFileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+
+        toast.dismiss(toastId)
+        toast.success(`Downloaded ${items.length} item(s)`)
+      } catch (error) {
+        console.error('Failed to download all items:', error)
+        toast.dismiss(toastId)
+        toast.error('Failed to download')
+      }
+    }, [convex, campaignId]),
   }
 
   const dialogsContent = useMemo(

@@ -79,13 +79,7 @@ export function FileCard({
   const contentType = metadataQuery.data?.contentType ?? null
   const FileIcon = getFileTypeIcon(contentType, file.name)
 
-  const dragData: SidebarDragData = {
-    _id: file._id,
-    type: SIDEBAR_ITEM_TYPES.files,
-    name: file.name || defaultItemName(file),
-    parentId: file.parentId,
-    icon: FileIcon,
-  }
+  const dragData: SidebarDragData = file
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: file._id,

@@ -4,43 +4,27 @@ import {
 } from 'convex/sidebarItems/types'
 import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
 import type {
+  SidebarItem,
   SidebarItemId,
-  SidebarItemOrRootType,
   SidebarItemType,
 } from 'convex/sidebarItems/types'
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
-import type { LucideIcon } from '~/lib/icons'
 
-// Sidebar-specific drag and drop data types
-export interface SidebarDragData {
-  _id: SidebarItemId
-  type: SidebarItemType
-  parentId?: SidebarItemId
-  ancestorIds?: Array<SidebarItemId>
-  name: string
-  icon: LucideIcon
-}
+export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 
-export interface SidebarDropData {
-  _id: SidebarItemId | typeof SIDEBAR_ROOT_TYPE
-  type: SidebarItemOrRootType
-  ancestorIds?: Array<SidebarItemId>
-  accepts?: Array<SidebarItemType>
-}
-
-// Internal interfaces for validation
-interface DragItem {
-  _id: SidebarItemId
-  type: SidebarItemType
-  parentId?: SidebarItemId
+export interface SidebarDragData extends SidebarItem<SidebarItemType> {
   ancestorIds?: Array<SidebarItemId>
 }
 
-interface DropTarget {
-  id: SidebarItemId | typeof SIDEBAR_ROOT_TYPE
-  type: SidebarItemOrRootType
-  ancestorIds?: Array<SidebarItemId>
+export type SidebarDropData =
+  | SidebarDragData
+  | { type: typeof SIDEBAR_ROOT_TYPE }
+  | { type: typeof EMPTY_EDITOR_DROP_TYPE }
+
+// This type predicate will properly narrow the type to SidebarDragData when used
+export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
+  return data.type !== SIDEBAR_ROOT_TYPE && data.type !== EMPTY_EDITOR_DROP_TYPE
 }
 
 /**
@@ -48,16 +32,22 @@ interface DropTarget {
  * Uses the validChildren map to match backend validation logic.
  */
 export function validateDrop(
-  draggedItem: DragItem | null,
-  targetData: DropTarget | null,
-  rootType: typeof SIDEBAR_ROOT_TYPE,
+  draggedItem: SidebarDragData | null,
+  targetData: SidebarDropData | null,
 ): boolean {
   if (!draggedItem || !targetData) return false
-  if (targetData.id === draggedItem._id) return false
 
-  // prevent dropping on same parent
-  if (targetData.type === rootType && !draggedItem.parentId) return false
-  if (targetData.type !== rootType && draggedItem.parentId === targetData.id) {
+  // items cannot be dropped onto their current parent
+  if (
+    targetData.type === SIDEBAR_ROOT_TYPE &&
+    draggedItem.parentId === undefined
+  ) {
+    return false
+  }
+  if (!isSidebarItem(targetData)) return true
+  if (targetData._id === draggedItem._id) return false
+
+  if (draggedItem.parentId === targetData._id) {
     return false
   }
 
@@ -83,27 +73,17 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
 
   if (!draggedItem || !targetData) return false
 
-  return validateDrop(
-    {
-      _id: draggedItem._id,
-      type: draggedItem.type,
-      parentId: draggedItem.parentId,
-      ancestorIds: draggedItem.ancestorIds || [],
-    },
-    {
-      id: targetData._id,
-      type: targetData.type,
-      ancestorIds: targetData.ancestorIds || [],
-    },
-    SIDEBAR_ROOT_TYPE,
-  )
+  return validateDrop(draggedItem, targetData)
 }
 
 /**
  * Validates if external files can be dropped on a target item.
  */
-export function canDropFilesOnTarget(targetData: DropTarget | null): boolean {
+export function canDropFilesOnTarget(
+  targetData: SidebarDropData | null,
+): boolean {
   if (!targetData) return false
+  if (!isSidebarItem(targetData)) return true
 
   // Check if target accepts files as children
   const validChildTypes = validSidebarChildren[targetData.type]

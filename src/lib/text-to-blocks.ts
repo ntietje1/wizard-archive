@@ -3,10 +3,19 @@ import escapeHtml from 'escape-html'
 import { editorSchema } from './editor-schema'
 import type { CustomBlock } from './editor-schema'
 
+export async function convertBlocksToMarkdown(
+  blocks: Array<CustomBlock>,
+): Promise<string> {
+  const editor = BlockNoteEditor.create({
+    schema: editorSchema,
+  })
+  const markdown = await editor.blocksToMarkdownLossy(blocks)
+  return markdown
+}
+
 export async function convertTextToBlocks(
   file: File,
 ): Promise<Array<CustomBlock>> {
-  // Create a BlockNote editor instance with the custom schema
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
   })

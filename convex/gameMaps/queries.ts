@@ -41,6 +41,20 @@ export const getMap = query({
   },
 })
 
+export const getMapDownloadUrl = query({
+  args: {
+    mapId: v.id('gameMaps'),
+  },
+  returns: v.union(v.null(), v.string()),
+  handler: async (ctx, args): Promise<string | null> => {
+    const map = await getMapFn(ctx, args.mapId)
+    if (!map.imageStorageId) {
+      return null
+    }
+    return await ctx.storage.getUrl(map.imageStorageId)
+  },
+})
+
 export const getMapPins = query({
   args: {
     mapId: v.id('gameMaps'),

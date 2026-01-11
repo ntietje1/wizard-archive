@@ -24,8 +24,7 @@ export function SidebarItemEditor({
     case SIDEBAR_ITEM_TYPES.files:
       return <FileViewer key={item._id} item={item} search={search} />
     default: {
-      // @ts-ignore - exhaustive check for unknown item types
-      console.error(`No viewer available for item type: ${item.type}`)
+      console.warn(`Unknown item type`, item)
       return null
     }
   }

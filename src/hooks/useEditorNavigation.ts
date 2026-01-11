@@ -139,8 +139,7 @@ export const useEditorNavigation = () => {
           navigateToFile(item.slug, replace)
           break
         default: {
-          // @ts-ignore - exhaustive check for unknown item types
-          console.error('Invalid item type:', item.type)
+          console.warn('Unknown item type', item)
         }
       }
     },

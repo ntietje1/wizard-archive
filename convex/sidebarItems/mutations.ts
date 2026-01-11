@@ -58,8 +58,7 @@ export const updateSidebarItem = mutation({
         await ctx.db.patch(args.itemId as Id<'files'>, patch)
         break
       default:
-        // @ts-expect-error - item.type is not typed
-        throw new Error(`Unknown item type: ${item.type}`)
+        throw new Error(`Unknown item type, ${item}`)
     }
 
     return null

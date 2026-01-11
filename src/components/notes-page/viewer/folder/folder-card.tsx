@@ -59,10 +59,9 @@ export function FolderCard({
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const dropData: SidebarDropData = {
-    _id: folder._id,
-    type: SIDEBAR_ITEM_TYPES.folders,
-  }
+  const dropData: SidebarDropData = folder
+  const dragData: SidebarDragData = folder
+
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folder._id,
     data: dropData,
@@ -71,13 +70,6 @@ export function FolderCard({
   const isValidDropTarget =
     isOver && active && over && canDropItem(active, over)
 
-  const dragData: SidebarDragData = {
-    _id: folder._id,
-    type: SIDEBAR_ITEM_TYPES.folders,
-    name: folder.name || defaultItemName(folder),
-    parentId: folder.parentId,
-    icon: FolderIcon,
-  }
   const {
     setNodeRef: setDragRef,
     listeners,

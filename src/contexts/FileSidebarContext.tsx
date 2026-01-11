@@ -1,4 +1,3 @@
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { useCallback, useRef, useState } from 'react'
 import {
   DndContext,
@@ -12,16 +11,23 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { canDropItem, executeMove } from '~/lib/dnd-utils'
+import {
+  EMPTY_EDITOR_DROP_TYPE,
+  canDropItem,
+  executeMove,
+  isSidebarItem,
+} from '~/lib/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
 import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { getSidebarItemIcon } from '~/lib/category-icons'
 
 export function FileSidebarProvider({
   children,
@@ -45,6 +51,7 @@ export function FileSidebarProvider({
 
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
+  const { navigateToItem } = useEditorNavigation()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
@@ -146,14 +153,18 @@ export function FileSidebarProvider({
 
       if (!active.data.current || !over) return
 
-      // Validate the drop using shared utility
-      if (!canDropItem(active, over)) return
-
       const draggedItem = active.data.current as SidebarDragData
       const targetData = over.data.current as SidebarDropData
 
-      const targetId =
-        targetData._id === SIDEBAR_ROOT_TYPE ? undefined : targetData._id
+      // If dropping on empty editor, open the item instead of moving it
+      if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {
+        navigateToItem(draggedItem as AnySidebarItem, true)
+        return
+      }
+
+      if (!canDropItem(active, over)) return
+
+      const targetId = isSidebarItem(targetData) ? targetData._id : undefined
 
       await executeMove(
         draggedItem.type,
@@ -173,7 +184,7 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveMap, moveFolder, openFolder, moveFile],
+    [moveNote, moveMap, moveFolder, openFolder, moveFile, navigateToItem],
   )
 
   const handleDragCancel = useCallback(() => {
@@ -228,14 +239,20 @@ export function FileSidebarProvider({
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {activeDragItem && (
-            <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
-              <activeDragItem.icon className="w-5 h-5" />
-              <span className="text-sm text-foreground font-semibold">
-                {activeDragItem.name}
-              </span>
-            </div>
-          )}
+          {activeDragItem &&
+            (() => {
+              const DraggedItemIcon = getSidebarItemIcon(
+                activeDragItem as AnySidebarItem,
+              )
+              return (
+                <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
+                  <DraggedItemIcon className="w-5 h-5" />
+                  <span className="text-sm text-foreground font-semibold">
+                    {activeDragItem.name}
+                  </span>
+                </div>
+              )
+            })()}
         </DragOverlay>
       </DndContext>
     </FileSidebarContext.Provider>

@@ -33,7 +33,7 @@ export const notInSidebar: Predicate = (ctx) => ctx.viewContext !== 'sidebar'
 export const viewingCanvas: Predicate = (ctx) =>
   ctx.viewContext === 'canvas-view'
 
-export const atRoot: Predicate = (ctx) => !ctx.item || !ctx.item.parentId
+export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
 export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMapId)
 

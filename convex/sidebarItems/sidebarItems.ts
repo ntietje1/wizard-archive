@@ -123,8 +123,7 @@ export const getSidebarItemBySlug = async (
     case SIDEBAR_ITEM_TYPES.files:
       return await getFileBySlug(ctx, campaignId, slug)
     default:
-      console.log('Unknown item type', type)
-      return null
+      throw new Error(`Unknown item type, ${type}`)
   }
 }
 
@@ -154,7 +153,7 @@ export const getSidebarItemById = async (
     case SIDEBAR_ITEM_TYPES.files:
       return await getFile(ctx, id as Id<'files'>)
     default:
-      console.log('Unknown item type', (item as { type: string }).type)
+      console.warn('Unknown item type', item)
       return null
   }
 }

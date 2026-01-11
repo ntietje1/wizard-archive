@@ -1,13 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { useDraggable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropItem } from '~/lib/dnd-utils'
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -25,7 +23,6 @@ export function MapCard({
   const { navigateToMap } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
-  const { active, over } = useDndContext()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const imageUrlQuery = useQuery(
@@ -37,13 +34,7 @@ export function MapCard({
 
   const imageUrl = imageUrlQuery.data || null
 
-  const dragData: SidebarDragData = {
-    _id: map._id,
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
-    name: map.name || defaultItemName(map),
-    parentId: map.parentId,
-    icon: MapPin,
-  }
+  const dragData: SidebarDragData = map
 
   const {
     setNodeRef: setDragRef,
@@ -55,19 +46,6 @@ export function MapCard({
     data: dragData,
     disabled: isDisabled,
   })
-
-  const dropData: SidebarDropData = {
-    _id: map._id,
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
-  }
-
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: map._id,
-    data: dropData,
-  })
-
-  const isValidDropTarget =
-    isOver && active && over && canDropItem(active, over)
 
   const handleCardActivate = () => {
     if (!isDragging) {
@@ -98,7 +76,6 @@ export function MapCard({
   const cardContent = (
     <div
       ref={(el) => {
-        setDropRef(el)
         setDragRef(el)
       }}
       {...listeners}
@@ -106,9 +83,7 @@ export function MapCard({
       className={`w-full h-[140px] ${isDragging ? 'opacity-20' : ''}`}
     >
       <Card
-        className={`w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md ${
-          isValidDropTarget ? 'ring-2 ring-primary' : ''
-        }`}
+        className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md"
         onClick={handleCardActivate}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {

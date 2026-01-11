@@ -1,5 +1,4 @@
 import { useDraggable } from '@dnd-kit/core'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
@@ -23,13 +22,7 @@ export function NoteCard({
   const isDisabled = activeDragItem !== null
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const dragData: SidebarDragData = {
-    _id: note._id,
-    type: SIDEBAR_ITEM_TYPES.notes,
-    name: note.name || defaultItemName(note),
-    parentId: note.parentId,
-    icon: FileText,
-  }
+  const dragData: SidebarDragData = note
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: note._id,

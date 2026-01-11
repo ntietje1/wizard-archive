@@ -4,11 +4,13 @@ import {
   SIDEBAR_ITEM_TYPES,
 } from 'convex/sidebarItems/types'
 import {
+  Download,
   Eye,
   File,
   FileEdit,
   FilePlus,
   FileTypeIcon,
+  FolderDown,
   FolderPlus,
   Grid2x2Plus,
   MapPin,
@@ -78,6 +80,13 @@ export type ActionHandlers = {
     ctx: MenuContext,
     memberId: Id<'campaignMembers'>,
   ) => void
+
+  // Download actions
+  downloadFile: (ctx: MenuContext) => void
+  downloadNote: (ctx: MenuContext) => void
+  downloadMap: (ctx: MenuContext) => void
+  downloadFolder: (ctx: MenuContext) => void
+  downloadAll: (ctx: MenuContext) => void
 }
 
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
@@ -311,6 +320,57 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.removeMapPin,
     },
 
+    // ========== DOWNLOAD GROUP ==========
+    {
+      id: 'download-file',
+      label: 'Download',
+      icon: Download,
+      group: 'download',
+      priority: 80,
+      shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+      action: actions.downloadFile,
+    },
+    {
+      id: 'download-note',
+      label: 'Download',
+      icon: Download,
+      group: 'download',
+      priority: 80,
+      shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx),
+      action: actions.downloadNote,
+    },
+    {
+      id: 'download-map',
+      label: 'Download',
+      icon: Download,
+      group: 'download',
+      priority: 80,
+      shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+      action: actions.downloadMap,
+    },
+    {
+      id: 'download-folder',
+      label: 'Download',
+      icon: FolderDown,
+      group: 'download',
+      priority: 81,
+      shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx),
+      action: actions.downloadFolder,
+    },
+    {
+      id: 'download-all',
+      label: 'Download All',
+      icon: FolderDown,
+      group: 'download',
+      priority: 82,
+      shouldShow: (ctx) => p.atRoot(ctx),
+      action: actions.downloadAll,
+    },
+
     // ========== EDIT GROUP ==========
     {
       id: 'rename',
@@ -371,8 +431,9 @@ export const groupConfig = {
   primary: { label: null, priority: 0 },
   create: { label: null, priority: 1 },
   share: { label: null, priority: 2 },
-  edit: { label: null, priority: 3 },
-  navigation: { label: null, priority: 4 },
+  download: { label: null, priority: 3 },
+  edit: { label: null, priority: 4 },
+  navigation: { label: null, priority: 5 },
   'pin-actions': { label: null, priority: 6 },
   danger: { label: null, priority: 99 },
 }

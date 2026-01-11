@@ -1,8 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
-import {
-  SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
-} from 'convex/sidebarItems/types'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
@@ -13,24 +10,15 @@ interface DroppableRootProps {
 }
 
 export function DroppableRoot({ children, className }: DroppableRootProps) {
+  const rootTargetData = { type: SIDEBAR_ROOT_TYPE }
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: SIDEBAR_ROOT_TYPE,
-    data: {
-      accepts: SIDEBAR_ITEM_TYPES,
-      _id: SIDEBAR_ROOT_TYPE,
-      ancestorIds: [],
-      type: SIDEBAR_ROOT_TYPE,
-    },
+    data: rootTargetData,
   })
 
   const canDrop = canDropItem(active, over)
   const isValidDrop = isOver && canDrop
 
-  const rootTargetData = {
-    id: SIDEBAR_ROOT_TYPE,
-    type: SIDEBAR_ROOT_TYPE,
-    ancestorIds: [],
-  }
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
   const {
     isDraggingFiles,
@@ -38,7 +26,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
     handleDragOver,
     handleDragLeave,
     handleDrop,
-  } = useFileDragDrop(undefined) // root level, so parentId is undefined
+  } = useFileDragDrop(undefined)
 
   return (
     <div
