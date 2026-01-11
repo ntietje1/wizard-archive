@@ -26,7 +26,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
 
   const rename = useCallback(
     async (newName: string) => {
-      if (!item || !newName || !campaignId) return
+      if (!item || !campaignId) return
 
       const previousSlug = item.slug
       let newSlug: string = previousSlug
@@ -73,16 +73,14 @@ export function useRenameItem(item: AnySidebarItem | null) {
           name: newName,
         }
 
-        if (campaignId) {
-          queryClient.setQueryData(
-            convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
-              campaignId,
-              type: item.type,
-              slug: newSlug,
-            }).queryKey,
-            updatedItem,
-          )
-        }
+        queryClient.setQueryData(
+          convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+            campaignId,
+            type: item.type,
+            slug: newSlug,
+          }).queryKey,
+          updatedItem,
+        )
 
         if (
           currentItem &&

@@ -5,6 +5,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getSidebarItemById,
   isValidSidebarParent,
+  validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
@@ -43,6 +44,14 @@ export const moveFile = mutation({
         throw new Error('Invalid parent type for files')
       }
     }
+
+    await validateUniqueNameUnderParent(
+      ctx,
+      file.campaignId,
+      args.parentId,
+      file.name,
+      file._id,
+    )
 
     await ctx.db.patch(args.fileId, {
       parentId: args.parentId,
@@ -87,6 +96,13 @@ export const createFile = mutation({
       }
     }
 
+    await validateUniqueNameUnderParent(
+      ctx,
+      args.campaignId,
+      args.parentId,
+      args.name,
+    )
+
     const slugBasis =
       args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
 
@@ -118,7 +134,6 @@ export const updateFile = mutation({
     fileId: v.id('files'),
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
-    parentId: v.optional(sidebarItemIdValidator),
     iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
@@ -147,6 +162,13 @@ export const updateFile = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
+      await validateUniqueNameUnderParent(
+        ctx,
+        file.campaignId,
+        file.parentId,
+        args.name,
+        file._id,
+      )
 
       const slugBasis =
         args.name && args.name.trim() !== ''
@@ -167,22 +189,6 @@ export const updateFile = mutation({
     }
     if (args.storageId !== undefined) {
       updates.storageId = args.storageId
-    }
-    if (args.parentId !== undefined) {
-      updates.parentId = args.parentId ?? undefined
-      if (args.parentId) {
-        const parentItem = await getSidebarItemById(
-          ctx,
-          file.campaignId,
-          args.parentId,
-        )
-        if (!parentItem) {
-          throw new Error('Parent not found')
-        }
-        if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.files, parentItem.type)) {
-          throw new Error('Invalid parent type')
-        }
-      }
     }
     if (args.iconName !== undefined) {
       updates.iconName = args.iconName ?? undefined

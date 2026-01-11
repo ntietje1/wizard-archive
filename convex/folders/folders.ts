@@ -68,7 +68,7 @@ export async function deleteFolder(
   // First, delete child folders (recursively)
   const childFolders = await ctx.db
     .query('folders')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
     )
     .collect()
@@ -80,7 +80,7 @@ export async function deleteFolder(
   // Delete child notes
   const childNotes = await ctx.db
     .query('notes')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
     )
     .collect()
@@ -92,7 +92,7 @@ export async function deleteFolder(
   // Delete child maps
   const childMaps = await ctx.db
     .query('gameMaps')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
     )
     .collect()

@@ -4,10 +4,12 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { FormDialog } from '../base-form/form-dialog'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
+import { useNameValidation } from '~/hooks/useNameValidation'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -30,13 +32,13 @@ interface SidebarItemEditDialogProps {
 // Get a human-readable type name for the dialog title
 function getTypeName(type: SidebarItemType): string {
   switch (type) {
-    case 'notes':
+    case SIDEBAR_ITEM_TYPES.notes:
       return 'Note'
-    case 'folders':
+    case SIDEBAR_ITEM_TYPES.folders:
       return 'Folder'
-    case 'gameMaps':
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       return 'Map'
-    case 'files':
+    case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
       return 'Item'
@@ -47,13 +49,13 @@ function getTypeName(type: SidebarItemType): string {
 // Get the default icon name for an item type
 function getDefaultIconName(type: SidebarItemType): string {
   switch (type) {
-    case 'notes':
+    case SIDEBAR_ITEM_TYPES.notes:
       return 'FileText'
-    case 'folders':
+    case SIDEBAR_ITEM_TYPES.folders:
       return 'Folder'
-    case 'gameMaps':
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       return 'MapPin'
-    case 'files':
+    case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
       return 'FileText'
@@ -80,6 +82,10 @@ export function SidebarItemEditDialog({
   const form = useForm({
     defaultValues: getInitialValues(),
     onSubmit: async ({ value }) => {
+      if (isNotUnique) {
+        return
+      }
+
       try {
         await updateMutation.mutateAsync({
           itemId: item._id,
@@ -94,6 +100,15 @@ export function SidebarItemEditDialog({
         toast.error('Failed to update item')
       }
     },
+  })
+
+  const { isNotUnique } = useNameValidation({
+    name: form.state.values.name,
+    initialName: item.name ?? '',
+    isActive: true,
+    campaignId: item.campaignId,
+    parentId: item.parentId,
+    excludeId: item._id,
   })
 
   // Reset form when item changes
@@ -128,18 +143,37 @@ export function SidebarItemEditDialog({
         className="space-y-4"
       >
         {/* Name Field */}
-        <form.Field name="name">
+        <form.Field
+          name="name"
+          validators={{
+            onChange: () => {
+              if (isNotUnique) {
+                return 'A name with this value already exists here'
+              }
+              return undefined
+            },
+          }}
+        >
           {(field) => (
             <div className="space-y-2">
               <Label htmlFor="item-name">Name</Label>
               <Input
                 id="item-name"
                 value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
+                onChange={(e) => {
+                  field.handleChange(e.target.value)
+                }}
+                onBlur={field.handleBlur}
                 placeholder={`Enter ${typeName.toLowerCase()} name`}
                 disabled={form.state.isSubmitting}
                 autoFocus
+                aria-invalid={field.state.meta.errors.length > 0}
               />
+              {field.state.meta.errors[0] && (
+                <p className="text-sm text-destructive">
+                  {field.state.meta.errors[0]}
+                </p>
+              )}
             </div>
           )}
         </form.Field>

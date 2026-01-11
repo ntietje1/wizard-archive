@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import {
   canItemHaveChildren,
   defaultItemName,
@@ -53,13 +53,12 @@ const SidebarItemButtonComponent = ({
   const handleSelect = () => navigateToItem(item)
 
   const handleFinishRename = async (name: string) => {
-    try {
-      await rename(name)
-      setRenamingId(null)
-    } catch (error) {
-      console.error(error)
-      setRenamingId(null)
-    }
+    await rename(name)
+    setRenamingId(null)
+  }
+
+  const handleCancelRename = () => {
+    setRenamingId(null)
   }
 
   const button = (
@@ -74,7 +73,11 @@ const SidebarItemButtonComponent = ({
       onToggleExpanded={toggleExpanded}
       onMoreOptions={handleMoreOptions}
       onFinishRename={handleFinishRename}
+      onCancelRename={handleCancelRename}
       showChevron={canItemHaveChildren(item.type)}
+      campaignId={item.campaignId}
+      parentId={item.parentId}
+      excludeId={item._id}
     />
   )
 

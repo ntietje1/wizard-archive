@@ -3,6 +3,7 @@ import { query } from '../_generated/server'
 import { anySidebarItemValidator, sidebarItemTypeValidator } from './schema'
 import { sidebarItemIdValidator } from './baseFields'
 import {
+  checkUniqueNameUnderParent as checkUniqueNameUnderParentFn,
   getAllSidebarItems as getAllSidebarItemsFn,
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
@@ -80,5 +81,24 @@ export const getSidebarItemBySlug = query({
       return null
     }
     return item
+  },
+})
+
+export const checkUniqueNameUnderParent = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    parentId: v.optional(sidebarItemIdValidator),
+    name: v.optional(v.string()),
+    excludeId: v.optional(sidebarItemIdValidator),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args): Promise<boolean> => {
+    return await checkUniqueNameUnderParentFn(
+      ctx,
+      args.campaignId,
+      args.parentId,
+      args.name,
+      args.excludeId,
+    )
   },
 })

@@ -1,41 +1,71 @@
 import { useCallback, useEffect, useState } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
+import { useNameValidation } from '~/hooks/useNameValidation'
 
 interface EditableNameProps {
   initialName: string
   defaultName: string
   onRename: (newName: string) => Promise<void>
+  campaignId?: Id<'campaigns'>
+  parentId?: SidebarItemId
+  excludeId?: SidebarItemId
 }
 
 export function EditableName({
   initialName,
   defaultName,
   onRename,
+  campaignId,
+  parentId,
+  excludeId,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
     setName(initialName)
+    setHasError(false)
   }, [initialName])
+
+  const { isNotUnique, isLoading } = useNameValidation({
+    name,
+    initialName,
+    isActive: isEditing,
+    campaignId,
+    parentId,
+    excludeId,
+  })
+
+  // Update error state based on validation
+  useEffect(() => {
+    setHasError(isNotUnique)
+  }, [isNotUnique])
 
   const handleNameSubmit = useCallback(async () => {
     if (name === initialName) {
       setIsEditing(false)
       return
-    } else {
-      await onRename(name)
-        .catch((error) => {
-          console.error(error)
-          setName(initialName)
-        })
-        .finally(() => {
-          setIsEditing(false)
-        })
     }
-  }, [name, initialName, onRename])
+
+    // Prevent submission if name is invalid
+    if (isNotUnique && !isLoading) {
+      setHasError(true)
+      return
+    }
+
+    await onRename(name)
+      .then(() => {
+        setIsEditing(false)
+      })
+      .catch((error) => {
+        console.error(error)
+        setHasError(true)
+      })
+  }, [name, initialName, onRename, isNotUnique, isLoading])
 
   const handleFocus = useCallback(() => {
     if (!isEditing) {
@@ -53,20 +83,26 @@ export function EditableName({
         value={name}
         placeholder={defaultName}
         readOnly={!isEditing}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          setName(e.target.value)
+          setHasError(false)
+        }}
         onFocus={handleFocus}
         onBlur={handleNameSubmit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
+            e.preventDefault()
             handleNameSubmit()
           } else if (e.key === 'Escape') {
             setName(initialName)
             setIsEditing(false)
+            setHasError(false)
           }
         }}
         className={cn(
           'absolute inset-0 min-w-0 flex-shrink-0 w-full cursor-text',
           isEditing ? 'underline' : 'hover:underline',
+          hasError || isNotUnique ? 'text-destructive' : '',
         )}
       />
       {!name && !isEditing && (
@@ -84,6 +120,9 @@ interface EditableBreadcrumbProps {
   onRename: (newName: string) => Promise<void>
   ancestors: Array<AnySidebarItem>
   onNavigateToItem: (item: AnySidebarItem) => void
+  campaignId?: Id<'campaigns'>
+  parentId?: SidebarItemId
+  excludeId?: SidebarItemId
 }
 
 export function EditableBreadcrumb({
@@ -92,6 +131,9 @@ export function EditableBreadcrumb({
   onRename,
   ancestors,
   onNavigateToItem,
+  campaignId,
+  parentId,
+  excludeId,
 }: EditableBreadcrumbProps) {
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
@@ -123,6 +165,9 @@ export function EditableBreadcrumb({
         initialName={initialName}
         defaultName={defaultName}
         onRename={onRename}
+        campaignId={campaignId}
+        parentId={parentId}
+        excludeId={excludeId}
       />
     </div>
   )

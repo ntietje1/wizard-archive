@@ -8,6 +8,7 @@ import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import {
   getSidebarItemById,
   isValidSidebarParent,
+  validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import {
@@ -67,6 +68,13 @@ export const moveNote = mutation({
         throw new Error('Invalid parent type for notes')
       }
     }
+    await validateUniqueNameUnderParent(
+      ctx,
+      note.campaignId,
+      args.parentId,
+      note.name,
+      note._id,
+    )
 
     await ctx.db.patch(args.noteId, {
       parentId: args.parentId,

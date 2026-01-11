@@ -3,6 +3,7 @@ import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { sidebarItemIdValidator } from './baseFields'
+import { validateUniqueNameUnderParent } from './sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from './types'
 import type { Id } from '../_generated/dataModel'
 
@@ -35,6 +36,13 @@ export const updateSidebarItem = mutation({
     }
 
     if (args.name !== undefined) {
+      await validateUniqueNameUnderParent(
+        ctx,
+        item.campaignId,
+        item.parentId,
+        args.name,
+        args.itemId,
+      )
       patch.name = args.name
     }
     if (args.iconName !== undefined) {

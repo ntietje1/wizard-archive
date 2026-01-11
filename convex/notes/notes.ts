@@ -4,6 +4,7 @@ import { deleteBlocksByNote } from '../blocks/blocks'
 import {
   getSidebarItemById,
   isValidSidebarParent,
+  validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
@@ -56,8 +57,15 @@ export const createNote = async (
     }
   }
 
+  await validateUniqueNameUnderParent(
+    ctx,
+    input.campaignId,
+    input.parentId,
+    input.name,
+  )
+
   const noteId = await ctx.db.insert('notes', {
-    name: input.name || '',
+    name: input.name,
     slug: uniqueSlug,
     parentId: input.parentId,
     iconName: input.iconName,
@@ -75,7 +83,6 @@ export const updateNote = async (
   input: {
     noteId: Id<'notes'>
     name?: string
-    parentId?: SidebarItemId
     iconName?: string
     color?: string | null
   },
@@ -98,6 +105,13 @@ export const updateNote = async (
 
   if (input.name !== undefined) {
     updates.name = input.name
+    await validateUniqueNameUnderParent(
+      ctx,
+      note.campaignId,
+      note.parentId,
+      input.name,
+      note._id,
+    )
 
     const slugBasis =
       input.name && input.name.trim() !== ''
@@ -115,23 +129,6 @@ export const updateNote = async (
     })
 
     updates.slug = uniqueSlug
-  }
-
-  if (input.parentId !== undefined) {
-    if (input.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        note.campaignId,
-        input.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.notes, parentItem.type)) {
-        throw new Error('Invalid parent type')
-      }
-    }
-    updates.parentId = input.parentId
   }
 
   if (input.iconName !== undefined) {

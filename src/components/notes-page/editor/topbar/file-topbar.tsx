@@ -50,6 +50,9 @@ export function FileTopbar() {
           onRename={rename}
           ancestors={ancestors.data ?? []}
           onNavigateToItem={navigateToItem}
+          campaignId={item.campaignId}
+          parentId={item.parentId}
+          excludeId={item._id}
         />
 
         <div className="flex items-center gap-2 flex-shrink-0">

@@ -17,6 +17,10 @@ export function SidebarItemButtonBase({
   onMoreOptions = () => {},
   onToggleExpanded = () => {},
   onFinishRename,
+  onCancelRename,
+  campaignId,
+  parentId,
+  excludeId,
 }: SidebarItemButtonProps) {
   return (
     <div
@@ -64,6 +68,10 @@ export function SidebarItemButtonBase({
             defaultName={defaultName}
             isRenaming={isRenaming}
             onFinishRename={onFinishRename}
+            onCancelRename={onCancelRename}
+            campaignId={campaignId}
+            parentId={parentId}
+            excludeId={excludeId}
           />
         ) : (
           <span className="truncate ml-1">{name || defaultName}</span>

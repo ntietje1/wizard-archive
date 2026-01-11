@@ -8,6 +8,7 @@ import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { useNameValidation } from '~/hooks/useNameValidation'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -85,6 +86,15 @@ export function FileForm({
     },
   })
 
+  const { isNotUnique } = useNameValidation({
+    name: form.state.values.name,
+    initialName: file.data?.name ?? '',
+    isActive: !!fileId && !!file.data,
+    campaignId,
+    parentId: file.data?.parentId,
+    excludeId: fileId,
+  })
+
   async function handleSubmit(values: FileFormValues) {
     try {
       let finalStorageId: Id<'_storage'> | undefined = undefined
@@ -118,17 +128,26 @@ export function FileForm({
         ''
 
       if (fileId) {
+        // Prevent submission if name is invalid
+        if (isNotUnique) {
+          return
+        }
         // Update existing file
-        await updateMutation.mutateAsync({
-          fileId,
-          name: finalName,
-          storageId: finalStorageId,
-          iconName: values.iconName,
-          color: values.color,
-        })
-        toast.success('File updated')
-        onSuccess?.(file.data?.slug)
-        onClose()
+        try {
+          await updateMutation.mutateAsync({
+            fileId,
+            name: finalName,
+            storageId: finalStorageId,
+            iconName: values.iconName,
+            color: values.color,
+          })
+          toast.success('File updated')
+          onSuccess?.(file.data?.slug)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to update file')
+          return
+        }
       } else if (campaignId) {
         // Create new file - require file
         const { fileId: newFileId, slug: newFileSlug } =
@@ -182,10 +201,12 @@ export function FileForm({
       <form.Field
         name="name"
         validators={{
-          onChange: ({ value }) =>
-            !value || value.trim().length === 0
-              ? undefined // Name is optional
-              : undefined,
+          onChange: () => {
+            if (isNotUnique) {
+              return 'A name with this value already exists here'
+            }
+            return undefined
+          },
         }}
       >
         {(field) => (
@@ -194,11 +215,14 @@ export function FileForm({
             <Input
               id={field.name}
               value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
+              onChange={(e) => {
+                field.handleChange(e.target.value)
+              }}
               onBlur={field.handleBlur}
               placeholder="Enter file name"
               disabled={isDisabled}
               autoFocus
+              aria-invalid={field.state.meta.errors.length > 0}
             />
             {field.state.meta.errors[0] && (
               <p className="text-sm text-destructive">

@@ -8,6 +8,7 @@ import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { useNameValidation } from '~/hooks/useNameValidation'
 import { getIconByName } from '~/lib/category-icons'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -89,6 +90,15 @@ export function MapForm({
     },
   })
 
+  const { isNotUnique } = useNameValidation({
+    name: form.state.values.name,
+    initialName: map.data?.name ?? '',
+    isActive: !!mapId,
+    campaignId,
+    parentId: map.data?.parentId,
+    excludeId: mapId,
+  })
+
   async function handleSubmit(values: MapFormValues) {
     try {
       let finalImageStorageId: Id<'_storage'> | undefined = undefined
@@ -114,15 +124,25 @@ export function MapForm({
       }
 
       if (mapId) {
+        // Prevent submission if name is invalid
+        if (isNotUnique) {
+          return
+        }
         // Update existing map
-        await updateMutation.mutateAsync({
-          mapId,
-          name: values.name,
-          imageStorageId: finalImageStorageId,
-          iconName: values.iconName,
-          color: values.color,
-        })
-        toast.success('Map updated')
+        try {
+          await updateMutation.mutateAsync({
+            mapId,
+            name: values.name,
+            imageStorageId: finalImageStorageId,
+            iconName: values.iconName,
+            color: values.color,
+          })
+          toast.success('Map updated')
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to update map')
+          return
+        }
       } else if (campaignId) {
         // Create new map - require image
         const { mapId: newMapId, slug: newMapSlug } =
@@ -170,10 +190,15 @@ export function MapForm({
       <form.Field
         name="name"
         validators={{
-          onChange: ({ value }) =>
-            !value || value.trim().length === 0
-              ? 'Map name is required'
-              : undefined,
+          onChange: ({ value }) => {
+            if (!value || value.trim().length === 0) {
+              return 'Map name is required'
+            }
+            if (isNotUnique) {
+              return 'A name with this value already exists here'
+            }
+            return undefined
+          },
         }}
       >
         {(field) => (
@@ -182,11 +207,14 @@ export function MapForm({
             <Input
               id={field.name}
               value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
+              onChange={(e) => {
+                field.handleChange(e.target.value)
+              }}
               onBlur={field.handleBlur}
               placeholder="Enter map name"
               disabled={isSubmitting}
               autoFocus
+              aria-invalid={field.state.meta.errors.length > 0}
             />
             {field.state.meta.errors[0] && (
               <p className="text-sm text-destructive">

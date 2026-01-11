@@ -28,25 +28,25 @@ export const getAllSidebarItems = async (
 
   const folders = await ctx.db
     .query('folders')
-    .withIndex('by_campaign_parent', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
   allItems.push(...(folders as Array<AnySidebarItem>))
 
   const notes = await ctx.db
     .query('notes')
-    .withIndex('by_campaign_parent', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
   allItems.push(...(notes as Array<AnySidebarItem>))
 
   const maps = await ctx.db
     .query('gameMaps')
-    .withIndex('by_campaign_parent', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
   allItems.push(...(maps as Array<AnySidebarItem>))
 
   const files = await ctx.db
     .query('files')
-    .withIndex('by_campaign_parent', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
   allItems.push(...(files as Array<AnySidebarItem>))
 
@@ -68,7 +68,7 @@ export const getSidebarItemsByParent = async (
 
   const folders = await ctx.db
     .query('folders')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
@@ -76,7 +76,7 @@ export const getSidebarItemsByParent = async (
 
   const notes = await ctx.db
     .query('notes')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
@@ -84,7 +84,7 @@ export const getSidebarItemsByParent = async (
 
   const maps = await ctx.db
     .query('gameMaps')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', parentId),
     )
     .collect()
@@ -92,8 +92,57 @@ export const getSidebarItemsByParent = async (
 
   const files = await ctx.db
     .query('files')
-    .withIndex('by_campaign_parent', (q) =>
+    .withIndex('by_campaign_parent_name', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', parentId),
+    )
+    .collect()
+  allItems.push(...(files as Array<AnySidebarItem>))
+
+  return allItems
+}
+
+export const getSidebarItemsByParentAndName = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: SidebarItemId | undefined,
+  name: string | undefined,
+): Promise<Array<AnySidebarItem>> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+  )
+
+  const allItems: Array<AnySidebarItem> = []
+
+  const folders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId).eq('name', name),
+    )
+    .collect()
+  allItems.push(...(folders as Array<AnySidebarItem>))
+
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId).eq('name', name),
+    )
+    .collect()
+  allItems.push(...(notes as Array<AnySidebarItem>))
+
+  const maps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId).eq('name', name),
+    )
+    .collect()
+  allItems.push(...(maps as Array<AnySidebarItem>))
+
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', parentId).eq('name', name),
     )
     .collect()
   allItems.push(...(files as Array<AnySidebarItem>))
@@ -245,4 +294,50 @@ export const defaultItemName = (
   item: AnySidebarItem | null | undefined,
 ): string => {
   return item ? defaultNameMap[item.type] : 'Untitled Item'
+}
+
+export const checkUniqueNameUnderParent = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: SidebarItemId | undefined,
+  name: string | undefined,
+  excludeId?: SidebarItemId,
+): Promise<boolean> => {
+  if (!name || name.trim() === '') {
+    return true
+  }
+
+  const items: Array<AnySidebarItem> = await getSidebarItemsByParentAndName(
+    ctx,
+    campaignId,
+    parentId,
+    name,
+  )
+  if (items.length == 1 && items[0]._id === excludeId) {
+    return true
+  } else if (items.length == 0) {
+    return true
+  } else {
+    return false
+  }
+}
+
+export const validateUniqueNameUnderParent = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: SidebarItemId | undefined,
+  name: string | undefined,
+  excludeId?: SidebarItemId,
+): Promise<boolean> => {
+  const isUnique = await checkUniqueNameUnderParent(
+    ctx,
+    campaignId,
+    parentId,
+    name,
+    excludeId,
+  )
+  if (!isUnique) {
+    throw new Error('An item with this name already exists here')
+  }
+  return true
 }

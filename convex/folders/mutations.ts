@@ -6,6 +6,7 @@ import { findUniqueSlug, shortenId } from '../common/slug'
 import {
   getSidebarItemById,
   isValidSidebarParent,
+  validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
@@ -43,6 +44,13 @@ export const updateFolder = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
+      await validateUniqueNameUnderParent(
+        ctx,
+        folder.campaignId,
+        folder.parentId,
+        args.name,
+        folder._id,
+      )
 
       const slugBasis =
         args.name && args.name.trim() !== ''
@@ -97,6 +105,13 @@ export const moveFolder = mutation({
       if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.folders, parentItem.type)) {
         throw new Error('Invalid parent type')
       }
+      await validateUniqueNameUnderParent(
+        ctx,
+        folder.campaignId,
+        args.parentId,
+        folder.name,
+        folder._id,
+      )
     }
 
     await ctx.db.patch(args.folderId, {
@@ -162,6 +177,13 @@ export const createFolder = mutation({
         .unique()
       return conflict !== null
     })
+
+    await validateUniqueNameUnderParent(
+      ctx,
+      args.campaignId,
+      args.parentId,
+      args.name,
+    )
 
     const folderId = await ctx.db.insert('folders', {
       name: args.name || '',

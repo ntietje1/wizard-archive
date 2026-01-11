@@ -13,7 +13,7 @@ export const filesTables = {
   files: defineTable({
     ...fileTableFields,
   })
-    .index('by_campaign_parent', ['campaignId', 'parentId'])
+    .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 

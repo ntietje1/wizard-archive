@@ -22,7 +22,7 @@ export const getCampaignMaps = query({
 
     const maps = await ctx.db
       .query('gameMaps')
-      .withIndex('by_campaign_parent', (q) =>
+      .withIndex('by_campaign_parent_name', (q) =>
         q.eq('campaignId', args.campaignId),
       )
       .collect()

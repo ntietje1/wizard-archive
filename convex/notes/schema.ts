@@ -12,7 +12,7 @@ export const notesTables = {
   notes: defineTable({
     ...noteTableFields,
   })
-    .index('by_campaign_parent', ['campaignId', 'parentId'])
+    .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 
