@@ -64,7 +64,7 @@ export function NameValidationFeedback({
         zIndex: 50,
       }}
     >
-      <span>Name already exists here</span>
+      <span>Name already taken</span>
     </div>
   ) : null
 

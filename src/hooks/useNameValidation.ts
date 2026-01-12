@@ -103,7 +103,7 @@ export function useNameValidation({
         api.sidebarItems.queries.checkUniqueNameUnderParent,
         { campaignId, parentId, name: trimmed, excludeId },
       )
-      return isUnique ? undefined : 'A name with this value already exists here'
+      return isUnique ? undefined : 'Name already taken'
     },
     [convex, campaignId, parentId, excludeId, trimmedInitialName],
   )

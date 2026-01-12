@@ -129,11 +129,7 @@ export function EditableName({
           {defaultName}
         </span>
       )}
-      <NameValidationFeedback
-        isLoading={isLoading}
-        isNotUnique={isNotUnique}
-        anchorRef={inputRef}
-      />
+      <NameValidationFeedback isNotUnique={isNotUnique} anchorRef={inputRef} />
     </div>
   )
 }
