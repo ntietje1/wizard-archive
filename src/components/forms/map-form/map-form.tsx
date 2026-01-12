@@ -4,20 +4,25 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
-import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
 import { getIconByName } from '~/lib/category-icons'
-import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '~/components/shadcn/ui/input-group'
 
 export interface MapFormValues {
   name: string
@@ -91,7 +96,11 @@ export function MapForm({
     },
   })
 
-  const { isLoading: isValidating, shouldValidate, checkNameUnique } = useNameValidation({
+  const {
+    isLoading: isValidating,
+    shouldValidate,
+    checkNameUnique,
+  } = useNameValidation({
     name: form.state.values.name,
     initialName: map.data?.name ?? '',
     isActive: !!mapId,
@@ -175,6 +184,11 @@ export function MapForm({
     (map.data?.imageStorageId && !imageUpload.removed)
   )
 
+  const isLoadingFile =
+    mapId !== undefined && map.data === undefined && map.isPending
+
+  const isDisabled = isSubmitting || isLoadingFile
+
   return (
     <form
       onSubmit={(e) => {
@@ -197,38 +211,35 @@ export function MapForm({
           onChangeAsyncDebounceMs: 300,
         }}
       >
-        {(field) => {
-          const hasRequiredError = field.state.meta.errors.some(
-            (e) => e === 'Map name is required',
-          )
-          const hasUniqueError = field.state.meta.errors.some((e) =>
-            e?.includes('already exists'),
-          )
-          return (
-            <div className="space-y-2">
-              <Label htmlFor={field.name}>Map Name</Label>
-              <Input
+        {(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Map Name</Label>
+            <InputGroup>
+              <InputGroupInput
                 id={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder="Enter map name"
-                disabled={isSubmitting}
+                disabled={isDisabled}
                 autoFocus
                 aria-invalid={field.state.meta.errors.length > 0}
               />
-              {hasRequiredError ? (
-                <p className="text-sm text-destructive">Map name is required</p>
-              ) : (
-                <FormFieldValidation
-                  isLoading={isValidating || field.state.meta.isValidating}
-                  isNotUnique={hasUniqueError}
-                  shouldValidate={shouldValidate || field.state.meta.isValidating}
-                />
+              {field.state.meta.isValidating && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton className="rounded-full" size="icon-xs">
+                    <Loader className="size-4 animate-spin" />
+                  </InputGroupButton>
+                </InputGroupAddon>
               )}
-            </div>
-          )
-        }}
+            </InputGroup>
+            {field.state.meta.errors[0] && (
+              <p className="text-sm text-destructive">
+                {field.state.meta.errors[0]}
+              </p>
+            )}
+          </div>
+        )}
       </form.Field>
 
       {/* Icon and Color Row */}
@@ -299,7 +310,8 @@ export function MapForm({
         })}
       >
         {({ name, canSubmit }) => {
-          const isDisabled = !name || !hasImage || isSubmitting || (mapId && !canSubmit)
+          const isDisabled =
+            !name || !hasImage || isSubmitting || (mapId && !canSubmit)
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button

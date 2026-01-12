@@ -5,17 +5,22 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { Loader } from 'lucide-react'
 import { FormDialog } from '../base-form/form-dialog'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
-import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
-import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { FileEdit } from '~/lib/icons'
 import { getIconByName } from '~/lib/category-icons'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '~/components/shadcn/ui/input-group'
 
 interface SidebarItemEditFormValues {
   name: string
@@ -99,7 +104,7 @@ export function SidebarItemEditDialog({
     },
   })
 
-  const { isNotUnique, isLoading, shouldValidate, checkNameUnique } = useNameValidation({
+  const { checkNameUnique } = useNameValidation({
     name: form.state.values.name,
     initialName: item.name ?? '',
     isActive: isOpen,
@@ -150,21 +155,29 @@ export function SidebarItemEditDialog({
           {(field) => (
             <div className="space-y-2">
               <Label htmlFor="item-name">Name</Label>
-              <Input
-                id="item-name"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                placeholder={`Enter ${typeName.toLowerCase()} name`}
-                disabled={form.state.isSubmitting}
-                autoFocus
-                aria-invalid={field.state.meta.errors.length > 0}
-              />
-              <FormFieldValidation
-                isLoading={isLoading || field.state.meta.isValidating}
-                isNotUnique={field.state.meta.errors.length > 0}
-                shouldValidate={shouldValidate || field.state.meta.isValidating}
-              />
+              <InputGroup>
+                <InputGroupInput
+                  id={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  placeholder="Enter map name"
+                  autoFocus
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                {field.state.meta.isValidating && (
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton className="rounded-full" size="icon-xs">
+                      <Loader className="size-4 animate-spin" />
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                )}
+              </InputGroup>
+              {field.state.meta.errors[0] && (
+                <p className="text-sm text-destructive">
+                  {field.state.meta.errors[0]}
+                </p>
+              )}
             </div>
           )}
         </form.Field>

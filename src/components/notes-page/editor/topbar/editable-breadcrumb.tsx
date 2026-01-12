@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -26,12 +26,13 @@ export function EditableName({
   const [name, setName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setName(initialName)
   }, [initialName])
 
-  const { isNotUnique, isLoading, shouldValidate } = useNameValidation({
+  const { isNotUnique, isLoading } = useNameValidation({
     name,
     initialName,
     isActive: isEditing,
@@ -40,35 +41,46 @@ export function EditableName({
     excludeId,
   })
 
-  const handleNameSubmit = useCallback(async () => {
-    // Prevent submission while loading validation or already submitting
-    if (isLoading || isSubmitting) {
-      return
-    }
-
-    // If name unchanged, just close editing
-    if (name === initialName) {
+  const handleEnterSubmit = useCallback(async () => {
+    if (isLoading || isSubmitting) return
+    if (isNotUnique) return
+    const trimmedName = name.trim()
+    if (trimmedName === initialName.trim()) {
       setIsEditing(false)
       return
     }
-
-    // Prevent submission if name is taken
-    if (isNotUnique) {
-      return
-    }
-
     setIsSubmitting(true)
     try {
-      await onRename(name)
+      await onRename(trimmedName)
       setIsEditing(false)
     } catch (error) {
       console.error(error)
-      // Reset to original name on error
       setName(initialName)
     } finally {
       setIsSubmitting(false)
     }
   }, [name, initialName, onRename, isNotUnique, isLoading, isSubmitting])
+
+  const handleBlur = useCallback(async () => {
+    if (isSubmitting) return
+    const trimmedName = name.trim()
+    const isNameChanged = trimmedName !== initialName.trim()
+    if (isNameChanged && !isNotUnique) {
+      setIsSubmitting(true)
+      try {
+        await onRename(trimmedName)
+        setIsEditing(false)
+      } catch (error) {
+        console.error(error)
+        setName(initialName)
+      } finally {
+        setIsSubmitting(false)
+      }
+    } else {
+      setName(initialName)
+      setIsEditing(false)
+    }
+  }, [name, initialName, onRename, isNotUnique, isSubmitting])
 
   const handleFocus = useCallback(() => {
     if (!isEditing) {
@@ -89,6 +101,7 @@ export function EditableName({
         {name || defaultName}
       </span>
       <input
+        ref={inputRef}
         type="text"
         value={name}
         placeholder={defaultName}
@@ -96,11 +109,11 @@ export function EditableName({
         disabled={isSubmitting}
         onChange={(e) => setName(e.target.value)}
         onFocus={handleFocus}
-        onBlur={handleNameSubmit}
+        onBlur={handleBlur}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            handleNameSubmit()
+            handleEnterSubmit()
           } else if (e.key === 'Escape') {
             handleCancel()
           }
@@ -108,7 +121,6 @@ export function EditableName({
         className={cn(
           'absolute inset-0 min-w-0 flex-shrink-0 w-full cursor-text',
           isEditing ? 'underline' : 'hover:underline',
-          hasError && 'text-destructive underline-offset-2',
           isSubmitting && 'opacity-50',
         )}
       />
@@ -120,7 +132,7 @@ export function EditableName({
       <NameValidationFeedback
         isLoading={isLoading}
         isNotUnique={isNotUnique}
-        shouldValidate={shouldValidate}
+        anchorRef={inputRef}
       />
     </div>
   )

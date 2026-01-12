@@ -37,7 +37,7 @@ export function EditableName({
   }, [isRenaming, initialName, defaultName])
 
   const displayInitialName = initialName === defaultName ? '' : initialName
-  const { isNotUnique, isLoading, shouldValidate } = useNameValidation({
+  const { isNotUnique, isLoading } = useNameValidation({
     name,
     initialName: displayInitialName,
     isActive: isRenaming,
@@ -60,43 +60,48 @@ export function EditableName({
 
   if (isRenaming) {
     const trimmedName = name.trim()
+    const resetValue = initialName === defaultName ? '' : initialName
+    const isNameChanged = trimmedName !== displayInitialName.trim()
 
-    const handleSubmit = async () => {
-      // Prevent submission while loading validation or already submitting
-      if (isLoading || isSubmitting) {
-        return
-      }
-      // If name is taken, block submission
-      if (isNotUnique) {
-        return
-      }
-      // If name unchanged, just cancel
-      if (trimmedName === displayInitialName.trim()) {
-        const resetValue = initialName === defaultName ? '' : initialName
+    const handleEnterSubmit = async () => {
+      if (isLoading || isSubmitting) return
+      if (isNotUnique) return
+      if (!isNameChanged) {
         setName(resetValue)
         onCancelRename()
         return
       }
-      // Submit the new name
       setIsSubmitting(true)
       try {
         await onFinishRename(trimmedName)
       } catch {
-        // Error already handled by parent via toast, reset to original
-        const resetValue = initialName === defaultName ? '' : initialName
         setName(resetValue)
       } finally {
         setIsSubmitting(false)
       }
     }
 
+    const handleBlur = async () => {
+      if (isSubmitting) return
+      if (isNameChanged && !isNotUnique) {
+        setIsSubmitting(true)
+        try {
+          await onFinishRename(trimmedName)
+        } catch {
+          setName(resetValue)
+        } finally {
+          setIsSubmitting(false)
+        }
+      } else {
+        setName(resetValue)
+        onCancelRename()
+      }
+    }
+
     const handleCancel = () => {
-      const resetValue = initialName === defaultName ? '' : initialName
       setName(resetValue)
       onCancelRename()
     }
-
-    const hasError = isNotUnique
 
     return (
       <div className="relative flex-1 min-w-0">
@@ -105,15 +110,14 @@ export function EditableName({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onBlur={handleSubmit}
+          onBlur={handleBlur}
           onKeyDown={async (e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              await handleSubmit()
+              await handleEnterSubmit()
             } else if (e.key === 'Escape') {
               handleCancel()
             }
-            // Prevent space from triggering button click
             if (e.key === ' ') {
               e.stopPropagation()
             }
@@ -121,17 +125,17 @@ export function EditableName({
           onClick={(e) => e.stopPropagation()}
           placeholder={defaultName}
           disabled={isSubmitting}
-          aria-invalid={hasError}
+          aria-invalid={isNotUnique}
           className={cn(
             'border-none bg-transparent w-full px-1 focus:outline-none focus:ring-1',
-            hasError && 'focus:ring-destructive ring-1 ring-destructive',
+            isNotUnique && 'focus:ring-destructive ring-1 ring-destructive',
             isSubmitting && 'opacity-50',
           )}
         />
         <NameValidationFeedback
           isLoading={isLoading}
           isNotUnique={isNotUnique}
-          shouldValidate={shouldValidate}
+          anchorRef={inputRef}
         />
       </div>
     )

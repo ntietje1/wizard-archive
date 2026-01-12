@@ -4,13 +4,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
-import { FormFieldValidation } from '~/components/validation/name-validation-feedback'
-import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { getIconByName } from '~/lib/category-icons'
@@ -19,6 +18,12 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/components/file-upload/generic-file-upload-section'
 import { validateFileForUpload } from '~/lib/file-validation'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '~/components/shadcn/ui/input-group'
 
 export interface FileFormValues {
   name: string
@@ -87,11 +92,7 @@ export function FileForm({
     },
   })
 
-  const {
-    isLoading: isValidating,
-    shouldValidate,
-    checkNameUnique,
-  } = useNameValidation({
+  const { checkNameUnique } = useNameValidation({
     name: form.state.values.name,
     initialName: file.data?.name ?? '',
     isActive: !!fileId && !!file.data,
@@ -179,7 +180,6 @@ export function FileForm({
     updateMutation.isPending ||
     fileUpload.isUploading
 
-  // Disable form while file data is loading in edit mode
   const isLoadingFile =
     fileId !== undefined && file.data === undefined && file.isPending
 
@@ -209,21 +209,30 @@ export function FileForm({
         {(field) => (
           <div className="space-y-2">
             <Label htmlFor={field.name}>File Name (optional)</Label>
-            <Input
-              id={field.name}
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              placeholder="Enter file name"
-              disabled={isDisabled}
-              autoFocus
-              aria-invalid={field.state.meta.errors.length > 0}
-            />
-            <FormFieldValidation
-              isLoading={isValidating || field.state.meta.isValidating}
-              isNotUnique={field.state.meta.errors.length > 0}
-              shouldValidate={shouldValidate || field.state.meta.isValidating}
-            />
+            <InputGroup>
+              <InputGroupInput
+                id={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                placeholder="Enter file name"
+                disabled={isDisabled}
+                autoFocus
+                aria-invalid={field.state.meta.errors.length > 0}
+              />
+              {field.state.meta.isValidating && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton className="rounded-full" size="icon-xs">
+                    <Loader className="size-4 animate-spin" />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              )}
+            </InputGroup>
+            {field.state.meta.errors[0] && (
+              <p className="text-sm text-destructive">
+                {field.state.meta.errors[0]}
+              </p>
+            )}
           </div>
         )}
       </form.Field>
