@@ -133,7 +133,6 @@ export function EditableName({
           )}
         />
         <NameValidationFeedback
-          isLoading={isLoading}
           isNotUnique={isNotUnique}
           anchorRef={inputRef}
         />

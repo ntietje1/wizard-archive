@@ -3,14 +3,12 @@ import { createPortal } from 'react-dom'
 import { cn } from '~/lib/shadcn/utils'
 
 interface NameValidationFeedbackProps {
-  isLoading: boolean
   isNotUnique: boolean
   anchorRef: React.RefObject<HTMLElement | null>
   className?: string
 }
 
 export function NameValidationFeedback({
-  isLoading,
   isNotUnique,
   anchorRef,
   className,
@@ -21,7 +19,7 @@ export function NameValidationFeedback({
   } | null>(null)
 
   useEffect(() => {
-    if (!anchorRef.current || (!isLoading && !isNotUnique)) {
+    if (!anchorRef.current || !isNotUnique) {
       setPosition(null)
       return
     }
@@ -45,9 +43,9 @@ export function NameValidationFeedback({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [anchorRef, isLoading, isNotUnique])
+  }, [anchorRef, isNotUnique])
 
-  if (!position || (!isLoading && !isNotUnique)) {
+  if (!position || !isNotUnique) {
     return null
   }
 
