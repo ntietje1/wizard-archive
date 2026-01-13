@@ -26,7 +26,6 @@ export const findBlockByBlockNoteId = async (
     throw new Error('Note not found')
   }
 
-  // Use the full index to efficiently find the block
   const block = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
@@ -54,23 +53,6 @@ export async function getBlocksByNote(
 }
 
 export async function getTopLevelBlocksByNote(
-  ctx: Ctx,
-  noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
-): Promise<Array<Block>> {
-  const blocks = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId),
-    )
-    .collect()
-
-  return blocks
-    .filter((block) => block.isTopLevel)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
-}
-
-export async function getTopLevelBlocksByChildNote(
   ctx: Ctx,
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,

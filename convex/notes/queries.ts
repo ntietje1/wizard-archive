@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { getTopLevelBlocksByChildNote } from '../blocks/blocks'
+import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { noteValidator, noteWithContentValidator } from './schema'
@@ -62,7 +62,7 @@ export const getNoteWithContent = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
 
-    const topLevelBlocks = await getTopLevelBlocksByChildNote(
+    const topLevelBlocks = await getTopLevelBlocksByNote(
       ctx,
       args.noteId,
       note.campaignId,

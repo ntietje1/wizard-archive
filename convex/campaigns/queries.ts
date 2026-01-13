@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { getUserProfileByUsernameHandler } from '../users/users'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
 import {
@@ -13,7 +12,6 @@ import {
   campaignMemberValidator,
   campaignWithMembershipValidator,
 } from './schema'
-import type { Note } from '../notes/types'
 import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
 
 export const getUserCampaigns = query({
@@ -45,20 +43,6 @@ export const getUserCampaigns = query({
 
         if (!membership) {
           return null
-        }
-
-        let notes: Array<Note> | undefined = undefined
-        if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
-          const rawNotes = await ctx.db
-            .query('notes')
-            .withIndex('by_campaign_parent_name', (q) =>
-              q.eq('campaignId', campaign._id),
-            )
-            .collect()
-          notes = rawNotes.map((note) => ({
-            ...note,
-            type: SIDEBAR_ITEM_TYPES.notes,
-          })) as Array<Note>
         }
 
         return {

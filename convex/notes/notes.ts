@@ -1,6 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { deleteBlocksByNote } from '../blocks/blocks'
 import {
   getSidebarItemById,
   isValidSidebarParent,
@@ -8,6 +7,7 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
+import { deleteBlocksByNote } from '../blocks/blocks'
 import type { SidebarItemId } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Note } from './types'

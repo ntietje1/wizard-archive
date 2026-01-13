@@ -9,7 +9,7 @@ import {
   getSidebarItemsByParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { getTopLevelBlocksByChildNote } from '../blocks/blocks'
+import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { downloadableItemValidator, folderValidator } from './schema'
 import { getFolder as getFolderFn } from './folders'
 import type { AnySidebarItem, SidebarItemId } from '../sidebarItems/types'
@@ -79,7 +79,7 @@ async function collectItemsRecursively(
     } else if (child.type === SIDEBAR_ITEM_TYPES.notes) {
       const baseName = child.name ?? defaultItemName(child)
       const noteName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
-      const topLevelBlocks = await getTopLevelBlocksByChildNote(
+      const topLevelBlocks = await getTopLevelBlocksByNote(
         ctx,
         child._id,
         campaignId,
