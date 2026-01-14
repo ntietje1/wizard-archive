@@ -79,7 +79,7 @@ export function useBlockShare(block: CustomBlock) {
   }
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
-    if (!campaign?._id || !isNote(item) || isMutating) return
+    if (!campaign?._id || !isNote(item) || isMutating || !blockData) return
 
     const isCurrentlyShared = memberHasAccess(memberId)
 
@@ -95,6 +95,7 @@ export function useBlockShare(block: CustomBlock) {
         await shareBlock.mutateAsync({
           campaignId: campaign._id,
           noteId: item._id,
+          isTopLevel: blockData.block.isTopLevel,
           blockNoteId: block.id,
           campaignMemberId: memberId,
           content: block.content,
@@ -107,7 +108,7 @@ export function useBlockShare(block: CustomBlock) {
   }
 
   const toggleShareStatus = async () => {
-    if (!campaign?._id || !isNote(item) || isMutating) return
+    if (!campaign?._id || !isNote(item) || isMutating || !blockData) return
 
     let newStatus: BlockShareStatus
     switch (shareStatus) {
@@ -128,6 +129,7 @@ export function useBlockShare(block: CustomBlock) {
       await setBlockShareStatus.mutateAsync({
         campaignId: campaign._id,
         noteId: item._id,
+        isTopLevel: blockData.block.isTopLevel,
         blockNoteId: block.id,
         status: newStatus,
         content: block.content,
@@ -139,13 +141,7 @@ export function useBlockShare(block: CustomBlock) {
   }
 
   const shareItems: Array<ShareItem> = useMemo(() => {
-    // Deduplicate members by ID to prevent duplicate keys
-    const uniqueMembers = playerMembers.filter(
-      (member, index, self) =>
-        index === self.findIndex((m) => m._id === member._id),
-    )
-
-    return uniqueMembers.map((member: CampaignMember) => {
+    return playerMembers.map((member: CampaignMember) => {
       let isShared: boolean
       switch (shareStatus) {
         case BLOCK_SHARE_STATUS.ALL_SHARED:

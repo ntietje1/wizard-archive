@@ -52,15 +52,11 @@ export default function ShareSideMenuButton({
   } = useBlockShare(block)
 
   const handleButtonClick = (e: React.MouseEvent) => {
-    if (!item || isMutating) return
+    if (!item || isMutating || isPending) return
     if (e.ctrlKey || e.metaKey) return
 
     if (!blockWithSharesQuery.data?.block.isTopLevel) {
-      return
-    }
-
-    if (isPending) {
-      toast.error('Please wait a moment...')
+      console.error('Non-top-level blocks cannot be shared.')
       return
     }
 

@@ -186,6 +186,7 @@ export const setBlockShareStatus = mutation({
   args: {
     campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
+    isTopLevel: v.boolean(),
     blockNoteId: blockNoteIdValidator,
     status: blockShareStatusValidator,
     content: customBlockValidator,
@@ -203,36 +204,26 @@ export const setBlockShareStatus = mutation({
       throw new Error('Note not found')
     }
 
-    let block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockNoteId)
-    if (block && block.campaignId !== args.campaignId) {
-      throw new Error('Block not found')
-    } else if (!block) {
-      const blockId = await upsertBlock(ctx, undefined, {
-        campaignId: args.campaignId,
-        blockId: args.blockNoteId,
-        content: args.content,
-        shareStatus: args.status,
-        isTopLevel: false,
-        noteId: args.noteId,
-        now: Date.now(),
-      })
-      block = await ctx.db.get(blockId)
-    }
-
-    if (!block) {
-      throw new Error('Block not found')
-    }
-
-    await ctx.db.patch(block._id, {
+    const blockId = await upsertBlock(ctx, {
+      campaignId: args.campaignId,
+      blockId: args.blockNoteId,
+      content: args.content,
       shareStatus: args.status,
+      isTopLevel: args.isTopLevel,
+      noteId: args.noteId,
+      now: Date.now(),
     })
+
+    // await ctx.db.patch(block._id, {
+    //   shareStatus: args.status,
+    // })
 
     // If setting to not_shared, clear any individual shares
     if (args.status === BLOCK_SHARE_STATUS.NOT_SHARED) {
       const shares = await ctx.db
         .query('blockShares')
         .withIndex('by_campaign_block_member', (q) =>
-          q.eq('campaignId', args.campaignId).eq('blockId', block._id),
+          q.eq('campaignId', args.campaignId).eq('blockId', blockId),
         )
         .collect()
 
@@ -240,7 +231,7 @@ export const setBlockShareStatus = mutation({
         await ctx.db.delete(share._id)
       }
 
-      await removeBlockIfNotNeeded(ctx, args.campaignId, block._id)
+      await removeBlockIfNotNeeded(ctx, args.campaignId, blockId)
     }
 
     return null
@@ -255,6 +246,7 @@ export const shareBlock = mutation({
   args: {
     campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
+    isTopLevel: v.boolean(),
     blockNoteId: blockNoteIdValidator,
     campaignMemberId: v.id('campaignMembers'),
     content: customBlockValidator,
@@ -272,21 +264,11 @@ export const shareBlock = mutation({
       throw new Error('Note not found')
     }
 
-    // Set status to individually_shared
-    const block = await findBlockByBlockNoteId(
-      ctx,
-      args.noteId,
-      args.blockNoteId,
-    )
-    if (block && block.campaignId !== args.campaignId) {
-      throw new Error('Block not found')
-    }
-
-    const blockId = await upsertBlock(ctx, undefined, {
+    const blockId = await upsertBlock(ctx, {
       campaignId: args.campaignId,
       blockId: args.blockNoteId,
       content: args.content,
-      isTopLevel: false,
+      isTopLevel: args.isTopLevel,
       noteId: args.noteId,
       now: Date.now(),
       shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,

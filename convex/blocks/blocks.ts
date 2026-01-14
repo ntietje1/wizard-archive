@@ -210,7 +210,7 @@ export async function saveTopLevelBlocksForNote(
     processedBlockIds.add(blockId)
     const existingBlock = existingBlocksMap.get(blockId)
 
-    const finalBlockDbId = await upsertBlock(ctx, existingBlock, {
+    const finalBlockDbId = await upsertBlock(ctx, {
       noteId,
       campaignId: note.campaignId,
       blockId,
@@ -245,7 +245,6 @@ export async function saveTopLevelBlocksForNote(
 
 export async function upsertBlock(
   ctx: MutationCtx,
-  existingBlock: Block | undefined,
   params: {
     noteId: Id<'notes'>
     campaignId: Id<'campaigns'>
@@ -257,6 +256,11 @@ export async function upsertBlock(
     shareStatus: BlockShareStatus
   },
 ): Promise<Id<'blocks'>> {
+  const existingBlock = await findBlockByBlockNoteId(
+    ctx,
+    params.noteId,
+    params.blockId,
+  )
   if (existingBlock) {
     await ctx.db.patch(existingBlock._id, {
       position: params.position,
@@ -270,11 +274,12 @@ export async function upsertBlock(
 
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
+    campaignId: params.campaignId,
     blockId: params.blockId,
+
     position: params.position,
     content: params.content,
     isTopLevel: params.isTopLevel,
-    campaignId: params.campaignId,
     updatedAt: params.now,
     shareStatus: params.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED,
   })
