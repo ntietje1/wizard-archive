@@ -18,7 +18,6 @@ function processMenuItem(
     : undefined
 
   // If children resolve to empty, show the item without a submenu
-  // (don't hide items just because they have no children)
   const finalChildren =
     filteredChildren && filteredChildren.length > 0
       ? filteredChildren

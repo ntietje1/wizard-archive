@@ -1,5 +1,4 @@
 import { useDroppable } from '@dnd-kit/core'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
