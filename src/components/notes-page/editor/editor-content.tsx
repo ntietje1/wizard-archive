@@ -41,7 +41,6 @@ function EmptyEditorContent() {
     })
   }
 
-  // Set up droppable for empty editor
   const dropData = { type: EMPTY_EDITOR_DROP_TYPE }
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: EMPTY_EDITOR_DROP_TYPE,

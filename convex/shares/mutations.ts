@@ -11,7 +11,16 @@ import {
   SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from '../sidebarItems/types'
-import { blockShareStatusValidator } from '../blocks/schema'
+import {
+  blockNoteIdValidator,
+  blockShareStatusValidator,
+  customBlockValidator,
+} from '../blocks/schema'
+import {
+  findBlockByBlockNoteId,
+  removeBlockIfNotNeeded,
+  upsertBlock,
+} from '../blocks/blocks'
 import { BLOCK_SHARE_STATUS } from '../blocks/types'
 import {
   shareBlockWithMember,
@@ -176,8 +185,10 @@ export const unshareSidebarItem = mutation({
 export const setBlockShareStatus = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    blockId: v.id('blocks'),
+    noteId: v.id('notes'),
+    blockNoteId: blockNoteIdValidator,
     status: blockShareStatusValidator,
+    content: customBlockValidator,
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
@@ -187,13 +198,32 @@ export const setBlockShareStatus = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const block = await ctx.db.get(args.blockId)
-    if (!block || block.campaignId !== args.campaignId) {
+    const note = await ctx.db.get(args.noteId)
+    if (!note || note.campaignId !== args.campaignId) {
+      throw new Error('Note not found')
+    }
+
+    let block = await findBlockByBlockNoteId(ctx, args.noteId, args.blockNoteId)
+    if (block && block.campaignId !== args.campaignId) {
+      throw new Error('Block not found')
+    } else if (!block) {
+      const blockId = await upsertBlock(ctx, undefined, {
+        campaignId: args.campaignId,
+        blockId: args.blockNoteId,
+        content: args.content,
+        shareStatus: args.status,
+        isTopLevel: false,
+        noteId: args.noteId,
+        now: Date.now(),
+      })
+      block = await ctx.db.get(blockId)
+    }
+
+    if (!block) {
       throw new Error('Block not found')
     }
 
-    // Update the block's share status
-    await ctx.db.patch(args.blockId, {
+    await ctx.db.patch(block._id, {
       shareStatus: args.status,
     })
 
@@ -202,13 +232,15 @@ export const setBlockShareStatus = mutation({
       const shares = await ctx.db
         .query('blockShares')
         .withIndex('by_campaign_block_member', (q) =>
-          q.eq('campaignId', args.campaignId).eq('blockId', args.blockId),
+          q.eq('campaignId', args.campaignId).eq('blockId', block._id),
         )
         .collect()
 
       for (const share of shares) {
         await ctx.db.delete(share._id)
       }
+
+      await removeBlockIfNotNeeded(ctx, args.campaignId, block._id)
     }
 
     return null
@@ -222,8 +254,10 @@ export const setBlockShareStatus = mutation({
 export const shareBlock = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    blockId: v.id('blocks'),
+    noteId: v.id('notes'),
+    blockNoteId: blockNoteIdValidator,
     campaignMemberId: v.id('campaignMembers'),
+    content: customBlockValidator,
   },
   returns: v.id('blockShares'),
   handler: async (ctx, args): Promise<Id<'blockShares'>> => {
@@ -233,22 +267,35 @@ export const shareBlock = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    const note = await ctx.db.get(args.noteId)
+    if (!note || note.campaignId !== args.campaignId) {
+      throw new Error('Note not found')
+    }
+
     // Set status to individually_shared
-    const block = await ctx.db.get(args.blockId)
-    if (!block || block.campaignId !== args.campaignId) {
+    const block = await findBlockByBlockNoteId(
+      ctx,
+      args.noteId,
+      args.blockNoteId,
+    )
+    if (block && block.campaignId !== args.campaignId) {
       throw new Error('Block not found')
     }
 
-    if (block.shareStatus !== BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
-      await ctx.db.patch(args.blockId, {
-        shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
-      })
-    }
+    const blockId = await upsertBlock(ctx, undefined, {
+      campaignId: args.campaignId,
+      blockId: args.blockNoteId,
+      content: args.content,
+      isTopLevel: false,
+      noteId: args.noteId,
+      now: Date.now(),
+      shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+    })
 
     return await shareBlockWithMember(
       ctx,
       args.campaignId,
-      args.blockId,
+      blockId,
       args.campaignMemberId,
     )
   },
@@ -261,7 +308,8 @@ export const shareBlock = mutation({
 export const unshareBlock = mutation({
   args: {
     campaignId: v.id('campaigns'),
-    blockId: v.id('blocks'),
+    noteId: v.id('notes'),
+    blockNoteId: blockNoteIdValidator,
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
@@ -272,7 +320,11 @@ export const unshareBlock = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    const block = await ctx.db.get(args.blockId)
+    const block = await findBlockByBlockNoteId(
+      ctx,
+      args.noteId,
+      args.blockNoteId,
+    )
     if (!block || block.campaignId !== args.campaignId) {
       throw new Error('Block not found')
     }
@@ -280,7 +332,7 @@ export const unshareBlock = mutation({
     await unshareBlockFromMember(
       ctx,
       args.campaignId,
-      args.blockId,
+      block._id,
       args.campaignMemberId,
     )
 
@@ -288,15 +340,17 @@ export const unshareBlock = mutation({
     const remainingShares = await ctx.db
       .query('blockShares')
       .withIndex('by_campaign_block_member', (q) =>
-        q.eq('campaignId', args.campaignId).eq('blockId', args.blockId),
+        q.eq('campaignId', args.campaignId).eq('blockId', block._id),
       )
       .first()
 
     // If no shares remain, set status to not_shared
     if (!remainingShares) {
-      await ctx.db.patch(args.blockId, {
+      await ctx.db.patch(block._id, {
         shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
       })
+
+      await removeBlockIfNotNeeded(ctx, args.campaignId, block._id)
     }
 
     return null

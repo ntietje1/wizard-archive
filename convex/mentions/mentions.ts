@@ -1,8 +1,8 @@
+import type { Block, BlockMention } from '../blocks/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { CustomBlock } from '../notes/editorSpecs'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'
-import type { Block, BlockMention } from '../blocks/types'
 
 export type ExtractedMention = {
   sidebarItemId: SidebarItemId
@@ -127,44 +127,6 @@ export function computeTopLevelPositions(
   const positions = new Map<string, number>()
   order.forEach((id, index) => positions.set(id, index))
   return positions
-}
-
-/**
- * Upsert a block in the database
- */
-export async function upsertBlock(
-  ctx: MutationCtx,
-  existingBlock: Block | undefined,
-  params: {
-    noteId: Id<'notes'>
-    campaignId: Id<'campaigns'>
-    blockId: string
-    isTopLevel: boolean
-    position?: number
-    content: CustomBlock
-    now: number
-  },
-): Promise<Id<'blocks'>> {
-  if (existingBlock) {
-    await ctx.db.patch(existingBlock._id, {
-      position: params.position,
-      content: params.content,
-      isTopLevel: params.isTopLevel,
-      updatedAt: params.now,
-    })
-    return existingBlock._id
-  }
-
-  return await ctx.db.insert('blocks', {
-    noteId: params.noteId,
-    blockId: params.blockId,
-    position: params.position,
-    content: params.content,
-    isTopLevel: params.isTopLevel,
-    campaignId: params.campaignId,
-    updatedAt: params.now,
-    shareStatus: 'not_shared', // Initialize with not_shared
-  })
 }
 
 /**

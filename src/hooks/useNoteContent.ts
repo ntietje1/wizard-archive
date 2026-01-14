@@ -14,6 +14,10 @@ export function useNoteContent(noteId: Id<'notes'>) {
     ...convexQuery(api.notes.queries.getNoteWithContent, { noteId }),
   })
 
+  const sharedNoteQuery = useQuery({
+    ...convexQuery(api.notes.queries.getNoteWithSharedContent, { noteId }),
+  })
+
   const updateContent = useMemo(
     () =>
       debounce((newContent: Array<CustomBlock>) => {
@@ -30,6 +34,7 @@ export function useNoteContent(noteId: Id<'notes'>) {
 
   return {
     noteQuery,
+    sharedNoteQuery,
     updateContent,
   }
 }

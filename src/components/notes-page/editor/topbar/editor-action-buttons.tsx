@@ -1,27 +1,10 @@
-import { useCallback, useRef } from 'react'
+import { useRef } from 'react'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { Button } from '~/components/shadcn/ui/button'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { Eye, MoreVertical, Pencil, X } from '~/lib/icons'
-
-export function EditorViewModeToggleButton() {
-  const { editorMode, setEditorMode } = useEditorMode()
-  const handleEditorModeToggle = useCallback(() => {
-    setEditorMode(editorMode === 'editor' ? 'viewer' : 'editor')
-  }, [editorMode, setEditorMode])
-  return (
-    <Button variant="ghost" size="icon" onClick={handleEditorModeToggle}>
-      {editorMode === 'editor' ? (
-        <Eye className="h-4 w-4" />
-      ) : (
-        <Pencil className="h-4 w-4" />
-      )}
-    </Button>
-  )
-}
+import { MoreVertical, X } from '~/lib/icons'
 
 export function ContextMenuButton() {
   const { item } = useCurrentItem()

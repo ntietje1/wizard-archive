@@ -93,8 +93,6 @@ export function EditableName({
     setIsEditing(false)
   }, [initialName])
 
-  const hasError = isNotUnique
-
   return (
     <div className="truncate min-w-0 flex-shrink-0 relative">
       <span className="invisible px-1 block whitespace-pre">

@@ -3,17 +3,18 @@ import {
   cleanupUnprocessedBlocks,
   computeTopLevelPositions,
   extractAllBlocksWithMentions,
+  getBlockMentions,
   insertBlockMentions,
   updateBlockMentions,
-  upsertBlock,
 } from '../mentions/mentions'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { BLOCK_SHARE_STATUS } from './types'
+import type { Block, BlockShareStatus } from './types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type { Ctx } from '../common/types'
 import type { CustomBlock } from '../notes/editorSpecs'
-import type { Block } from './types'
 import type { Note } from '../notes/types'
 
 export const findBlockByBlockNoteId = async (
@@ -65,6 +66,65 @@ export async function getTopLevelBlocksByNote(
     .collect()
 
   return blocks
+    .filter((block) => block.isTopLevel)
+    .sort((a, b) => (a.position || 0) - (b.position || 0))
+}
+
+export async function getSharedBlocksByNoteAndPlayer(
+  ctx: Ctx,
+  noteId: Id<'notes'>,
+  campaignId: Id<'campaigns'>,
+  sharedWithPlayerId?: Id<'campaignMembers'>,
+): Promise<Array<Block>> {
+  const { campaignWithMembership } = await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+  )
+  const targetPlayerId = sharedWithPlayerId ?? campaignWithMembership.member._id
+  if (
+    targetPlayerId !== campaignWithMembership.member._id &&
+    campaignWithMembership.member.role !== CAMPAIGN_MEMBER_ROLE.DM
+  ) {
+    throw new Error('You are not allowed to access this content')
+  }
+
+  const allSharedBlocks = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_shareStatus', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('noteId', noteId)
+        .eq('shareStatus', BLOCK_SHARE_STATUS.ALL_SHARED),
+    )
+    .collect()
+
+  const individuallySharedBlocks = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_shareStatus', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('noteId', noteId)
+        .eq('shareStatus', BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED),
+    )
+    .collect()
+
+  for (const block of individuallySharedBlocks) {
+    const share = await ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_block_member', (q) =>
+        q
+          .eq('campaignId', campaignId)
+          .eq('blockId', block._id)
+          .eq('campaignMemberId', targetPlayerId),
+      )
+      .unique()
+    if (share) {
+      allSharedBlocks.push(block)
+    }
+  }
+
+  return allSharedBlocks
     .filter((block) => block.isTopLevel)
     .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
@@ -158,6 +218,7 @@ export async function saveTopLevelBlocksForNote(
       position: isTopLevel ? positions.get(blockId) : undefined,
       content: block,
       now,
+      shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
     })
 
     if (existingBlock) {
@@ -180,4 +241,68 @@ export async function saveTopLevelBlocksForNote(
     content,
     now,
   )
+}
+
+export async function upsertBlock(
+  ctx: MutationCtx,
+  existingBlock: Block | undefined,
+  params: {
+    noteId: Id<'notes'>
+    campaignId: Id<'campaigns'>
+    blockId: string
+    isTopLevel: boolean
+    position?: number
+    content: CustomBlock
+    now: number
+    shareStatus: BlockShareStatus
+  },
+): Promise<Id<'blocks'>> {
+  if (existingBlock) {
+    await ctx.db.patch(existingBlock._id, {
+      position: params.position,
+      content: params.content,
+      isTopLevel: params.isTopLevel,
+      updatedAt: params.now,
+      shareStatus: params.shareStatus,
+    })
+    return existingBlock._id
+  }
+
+  return await ctx.db.insert('blocks', {
+    noteId: params.noteId,
+    blockId: params.blockId,
+    position: params.position,
+    content: params.content,
+    isTopLevel: params.isTopLevel,
+    campaignId: params.campaignId,
+    updatedAt: params.now,
+    shareStatus: params.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED,
+  })
+}
+
+/**
+ * Removes a block if:
+ * - It has no mentions
+ * - It is not shared
+ * - It is not a top-level block
+ */
+export async function removeBlockIfNotNeeded(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  blockId: Id<'blocks'>,
+): Promise<void> {
+  const block = await ctx.db.get(blockId)
+  if (
+    !block ||
+    block.campaignId !== campaignId ||
+    block.isTopLevel ||
+    block.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED
+  ) {
+    return
+  }
+  const currentMentions = await getBlockMentions(ctx, campaignId, blockId)
+  if (currentMentions.length > 0) {
+    return
+  }
+  await ctx.db.delete(blockId)
 }

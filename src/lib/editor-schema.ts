@@ -1,4 +1,9 @@
-import { BlockNoteSchema, defaultInlineContentSpecs } from '@blocknote/core'
+import {
+  BlockNoteSchema,
+  defaultBlockSpecs,
+  defaultInlineContentSpecs,
+  defaultStyleSpecs,
+} from '@blocknote/core'
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core'
 import { MentionInlineContent } from '~/components/notes-page/editor/blocks/mention-inline-content'
 
@@ -7,8 +12,17 @@ export const customInlineContentSpecs = {
   mention: MentionInlineContent,
 }
 
+export const customBlockSpecs = {
+  ...defaultBlockSpecs,
+}
+
+export const customStyleSpecs = {
+  ...defaultStyleSpecs,
+}
 export const editorSchema = BlockNoteSchema.create({
+  blockSpecs: customBlockSpecs,
   inlineContentSpecs: customInlineContentSpecs,
+  styleSpecs: customStyleSpecs,
 })
 
 export type CustomBlockSchema = typeof editorSchema.blockSchema

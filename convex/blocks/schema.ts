@@ -36,7 +36,13 @@ const blockMentionTableFields = {
 export const blocksTables = {
   blocks: defineTable({
     ...blockTableFields,
-  }).index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId']),
+  })
+    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId'])
+    .index('by_campaign_note_shareStatus', [
+      'campaignId',
+      'noteId',
+      'shareStatus',
+    ]),
 
   blockMentions: defineTable({
     ...blockMentionTableFields,

@@ -10,7 +10,11 @@ import { blockShareValidator } from '../shares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { getBlockMentions } from '../mentions/mentions'
-import { blockShareStatusValidator, blockValidator } from './schema'
+import {
+  blockNoteIdValidator,
+  blockShareStatusValidator,
+  blockValidator,
+} from './schema'
 import { findBlockByBlockNoteId, getBlocksByCampaign } from './blocks'
 import { BLOCK_SHARE_STATUS } from './types'
 import type { Block, BlockShareStatus } from './types'
@@ -109,26 +113,16 @@ export const getBlockById = query({
   },
 })
 
-/**
- * Get a block by its BlockNote string ID along with its share status and player members.
- * This query finds the block DIRECTLY by BlockNote ID - no mention tables involved.
- * Returns null if the block hasn't been saved to the database yet.
- *
- * Share status optimization:
- * - 'all_shared': Block visible to all players (shares array will be empty)
- * - 'not_shared': Block visible to no players (shares array will be empty)
- * - 'individually_shared': Must query blockShares table for specific shares
- */
 export const getBlockWithShares = query({
   args: {
     noteId: v.id('notes'),
-    blockId: v.string(), // BlockNote string ID (NOT database ID)
+    blockId: blockNoteIdValidator,
   },
   returns: v.union(
     v.object({
       block: blockValidator,
       shareStatus: blockShareStatusValidator,
-      shares: v.array(blockShareValidator), // Only populated if individually_shared
+      shares: v.array(blockShareValidator),
       playerMembers: v.array(campaignMemberValidator),
     }),
     v.null(),

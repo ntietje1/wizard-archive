@@ -3,11 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { EditableBreadcrumb } from './editable-breadcrumb'
-import {
-  CloseButton,
-  ContextMenuButton,
-  EditorViewModeToggleButton,
-} from './editor-action-buttons'
+import { CloseButton, ContextMenuButton } from './editor-action-buttons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
@@ -56,7 +52,6 @@ export function FileTopbar() {
         />
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <EditorViewModeToggleButton />
           <ContextMenuButton />
           <CloseButton />
         </div>

@@ -2,7 +2,10 @@ import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { getTopLevelBlocksByNote } from '../blocks/blocks'
+import {
+  getSharedBlocksByNoteAndPlayer,
+  getTopLevelBlocksByNote,
+} from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../sidebarItems/sidebarItems'
 import { anySidebarItemValidator } from '../sidebarItems/schema'
 import { noteValidator, noteWithContentValidator } from './schema'
@@ -59,7 +62,7 @@ export const getNoteWithContent = query({
     await requireCampaignMembership(
       ctx,
       { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     const topLevelBlocks = await getTopLevelBlocksByNote(
@@ -69,6 +72,40 @@ export const getNoteWithContent = query({
     )
 
     const content = topLevelBlocks.map((block) => block.content)
+
+    return {
+      ...note,
+      content,
+    }
+  },
+})
+
+export const getNoteWithSharedContent = query({
+  args: {
+    noteId: v.id('notes'),
+    playerId: v.optional(v.id('campaignMembers')),
+  },
+  returns: v.union(noteWithContentValidator, v.null()),
+  handler: async (ctx, args): Promise<NoteWithContent | null> => {
+    const note = await getNoteFn(ctx, args.noteId)
+    if (!note) {
+      return null
+    }
+
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: note.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+
+    const blocks = await getSharedBlocksByNoteAndPlayer(
+      ctx,
+      args.noteId,
+      note.campaignId,
+      args.playerId,
+    )
+
+    const content = blocks.map((block) => block.content)
 
     return {
       ...note,

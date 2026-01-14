@@ -1,6 +1,7 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
+import { BookOpen, Pencil } from 'lucide-react'
 import MentionMenu from '../../editor/extensions/side-menu/mentions/mention-menu'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
@@ -16,6 +17,8 @@ import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useNoteContent } from '~/hooks/useNoteContent'
+import { useEditorMode } from '~/hooks/useEditorMode'
+import { Button } from '~/components/shadcn/ui/button'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const { noteQuery, updateContent } = useNoteContent(note._id)
@@ -72,10 +75,13 @@ export const NoteEditorBase = ({
   })
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto relative">
+      <div className="absolute top-2 right-2 z-10">
+        <EditorViewModeToggleButton />
+      </div>
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
         <BlockNoteView
-          key={noteWithContent._id}
+          key={noteWithContent._id + 'editor'}
           editor={editor}
           onChange={() => updateContent(editor.document)}
           theme="light"
@@ -90,5 +96,29 @@ export const NoteEditorBase = ({
         </BlockNoteView>
       </div>
     </div>
+  )
+}
+
+export function EditorViewModeToggleButton() {
+  const { editorMode, setEditorMode } = useEditorMode()
+  const handleEditorModeToggle = useCallback(() => {
+    setEditorMode(editorMode === 'editor' ? 'viewer' : 'editor')
+  }, [editorMode, setEditorMode])
+  const label =
+    editorMode === 'editor' ? 'Switch to viewer mode' : 'Switch to editor mode'
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleEditorModeToggle}
+      aria-label={label}
+      title={label}
+    >
+      {editorMode === 'editor' ? (
+        <Pencil className="h-4 w-4" />
+      ) : (
+        <BookOpen className="h-4 w-4" />
+      )}
+    </Button>
   )
 }
