@@ -226,61 +226,12 @@ export async function getSidebarItemAncestors(
       break
     }
 
-    if (
-      previousParentItem != null &&
-      !isValidSidebarParent(previousParentItem.type, parentItem.type)
-    ) {
-      console.error('Invalid parent item for item id:', currentParentId)
-    }
-
     ancestors.unshift(parentItem)
     currentParentId = parentItem.parentId
     previousParentItem = parentItem
   }
 
   return ancestors
-}
-
-const validRootChildren: Array<SidebarItemType> = [
-  SIDEBAR_ITEM_TYPES.notes,
-  SIDEBAR_ITEM_TYPES.folders,
-  SIDEBAR_ITEM_TYPES.gameMaps,
-  SIDEBAR_ITEM_TYPES.files,
-]
-
-export const validFolderChildren: Array<SidebarItemType> = [
-  SIDEBAR_ITEM_TYPES.notes,
-  SIDEBAR_ITEM_TYPES.folders,
-  SIDEBAR_ITEM_TYPES.gameMaps,
-  SIDEBAR_ITEM_TYPES.files,
-]
-
-export const validNoteChildren: Array<SidebarItemType> = []
-
-export const validMapChildren: Array<SidebarItemType> = []
-
-export const validFileChildren: Array<SidebarItemType> = []
-
-export const validSidebarChildren: Record<
-  SidebarItemOrRootType,
-  Array<SidebarItemType>
-> = {
-  [SIDEBAR_ROOT_TYPE]: validRootChildren,
-  [SIDEBAR_ITEM_TYPES.folders]: validFolderChildren,
-  [SIDEBAR_ITEM_TYPES.notes]: validNoteChildren,
-  [SIDEBAR_ITEM_TYPES.gameMaps]: validMapChildren,
-  [SIDEBAR_ITEM_TYPES.files]: validFileChildren,
-}
-
-export const canItemHaveChildren = (type: SidebarItemType): boolean => {
-  return validSidebarChildren[type].length > 0
-}
-
-export const isValidSidebarParent = (
-  childType: SidebarItemType,
-  parentType: SidebarItemOrRootType,
-): boolean => {
-  return validSidebarChildren[parentType].includes(childType)
 }
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

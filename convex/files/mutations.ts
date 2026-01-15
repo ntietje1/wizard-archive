@@ -4,7 +4,6 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getSidebarItemById,
-  isValidSidebarParent,
   validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
@@ -39,9 +38,6 @@ export const moveFile = mutation({
       )
       if (!parentItem) {
         throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.files, parentItem.type)) {
-        throw new Error('Invalid parent type for files')
       }
     }
 
@@ -90,9 +86,6 @@ export const createFile = mutation({
       )
       if (!parentItem) {
         throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.files, parentItem.type)) {
-        throw new Error('Invalid parent type')
       }
     }
 

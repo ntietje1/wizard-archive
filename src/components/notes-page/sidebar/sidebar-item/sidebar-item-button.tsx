@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import {
-  canItemHaveChildren,
   defaultItemName,
 } from 'convex/sidebarItems/sidebarItems'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarItem } from './sidebar-item'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
@@ -41,6 +41,7 @@ const SidebarItemButtonComponent = ({
   const { navigateToItem } = useEditorNavigation()
   const { item: currentItem } = useCurrentItem()
 
+  const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const children = useSidebarItemsByParent(item._id)
   const hasChildren = (children.data && children.data.length > 0) || false
@@ -75,7 +76,7 @@ const SidebarItemButtonComponent = ({
       onMoreOptions={handleMoreOptions}
       onFinishRename={handleFinishRename}
       onCancelRename={handleCancelRename}
-      showChevron={canItemHaveChildren(item.type)}
+      showChevron={isFolder}
       campaignId={item.campaignId}
       parentId={item.parentId}
       excludeId={item._id}
@@ -88,17 +89,17 @@ const SidebarItemButtonComponent = ({
     </EditorContextMenu>
   )
 
-  return (
-    <DroppableSidebarItem item={item} ancestorIds={ancestorIds}>
+  // For folders: DroppableSidebarItem wraps the entire Collapsible (button + children)
+  if (isFolder) {
+    return (
       <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
-        <Collapsible
-          open={isExpanded}
-          onOpenChange={toggleExpanded}
-          className="w-full"
-          disabled={!canItemHaveChildren(item.type)}
-        >
-          {wrappedButton}
-          {canItemHaveChildren(item.type) && (
+        <DroppableSidebarItem item={item} ancestorIds={ancestorIds}>
+          <Collapsible
+            open={isExpanded}
+            onOpenChange={toggleExpanded}
+            className="w-full"
+          >
+            {wrappedButton}
             <CollapsibleContent
               transition={{ duration: 0.1, ease: 'easeInOut' }}
               keepRendered
@@ -115,10 +116,17 @@ const SidebarItemButtonComponent = ({
                 </div>
               )}
             </CollapsibleContent>
-          )}
-        </Collapsible>
+          </Collapsible>
+        </DroppableSidebarItem>
       </DraggableSidebarItem>
-    </DroppableSidebarItem>
+    )
+  }
+
+  // For non-folder items: just the button wrapped in DraggableSidebarItem
+  return (
+    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+      {wrappedButton}
+    </DraggableSidebarItem>
   )
 }
 

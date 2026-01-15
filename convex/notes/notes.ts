@@ -2,7 +2,6 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
   getSidebarItemById,
-  isValidSidebarParent,
   validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
@@ -51,9 +50,6 @@ export const createNote = async (
     )
     if (!parentItem) {
       throw new Error('Parent not found')
-    }
-    if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.notes, parentItem.type)) {
-      throw new Error('Invalid parent type')
     }
   }
 

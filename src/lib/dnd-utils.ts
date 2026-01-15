@@ -2,7 +2,7 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types'
-import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
+import {} from 'convex/sidebarItems/sidebarItems'
 import type {
   SidebarItem,
   SidebarItemId,
@@ -29,7 +29,6 @@ export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
 
 /**
  * Validates if a drag item can be dropped on a target.
- * Uses the validChildren map to match backend validation logic.
  */
 export function validateDrop(
   draggedItem: SidebarDragData | null,
@@ -37,28 +36,16 @@ export function validateDrop(
 ): boolean {
   if (!draggedItem || !targetData) return false
 
-  // items cannot be dropped onto their current parent
-  // if (
-  //   targetData.type === SIDEBAR_ROOT_TYPE &&
-  //   draggedItem.parentId === undefined
-  // ) {
-  //   return false
-  // }
   if (!isSidebarItem(targetData)) return true
-  if (targetData._id === draggedItem._id) return false
 
-  // if (draggedItem.parentId === targetData._id) {
-  //   return false
-  // }
-
-  // items cannot be dropped on their own children
-  if (targetData.ancestorIds?.includes(draggedItem._id)) {
+  if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
     return false
   }
 
-  // check if the dragged item type is valid for the target type
-  const validChildTypes = validSidebarChildren[targetData.type]
-  if (!validChildTypes.includes(draggedItem.type)) {
+  if (targetData._id === draggedItem._id) return false
+
+  // items cannot be dropped on their own children
+  if (targetData.ancestorIds?.includes(draggedItem._id)) {
     return false
   }
 
@@ -83,11 +70,10 @@ export function canDropFilesOnTarget(
   targetData: SidebarDropData | null,
 ): boolean {
   if (!targetData) return false
+
   if (!isSidebarItem(targetData)) return true
 
-  // Check if target accepts files as children
-  const validChildTypes = validSidebarChildren[targetData.type]
-  if (!validChildTypes.includes(SIDEBAR_ITEM_TYPES.files)) {
+  if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
     return false
   }
 

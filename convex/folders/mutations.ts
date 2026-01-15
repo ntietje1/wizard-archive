@@ -5,7 +5,6 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { findUniqueSlug, shortenId } from '../common/slug'
 import {
   getSidebarItemById,
-  isValidSidebarParent,
   validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
@@ -102,9 +101,6 @@ export const moveFolder = mutation({
       if (!parentItem) {
         throw new Error('Parent not found')
       }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.folders, parentItem.type)) {
-        throw new Error('Invalid parent type')
-      }
       await validateUniqueNameUnderParent(
         ctx,
         folder.campaignId,
@@ -159,9 +155,6 @@ export const createFolder = mutation({
       )
       if (!parentItem) {
         throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.folders, parentItem.type)) {
-        throw new Error('Invalid parent type')
       }
     }
 

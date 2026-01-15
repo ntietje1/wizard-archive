@@ -4,7 +4,6 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getSidebarItemById,
-  isValidSidebarParent,
   validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
@@ -42,9 +41,6 @@ export const createMap = mutation({
       )
       if (!parentItem) {
         throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.gameMaps, parentItem.type)) {
-        throw new Error('Invalid parent type')
       }
     }
 
@@ -177,9 +173,6 @@ export const moveMap = mutation({
       )
       if (!parentItem) {
         throw new Error('Parent not found')
-      }
-      if (!isValidSidebarParent(SIDEBAR_ITEM_TYPES.gameMaps, parentItem.type)) {
-        throw new Error('Invalid parent type')
       }
     }
 
