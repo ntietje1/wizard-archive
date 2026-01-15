@@ -3,7 +3,7 @@ import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropItem } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -12,6 +12,8 @@ import '~/components/notes-page/viewer/folder/folder-card.css'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 function FolderSvg() {
   return (
@@ -53,21 +55,35 @@ export function FolderCard({
   item: folder,
   onClick,
   isLoading,
+  parentId,
 }: ItemCardProps<Folder>) {
   const { active, over } = useDndContext()
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const { activeDragItem, fileDragHoveredId, isDraggingFiles } = useFileSidebar()
 
-  const dropData: SidebarDropData = folder
-  const dragData: SidebarDragData = folder
+  // Include parentId in ancestorIds for circular drop prevention
+  const ancestorIds = parentId ? [parentId] : []
+  const dropData: SidebarDropData = { ...folder, ancestorIds }
+  const dragData: SidebarDragData = { ...folder, ancestorIds }
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folder._id,
     data: dropData,
+    disabled: activeDragItem?._id === folder._id,
   })
 
-  const isValidDropTarget =
-    isOver && active && over && canDropItem(active, over)
+  const canDrop = canDropItem(active, over)
+  const isValidDropTarget = canDrop && isOver
+
+  // Handle native file drag-and-drop
+  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
+  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
+    useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
+  const isFileValidDrop =
+    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
+
+  const shouldHighlight = isValidDropTarget || isFileValidDrop
 
   const {
     setNodeRef: setDragRef,
@@ -111,10 +127,14 @@ export function FolderCard({
       {...listeners}
       {...attributes}
       className={`h-[140px] ${isDragging ? 'opacity-20' : ''}`}
+      onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
+      onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
+      onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
+      onDrop={canAcceptFileDrops ? handleDrop : undefined}
     >
       <div
         className={`folder-wrapper group transition-all relative ${
-          isValidDropTarget ? 'valid-drop-target' : ''
+          shouldHighlight ? 'valid-drop-target' : ''
         }`}
         onClick={handleCardActivate}
         onKeyDown={(e) => {

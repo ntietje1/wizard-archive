@@ -1,4 +1,5 @@
 export {
+  Ban,
   FileText,
   FolderPlus,
   FilePlus,

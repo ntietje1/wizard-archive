@@ -3,18 +3,22 @@ import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'
 import { FileCard } from './file-card'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 
 export interface ItemCardProps<T extends AnySidebarItem> {
   item: T
   onClick?: () => void
   isLoading?: boolean
+  parentId?: SidebarItemId
 }
 
-export function ItemCard({ item }: ItemCardProps<AnySidebarItem>) {
+export function ItemCard({
+  item,
+  parentId,
+}: ItemCardProps<AnySidebarItem>) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      return <FolderCard item={item} />
+      return <FolderCard item={item} parentId={parentId} />
     case SIDEBAR_ITEM_TYPES.notes:
       return <NoteCard item={item} />
     case SIDEBAR_ITEM_TYPES.gameMaps:

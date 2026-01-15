@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -65,11 +65,32 @@ export const useAllSidebarItems = (enabled = true) => {
     return map
   }, [sidebarItemsQuery.data])
 
+  const getAncestorSidebarItems = useCallback(
+    (itemId: SidebarItemId) => {
+      const item = sidebarItemIdMap.get(itemId)
+      if (!item) return []
+      let currAncestorId = item.parentId
+      const seen = new Set<SidebarItemId>()
+      const ancestorItems = []
+      while (currAncestorId && !seen.has(currAncestorId)) {
+        seen.add(currAncestorId)
+        const currAncestor = sidebarItemIdMap.get(currAncestorId)
+        if (currAncestor) {
+          ancestorItems.push(currAncestor)
+          currAncestorId = currAncestor.parentId
+        }
+      }
+      return ancestorItems
+    },
+    [sidebarItemIdMap],
+  )
+
   return {
     ...sidebarItemsQuery,
     data: sidebarItemsQuery.data ?? [],
     itemsMap: sidebarItemIdMap,
     parentItemsMap: sidebarItemParentIdMap,
+    getAncestorSidebarItems,
   }
 }
 

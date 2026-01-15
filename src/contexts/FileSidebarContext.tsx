@@ -33,6 +33,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
   activatorEvent,
@@ -65,6 +66,8 @@ function DragOverlayContent({
   activeDragItem: SidebarDragData
 }) {
   const { active, over } = useDndContext()
+  const { campaignWithMembership } = useCampaign()
+  const campaign = campaignWithMembership.data?.campaign
 
   const DraggedItemIcon = getSidebarItemIcon(activeDragItem as AnySidebarItem)
   const DraggedItemName =
@@ -76,24 +79,20 @@ function DragOverlayContent({
     }
 
     const targetData = over.data.current as SidebarDropData
+    const isValidDrop = canDropItem(active, over)
 
-    // Check if it's a valid drop target
-    if (!canDropItem(active, over)) {
-      return null
-    }
-
-    // Get the name of the drop target
+    // Get target info for display
     if (isSidebarItem(targetData)) {
       return {
         name: targetData.name || defaultItemName(targetData as AnySidebarItem),
-        isValid: true,
+        isValid: isValidDrop,
       }
     } else if (targetData.type === SIDEBAR_ROOT_TYPE) {
-      return { name: 'root', isValid: true }
+      return { name: campaign?.name || 'root', isValid: isValidDrop }
     }
 
-    return null
-  }, [active, over])
+    return isValidDrop ? null : { name: null, isValid: false }
+  }, [active, over, campaign])
 
   return (
     <div className="bg-background rounded-sm shadow-lg shadow-foreground/25 px-2 py-1 font-semibold flex flex-col items-left animate-overlay-shrink w-fit max-w-full opacity-70 ">
@@ -105,7 +104,12 @@ function DragOverlayContent({
       </span>
       {dropTargetInfo?.isValid ? (
         <span className="text-muted-foreground whitespace-nowrap text-xs">
-          Move to "{dropTargetInfo.name}"
+          Move to &quot;{dropTargetInfo.name}&quot;
+        </span>
+      ) : dropTargetInfo && !dropTargetInfo.isValid ? (
+        <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
+          <Ban className="w-3 h-3" />
+          Cannot drop here
         </span>
       ) : null}
     </div>

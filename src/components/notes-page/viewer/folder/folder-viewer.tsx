@@ -1,4 +1,5 @@
 import { ItemCard } from './item-card'
+import { DroppableFolderZone } from './droppable-folder-zone'
 import type { ReactNode } from 'react'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Folder } from 'convex/folders/types'
@@ -29,7 +30,13 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
       >
-        {children}
+        <DroppableFolderZone
+          folder={folder}
+          className="flex flex-col h-full w-full min-h-0"
+          highlightClassName="bg-muted/50"
+        >
+          {children}
+        </DroppableFolderZone>
       </EditorContextMenu>
     )
   }
@@ -50,7 +57,13 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
         <div className="w-full min-w-0">
           <ContentGrid className="p-6 min-h-0">
             {items.map((childItem) => {
-              return <ItemCard key={childItem._id} item={childItem} />
+              return (
+                <ItemCard
+                  key={childItem._id}
+                  item={childItem}
+                  parentId={folder._id}
+                />
+              )
             })}
           </ContentGrid>
         </div>
