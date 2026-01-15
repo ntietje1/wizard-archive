@@ -1,16 +1,20 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
   pointerWithin,
+  useDndContext,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { getEventCoordinates } from '@dnd-kit/utilities'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
@@ -28,6 +32,87 @@ import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
+
+const snapTopLeftToCursor: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  overlayNodeRect,
+  transform,
+}) => {
+  if (draggingNodeRect && activatorEvent) {
+    const activatorCoordinates = getEventCoordinates(activatorEvent)
+
+    if (!activatorCoordinates) {
+      return transform
+    }
+
+    const xAdjustment = (overlayNodeRect?.width ?? 100) / 10
+
+    const offsetX = activatorCoordinates.x - draggingNodeRect.left - xAdjustment
+    const offsetY = activatorCoordinates.y - draggingNodeRect.top
+
+    return {
+      ...transform,
+      x: transform.x + offsetX,
+      y: transform.y + offsetY,
+    }
+  }
+
+  return transform
+}
+
+function DragOverlayContent({
+  activeDragItem,
+}: {
+  activeDragItem: SidebarDragData
+}) {
+  const { active, over } = useDndContext()
+
+  const DraggedItemIcon = getSidebarItemIcon(activeDragItem as AnySidebarItem)
+  const DraggedItemName =
+    activeDragItem.name || defaultItemName(activeDragItem as AnySidebarItem)
+
+  const dropTargetInfo = useMemo(() => {
+    if (!active || !over || !active.data.current) {
+      return null
+    }
+
+    const targetData = over.data.current as SidebarDropData
+
+    // Check if it's a valid drop target
+    if (!canDropItem(active, over)) {
+      return null
+    }
+
+    // Get the name of the drop target
+    if (isSidebarItem(targetData)) {
+      return {
+        name: targetData.name || defaultItemName(targetData as AnySidebarItem),
+        isValid: true,
+      }
+    } else if (targetData.type === SIDEBAR_ROOT_TYPE) {
+      return { name: 'root', isValid: true }
+    }
+
+    return null
+  }, [active, over])
+
+  return (
+    <div className="bg-background rounded-sm shadow-lg shadow-foreground/25 px-2 py-1 font-semibold flex flex-col items-left animate-overlay-shrink w-fit max-w-full opacity-70 ">
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        <DraggedItemIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+        <span className="truncate text-xs text-foreground">
+          {DraggedItemName}
+        </span>
+      </span>
+      {dropTargetInfo?.isValid ? (
+        <span className="text-muted-foreground whitespace-nowrap text-xs">
+          Move to "{dropTargetInfo.name}"
+        </span>
+      ) : null}
+    </div>
+  )
+}
 
 export function FileSidebarProvider({
   children,
@@ -64,8 +149,10 @@ export function FileSidebarProvider({
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
   )
-  const [pointerOffset, setPointerOffset] = useState({ x: 0, y: 0 })
-  const pointerListenerRef = useRef<(() => void) | null>(null)
+
+  const [fileDragHoveredId, setFileDragHoveredId] =
+    useState<SidebarItemId | null>(null)
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
 
   const setFolderState = useCallback(
     (folderId: string, isOpen: boolean) => {
@@ -122,21 +209,6 @@ export function FileSidebarProvider({
     const item = active.data.current as SidebarDragData | null | undefined
     if (item) {
       setActiveDragItem(item)
-
-      // Set up pointer tracking for drag overlay
-      if (pointerListenerRef.current) {
-        pointerListenerRef.current()
-      }
-
-      const handlePointerMove = (e: globalThis.PointerEvent) => {
-        setPointerOffset({ x: e.clientX, y: e.clientY })
-      }
-
-      document.addEventListener('pointermove', handlePointerMove)
-
-      pointerListenerRef.current = () => {
-        document.removeEventListener('pointermove', handlePointerMove)
-      }
     }
   }, [])
 
@@ -144,12 +216,6 @@ export function FileSidebarProvider({
     async (event: DragEndEvent) => {
       const { active, over } = event
       setActiveDragItem(null)
-      setPointerOffset({ x: 0, y: 0 })
-
-      if (pointerListenerRef.current) {
-        pointerListenerRef.current()
-        pointerListenerRef.current = null
-      }
 
       if (!active.data.current || !over) return
 
@@ -188,13 +254,7 @@ export function FileSidebarProvider({
   )
 
   const handleDragCancel = useCallback(() => {
-    // Clean up pointer listener
-    if (pointerListenerRef.current) {
-      pointerListenerRef.current()
-      pointerListenerRef.current = null
-    }
     setActiveDragItem(null)
-    setPointerOffset({ x: 0, y: 0 })
   }, [])
 
   const value: FileSidebarContextType = {
@@ -211,6 +271,10 @@ export function FileSidebarProvider({
     closeAllFoldersMode,
     toggleCloseAllFoldersMode,
     exitCloseAllMode,
+    fileDragHoveredId,
+    setFileDragHoveredId,
+    isDraggingFiles,
+    setIsDraggingFiles,
   }
 
   return (
@@ -230,29 +294,13 @@ export function FileSidebarProvider({
       >
         {children}
         <DragOverlay
+          modifiers={[snapTopLeftToCursor]}
           dropAnimation={null}
-          className="flex items-center justify-center pointer-events-none"
-          style={{
-            position: 'fixed',
-            left: `${pointerOffset.x}px`,
-            top: `${pointerOffset.y}px`,
-            transform: 'translate(-50%, -50%)',
-          }}
+          className="pointer-events-none inline-block"
         >
-          {activeDragItem &&
-            (() => {
-              const DraggedItemIcon = getSidebarItemIcon(
-                activeDragItem as AnySidebarItem,
-              )
-              return (
-                <div className="h-6 bg-background rounded-sm shadow-lg p-2 flex items-center justify-center gap-1 animate-overlay-shrink">
-                  <DraggedItemIcon className="w-5 h-5" />
-                  <span className="text-sm text-foreground font-semibold">
-                    {activeDragItem.name}
-                  </span>
-                </div>
-              )
-            })()}
+          {activeDragItem && (
+            <DragOverlayContent activeDragItem={activeDragItem} />
+          )}
         </DragOverlay>
       </DndContext>
     </FileSidebarContext.Provider>

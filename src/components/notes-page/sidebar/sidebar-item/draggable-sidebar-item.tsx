@@ -18,14 +18,14 @@ export function DraggableSidebarItem({
     ancestorIds,
   }
 
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef } = useDraggable({
     id: item._id,
     data: dragData,
   })
 
   return (
     <div
-      className={cn('flex w-full min-w-0', isDragging && 'opacity-50')}
+      className={cn('flex w-full min-w-0')}
       ref={setNodeRef}
       {...listeners}
       {...attributes}

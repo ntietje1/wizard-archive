@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, MoreHorizontal } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import { HoverToggleButton } from '~/components/hover-toggle-button'
 import { cn } from '~/lib/shadcn/utils'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 export function SidebarItemButtonBase({
   icon: Icon,
@@ -11,6 +12,7 @@ export function SidebarItemButtonBase({
   defaultName,
   isExpanded = false,
   isSelected = false,
+  isDragging = false,
   isRenaming = false,
   showChevron = true,
   onSelect = () => {},
@@ -22,11 +24,17 @@ export function SidebarItemButtonBase({
   parentId,
   excludeId,
 }: SidebarItemButtonProps) {
+  const { activeDragItem } = useFileSidebar()
+  const isDraggingActive = !!activeDragItem
+
   return (
     <div
       className={cn(
-        'group relative flex items-center w-full h-8 px-1 rounded-sm hover:bg-muted/50 transition-colors',
+        'relative flex items-center w-full h-8 px-1 rounded-sm',
+        !isDraggingActive && 'group',
         isSelected && 'bg-muted',
+        isDragging && 'bg-amber-500/10',
+        !isSelected && !isDragging && !activeDragItem && 'hover:bg-muted/50',
       )}
     >
       {/* Icon / Chevron Toggle */}
@@ -34,7 +42,7 @@ export function SidebarItemButtonBase({
         className="relative h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground"
         nonHoverComponent={<Icon className="h-4 w-4 shrink-0" />}
         hoverComponent={
-          showChevron ? (
+          showChevron && !activeDragItem ? (
             <Button
               variant="ghost"
               size="sm"
@@ -79,7 +87,7 @@ export function SidebarItemButtonBase({
       </button>
 
       {/* More Options Button */}
-      {!isRenaming && (
+      {!isRenaming && !activeDragItem && (
         <HoverToggleButton
           className="relative h-6 w-6 shrink-0 flex items-center justify-center"
           hoverComponent={

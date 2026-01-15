@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useCampaign } from './useCampaign'
 import { useFileDropHandler } from './useFileDropHandler'
+import { useFileSidebar } from './useFileSidebar'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { DropResult } from '~/lib/folder-reader'
 import { processDataTransferItems } from '~/lib/folder-reader'
@@ -9,6 +10,8 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { handleDrop: handleDropFiles } = useFileDropHandler()
+  const { setFileDragHoveredId, setIsDraggingFiles: setGlobalIsDraggingFiles } =
+    useFileSidebar()
 
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const dragDepthRef = useRef(0)
@@ -25,8 +28,12 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
       e.stopPropagation()
       dragDepthRef.current++
       setIsDraggingFiles(true)
+      setGlobalIsDraggingFiles(true)
+      if (parentId) {
+        setFileDragHoveredId(parentId)
+      }
     },
-    [isFileDrag],
+    [isFileDrag, parentId, setFileDragHoveredId, setGlobalIsDraggingFiles],
   )
 
   const handleDragOver = useCallback(
@@ -44,9 +51,15 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
       e.preventDefault()
       e.stopPropagation()
       dragDepthRef.current--
-      if (dragDepthRef.current === 0) setIsDraggingFiles(false)
+      if (dragDepthRef.current === 0) {
+        setIsDraggingFiles(false)
+        setGlobalIsDraggingFiles(false)
+        if (parentId) {
+          setFileDragHoveredId(null)
+        }
+      }
     },
-    [isFileDrag],
+    [isFileDrag, parentId, setFileDragHoveredId, setGlobalIsDraggingFiles],
   )
 
   const handleDrop = useCallback(
@@ -57,6 +70,8 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
       e.stopPropagation()
       dragDepthRef.current = 0
       setIsDraggingFiles(false)
+      setGlobalIsDraggingFiles(false)
+      setFileDragHoveredId(null)
 
       if (!campaignId) return
 
@@ -67,7 +82,14 @@ export function useFileDragDrop(parentId?: SidebarItemId) {
         handleDropFiles(dropResult, { campaignId, parentId })
       }
     },
-    [isFileDrag, campaignId, handleDropFiles, parentId],
+    [
+      isFileDrag,
+      campaignId,
+      handleDropFiles,
+      parentId,
+      setFileDragHoveredId,
+      setGlobalIsDraggingFiles,
+    ],
   )
 
   return {

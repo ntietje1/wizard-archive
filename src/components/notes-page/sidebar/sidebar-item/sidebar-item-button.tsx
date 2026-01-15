@@ -35,7 +35,7 @@ const SidebarItemButtonComponent = ({
   item,
   ancestorIds = [],
 }: SidebarItemButtonProps) => {
-  const { renamingId, setRenamingId } = useFileSidebar()
+  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
   const { rename } = useRenameItem(item)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
@@ -69,6 +69,7 @@ const SidebarItemButtonComponent = ({
       isSelected={isSelected}
       isExpanded={isExpanded}
       isRenaming={renamingId === item._id}
+      isDragging={activeDragItem?._id === item._id}
       onSelect={handleSelect}
       onToggleExpanded={toggleExpanded}
       onMoreOptions={handleMoreOptions}

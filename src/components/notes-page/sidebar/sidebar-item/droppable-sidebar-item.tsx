@@ -1,25 +1,14 @@
 import { useDroppable } from '@dnd-kit/core'
-import { validSidebarChildren } from 'convex/sidebarItems/sidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 interface DroppableSidebarItemProps {
   item: AnySidebarItem
   ancestorIds?: Array<SidebarItemId>
   children: React.ReactNode
-}
-
-function getDropData(item: AnySidebarItem, ancestorIds: Array<SidebarItemId>) {
-  const accepts = validSidebarChildren[item.type]
-
-  return {
-    accepts,
-    _id: item._id,
-    ancestorIds,
-    type: item.type,
-  }
 }
 
 /**
@@ -29,12 +18,7 @@ function canAcceptFiles(
   item: AnySidebarItem,
   ancestorIds: Array<SidebarItemId>,
 ): boolean {
-  const targetData = {
-    id: item._id,
-    type: item.type,
-    ancestorIds,
-  }
-  return canDropFilesOnTarget(targetData)
+  return canDropFilesOnTarget({ ...item, ancestorIds })
 }
 
 export function DroppableSidebarItem({
@@ -42,7 +26,7 @@ export function DroppableSidebarItem({
   ancestorIds = [],
   children,
 }: DroppableSidebarItemProps) {
-  const dropData = getDropData(item, ancestorIds)
+  const dropData = { ...item, ancestorIds }
 
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: item._id,
@@ -50,25 +34,35 @@ export function DroppableSidebarItem({
   })
 
   const canDrop = canDropItem(active, over)
-  const isValidDrop = isOver && canDrop
+  const isValidDrop = canDrop && isOver
+  const isParentValidDrop =
+    canDrop && ancestorIds.includes(over?.data.current?._id)
 
   // Handle file drag-and-drop for items that can accept files according to drag rules
   const canAcceptFileDrops = canAcceptFiles(item, ancestorIds)
-  const {
-    isDraggingFiles,
-    handleDragEnter,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = useFileDragDrop(canAcceptFileDrops ? item._id : undefined)
+  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
+    useFileDragDrop(canAcceptFileDrops ? item._id : undefined)
+  const { fileDragHoveredId, isDraggingFiles } = useFileSidebar()
+
+  const isFileValidDrop =
+    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === item._id
+
+  const isFileParentValidDrop =
+    isDraggingFiles &&
+    fileDragHoveredId !== null &&
+    ancestorIds.includes(fileDragHoveredId)
+
+  const shouldHighlight =
+    isValidDrop || isParentValidDrop || isFileValidDrop || isFileParentValidDrop
+
+  // TODO: make dropping onto a non-folder item effectively drop onto the next parent in the ancestor chain
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'transition-colors min-w-0 w-full',
-        isValidDrop ? 'bg-muted' : 'bg-background',
-        isDraggingFiles && canAcceptFileDrops && 'bg-muted/50',
+        'min-w-0 w-full',
+        shouldHighlight ? 'bg-muted' : 'bg-background',
       )}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}

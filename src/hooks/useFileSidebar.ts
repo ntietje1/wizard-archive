@@ -17,6 +17,10 @@ export type FileSidebarContextType = {
   closeAllFoldersMode: boolean
   toggleCloseAllFoldersMode: () => void
   exitCloseAllMode: () => void
+  fileDragHoveredId: SidebarItemId | null
+  setFileDragHoveredId: (id: SidebarItemId | null) => void
+  isDraggingFiles: boolean
+  setIsDraggingFiles: (isDragging: boolean) => void
 }
 
 export const FileSidebarContext = createContext<FileSidebarContextType | null>(

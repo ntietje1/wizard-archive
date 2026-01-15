@@ -38,18 +38,18 @@ export function validateDrop(
   if (!draggedItem || !targetData) return false
 
   // items cannot be dropped onto their current parent
-  if (
-    targetData.type === SIDEBAR_ROOT_TYPE &&
-    draggedItem.parentId === undefined
-  ) {
-    return false
-  }
+  // if (
+  //   targetData.type === SIDEBAR_ROOT_TYPE &&
+  //   draggedItem.parentId === undefined
+  // ) {
+  //   return false
+  // }
   if (!isSidebarItem(targetData)) return true
   if (targetData._id === draggedItem._id) return false
 
-  if (draggedItem.parentId === targetData._id) {
-    return false
-  }
+  // if (draggedItem.parentId === targetData._id) {
+  //   return false
+  // }
 
   // items cannot be dropped on their own children
   if (targetData.ancestorIds?.includes(draggedItem._id)) {
