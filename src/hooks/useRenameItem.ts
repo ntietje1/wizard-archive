@@ -13,7 +13,7 @@ import { useCurrentItem } from './useCurrentItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
 
-export function useRenameItem(item: AnySidebarItem | null) {
+export function useRenameItem() {
   const { item: currentItem } = useCurrentItem()
   const { updateNote } = useNoteActions()
   const { updateMap } = useMapActions()
@@ -25,7 +25,7 @@ export function useRenameItem(item: AnySidebarItem | null) {
   const queryClient = useQueryClient()
 
   const rename = useCallback(
-    async (newName: string) => {
+    async (item: AnySidebarItem, newName: string) => {
       if (!item || !campaignId) return
 
       const previousSlug = item.slug
@@ -96,7 +96,6 @@ export function useRenameItem(item: AnySidebarItem | null) {
       }
     },
     [
-      item,
       campaignId,
       updateNote,
       updateMap,

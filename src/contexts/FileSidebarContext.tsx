@@ -32,11 +32,11 @@ import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 const snapTopLeftToCursor: Modifier = ({
   activatorEvent,
   draggingNodeRect,
-  overlayNodeRect,
   transform,
 }) => {
   if (draggingNodeRect && activatorEvent) {
@@ -46,9 +46,7 @@ const snapTopLeftToCursor: Modifier = ({
       return transform
     }
 
-    const xAdjustment = (overlayNodeRect?.width ?? 100) / 10
-
-    const offsetX = activatorCoordinates.x - draggingNodeRect.left - xAdjustment
+    const offsetX = activatorCoordinates.x - draggingNodeRect.left
     const offsetY = activatorCoordinates.y - draggingNodeRect.top
 
     return {
@@ -137,6 +135,7 @@ export function FileSidebarProvider({
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
   const { navigateToItem } = useEditorNavigation()
+  const { parentItemsMap } = useAllSidebarItems()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
@@ -232,6 +231,23 @@ export function FileSidebarProvider({
 
       const targetId = isSidebarItem(targetData) ? targetData._id : undefined
 
+      if (draggedItem._id === targetId) {
+        console.log('Dropping on the same item') // TODO: remove this
+        return
+      }
+
+      const neighborItems = parentItemsMap.get(targetId)
+      if (
+        neighborItems &&
+        neighborItems.some(
+          (item: AnySidebarItem) => item.name === draggedItem.name,
+        )
+      ) {
+        console.error('An item with this name already exists here')
+        // TODO: make this rename on the backend instead of returning
+        return
+      }
+
       await executeMove(
         draggedItem.type,
         draggedItem._id,
@@ -250,7 +266,15 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       })
     },
-    [moveNote, moveMap, moveFolder, openFolder, moveFile, navigateToItem],
+    [
+      moveNote,
+      moveMap,
+      moveFolder,
+      openFolder,
+      moveFile,
+      navigateToItem,
+      parentItemsMap,
+    ],
   )
 
   const handleDragCancel = useCallback(() => {

@@ -26,11 +26,13 @@ export function DroppableSidebarItem({
   ancestorIds = [],
   children,
 }: DroppableSidebarItemProps) {
+  const { activeDragItem } = useFileSidebar()
   const dropData = { ...item, ancestorIds }
 
   const { setNodeRef, isOver, active, over } = useDroppable({
     id: item._id,
     data: dropData,
+    disabled: activeDragItem?._id === item._id,
   })
 
   const canDrop = canDropItem(active, over)
@@ -54,8 +56,6 @@ export function DroppableSidebarItem({
 
   const shouldHighlight =
     isValidDrop || isParentValidDrop || isFileValidDrop || isFileParentValidDrop
-
-  // TODO: make dropping onto a non-folder item effectively drop onto the next parent in the ancestor chain
 
   return (
     <div

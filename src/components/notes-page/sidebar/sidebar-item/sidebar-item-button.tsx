@@ -1,7 +1,5 @@
 import { memo } from 'react'
-import {
-  defaultItemName,
-} from 'convex/sidebarItems/sidebarItems'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarItem } from './sidebar-item'
@@ -36,7 +34,8 @@ const SidebarItemButtonComponent = ({
   ancestorIds = [],
 }: SidebarItemButtonProps) => {
   const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
-  const { rename } = useRenameItem(item)
+  const { rename } = useRenameItem()
+
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
   const { item: currentItem } = useCurrentItem()
@@ -54,7 +53,8 @@ const SidebarItemButtonComponent = ({
   const handleSelect = () => navigateToItem(item)
 
   const handleFinishRename = async (name: string) => {
-    await rename(name)
+    if (!item) return
+    await rename(item, name)
     setRenamingId(null)
   }
 
@@ -89,7 +89,6 @@ const SidebarItemButtonComponent = ({
     </EditorContextMenu>
   )
 
-  // For folders: DroppableSidebarItem wraps the entire Collapsible (button + children)
   if (isFolder) {
     return (
       <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>

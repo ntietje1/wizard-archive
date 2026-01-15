@@ -13,7 +13,12 @@ import { EditorContextMenu } from '~/components/context-menu/components/EditorCo
 export function FileTopbar() {
   const { item, isLoading } = useCurrentItem()
   const { navigateToItem } = useEditorNavigation()
-  const { rename } = useRenameItem(item)
+  const { rename } = useRenameItem()
+
+  const handleRename = async (newName: string) => {
+    if (!item) return
+    await rename(item, newName)
+  }
 
   const ancestors = useQuery(
     convexQuery(
@@ -43,7 +48,7 @@ export function FileTopbar() {
         <EditableBreadcrumb
           initialName={item.name || ''}
           defaultName={defaultName || 'Untitled'}
-          onRename={rename}
+          onRename={handleRename}
           ancestors={ancestors.data ?? []}
           onNavigateToItem={navigateToItem}
           campaignId={item.campaignId}

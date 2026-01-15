@@ -43,7 +43,7 @@ export const useAllSidebarItems = (enabled = true) => {
     ),
   )
 
-  const itemsMap = useMemo(() => {
+  const sidebarItemIdMap = useMemo(() => {
     const sidebarItems = sidebarItemsQuery.data ?? []
     const map = new Map<SidebarItemId, AnySidebarItem>()
     sidebarItems.forEach((item) => {
@@ -52,10 +52,24 @@ export const useAllSidebarItems = (enabled = true) => {
     return map
   }, [sidebarItemsQuery.data])
 
+  const sidebarItemParentIdMap = useMemo(() => {
+    const sidebarItems = sidebarItemsQuery.data ?? []
+    const map = new Map<SidebarItemId | undefined, Array<AnySidebarItem>>()
+    sidebarItems.forEach((item) => {
+      if (map.has(item.parentId)) {
+        map.get(item.parentId)?.push(item)
+      } else {
+        map.set(item.parentId, [item])
+      }
+    })
+    return map
+  }, [sidebarItemsQuery.data])
+
   return {
     ...sidebarItemsQuery,
     data: sidebarItemsQuery.data ?? [],
-    itemsMap,
+    itemsMap: sidebarItemIdMap,
+    parentItemsMap: sidebarItemParentIdMap,
   }
 }
 
