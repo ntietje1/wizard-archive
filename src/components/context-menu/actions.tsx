@@ -17,6 +17,7 @@ import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { CustomBlock } from '~/lib/editor-schema'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -34,7 +35,13 @@ import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useSession } from '~/hooks/useSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
 
-export function useMenuActions() {
+interface UseMenuActionsOptions {
+  onDialogOpen?: () => void
+  onDialogClose?: () => void
+}
+
+export function useMenuActions(options: UseMenuActionsOptions = {}) {
+  const { onDialogOpen, onDialogClose } = options
   const { navigateToItem, navigateToMap, clearEditorContent } =
     useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
@@ -89,12 +96,16 @@ export function useMenuActions() {
       const item = ctx.item
       if (isNote(item)) {
         setDeleteNoteDialog(item)
+        onDialogOpen?.()
       } else if (isFolder(item)) {
         setDeleteFolderDialog(item)
+        onDialogOpen?.()
       } else if (isGameMap(item)) {
         setDeleteMapDialog(item)
+        onDialogOpen?.()
       } else if (isFile(item)) {
         setDeleteFileDialog(item)
+        onDialogOpen?.()
       }
     },
 
@@ -138,10 +149,12 @@ export function useMenuActions() {
 
     createMap: (ctx: MenuContext) => {
       setCreateMapDialog({ parentId: ctx.item?._id })
+      onDialogOpen?.()
     },
 
     createFile: (ctx: MenuContext) => {
       setCreateFileDialog({ parentId: ctx.item?._id })
+      onDialogOpen?.()
     },
 
     createCanvas: () => {
@@ -151,18 +164,21 @@ export function useMenuActions() {
     editMap: (ctx: MenuContext) => {
       if (isGameMap(ctx.item)) {
         setEditMapDialog(ctx.item._id)
+        onDialogOpen?.()
       }
     },
 
     editFile: (ctx: MenuContext) => {
       if (isFile(ctx.item)) {
         setEditFileDialog(ctx.item._id)
+        onDialogOpen?.()
       }
     },
 
     editItem: (ctx: MenuContext) => {
       if (ctx.item) {
         setEditSidebarItemDialog(ctx.item)
+        onDialogOpen?.()
       }
     },
 
@@ -172,6 +188,7 @@ export function useMenuActions() {
       // Check if already pinned using context data
       if (ctx.pinnedItemIds?.has(ctx.item._id)) {
         toast.error('Item is already pinned on this map')
+        // TODO: add highlight of pin here
         return
       }
 
@@ -201,6 +218,7 @@ export function useMenuActions() {
             mapId: ctx.activeMapId as Id<'gameMaps'>,
           })
           navigateToMap(map.slug)
+          toast.info('Highlighting map pin... (coming soon)')
         } catch (error) {
           console.error('Failed to navigate to map pin:', error)
           toast.error('Failed to navigate to map pin')
@@ -208,6 +226,12 @@ export function useMenuActions() {
       },
       [convex, navigateToMap],
     ),
+
+    createMapPin: useCallback((ctx: MenuContext) => {
+      if (!ctx.item || !ctx.activeMapId) return
+
+      toast.info('Create Pin Here... (coming soon)')
+    }, []),
 
     removeMapPin: useCallback(
       async (ctx: MenuContext) => {
@@ -226,9 +250,16 @@ export function useMenuActions() {
       [convex],
     ),
 
-    moveMapPin: useCallback(() => {
-      // For now, just show a toast. In the future, this could enable drag mode
-      toast.info('Move pin not yet implemented')
+    moveMapPin: useCallback((ctx: MenuContext) => {
+      if (!ctx.pinId) return
+
+      // Dispatch event to map viewer to enter pin move mode
+      const event = new CustomEvent('map-pin-move-request', {
+        detail: {
+          pinId: ctx.pinId,
+        },
+      })
+      window.dispatchEvent(event)
     }, []),
 
     startSession: useCallback(() => {
@@ -369,7 +400,7 @@ export function useMenuActions() {
           }
 
           const markdown = await convertBlocksToMarkdown(
-            noteWithContent.content,
+            noteWithContent.content as Array<CustomBlock>,
           )
           const baseName =
             noteWithContent.name ?? defaultItemName(noteWithContent)
@@ -468,7 +499,9 @@ export function useMenuActions() {
                 const blob = await response.blob()
                 zip.file(item.path, blob)
               } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                const markdown = await convertBlocksToMarkdown(item.content)
+                const markdown = await convertBlocksToMarkdown(
+                  item.content as Array<CustomBlock>,
+                )
                 zip.file(item.path, markdown)
               } else {
                 console.warn(`Unknown item type`, item)
@@ -544,7 +577,9 @@ export function useMenuActions() {
               const blob = await response.blob()
               zip.file(item.path, blob)
             } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-              const markdown = await convertBlocksToMarkdown(item.content)
+              const markdown = await convertBlocksToMarkdown(
+                item.content as Array<CustomBlock>,
+              )
               zip.file(item.path, markdown)
             } else {
               console.warn(`Unknown item type`, item)
@@ -580,6 +615,17 @@ export function useMenuActions() {
     }, [convex, campaignId]),
   }
 
+  // Helper to close a dialog and notify the parent
+  const closeDialog = useCallback(
+    <T,>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {
+      return () => {
+        setter(null)
+        onDialogClose?.()
+      }
+    },
+    [onDialogClose],
+  )
+
   const dialogsContent = useMemo(
     () => (
       <>
@@ -593,7 +639,7 @@ export function useMenuActions() {
                 clearEditorContent()
               }
             }}
-            onClose={() => setDeleteNoteDialog(null)}
+            onClose={closeDialog(setDeleteNoteDialog)}
           />
         )}
 
@@ -607,7 +653,7 @@ export function useMenuActions() {
                 clearEditorContent()
               }
             }}
-            onClose={() => setDeleteFolderDialog(null)}
+            onClose={closeDialog(setDeleteFolderDialog)}
           />
         )}
 
@@ -621,7 +667,7 @@ export function useMenuActions() {
                 clearEditorContent()
               }
             }}
-            onClose={() => setDeleteMapDialog(null)}
+            onClose={closeDialog(setDeleteMapDialog)}
           />
         )}
 
@@ -635,7 +681,7 @@ export function useMenuActions() {
                 clearEditorContent()
               }
             }}
-            onClose={() => setDeleteFileDialog(null)}
+            onClose={closeDialog(setDeleteFileDialog)}
           />
         )}
 
@@ -643,7 +689,7 @@ export function useMenuActions() {
           <MapDialog
             key={`create-map-${createMapDialog.parentId || 'root'}`}
             isOpen={true}
-            onClose={() => setCreateMapDialog(null)}
+            onClose={closeDialog(setCreateMapDialog)}
             campaignId={campaignId}
             parentId={createMapDialog.parentId}
           />
@@ -653,7 +699,7 @@ export function useMenuActions() {
           <FileDialog
             key={`create-file-${createFileDialog.parentId || 'root'}`}
             isOpen={true}
-            onClose={() => setCreateFileDialog(null)}
+            onClose={closeDialog(setCreateFileDialog)}
             campaignId={campaignId}
             parentId={createFileDialog.parentId}
           />
@@ -664,7 +710,7 @@ export function useMenuActions() {
             key={`edit-map-${editMapDialog}`}
             mapId={editMapDialog}
             isOpen={true}
-            onClose={() => setEditMapDialog(null)}
+            onClose={closeDialog(setEditMapDialog)}
             campaignId={campaignId}
           />
         )}
@@ -674,9 +720,9 @@ export function useMenuActions() {
             key={`edit-file-${editFileDialog}`}
             fileId={editFileDialog}
             isOpen={true}
-            onClose={() => setEditFileDialog(null)}
+            onClose={closeDialog(setEditFileDialog)}
             campaignId={campaignId}
-            onSuccess={() => setEditFileDialog(null)}
+            onSuccess={closeDialog(setEditFileDialog)}
           />
         )}
 
@@ -685,7 +731,7 @@ export function useMenuActions() {
             key={`edit-sidebar-item-${editSidebarItemDialog._id}`}
             item={editSidebarItemDialog}
             isOpen={true}
-            onClose={() => setEditSidebarItemDialog(null)}
+            onClose={closeDialog(setEditSidebarItemDialog)}
           />
         )}
       </>
@@ -703,6 +749,7 @@ export function useMenuActions() {
       clearEditorContent,
       createFileDialog,
       deleteFileDialog,
+      closeDialog,
     ],
   )
 

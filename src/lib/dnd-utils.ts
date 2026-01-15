@@ -12,19 +12,35 @@ import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
+export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 
 export interface SidebarDragData extends SidebarItem<SidebarItemType> {
   ancestorIds?: Array<SidebarItemId>
+}
+
+export interface MapDropZoneData {
+  type: typeof MAP_DROP_ZONE_TYPE
+  mapId: Id<'gameMaps'>
+  mapName: string
 }
 
 export type SidebarDropData =
   | SidebarDragData
   | { type: typeof SIDEBAR_ROOT_TYPE }
   | { type: typeof EMPTY_EDITOR_DROP_TYPE }
+  | MapDropZoneData
 
-// This type predicate will properly narrow the type to SidebarDragData when used
+// Type predicates for narrowing drop data types
 export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
-  return data.type !== SIDEBAR_ROOT_TYPE && data.type !== EMPTY_EDITOR_DROP_TYPE
+  return (
+    data.type !== SIDEBAR_ROOT_TYPE &&
+    data.type !== EMPTY_EDITOR_DROP_TYPE &&
+    data.type !== MAP_DROP_ZONE_TYPE
+  )
+}
+
+export function isMapDropZone(data: SidebarDropData): data is MapDropZoneData {
+  return data.type === MAP_DROP_ZONE_TYPE
 }
 
 /**
@@ -36,15 +52,30 @@ export function validateDrop(
 ): boolean {
   if (!draggedItem || !targetData) return false
 
+  // Handle map drop zone - allow pinning items to map
+  if (isMapDropZone(targetData)) {
+    // A map cannot be dropped onto itself (pinned to itself)
+    if (
+      draggedItem.type === SIDEBAR_ITEM_TYPES.gameMaps &&
+      draggedItem._id === targetData.mapId
+    ) {
+      return false
+    }
+    return true
+  }
+
+  // Handle root or empty editor drops
   if (!isSidebarItem(targetData)) return true
 
+  // Only folders accept item drops
   if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
     return false
   }
 
+  // Item cannot be dropped on itself
   if (targetData._id === draggedItem._id) return false
 
-  // items cannot be dropped on their own children
+  // Items cannot be dropped on their own children
   if (targetData.ancestorIds?.includes(draggedItem._id)) {
     return false
   }

@@ -67,6 +67,7 @@ export type ActionHandlers = {
 
   pinToMap: (ctx: MenuContext) => void
   goToMapPin: (ctx: MenuContext) => void
+  createMapPin: (ctx: MenuContext) => void
 
   removeMapPin: (ctx: MenuContext) => void
   moveMapPin: (ctx: MenuContext) => void
@@ -98,8 +99,22 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) => p.inSidebar(ctx) && ctx.item !== undefined,
+      shouldShow: (ctx) =>
+        (p.inSidebar(ctx) || p.hasPinContext(ctx)) && ctx.item !== undefined,
       action: actions.open,
+    },
+    {
+      id: 'go-to-map-pin',
+      label: 'Go to Map Pin',
+      icon: Navigation,
+      group: 'primary',
+      priority: 1,
+      shouldShow: (ctx) =>
+        p.inSidebar(ctx) &&
+        p.isSidebarItem(ctx) &&
+        p.isPinnedOnActiveMap(ctx) &&
+        p.isNotActiveMap(ctx),
+      action: actions.goToMapPin,
     },
 
     // ========== CREATE GROUP ==========
@@ -111,6 +126,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 5,
       shouldShow: (ctx) =>
         !p.inView('topbar')(ctx) &&
+        !p.hasPinContext(ctx) &&
         (p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) || p.atRoot(ctx)),
       action: () => {}, // No action for submenu parent
       children: [
@@ -239,7 +255,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: Eye,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.notInSidebar(ctx),
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.isNotActiveMap(ctx),
       action: actions.showInSidebar,
     },
 
@@ -280,21 +296,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         p.inSidebar(ctx) &&
         p.isSidebarItem(ctx) &&
         !p.isPinnedOnActiveMap(ctx) &&
-        p.mapIsNotActiveMap(ctx),
+        p.isNotActiveMap(ctx),
       action: actions.pinToMap,
-    },
-    {
-      id: 'go-to-map-pin',
-      label: 'Go to Map Pin',
-      icon: Navigation,
-      group: 'pin-actions',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.inSidebar(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isPinnedOnActiveMap(ctx) &&
-        p.mapIsNotActiveMap(ctx),
-      action: actions.goToMapPin,
     },
     {
       id: 'move-map-pin',
@@ -302,9 +305,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: Move,
       group: 'pin-actions',
       priority: 50,
-      shouldShow: (
-        ctx, // TODO: these are broken
-      ) => p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+      shouldShow: (ctx) =>
+        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
       action: actions.moveMapPin,
     },
     {
@@ -314,10 +316,18 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 51,
       variant: 'danger',
-      shouldShow: (
-        ctx, // TODO: these are broken
-      ) => p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+      shouldShow: (ctx) =>
+        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
       action: actions.removeMapPin,
+    },
+    {
+      id: 'create-map-pin',
+      label: 'Create Pin Here',
+      icon: MapPin,
+      group: 'pin-actions',
+      priority: 52,
+      shouldShow: (ctx) => p.isActiveMap(ctx) && p.inView('map-view')(ctx),
+      action: actions.createMapPin,
     },
 
     // ========== DOWNLOAD GROUP ==========
@@ -328,7 +338,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+        p.isSidebarItem(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) &&
+        !p.hasPinContext(ctx),
       action: actions.downloadFile,
     },
     {
@@ -338,7 +350,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx),
+        p.isSidebarItem(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
+        !p.hasMapContext(ctx),
       action: actions.downloadNote,
     },
     {
@@ -348,7 +362,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+        p.isSidebarItem(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) &&
+        !p.hasMapContext(ctx),
       action: actions.downloadMap,
     },
     {
@@ -358,7 +374,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 81,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx),
+        p.isSidebarItem(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) &&
+        !p.hasMapContext(ctx),
       action: actions.downloadFolder,
     },
     {
@@ -387,8 +405,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) =>
-        !p.inSidebar(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+      shouldShow: (ctx) => p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
       action: actions.editMap,
     },
     {
@@ -397,8 +414,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) =>
-        !p.inSidebar(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+      shouldShow: (ctx) => p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editFile,
     },
     {
@@ -408,7 +424,6 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        !p.inSidebar(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,
     },
@@ -421,7 +436,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'danger',
       priority: 100,
       variant: 'danger',
-      shouldShow: (ctx) => p.isSidebarItem(ctx),
+      shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) && !p.hasPinContext(ctx) && p.isNotActiveMap(ctx),
       action: actions.delete,
     },
   ]

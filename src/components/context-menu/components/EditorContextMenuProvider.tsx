@@ -15,14 +15,18 @@ interface ProviderProps {
   viewContext: ViewContext
   item?: AnySidebarItem
   children: React.ReactNode
+  onDialogOpen?: () => void
+  onDialogClose?: () => void
 }
 
 export function EditorContextMenuProvider({
   viewContext,
   item,
   children,
+  onDialogOpen,
+  onDialogClose,
 }: ProviderProps) {
-  const menuActions = useMenuActions()
+  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
   const { campaignWithMembership } = useCampaign()
   const { currentSession } = useSession()
   const { mapId, pinnedItemIds, pinId } = useMapView()

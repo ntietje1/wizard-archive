@@ -35,6 +35,8 @@ interface Props {
   className?: string
   menuClassName?: string
   onClose?: () => void
+  onDialogOpen?: () => void
+  onDialogClose?: () => void
 }
 
 const EditorMenuContent = forwardRef<
@@ -261,11 +263,18 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, Props>(
       className,
       menuClassName = 'w-48 z-[9999]',
       onClose,
+      onDialogOpen,
+      onDialogClose,
     },
     ref,
   ) => {
     return (
-      <EditorContextMenuProvider viewContext={viewContext} item={item}>
+      <EditorContextMenuProvider
+        viewContext={viewContext}
+        item={item}
+        onDialogOpen={onDialogOpen}
+        onDialogClose={onDialogClose}
+      >
         <EditorMenuContent
           ref={ref}
           className={className}

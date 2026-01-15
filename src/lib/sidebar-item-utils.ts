@@ -1,4 +1,7 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import {
+  DEFAULT_ITEM_COLOR,
+  SIDEBAR_ITEM_TYPES,
+} from 'convex/sidebarItems/types'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -84,7 +87,7 @@ export function isValidHexColor(color: string | undefined | null): boolean {
 
 export const validateHexColorOrDefault = (
   colorValue: string | undefined | null,
-  defaultColor: string = '#14b8a6',
+  defaultColor: string = DEFAULT_ITEM_COLOR,
 ): string => {
   if (!colorValue) return defaultColor
 

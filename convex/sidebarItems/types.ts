@@ -55,6 +55,8 @@ export type SidebarItem<T extends SidebarItemType> = {
   shareStatus?: SidebarItemShareStatus
 }
 
+export const DEFAULT_ITEM_COLOR = '#14b8a6'
+
 export type AnySidebarItem = Note | Folder | GameMap | File
 
 export type SidebarItemId =

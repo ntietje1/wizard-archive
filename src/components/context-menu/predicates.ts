@@ -42,12 +42,23 @@ export const isPinnedOnActiveMap: Predicate = (ctx) => {
   return ctx.pinnedItemIds.has(ctx.item._id)
 }
 
-export const mapIsNotActiveMap: Predicate = (ctx) => {
+export const isNotActiveMap: Predicate = (ctx) => {
   if (!ctx.item || !ctx.activeMapId) return false
   return ctx.activeMapId !== ctx.item._id
 }
 
-export const hasPinContext: Predicate = (ctx) => Boolean(ctx.pinId && ctx.mapId)
+export const isActiveMap: Predicate = (ctx) => {
+  if (!ctx.item || !ctx.activeMapId) return false
+  return ctx.activeMapId === ctx.item._id
+}
+
+export const hasPinContext: Predicate = (ctx) => {
+  return Boolean(ctx.pinId && ctx.mapId)
+}
+
+export const hasMapContext: Predicate = (ctx) => {
+  return Boolean(ctx.mapId)
+}
 
 export const hasActiveSession: Predicate = (ctx) => {
   return ctx.hasActiveSession === true

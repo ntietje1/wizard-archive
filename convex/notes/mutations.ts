@@ -9,7 +9,6 @@ import {
   getSidebarItemById,
   validateUniqueNameUnderParent,
 } from '../sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import {
   createNote as createNoteFn,
   deleteNote as deleteNoteFn,

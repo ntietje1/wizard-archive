@@ -23,6 +23,7 @@ import {
   EMPTY_EDITOR_DROP_TYPE,
   canDropItem,
   executeMove,
+  isMapDropZone,
   isSidebarItem,
 } from '~/lib/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
@@ -82,16 +83,29 @@ function DragOverlayContent({
     const isValidDrop = canDropItem(active, over)
 
     // Get target info for display
-    if (isSidebarItem(targetData)) {
+    if (isMapDropZone(targetData)) {
+      return {
+        name: targetData.mapName,
+        isValid: isValidDrop,
+        action: 'pin' as const,
+      }
+    } else if (isSidebarItem(targetData)) {
       return {
         name: targetData.name || defaultItemName(targetData as AnySidebarItem),
         isValid: isValidDrop,
+        action: 'move' as const,
       }
     } else if (targetData.type === SIDEBAR_ROOT_TYPE) {
-      return { name: campaign?.name || 'root', isValid: isValidDrop }
+      return {
+        name: campaign?.name || 'root',
+        isValid: isValidDrop,
+        action: 'move' as const,
+      }
     }
 
-    return isValidDrop ? null : { name: null, isValid: false }
+    return isValidDrop
+      ? null
+      : { name: null, isValid: false, action: 'move' as const }
   }, [active, over, campaign])
 
   return (
@@ -104,7 +118,8 @@ function DragOverlayContent({
       </span>
       {dropTargetInfo?.isValid ? (
         <span className="text-muted-foreground whitespace-nowrap text-xs">
-          Move to &quot;{dropTargetInfo.name}&quot;
+          {dropTargetInfo.action === 'pin' ? 'Pin to' : 'Move to'} &quot;
+          {dropTargetInfo.name}&quot;
         </span>
       ) : dropTargetInfo && !dropTargetInfo.isValid ? (
         <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
@@ -224,6 +239,11 @@ export function FileSidebarProvider({
 
       const draggedItem = active.data.current as SidebarDragData
       const targetData = over.data.current as SidebarDropData
+
+      // Map drop zones are handled by the map viewer via useDndMonitor
+      if (isMapDropZone(targetData)) {
+        return
+      }
 
       // If dropping on empty editor, open the item instead of moving it
       if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {

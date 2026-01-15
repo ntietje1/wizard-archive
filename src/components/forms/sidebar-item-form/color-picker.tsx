@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Palette } from 'lucide-react'
+import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   Popover,
@@ -10,7 +11,7 @@ import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 const COLOR_OPTIONS = [
-  { name: 'Default', hex: '#14b8a6' },
+  { name: 'Default', hex: DEFAULT_ITEM_COLOR },
   { name: 'Red', hex: '#ef4444' },
   { name: 'Orange', hex: '#f97316' },
   { name: 'Yellow', hex: '#eab308' },
@@ -21,8 +22,6 @@ const COLOR_OPTIONS = [
   { name: 'Gray', hex: '#6b7280' },
 ] as const
 
-const DEFAULT_COLOR = '#14b8a6'
-
 interface ColorPickerProps {
   value: string | undefined | null
   onChange: (color: string | null) => void
@@ -30,7 +29,7 @@ interface ColorPickerProps {
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false)
-  const currentColorHex = validateHexColorOrDefault(value, DEFAULT_COLOR)
+  const currentColorHex = validateHexColorOrDefault(value, DEFAULT_ITEM_COLOR)
 
   return (
     <div className="h-9 w-9 flex-shrink-0">
@@ -56,8 +55,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         <PopoverContent className="w-48 p-2" align="start" sideOffset={4}>
           <div className="grid grid-cols-3 gap-2">
             {COLOR_OPTIONS.map((color) => {
-              const valueHex = validateHexColorOrDefault(value, DEFAULT_COLOR)
-              const isSelected = valueHex === color.hex
+              const isSelected = currentColorHex === color.hex
 
               return (
                 <button
