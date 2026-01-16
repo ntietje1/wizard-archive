@@ -1,3 +1,4 @@
+import { BLOCK_SHARE_STATUS } from '../blocks/types'
 import type { Block, BlockMention } from '../blocks/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
@@ -265,14 +266,25 @@ export async function cleanupUnprocessedBlocks(
 
       const hasAnyMentions =
         currentMentions.length > 0 || newMentions.length > 0
+      const isShared =
+        existingBlock.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED
 
-      if (!hasAnyMentions) {
+      if (!hasAnyMentions && !isShared) {
         // Remove all mentions for this block
         for (const mention of currentMentions) {
           await ctx.db.delete(mention._id)
         }
         await ctx.db.delete(existingBlock._id)
+      } else if (isShared) {
+        // Shared blocks: preserve isTopLevel and position, only update content if changed
+        if (blockInNewContent) {
+          await ctx.db.patch(existingBlock._id, {
+            content: blockInNewContent,
+            updatedAt: now,
+          })
+        }
       } else {
+        // Non-shared blocks with mentions: demote to non-top-level
         await ctx.db.patch(existingBlock._id, {
           isTopLevel: false,
           position: undefined,

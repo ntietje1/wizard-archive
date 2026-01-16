@@ -98,7 +98,7 @@ export function useBlockShare(block: CustomBlock) {
           isTopLevel: blockData.block.isTopLevel,
           blockNoteId: block.id,
           campaignMemberId: memberId,
-          content: block.content,
+          content: block,
         })
       }
     } catch (error) {
@@ -132,7 +132,7 @@ export function useBlockShare(block: CustomBlock) {
         isTopLevel: blockData.block.isTopLevel,
         blockNoteId: block.id,
         status: newStatus,
-        content: block.content,
+        content: block,
       })
     } catch (error) {
       console.error(error)

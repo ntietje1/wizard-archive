@@ -9,10 +9,7 @@ import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note, NoteWithContent } from 'convex/notes/types'
-import type {
-  CustomBlockNoteEditor,
-  CustomPartialBlock,
-} from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { Button } from '~/components/shadcn/ui/button'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -83,9 +80,7 @@ export const NoteViewerBase = ({
 }) => {
   const initialContent = useMemo(
     () =>
-      noteWithContent.content.length > 0
-        ? (noteWithContent.content as Array<CustomPartialBlock>)
-        : undefined,
+      noteWithContent.content.length > 0 ? noteWithContent.content : undefined,
     [noteWithContent],
   )
 
@@ -97,10 +92,7 @@ export const NoteViewerBase = ({
   useWikiLinkExtension(editor)
 
   useEffect(() => {
-    editor.replaceBlocks(
-      editor.document,
-      noteWithContent.content as Array<CustomPartialBlock>,
-    )
+    editor.replaceBlocks(editor.document, noteWithContent.content)
   }, [editor, noteWithContent.content])
 
   return (

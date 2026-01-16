@@ -212,10 +212,19 @@ export async function saveTopLevelBlocksForNote(
 
     let finalBlockDbId: Id<'blocks'>
     if (existingBlock) {
+      // Preserve isTopLevel for shared blocks to prevent accidental demotion
+      const isSharedTopLevel =
+        existingBlock.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED &&
+        existingBlock.isTopLevel
+      const finalIsTopLevel = isSharedTopLevel || isTopLevel
+      const position = finalIsTopLevel
+        ? (positions.get(blockId) ?? existingBlock.position)
+        : undefined
+
       await updateBlock(ctx, existingBlock._id, {
-        position: isTopLevel ? positions.get(blockId) : undefined,
+        position,
         content: block,
-        isTopLevel,
+        isTopLevel: finalIsTopLevel,
         updatedAt: now,
       })
       finalBlockDbId = existingBlock._id
