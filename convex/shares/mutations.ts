@@ -18,8 +18,9 @@ import {
 } from '../blocks/schema'
 import {
   findBlockByBlockNoteId,
+  insertBlock,
   removeBlockIfNotNeeded,
-  upsertBlock,
+  updateBlock,
 } from '../blocks/blocks'
 import { BLOCK_SHARE_STATUS } from '../blocks/types'
 import {
@@ -204,19 +205,32 @@ export const setBlockShareStatus = mutation({
       throw new Error('Note not found')
     }
 
-    const blockId = await upsertBlock(ctx, {
-      campaignId: args.campaignId,
-      blockId: args.blockNoteId,
-      content: args.content,
-      shareStatus: args.status,
-      isTopLevel: args.isTopLevel,
-      noteId: args.noteId,
-      now: Date.now(),
-    })
+    const existingBlock = await findBlockByBlockNoteId(
+      ctx,
+      args.noteId,
+      args.blockNoteId,
+    )
 
-    // await ctx.db.patch(block._id, {
-    //   shareStatus: args.status,
-    // })
+    let blockId: Id<'blocks'>
+    if (existingBlock) {
+      await updateBlock(ctx, existingBlock._id, {
+        content: args.content,
+        shareStatus: args.status,
+        isTopLevel: args.isTopLevel,
+        updatedAt: Date.now(),
+      })
+      blockId = existingBlock._id
+    } else {
+      blockId = await insertBlock(ctx, {
+        campaignId: args.campaignId,
+        blockId: args.blockNoteId,
+        content: args.content,
+        shareStatus: args.status,
+        isTopLevel: args.isTopLevel,
+        noteId: args.noteId,
+        now: Date.now(),
+      })
+    }
 
     // If setting to not_shared, clear any individual shares
     if (args.status === BLOCK_SHARE_STATUS.NOT_SHARED) {
@@ -264,15 +278,32 @@ export const shareBlock = mutation({
       throw new Error('Note not found')
     }
 
-    const blockId = await upsertBlock(ctx, {
-      campaignId: args.campaignId,
-      blockId: args.blockNoteId,
-      content: args.content,
-      isTopLevel: args.isTopLevel,
-      noteId: args.noteId,
-      now: Date.now(),
-      shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
-    })
+    const existingBlock = await findBlockByBlockNoteId(
+      ctx,
+      args.noteId,
+      args.blockNoteId,
+    )
+
+    let blockId: Id<'blocks'>
+    if (existingBlock) {
+      await updateBlock(ctx, existingBlock._id, {
+        content: args.content,
+        isTopLevel: args.isTopLevel,
+        shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+        updatedAt: Date.now(),
+      })
+      blockId = existingBlock._id
+    } else {
+      blockId = await insertBlock(ctx, {
+        campaignId: args.campaignId,
+        blockId: args.blockNoteId,
+        content: args.content,
+        isTopLevel: args.isTopLevel,
+        noteId: args.noteId,
+        now: Date.now(),
+        shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+      })
+    }
 
     return await shareBlockWithMember(
       ctx,

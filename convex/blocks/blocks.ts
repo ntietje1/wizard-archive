@@ -210,18 +210,15 @@ export async function saveTopLevelBlocksForNote(
     processedBlockIds.add(blockId)
     const existingBlock = existingBlocksMap.get(blockId)
 
-    const finalBlockDbId = await upsertBlock(ctx, {
-      noteId,
-      campaignId: note.campaignId,
-      blockId,
-      isTopLevel,
-      position: isTopLevel ? positions.get(blockId) : undefined,
-      content: block,
-      now,
-      shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
-    })
-
+    let finalBlockDbId: Id<'blocks'>
     if (existingBlock) {
+      await updateBlock(ctx, existingBlock._id, {
+        position: isTopLevel ? positions.get(blockId) : undefined,
+        content: block,
+        isTopLevel,
+        updatedAt: now,
+      })
+      finalBlockDbId = existingBlock._id
       await updateBlockMentions(
         ctx,
         note.campaignId,
@@ -230,6 +227,16 @@ export async function saveTopLevelBlocksForNote(
         mentions,
       )
     } else {
+      finalBlockDbId = await insertBlock(ctx, {
+        noteId,
+        campaignId: note.campaignId,
+        blockId,
+        isTopLevel,
+        position: isTopLevel ? positions.get(blockId) : undefined,
+        content: block,
+        now,
+        shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
+      })
       await insertBlockMentions(ctx, note.campaignId, finalBlockDbId, mentions)
     }
   }
@@ -243,7 +250,7 @@ export async function saveTopLevelBlocksForNote(
   )
 }
 
-export async function upsertBlock(
+export async function insertBlock(
   ctx: MutationCtx,
   params: {
     noteId: Id<'notes'>
@@ -256,33 +263,30 @@ export async function upsertBlock(
     shareStatus: BlockShareStatus
   },
 ): Promise<Id<'blocks'>> {
-  const existingBlock = await findBlockByBlockNoteId(
-    ctx,
-    params.noteId,
-    params.blockId,
-  )
-  if (existingBlock) {
-    await ctx.db.patch(existingBlock._id, {
-      position: params.position,
-      content: params.content,
-      isTopLevel: params.isTopLevel,
-      updatedAt: params.now,
-      shareStatus: params.shareStatus,
-    })
-    return existingBlock._id
-  }
-
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
     campaignId: params.campaignId,
     blockId: params.blockId,
-
     position: params.position,
     content: params.content,
     isTopLevel: params.isTopLevel,
     updatedAt: params.now,
     shareStatus: params.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED,
   })
+}
+
+export async function updateBlock(
+  ctx: MutationCtx,
+  blockDbId: Id<'blocks'>,
+  updates: {
+    position?: number
+    content?: CustomBlock
+    isTopLevel?: boolean
+    shareStatus?: BlockShareStatus
+    updatedAt?: number
+  },
+): Promise<void> {
+  await ctx.db.patch(blockDbId, updates)
 }
 
 /**
