@@ -424,6 +424,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
+        p.isSidebarItem(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,
     },
