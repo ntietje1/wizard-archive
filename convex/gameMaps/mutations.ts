@@ -4,7 +4,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getSidebarItemById,
-  validateUniqueNameUnderParent,
+  validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
@@ -44,7 +44,7 @@ export const createMap = mutation({
       }
     }
 
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       args.campaignId,
       args.parentId,
@@ -110,7 +110,7 @@ export const updateMap = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateUniqueNameUnderParent(
+      await validateSidebarItemName(
         ctx,
         map.campaignId,
         map.parentId,
@@ -176,7 +176,7 @@ export const moveMap = mutation({
       }
     }
 
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       map.campaignId,
       args.parentId,

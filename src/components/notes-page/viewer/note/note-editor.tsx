@@ -2,7 +2,8 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { useCallback, useMemo } from 'react'
 import { BookOpen, Pencil } from 'lucide-react'
-import MentionMenu from '../../editor/extensions/side-menu/mentions/mention-menu'
+import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
+import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
@@ -18,7 +19,9 @@ import { isNote } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
+import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { Button } from '~/components/shadcn/ui/button'
+import '../../editor/extensions/wiki-link/wiki-link.css'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const { noteQuery, updateContent } = useNoteContent(note._id)
@@ -69,10 +72,13 @@ export const NoteEditorBase = ({
         : undefined,
     [noteWithContent],
   )
+
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
     schema: editorSchema,
     initialContent,
   })
+
+  useWikiLinkExtension(editor)
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto relative">
@@ -89,7 +95,8 @@ export const NoteEditorBase = ({
           formattingToolbar={false}
           slashMenu={false}
         >
-          <MentionMenu editor={editor} />
+          <WikiLinkAutocomplete editor={editor} />
+          <WikiLinkClickHandler editor={editor} />
           <SideMenuController sideMenu={SideMenuRenderer} />
           <SelectionToolbar />
           <SlashMenu editor={editor} />

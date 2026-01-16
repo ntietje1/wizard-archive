@@ -150,6 +150,52 @@ export const getSidebarItemsByParentAndName = async (
   return allItems
 }
 
+export const getSidebarItemsByName = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  name: string,
+): Promise<AnySidebarItem | null> => {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+  )
+
+  const notes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_name', (q) =>
+      q.eq('campaignId', campaignId).eq('name', name),
+    )
+    .first()
+  if (notes) return notes as AnySidebarItem
+
+  const folders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_name', (q) =>
+      q.eq('campaignId', campaignId).eq('name', name),
+    )
+    .first()
+  if (folders) return folders as AnySidebarItem
+
+  const maps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_name', (q) =>
+      q.eq('campaignId', campaignId).eq('name', name),
+    )
+    .first()
+  if (maps) return maps as AnySidebarItem
+
+  const files = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_name', (q) =>
+      q.eq('campaignId', campaignId).eq('name', name),
+    )
+    .first()
+  if (files) return files as AnySidebarItem
+
+  return null
+}
+
 export const getSidebarItemBySlug = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
@@ -241,6 +287,28 @@ export const defaultNameMap: Record<SidebarItemType, string> = {
   [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
 }
 
+/**
+ * Validates that a name is compatible with wiki-link syntax.
+ * Names cannot contain [[ or ]] as these are wiki-link delimiters.
+ * Single [ or ] are allowed.
+ */
+export const validateWikiLinkCompatibleName = (
+  name: string | undefined,
+): void => {
+  if (!name) return
+
+  if (name.includes('[[')) {
+    throw new Error(
+      'Name cannot contain "[[" as it conflicts with wiki-link syntax',
+    )
+  }
+  if (name.includes(']]')) {
+    throw new Error(
+      'Name cannot contain "]]" as it conflicts with wiki-link syntax',
+    )
+  }
+}
+
 export const defaultItemName = (
   item: AnySidebarItem | null | undefined,
 ): string => {
@@ -290,5 +358,23 @@ export const validateUniqueNameUnderParent = async (
   if (!isUnique) {
     throw new Error('An item with this name already exists here')
   }
+  return true
+}
+
+export const validateSidebarItemName = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: SidebarItemId | undefined,
+  name: string | undefined,
+  excludeId?: SidebarItemId,
+): Promise<boolean> => {
+  validateWikiLinkCompatibleName(name)
+  await validateUniqueNameUnderParent(
+    ctx,
+    campaignId,
+    parentId,
+    name,
+    excludeId,
+  )
   return true
 }

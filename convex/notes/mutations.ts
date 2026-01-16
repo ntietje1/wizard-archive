@@ -7,7 +7,7 @@ import { customBlockValidator } from '../blocks/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import {
   getSidebarItemById,
-  validateUniqueNameUnderParent,
+  validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import {
   createNote as createNoteFn,
@@ -63,7 +63,7 @@ export const moveNote = mutation({
         throw new Error('Parent not found')
       }
     }
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       note.campaignId,
       args.parentId,

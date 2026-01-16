@@ -4,7 +4,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   getSidebarItemById,
-  validateUniqueNameUnderParent,
+  validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
@@ -41,7 +41,7 @@ export const moveFile = mutation({
       }
     }
 
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       file.campaignId,
       args.parentId,
@@ -89,7 +89,7 @@ export const createFile = mutation({
       }
     }
 
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       args.campaignId,
       args.parentId,
@@ -155,7 +155,7 @@ export const updateFile = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateUniqueNameUnderParent(
+      await validateSidebarItemName(
         ctx,
         file.campaignId,
         file.parentId,

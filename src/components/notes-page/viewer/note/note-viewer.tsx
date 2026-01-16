@@ -2,8 +2,9 @@ import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { useEffect, useMemo, useState } from 'react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
-import MentionMenu from '../../editor/extensions/side-menu/mentions/mention-menu'
+import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
+import '../../editor/extensions/wiki-link/wiki-link.css'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
@@ -12,6 +13,7 @@ import type {
   CustomBlockNoteEditor,
   CustomPartialBlock,
 } from '~/lib/editor-schema'
+import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { Button } from '~/components/shadcn/ui/button'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
@@ -26,7 +28,6 @@ import {
 import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
-import { useCampaign } from '~/hooks/useCampaign'
 import { Eye } from '~/lib/icons'
 import { useSharedNoteContent } from '~/hooks/useSharedNoteContent'
 
@@ -87,10 +88,13 @@ export const NoteViewerBase = ({
         : undefined,
     [noteWithContent],
   )
+
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
     schema: editorSchema,
     initialContent,
   })
+
+  useWikiLinkExtension(editor)
 
   useEffect(() => {
     editor.replaceBlocks(
@@ -115,7 +119,7 @@ export const NoteViewerBase = ({
           formattingToolbar={false}
           slashMenu={false}
         >
-          <MentionMenu editor={editor} />
+          <WikiLinkClickHandler editor={editor} />
           <SideMenuController sideMenu={SideMenuRenderer} />
           <SelectionToolbar />
           <SlashMenu editor={editor} />

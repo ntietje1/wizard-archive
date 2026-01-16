@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
   getSidebarItemById,
-  validateUniqueNameUnderParent,
+  validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueSlug, shortenId } from '../common/slug'
@@ -53,7 +53,7 @@ export const createNote = async (
     }
   }
 
-  await validateUniqueNameUnderParent(
+  await validateSidebarItemName(
     ctx,
     input.campaignId,
     input.parentId,
@@ -101,7 +101,7 @@ export const updateNote = async (
 
   if (input.name !== undefined) {
     updates.name = input.name
-    await validateUniqueNameUnderParent(
+    await validateSidebarItemName(
       ctx,
       note.campaignId,
       note.parentId,

@@ -8,6 +8,7 @@ import {
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
   getSidebarItemBySlug as getSidebarItemBySlugFn,
+  getSidebarItemsByName as getSidebarItemsByNameFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
 import type { AnySidebarItem } from './types'
@@ -100,5 +101,16 @@ export const checkUniqueNameUnderParent = query({
       args.name,
       args.excludeId,
     )
+  },
+})
+
+export const getSidebarItemByName = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    name: v.string(),
+  },
+  returns: v.union(anySidebarItemValidator, v.null()),
+  handler: async (ctx, args): Promise<AnySidebarItem | null> => {
+    return await getSidebarItemsByNameFn(ctx, args.campaignId, args.name)
   },
 })

@@ -13,7 +13,7 @@ export const MentionConfig: CustomInlineContentConfig = {
     displayName: { default: '' },
     color: { default: '' },
   },
-  content: 'none',
+  content: 'styled',
 }
 
 type MentionInlineSpec = InlineContentSpec<typeof MentionConfig>
