@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { filterSuggestionItems } from '@blocknote/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -70,6 +70,7 @@ export function WikiLinkAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [items, setItems] = useState<Array<WikiLinkMenuItem>>([])
   const [isDragging, setIsDragging] = useState(false)
+  const hasEditedLinkRef = useRef(false)
 
   // Build filtered menu items when query changes
   useEffect(() => {
@@ -123,13 +124,25 @@ export function WikiLinkAutocomplete({
   useEffect(() => {
     if (!editor) return
 
-    const updateMenuState = () => {
+    const updateMenuState = ({
+      transaction,
+    }: {
+      transaction: { docChanged: boolean }
+    }) => {
       // Don't show menu while user is dragging to select text
       if (isDragging) return
 
       const context = getWikiLinkContext(editor)
 
       if (context) {
+        // Mark as edited if doc changed while in wiki-link context
+        if (transaction.docChanged) {
+          hasEditedLinkRef.current = true
+        }
+
+        // Only show menu if user has edited the link
+        if (!hasEditedLinkRef.current) return
+
         // Get caret position for menu placement
         const tiptapEditor = editor._tiptapEditor
         const coords = tiptapEditor?.view?.coordsAtPos(context.startPos)
@@ -143,6 +156,8 @@ export function WikiLinkAutocomplete({
           referencePos,
         })
       } else {
+        // Left wiki-link context, reset edited flag
+        hasEditedLinkRef.current = false
         setMenuState({ show: false, query: '', referencePos: null })
       }
     }
