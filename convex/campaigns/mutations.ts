@@ -176,18 +176,6 @@ export const deleteCampaign = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Delete block mentions
-    const blockMentions = await ctx.db
-      .query('blockMentions')
-      .withIndex('by_campaign_block_item', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    for (const mention of blockMentions) {
-      await ctx.db.delete(mention._id)
-    }
-
     // Delete blocks
     const blocks = await ctx.db
       .query('blocks')

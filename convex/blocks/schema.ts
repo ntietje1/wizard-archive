@@ -26,13 +26,6 @@ const blockTableFields = {
   shareStatus: v.optional(blockShareStatusValidator),
 }
 
-const blockMentionTableFields = {
-  campaignId: v.id('campaigns'),
-  blockId: v.id('blocks'),
-  sidebarItemId: sidebarItemIdValidator,
-  sidebarItemType: sidebarItemTypeValidator,
-}
-
 export const blocksTables = {
   blocks: defineTable({
     ...blockTableFields,
@@ -43,14 +36,6 @@ export const blocksTables = {
       'noteId',
       'shareStatus',
     ]),
-
-  blockMentions: defineTable({
-    ...blockMentionTableFields,
-  }).index('by_campaign_block_item', [
-    'campaignId',
-    'blockId',
-    'sidebarItemId',
-  ]),
 }
 
 const blockValidatorFields = {
@@ -59,12 +44,4 @@ const blockValidatorFields = {
   ...blockTableFields,
 } as const
 
-const blockMentionValidatorFields = {
-  _id: v.id('blockMentions'),
-  _creationTime: v.number(),
-  ...blockMentionTableFields,
-} as const
-
 export const blockValidator = v.object(blockValidatorFields)
-
-export const blockMentionValidator = v.object(blockMentionValidatorFields)

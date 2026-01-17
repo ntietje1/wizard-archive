@@ -34,8 +34,6 @@ import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
 import type * as gameMaps_validators from "../gameMaps/validators.js";
-import type * as mentions_editorSpecs from "../mentions/editorSpecs.js";
-import type * as mentions_mentions from "../mentions/mentions.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_mutations from "../notes/mutations.js";
 import type * as notes_notes from "../notes/notes.js";
@@ -103,8 +101,6 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/types": typeof gameMaps_types;
   "gameMaps/validators": typeof gameMaps_validators;
-  "mentions/editorSpecs": typeof mentions_editorSpecs;
-  "mentions/mentions": typeof mentions_mentions;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/mutations": typeof notes_mutations;
   "notes/notes": typeof notes_notes;

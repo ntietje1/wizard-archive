@@ -1,12 +1,4 @@
 import { getNote } from '../notes/notes'
-import {
-  cleanupUnprocessedBlocks,
-  computeTopLevelPositions,
-  extractAllBlocksWithMentions,
-  getBlockMentions,
-  insertBlockMentions,
-  updateBlockMentions,
-} from '../mentions/mentions'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { BLOCK_SHARE_STATUS } from './types'
@@ -139,24 +131,6 @@ export async function getBlocksByCampaign(
     .collect()
 }
 
-async function deleteBlockAndMentions(
-  ctx: MutationCtx,
-  blockId: Id<'blocks'>,
-  campaignId: Id<'campaigns'>,
-): Promise<void> {
-  const blockMentions = await ctx.db
-    .query('blockMentions')
-    .withIndex('by_campaign_block_item', (q) =>
-      q.eq('campaignId', campaignId).eq('blockId', blockId),
-    )
-    .collect()
-
-  for (const blockMention of blockMentions) {
-    await ctx.db.delete(blockMention._id)
-  }
-  await ctx.db.delete(blockId)
-}
-
 export async function deleteBlocksByNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
@@ -165,7 +139,7 @@ export async function deleteBlocksByNote(
   const blocks = await getBlocksByNote(ctx, noteId, campaignId)
 
   for (const block of blocks) {
-    await deleteBlockAndMentions(ctx, block._id, campaignId)
+    await ctx.db.delete(block._id)
   }
 }
 
@@ -187,76 +161,49 @@ export async function saveTopLevelBlocksForNote(
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const allBlocksWithMentions = extractAllBlocksWithMentions(content)
-
-  const existingBlocks = await ctx.db
+  const existingTopLevelBlocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
       q.eq('campaignId', note.campaignId).eq('noteId', noteId),
     )
     .collect()
+    .then((blocks) => blocks.filter((block) => block.isTopLevel))
 
   const existingBlocksMap = new Map(
-    existingBlocks.map((block) => [block.blockId, block]),
+    existingTopLevelBlocks.map((block) => [block.blockId, block]),
   )
 
-  const processedBlockIds = new Set<string>()
-  const positions = computeTopLevelPositions(allBlocksWithMentions)
+  const positions = new Map<string, number>()
+  content.forEach((block, index) => positions.set(block.id, index))
 
-  for (const [
-    blockId,
-    { block, mentions, isTopLevel },
-  ] of allBlocksWithMentions) {
-    processedBlockIds.add(blockId)
-    const existingBlock = existingBlocksMap.get(blockId)
-
-    let finalBlockDbId: Id<'blocks'>
+  for (const block of content) {
+    const existingBlock = existingBlocksMap.get(block.id)
     if (existingBlock) {
-      // Preserve isTopLevel for shared blocks to prevent accidental demotion
-      const isSharedTopLevel =
-        existingBlock.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED &&
-        existingBlock.isTopLevel
-      const finalIsTopLevel = isSharedTopLevel || isTopLevel
-      const position = finalIsTopLevel
-        ? (positions.get(blockId) ?? existingBlock.position)
-        : undefined
-
       await updateBlock(ctx, existingBlock._id, {
-        position,
+        position: positions.get(block.id),
         content: block,
-        isTopLevel: finalIsTopLevel,
+        isTopLevel: existingBlock.isTopLevel,
         updatedAt: now,
       })
-      finalBlockDbId = existingBlock._id
-      await updateBlockMentions(
-        ctx,
-        note.campaignId,
-        finalBlockDbId,
-        existingBlock.content,
-        mentions,
-      )
     } else {
-      finalBlockDbId = await insertBlock(ctx, {
+      await insertBlock(ctx, {
         noteId,
         campaignId: note.campaignId,
-        blockId,
-        isTopLevel,
-        position: isTopLevel ? positions.get(blockId) : undefined,
+        blockId: block.id,
+        isTopLevel: true,
+        position: positions.get(block.id),
         content: block,
         now,
         shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
       })
-      await insertBlockMentions(ctx, note.campaignId, finalBlockDbId, mentions)
     }
   }
-
-  await cleanupUnprocessedBlocks(
-    ctx,
-    existingBlocks,
-    processedBlockIds,
-    content,
-    now,
+  const remainingBlocks = existingTopLevelBlocks.filter(
+    (b) => !content.some((b2) => b2.id === b.blockId),
   )
+  for (const block of remainingBlocks) {
+    await removeBlockIfNotNeeded(ctx, note.campaignId, block._id)
+  }
 }
 
 export async function insertBlock(
@@ -300,7 +247,6 @@ export async function updateBlock(
 
 /**
  * Removes a block if:
- * - It has no mentions
  * - It is not shared
  * - It is not a top-level block
  */
@@ -316,10 +262,6 @@ export async function removeBlockIfNotNeeded(
     block.isTopLevel ||
     block.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED
   ) {
-    return
-  }
-  const currentMentions = await getBlockMentions(ctx, campaignId, blockId)
-  if (currentMentions.length > 0) {
     return
   }
   await ctx.db.delete(blockId)

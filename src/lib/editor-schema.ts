@@ -5,11 +5,9 @@ import {
   defaultStyleSpecs,
 } from '@blocknote/core'
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core'
-import { MentionInlineContent } from '~/components/notes-page/editor/blocks/mention-inline-content'
 
 export const customInlineContentSpecs = {
   ...defaultInlineContentSpecs,
-  mention: MentionInlineContent,
 }
 
 export const customBlockSpecs = {

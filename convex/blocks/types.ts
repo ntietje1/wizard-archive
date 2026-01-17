@@ -23,12 +23,3 @@ export type Block = {
   updatedAt: number
   shareStatus?: BlockShareStatus
 }
-
-export type BlockMention = {
-  _id: Id<'blockMentions'>
-  _creationTime: number
-  campaignId: Id<'campaigns'>
-  blockId: Id<'blocks'>
-  sidebarItemId: SidebarItemId
-  sidebarItemType: SidebarItemType
-}
