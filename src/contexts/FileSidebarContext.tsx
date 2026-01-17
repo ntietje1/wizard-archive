@@ -33,7 +33,7 @@ import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
 import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
@@ -154,7 +154,8 @@ export function FileSidebarProvider({
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
   const { navigateToItem } = useEditorNavigation()
-  const { parentItemsMap } = useAllSidebarItems()
+  const { validateNameConflictSync, canMoveToParent } =
+    useSidebarItemValidation()
 
   const moveMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
@@ -256,19 +257,26 @@ export function FileSidebarProvider({
       const targetId = isSidebarItem(targetData) ? targetData._id : undefined
 
       if (draggedItem._id === targetId) {
-        console.log('Dropping on the same item') // TODO: remove this
         return
       }
 
-      const neighborItems = parentItemsMap.get(targetId)
-      if (
-        neighborItems &&
-        neighborItems.some(
-          (item: AnySidebarItem) => item.name === draggedItem.name,
+      // Validate circular parent reference
+      if (!canMoveToParent(draggedItem._id, targetId)) {
+        toast.error('Cannot move item into its own descendant')
+        return
+      }
+
+      // Validate name conflict in target location
+      const nameConflictResult = validateNameConflictSync(
+        draggedItem.name,
+        targetId,
+        draggedItem._id,
+      )
+      if (!nameConflictResult.valid) {
+        toast.error(
+          nameConflictResult.error ??
+            'An item with this name already exists here',
         )
-      ) {
-        console.error('An item with this name already exists here')
-        // TODO: make this rename on the backend instead of returning
         return
       }
 
@@ -297,7 +305,8 @@ export function FileSidebarProvider({
       openFolder,
       moveFile,
       navigateToItem,
-      parentItemsMap,
+      canMoveToParent,
+      validateNameConflictSync,
     ],
   )
 

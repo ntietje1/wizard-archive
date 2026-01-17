@@ -5,10 +5,8 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
-import {
-  getSidebarItemById,
-  validateSidebarItemName,
-} from '../sidebarItems/sidebarItems'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { validateSidebarItemName } from '../sidebarItems/validation'
 import {
   createNote as createNoteFn,
   deleteNote as deleteNoteFn,
@@ -63,13 +61,13 @@ export const moveNote = mutation({
         throw new Error('Parent not found')
       }
     }
-    await validateSidebarItemName(
+    await validateSidebarItemName({
       ctx,
-      note.campaignId,
-      args.parentId,
-      note.name,
-      note._id,
-    )
+      campaignId: note.campaignId,
+      parentId: args.parentId,
+      name: note.name,
+      excludeId: note._id,
+    })
 
     await ctx.db.patch(args.noteId, {
       parentId: args.parentId,

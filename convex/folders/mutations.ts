@@ -3,10 +3,11 @@ import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { findUniqueFolderSlug, findUniqueSlug } from '../common/slug'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  getSidebarItemById,
+  validateParentChange,
   validateSidebarItemName,
-} from '../sidebarItems/sidebarItems'
+} from '../sidebarItems/validation'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { deleteFolder as deleteFolderFn } from './folders'
@@ -43,13 +44,13 @@ export const updateFolder = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName(
+      await validateSidebarItemName({
         ctx,
-        folder.campaignId,
-        folder.parentId,
-        args.name,
-        folder._id,
-      )
+        campaignId: folder.campaignId,
+        parentId: folder.parentId,
+        name: args.name,
+        excludeId: folder._id,
+      })
 
       updates.slug = await findUniqueFolderSlug(
         ctx,
@@ -82,6 +83,13 @@ export const moveFolder = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    // Validate no circular parent reference
+    await validateParentChange({
+      ctx,
+      itemId: args.folderId,
+      newParentId: args.parentId,
+    })
+
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -91,14 +99,16 @@ export const moveFolder = mutation({
       if (!parentItem) {
         throw new Error('Parent not found')
       }
-      await validateSidebarItemName(
-        ctx,
-        folder.campaignId,
-        args.parentId,
-        folder.name,
-        folder._id,
-      )
     }
+
+    // Validate name doesn't conflict in new location
+    await validateSidebarItemName({
+      ctx,
+      campaignId: folder.campaignId,
+      parentId: args.parentId,
+      name: folder.name,
+      excludeId: folder._id,
+    })
 
     await ctx.db.patch(args.folderId, {
       parentId: args.parentId,
@@ -161,12 +171,12 @@ export const createFolder = mutation({
       return conflict !== null
     })
 
-    await validateSidebarItemName(
+    await validateSidebarItemName({
       ctx,
-      args.campaignId,
-      args.parentId,
-      args.name,
-    )
+      campaignId: args.campaignId,
+      parentId: args.parentId,
+      name: args.name,
+    })
 
     const folderId = await ctx.db.insert('folders', {
       name: args.name || '',

@@ -1,11 +1,9 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import {
-  getSidebarItemById,
-  validateSidebarItemName,
-} from '../sidebarItems/sidebarItems'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
+import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { findUniqueSlug, findUniqueNoteSlug } from '../common/slug'
+import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import type { SidebarItemId } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
@@ -53,12 +51,12 @@ export const createNote = async (
     }
   }
 
-  await validateSidebarItemName(
+  await validateSidebarItemName({
     ctx,
-    input.campaignId,
-    input.parentId,
-    input.name,
-  )
+    campaignId: input.campaignId,
+    parentId: input.parentId,
+    name: input.name,
+  })
 
   const noteId = await ctx.db.insert('notes', {
     name: input.name,
@@ -101,13 +99,13 @@ export const updateNote = async (
 
   if (input.name !== undefined) {
     updates.name = input.name
-    await validateSidebarItemName(
+    await validateSidebarItemName({
       ctx,
-      note.campaignId,
-      note.parentId,
-      input.name,
-      note._id,
-    )
+      campaignId: note.campaignId,
+      parentId: note.parentId,
+      name: input.name,
+      excludeId: note._id,
+    })
 
     updates.slug = await findUniqueNoteSlug(
       ctx,

@@ -2,12 +2,13 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  getSidebarItemById,
+  validateParentChange,
   validateSidebarItemName,
-} from '../sidebarItems/sidebarItems'
+} from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { findUniqueSlug, findUniqueGameMapSlug } from '../common/slug'
+import { findUniqueGameMapSlug, findUniqueSlug } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -44,12 +45,12 @@ export const createMap = mutation({
       }
     }
 
-    await validateSidebarItemName(
+    await validateSidebarItemName({
       ctx,
-      args.campaignId,
-      args.parentId,
-      args.name,
-    )
+      campaignId: args.campaignId,
+      parentId: args.parentId,
+      name: args.name,
+    })
 
     const slugBasis =
       args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
@@ -110,13 +111,13 @@ export const updateMap = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName(
+      await validateSidebarItemName({
         ctx,
-        map.campaignId,
-        map.parentId,
-        args.name,
-        map._id,
-      )
+        campaignId: map.campaignId,
+        parentId: map.parentId,
+        name: args.name,
+        excludeId: map._id,
+      })
 
       updates.slug = await findUniqueGameMapSlug(
         ctx,
@@ -157,6 +158,13 @@ export const moveMap = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    // Validate no circular parent reference
+    await validateParentChange({
+      ctx,
+      itemId: args.mapId,
+      newParentId: args.parentId,
+    })
+
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -168,13 +176,14 @@ export const moveMap = mutation({
       }
     }
 
-    await validateSidebarItemName(
+    // Validate name doesn't conflict in new location
+    await validateSidebarItemName({
       ctx,
-      map.campaignId,
-      args.parentId,
-      map.name,
-      map._id,
-    )
+      campaignId: map.campaignId,
+      parentId: args.parentId,
+      name: map.name,
+      excludeId: map._id,
+    })
 
     await ctx.db.patch(args.mapId, {
       parentId: args.parentId,

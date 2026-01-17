@@ -2,10 +2,11 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  getSidebarItemById,
+  validateParentChange,
   validateSidebarItemName,
-} from '../sidebarItems/sidebarItems'
+} from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
@@ -30,6 +31,13 @@ export const moveFile = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
+    // Validate no circular parent reference
+    await validateParentChange({
+      ctx,
+      itemId: args.fileId,
+      newParentId: args.parentId,
+    })
+
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -41,13 +49,14 @@ export const moveFile = mutation({
       }
     }
 
-    await validateSidebarItemName(
+    // Validate name doesn't conflict in new location
+    await validateSidebarItemName({
       ctx,
-      file.campaignId,
-      args.parentId,
-      file.name,
-      file._id,
-    )
+      campaignId: file.campaignId,
+      parentId: args.parentId,
+      name: file.name,
+      excludeId: file._id,
+    })
 
     await ctx.db.patch(args.fileId, {
       parentId: args.parentId,
@@ -89,12 +98,12 @@ export const createFile = mutation({
       }
     }
 
-    await validateSidebarItemName(
+    await validateSidebarItemName({
       ctx,
-      args.campaignId,
-      args.parentId,
-      args.name,
-    )
+      campaignId: args.campaignId,
+      parentId: args.parentId,
+      name: args.name,
+    })
 
     const slugBasis =
       args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
@@ -155,13 +164,13 @@ export const updateFile = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName(
+      await validateSidebarItemName({
         ctx,
-        file.campaignId,
-        file.parentId,
-        args.name,
-        file._id,
-      )
+        campaignId: file.campaignId,
+        parentId: file.parentId,
+        name: args.name,
+        excludeId: file._id,
+      })
 
       updates.slug = await findUniqueFileSlug(
         ctx,

@@ -5,6 +5,7 @@ import { debounce } from 'lodash-es'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
+import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'
 
 interface UseNameValidationOptions {
   name: string
@@ -79,11 +80,27 @@ export function useNameValidation({
     ),
   )
 
+  // Wiki-link validation (sync, immediate feedback)
+  const wikiLinkValidation = useMemo(() => {
+    if (!isActive || !trimmedName) return { valid: true, error: undefined }
+    return validateWikiLinkCompatibleName(trimmedName)
+  }, [isActive, trimmedName])
+
   // Only consider query result valid if the debounced name matches current name
   // This prevents showing stale error messages while typing
   const isResultValid = !isPendingDebounce && shouldValidate
   const isUnique = isResultValid && isUniqueQuery.data === true
   const isNotUnique = isResultValid && isUniqueQuery.data === false
+
+  // Combined validation error for immediate feedback
+  // Wiki-link errors show immediately, uniqueness errors show after debounce
+  const validationError = useMemo(() => {
+    if (!wikiLinkValidation.valid) return wikiLinkValidation.error
+    if (isNotUnique) return 'An item with this name already exists here'
+    return undefined
+  }, [wikiLinkValidation, isNotUnique])
+
+  const hasError = !wikiLinkValidation.valid || isNotUnique
 
   // Show loading if:
   // - Query is loading OR
@@ -93,17 +110,28 @@ export function useNameValidation({
     (willValidate && isPendingDebounce)
 
   // Async validation function for form validators
+  // Combines wiki-link validation with uniqueness check
   const checkNameUnique = useCallback(
     async (nameToCheck: string): Promise<string | undefined> => {
       const trimmed = nameToCheck.trim()
+
+      // Check wiki-link compatibility (sync)
+      const wikiLinkResult = validateWikiLinkCompatibleName(trimmed)
+      if (!wikiLinkResult.valid) {
+        return wikiLinkResult.error
+      }
+
+      // Skip uniqueness check if not needed
       if (!campaignId || !trimmed || trimmed === trimmedInitialName) {
         return undefined
       }
+
+      // Check uniqueness (async)
       const isUnique = await convex.query(
         api.sidebarItems.queries.checkUniqueNameUnderParent,
         { campaignId, parentId, name: trimmed, excludeId },
       )
-      return isUnique ? undefined : 'Name already taken'
+      return isUnique ? undefined : 'An item with this name already exists here'
     },
     [convex, campaignId, parentId, excludeId, trimmedInitialName],
   )
@@ -115,5 +143,8 @@ export function useNameValidation({
     isNotUnique,
     isLoading,
     checkNameUnique,
+    // New: combined validation for immediate feedback
+    validationError,
+    hasError,
   }
 }

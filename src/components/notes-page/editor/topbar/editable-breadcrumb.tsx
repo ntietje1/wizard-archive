@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -32,7 +33,7 @@ export function EditableName({
     setName(initialName)
   }, [initialName])
 
-  const { isNotUnique } = useNameValidation({
+  const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
     initialName,
     isActive: isEditing,
@@ -45,22 +46,33 @@ export function EditableName({
     if (isSubmitting) return
     const trimmedName = name.trim()
     const isNameChanged = trimmedName !== initialName.trim()
-    if (isNameChanged && !isNotUnique) {
-      setIsSubmitting(true)
-      try {
-        await onRename(trimmedName)
-        setIsEditing(false)
-      } catch (error) {
-        console.error(error)
-        setName(initialName)
-      } finally {
-        setIsSubmitting(false)
-      }
-    } else {
+
+    if (!isNameChanged) {
       setName(initialName)
       setIsEditing(false)
+      return
     }
-  }, [name, initialName, onRename, isNotUnique, isSubmitting])
+
+    // Validate the name before submitting
+    setIsSubmitting(true)
+    try {
+      const error = await checkNameUnique(trimmedName)
+      if (error) {
+        toast.error(error)
+        setName(initialName)
+        setIsEditing(false)
+        return
+      }
+      await onRename(trimmedName)
+      setIsEditing(false)
+    } catch (error) {
+      toast.error('Failed to rename. Please try again.')
+      console.error(error)
+      setName(initialName)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [name, initialName, onRename, checkNameUnique, isSubmitting])
 
   const handleFocus = useCallback(() => {
     if (!isEditing) {
@@ -88,6 +100,7 @@ export function EditableName({
         onChange={(e) => setName(e.target.value)}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        aria-invalid={hasError}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
@@ -107,7 +120,10 @@ export function EditableName({
           {defaultName}
         </span>
       )}
-      <NameValidationFeedback isNotUnique={isNotUnique} anchorRef={inputRef} />
+      <NameValidationFeedback
+        errorMessage={validationError}
+        anchorRef={inputRef}
+      />
     </div>
   )
 }

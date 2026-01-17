@@ -4,13 +4,8 @@ import { getNote, getNoteBySlug } from '../notes/notes'
 import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
 import { getFolder, getFolderBySlug } from '../folders/folders'
 import { getFile, getFileBySlug } from '../files/files'
-import { SIDEBAR_ITEM_TYPES, SIDEBAR_ROOT_TYPE } from './types'
-import type {
-  AnySidebarItem,
-  SidebarItemId,
-  SidebarItemOrRootType,
-  SidebarItemType,
-} from './types'
+import { SIDEBAR_ITEM_TYPES } from './types'
+import type { AnySidebarItem, SidebarItemId, SidebarItemType } from './types'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 
@@ -287,94 +282,8 @@ export const defaultNameMap: Record<SidebarItemType, string> = {
   [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
 }
 
-/**
- * Validates that a name is compatible with wiki-link syntax.
- * Names cannot contain [[ or ]] as these are wiki-link delimiters.
- * Single [ or ] are allowed.
- */
-export const validateWikiLinkCompatibleName = (
-  name: string | undefined,
-): void => {
-  if (!name) return
-
-  if (name.includes('[[')) {
-    throw new Error(
-      'Name cannot contain "[[" as it conflicts with wiki-link syntax',
-    )
-  }
-  if (name.includes(']]')) {
-    throw new Error(
-      'Name cannot contain "]]" as it conflicts with wiki-link syntax',
-    )
-  }
-}
-
 export const defaultItemName = (
   item: AnySidebarItem | null | undefined,
 ): string => {
   return item ? defaultNameMap[item.type] : 'Untitled Item'
-}
-
-export const checkUniqueNameUnderParent = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  parentId: SidebarItemId | undefined,
-  name: string | undefined,
-  excludeId?: SidebarItemId,
-): Promise<boolean> => {
-  if (!name || name.trim() === '') {
-    return true
-  }
-
-  const items: Array<AnySidebarItem> = await getSidebarItemsByParentAndName(
-    ctx,
-    campaignId,
-    parentId,
-    name,
-  )
-  if (items.length == 1 && items[0]._id === excludeId) {
-    return true
-  } else if (items.length == 0) {
-    return true
-  } else {
-    return false
-  }
-}
-
-export const validateUniqueNameUnderParent = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  parentId: SidebarItemId | undefined,
-  name: string | undefined,
-  excludeId?: SidebarItemId,
-): Promise<boolean> => {
-  const isUnique = await checkUniqueNameUnderParent(
-    ctx,
-    campaignId,
-    parentId,
-    name,
-    excludeId,
-  )
-  if (!isUnique) {
-    throw new Error('An item with this name already exists here')
-  }
-  return true
-}
-
-export const validateSidebarItemName = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  parentId: SidebarItemId | undefined,
-  name: string | undefined,
-  excludeId?: SidebarItemId,
-): Promise<boolean> => {
-  validateWikiLinkCompatibleName(name)
-  await validateUniqueNameUnderParent(
-    ctx,
-    campaignId,
-    parentId,
-    name,
-    excludeId,
-  )
-  return true
 }

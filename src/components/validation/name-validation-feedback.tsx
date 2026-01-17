@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom'
 import { cn } from '~/lib/shadcn/utils'
 
 interface NameValidationFeedbackProps {
-  isNotUnique: boolean
+  errorMessage?: string
   anchorRef: React.RefObject<HTMLElement | null>
   className?: string
 }
 
 export function NameValidationFeedback({
-  isNotUnique,
+  errorMessage,
   anchorRef,
   className,
 }: NameValidationFeedbackProps) {
@@ -18,8 +18,10 @@ export function NameValidationFeedback({
     left: number
   } | null>(null)
 
+  const hasError = !!errorMessage
+
   useEffect(() => {
-    if (!anchorRef.current || !isNotUnique) {
+    if (!anchorRef.current || !hasError) {
       setPosition(null)
       return
     }
@@ -43,13 +45,13 @@ export function NameValidationFeedback({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [anchorRef, isNotUnique])
+  }, [anchorRef, hasError])
 
-  if (!position || !isNotUnique) {
+  if (!position || !hasError) {
     return null
   }
 
-  const content = isNotUnique ? (
+  const content = (
     <div
       className={cn(
         'flex items-center gap-1.5 px-2 py-1',
@@ -64,9 +66,9 @@ export function NameValidationFeedback({
         zIndex: 50,
       }}
     >
-      <span>Name already taken</span>
+      <span>{errorMessage}</span>
     </div>
-  ) : null
+  )
 
-  return content ? createPortal(content, document.body) : null
+  return createPortal(content, document.body)
 }

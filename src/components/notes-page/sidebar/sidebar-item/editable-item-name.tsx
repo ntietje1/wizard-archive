@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
@@ -37,7 +38,7 @@ export function EditableName({
   }, [isRenaming, initialName, defaultName])
 
   const displayInitialName = initialName === defaultName ? '' : initialName
-  const { isNotUnique } = useNameValidation({
+  const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
     initialName: displayInitialName,
     isActive: isRenaming,
@@ -65,18 +66,29 @@ export function EditableName({
 
     const handleBlur = async () => {
       if (isSubmitting) return
-      if (isNameChanged && !isNotUnique) {
-        setIsSubmitting(true)
-        try {
-          await onFinishRename(trimmedName)
-        } catch {
-          setName(resetValue)
-        } finally {
-          setIsSubmitting(false)
-        }
-      } else {
+      if (!isNameChanged) {
         setName(resetValue)
         onCancelRename()
+        return
+      }
+
+      // Validate the name before submitting
+      setIsSubmitting(true)
+      try {
+        const error = await checkNameUnique(trimmedName)
+        if (error) {
+          toast.error(error)
+          setName(resetValue)
+          onCancelRename()
+          return
+        }
+        await onFinishRename(trimmedName)
+      } catch {
+        toast.error('Failed to rename. Please try again.')
+        setName(resetValue)
+        onCancelRename()
+      } finally {
+        setIsSubmitting(false)
       }
     }
 
@@ -107,15 +119,15 @@ export function EditableName({
           onClick={(e) => e.stopPropagation()}
           placeholder={defaultName}
           disabled={isSubmitting}
-          aria-invalid={isNotUnique}
+          aria-invalid={hasError}
           className={cn(
             'border-none bg-transparent w-full px-1 focus:outline-none focus:ring-1',
-            isNotUnique && 'focus:ring-destructive ring-1 ring-destructive',
+            hasError && 'focus:ring-destructive ring-1 ring-destructive',
             isSubmitting && 'opacity-50',
           )}
         />
         <NameValidationFeedback
-          isNotUnique={isNotUnique}
+          errorMessage={validationError}
           anchorRef={inputRef}
         />
       </div>

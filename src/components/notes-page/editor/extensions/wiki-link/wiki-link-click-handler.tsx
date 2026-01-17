@@ -3,11 +3,14 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
+import { toast } from 'sonner'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import './wiki-link.css'
+import { validateSidebarItemName } from '~/lib/sidebar-validation'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface WikiLinkClickHandlerProps {
   editor: CustomBlockNoteEditor | undefined
@@ -25,6 +28,7 @@ export function WikiLinkClickHandler({ editor }: WikiLinkClickHandlerProps) {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
   const { editorMode } = useEditorMode()
+  const { parentItemsMap } = useAllSidebarItems()
 
   const [tooltip, setTooltip] = useState<TooltipState>({
     show: false,
@@ -220,6 +224,14 @@ export function WikiLinkClickHandler({ editor }: WikiLinkClickHandlerProps) {
         setTooltip((prev) => ({ ...prev, show: false }))
 
         try {
+          const validationResult = validateSidebarItemName({
+            name: linkText,
+            siblings: parentItemsMap.get(undefined),
+          })
+          if (!validationResult.valid) {
+            toast.error(validationResult.error)
+            return
+          }
           const result = await createNote({
             campaignId: campaign._id,
             name: linkText,

@@ -4,7 +4,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { findUniqueSidebarItemSlug } from '../common/slug'
 import { sidebarItemIdValidator } from './baseFields'
-import { validateSidebarItemName } from './sidebarItems'
+import { validateSidebarItemName } from './validation'
 import { SIDEBAR_ITEM_TYPES } from './types'
 import type { Id } from '../_generated/dataModel'
 
@@ -40,13 +40,13 @@ export const updateSidebarItem = mutation({
     }
 
     if (args.name !== undefined) {
-      await validateSidebarItemName(
+      await validateSidebarItemName({
         ctx,
-        item.campaignId,
-        item.parentId,
-        args.name,
-        args.itemId,
-      )
+        campaignId: item.campaignId,
+        parentId: item.parentId,
+        name: args.name,
+        excludeId: args.itemId,
+      })
       patch.name = args.name
       patch.slug = await findUniqueSidebarItemSlug(
         ctx,
