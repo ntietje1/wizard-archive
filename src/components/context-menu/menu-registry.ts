@@ -438,7 +438,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 100,
       variant: 'danger',
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && !p.hasPinContext(ctx) && p.isNotActiveMap(ctx),
+        p.isSidebarItem(ctx) &&
+        (p.inView('sidebar')(ctx) ||
+          p.inView('folder-view')(ctx) ||
+          p.inView('topbar')(ctx)),
       action: actions.delete,
     },
   ]

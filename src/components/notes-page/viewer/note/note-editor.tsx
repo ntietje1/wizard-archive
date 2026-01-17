@@ -65,6 +65,7 @@ export const NoteEditorBase = ({
   noteWithContent: NoteWithContent
   updateContent: (newContent: Array<CustomBlock>) => void
 }) => {
+  const { editorMode } = useEditorMode()
   const initialContent = useMemo(
     () =>
       noteWithContent.content.length > 0
@@ -94,6 +95,7 @@ export const NoteEditorBase = ({
           sideMenu={false}
           formattingToolbar={false}
           slashMenu={false}
+          editable={editorMode === 'editor'}
         >
           <WikiLinkAutocomplete editor={editor} />
           <WikiLinkClickHandler editor={editor} />

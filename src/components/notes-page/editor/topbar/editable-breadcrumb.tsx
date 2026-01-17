@@ -32,7 +32,7 @@ export function EditableName({
     setName(initialName)
   }, [initialName])
 
-  const { isNotUnique, isLoading } = useNameValidation({
+  const { isNotUnique } = useNameValidation({
     name,
     initialName,
     isActive: isEditing,
@@ -40,26 +40,6 @@ export function EditableName({
     parentId,
     excludeId,
   })
-
-  const handleEnterSubmit = useCallback(async () => {
-    if (isLoading || isSubmitting) return
-    if (isNotUnique) return
-    const trimmedName = name.trim()
-    if (trimmedName === initialName.trim()) {
-      setIsEditing(false)
-      return
-    }
-    setIsSubmitting(true)
-    try {
-      await onRename(trimmedName)
-      setIsEditing(false)
-    } catch (error) {
-      console.error(error)
-      setName(initialName)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [name, initialName, onRename, isNotUnique, isLoading, isSubmitting])
 
   const handleBlur = useCallback(async () => {
     if (isSubmitting) return
@@ -111,7 +91,7 @@ export function EditableName({
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            handleEnterSubmit()
+            e.currentTarget.blur()
           } else if (e.key === 'Escape') {
             handleCancel()
           }
