@@ -56,7 +56,7 @@ export default function ShareSideMenuButton({
     if (e.ctrlKey || e.metaKey) return
 
     if (!blockWithSharesQuery.data?.block.isTopLevel) {
-      console.error('Non-top-level blocks cannot be shared.')
+      toast.error('Cannot share non-top-level blocks.')
       return
     }
 
