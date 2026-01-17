@@ -7,7 +7,7 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { findUniqueSlug, shortenId } from '../common/slug'
+import { findUniqueSlug, findUniqueGameMapSlug } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -118,20 +118,12 @@ export const updateMap = mutation({
         map._id,
       )
 
-      const slugBasis =
-        args.name && args.name.trim() !== '' ? args.name : shortenId(args.mapId)
-
-      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-        const conflict = await ctx.db
-          .query('gameMaps')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', map.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null && conflict._id !== args.mapId
-      })
-
-      updates.slug = uniqueSlug
+      updates.slug = await findUniqueGameMapSlug(
+        ctx,
+        map.campaignId,
+        args.name,
+        args.mapId,
+      )
     }
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId

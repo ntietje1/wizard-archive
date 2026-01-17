@@ -3,6 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
@@ -10,6 +11,7 @@ import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { getIconByName } from '~/lib/category-icons'
@@ -54,6 +56,7 @@ export function FileForm({
 }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToFile } = useEditorNavigation()
+  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const file = useQuery(
     convexQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip'),
   )
@@ -136,15 +139,24 @@ export function FileForm({
       if (fileId) {
         // Update existing file
         try {
-          await updateMutation.mutateAsync({
+          const previousSlug = file.data?.slug
+          const response = await updateMutation.mutateAsync({
             fileId,
             name: finalName,
             storageId: finalStorageId,
             iconName: values.iconName,
             color: values.color,
           })
+
+          navigateIfSlugChanged({
+            itemId: fileId,
+            itemType: SIDEBAR_ITEM_TYPES.files,
+            previousSlug,
+            newSlug: response.slug,
+          })
+
           toast.success('File updated')
-          onSuccess?.(file.data?.slug)
+          onSuccess?.(response.slug)
         } catch (error) {
           console.error(error)
           toast.error('Failed to update file')

@@ -7,7 +7,7 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { findUniqueSlug, shortenId } from '../common/slug'
+import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
 import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -163,22 +163,12 @@ export const updateFile = mutation({
         file._id,
       )
 
-      const slugBasis =
-        args.name && args.name.trim() !== ''
-          ? args.name
-          : shortenId(args.fileId)
-
-      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-        const conflict = await ctx.db
-          .query('files')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', file.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null && conflict._id !== args.fileId
-      })
-
-      updates.slug = uniqueSlug
+      updates.slug = await findUniqueFileSlug(
+        ctx,
+        file.campaignId,
+        args.name,
+        args.fileId,
+      )
     }
     if (args.storageId !== undefined) {
       updates.storageId = args.storageId

@@ -5,7 +5,7 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
-import { findUniqueSlug, shortenId } from '../common/slug'
+import { findUniqueSlug, findUniqueNoteSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import type { SidebarItemId } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
@@ -109,22 +109,12 @@ export const updateNote = async (
       note._id,
     )
 
-    const slugBasis =
-      input.name && input.name.trim() !== ''
-        ? input.name
-        : shortenId(input.noteId)
-
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-      const conflict = await ctx.db
-        .query('notes')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', note.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null && conflict._id !== input.noteId
-    })
-
-    updates.slug = uniqueSlug
+    updates.slug = await findUniqueNoteSlug(
+      ctx,
+      note.campaignId,
+      input.name,
+      input.noteId,
+    )
   }
 
   if (input.iconName !== undefined) {

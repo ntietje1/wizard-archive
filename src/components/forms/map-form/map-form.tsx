@@ -3,6 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
@@ -10,6 +11,7 @@ import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { getIconByName } from '~/lib/category-icons'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
@@ -53,6 +55,7 @@ export function MapForm({
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToMap } = useEditorNavigation()
+  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const map = useQuery(
     convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
   )
@@ -136,14 +139,24 @@ export function MapForm({
       if (mapId) {
         // Update existing map
         try {
-          await updateMutation.mutateAsync({
+          const previousSlug = map.data?.slug
+          const response = await updateMutation.mutateAsync({
             mapId,
             name: values.name,
             imageStorageId: finalImageStorageId,
             iconName: values.iconName,
             color: values.color,
           })
+
+          navigateIfSlugChanged({
+            itemId: mapId,
+            itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+            previousSlug,
+            newSlug: response.slug,
+          })
+
           toast.success('Map updated')
+          onSuccess?.(response.slug)
         } catch (error) {
           console.error(error)
           toast.error('Failed to update map')

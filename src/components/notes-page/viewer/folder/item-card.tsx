@@ -12,10 +12,7 @@ export interface ItemCardProps<T extends AnySidebarItem> {
   parentId?: SidebarItemId
 }
 
-export function ItemCard({
-  item,
-  parentId,
-}: ItemCardProps<AnySidebarItem>) {
+export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
       return <FolderCard item={item} parentId={parentId} />

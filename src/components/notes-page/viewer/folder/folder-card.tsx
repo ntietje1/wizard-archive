@@ -60,7 +60,8 @@ export function FolderCard({
   const { active, over } = useDndContext()
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { activeDragItem, fileDragHoveredId, isDraggingFiles } = useFileSidebar()
+  const { activeDragItem, fileDragHoveredId, isDraggingFiles } =
+    useFileSidebar()
 
   // Include parentId in ancestorIds for circular drop prevention
   const ancestorIds = parentId ? [parentId] : []

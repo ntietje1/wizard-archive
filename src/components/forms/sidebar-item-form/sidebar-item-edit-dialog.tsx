@@ -11,6 +11,7 @@ import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { FileEdit } from '~/lib/icons'
@@ -73,6 +74,8 @@ export function SidebarItemEditDialog({
   isOpen,
   onClose,
 }: SidebarItemEditDialogProps) {
+  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
+
   const updateMutation = useMutation({
     mutationFn: useConvexMutation(api.sidebarItems.mutations.updateSidebarItem),
   })
@@ -89,12 +92,26 @@ export function SidebarItemEditDialog({
     defaultValues: getInitialValues(),
     onSubmit: async ({ value }) => {
       try {
-        await updateMutation.mutateAsync({
+        const previousSlug = item.slug
+        const response = await updateMutation.mutateAsync({
           itemId: item._id,
           name: value.name || undefined,
           iconName: value.iconName,
           color: value.color,
         })
+
+        navigateIfSlugChanged({
+          itemId: item._id,
+          itemType: item.type,
+          previousSlug,
+          newSlug: response.slug,
+          updatedItem: {
+            ...item,
+            slug: response.slug,
+            name: value.name || item.name,
+          },
+        })
+
         toast.success(`${getTypeName(item.type)} updated`)
         onClose()
       } catch (error) {

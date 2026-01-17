@@ -4,24 +4,22 @@ import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { useEditorNavigation } from './useEditorNavigation'
 import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
 import { useNoteActions } from './useNoteActions'
 import { useFileActions } from './useFileActions'
-import { useCurrentItem } from './useCurrentItem'
+import { useNavigateOnSlugChange } from './useNavigateOnSlugChange'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function useRenameItem() {
-  const { item: currentItem } = useCurrentItem()
   const { updateNote } = useNoteActions()
   const { updateMap } = useMapActions()
   const { updateFolder } = useFolderActions()
   const { updateFile } = useFileActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { navigateToItem } = useEditorNavigation()
+  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const queryClient = useQueryClient()
 
   const rename = useCallback(
@@ -82,13 +80,13 @@ export function useRenameItem() {
           updatedItem,
         )
 
-        if (
-          currentItem &&
-          currentItem._id === item._id &&
-          previousSlug !== newSlug
-        ) {
-          navigateToItem(updatedItem, true)
-        }
+        navigateIfSlugChanged({
+          itemId: item._id,
+          itemType: item.type,
+          previousSlug,
+          newSlug,
+          updatedItem,
+        })
       } catch (error) {
         console.error(error)
         toast.error('Failed to update name')
@@ -101,8 +99,7 @@ export function useRenameItem() {
       updateMap,
       updateFolder,
       updateFile,
-      navigateToItem,
-      currentItem,
+      navigateIfSlugChanged,
       queryClient,
     ],
   )

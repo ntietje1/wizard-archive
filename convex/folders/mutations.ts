@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { findUniqueSlug, shortenId } from '../common/slug'
+import { findUniqueFolderSlug, findUniqueSlug } from '../common/slug'
 import {
   getSidebarItemById,
   validateSidebarItemName,
@@ -51,22 +51,12 @@ export const updateFolder = mutation({
         folder._id,
       )
 
-      const slugBasis =
-        args.name && args.name.trim() !== ''
-          ? args.name
-          : shortenId(args.folderId)
-
-      const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-        const conflict = await ctx.db
-          .query('folders')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', folder.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null && conflict._id !== args.folderId
-      })
-
-      updates.slug = uniqueSlug
+      updates.slug = await findUniqueFolderSlug(
+        ctx,
+        folder.campaignId,
+        args.name,
+        args.folderId,
+      )
     }
 
     await ctx.db.patch(args.folderId, updates)
