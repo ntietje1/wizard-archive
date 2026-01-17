@@ -22,6 +22,7 @@ import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { Button } from '~/components/shadcn/ui/button'
 import '../../editor/extensions/wiki-link/wiki-link.css'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
   const { noteQuery, updateContent } = useNoteContent(note._id)
@@ -81,13 +82,18 @@ export const NoteEditorBase = ({
 
   useWikiLinkExtension(editor)
 
+  const handleWrapperClick = useCallback(() => {
+    editor.focus()
+  }, [editor])
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto relative">
-      <div className="absolute top-2 right-2 z-10">
-        <EditorViewModeToggleButton />
-      </div>
-      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
+    <div className="flex-1 h-full" onClick={handleWrapperClick}>
+      <ScrollArea className="h-full">
+        <div className="absolute top-2 right-2 z-10">
+          <EditorViewModeToggleButton />
+        </div>
         <BlockNoteView
+          className="mx-auto w-full max-w-3xl py-4"
           key={noteWithContent._id + 'editor'}
           editor={editor}
           onChange={() => updateContent(editor.document)}
@@ -103,7 +109,7 @@ export const NoteEditorBase = ({
           <SelectionToolbar />
           <SlashMenu editor={editor} />
         </BlockNoteView>
-      </div>
+      </ScrollArea>
     </div>
   )
 }

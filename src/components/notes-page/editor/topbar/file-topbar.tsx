@@ -44,7 +44,7 @@ export function FileTopbar() {
 
   return (
     <EditorContextMenu viewContext="topbar" item={item}>
-      <div className="flex items-center px-4 py-2 h-12 border-b bg-white w-full min-w-0 overflow-hidden gap-4">
+      <div className="flex items-center px-4 py-2 h-12 shrink-0 border-b bg-white w-full min-w-0 overflow-hidden gap-4">
         <EditableBreadcrumb
           initialName={item.name || ''}
           defaultName={defaultName || 'Untitled'}
@@ -67,7 +67,7 @@ export function FileTopbar() {
 
 function TopbarLoading() {
   return (
-    <div className="border-b p-2 h-12">
+    <div className="border-b p-2 h-12 shrink-0">
       <div className="flex items-center justify-between">
         <Skeleton className="h-6 w-32" />
         <div className="flex items-center space-x-2">
@@ -81,7 +81,7 @@ function TopbarLoading() {
 
 function TopbarEmpty() {
   return (
-    <div className="flex items-center justify-between px-4 py-2 h-12 border-b bg-white w-full min-w-0 max-w-full overflow-hidden">
+    <div className="flex items-center justify-between px-4 py-2 h-12 shrink-0 border-b bg-white w-full min-w-0 max-w-full overflow-hidden">
       <div className="flex items-center justify-between w-full h-12" />
     </div>
   )

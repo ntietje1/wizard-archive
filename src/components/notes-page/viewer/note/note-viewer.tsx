@@ -27,6 +27,7 @@ import { isNote } from '~/lib/sidebar-item-utils'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { Eye } from '~/lib/icons'
 import { useSharedNoteContent } from '~/hooks/useSharedNoteContent'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteViewer({ item: note }: EditorViewerProps<Note>) {
   const [playerId, setPlayerId] = useState<Id<'campaignMembers'> | undefined>(
@@ -96,28 +97,26 @@ export const NoteViewerBase = ({
   }, [editor, noteWithContent.content])
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto relative">
+    <ScrollArea className="flex-1">
       <div className="absolute top-2 right-2 z-10">
         <ViewAsPlayerButton playerId={playerId} setPlayerId={setPlayerId} />
       </div>
-      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col gap-4"></div>
-        <BlockNoteView
-          key={noteWithContent._id + 'viewer'}
-          editable={false}
-          editor={editor}
-          theme="light"
-          sideMenu={false}
-          formattingToolbar={false}
-          slashMenu={false}
-        >
-          <WikiLinkClickHandler editor={editor} />
-          <SideMenuController sideMenu={SideMenuRenderer} />
-          <SelectionToolbar />
-          <SlashMenu editor={editor} />
-        </BlockNoteView>
-      </div>
-    </div>
+      <BlockNoteView
+        className="mx-auto w-full max-w-3xl py-4"
+        key={noteWithContent._id + 'viewer'}
+        editable={false}
+        editor={editor}
+        theme="light"
+        sideMenu={false}
+        formattingToolbar={false}
+        slashMenu={false}
+      >
+        <WikiLinkClickHandler editor={editor} />
+        <SideMenuController sideMenu={SideMenuRenderer} />
+        <SelectionToolbar />
+        <SlashMenu editor={editor} />
+      </BlockNoteView>
+    </ScrollArea>
   )
 }
 

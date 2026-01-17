@@ -14,7 +14,7 @@ export function EditorContent() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -24,7 +24,11 @@ export function EditorContent() {
     return <EmptyEditorContent />
   }
 
-  return <SidebarItemEditor item={item} search={search} />
+  return (
+    <div className="flex-1 min-h-0">
+      <SidebarItemEditor item={item} search={search} />
+    </div>
+  )
 }
 
 function EmptyEditorContent() {
@@ -61,7 +65,7 @@ function EmptyEditorContent() {
     <div
       ref={setNodeRef}
       className={cn(
-        'h-full flex items-center justify-center transition-colors',
+        'flex-1 min-h-0 flex items-center justify-center transition-colors',
         isValidDrop && 'bg-muted',
         isDraggingFiles && 'bg-muted/50',
       )}
