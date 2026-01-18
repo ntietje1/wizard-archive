@@ -3,6 +3,11 @@ import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
+import {
+  isMediaFile,
+  isTextFile,
+  validateFileForUpload,
+} from 'convex/storage/validation'
 import { useFileActions } from './useFileActions'
 import { useNoteActions } from './useNoteActions'
 import { useFolderActions } from './useFolderActions'
@@ -12,11 +17,6 @@ import { useCampaign } from './useCampaign'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/lib/folder-reader'
-import {
-  isMediaFile,
-  isTextFile,
-  validateFileForUpload,
-} from '~/lib/file-validation'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
 import {
   FileProgressContent,
@@ -85,8 +85,8 @@ export function useFileDropHandler() {
         toastId = toast.loading(
           <ToastContent
             title={fileName}
-            message={isTextFile(file) ? 'Processing...' : 'Uploading... 0%'}
-            progress={isTextFile(file) ? undefined : 0}
+            message={isTextFile(file.type, file.name) ? 'Processing...' : 'Uploading... 0%'}
+            progress={isTextFile(file.type, file.name) ? undefined : 0}
           />,
           { duration: Infinity, style: TOAST_STYLE },
         )
@@ -94,7 +94,7 @@ export function useFileDropHandler() {
       }
 
       try {
-        if (isTextFile(file)) {
+        if (isTextFile(file.type, file.name)) {
           const blocks = await convertTextToBlocks(file)
           const { noteId, slug } = await createNoteWithContent.mutateAsync({
             campaignId: targetCampaignId,
@@ -112,7 +112,7 @@ export function useFileDropHandler() {
             await openParentFolders(noteId)
             navigateToNote(slug, true)
           }
-        } else if (isMediaFile(file)) {
+        } else if (isMediaFile(file.type)) {
           const uploadUrl = await generateUploadUrl.mutateAsync({})
           const storageId = await uploadFile(file, uploadUrl, {
             onProgress: silent
@@ -261,14 +261,13 @@ export function useFileDropHandler() {
 
       // Single file: individual toast with navigation
       if (isSingleFile) {
-        const success = await uploadSingleFile(
+        // uploadSingleFile handles all toasts when silent=false
+        await uploadSingleFile(
           files[0].file,
           targetCampaignId,
           options?.parentId,
           false,
         )
-        if (!success)
-          toast.error(`Unsupported file type: ${files[0].file.name}`)
         return
       }
 

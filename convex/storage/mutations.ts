@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { requireUserIdentity } from '../common/identity'
 import { FILE_STORAGE_STATUS } from './types'
+import { validateFileUpload } from './validation'
 import type { Id } from '../_generated/dataModel'
 
 export const generateUploadUrl = mutation({
@@ -45,6 +46,22 @@ export const commitUpload = mutation({
     if (!fileStorage) {
       throw new Error('File storage not found')
     }
+
+    // Validate file before committing
+    const storageMetadata = await ctx.db.system.get(args.storageId)
+    if (!storageMetadata) {
+      throw new Error('Storage metadata not found')
+    }
+
+    const validation = validateFileUpload(
+      storageMetadata.contentType ?? null,
+      storageMetadata.size,
+      fileStorage.originalFileName,
+    )
+    if (!validation.success) {
+      throw new Error(validation.error)
+    }
+
     await ctx.db.patch(fileStorage._id, {
       status: FILE_STORAGE_STATUS.Committed,
       updatedAt: Date.now(),

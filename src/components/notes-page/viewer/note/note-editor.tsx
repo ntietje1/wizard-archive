@@ -106,7 +106,7 @@ export const NoteEditorBase = ({
           <WikiLinkAutocomplete editor={editor} />
           <WikiLinkClickHandler editor={editor} />
           <SideMenuController sideMenu={SideMenuRenderer} />
-          <SelectionToolbar />
+          {/* <SelectionToolbar /> */}
           <SlashMenu editor={editor} />
         </BlockNoteView>
       </ScrollArea>

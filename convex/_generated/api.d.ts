@@ -56,6 +56,7 @@ import type * as sidebarItems_validation from "../sidebarItems/validation.js";
 import type * as storage_mutations from "../storage/mutations.js";
 import type * as storage_queries from "../storage/queries.js";
 import type * as storage_types from "../storage/types.js";
+import type * as storage_validation from "../storage/validation.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_types from "../users/types.js";
@@ -124,6 +125,7 @@ declare const fullApi: ApiFromModules<{
   "storage/mutations": typeof storage_mutations;
   "storage/queries": typeof storage_queries;
   "storage/types": typeof storage_types;
+  "storage/validation": typeof storage_validation;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/types": typeof users_types;

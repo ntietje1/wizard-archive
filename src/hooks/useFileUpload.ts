@@ -4,8 +4,6 @@ import { api } from 'convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
 export interface UploadProgress {
   loaded: number
   total: number
@@ -31,13 +29,9 @@ export const useFileUpload = () => {
     mutationFn: useConvexMutation(api.storage.mutations.commitUpload),
   })
 
+  // assumes file is already validated
   const uploadFile = useMutation({
     mutationFn: async (file: File): Promise<Id<'_storage'>> => {
-      if (file.size > MAX_FILE_SIZE) {
-        const error = `File must be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB (current: ${(file.size / (1024 * 1024)).toFixed(1)}MB)`
-        throw new Error(error)
-      }
-
       const uploadUrl = await generateUploadUrl.mutateAsync({})
 
       return new Promise((resolve, reject) => {

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { MAX_FILE_SIZE } from 'convex/storage/validation'
 import { useFileUpload } from './useFileUpload'
 import type { Id } from 'convex/_generated/dataModel'
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export interface FileWithPreviewOptions {
   isOpen: boolean
@@ -137,24 +136,19 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
 
       if (fileToVerify.size > maxFileSize) {
         const maxSizeMB = maxFileSize / (1024 * 1024)
-        setUploadError(`File must be less than ${maxSizeMB}MB`)
         return {
           success: false,
           error: `File must be less than ${maxSizeMB}MB`,
         }
       }
-      return { success: true, error: undefined }
+      return { success: true }
     },
     [fileTypeValidator, maxFileSize],
   )
 
+  // assumes file is already validated
   const handleUpload = useCallback(
     async (fileToUpload: File) => {
-      const { error: verifyError } = verifyFile(fileToUpload)
-      if (verifyError) {
-        setUploadError(verifyError)
-        throw new Error(verifyError)
-      }
       setIsUploading(true)
       setUploadError('')
 
@@ -170,7 +164,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
         setIsUploading(false)
       }
     },
-    [verifyFile, uploadFile],
+    [uploadFile],
   )
 
   const handleFileSelect = useCallback(
