@@ -10,23 +10,35 @@ export interface ValidationResult {
 
 /**
  * Validates that a name is compatible with wiki-link syntax.
- * Names cannot contain [[ or ]] as these are wiki-link delimiters.
+ * Names cannot contain [ ] # | as these are wiki-link delimiters/modifiers.
  */
 export function validateWikiLinkCompatibleName(
   name: string | undefined,
 ): ValidationResult {
   if (!name) return { valid: true }
 
-  if (name.includes('[[')) {
+  if (name.includes('[')) {
     return {
       valid: false,
-      error: 'Name cannot contain "[[" as it conflicts with wiki-link syntax',
+      error: 'Name cannot contain "[" as it conflicts with wiki-link syntax',
     }
   }
-  if (name.includes(']]')) {
+  if (name.includes(']')) {
     return {
       valid: false,
-      error: 'Name cannot contain "]]" as it conflicts with wiki-link syntax',
+      error: 'Name cannot contain "]" as it conflicts with wiki-link syntax',
+    }
+  }
+  if (name.includes('#')) {
+    return {
+      valid: false,
+      error: 'Name cannot contain "#" as it conflicts with wiki-link heading syntax',
+    }
+  }
+  if (name.includes('|')) {
+    return {
+      valid: false,
+      error: 'Name cannot contain "|" as it conflicts with wiki-link display name syntax',
     }
   }
   return { valid: true }

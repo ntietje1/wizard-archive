@@ -24,10 +24,43 @@ export interface WikiLinkItemInfo {
 
 export type WikiLinkItemsMap = Map<string, WikiLinkItemInfo>
 
+
+export interface ParsedWikiLink {
+  itemName: string // The file/note name
+  headingPath: Array<string> // Array of heading anchors ["h1", "h2"]
+  displayName: string | null // Optional display override
+}
+
+
+export function parseWikiLinkText(text: string): ParsedWikiLink {
+  // Find last | for display name (allows | in item name)
+  const lastPipeIndex = text.lastIndexOf('|')
+
+  let displayName: string | null = null
+  let remainingText = text
+
+  if (lastPipeIndex !== -1) {
+    displayName = text.slice(lastPipeIndex + 1).trim() || null
+    remainingText = text.slice(0, lastPipeIndex)
+  }
+
+  // Split by # to get item name and heading path
+  const parts = remainingText.split('#')
+  const itemName = parts[0].trim()
+  const headingPath = parts.slice(1).map((h) => h.trim()).filter(Boolean)
+
+  return {
+    itemName,
+    headingPath,
+    displayName,
+  }
+}
+
 interface WikiLinkMatch {
   from: number
   to: number
   innerText: string
+  parsed: ParsedWikiLink
   itemInfo: WikiLinkItemInfo | undefined
 }
 
@@ -39,8 +72,7 @@ interface PluginState {
 
 // Match [[content]] where:
 // - Content cannot contain [[ (would look like nested link start)
-// - Content cannot contain ]] followed by non-] (would look like link end + more content)
-// - Content CAN end with ] (e.g., [[name]]] for name "[name]")
+// - Content cannot contain ]] followed by non-]
 // - The final ]] must be followed by end or non-] to handle names ending with ]
 export const WIKI_LINK_REGEX =
   /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
@@ -125,8 +157,9 @@ function findWikiLinks(
       const from = pos + match.index
       const to = pos + match.index + match[0].length
       const innerText = match[1]
-      const itemInfo = itemsByName.get(innerText.toLowerCase())
-      matches.push({ from, to, innerText, itemInfo })
+      const parsed = parseWikiLinkText(innerText)
+      const itemInfo = itemsByName.get(parsed.itemName.toLowerCase())
+      matches.push({ from, to, innerText, parsed, itemInfo })
     }
   })
 
@@ -249,7 +282,7 @@ function buildDecorations(
 ): DecorationSet {
   const decorations: Array<Decoration> = []
 
-  for (const { from, to, innerText, itemInfo } of matches) {
+  for (const { from, to, innerText, parsed, itemInfo } of matches) {
     const color = validateHexColorOrDefault(itemInfo?.item.color)
     const baseClass = itemInfo ? 'wiki-link-exists' : 'wiki-link-ghost'
 
@@ -257,6 +290,17 @@ function buildDecorations(
     const isActive =
       !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
     const activeClass = isActive ? ' wiki-link-active' : ''
+
+    // Build href with heading parameter when heading exists
+    let href = itemInfo?.href
+    if (href && parsed.headingPath.length > 0) {
+      const headingParam = encodeURIComponent(parsed.headingPath.join('#'))
+      href = `${href}&heading=${headingParam}`
+    }
+
+    // Determine display text: displayName > itemName
+    const displayText = parsed.displayName || parsed.itemName
+    const hasDisplayName = !!parsed.displayName
 
     // Opening bracket [[
     decorations.push(
@@ -274,8 +318,13 @@ function buildDecorations(
         class: `wiki-link-content ${baseClass}${activeClass}`,
         style: itemInfo ? `color: ${color}` : undefined,
         'data-wiki-link': innerText,
+        'data-wiki-link-item-name': parsed.itemName,
         'data-wiki-link-exists': itemInfo ? 'true' : 'false',
-        ...(itemInfo && { 'data-href': itemInfo.href }),
+        ...(href && { 'data-href': href }),
+        ...(parsed.headingPath.length > 0 && {
+          'data-wiki-link-heading': parsed.headingPath.join('#'),
+        }),
+        ...(hasDisplayName && { 'data-display-name': displayText }),
       }),
     )
 

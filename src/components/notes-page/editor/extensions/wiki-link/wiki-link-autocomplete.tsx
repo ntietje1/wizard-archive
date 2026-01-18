@@ -1,312 +1,363 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { filterSuggestionItems } from '@blocknote/core'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { HeadingEntry } from '~/lib/heading-utils'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/lib/sidebar-item-utils'
-
+import { extractHeadingsFromContent } from '~/lib/heading-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { useCampaign } from '~/hooks/useCampaign'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import './wiki-link-autocomplete.css'
 
-interface WikiLinkMenuItem {
-  key: string
-  title: string
-  subtext: string
-  badge: string
-  item: AnySidebarItem
+type AutocompleteMode = 'file' | 'heading' | 'display-name'
+
+interface FileItem { key: SidebarItemId; title: string; subtext: string; badge: string; item: AnySidebarItem }
+interface HeadingItem { key: string; title: string; level: 1 | 2 | 3; heading: HeadingEntry; fullPath: Array<string> }
+
+interface AutocompleteContext {
+  mode: AutocompleteMode
+  fileQuery: string
+  headingQuery: string
+  completedHeadingPath: Array<string>
+  resolvedItem: AnySidebarItem | null
 }
 
-// Regex to find unclosed wiki-link at cursor: [[ followed by valid content
-// - Content cannot contain [[ (would look like nested link start)
-// - Content cannot contain ]] (would close the link)
-// - Single [ or ] are allowed (e.g., [[name] for name "[name]")
+// Match unclosed wiki-link at cursor: [[ followed by content (no [[ or ]])
 const UNCLOSED_WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\]).)*)?$/
 
-/**
- * Check if cursor is inside an unclosed wiki-link pattern.
- * Returns the query string if valid, null otherwise.
- */
-function getWikiLinkContext(
-  editor: CustomBlockNoteEditor,
-): { query: string; startPos: number } | null {
-  const tiptapEditor = editor._tiptapEditor
-  if (!tiptapEditor) return null
+function getAutocompleteContext(query: string, itemsByName: Map<string, AnySidebarItem>): AutocompleteContext {
+  if (query.includes('|')) {
+    return { mode: 'display-name', fileQuery: '', headingQuery: '', completedHeadingPath: [], resolvedItem: null }
+  }
 
-  const { state } = tiptapEditor
-  const { from } = state.selection
+  const hashIdx = query.indexOf('#')
+  if (hashIdx === -1) {
+    return { mode: 'file', fileQuery: query, headingQuery: '', completedHeadingPath: [], resolvedItem: null }
+  }
 
-  // Get text from start of block to cursor
-  const $pos = state.selection.$from
-  const blockStart = $pos.start()
-  const textBeforeCursor = state.doc.textBetween(blockStart, from)
+  const fileName = query.slice(0, hashIdx)
+  const item = itemsByName.get(fileName.toLowerCase())
 
-  // Check for unclosed [[ pattern
-  const match = UNCLOSED_WIKI_LINK_REGEX.exec(textBeforeCursor)
-  if (!match) return null
+  // Only notes support heading links
+  if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) {
+    return { mode: 'file', fileQuery: query, headingQuery: '', completedHeadingPath: [], resolvedItem: null }
+  }
 
-  // Found [[ - return the query (text after [[)
-  const query = match[1] || ''
-  const startPos = blockStart + match.index
-
-  return { query, startPos }
+  const parts = query.slice(hashIdx + 1).split('#')
+  return {
+    mode: 'heading',
+    fileQuery: fileName,
+    headingQuery: parts.at(-1) || '',
+    completedHeadingPath: parts.slice(0, -1),
+    resolvedItem: item,
+  }
 }
 
-/**
- * Autocomplete menu for wiki-links.
- * Shows suggestions when typing [[query (no spaces, no closing brackets).
- */
-export function WikiLinkAutocomplete({
-  editor,
-}: {
-  editor: CustomBlockNoteEditor | undefined
-}) {
+function getWikiLinkContext(editor: CustomBlockNoteEditor): { query: string; startPos: number } | null {
+  const tiptap = editor._tiptapEditor
+  if (!tiptap) return null
+  const { state } = tiptap
+  const $pos = state.selection.$from
+  const text = state.doc.textBetween($pos.start(), state.selection.from)
+  const match = UNCLOSED_WIKI_LINK_REGEX.exec(text)
+  if (!match) return null
+  return { query: match[1] || '', startPos: $pos.start() + match.index }
+}
+
+/** Get child headings under a parent level, stopping at same-or-higher level */
+function getChildHeadings(headings: Array<HeadingEntry>, parentLevel: number, startIdx: number): Array<HeadingEntry> {
+  const children: Array<HeadingEntry> = []
+  for (let i = startIdx; i < headings.length; i++) {
+    if (headings[i].level <= parentLevel) break
+    children.push(headings[i])
+  }
+  return children
+}
+
+/** Build heading items with paths for the autocomplete menu */
+function buildHeadingItems(
+  headings: Array<HeadingEntry>,
+  completedPath: Array<string>,
+  query: string,
+): Array<HeadingItem> {
+  let remaining = headings
+  let parentLevel = 0
+
+  // Walk through completed path segments
+  for (const segment of completedPath) {
+    const normalized = segment.toLowerCase().trim().replace(/\s+/g, ' ')
+    if (!normalized) continue
+    const idx = remaining.findIndex(h => h.normalizedText === normalized)
+    if (idx === -1) return []
+    parentLevel = remaining[idx].level
+    remaining = getChildHeadings(remaining, parentLevel, idx + 1)
+  }
+
+  // Build items with full paths
+  const items: Array<HeadingItem> = []
+  const parentAt = new Map<number, string>()
+
+  for (const h of remaining) {
+    parentAt.set(h.level, h.text)
+    // Clear deeper levels
+    for (const [lvl] of parentAt) if (lvl > h.level) parentAt.delete(lvl)
+
+    const fullPath = [...parentAt.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([, text]) => text)
+
+    items.push({ key: h.blockId, title: h.text, level: h.level, heading: h, fullPath })
+  }
+
+  // Filter by query
+  if (query) {
+    const q = query.toLowerCase()
+    return items.filter(i => i.title.toLowerCase().includes(q)).slice(0, 10)
+  }
+  return items.slice(0, 10)
+}
+
+export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const { data: sidebarItems, itemsMap } = useAllSidebarItems()
-  const [menuState, setMenuState] = useState<{
-    show: boolean
-    query: string
-    referencePos: DOMRect | null
-  }>({ show: false, query: '', referencePos: null })
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+
+  const [menu, setMenu] = useState<{ show: boolean; query: string; pos: DOMRect | null }>({
+    show: false, query: '', pos: null
+  })
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [items, setItems] = useState<Array<WikiLinkMenuItem>>([])
   const [isDragging, setIsDragging] = useState(false)
-  const hasEditedLinkRef = useRef(false)
+  const hasEditedRef = useRef(false)
 
-  // Build filtered menu items when query changes
-  useEffect(() => {
-    if (!sidebarItems || !itemsMap || !menuState.show) {
-      setItems([])
-      return
-    }
+  const itemsByName = useMemo(() => {
+    const map = new Map<string, AnySidebarItem>()
+    sidebarItems?.forEach(item => { if (item.name) map.set(item.name.toLowerCase(), item) })
+    return map
+  }, [sidebarItems])
 
-    const allItems: Array<WikiLinkMenuItem> = sidebarItems.map((item) => ({
+  const context = useMemo(() => menu.show ? getAutocompleteContext(menu.query, itemsByName) : null, [menu, itemsByName])
+
+  // Fetch note content for heading mode
+  const noteId = context?.mode === 'heading' && context.resolvedItem?.type === SIDEBAR_ITEM_TYPES.notes
+    ? context.resolvedItem._id : undefined
+
+  const noteQuery = useQuery({
+    ...convexQuery(api.notes.queries.getNoteWithContent, noteId && campaignId ? { noteId } : 'skip'),
+    staleTime: 30000,
+  })
+
+  const headings = useMemo(() => {
+    if (!noteQuery.data?.content) return []
+    return extractHeadingsFromContent(noteQuery.data.content as Array<CustomBlock>)
+  }, [noteQuery.data?.content])
+
+  // Build filtered items
+  const fileItems = useMemo((): Array<FileItem> => {
+    if (!sidebarItems || !itemsMap || context?.mode !== 'file') return []
+    const all = sidebarItems.map(item => ({
       key: item._id,
       title: item.name || defaultItemName(item),
       subtext: buildBreadcrumbs(item, itemsMap),
       badge: getItemTypeLabel(item.type),
       item,
     }))
+    const filtered = context.fileQuery ? filterSuggestionItems(all, context.fileQuery) : all
+    return filtered.slice(0, 10)
+  }, [sidebarItems, itemsMap, context?.mode, context?.fileQuery])
 
-    const filtered = menuState.query
-      ? filterSuggestionItems(allItems, menuState.query)
-      : allItems
+  const headingItems = useMemo((): Array<HeadingItem> => {
+    if (context?.mode !== 'heading') return []
+    return buildHeadingItems(headings, context.completedHeadingPath, context.headingQuery)
+  }, [context?.mode, context?.completedHeadingPath, context?.headingQuery, headings])
 
-    setItems(filtered.slice(0, 10))
-    setSelectedIndex(0)
-  }, [sidebarItems, itemsMap, menuState.show, menuState.query])
+  const items = context?.mode === 'heading' ? headingItems : fileItems
 
-  // Track mouse drag state to prevent menu from showing during selection
+  // Reset selection on mode/path change
+  const completedHeadingPath = context?.completedHeadingPath?.join('#')
+  useEffect(() => { setSelectedIndex(0) }, [context?.mode, completedHeadingPath])
+
+  // Track dragging to hide menu during text selection
   useEffect(() => {
-    if (!editor) return
-
-    const editorElement = editor.domElement
-    if (!editorElement) return
-
-    const handleMouseDown = () => {
-      setIsDragging(true)
-      setMenuState({ show: false, query: '', referencePos: null })
-    }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    editorElement.addEventListener('mousedown', handleMouseDown)
-    document.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      editorElement.removeEventListener('mousedown', handleMouseDown)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
+    const editorEl = editor?.domElement
+    if (!editorEl) return
+    const onDown = () => { setIsDragging(true); setMenu({ show: false, query: '', pos: null }) }
+    const onUp = () => setIsDragging(false)
+    editorEl.addEventListener('mousedown', onDown)
+    document.addEventListener('mouseup', onUp)
+    return () => { editorEl.removeEventListener('mousedown', onDown); document.removeEventListener('mouseup', onUp) }
   }, [editor])
 
-  // Listen to editor changes and update menu state
+  // Listen to editor changes
   useEffect(() => {
-    if (!editor) return
+    const tiptap = editor?._tiptapEditor
+    if (!tiptap) return
 
-    const updateMenuState = ({
-      transaction,
-    }: {
-      transaction: { docChanged: boolean }
-    }) => {
-      // Don't show menu while user is dragging to select text
+    const onTransaction = ({ transaction }: { transaction: { docChanged: boolean } }) => {
       if (isDragging) return
-
-      const context = getWikiLinkContext(editor)
-
-      if (context) {
-        // Mark as edited if doc changed while in wiki-link context
-        if (transaction.docChanged) {
-          hasEditedLinkRef.current = true
-        }
-
-        // Only show menu if user has edited the link
-        if (!hasEditedLinkRef.current) return
-
-        // Get caret position for menu placement
-        const tiptapEditor = editor._tiptapEditor
-        const coords = tiptapEditor?.view?.coordsAtPos(context.startPos)
-        const referencePos = coords
-          ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top)
-          : null
-
-        setMenuState({
-          show: true,
-          query: context.query,
-          referencePos,
-        })
+      const ctx = getWikiLinkContext(editor)
+      if (ctx) {
+        if (transaction.docChanged) hasEditedRef.current = true
+        if (!hasEditedRef.current) return
+        const coords = tiptap.view?.coordsAtPos(ctx.startPos)
+        const pos = coords ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top) : null
+        setMenu({ show: true, query: ctx.query, pos })
       } else {
-        // Left wiki-link context, reset edited flag
-        hasEditedLinkRef.current = false
-        setMenuState({ show: false, query: '', referencePos: null })
+        hasEditedRef.current = false
+        setMenu({ show: false, query: '', pos: null })
       }
     }
 
-    // Subscribe to editor changes
-    const tiptapEditor = editor._tiptapEditor
-    if (tiptapEditor) {
-      tiptapEditor.on('transaction', updateMenuState)
-      return () => {
-        tiptapEditor.off('transaction', updateMenuState)
-      }
-    }
+    tiptap.on('transaction', onTransaction)
+    return () => { tiptap.off('transaction', onTransaction) }
   }, [editor, isDragging])
 
-  const insertWikiLink = useCallback(
-    (item: WikiLinkMenuItem) => {
-      if (!editor) return
+  const insertLink = useCallback((item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
+    if (!editor || !ctx) return
+    const wikiCtx = getWikiLinkContext(editor)
+    if (!wikiCtx) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
 
-      const context = getWikiLinkContext(editor)
-      if (!context) return
+    const { state } = tiptap
+    const from = wikiCtx.startPos
+    const cursor = state.selection.from
 
-      const displayName = item.title
-      const tiptapEditor = editor._tiptapEditor
-      if (!tiptapEditor) return
-
-      const { state } = tiptapEditor
-      const from = context.startPos
-      const cursorPos = state.selection.from
-
-      // Check for closing brackets after cursor
-      // Need to handle cases like ]]] where name ends with ] (e.g., [[name]]])
-      const textAfterCursor = state.doc.textBetween(
-        cursorPos,
-        Math.min(cursorPos + 10, state.doc.content.size),
-      )
-
-      // Find the true closing ]] (followed by non-] or end of text)
-      let closingBracketsToDelete = 0
-      let consecutiveBrackets = 0
-      for (let i = 0; i < textAfterCursor.length; i++) {
-        if (textAfterCursor[i] === ']') {
-          consecutiveBrackets++
-          // Check if we have at least ]] and next char is not ]
-          if (consecutiveBrackets >= 2) {
-            const nextChar = textAfterCursor[i + 1]
-            if (nextChar === undefined || nextChar !== ']') {
-              closingBracketsToDelete = consecutiveBrackets
-              break
-            }
-          }
-        } else {
-          consecutiveBrackets = 0
+    // Find closing ]] after cursor
+    const after = state.doc.textBetween(cursor, Math.min(cursor + 10, state.doc.content.size))
+    let closingLen = 0, brackets = 0
+    for (let i = 0; i < after.length; i++) {
+      if (after[i] === ']') {
+        brackets++
+        if (brackets >= 2 && (after[i + 1] === undefined || after[i + 1] !== ']')) {
+          closingLen = brackets
+          break
         }
-      }
+      } else brackets = 0
+    }
 
-      const to = cursorPos + closingBracketsToDelete
+    const to = cursor + closingLen
+    const text = ctx.mode === 'file'
+      ? `[[${(item as FileItem).title}]]`
+      : `[[${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}]]`
 
-      tiptapEditor
-        .chain()
-        .focus()
-        .deleteRange({ from, to })
-        .insertContent(`[[${displayName}]]`)
-        .run()
+    tiptap.chain().focus().deleteRange({ from, to }).insertContent(text).run()
+    setMenu({ show: false, query: '', pos: null })
+  }, [editor])
 
-      setMenuState({ show: false, query: '', referencePos: null })
-    },
-    [editor],
-  )
+  const continueLink = useCallback((item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
+    if (!editor || !ctx) return
+    const wikiCtx = getWikiLinkContext(editor)
+    if (!wikiCtx) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
 
-  // Handle keyboard navigation and selection
+    const from = wikiCtx.startPos
+    const cursor = tiptap.state.selection.from
+    const text = ctx.mode === 'file'
+      ? `[[${(item as FileItem).title}#`
+      : `[[${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}#`
+
+    tiptap.chain().focus().deleteRange({ from, to: cursor }).insertContent(text).run()
+  }, [editor])
+
+  // Keyboard navigation
   useEffect(() => {
-    if (!editor || !menuState.show) return
+    const editorEl = editor?.domElement
+    if (!editorEl || !menu.show) return
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!menuState.show) return
-
-      switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault()
-          setSelectedIndex((i) => (i + 1) % Math.max(items.length, 1))
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          setSelectedIndex(
-            (i) =>
-              (i - 1 + Math.max(items.length, 1)) % Math.max(items.length, 1),
-          )
-          break
+    const onKeyDown = (e: KeyboardEvent) => {
+      const len = items.length || 1
+      switch (e.key) {
+        case 'ArrowDown': e.preventDefault(); setSelectedIndex(i => (i + 1) % len); break
+        case 'ArrowUp': e.preventDefault(); setSelectedIndex(i => (i - 1 + len) % len); break
         case 'Enter':
-          event.preventDefault()
-          if (items[selectedIndex]) {
-            insertWikiLink(items[selectedIndex])
-          }
+          e.preventDefault()
+          if (items[selectedIndex]) insertLink(items[selectedIndex], context)
           break
         case 'Tab':
+          e.preventDefault()
+          if (context?.mode === 'file' && fileItems[selectedIndex]) {
+            if (fileItems[selectedIndex].item.type === SIDEBAR_ITEM_TYPES.notes) {
+              continueLink(fileItems[selectedIndex], context)
+            } else {
+              insertLink(fileItems[selectedIndex], context)
+            }
+          } else if (context?.mode === 'heading' && headingItems[selectedIndex]) {
+            continueLink(headingItems[selectedIndex], context)
+          } else {
+            setMenu({ show: false, query: '', pos: null })
+          }
+          break
         case 'Escape':
-          event.preventDefault()
-          setMenuState({ show: false, query: '', referencePos: null })
+          e.preventDefault()
+          setMenu({ show: false, query: '', pos: null })
           break
       }
     }
 
-    const editorElement = editor.domElement
-    if (editorElement) {
-      editorElement.addEventListener('keydown', handleKeyDown, true)
-      return () => {
-        editorElement.removeEventListener('keydown', handleKeyDown, true)
-      }
-    }
-  }, [editor, menuState.show, items, selectedIndex, insertWikiLink])
+    editorEl.addEventListener('keydown', onKeyDown, true)
+    return () => editorEl.removeEventListener('keydown', onKeyDown, true)
+  }, [editor, menu.show, items, selectedIndex, insertLink, continueLink, context, fileItems, headingItems])
 
-  if (!editor || !menuState.show || !menuState.referencePos) return null
+  if (!editor || !menu.show || !menu.pos || context?.mode === 'display-name') return null
+
+  const isHeading = context?.mode === 'heading'
+  const loading = isHeading && noteQuery.isPending
 
   return (
-    <div
-      className="wiki-link-menu-container"
-      style={{
-        position: 'fixed',
-        left: menuState.referencePos.left,
-        top: menuState.referencePos.bottom + 4,
-        zIndex: 2000,
-      }}
-    >
+    <div className="wiki-link-menu-container" style={{ position: 'fixed', left: menu.pos.left, top: menu.pos.bottom + 4, zIndex: 2000 }}>
       <div className="wiki-link-menu">
+        {isHeading && context?.resolvedItem && (
+          <div className="wiki-link-menu-header">
+            Headings in "{context.resolvedItem.name}"
+            {context.completedHeadingPath.length > 0 && (
+              <span className="wiki-link-menu-path"> &gt; {context.completedHeadingPath.join(' > ')}</span>
+            )}
+          </div>
+        )}
         <ScrollArea className="wiki-link-menu-scroll-area">
-          {items.length === 0 ? (
-            <div className="wiki-link-menu-empty">No matches found</div>
-          ) : (
+          {loading ? (
+            <div className="wiki-link-menu-empty">Loading headings...</div>
+          ) : items.length === 0 ? (
+            <div className="wiki-link-menu-empty">{isHeading ? 'No headings found' : 'No matches found'}</div>
+          ) : isHeading ? (
             <div className="wiki-link-menu-items">
-              {items.map((item, index) => (
+              {headingItems.map((item, i) => (
                 <div
                   key={item.key}
-                  onClick={() => insertWikiLink(item)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={`wiki-link-menu-item ${
-                    index === selectedIndex ? 'selected' : ''
-                  }`}
+                  onClick={() => insertLink(item, context)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                  className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
                 >
                   <div className="wiki-link-menu-item-title-row">
-                    <span className="wiki-link-menu-item-title">
-                      {item.title}
+                    <span className="wiki-link-menu-item-title" style={{ paddingLeft: `${(item.level - 1) * 12}px` }}>
+                      {'#'.repeat(item.level)} {item.title}
                     </span>
+                    <span className="wiki-link-menu-badge">H{item.level}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="wiki-link-menu-items">
+              {fileItems.map((item, i) => (
+                <div
+                  key={item.key}
+                  onClick={() => insertLink(item, context)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                  className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
+                >
+                  <div className="wiki-link-menu-item-title-row">
+                    <span className="wiki-link-menu-item-title">{item.title}</span>
                     <span className="wiki-link-menu-badge">{item.badge}</span>
                   </div>
-                  {item.subtext && (
-                    <div className="wiki-link-menu-item-subtext">
-                      {item.subtext}
-                    </div>
-                  )}
+                  {item.subtext && <div className="wiki-link-menu-item-subtext">{item.subtext}</div>}
                 </div>
               ))}
             </div>
@@ -315,7 +366,8 @@ export function WikiLinkAutocomplete({
         <div className="wiki-link-menu-footer">
           <span>↑↓ navigate</span>
           <span>↵ select</span>
-          <span>tab close</span>
+          <span>tab continue</span>
+          <span>esc close</span>
         </div>
       </div>
     </div>

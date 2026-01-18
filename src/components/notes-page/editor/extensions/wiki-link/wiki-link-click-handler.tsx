@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -8,21 +8,33 @@ import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
-import './wiki-link.css'
 import { validateSidebarItemName } from '~/lib/sidebar-validation'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
-
-interface WikiLinkClickHandlerProps {
-  editor: CustomBlockNoteEditor | undefined
-}
+import './wiki-link.css'
 
 interface TooltipState {
   show: boolean
-  linkText: string
-  position: { x: number; y: number }
+  text: string
+  x: number
+  y: number
 }
 
-export function WikiLinkClickHandler({ editor }: WikiLinkClickHandlerProps) {
+const HIDDEN_TOOLTIP: TooltipState = { show: false, text: '', x: 0, y: 0 }
+
+/** Extract wiki link data from an element at a position */
+function getWikiLinkAt(x: number, y: number) {
+  const el = document.elementFromPoint(x, y)?.closest('.wiki-link-content')
+  if (!el) return null
+  return {
+    element: el,
+    exists: el.getAttribute('data-wiki-link-exists') === 'true',
+    itemName: el.getAttribute('data-wiki-link-item-name') || el.getAttribute('data-wiki-link'),
+    href: el.getAttribute('data-href'),
+    heading: el.getAttribute('data-wiki-link-heading'),
+  }
+}
+
+export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const navigate = useNavigate()
   const { navigateToNote } = useEditorNavigation()
   const { campaignWithMembership } = useCampaign()
@@ -30,241 +42,136 @@ export function WikiLinkClickHandler({ editor }: WikiLinkClickHandlerProps) {
   const { editorMode } = useEditorMode()
   const { parentItemsMap } = useAllSidebarItems()
 
-  const [tooltip, setTooltip] = useState<TooltipState>({
-    show: false,
-    linkText: '',
-    position: { x: 0, y: 0 },
-  })
+  const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
-    null,
-  )
 
-  // Create note mutation
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
-  const { mutateAsync: createNote } = useMutation({
-    mutationFn: createNoteMutation,
-  })
+  const { mutateAsync: createNote } = useMutation({ mutationFn: createNoteMutation })
 
-  // Helper to check for ghost link at position
-  const checkGhostLinkAtPosition = (x: number, y: number) => {
-    const element = document.elementFromPoint(x, y)
-    if (!element) return
+  const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
-    const wikiLinkElement = element.closest('.wiki-link-content')
-    if (!wikiLinkElement) return
+  const showTooltipFor = useCallback((link: ReturnType<typeof getWikiLinkAt>) => {
+    if (!link || link.exists || !link.itemName) return
+    const rect = link.element.getBoundingClientRect()
+    setTooltip({ show: true, text: link.itemName, x: rect.left, y: rect.bottom + 4 })
+  }, [])
 
-    const isExistingLink =
-      wikiLinkElement.getAttribute('data-wiki-link-exists') === 'true'
-    if (isExistingLink) return
-
-    const linkText = wikiLinkElement.getAttribute('data-wiki-link')
-    if (!linkText) return
-
-    const rect = wikiLinkElement.getBoundingClientRect()
-    setTooltip({
-      show: true,
-      linkText,
-      position: { x: rect.left, y: rect.bottom + 4 },
-    })
-  }
-
-  // Track ctrl key state
+  // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Control' || event.key === 'Meta') {
-        setCtrlHeld(true)
-        // Check if already hovering over a ghost link
-        if (mousePos) {
-          checkGhostLinkAtPosition(mousePos.x, mousePos.y)
-        }
-      }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') setCtrlHeld(true)
     }
-
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === 'Control' || event.key === 'Meta') {
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') {
         setCtrlHeld(false)
-        setTooltip((prev) => ({ ...prev, show: false }))
+        hideTooltip()
       }
     }
+    const onBlur = () => { setCtrlHeld(false); hideTooltip() }
 
-    // Also hide when window loses focus
-    const handleBlur = () => {
-      setCtrlHeld(false)
-      setTooltip((prev) => ({ ...prev, show: false }))
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('keyup', handleKeyUp)
-    window.addEventListener('blur', handleBlur)
-
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('keyup', handleKeyUp)
-      window.removeEventListener('blur', handleBlur)
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
     }
-  }, [mousePos])
+  }, [hideTooltip])
 
-  // Track mouse position and hover over ghost links when ctrl is held
+  // Mouse tracking for ghost link tooltips
   useEffect(() => {
-    if (!editor) return
+    const editorEl = editor?.domElement
+    if (!editorEl) return
 
-    const editorElement = editor.domElement
-    if (!editorElement) return
-
-    const handleMouseMove = (event: MouseEvent) => {
-      // Always track mouse position
-      setMousePos({ x: event.clientX, y: event.clientY })
-
-      if (!ctrlHeld) {
-        if (tooltip.show) {
-          setTooltip((prev) => ({ ...prev, show: false }))
-        }
-        return
-      }
-
-      const target = event.target as HTMLElement
-      const wikiLinkElement = target.closest('.wiki-link-content')
-
-      if (!wikiLinkElement) {
-        if (tooltip.show) {
-          setTooltip((prev) => ({ ...prev, show: false }))
-        }
-        return
-      }
-
-      const isExistingLink =
-        wikiLinkElement.getAttribute('data-wiki-link-exists') === 'true'
-      if (isExistingLink) {
-        if (tooltip.show) {
-          setTooltip((prev) => ({ ...prev, show: false }))
-        }
-        return
-      }
-
-      const linkText = wikiLinkElement.getAttribute('data-wiki-link')
-      if (!linkText) return
-
-      const rect = wikiLinkElement.getBoundingClientRect()
-      setTooltip({
-        show: true,
-        linkText,
-        position: { x: rect.left, y: rect.bottom + 4 },
-      })
+    const onMouseMove = (e: MouseEvent) => {
+      if (!ctrlHeld) { hideTooltip(); return }
+      const link = getWikiLinkAt(e.clientX, e.clientY)
+      if (!link || link.exists) { hideTooltip(); return }
+      showTooltipFor(link)
     }
 
-    const handleMouseLeave = () => {
-      setMousePos(null)
-      setTooltip((prev) => ({ ...prev, show: false }))
-    }
-
-    editorElement.addEventListener('mousemove', handleMouseMove)
-    editorElement.addEventListener('mouseleave', handleMouseLeave)
+    editorEl.addEventListener('mousemove', onMouseMove)
+    editorEl.addEventListener('mouseleave', hideTooltip)
     return () => {
-      editorElement.removeEventListener('mousemove', handleMouseMove)
-      editorElement.removeEventListener('mouseleave', handleMouseLeave)
+      editorEl.removeEventListener('mousemove', onMouseMove)
+      editorEl.removeEventListener('mouseleave', hideTooltip)
     }
-  }, [editor, ctrlHeld, tooltip.show])
+  }, [editor, ctrlHeld, hideTooltip, showTooltipFor])
 
-  // Handle clicks on wiki-links
-  // Use mousedown with capturing to intercept before BlockNote's ctrl+click selection
+  // Click handling
   useEffect(() => {
-    if (!editor) return
+    const editorEl = editor?.domElement
+    if (!editorEl) return
 
-    const editorElement = editor.domElement
-    if (!editorElement) return
+    const onMouseDown = async (e: MouseEvent) => {
+      const link = getWikiLinkAt(e.clientX, e.clientY)
+      if (!link) return
 
-    const handleMouseDown = async (event: MouseEvent) => {
-      const target = event.target as HTMLElement
+      const isCtrlClick = e.ctrlKey || e.metaKey
 
-      // Check if we clicked on a wiki-link content element
-      const wikiLinkElement = target.closest('.wiki-link-content')
-      if (!wikiLinkElement) return
+      if (link.exists && link.href) {
+        const url = new URL(link.href, window.location.origin)
+        const searchParams: Record<string, string> = {}
+        url.searchParams.forEach((v, k) => { searchParams[k] = v })
+        if (link.heading) searchParams.heading = link.heading
 
-      const linkText = wikiLinkElement.getAttribute('data-wiki-link')
-      if (!linkText) return
-
-      const isExistingLink =
-        wikiLinkElement.getAttribute('data-wiki-link-exists') === 'true'
-      const isCtrlClick = event.ctrlKey || event.metaKey
-
-      if (isExistingLink) {
-        const href = wikiLinkElement.getAttribute('data-href')
-        if (href) {
-          if (editorMode === 'editor') {
-            // In editor mode: only ctrl+click navigates (allows normal cursor positioning)
-            if (isCtrlClick) {
-              event.preventDefault()
-              event.stopPropagation()
-              navigate({ to: href })
-            }
-            // Regular click: do nothing, allow cursor positioning
+        if (editorMode === 'editor') {
+          // Editor: ctrl+click navigates, regular click positions cursor
+          if (!isCtrlClick) return
+          e.preventDefault()
+          e.stopPropagation()
+          navigate({ to: url.pathname, search: searchParams })
+        } else {
+          // Viewer: click navigates, ctrl+click opens new tab
+          e.preventDefault()
+          e.stopPropagation()
+          if (isCtrlClick) {
+            if (link.heading) url.searchParams.set('heading', link.heading)
+            window.open(url.toString(), '_blank', 'noopener,noreferrer')
           } else {
-            // In viewer mode: regular click navigates, ctrl+click opens new tab
-            event.preventDefault()
-            event.stopPropagation()
-            if (isCtrlClick) {
-              const a = document.createElement('a')
-              a.href = href
-              a.target = '_blank'
-              a.rel = 'noopener noreferrer'
-              a.click()
-            } else {
-              navigate({ to: href })
-            }
+            navigate({ to: url.pathname, search: searchParams })
           }
         }
         return
       }
 
-      // For ghost links: ctrl+click creates the note directly
-      if (isCtrlClick && campaign?._id) {
-        event.preventDefault()
-        event.stopPropagation()
-        setTooltip((prev) => ({ ...prev, show: false }))
+      // Ghost link: ctrl+click creates note
+      if (!link.exists && isCtrlClick && link.itemName && campaign?._id) {
+        e.preventDefault()
+        e.stopPropagation()
+        hideTooltip()
 
+        const validation = validateSidebarItemName({
+          name: link.itemName,
+          siblings: parentItemsMap.get(undefined),
+        })
+        if (!validation.valid) {
+          toast.error(validation.error)
+          return
+        }
         try {
-          const validationResult = validateSidebarItemName({
-            name: linkText,
-            siblings: parentItemsMap.get(undefined),
-          })
-          if (!validationResult.valid) {
-            toast.error(validationResult.error)
-            return
-          }
-          const result = await createNote({
-            campaignId: campaign._id,
-            name: linkText,
-          })
-          if (result) {
-            navigateToNote(result.slug)
-          }
-        } catch (error) {
-          console.error('Failed to create note:', error)
+          const result = await createNote({ campaignId: campaign._id, name: link.itemName })
+          if (result) navigateToNote(result.slug)
+        } catch (err) {
+          console.error('Failed to create note:', err)
+          toast.error('Failed to create note')
         }
       }
     }
 
-    // Use capturing phase to intercept before BlockNote handles ctrl+click
-    editorElement.addEventListener('mousedown', handleMouseDown, true)
-    return () =>
-      editorElement.removeEventListener('mousedown', handleMouseDown, true)
-  }, [editor, navigate, campaign?._id, createNote, navigateToNote, editorMode])
+    editorEl.addEventListener('mousedown', onMouseDown, true)
+    return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
+  }, [editor, navigate, campaign?._id, createNote, navigateToNote, editorMode, parentItemsMap, hideTooltip])
 
-  // Tooltip for ghost links
   if (!tooltip.show) return null
 
   return (
     <div
       className="wiki-link-tooltip"
-      style={{
-        position: 'fixed',
-        top: tooltip.position.y,
-        left: tooltip.position.x,
-        zIndex: 9999,
-      }}
+      style={{ position: 'fixed', top: tooltip.y, left: tooltip.x, zIndex: 9999 }}
     >
-      Click to create "{tooltip.linkText}"
+      Click to create "{tooltip.text}"
     </div>
   )
 }

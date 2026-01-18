@@ -5,7 +5,6 @@ import { BookOpen, Pencil } from 'lucide-react'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
-import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Note, NoteWithContent } from 'convex/notes/types'
@@ -20,6 +19,7 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
+import { useScrollToHeading } from '~/hooks/useScrollToHeading'
 import { Button } from '~/components/shadcn/ui/button'
 import '../../editor/extensions/wiki-link/wiki-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
@@ -81,6 +81,7 @@ export const NoteEditorBase = ({
   })
 
   useWikiLinkExtension(editor)
+  useScrollToHeading(noteWithContent.content as Array<CustomBlock>, true, editor)
 
   const handleWrapperClick = useCallback(() => {
     editor.focus()

@@ -68,6 +68,38 @@
   display: none;
 }
 
+/* Display name override - hide actual text and show display name via ::before */
+.wiki-link-content[data-display-name] {
+  font-size: 0;
+}
+
+.wiki-link-content[data-display-name]::before {
+  content: attr(data-display-name);
+  font-size: 0.875rem; /* Reset to normal font size */
+}
+
+/* When active (cursor inside) or hovered, show the full wiki-link text instead of display name */
+.wiki-link-content.wiki-link-active[data-display-name],
+.wiki-link-content[data-display-name]:hover {
+  font-size: inherit;
+}
+
+.wiki-link-content.wiki-link-active[data-display-name]::before,
+.wiki-link-content[data-display-name]:hover::before {
+  content: none;
+}
+
+/* Also reveal when adjacent brackets are hovered */
+.wiki-link-bracket-open:hover + .wiki-link-content[data-display-name],
+.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:hover) {
+  font-size: inherit;
+}
+
+.wiki-link-bracket-open:hover + .wiki-link-content[data-display-name]::before,
+.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:hover)::before {
+  content: none;
+}
+
 /* Tooltip for ghost links */
 .wiki-link-tooltip {
   background-color: hsl(var(--popover));

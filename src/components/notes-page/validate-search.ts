@@ -3,6 +3,7 @@ export type EditorSearch = {
   map?: string
   note?: string
   file?: string
+  heading?: string
 }
 
 export const validateSearch = (
@@ -38,6 +39,13 @@ export const validateSearch = (
       ? search.file.trim()
       : undefined
 
+  const heading =
+    'heading' in search &&
+    typeof search.heading === 'string' &&
+    search.heading.trim().length > 0
+      ? search.heading.trim()
+      : undefined
+
   if (note) {
     result.note = note
   } else if (map) {
@@ -46,6 +54,11 @@ export const validateSearch = (
     result.folder = folder
   } else if (file) {
     result.file = file
+  }
+
+  // heading can be present alongside note
+  if (heading) {
+    result.heading = heading
   }
 
   return result
