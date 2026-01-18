@@ -3,6 +3,7 @@ import { CustomDragHandleMenu } from '../drag-handle/drag-handle'
 import ShareSideMenuButton from './share/share-side-menu-button'
 import type { SideMenuProps } from '@blocknote/react'
 import type {
+  CustomBlockNoteEditor,
   CustomBlockSchema,
   CustomInlineContentSchema,
   CustomStyleSchema,
@@ -16,7 +17,10 @@ export const SideMenuRenderer = (
   >,
 ) => (
   <SideMenu {...props}>
-    <ShareSideMenuButton {...props} />
+    <ShareSideMenuButton
+      {...props}
+      editor={props.editor as CustomBlockNoteEditor}
+    />
     <DragHandleButton {...props} dragHandleMenu={CustomDragHandleMenu} />
   </SideMenu>
 )

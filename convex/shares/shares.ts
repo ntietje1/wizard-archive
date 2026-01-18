@@ -1,6 +1,15 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
+import {
+  findBlockByBlockNoteId,
+  insertBlock,
+  removeBlockIfNotNeeded,
+  updateBlock,
+} from '../blocks/blocks'
+import { BLOCK_SHARE_STATUS } from '../blocks/types'
+import type { BlockShareStatus } from '../blocks/types'
+import type { CustomBlock } from '../notes/editorSpecs'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'
@@ -120,7 +129,127 @@ export async function isSidebarItemSharedWithMember(
   return share !== null
 }
 
-// ============ Block Shares ============
+export interface BlockItem {
+  blockNoteId: string
+  content: CustomBlock
+}
+
+export async function setBlockShareStatusHelper(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  noteId: Id<'notes'>,
+  blockItem: BlockItem,
+  status: BlockShareStatus,
+): Promise<void> {
+  const existingBlock = await findBlockByBlockNoteId(
+    ctx,
+    noteId,
+    blockItem.blockNoteId,
+  )
+
+  let blockId: Id<'blocks'>
+  if (existingBlock) {
+    await updateBlock(ctx, existingBlock._id, {
+      content: blockItem.content,
+      shareStatus: status,
+      isTopLevel: true,
+      updatedAt: Date.now(),
+    })
+    blockId = existingBlock._id
+  } else {
+    blockId = await insertBlock(ctx, {
+      campaignId,
+      blockId: blockItem.blockNoteId,
+      content: blockItem.content,
+      shareStatus: status,
+      isTopLevel: true,
+      noteId,
+      now: Date.now(),
+    })
+  }
+
+  // If setting to not_shared, clear any individual shares
+  if (status === BLOCK_SHARE_STATUS.NOT_SHARED) {
+    const shares = await ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_block_member', (q) =>
+        q.eq('campaignId', campaignId).eq('blockId', blockId),
+      )
+      .collect()
+
+    for (const share of shares) {
+      await ctx.db.delete(share._id)
+    }
+
+    await removeBlockIfNotNeeded(ctx, campaignId, blockId)
+  }
+}
+
+export async function shareBlockWithMemberHelper(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  noteId: Id<'notes'>,
+  blockItem: BlockItem,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<void> {
+  const existingBlock = await findBlockByBlockNoteId(
+    ctx,
+    noteId,
+    blockItem.blockNoteId,
+  )
+
+  let blockId: Id<'blocks'>
+  if (existingBlock) {
+    await updateBlock(ctx, existingBlock._id, {
+      content: blockItem.content,
+      isTopLevel: true,
+      shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+      updatedAt: Date.now(),
+    })
+    blockId = existingBlock._id
+  } else {
+    blockId = await insertBlock(ctx, {
+      campaignId,
+      blockId: blockItem.blockNoteId,
+      content: blockItem.content,
+      isTopLevel: true,
+      noteId,
+      now: Date.now(),
+      shareStatus: BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED,
+    })
+  }
+
+  await shareBlockWithMember(ctx, campaignId, blockId, campaignMemberId)
+}
+
+export async function unshareBlockFromMemberHelper(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  noteId: Id<'notes'>,
+  blockNoteId: string,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<void> {
+  const block = await findBlockByBlockNoteId(ctx, noteId, blockNoteId)
+  if (!block || block.campaignId !== campaignId) return
+
+  await unshareBlockFromMember(ctx, campaignId, block._id, campaignMemberId)
+
+  // Check if any shares remain
+  const remainingShares = await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q.eq('campaignId', campaignId).eq('blockId', block._id),
+    )
+    .first()
+
+  // If no shares remain, set status to not_shared
+  if (!remainingShares) {
+    await ctx.db.patch(block._id, {
+      shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
+    })
+    await removeBlockIfNotNeeded(ctx, campaignId, block._id)
+  }
+}
 
 export async function shareBlockWithMember(
   ctx: MutationCtx,

@@ -11,7 +11,7 @@ import {
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
 import { checkUniqueNameUnderParent as checkUniqueNameUnderParentFn } from './validation'
-import type { ValidationResult } from './validation';
+import type { ValidationResult } from './validation'
 import type { AnySidebarItem } from './types'
 
 export const getAllSidebarItems = query({
