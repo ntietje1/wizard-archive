@@ -3,7 +3,6 @@ import { query } from '../_generated/server'
 import { anySidebarItemValidator, sidebarItemTypeValidator } from './schema'
 import { sidebarItemIdValidator } from './baseFields'
 import {
-  checkUniqueNameUnderParent as checkUniqueNameUnderParentFn,
   getAllSidebarItems as getAllSidebarItemsFn,
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
@@ -11,6 +10,8 @@ import {
   getSidebarItemsByName as getSidebarItemsByNameFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
+import { checkUniqueNameUnderParent as checkUniqueNameUnderParentFn } from './validation'
+import type { ValidationResult } from './validation';
 import type { AnySidebarItem } from './types'
 
 export const getAllSidebarItems = query({
@@ -85,6 +86,11 @@ export const getSidebarItemBySlug = query({
   },
 })
 
+export const validationResultValidator = v.object({
+  valid: v.boolean(),
+  error: v.optional(v.string()),
+})
+
 export const checkUniqueNameUnderParent = query({
   args: {
     campaignId: v.id('campaigns'),
@@ -92,15 +98,16 @@ export const checkUniqueNameUnderParent = query({
     name: v.optional(v.string()),
     excludeId: v.optional(sidebarItemIdValidator),
   },
-  returns: v.boolean(),
-  handler: async (ctx, args): Promise<boolean> => {
-    return await checkUniqueNameUnderParentFn(
+  returns: validationResultValidator,
+  handler: async (ctx, args): Promise<ValidationResult> => {
+    const result = await checkUniqueNameUnderParentFn(
       ctx,
       args.campaignId,
       args.parentId,
       args.name,
       args.excludeId,
     )
+    return result
   },
 })
 

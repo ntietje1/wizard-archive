@@ -89,8 +89,8 @@ export function useNameValidation({
   // Only consider query result valid if the debounced name matches current name
   // This prevents showing stale error messages while typing
   const isResultValid = !isPendingDebounce && shouldValidate
-  const isUnique = isResultValid && isUniqueQuery.data === true
-  const isNotUnique = isResultValid && isUniqueQuery.data === false
+  const isUnique = isResultValid && isUniqueQuery.data?.valid
+  const isNotUnique = isResultValid && isUniqueQuery.data?.valid === false
 
   // Combined validation error for immediate feedback
   // Wiki-link errors show immediately, uniqueness errors show after debounce
@@ -127,11 +127,11 @@ export function useNameValidation({
       }
 
       // Check uniqueness (async)
-      const isUnique = await convex.query(
+      const result = await convex.query(
         api.sidebarItems.queries.checkUniqueNameUnderParent,
         { campaignId, parentId, name: trimmed, excludeId },
       )
-      return isUnique ? undefined : 'An item with this name already exists here'
+      return result.valid ? undefined : result.error
     },
     [convex, campaignId, parentId, excludeId, trimmedInitialName],
   )
