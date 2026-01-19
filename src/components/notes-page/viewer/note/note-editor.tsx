@@ -1,6 +1,6 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { BookOpen, Pencil } from 'lucide-react'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
@@ -20,6 +20,7 @@ import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { useScrollToHeading } from '~/hooks/useScrollToHeading'
+import { useRestoreScrollPosition } from '~/hooks/useRestoreScrollPosition'
 import { Button } from '~/components/shadcn/ui/button'
 import '../../editor/extensions/wiki-link/wiki-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
@@ -80,8 +81,11 @@ export const NoteEditorBase = ({
     initialContent,
   })
 
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
   useWikiLinkExtension(editor)
-  useScrollToHeading(noteWithContent.content as Array<CustomBlock>, true, editor)
+  const { isScrollingToHeading } = useScrollToHeading(noteWithContent.content as Array<CustomBlock>, true, editor)
+  useRestoreScrollPosition(noteWithContent._id, scrollAreaRef, isScrollingToHeading)
 
   const handleWrapperClick = useCallback(() => {
     editor.focus()
@@ -89,7 +93,7 @@ export const NoteEditorBase = ({
 
   return (
     <div className="flex-1 h-full" onClick={handleWrapperClick}>
-      <ScrollArea className="h-full">
+      <ScrollArea ref={scrollAreaRef} className="h-full">
         <div className="absolute top-2 right-2 z-10">
           <EditorViewModeToggleButton />
         </div>

@@ -4,8 +4,8 @@ import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
 import type {
   AnySidebarItem,
-  SidebarItemType,
   SidebarItemId,
+  SidebarItemType,
 } from 'convex/sidebarItems/types'
 
 interface NavigateOnSlugChangeParams {

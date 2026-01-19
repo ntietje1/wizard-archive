@@ -13,11 +13,13 @@ export function useScrollToHeading(
   content: Array<CustomBlock> | undefined,
   isContentLoaded: boolean,
   editor?: CustomBlockNoteEditor,
-) {
+): { isScrollingToHeading: boolean } {
   const search = useSearch({ from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor' })
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
   const lastScrolledRef = useRef<string | null>(null)
+
+  const hasHeadingParam = Boolean(search.heading)
 
   useEffect(() => {
     const { heading, ...restSearch } = search
@@ -38,8 +40,6 @@ export function useScrollToHeading(
 
     // Wait for DOM to render before scrolling
     requestAnimationFrame(() => {
-
- 
       editor?.focus()
       editor?.setTextCursorPosition(target.blockId, 'start')
 
@@ -54,4 +54,6 @@ export function useScrollToHeading(
       })
     })
   }, [search, content, isContentLoaded, navigate, editor, dmUsername, campaignSlug])
+
+  return { isScrollingToHeading: hasHeadingParam }
 }
