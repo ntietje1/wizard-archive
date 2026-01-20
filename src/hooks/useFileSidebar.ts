@@ -21,6 +21,8 @@ export type FileSidebarContextType = {
   setFileDragHoveredId: (id: SidebarItemId | null) => void
   isDraggingFiles: boolean
   setIsDraggingFiles: (isDragging: boolean) => void
+  isSidebarExpanded: boolean
+  setIsSidebarExpanded: (isExpanded: boolean) => void
 }
 
 export const FileSidebarContext = createContext<FileSidebarContextType | null>(

@@ -140,6 +140,10 @@ export function FileSidebarProvider({
   const campaignId = campaignWithMembership.data?.campaign._id
   const [renamingId, setRenamingId] = useState<SidebarItemId | null>(null)
   const [deletingId, setDeletingId] = useState<SidebarItemId | null>(null)
+  const [isSidebarExpanded, setIsSidebarExpanded] = usePersistedState<boolean>(
+    campaignId ? `file-sidebar-expanded-${campaignId}` : null,
+    true,
+  )
 
   const [folderStates, setFolderStates] = usePersistedState<
     Record<string, boolean>
@@ -332,6 +336,8 @@ export function FileSidebarProvider({
     setFileDragHoveredId,
     isDraggingFiles,
     setIsDraggingFiles,
+    isSidebarExpanded,
+    setIsSidebarExpanded,
   }
 
   return (

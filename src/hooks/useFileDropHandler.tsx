@@ -85,7 +85,11 @@ export function useFileDropHandler() {
         toastId = toast.loading(
           <ToastContent
             title={fileName}
-            message={isTextFile(file.type, file.name) ? 'Processing...' : 'Uploading... 0%'}
+            message={
+              isTextFile(file.type, file.name)
+                ? 'Processing...'
+                : 'Uploading... 0%'
+            }
             progress={isTextFile(file.type, file.name) ? undefined : 0}
           />,
           { duration: Infinity, style: TOAST_STYLE },

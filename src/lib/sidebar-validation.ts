@@ -29,13 +29,15 @@ export function validateWikiLinkCompatibleName(
   if (name.includes('#')) {
     return {
       valid: false,
-      error: 'Name cannot contain "#" as it conflicts with wiki-link heading syntax',
+      error:
+        'Name cannot contain "#" as it conflicts with wiki-link heading syntax',
     }
   }
   if (name.includes('|')) {
     return {
       valid: false,
-      error: 'Name cannot contain "|" as it conflicts with wiki-link display name syntax',
+      error:
+        'Name cannot contain "|" as it conflicts with wiki-link display name syntax',
     }
   }
   return { valid: true }

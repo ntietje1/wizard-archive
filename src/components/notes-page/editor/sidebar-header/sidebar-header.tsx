@@ -6,7 +6,7 @@ import { TooltipButton } from '~/components/tooltips/tooltip-button'
 
 export function SidebarHeader() {
   return (
-    <div className="flex items-center justify-center px-8 h-12 border-b bg-background">
+    <div className="flex items-center justify-center px-8 h-10 border-b bg-background">
       <TooltipButton tooltip="New note">
         <NewNoteButton />
       </TooltipButton>
