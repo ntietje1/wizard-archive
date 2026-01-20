@@ -28,19 +28,18 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
   const [skipAnimation, setSkipAnimation] = useState(false)
   const dragWidthRef = useRef<number>(0)
-  const wasExpandedRef = useRef<boolean>(false)
   const sidebarRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (!isSidebarExpanded) return
+
       e.preventDefault()
 
       const startX = e.clientX
-      const wasExpanded = isSidebarExpanded
-      wasExpandedRef.current = wasExpanded
-      const startWidth = wasExpanded ? sidebarWidth : 0
+      const startWidth = sidebarWidth
       dragWidthRef.current = startWidth
 
       // Apply immediate styles for resize mode
@@ -57,23 +56,14 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         dragWidthRef.current = rawWidth
 
         let displayWidth: number
-        if (wasExpandedRef.current) {
-          if (rawWidth < SNAP_CLOSED_THRESHOLD) {
-            displayWidth = 0
-          } else if (rawWidth < SIDEBAR_MIN_WIDTH) {
-            displayWidth = SIDEBAR_MIN_WIDTH
-          } else {
-            displayWidth = rawWidth
-          }
+        if (rawWidth < SNAP_CLOSED_THRESHOLD) {
+          displayWidth = 0
+        } else if (rawWidth < SIDEBAR_MIN_WIDTH) {
+          displayWidth = SIDEBAR_MIN_WIDTH
         } else {
-          if (rawWidth > 0) {
-            displayWidth = Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
-          } else {
-            displayWidth = 0
-          }
+          displayWidth = rawWidth
         }
 
-        // Direct DOM manipulation - no React state updates
         if (sidebarRef.current) {
           sidebarRef.current.style.width = `${displayWidth}px`
           sidebarRef.current.style.borderRightWidth = displayWidth > 0 ? '1px' : '0px'
@@ -89,17 +79,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         // Disable animation for this update
         setSkipAnimation(true)
 
-        if (wasExpandedRef.current) {
-          if (finalWidth < SNAP_CLOSED_THRESHOLD) {
-            setIsSidebarExpanded(false)
-          } else {
-            setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
-          }
+        if (finalWidth < SNAP_CLOSED_THRESHOLD) {
+          setIsSidebarExpanded(false)
         } else {
-          if (finalWidth > 0) {
-            setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
-            setIsSidebarExpanded(true)
-          }
+          setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
         }
 
         // Clear inline styles after React has rendered with skipAnimation=true
@@ -175,7 +158,11 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Custom resize handle */}
       <div
         ref={handleRef}
-        className="w-1 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30"
+        className={`w-1 shrink-0 ${
+          isSidebarExpanded
+            ? 'cursor-col-resize hover:bg-primary/20 active:bg-primary/30'
+            : ''
+        }`}
         onMouseDown={handleMouseDown}
       />
 
