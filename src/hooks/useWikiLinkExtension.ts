@@ -5,7 +5,7 @@ import { useAllSidebarItems } from './useSidebarItems'
 import { useCampaign } from './useCampaign'
 import { useEditorMode } from './useEditorMode'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 const PLUGIN_KEY = new PluginKey('wikiLinkDecoration')
@@ -25,7 +25,8 @@ export interface WikiLinkItemInfo {
 export type WikiLinkItemsMap = Map<string, WikiLinkItemInfo>
 
 export interface ParsedWikiLink {
-  itemName: string // The file/note name
+  itemPath: Array<string> // Path segments ["folder", "subfolder", "note"]
+  itemName: string // The final item name (last segment of path)
   headingPath: Array<string> // Array of heading anchors ["h1", "h2"]
   displayName: string | null // Optional display override
 }
@@ -42,19 +43,149 @@ export function parseWikiLinkText(text: string): ParsedWikiLink {
     remainingText = text.slice(0, lastPipeIndex)
   }
 
-  // Split by # to get item name and heading path
+  // Split by # to get item path and heading path
   const parts = remainingText.split('#')
-  const itemName = parts[0].trim()
+  const itemPathStr = parts[0].trim()
   const headingPath = parts
     .slice(1)
     .map((h) => h.trim())
     .filter(Boolean)
 
+  // Split item path by / to get path segments
+  const itemPath = itemPathStr
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const itemName = itemPath.at(-1) || ''
+
   return {
+    itemPath,
     itemName,
     headingPath,
     displayName,
   }
+}
+
+/**
+ * Get the full path of an item from root to item (array of names)
+ */
+export function getItemPath(
+  item: AnySidebarItem,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+): Array<string> {
+  const path: Array<string> = []
+  let current: AnySidebarItem | undefined = item
+  const seen = new Set<SidebarItemId>()
+
+  while (current && !seen.has(current._id)) {
+    seen.add(current._id)
+    if (current.name) {
+      path.unshift(current.name)
+    }
+    current = current.parentId ? itemsMap.get(current.parentId) : undefined
+  }
+
+  return path
+}
+
+/**
+ * Resolve a path (array of names) to an item.
+ * The path can be partial - it matches from the end of the full path.
+ * Returns the first matching item if found, or undefined if not found.
+ */
+export function resolveItemByPath(
+  pathSegments: Array<string>,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+): AnySidebarItem | undefined {
+  if (pathSegments.length === 0) return undefined
+
+  const normalizedPath = pathSegments.map((s) => s.toLowerCase())
+
+  for (const item of allItems) {
+    const fullPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
+
+    // Check if the provided path matches the end of the full path
+    if (fullPath.length < normalizedPath.length) continue
+
+    const startIdx = fullPath.length - normalizedPath.length
+    const pathMatches = normalizedPath.every(
+      (segment, i) => fullPath[startIdx + i] === segment,
+    )
+
+    if (pathMatches) {
+      return item
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * Check if a path uniquely identifies an item (no other items match the same path)
+ */
+export function isPathUnique(
+  pathSegments: Array<string>,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+): boolean {
+  if (pathSegments.length === 0) return false
+
+  const normalizedPath = pathSegments.map((s) => s.toLowerCase())
+  let matchCount = 0
+
+  for (const item of allItems) {
+    const fullPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
+
+    if (fullPath.length < normalizedPath.length) continue
+
+    const startIdx = fullPath.length - normalizedPath.length
+    const pathMatches = normalizedPath.every(
+      (segment, i) => fullPath[startIdx + i] === segment,
+    )
+
+    if (pathMatches) {
+      matchCount++
+      if (matchCount > 1) return false
+    }
+  }
+
+  return matchCount === 1
+}
+
+/**
+ * Get all items with a given name (case-insensitive)
+ */
+export function getItemsByName(
+  name: string,
+  allItems: Array<AnySidebarItem>,
+): Array<AnySidebarItem> {
+  const normalizedName = name.toLowerCase()
+  return allItems.filter((item) => item.name?.toLowerCase() === normalizedName)
+}
+
+/**
+ * Calculate the minimum path needed to uniquely identify an item.
+ * Returns the shortest suffix of the full path that uniquely identifies this item.
+ */
+export function getMinDisambiguationPath(
+  item: AnySidebarItem,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+): Array<string> {
+  const fullPath = getItemPath(item, itemsMap)
+  if (fullPath.length === 0) return []
+
+  // Start with just the name and add parent folders until unique
+  for (let i = fullPath.length - 1; i >= 0; i--) {
+    const partialPath = fullPath.slice(i)
+    if (isPathUnique(partialPath, allItems, itemsMap)) {
+      return partialPath
+    }
+  }
+
+  // Fall back to full path (should always be unique)
+  return fullPath
 }
 
 interface WikiLinkMatch {
@@ -78,6 +209,12 @@ interface PluginState {
 export const WIKI_LINK_REGEX =
   /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
 
+export interface WikiLinkResolver {
+  resolve: (pathSegments: Array<string>) => WikiLinkItemInfo | undefined
+  allItems: Array<AnySidebarItem>
+  itemsMap: Map<SidebarItemId, AnySidebarItem>
+}
+
 /**
  * Hook that applies wiki-link styling to [[text]] patterns in the editor.
  * - In editor mode: brackets are hidden unless cursor/selection overlaps with the link
@@ -86,13 +223,33 @@ export const WIKI_LINK_REGEX =
 export function useWikiLinkExtension(
   editor: CustomBlockNoteEditor | undefined,
 ) {
-  const { data: sidebarItems } = useAllSidebarItems()
+  const { data: sidebarItems, itemsMap } = useAllSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode } = useEditorMode()
   const pluginRef = useRef<Plugin | null>(null)
   const isViewerMode = editorMode === 'viewer'
 
-  // Build map of lowercase names to item info
+  // Build resolver for path-based lookups
+  const resolver = useMemo((): WikiLinkResolver => {
+    const allItems = sidebarItems || []
+
+    const resolve = (pathSegments: Array<string>): WikiLinkItemInfo | undefined => {
+      if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
+
+      const item = resolveItemByPath(pathSegments, allItems, itemsMap)
+      if (!item) return undefined
+
+      const urlParam = TYPE_TO_URL_PARAM[item.type]
+      if (!urlParam) return undefined
+
+      const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
+      return { item, href }
+    }
+
+    return { resolve, allItems, itemsMap }
+  }, [sidebarItems, itemsMap, dmUsername, campaignSlug])
+
+  // Legacy map for backwards compatibility (keyed by lowercase name)
   const itemsByName = useMemo((): WikiLinkItemsMap => {
     const map = new Map<string, WikiLinkItemInfo>()
     if (!sidebarItems || !dmUsername || !campaignSlug) return map
@@ -103,7 +260,10 @@ export function useWikiLinkExtension(
       if (!urlParam) continue
 
       const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
-      map.set(item.name.toLowerCase(), { item, href })
+      // Only set if not already set (first item with this name wins for legacy map)
+      if (!map.has(item.name.toLowerCase())) {
+        map.set(item.name.toLowerCase(), { item, href })
+      }
     }
     return map
   }, [sidebarItems, dmUsername, campaignSlug])
@@ -125,7 +285,7 @@ export function useWikiLinkExtension(
 
       if (cancelled) return
 
-      const plugin = createWikiLinkPlugin(itemsByName, isViewerMode)
+      const plugin = createWikiLinkPlugin(resolver, isViewerMode)
 
       // Always try to unregister first (handles HMR and dependency changes)
       try {
@@ -160,9 +320,9 @@ export function useWikiLinkExtension(
       }
       pluginRef.current = null
     }
-  }, [editor, itemsByName, isViewerMode])
+  }, [editor, resolver, isViewerMode])
 
-  return { itemsByName }
+  return { itemsByName, resolver }
 }
 
 // Find all wiki-link matches in the document
@@ -172,7 +332,7 @@ function findWikiLinks(
       fn: (node: { isText: boolean; text?: string }, pos: number) => void,
     ) => void
   },
-  itemsByName: WikiLinkItemsMap,
+  resolver: WikiLinkResolver,
 ): Array<WikiLinkMatch> {
   const matches: Array<WikiLinkMatch> = []
   const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
@@ -186,7 +346,8 @@ function findWikiLinks(
       const to = pos + match.index + match[0].length
       const innerText = match[1]
       const parsed = parseWikiLinkText(innerText)
-      const itemInfo = itemsByName.get(parsed.itemName.toLowerCase())
+      // Resolve using the full item path
+      const itemInfo = resolver.resolve(parsed.itemPath)
       matches.push({ from, to, innerText, parsed, itemInfo })
     }
   })
@@ -205,7 +366,7 @@ function overlapsSelection(
 }
 
 function createWikiLinkPlugin(
-  itemsByName: WikiLinkItemsMap,
+  resolver: WikiLinkResolver,
   isViewerMode: boolean,
 ): Plugin<PluginState> {
   return new Plugin<PluginState>({
@@ -213,7 +374,7 @@ function createWikiLinkPlugin(
     state: {
       init(_, { doc, selection }) {
         try {
-          const matches = findWikiLinks(doc, itemsByName)
+          const matches = findWikiLinks(doc, resolver)
           return {
             decorations: buildDecorations(
               doc,
@@ -240,7 +401,7 @@ function createWikiLinkPlugin(
 
           // If doc changed, rebuild everything
           if (tr.docChanged || forceRebuild) {
-            const matches = findWikiLinks(newEditorState.doc, itemsByName)
+            const matches = findWikiLinks(newEditorState.doc, resolver)
             return {
               decorations: buildDecorations(
                 newEditorState.doc,
@@ -256,7 +417,7 @@ function createWikiLinkPlugin(
 
           // If selection changed, check if we need to rebuild
           if (tr.selectionSet && !isViewerMode) {
-            const matches = findWikiLinks(newEditorState.doc, itemsByName)
+            const matches = findWikiLinks(newEditorState.doc, resolver)
 
             // Check if the set of overlapping wiki-links changed
             const oldOverlapping = matches.filter((m) =>

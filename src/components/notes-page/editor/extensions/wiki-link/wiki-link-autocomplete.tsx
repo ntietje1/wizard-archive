@@ -13,6 +13,10 @@ import { extractHeadingsFromContent } from '~/lib/heading-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
+import {
+  getMinDisambiguationPath,
+  resolveItemByPath,
+} from '~/hooks/useWikiLinkExtension'
 import './wiki-link-autocomplete.css'
 
 type AutocompleteMode = 'file' | 'heading' | 'display-name'
@@ -23,6 +27,8 @@ interface FileItem {
   subtext: string
   badge: string
   item: AnySidebarItem
+  /** The minimum path needed to uniquely identify this item (used for insertion) */
+  linkPath: Array<string>
 }
 interface HeadingItem {
   key: string
@@ -35,6 +41,8 @@ interface HeadingItem {
 interface AutocompleteContext {
   mode: AutocompleteMode
   fileQuery: string
+  /** The file path as typed by the user (may include folder segments) */
+  filePathQuery: Array<string>
   headingQuery: string
   completedHeadingPath: Array<string>
   resolvedItem: AnySidebarItem | null
@@ -45,12 +53,14 @@ const UNCLOSED_WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\]).)*)?$/
 
 function getAutocompleteContext(
   query: string,
-  itemsByName: Map<string, AnySidebarItem>,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): AutocompleteContext {
   if (query.includes('|')) {
     return {
       mode: 'display-name',
       fileQuery: '',
+      filePathQuery: [],
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -62,20 +72,25 @@ function getAutocompleteContext(
     return {
       mode: 'file',
       fileQuery: query,
+      filePathQuery: query.split('/').map((s) => s.trim()).filter(Boolean),
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
     }
   }
 
-  const fileName = query.slice(0, hashIdx)
-  const item = itemsByName.get(fileName.toLowerCase())
+  const filePath = query.slice(0, hashIdx)
+  const filePathSegments = filePath.split('/').map((s) => s.trim()).filter(Boolean)
+
+  // Resolve the item using path-based lookup
+  const item = resolveItemByPath(filePathSegments, allItems, itemsMap)
 
   // Only notes support heading links
   if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) {
     return {
       mode: 'file',
       fileQuery: query,
+      filePathQuery: query.split('/').map((s) => s.trim()).filter(Boolean),
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -85,7 +100,8 @@ function getAutocompleteContext(
   const parts = query.slice(hashIdx + 1).split('#')
   return {
     mode: 'heading',
-    fileQuery: fileName,
+    fileQuery: filePath,
+    filePathQuery: filePathSegments,
     headingQuery: parts.at(-1) || '',
     completedHeadingPath: parts.slice(0, -1),
     resolvedItem: item,
@@ -190,17 +206,9 @@ export function WikiLinkAutocomplete({
   const [isDragging, setIsDragging] = useState(false)
   const hasEditedRef = useRef(false)
 
-  const itemsByName = useMemo(() => {
-    const map = new Map<string, AnySidebarItem>()
-    sidebarItems?.forEach((item) => {
-      if (item.name) map.set(item.name.toLowerCase(), item)
-    })
-    return map
-  }, [sidebarItems])
-
   const context = useMemo(
-    () => (menu.show ? getAutocompleteContext(menu.query, itemsByName) : null),
-    [menu, itemsByName],
+    () => (menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null),
+    [menu, sidebarItems, itemsMap],
   )
 
   // Fetch note content for heading mode
@@ -234,6 +242,8 @@ export function WikiLinkAutocomplete({
       subtext: buildBreadcrumbs(item, itemsMap),
       badge: getItemTypeLabel(item.type),
       item,
+      // Calculate the minimum path needed to uniquely identify this item
+      linkPath: getMinDisambiguationPath(item, sidebarItems, itemsMap),
     }))
     const filtered = context.fileQuery
       ? filterSuggestionItems(all, context.fileQuery)
@@ -345,10 +355,12 @@ export function WikiLinkAutocomplete({
       }
 
       const to = cursor + closingLen
-      const text =
+      // Use linkPath joined with / for file items
+      const linkText =
         ctx.mode === 'file'
-          ? `[[${(item as FileItem).title}]]`
-          : `[[${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}]]`
+          ? (item as FileItem).linkPath.join('/')
+          : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
+      const text = `[[${linkText}]]`
 
       tiptap.chain().focus().deleteRange({ from, to }).insertContent(text).run()
       setMenu({ show: false, query: '', pos: null })
@@ -366,10 +378,12 @@ export function WikiLinkAutocomplete({
 
       const from = wikiCtx.startPos
       const cursor = tiptap.state.selection.from
-      const text =
+      // Use linkPath joined with / for file items
+      const linkText =
         ctx.mode === 'file'
-          ? `[[${(item as FileItem).title}#`
-          : `[[${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}#`
+          ? (item as FileItem).linkPath.join('/')
+          : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
+      const text = `[[${linkText}#`
 
       tiptap
         .chain()
