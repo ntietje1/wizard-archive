@@ -13,7 +13,8 @@ import usePersistedState from '~/hooks/usePersistedState'
 import { useCampaign } from '~/hooks/useCampaign'
 
 const SIDEBAR_DEFAULT_WIDTH = 280
-const SIDEBAR_MIN_WIDTH = 80
+const SIDEBAR_MIN_WIDTH = 120
+const SNAP_CLOSED_THRESHOLD = 10
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { isSidebarExpanded, setIsSidebarExpanded } = useFileSidebar()
@@ -25,18 +26,16 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     SIDEBAR_DEFAULT_WIDTH,
   )
 
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragWidth, setDragWidth] = useState<number | null>(null)
-  const [willSnapClosed, setWillSnapClosed] = useState(false)
-  const [willSnapOpen, setWillSnapOpen] = useState(false)
+  const [skipAnimation, setSkipAnimation] = useState(false)
   const dragWidthRef = useRef<number>(0)
   const wasExpandedRef = useRef<boolean>(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
+  const handleRef = useRef<HTMLDivElement>(null)
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
-      setIsResizing(true)
 
       const startX = e.clientX
       const wasExpanded = isSidebarExpanded
@@ -44,46 +43,82 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       const startWidth = wasExpanded ? sidebarWidth : 0
       dragWidthRef.current = startWidth
 
+      // Apply immediate styles for resize mode
+      if (sidebarRef.current) {
+        sidebarRef.current.style.transition = 'none'
+      }
+      if (handleRef.current) {
+        handleRef.current.classList.add('bg-primary/30')
+      }
+
       const handleMouseMove = (e: MouseEvent) => {
         const delta = e.clientX - startX
-        const newWidth = Math.max(0, startWidth + delta)
-        dragWidthRef.current = newWidth
-        setDragWidth(newWidth)
+        const rawWidth = Math.max(0, startWidth + delta)
+        dragWidthRef.current = rawWidth
 
-        // Update snap indicators
+        let displayWidth: number
         if (wasExpandedRef.current) {
-          // From expanded: will snap closed if below min width
-          setWillSnapClosed(newWidth < SIDEBAR_MIN_WIDTH)
-          setWillSnapOpen(false)
+          if (rawWidth < SNAP_CLOSED_THRESHOLD) {
+            displayWidth = 0
+          } else if (rawWidth < SIDEBAR_MIN_WIDTH) {
+            displayWidth = SIDEBAR_MIN_WIDTH
+          } else {
+            displayWidth = rawWidth
+          }
         } else {
-          // From collapsed: will snap open if any width > 0
-          setWillSnapOpen(newWidth > 0 && newWidth < SIDEBAR_MIN_WIDTH)
-          setWillSnapClosed(false)
+          if (rawWidth > 0) {
+            displayWidth = Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
+          } else {
+            displayWidth = 0
+          }
+        }
+
+        // Direct DOM manipulation - no React state updates
+        if (sidebarRef.current) {
+          sidebarRef.current.style.width = `${displayWidth}px`
+          sidebarRef.current.style.borderRightWidth = displayWidth > 0 ? '1px' : '0px'
+        }
+        if (innerRef.current) {
+          innerRef.current.style.width = `${displayWidth}px`
         }
       }
 
       const handleMouseUp = () => {
         const finalWidth = dragWidthRef.current
 
+        // Disable animation for this update
+        setSkipAnimation(true)
+
         if (wasExpandedRef.current) {
-          // From expanded: snap closed if below min width
-          if (finalWidth < SIDEBAR_MIN_WIDTH) {
+          if (finalWidth < SNAP_CLOSED_THRESHOLD) {
             setIsSidebarExpanded(false)
           } else {
-            setSidebarWidth(finalWidth)
+            setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
           }
         } else {
-          // From collapsed: snap open to min width if any drag
           if (finalWidth > 0) {
             setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
             setIsSidebarExpanded(true)
           }
         }
 
-        setDragWidth(null)
-        setIsResizing(false)
-        setWillSnapClosed(false)
-        setWillSnapOpen(false)
+        // Clear inline styles after React has rendered with skipAnimation=true
+        requestAnimationFrame(() => {
+          if (sidebarRef.current) {
+            sidebarRef.current.style.transition = ''
+            sidebarRef.current.style.width = ''
+            sidebarRef.current.style.borderRightWidth = ''
+          }
+          if (innerRef.current) {
+            innerRef.current.style.width = ''
+          }
+          if (handleRef.current) {
+            handleRef.current.classList.remove('bg-primary/30')
+          }
+          // Re-enable animation for button-triggered collapse/expand
+          setSkipAnimation(false)
+        })
+
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
       }
@@ -94,24 +129,24 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     [isSidebarExpanded, sidebarWidth, setIsSidebarExpanded, setSidebarWidth],
   )
 
-  // Use drag width while resizing, otherwise use saved width or 0
-  const displayWidth =
-    dragWidth !== null ? dragWidth : isSidebarExpanded ? sidebarWidth : 0
+  const displayWidth = isSidebarExpanded ? sidebarWidth : 0
 
   return (
-    <div ref={containerRef} className="flex flex-1 min-h-0 min-w-0">
+    <div className="flex flex-1 min-h-0 min-w-0">
       <motion.div
+        ref={sidebarRef}
         className="shrink-0 overflow-hidden border-r bg-background"
         initial={false}
         animate={{
           width: displayWidth,
           borderRightWidth: displayWidth > 0 ? 1 : 0,
         }}
-        transition={{ duration: isResizing ? 0 : 0.2, ease: 'easeInOut' }}
+        transition={{ duration: skipAnimation ? 0 : 0.2, ease: 'easeInOut' }}
       >
         <div
+          ref={innerRef}
           className="h-full flex flex-col"
-          style={{ width: isResizing ? displayWidth : sidebarWidth }}
+          style={{ width: sidebarWidth }}
         >
           <EditorContextMenu
             viewContext="sidebar"
@@ -139,13 +174,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
       {/* Custom resize handle */}
       <div
-        className={`w-1 shrink-0 cursor-col-resize ${
-          willSnapClosed || willSnapOpen
-            ? 'bg-purple-500/50'
-            : isResizing
-              ? 'bg-primary/30'
-              : 'hover:bg-primary/20 active:bg-primary/30'
-        }`}
+        ref={handleRef}
+        className="w-1 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30"
         onMouseDown={handleMouseDown}
       />
 
