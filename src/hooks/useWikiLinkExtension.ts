@@ -24,13 +24,11 @@ export interface WikiLinkItemInfo {
 
 export type WikiLinkItemsMap = Map<string, WikiLinkItemInfo>
 
-
 export interface ParsedWikiLink {
   itemName: string // The file/note name
   headingPath: Array<string> // Array of heading anchors ["h1", "h2"]
   displayName: string | null // Optional display override
 }
-
 
 export function parseWikiLinkText(text: string): ParsedWikiLink {
   // Find last | for display name (allows | in item name)
@@ -47,7 +45,10 @@ export function parseWikiLinkText(text: string): ParsedWikiLink {
   // Split by # to get item name and heading path
   const parts = remainingText.split('#')
   const itemName = parts[0].trim()
-  const headingPath = parts.slice(1).map((h) => h.trim()).filter(Boolean)
+  const headingPath = parts
+    .slice(1)
+    .map((h) => h.trim())
+    .filter(Boolean)
 
   return {
     itemName,
@@ -112,25 +113,52 @@ export function useWikiLinkExtension(
     const tiptapEditor = editor?._tiptapEditor
     if (!tiptapEditor) return
 
-    const plugin = createWikiLinkPlugin(itemsByName, isViewerMode)
+    let cancelled = false
+    let frameId: number | null = null
 
-    if (pluginRef.current) {
-      tiptapEditor.unregisterPlugin(PLUGIN_KEY)
+    const registerPluginWhenReady = () => {
+      // Wait for the editor's view to be ready before registering plugins
+      if (!tiptapEditor.view) {
+        frameId = requestAnimationFrame(registerPluginWhenReady)
+        return
+      }
+
+      if (cancelled) return
+
+      const plugin = createWikiLinkPlugin(itemsByName, isViewerMode)
+
+      // Always try to unregister first (handles HMR and dependency changes)
+      try {
+        tiptapEditor.unregisterPlugin(PLUGIN_KEY)
+      } catch {
+        // Plugin might not be registered, that's fine
+      }
+
+      tiptapEditor.registerPlugin(plugin)
+      pluginRef.current = plugin
+
+      try {
+        const { tr } = tiptapEditor.view.state
+        tiptapEditor.view.dispatch(tr.setMeta(PLUGIN_KEY, true))
+      } catch {
+        // View might not be ready, decorations will apply on next transaction
+      }
     }
 
-    tiptapEditor.registerPlugin(plugin)
-    pluginRef.current = plugin
-
-    if (tiptapEditor.view) {
-      const { tr } = tiptapEditor.view.state
-      tiptapEditor.view.dispatch(tr.setMeta(PLUGIN_KEY, true))
-    }
+    registerPluginWhenReady()
 
     return () => {
-      if (pluginRef.current) {
-        tiptapEditor.unregisterPlugin(PLUGIN_KEY)
-        pluginRef.current = null
+      cancelled = true
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
       }
+      // Always try to unregister on cleanup
+      try {
+        tiptapEditor.unregisterPlugin(PLUGIN_KEY)
+      } catch {
+        // Plugin might already be unregistered
+      }
+      pluginRef.current = null
     }
   }, [editor, itemsByName, isViewerMode])
 
@@ -184,61 +212,35 @@ function createWikiLinkPlugin(
     key: PLUGIN_KEY,
     state: {
       init(_, { doc, selection }) {
-        const matches = findWikiLinks(doc, itemsByName)
-        return {
-          decorations: buildDecorations(
-            doc,
-            matches,
-            isViewerMode,
-            selection.from,
-            selection.to,
-          ),
-          selFrom: selection.from,
-          selTo: selection.to,
+        try {
+          const matches = findWikiLinks(doc, itemsByName)
+          return {
+            decorations: buildDecorations(
+              doc,
+              matches,
+              isViewerMode,
+              selection.from,
+              selection.to,
+            ),
+            selFrom: selection.from,
+            selTo: selection.to,
+          }
+        } catch {
+          return {
+            decorations: DecorationSet.empty,
+            selFrom: selection.from,
+            selTo: selection.to,
+          }
         }
       },
       apply(tr, oldState, _oldEditorState, newEditorState) {
-        const forceRebuild = tr.getMeta(PLUGIN_KEY)
-        const { from: selFrom, to: selTo } = newEditorState.selection
+        try {
+          const forceRebuild = tr.getMeta(PLUGIN_KEY)
+          const { from: selFrom, to: selTo } = newEditorState.selection
 
-        // If doc changed, rebuild everything
-        if (tr.docChanged || forceRebuild) {
-          const matches = findWikiLinks(newEditorState.doc, itemsByName)
-          return {
-            decorations: buildDecorations(
-              newEditorState.doc,
-              matches,
-              isViewerMode,
-              selFrom,
-              selTo,
-            ),
-            selFrom,
-            selTo,
-          }
-        }
-
-        // If selection changed, check if we need to rebuild
-        if (tr.selectionSet && !isViewerMode) {
-          const matches = findWikiLinks(newEditorState.doc, itemsByName)
-
-          // Check if the set of overlapping wiki-links changed
-          const oldOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
-          )
-          const newOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, selFrom, selTo),
-          )
-
-          // Compare by checking if the sets are different
-          const overlappingChanged =
-            oldOverlapping.length !== newOverlapping.length ||
-            oldOverlapping.some(
-              (old, i) =>
-                old.from !== newOverlapping[i]?.from ||
-                old.to !== newOverlapping[i]?.to,
-            )
-
-          if (overlappingChanged) {
+          // If doc changed, rebuild everything
+          if (tr.docChanged || forceRebuild) {
+            const matches = findWikiLinks(newEditorState.doc, itemsByName)
             return {
               decorations: buildDecorations(
                 newEditorState.doc,
@@ -251,13 +253,55 @@ function createWikiLinkPlugin(
               selTo,
             }
           }
-        }
 
-        // No changes needed, just map decorations and update selection
-        return {
-          decorations: oldState.decorations.map(tr.mapping, tr.doc),
-          selFrom,
-          selTo,
+          // If selection changed, check if we need to rebuild
+          if (tr.selectionSet && !isViewerMode) {
+            const matches = findWikiLinks(newEditorState.doc, itemsByName)
+
+            // Check if the set of overlapping wiki-links changed
+            const oldOverlapping = matches.filter((m) =>
+              overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
+            )
+            const newOverlapping = matches.filter((m) =>
+              overlapsSelection(m.from, m.to, selFrom, selTo),
+            )
+
+            // Compare by checking if the sets are different
+            const overlappingChanged =
+              oldOverlapping.length !== newOverlapping.length ||
+              oldOverlapping.some(
+                (old, i) =>
+                  old.from !== newOverlapping[i]?.from ||
+                  old.to !== newOverlapping[i]?.to,
+              )
+
+            if (overlappingChanged) {
+              return {
+                decorations: buildDecorations(
+                  newEditorState.doc,
+                  matches,
+                  isViewerMode,
+                  selFrom,
+                  selTo,
+                ),
+                selFrom,
+                selTo,
+              }
+            }
+          }
+
+          // No changes needed, just map decorations and update selection
+          return {
+            decorations: oldState.decorations.map(tr.mapping, tr.doc),
+            selFrom,
+            selTo,
+          }
+        } catch {
+          return {
+            decorations: DecorationSet.empty,
+            selFrom: newEditorState.selection.from,
+            selTo: newEditorState.selection.to,
+          }
         }
       },
     },

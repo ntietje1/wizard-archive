@@ -96,7 +96,9 @@
 }
 
 .wiki-link-bracket-open:hover + .wiki-link-content[data-display-name]::before,
-.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:hover)::before {
+.wiki-link-content[data-display-name]:has(
+    + .wiki-link-bracket-close:hover
+  )::before {
   content: none;
 }
 

@@ -30,6 +30,12 @@ export const inSidebar: Predicate = (ctx) => ctx.viewContext === 'sidebar'
 
 export const notInSidebar: Predicate = (ctx) => ctx.viewContext !== 'sidebar'
 
+export const inNoteView: Predicate = (ctx) => ctx.viewContext === 'note-view'
+
+export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
+
+export const hasBlockId: Predicate = (ctx) => ctx.blockId !== undefined
+
 export const viewingCanvas: Predicate = (ctx) =>
   ctx.viewContext === 'canvas-view'
 

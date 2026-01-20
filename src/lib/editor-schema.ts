@@ -17,6 +17,7 @@ export const customBlockSpecs = {
 export const customStyleSpecs = {
   ...defaultStyleSpecs,
 }
+
 export const editorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,
   inlineContentSpecs: customInlineContentSpecs,

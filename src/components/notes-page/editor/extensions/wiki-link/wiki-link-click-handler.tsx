@@ -28,13 +28,19 @@ function getWikiLinkAt(x: number, y: number) {
   return {
     element: el,
     exists: el.getAttribute('data-wiki-link-exists') === 'true',
-    itemName: el.getAttribute('data-wiki-link-item-name') || el.getAttribute('data-wiki-link'),
+    itemName:
+      el.getAttribute('data-wiki-link-item-name') ||
+      el.getAttribute('data-wiki-link'),
     href: el.getAttribute('data-href'),
     heading: el.getAttribute('data-wiki-link-heading'),
   }
 }
 
-export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
+export function WikiLinkClickHandler({
+  editor,
+}: {
+  editor: CustomBlockNoteEditor | undefined
+}) {
   const navigate = useNavigate()
   const { navigateToNote } = useEditorNavigation()
   const { campaignWithMembership } = useCampaign()
@@ -46,15 +52,25 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
   const [ctrlHeld, setCtrlHeld] = useState(false)
 
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
-  const { mutateAsync: createNote } = useMutation({ mutationFn: createNoteMutation })
+  const { mutateAsync: createNote } = useMutation({
+    mutationFn: createNoteMutation,
+  })
 
   const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
-  const showTooltipFor = useCallback((link: ReturnType<typeof getWikiLinkAt>) => {
-    if (!link || link.exists || !link.itemName) return
-    const rect = link.element.getBoundingClientRect()
-    setTooltip({ show: true, text: link.itemName, x: rect.left, y: rect.bottom + 4 })
-  }, [])
+  const showTooltipFor = useCallback(
+    (link: ReturnType<typeof getWikiLinkAt>) => {
+      if (!link || link.exists || !link.itemName) return
+      const rect = link.element.getBoundingClientRect()
+      setTooltip({
+        show: true,
+        text: link.itemName,
+        x: rect.left,
+        y: rect.bottom + 4,
+      })
+    },
+    [],
+  )
 
   // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {
@@ -67,7 +83,10 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
         hideTooltip()
       }
     }
-    const onBlur = () => { setCtrlHeld(false); hideTooltip() }
+    const onBlur = () => {
+      setCtrlHeld(false)
+      hideTooltip()
+    }
 
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('keyup', onKeyUp)
@@ -85,9 +104,15 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
     if (!editorEl) return
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!ctrlHeld) { hideTooltip(); return }
+      if (!ctrlHeld) {
+        hideTooltip()
+        return
+      }
       const link = getWikiLinkAt(e.clientX, e.clientY)
-      if (!link || link.exists) { hideTooltip(); return }
+      if (!link || link.exists) {
+        hideTooltip()
+        return
+      }
       showTooltipFor(link)
     }
 
@@ -113,7 +138,9 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
       if (link.exists && link.href) {
         const url = new URL(link.href, window.location.origin)
         const searchParams: Record<string, string> = {}
-        url.searchParams.forEach((v, k) => { searchParams[k] = v })
+        url.searchParams.forEach((v, k) => {
+          searchParams[k] = v
+        })
         if (link.heading) searchParams.heading = link.heading
 
         if (editorMode === 'editor') {
@@ -151,7 +178,10 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
           return
         }
         try {
-          const result = await createNote({ campaignId: campaign._id, name: link.itemName })
+          const result = await createNote({
+            campaignId: campaign._id,
+            name: link.itemName,
+          })
           if (result) navigateToNote(result.slug)
         } catch (err) {
           console.error('Failed to create note:', err)
@@ -162,14 +192,28 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
 
     editorEl.addEventListener('mousedown', onMouseDown, true)
     return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
-  }, [editor, navigate, campaign?._id, createNote, navigateToNote, editorMode, parentItemsMap, hideTooltip])
+  }, [
+    editor,
+    navigate,
+    campaign?._id,
+    createNote,
+    navigateToNote,
+    editorMode,
+    parentItemsMap,
+    hideTooltip,
+  ])
 
   if (!tooltip.show) return null
 
   return (
     <div
       className="wiki-link-tooltip"
-      style={{ position: 'fixed', top: tooltip.y, left: tooltip.x, zIndex: 9999 }}
+      style={{
+        position: 'fixed',
+        top: tooltip.y,
+        left: tooltip.x,
+        zIndex: 9999,
+      }}
     >
       Click to create "{tooltip.text}"
     </div>

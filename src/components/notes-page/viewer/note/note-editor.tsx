@@ -1,18 +1,17 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import { BookOpen, Pencil } from 'lucide-react'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
+import { BlockNoteContextMenuHandler } from '../../editor/extensions/blocknote-context-menu/blocknote-context-menu-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Note, NoteWithContent } from 'convex/notes/types'
-import type {
-  CustomBlock,
-  CustomBlockNoteEditor,
-  CustomPartialBlock,
-} from '~/lib/editor-schema'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
+import { BlockNoteContextMenuProvider } from '~/contexts/BlockNoteContextMenuContext'
 import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -68,13 +67,8 @@ export const NoteEditorBase = ({
   updateContent: (newContent: Array<CustomBlock>) => void
 }) => {
   const { editorMode } = useEditorMode()
-  const initialContent = useMemo(
-    () =>
-      noteWithContent.content.length > 0
-        ? (noteWithContent.content as Array<CustomPartialBlock>)
-        : undefined,
-    [noteWithContent],
-  )
+  const initialContent =
+    noteWithContent.content.length > 0 ? noteWithContent.content : undefined
 
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
     schema: editorSchema,
@@ -84,38 +78,69 @@ export const NoteEditorBase = ({
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useWikiLinkExtension(editor)
-  const { isScrollingToHeading } = useScrollToHeading(noteWithContent.content as Array<CustomBlock>, true, editor)
-  useRestoreScrollPosition(noteWithContent._id, scrollAreaRef, isScrollingToHeading)
+  const { isScrollingToHeading } = useScrollToHeading(
+    noteWithContent.content as Array<CustomBlock>,
+    true,
+    editor,
+  )
+  useRestoreScrollPosition(
+    noteWithContent._id,
+    scrollAreaRef,
+    isScrollingToHeading,
+  )
 
   const handleWrapperClick = useCallback(() => {
     editor.focus()
   }, [editor])
 
+  const handleWrapperContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!e.isTrusted) return
+
+    const target = e.target as HTMLElement
+    if (target.closest('.bn-editor')) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    openBlockNoteContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      viewContext: 'note-view',
+      item: undefined,
+      blockId: undefined,
+    })
+  }, [])
+
   return (
-    <div className="flex-1 h-full" onClick={handleWrapperClick}>
-      <ScrollArea ref={scrollAreaRef} className="h-full">
-        <div className="absolute top-2 right-2 z-10">
-          <EditorViewModeToggleButton />
-        </div>
-        <BlockNoteView
-          className="mx-auto w-full max-w-3xl py-4"
-          key={noteWithContent._id + 'editor'}
-          editor={editor}
-          onChange={() => updateContent(editor.document)}
-          theme="light"
-          sideMenu={false}
-          formattingToolbar={false}
-          slashMenu={false}
-          editable={editorMode === 'editor'}
-        >
-          <WikiLinkAutocomplete editor={editor} />
-          <WikiLinkClickHandler editor={editor} />
-          <SideMenuController sideMenu={SideMenuRenderer} />
-          {/* <SelectionToolbar /> */}
-          <SlashMenu editor={editor} />
-        </BlockNoteView>
-      </ScrollArea>
-    </div>
+    <BlockNoteContextMenuProvider editor={editor}>
+      <div
+        className="flex-1 h-full"
+        onClick={handleWrapperClick}
+        onContextMenu={handleWrapperContextMenu}
+      >
+        <ScrollArea ref={scrollAreaRef} className="h-full">
+          <div className="absolute top-2 right-2 z-10">
+            <EditorViewModeToggleButton />
+          </div>
+          <BlockNoteView
+            className="mx-auto w-full max-w-3xl py-4"
+            key={noteWithContent._id + 'editor'}
+            editor={editor}
+            onChange={() => updateContent(editor.document)}
+            theme="light"
+            sideMenu={false}
+            formattingToolbar={false}
+            slashMenu={false}
+            editable={editorMode === 'editor'}
+          >
+            <BlockNoteContextMenuHandler />
+            <WikiLinkAutocomplete editor={editor} />
+            <WikiLinkClickHandler editor={editor} />
+            <SideMenuController sideMenu={SideMenuRenderer} />
+            <SlashMenu editor={editor} />
+          </BlockNoteView>
+        </ScrollArea>
+      </div>
+    </BlockNoteContextMenuProvider>
   )
 }
 

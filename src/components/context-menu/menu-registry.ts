@@ -16,6 +16,7 @@ import {
   MapPin,
   Move,
   Navigation,
+  Pencil,
   Plus,
   Share2,
   SquareArrowOutUpRight,
@@ -93,6 +94,28 @@ export type ActionHandlers = {
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
   return [
     // ========== PRIMARY GROUP ==========
+    {
+      id: 'test-editor',
+      label: 'Test Editor',
+      icon: Pencil,
+      group: 'primary',
+      priority: 0,
+      shouldShow: (ctx) => p.hasBlockNoteEditor(ctx),
+      action: (ctx) => {
+        console.log('test-editor', ctx)
+      },
+    },
+    {
+      id: 'test-block',
+      label: 'Test Block',
+      icon: Pencil,
+      group: 'primary',
+      priority: 0,
+      shouldShow: (ctx) => p.hasBlockId(ctx),
+      action: (ctx) => {
+        console.log('test-block', ctx)
+      },
+    },
     {
       id: 'open',
       label: 'Open',

@@ -6,10 +6,11 @@ import type {
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
+import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 
 export interface ShareState {
   shareStatus: SidebarItemShareStatus
-  sharedMemberIds: Set<Id<'campaignMembers'>> // Only populated if individually_shared
+  sharedMemberIds: Set<Id<'campaignMembers'>>
   playerMembers: Array<CampaignMember>
   isLoading: boolean
 }
@@ -17,6 +18,7 @@ export interface ShareState {
 export type ViewContext =
   | 'sidebar'
   | 'topbar'
+  | 'note-view'
   | 'folder-view'
   | 'map-view'
   | 'canvas-view'
@@ -47,6 +49,10 @@ export interface MenuContext {
 
   // Share state (for sidebar items)
   shareState?: ShareState
+
+  // BlockNote editor context (for editor-related menus)
+  editor?: CustomBlockNoteEditor
+  blockId?: string
 }
 
 export type Predicate = (ctx: MenuContext) => boolean

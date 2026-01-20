@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
-import { extractHeadingsFromContent, resolveHeadingPath } from '~/lib/heading-utils'
+import {
+  extractHeadingsFromContent,
+  resolveHeadingPath,
+} from '~/lib/heading-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
@@ -14,7 +17,9 @@ export function useScrollToHeading(
   isContentLoaded: boolean,
   editor?: CustomBlockNoteEditor,
 ): { isScrollingToHeading: boolean } {
-  const search = useSearch({ from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor' })
+  const search = useSearch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+  })
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
   const lastScrolledRef = useRef<string | null>(null)
@@ -40,10 +45,18 @@ export function useScrollToHeading(
 
     // Wait for DOM to render before scrolling
     requestAnimationFrame(() => {
-      editor?.focus()
-      editor?.setTextCursorPosition(target.blockId, 'start')
+      // Ensure editor and view are ready before setting cursor position
+      if (editor?._tiptapEditor?.view) {
+        try {
+          editor.focus()
+          editor.setTextCursorPosition(target.blockId, 'start')
+        } catch {
+          // Block might not exist yet or position out of range
+        }
+      }
 
-      document.querySelector(`[data-id="${target.blockId}"]`)
+      document
+        .querySelector(`[data-id="${target.blockId}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
       navigate({
@@ -53,7 +66,15 @@ export function useScrollToHeading(
         replace: true,
       })
     })
-  }, [search, content, isContentLoaded, navigate, editor, dmUsername, campaignSlug])
+  }, [
+    search,
+    content,
+    isContentLoaded,
+    navigate,
+    editor,
+    dmUsername,
+    campaignSlug,
+  ])
 
   return { isScrollingToHeading: hasHeadingParam }
 }

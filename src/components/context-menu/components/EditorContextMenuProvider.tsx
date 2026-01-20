@@ -10,6 +10,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useSession } from '~/hooks/useSession'
 import { useMapView } from '~/hooks/useMapView'
 import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
+import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 
 interface ProviderProps {
   viewContext: ViewContext
@@ -31,6 +32,7 @@ export function EditorContextMenuProvider({
   const { currentSession } = useSession()
   const { mapId, pinnedItemIds, pinId } = useMapView()
   const shareState = useSidebarItemShares(item?._id)
+  const { editor, blockId } = useBlockNoteContextMenu()
 
   const menuContext = useMemo(
     () => ({
@@ -44,6 +46,8 @@ export function EditorContextMenuProvider({
       mapId: mapId ?? undefined,
       hasActiveSession: !!currentSession.data,
       shareState,
+      editor: editor ?? undefined,
+      blockId,
     }),
     [
       item,
@@ -55,6 +59,8 @@ export function EditorContextMenuProvider({
       pinId,
       currentSession.data,
       shareState,
+      editor,
+      blockId,
     ],
   )
 

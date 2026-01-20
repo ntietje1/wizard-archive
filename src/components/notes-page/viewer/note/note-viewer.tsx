@@ -1,5 +1,5 @@
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
@@ -63,6 +63,7 @@ export function NoteViewer({ item: note }: EditorViewerProps<Note>) {
 
   return (
     <NoteViewerBase
+      key={noteQuery.data._id + '-' + playerId}
       noteWithContent={noteQuery.data}
       playerId={playerId}
       setPlayerId={setPlayerId}
@@ -79,11 +80,8 @@ export const NoteViewerBase = ({
   playerId: Id<'campaignMembers'> | undefined
   setPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }) => {
-  const initialContent = useMemo(
-    () =>
-      noteWithContent.content.length > 0 ? noteWithContent.content : undefined,
-    [noteWithContent],
-  )
+  const initialContent =
+    noteWithContent.content.length > 0 ? noteWithContent.content : undefined
 
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
     schema: editorSchema,
@@ -91,10 +89,6 @@ export const NoteViewerBase = ({
   })
 
   useWikiLinkExtension(editor)
-
-  useEffect(() => {
-    editor.replaceBlocks(editor.document, noteWithContent.content)
-  }, [editor, noteWithContent.content])
 
   return (
     <ScrollArea className="flex-1">
@@ -183,7 +177,6 @@ export function ViewAsPlayerButton({
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      // Toggle: if already selected, deselect; otherwise select
                       setPlayerId(isSelected ? undefined : member._id)
                     }}
                     className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
