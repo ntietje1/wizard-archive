@@ -19,10 +19,18 @@ const ScrollArea = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
     type?: 'auto' | 'always' | 'scroll' | 'hover'
     viewportClassName?: string
+    contentClassName?: string
   }
 >(
   (
-    { className, children, type = 'hover', viewportClassName, ...props },
+    {
+      className,
+      children,
+      type = 'hover',
+      viewportClassName,
+      contentClassName,
+      ...props
+    },
     ref,
   ) => {
     const viewportRef = React.useRef<HTMLDivElement>(null)
@@ -48,7 +56,9 @@ const ScrollArea = React.forwardRef<
             )}
             style={{ overflowX: 'hidden' }}
           >
-            <div className="w-full max-w-full min-w-0">{children}</div>
+            <div className={cn('w-full max-w-full min-w-0', contentClassName)}>
+              {children}
+            </div>
           </ScrollAreaPrimitive.Viewport>
           <ScrollBar />
           <ScrollAreaPrimitive.Corner />

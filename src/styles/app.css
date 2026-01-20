@@ -130,6 +130,26 @@
   }
 }
 
+/* BlockNote editor - fill available height */
+.note-editor-fill-height {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.note-editor-fill-height .bn-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-editor-fill-height .bn-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+}
+
 @layer utilities {
   /* Delayed fade-in animation utilities */
   .fade-in-delayed {

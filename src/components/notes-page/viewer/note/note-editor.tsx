@@ -89,9 +89,7 @@ export const NoteEditorBase = ({
     isScrollingToHeading,
   )
 
-  const handleWrapperClick = useCallback(() => {
-    editor.focus()
-  }, [editor])
+
 
   const handleWrapperContextMenu = useCallback((e: React.MouseEvent) => {
     if (!e.isTrusted) return
@@ -112,17 +110,18 @@ export const NoteEditorBase = ({
 
   return (
     <BlockNoteContextMenuProvider editor={editor}>
-      <div
+      <ScrollArea
+        ref={scrollAreaRef}
         className="flex-1 h-full"
-        onClick={handleWrapperClick}
+        contentClassName="h-full"
         onContextMenu={handleWrapperContextMenu}
       >
-        <ScrollArea ref={scrollAreaRef} className="h-full">
-          <div className="absolute top-2 right-2 z-10">
-            <EditorViewModeToggleButton />
-          </div>
+        <div className="absolute top-2 right-2 z-10">
+          <EditorViewModeToggleButton />
+        </div>
+        <div className="note-editor-fill-height">
           <BlockNoteView
-            className="mx-auto w-full max-w-3xl py-4"
+            className="mx-auto w-full max-w-3xl mt-4"
             key={noteWithContent._id + 'editor'}
             editor={editor}
             onChange={() => updateContent(editor.document)}
@@ -138,8 +137,8 @@ export const NoteEditorBase = ({
             <SideMenuController sideMenu={SideMenuRenderer} />
             <SlashMenu editor={editor} />
           </BlockNoteView>
-        </ScrollArea>
-      </div>
+        </div>
+      </ScrollArea>
     </BlockNoteContextMenuProvider>
   )
 }
