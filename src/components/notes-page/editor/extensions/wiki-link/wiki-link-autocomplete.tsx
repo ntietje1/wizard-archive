@@ -415,9 +415,13 @@ export function WikiLinkAutocomplete({
       let linkText: string
       if (ctx.mode === 'file') {
         const fileItem = item as FileItem
-        const path = fileItem.linkPath.join('/')
+        // Preserve the user's typed folder path + item name, or use min disambiguation path
+        const pathParts = ctx.completedFolderPath.length > 0
+          ? [...ctx.completedFolderPath, fileItem.title]
+          : fileItem.linkPath
+        const path = pathParts.join('/')
         // Add display name if path includes folders
-        linkText = fileItem.linkPath.length > 1 ? `${path}|${fileItem.title}` : path
+        linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
       } else {
         const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')
         linkText = `${ctx.fileQuery}#${headingPath}`
@@ -441,12 +445,37 @@ export function WikiLinkAutocomplete({
       const cursor = tiptap.state.selection.from
 
       // Build link text with trailing # to continue
-      const linkText =
-        ctx.mode === 'file'
-          ? (item as FileItem).linkPath.join('/')
-          : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
+      let linkText: string
+      if (ctx.mode === 'file') {
+        const fileItem = item as FileItem
+        // Preserve the user's typed folder path + item name
+        const pathParts = [...ctx.completedFolderPath, fileItem.title]
+        linkText = pathParts.join('/')
+      } else {
+        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')
+        linkText = `${ctx.fileQuery}#${headingPath}`
+      }
 
       tiptap.chain().focus().insertContentAt({ from, to: cursor }, `[[${linkText}#`).run()
+    },
+    [editor],
+  )
+
+  const continueFolderPath = useCallback(
+    (item: FileItem, ctx: AutocompleteContext | null) => {
+      if (!editor || !ctx) return
+      const wikiCtx = getWikiLinkContext(editor)
+      if (!wikiCtx) return
+      const tiptap = editor._tiptapEditor
+      if (!tiptap) return
+
+      const from = wikiCtx.startPos
+      const cursor = tiptap.state.selection.from
+
+      // Build folder path with trailing / to continue
+      const folderPath = item.linkPath.join('/')
+
+      tiptap.chain().focus().insertContentAt({ from, to: cursor }, `[[${folderPath}/`).run()
     },
     [editor],
   )
@@ -474,12 +503,15 @@ export function WikiLinkAutocomplete({
         case 'Tab':
           e.preventDefault()
           if (context?.mode === 'file' && fileItems[selectedIndex]) {
-            if (
-              fileItems[selectedIndex].item.type === SIDEBAR_ITEM_TYPES.notes
-            ) {
-              continueLink(fileItems[selectedIndex], context)
+            const selectedItem = fileItems[selectedIndex]
+            if (selectedItem.item.type === SIDEBAR_ITEM_TYPES.notes) {
+              // Notes: continue to heading selection with #
+              continueLink(selectedItem, context)
+            } else if (selectedItem.item.type === SIDEBAR_ITEM_TYPES.folders) {
+              // Folders: continue folder path with /
+              continueFolderPath(selectedItem, context)
             } else {
-              insertLink(fileItems[selectedIndex], context)
+              insertLink(selectedItem, context)
             }
           } else if (
             context?.mode === 'heading' &&
@@ -506,6 +538,7 @@ export function WikiLinkAutocomplete({
     selectedIndex,
     insertLink,
     continueLink,
+    continueFolderPath,
     context,
     fileItems,
     headingItems,
