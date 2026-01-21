@@ -5,6 +5,8 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { getWikiLinkContext } from './wiki-link-utils'
+import type { EditorState } from '@tiptap/pm/state'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { HeadingEntry } from '~/lib/heading-utils'
@@ -14,6 +16,7 @@ import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import {
+  getItemPath,
   getMinDisambiguationPath,
   resolveItemByPath,
 } from '~/hooks/useWikiLinkExtension'
@@ -40,16 +43,16 @@ interface HeadingItem {
 
 interface AutocompleteContext {
   mode: AutocompleteMode
+  /** The current search query (last segment after final /) */
   fileQuery: string
-  /** The file path as typed by the user (may include folder segments) */
-  filePathQuery: Array<string>
+  /** Completed folder path segments (folders typed with / after them) */
+  completedFolderPath: Array<string>
+  /** The resolved parent folder for the completed path, if any */
+  resolvedParentFolder: AnySidebarItem | null
   headingQuery: string
   completedHeadingPath: Array<string>
   resolvedItem: AnySidebarItem | null
 }
-
-// Match unclosed wiki-link at cursor: [[ followed by content (no [[ or ]])
-const UNCLOSED_WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\]).)*)?$/
 
 function getAutocompleteContext(
   query: string,
@@ -60,7 +63,8 @@ function getAutocompleteContext(
     return {
       mode: 'display-name',
       fileQuery: '',
-      filePathQuery: [],
+      completedFolderPath: [],
+      resolvedParentFolder: null,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -69,10 +73,21 @@ function getAutocompleteContext(
 
   const hashIdx = query.indexOf('#')
   if (hashIdx === -1) {
+    // File mode - split by / to get folder path and current query
+    const segments = query.split('/')
+    const currentQuery = segments.at(-1) || ''
+    const completedFolderPath = segments.slice(0, -1).map((s) => s.trim()).filter(Boolean)
+
+    // Resolve the parent folder if we have a completed path
+    const resolvedParentFolder = completedFolderPath.length > 0
+      ? resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null
+      : null
+
     return {
       mode: 'file',
-      fileQuery: query,
-      filePathQuery: query.split('/').map((s) => s.trim()).filter(Boolean),
+      fileQuery: currentQuery,
+      completedFolderPath,
+      resolvedParentFolder,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -87,10 +102,19 @@ function getAutocompleteContext(
 
   // Only notes support heading links
   if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) {
+    // Fall back to file mode
+    const segments = query.split('/')
+    const currentQuery = segments.at(-1) || ''
+    const completedFolderPath = segments.slice(0, -1).map((s) => s.trim()).filter(Boolean)
+    const resolvedParentFolder = completedFolderPath.length > 0
+      ? resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null
+      : null
+
     return {
       mode: 'file',
-      fileQuery: query,
-      filePathQuery: query.split('/').map((s) => s.trim()).filter(Boolean),
+      fileQuery: currentQuery,
+      completedFolderPath,
+      resolvedParentFolder,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -101,24 +125,36 @@ function getAutocompleteContext(
   return {
     mode: 'heading',
     fileQuery: filePath,
-    filePathQuery: filePathSegments,
+    completedFolderPath: filePathSegments.slice(0, -1),
+    resolvedParentFolder: null,
     headingQuery: parts.at(-1) || '',
     completedHeadingPath: parts.slice(0, -1),
     resolvedItem: item,
   }
 }
 
-function getWikiLinkContext(
-  editor: CustomBlockNoteEditor,
-): { query: string; startPos: number } | null {
-  const tiptap = editor._tiptapEditor
-  if (!tiptap) return null
-  const { state } = tiptap
-  const $pos = state.selection.$from
-  const text = state.doc.textBetween($pos.start(), state.selection.from)
-  const match = UNCLOSED_WIKI_LINK_REGEX.exec(text)
-  if (!match) return null
-  return { query: match[1] || '', startPos: $pos.start() + match.index }
+
+/** Find the length of closing ]] brackets after cursor position */
+function findClosingBrackets(state: EditorState, cursor: number): number {
+  const maxLookahead = 100
+  const endPos = Math.min(cursor + maxLookahead, state.doc.content.size)
+  if (cursor >= endPos) return 0
+
+  const after = state.doc.textBetween(cursor, endPos)
+  let brackets = 0
+
+  for (let i = 0; i < after.length; i++) {
+    if (after[i] === ']') {
+      brackets++
+      if (brackets >= 2 && after[i + 1] !== ']') {
+        return i + 1 // Position after the last ]
+      }
+    } else {
+      brackets = 0
+    }
+  }
+
+  return 0
 }
 
 /** Get child headings under a parent level, stopping at same-or-higher level */
@@ -236,7 +272,28 @@ export function WikiLinkAutocomplete({
   // Build filtered items
   const fileItems = useMemo((): Array<FileItem> => {
     if (!sidebarItems || !itemsMap || context?.mode !== 'file') return []
-    const all = sidebarItems.map((item) => ({
+
+    // Filter items by parent folder if we have a completed folder path
+    let itemsToShow = sidebarItems
+    if (context.completedFolderPath.length > 0) {
+      if (context.resolvedParentFolder) {
+        // Show direct children of the resolved parent folder
+        itemsToShow = sidebarItems.filter(
+          (item) => item.parentId === context.resolvedParentFolder?._id,
+        )
+      } else {
+        // No valid parent folder found, filter by path prefix match
+        const normalizedPath = context.completedFolderPath.map((s) => s.toLowerCase())
+        itemsToShow = sidebarItems.filter((item) => {
+          const itemPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
+          // Item path must start with the completed folder path
+          if (itemPath.length <= normalizedPath.length) return false
+          return normalizedPath.every((segment, i) => itemPath[i] === segment)
+        })
+      }
+    }
+
+    const all = itemsToShow.map((item) => ({
       key: item._id,
       title: item.name || defaultItemName(item),
       subtext: buildBreadcrumbs(item, itemsMap),
@@ -249,7 +306,7 @@ export function WikiLinkAutocomplete({
       ? filterSuggestionItems(all, context.fileQuery)
       : all
     return filtered.slice(0, 10)
-  }, [sidebarItems, itemsMap, context?.mode, context?.fileQuery])
+  }, [sidebarItems, itemsMap, context?.mode, context?.fileQuery, context?.completedFolderPath, context?.resolvedParentFolder])
 
   const headingItems = useMemo((): Array<HeadingItem> => {
     if (context?.mode !== 'heading') return []
@@ -269,9 +326,10 @@ export function WikiLinkAutocomplete({
 
   // Reset selection on mode/path change
   const completedHeadingPath = context?.completedHeadingPath?.join('#')
+  const completedFolderPath = context?.completedFolderPath?.join('/')
   useEffect(() => {
     setSelectedIndex(0)
-  }, [context?.mode, completedHeadingPath])
+  }, [context?.mode, completedHeadingPath, completedFolderPath])
 
   // Track dragging to hide menu during text selection
   useEffect(() => {
@@ -333,36 +391,21 @@ export function WikiLinkAutocomplete({
       const { state } = tiptap
       const from = wikiCtx.startPos
       const cursor = state.selection.from
+      const to = from + 2 + wikiCtx.query.length + findClosingBrackets(state, cursor)
 
-      // Find closing ]] after cursor
-      const after = state.doc.textBetween(
-        cursor,
-        Math.min(cursor + 10, state.doc.content.size),
-      )
-      let closingLen = 0,
-        brackets = 0
-      for (let i = 0; i < after.length; i++) {
-        if (after[i] === ']') {
-          brackets++
-          if (
-            brackets >= 2 &&
-            (after[i + 1] === undefined || after[i + 1] !== ']')
-          ) {
-            closingLen = brackets
-            break
-          }
-        } else brackets = 0
+      // Build link text
+      let linkText: string
+      if (ctx.mode === 'file') {
+        const fileItem = item as FileItem
+        const path = fileItem.linkPath.join('/')
+        // Add display name if path includes folders
+        linkText = fileItem.linkPath.length > 1 ? `${path}|${fileItem.title}` : path
+      } else {
+        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')
+        linkText = `${ctx.fileQuery}#${headingPath}`
       }
 
-      const to = cursor + closingLen
-      // Use linkPath joined with / for file items
-      const linkText =
-        ctx.mode === 'file'
-          ? (item as FileItem).linkPath.join('/')
-          : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
-      const text = `[[${linkText}]]`
-
-      tiptap.chain().focus().deleteRange({ from, to }).insertContent(text).run()
+      tiptap.chain().focus().deleteRange({ from, to }).insertContent(`[[${linkText}]]`).run()
       setMenu({ show: false, query: '', pos: null })
     },
     [editor],
@@ -378,19 +421,14 @@ export function WikiLinkAutocomplete({
 
       const from = wikiCtx.startPos
       const cursor = tiptap.state.selection.from
-      // Use linkPath joined with / for file items
+
+      // Build link text with trailing # to continue
       const linkText =
         ctx.mode === 'file'
           ? (item as FileItem).linkPath.join('/')
           : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
-      const text = `[[${linkText}#`
 
-      tiptap
-        .chain()
-        .focus()
-        .deleteRange({ from, to: cursor })
-        .insertContent(text)
-        .run()
+      tiptap.chain().focus().deleteRange({ from, to: cursor }).insertContent(`[[${linkText}#`).run()
     },
     [editor],
   )
