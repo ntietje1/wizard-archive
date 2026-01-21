@@ -23,10 +23,10 @@ export function BlockNoteContextMenuHandler() {
       e.preventDefault()
       e.stopPropagation()
 
-      // Try to determine what block was clicked
+      // Determine what block was clicked
       const target = e.target as HTMLElement
-      const blockElement = target.closest('[data-block-id]')
-      const blockId = blockElement?.getAttribute('data-block-id') ?? undefined
+      const blockElement = target.closest('[data-node-type="blockContainer"]')
+      const blockId = blockElement?.getAttribute('data-id') ?? undefined
 
       openBlockNoteContextMenu({
         position: { x: e.clientX, y: e.clientY },

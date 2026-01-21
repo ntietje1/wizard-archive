@@ -113,7 +113,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 0,
       shouldShow: (ctx) => p.hasBlockId(ctx),
       action: (ctx) => {
-        console.log('test-block', ctx)
+        console.log('test-block', ctx.blockId)
+        if (!ctx.blockId) return
+        const block = ctx.editor?.getBlock(ctx.blockId)
+        console.log(block?.content)
       },
     },
     {
