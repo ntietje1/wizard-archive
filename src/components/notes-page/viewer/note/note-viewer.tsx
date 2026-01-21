@@ -3,14 +3,18 @@ import { useState } from 'react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
+import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import '../../editor/extensions/wiki-link/wiki-link.css'
+import '../../editor/extensions/md-link/md-link.css'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note, NoteWithContent } from 'convex/notes/types'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
+import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
+import { useDisableAutolink } from '~/hooks/useDisableAutolink'
 import { Button } from '~/components/shadcn/ui/button'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
@@ -89,6 +93,8 @@ export const NoteViewerBase = ({
   })
 
   useWikiLinkExtension(editor)
+  useMdLinkExtension(editor)
+  useDisableAutolink(editor)
 
   return (
     <ScrollArea className="flex-1">
@@ -106,6 +112,7 @@ export const NoteViewerBase = ({
         slashMenu={false}
       >
         <WikiLinkClickHandler editor={editor} />
+        <MdLinkClickHandler editor={editor} />
         <SideMenuController sideMenu={SideMenuRenderer} />
         <SelectionToolbar />
         <SlashMenu editor={editor} />

@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react'
 import { BookOpen, Pencil } from 'lucide-react'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
+import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
 import { BlockNoteContextMenuHandler } from '../../editor/extensions/blocknote-context-menu/blocknote-context-menu-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
@@ -18,10 +19,13 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
+import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
+import { useDisableAutolink } from '~/hooks/useDisableAutolink'
 import { useScrollToHeading } from '~/hooks/useScrollToHeading'
 import { useRestoreScrollPosition } from '~/hooks/useRestoreScrollPosition'
 import { Button } from '~/components/shadcn/ui/button'
 import '../../editor/extensions/wiki-link/wiki-link.css'
+import '../../editor/extensions/md-link/md-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
@@ -78,6 +82,8 @@ export const NoteEditorBase = ({
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useWikiLinkExtension(editor)
+  useMdLinkExtension(editor)
+  useDisableAutolink(editor)
   const { isScrollingToHeading } = useScrollToHeading(
     noteWithContent.content as Array<CustomBlock>,
     true,
@@ -126,6 +132,7 @@ export const NoteEditorBase = ({
             editor={editor}
             onChange={() => updateContent(editor.document)}
             theme="light"
+            linkToolbar={false}
             sideMenu={false}
             formattingToolbar={false}
             slashMenu={false}
@@ -134,6 +141,7 @@ export const NoteEditorBase = ({
             <BlockNoteContextMenuHandler />
             <WikiLinkAutocomplete editor={editor} />
             <WikiLinkClickHandler editor={editor} />
+            <MdLinkClickHandler editor={editor} />
             <SideMenuController sideMenu={SideMenuRenderer} />
             <SlashMenu editor={editor} />
           </BlockNoteView>

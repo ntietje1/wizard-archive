@@ -10,7 +10,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { validateSidebarItemName } from '~/lib/sidebar-validation'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
-import './wiki-link.css'
+import './md-link.css'
 
 interface TooltipState {
   show: boolean
@@ -21,22 +21,24 @@ interface TooltipState {
 
 const HIDDEN_TOOLTIP: TooltipState = { show: false, text: '', x: 0, y: 0 }
 
-/** Extract wiki link data from an element at a position */
-function getWikiLinkAt(x: number, y: number) {
-  const el = document.elementFromPoint(x, y)?.closest('.wiki-link-content')
-  if (!el) return null
+/** Extract markdown link data from an element at a position */
+function getMdLinkAt(x: number, y: number) {
+  const el = document.elementFromPoint(x, y)
+  const displayEl = el?.closest('.md-link-display')
+
+  if (!displayEl) return null
   return {
-    element: el,
-    exists: el.getAttribute('data-wiki-link-exists') === 'true',
-    itemName:
-      el.getAttribute('data-wiki-link-item-name') ||
-      el.getAttribute('data-wiki-link'),
-    href: el.getAttribute('data-href'),
-    heading: el.getAttribute('data-wiki-link-heading'),
+    element: displayEl,
+    type: displayEl.getAttribute('data-md-link-type') as 'external' | 'internal' | null,
+    exists: displayEl.getAttribute('data-md-link-exists') === 'true',
+    itemName: displayEl.getAttribute('data-md-link-item-name'),
+    target: displayEl.getAttribute('data-md-link-target'),
+    href: displayEl.getAttribute('data-href'),
+    heading: displayEl.getAttribute('data-md-link-heading'),
   }
 }
 
-export function WikiLinkClickHandler({
+export function MdLinkClickHandler({
   editor,
 }: {
   editor: CustomBlockNoteEditor | undefined
@@ -60,8 +62,8 @@ export function WikiLinkClickHandler({
   const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
   const showTooltipFor = useCallback(
-    (link: ReturnType<typeof getWikiLinkAt>) => {
-      if (!link || link.exists || !link.itemName) return
+    (link: ReturnType<typeof getMdLinkAt>) => {
+      if (!link || link.type !== 'internal' || link.exists || !link.itemName) return
       const rect = link.element.getBoundingClientRect()
       setTooltip({
         show: true,
@@ -78,10 +80,9 @@ export function WikiLinkClickHandler({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
         setCtrlHeld(true)
-        // Check if already hovering over a ghost link
         if (mousePos) {
-          const link = getWikiLinkAt(mousePos.x, mousePos.y)
-          if (link && !link.exists) {
+          const link = getMdLinkAt(mousePos.x, mousePos.y)
+          if (link && link.type === 'internal' && !link.exists) {
             showTooltipFor(link)
           }
         }
@@ -114,15 +115,14 @@ export function WikiLinkClickHandler({
     if (!editorEl) return
 
     const onMouseMove = (e: MouseEvent) => {
-      // Always track mouse position
       setMousePos({ x: e.clientX, y: e.clientY })
 
       if (!ctrlHeld) {
         hideTooltip()
         return
       }
-      const link = getWikiLinkAt(e.clientX, e.clientY)
-      if (!link || link.exists) {
+      const link = getMdLinkAt(e.clientX, e.clientY)
+      if (!link || link.type !== 'internal' || link.exists) {
         hideTooltip()
         return
       }
@@ -142,37 +142,51 @@ export function WikiLinkClickHandler({
     }
   }, [editor, ctrlHeld, hideTooltip, showTooltipFor])
 
-  // Click handling
+  // Click handling for md-links
   useEffect(() => {
     const editorEl = editor?.domElement
     if (!editorEl) return
 
     const onMouseDown = async (e: MouseEvent) => {
-      const link = getWikiLinkAt(e.clientX, e.clientY)
-      if (!link) return
+      const mdLink = getMdLinkAt(e.clientX, e.clientY)
+      if (!mdLink) return
 
       const isCtrlClick = e.ctrlKey || e.metaKey
 
-      if (link.exists && link.href) {
-        const url = new URL(link.href, window.location.origin)
+      // External links
+      if (mdLink.type === 'external' && mdLink.target) {
+        if (editorMode === 'editor') {
+          if (!isCtrlClick) return
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(mdLink.target, '_blank', 'noopener,noreferrer')
+        } else {
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(mdLink.target, '_blank', 'noopener,noreferrer')
+        }
+        return
+      }
+
+      // Internal links that exist
+      if (mdLink.type === 'internal' && mdLink.exists && mdLink.href) {
+        const url = new URL(mdLink.href, window.location.origin)
         const searchParams: Record<string, string> = {}
         url.searchParams.forEach((v, k) => {
           searchParams[k] = v
         })
-        if (link.heading) searchParams.heading = link.heading
+        if (mdLink.heading) searchParams.heading = mdLink.heading
 
         if (editorMode === 'editor') {
-          // Editor: ctrl+click navigates, regular click positions cursor
           if (!isCtrlClick) return
           e.preventDefault()
           e.stopPropagation()
           navigate({ to: url.pathname, search: searchParams })
         } else {
-          // Viewer: click navigates, ctrl+click opens new tab
           e.preventDefault()
           e.stopPropagation()
           if (isCtrlClick) {
-            if (link.heading) url.searchParams.set('heading', link.heading)
+            if (mdLink.heading) url.searchParams.set('heading', mdLink.heading)
             window.open(url.toString(), '_blank', 'noopener,noreferrer')
           } else {
             navigate({ to: url.pathname, search: searchParams })
@@ -181,14 +195,14 @@ export function WikiLinkClickHandler({
         return
       }
 
-      // Ghost link: ctrl+click creates note
-      if (!link.exists && isCtrlClick && link.itemName && campaign?._id) {
+      // Ghost internal link: ctrl+click creates note
+      if (mdLink.type === 'internal' && !mdLink.exists && isCtrlClick && mdLink.itemName && campaign?._id) {
         e.preventDefault()
         e.stopPropagation()
         hideTooltip()
 
         const validation = validateSidebarItemName({
-          name: link.itemName,
+          name: mdLink.itemName,
           siblings: parentItemsMap.get(undefined),
         })
         if (!validation.valid) {
@@ -198,7 +212,7 @@ export function WikiLinkClickHandler({
         try {
           const result = await createNote({
             campaignId: campaign._id,
-            name: link.itemName,
+            name: mdLink.itemName,
           })
           if (result) navigateToNote(result.slug)
         } catch (err) {
@@ -225,7 +239,7 @@ export function WikiLinkClickHandler({
 
   return (
     <div
-      className="wiki-link-tooltip"
+      className="md-link-tooltip"
       style={{
         position: 'fixed',
         top: tooltip.y,

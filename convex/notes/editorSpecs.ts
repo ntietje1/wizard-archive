@@ -1,15 +1,23 @@
+import { defaultInlineContentSpecs } from '@blocknote/core'
 import type {
   Block,
   BlockSchemaFromSpecs,
   InlineContentSchemaFromSpecs,
+  InlineContentSpecs,
   PartialBlock,
   StyleSchemaFromSpecs,
   defaultBlockSpecs,
-  defaultInlineContentSpecs,
   defaultStyleSpecs,
 } from '@blocknote/core'
 
-export type CustomInlineContentSpecs = typeof defaultInlineContentSpecs
+// remove link from inline content specs
+const { link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
+
+export const customInlineContentSpecs = {
+  ...remainingInlineContentSpecs,
+} as InlineContentSpecs
+
+export type CustomInlineContentSpecs = typeof customInlineContentSpecs
 export type CustomInlineContentSchema =
   InlineContentSchemaFromSpecs<CustomInlineContentSpecs>
 
