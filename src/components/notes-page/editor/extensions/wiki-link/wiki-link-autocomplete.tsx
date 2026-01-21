@@ -142,15 +142,27 @@ function findClosingBrackets(state: EditorState, cursor: number): number {
 
   const after = state.doc.textBetween(cursor, endPos)
   let brackets = 0
+  let openBrackets = 0
 
   for (let i = 0; i < after.length; i++) {
-    if (after[i] === ']') {
+    const char = after[i]
+
+    if (char === '[') {
+      openBrackets++
+      // If we see [[, there's a new link starting - our link has no closing brackets
+      if (openBrackets >= 2) {
+        return 0
+      }
+      brackets = 0
+    } else if (char === ']') {
+      openBrackets = 0
       brackets++
       if (brackets >= 2 && after[i + 1] !== ']') {
         return i + 1 // Position after the last ]
       }
     } else {
       brackets = 0
+      openBrackets = 0
     }
   }
 
@@ -215,9 +227,9 @@ function buildHeadingItems(
   // Filter by query
   if (query) {
     const q = query.toLowerCase()
-    return items.filter((i) => i.title.toLowerCase().includes(q)).slice(0, 10)
+    return items.filter((i) => i.title.toLowerCase().includes(q))
   }
-  return items.slice(0, 10)
+  return items
 }
 
 export function WikiLinkAutocomplete({
@@ -270,8 +282,8 @@ export function WikiLinkAutocomplete({
   }, [noteQuery.data?.content])
 
   // Build filtered items
-  const fileItems = useMemo((): Array<FileItem> => {
-    if (!sidebarItems || !itemsMap || context?.mode !== 'file') return []
+  const fileResult = useMemo((): { items: Array<FileItem>; totalCount: number } => {
+    if (!sidebarItems || !itemsMap || context?.mode !== 'file') return { items: [], totalCount: 0 }
 
     // Filter items by parent folder if we have a completed folder path
     let itemsToShow = sidebarItems
@@ -305,16 +317,17 @@ export function WikiLinkAutocomplete({
     const filtered = context.fileQuery
       ? filterSuggestionItems(all, context.fileQuery)
       : all
-    return filtered.slice(0, 10)
+    return { items: filtered.slice(0, 10), totalCount: filtered.length }
   }, [sidebarItems, itemsMap, context?.mode, context?.fileQuery, context?.completedFolderPath, context?.resolvedParentFolder])
 
-  const headingItems = useMemo((): Array<HeadingItem> => {
-    if (context?.mode !== 'heading') return []
-    return buildHeadingItems(
+  const headingResult = useMemo((): { items: Array<HeadingItem>; totalCount: number } => {
+    if (context?.mode !== 'heading') return { items: [], totalCount: 0 }
+    const all = buildHeadingItems(
       headings,
       context.completedHeadingPath,
       context.headingQuery,
     )
+    return { items: all.slice(0, 10), totalCount: all.length }
   }, [
     context?.mode,
     context?.completedHeadingPath,
@@ -322,7 +335,11 @@ export function WikiLinkAutocomplete({
     headings,
   ])
 
+  const fileItems = fileResult.items
+  const headingItems = headingResult.items
   const items = context?.mode === 'heading' ? headingItems : fileItems
+  const totalCount = context?.mode === 'heading' ? headingResult.totalCount : fileResult.totalCount
+  const truncatedCount = totalCount - items.length
 
   // Reset selection on mode/path change
   const completedHeadingPath = context?.completedHeadingPath?.join('#')
@@ -391,7 +408,8 @@ export function WikiLinkAutocomplete({
       const { state } = tiptap
       const from = wikiCtx.startPos
       const cursor = state.selection.from
-      const to = from + 2 + wikiCtx.query.length + findClosingBrackets(state, cursor)
+      const closingBracketsLen = findClosingBrackets(state, cursor)
+      const to = cursor + closingBracketsLen
 
       // Build link text
       let linkText: string
@@ -405,7 +423,7 @@ export function WikiLinkAutocomplete({
         linkText = `${ctx.fileQuery}#${headingPath}`
       }
 
-      tiptap.chain().focus().deleteRange({ from, to }).insertContent(`[[${linkText}]]`).run()
+      tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}]]`).run()
       setMenu({ show: false, query: '', pos: null })
     },
     [editor],
@@ -428,7 +446,7 @@ export function WikiLinkAutocomplete({
           ? (item as FileItem).linkPath.join('/')
           : `${ctx.fileQuery}#${[...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')}`
 
-      tiptap.chain().focus().deleteRange({ from, to: cursor }).insertContent(`[[${linkText}#`).run()
+      tiptap.chain().focus().insertContentAt({ from, to: cursor }, `[[${linkText}#`).run()
     },
     [editor],
   )
@@ -575,6 +593,7 @@ export function WikiLinkAutocomplete({
           )}
         </ScrollArea>
         <div className="wiki-link-menu-footer">
+          {truncatedCount > 0 && <span>+{truncatedCount} more</span>}
           <span>↑↓ navigate</span>
           <span>↵ select</span>
           <span>tab continue</span>
