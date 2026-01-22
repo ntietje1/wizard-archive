@@ -26,11 +26,11 @@ export const toggleBookmark = mutation({
     // Check if bookmark already exists
     const existingBookmark = await ctx.db
       .query('bookmarks')
-      .withIndex('by_campaign_item_member', (q) =>
+      .withIndex('by_campaign_member_item', (q) =>
         q
           .eq('campaignId', args.campaignId)
-          .eq('sidebarItemId', args.sidebarItemId)
-          .eq('campaignMemberId', campaignMemberId),
+          .eq('campaignMemberId', campaignMemberId)
+          .eq('sidebarItemId', args.sidebarItemId),
       )
       .unique()
 

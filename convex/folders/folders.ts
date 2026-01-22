@@ -1,6 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
+import { getBookmark } from '../bookmarks/bookmarks'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
@@ -15,13 +16,22 @@ export const getFolder = async (
     return null
   }
 
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: folder.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
+  const bookmark = await getBookmark(
+    ctx,
+    folder.campaignId,
+    campaignWithMembership.member._id,
+    folder._id,
+  )
 
-  return folder
+  return {
+    ...folder,
+    isBookmarked: !!bookmark,
+  }
 }
 
 export const getFolderBySlug = async (

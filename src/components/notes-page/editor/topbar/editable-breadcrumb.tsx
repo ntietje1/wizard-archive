@@ -116,7 +116,7 @@ export function EditableName({
         )}
       />
       {!name && !isEditing && (
-        <span className="absolute inset-0 pointer-events-none opacity-85 flex items-center">
+        <span className="absolute inset-0 pointer-events-none opacity-85 flex items-center cursor-text">
           {defaultName}
         </span>
       )}
@@ -151,7 +151,7 @@ export function EditableBreadcrumb({
 }: EditableBreadcrumbProps) {
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
-      <div className="flex items-center min-w-0 overflow-hidden flex-shrink">
+      <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
         {ancestors.map((ancestor) => {
           const ancestorName =
             ancestor.name && ancestor.name.length > 0
@@ -165,12 +165,13 @@ export function EditableBreadcrumb({
             >
               <button
                 onClick={() => onNavigateToItem(ancestor)}
-                className="hover:text-gray-900 transition-colors truncate text-gray-500 min-w-0 pr-1"
+                className="hover:text-gray-900 hover:bg-muted rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-pointer"
                 title={ancestorName}
+                type="button"
               >
                 {ancestorName}
               </button>
-              <span className="text-gray-400 flex-shrink-0 pr-1">/</span>
+              <span className="text-gray-400 flex-shrink-0">/</span>
             </div>
           )
         })}

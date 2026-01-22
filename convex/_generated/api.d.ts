@@ -11,7 +11,9 @@
 import type * as blocks_blocks from "../blocks/blocks.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
+import type * as bookmarks_bookmarks from "../bookmarks/bookmarks.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
+import type * as bookmarks_types from "../bookmarks/types.js";
 import type * as campaigns_campaigns from "../campaigns/campaigns.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
@@ -81,7 +83,9 @@ declare const fullApi: ApiFromModules<{
   "blocks/blocks": typeof blocks_blocks;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
+  "bookmarks/bookmarks": typeof bookmarks_bookmarks;
   "bookmarks/mutations": typeof bookmarks_mutations;
+  "bookmarks/types": typeof bookmarks_types;
   "campaigns/campaigns": typeof campaigns_campaigns;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;

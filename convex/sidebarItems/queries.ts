@@ -7,7 +7,7 @@ import {
   getSidebarItemAncestors as getSidebarItemAncestorsFn,
   getSidebarItemById,
   getSidebarItemBySlug as getSidebarItemBySlugFn,
-  getSidebarItemsByName as getSidebarItemsByNameFn,
+  getSidebarItemByName as getSidebarItemsByNameFn,
   getSidebarItemsByParent as getSidebarItemsByParentFn,
 } from './sidebarItems'
 import { checkUniqueNameUnderParent as checkUniqueNameUnderParentFn } from './validation'

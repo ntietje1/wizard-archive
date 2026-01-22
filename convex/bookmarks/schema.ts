@@ -15,13 +15,11 @@ const bookmarkTableFields = {
 export const bookmarkTables = {
   bookmarks: defineTable({
     ...bookmarkTableFields,
-  })
-    .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
-    .index('by_campaign_item_member', [
-      'campaignId',
-      'sidebarItemId',
-      'campaignMemberId',
-    ]),
+  }).index('by_campaign_member_item', [
+    'campaignId',
+    'campaignMemberId',
+    'sidebarItemId',
+  ]),
 }
 
 const bookmarkValidatorFields = {

@@ -1,5 +1,6 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getBookmark } from '../bookmarks/bookmarks'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { File } from './types'
@@ -11,13 +12,22 @@ export const getFile = async (ctx: Ctx, fileId: Id<'files'>): Promise<File> => {
     throw new Error('File not found')
   }
 
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: file.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  return file
+  const bookmark = await getBookmark(
+    ctx,
+    file.campaignId,
+    campaignWithMembership.member._id,
+    file._id,
+  )
+  return {
+    ...file,
+    isBookmarked: !!bookmark,
+  }
 }
 
 export const getFileBySlug = async (

@@ -4,6 +4,7 @@ import { getNote, getNoteBySlug } from '../notes/notes'
 import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
 import { getFolder, getFolderBySlug } from '../folders/folders'
 import { getFile, getFileBySlug } from '../files/files'
+import { getAllBookmarks, getBookmark } from '../bookmarks/bookmarks'
 import { SIDEBAR_ITEM_TYPES } from './types'
 import type { AnySidebarItem, SidebarItemId, SidebarItemType } from './types'
 import type { Ctx } from '../common/types'
@@ -19,14 +20,11 @@ export const getAllSidebarItems = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const bookmarks = await ctx.db
-    .query('bookmarks')
-    .withIndex('by_campaign_member', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('campaignMemberId', campaignWithMembership.member._id),
-    )
-    .collect()
+  const bookmarks = await getAllBookmarks(
+    ctx,
+    campaignId,
+    campaignWithMembership.member._id,
+  )
   const bookmarkedIds = new Set(bookmarks.map((b) => b.sidebarItemId))
 
   const allItems: Array<AnySidebarItem> = []
@@ -72,14 +70,11 @@ export const getSidebarItemsByParent = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const bookmarks = await ctx.db
-    .query('bookmarks')
-    .withIndex('by_campaign_member', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('campaignMemberId', campaignWithMembership.member._id),
-    )
-    .collect()
+  const bookmarks = await getAllBookmarks(
+    ctx,
+    campaignId,
+    campaignWithMembership.member._id,
+  )
   const bookmarkedIds = new Set(bookmarks.map((b) => b.sidebarItemId))
 
   const allItems: Array<AnySidebarItem> = []
@@ -128,11 +123,18 @@ export const getSidebarItemsByParentAndName = async (
   parentId: SidebarItemId | undefined,
   name: string | undefined,
 ): Promise<Array<AnySidebarItem>> => {
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
+
+  const bookmarks = await getAllBookmarks(
+    ctx,
+    campaignId,
+    campaignWithMembership.member._id,
+  )
+  const bookmarkedIds = new Set(bookmarks.map((b) => b.sidebarItemId))
 
   const allItems: Array<AnySidebarItem> = []
 
@@ -168,53 +170,80 @@ export const getSidebarItemsByParentAndName = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItem>))
 
-  return allItems
+  return allItems.map((item) => ({
+    ...item,
+    isBookmarked: bookmarkedIds.has(item._id),
+  }))
 }
 
-export const getSidebarItemsByName = async (
+export const getSidebarItemByName = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   name: string,
 ): Promise<AnySidebarItem | null> => {
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const notes = await ctx.db
+  let item: AnySidebarItem | null = null
+
+  const note = await ctx.db
     .query('notes')
     .withIndex('by_campaign_name', (q) =>
       q.eq('campaignId', campaignId).eq('name', name),
     )
     .first()
-  if (notes) return notes as AnySidebarItem
+  if (note) {
+    item = note
+  }
 
-  const folders = await ctx.db
+  const folder = await ctx.db
     .query('folders')
     .withIndex('by_campaign_name', (q) =>
       q.eq('campaignId', campaignId).eq('name', name),
     )
     .first()
-  if (folders) return folders as AnySidebarItem
+  if (folder) {
+    item = folder
+  }
 
-  const maps = await ctx.db
+  const map = await ctx.db
     .query('gameMaps')
     .withIndex('by_campaign_name', (q) =>
       q.eq('campaignId', campaignId).eq('name', name),
     )
     .first()
-  if (maps) return maps as AnySidebarItem
+  if (map) {
+    item = map
+  }
 
-  const files = await ctx.db
+  const file = await ctx.db
     .query('files')
     .withIndex('by_campaign_name', (q) =>
       q.eq('campaignId', campaignId).eq('name', name),
     )
     .first()
-  if (files) return files as AnySidebarItem
+  if (file) {
+    item = file
+  }
 
-  return null
+  if (!item) {
+    return null
+  }
+
+  const bookmark = await getBookmark(
+    ctx,
+    campaignId,
+    campaignWithMembership.member._id,
+    item._id,
+  )
+
+  return {
+    ...item,
+    isBookmarked: !!bookmark,
+  }
 }
 
 export const getSidebarItemBySlug = async (

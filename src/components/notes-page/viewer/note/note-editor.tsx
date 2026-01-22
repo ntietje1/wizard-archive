@@ -8,6 +8,7 @@ import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-clic
 import { BlockNoteContextMenuHandler } from '../../editor/extensions/blocknote-context-menu/blocknote-context-menu-handler'
 import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
+import { NoteViewer } from './note-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Note, NoteWithContent } from 'convex/notes/types'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
@@ -23,13 +24,18 @@ import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
 import { useDisableAutolink } from '~/hooks/useDisableAutolink'
 import { useScrollToHeading } from '~/hooks/useScrollToHeading'
 import { useRestoreScrollPosition } from '~/hooks/useRestoreScrollPosition'
-import { Button } from '~/components/shadcn/ui/button'
 import '../../editor/extensions/wiki-link/wiki-link.css'
 import '../../editor/extensions/md-link/md-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
+  const { viewAsPlayerId } = useEditorMode()
   const { noteQuery, updateContent } = useNoteContent(note._id)
+
+  // When viewing as a player, show the viewer instead
+  if (viewAsPlayerId) {
+    return <NoteViewer item={note} />
+  }
 
   if (noteQuery.isPending || !noteQuery.data) {
     return (
@@ -120,12 +126,9 @@ export const NoteEditorBase = ({
         contentClassName="h-full"
         onContextMenu={handleWrapperContextMenu}
       >
-        <div className="absolute top-2 right-2 z-10">
-          <EditorViewModeToggleButton />
-        </div>
         <div className="note-editor-fill-height">
           <BlockNoteView
-            className="mx-auto w-full max-w-3xl mt-4"
+            className="mx-auto w-full max-w-3xl mt-2"
             key={noteWithContent._id + 'editor'}
             editor={editor}
             onChange={() => updateContent(editor.document)}
@@ -146,29 +149,5 @@ export const NoteEditorBase = ({
         </div>
       </ScrollArea>
     </BlockNoteContextMenuProvider>
-  )
-}
-
-export function EditorViewModeToggleButton() {
-  const { editorMode, setEditorMode } = useEditorMode()
-  const handleEditorModeToggle = useCallback(() => {
-    setEditorMode(editorMode === 'editor' ? 'viewer' : 'editor')
-  }, [editorMode, setEditorMode])
-  const label =
-    editorMode === 'editor' ? 'Switch to viewer mode' : 'Switch to editor mode'
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={handleEditorModeToggle}
-      aria-label={label}
-      title={label}
-    >
-      {editorMode === 'editor' ? (
-        <Pencil className="h-4 w-4" />
-      ) : (
-        <BookOpen className="h-4 w-4" />
-      )}
-    </Button>
   )
 }

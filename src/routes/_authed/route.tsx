@@ -10,7 +10,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { Header } from '~/components/Header'
 
 const useEnsureProfile = () => {
   const { user } = useUser()
@@ -37,7 +36,6 @@ function AuthedRouteComponent() {
     typeof window !== 'undefined' ? window.location.href : '/'
   return (
     <div className="flex flex-col h-screen">
-      <Header />
       <SignedOut>
         <div className="flex items-center justify-center p-24">
           <SignIn routing="hash" forceRedirectUrl={forceRedirectUrl} />

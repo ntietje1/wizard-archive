@@ -1,16 +1,14 @@
 import { Link } from '@tanstack/react-router'
+import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
+import { PanelLeft, PanelLeftOpen } from 'lucide-react'
 import type { LucideIcon } from '~/lib/icons'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, Settings, Users } from '~/lib/icons'
-import { cn } from '~/lib/shadcn/utils'
-import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/components/shadcn/ui/tooltip'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { Button } from '~/components/shadcn/ui/button'
+import { TooltipButton } from '~/components/tooltips/tooltip-button'
 
 type NavigationItem = {
   name: string
@@ -22,6 +20,7 @@ type NavigationItem = {
 export const NavigationSidebar = () => {
   const { dmUsername, campaignSlug } = useCampaign()
   const { lastSelectedItemSearch } = useLastEditorItem()
+  const { isSidebarExpanded, setIsSidebarExpanded } = useFileSidebar()
 
   const navigationItems: Array<NavigationItem> = [
     {
@@ -43,33 +42,51 @@ export const NavigationSidebar = () => {
   ]
 
   return (
-    <div className="w-16 h-full min-h-0 bg-white border-r border-slate-200 flex flex-col items-center py-4">
-      <ScrollArea className="flex-1 w-full h-full pl-1">
-        <div className="flex flex-col items-center space-y-2">
-          {/* Overview, Players, Notes */}
-          {navigationItems.map((item) => {
-            return (
-              <Tooltip key={item.name}>
-                <TooltipTrigger>
+    <div className="w-12 h-full min-h-0 bg-background border-r border-border flex flex-col items-center py-2">
+      {/* Navigation items */}
+      <div className="flex flex-col items-center space-y-1 flex-1">
+        <TooltipButton
+          tooltip={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          side="right"
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+          >
+            {isSidebarExpanded ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftOpen className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipButton>
+        {navigationItems.map((item) => {
+          return (
+            <TooltipButton key={item.name} tooltip={item.name} side="right">
+              <Button
+                variant="ghost"
+                size="icon"
+                render={(props) => (
                   <Link
                     to={item.to}
                     params={{ dmUsername, campaignSlug }}
                     search={item.search}
-                    className={cn(
-                      'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
-                      'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-                    )}
-                    title={item.name}
+                    {...props}
                   >
-                    <item.icon className="h-5 w-5" />
+                    <item.icon className="h-4 w-4" />
                   </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">{item.name}</TooltipContent>
-              </Tooltip>
-            )
-          })}
-        </div>
-      </ScrollArea>
+                )}
+              />
+            </TooltipButton>
+          )
+        })}
+      </div>
+
+      {/* User profile at bottom */}
+      <SignedIn>
+        <UserButton />
+      </SignedIn>
     </div>
   )
 }

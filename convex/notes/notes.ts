@@ -5,6 +5,7 @@ import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
+import { getBookmark } from '../bookmarks/bookmarks'
 import type { SidebarItemId } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Note } from './types'
@@ -135,13 +136,22 @@ export const getNote = async (
     return null
   }
 
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: note.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  return note
+  const bookmark = await getBookmark(
+    ctx,
+    note.campaignId,
+    campaignWithMembership.member._id,
+    note._id,
+  )
+  return {
+    ...note,
+    isBookmarked: !!bookmark,
+  }
 }
 
 export const getNoteBySlug = async (

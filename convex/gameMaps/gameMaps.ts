@@ -1,5 +1,6 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getBookmark } from '../bookmarks/bookmarks'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { GameMap } from './types'
@@ -14,13 +15,22 @@ export const getMap = async (
     throw new Error('Map not found')
   }
 
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId: map.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  return map
+  const bookmark = await getBookmark(
+    ctx,
+    map.campaignId,
+    campaignWithMembership.member._id,
+    map._id,
+  )
+  return {
+    ...map,
+    isBookmarked: !!bookmark,
+  }
 }
 
 export const getMapBySlug = async (
