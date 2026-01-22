@@ -20,7 +20,7 @@ export function BookmarkedItemsList() {
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
-      <ScrollArea className="flex-1 min-h-0 min-w-0 w-full mr-[1px]">
+      <ScrollArea className="flex-1 min-h-0 min-w-0 w-full">
         <div className="p-1 min-w-0 w-full max-w-full">
           {bookmarkedItems?.map((item) => (
             <SidebarItem key={item._id} item={item} />
