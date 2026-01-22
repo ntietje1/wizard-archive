@@ -82,9 +82,9 @@ const ScrollBar = React.forwardRef<
       orientation={orientation}
       data-slot="scroll-area-scrollbar"
       className={cn(
-        'flex touch-none transition-[colors,opacity] duration-150 ease-out select-none shrink-0 !relative',
-        orientation === 'vertical' && 'h-full w-1 mr-[1px]',
-        orientation === 'horizontal' && 'h-1 flex-col mb-[1px]',
+        'flex touch-none transition-[colors,opacity] duration-150 ease-out select-none shrink-0 absolute',
+        orientation === 'vertical' && 'top-0 right-0 bottom-0 w-1 mr-[1px]',
+        orientation === 'horizontal' && 'left-0 right-0 bottom-0 h-1 flex-col mb-[1px]',
         type === 'hover' && 'opacity-0 data-[hovering]:opacity-100',
         type === 'scroll' && 'opacity-0 data-[scrolling]:opacity-100',
         className,

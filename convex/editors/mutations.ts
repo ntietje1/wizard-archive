@@ -20,6 +20,8 @@ export const setCurrentEditor = mutation({
         v.literal(SORT_DIRECTIONS.Descending),
       ),
     ),
+    sidebarWidth: v.optional(v.number()),
+    isSidebarExpanded: v.optional(v.boolean()),
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
@@ -38,6 +40,8 @@ export const setCurrentEditor = mutation({
         campaignId: args.campaignId,
         sortOrder: args.sortOrder ?? SORT_ORDERS.DateCreated,
         sortDirection: args.sortDirection ?? SORT_DIRECTIONS.Ascending,
+        sidebarWidth: args.sidebarWidth,
+        isSidebarExpanded: args.isSidebarExpanded,
       })
     }
 
@@ -45,6 +49,12 @@ export const setCurrentEditor = mutation({
       ...(args.sortOrder !== undefined && { sortOrder: args.sortOrder }),
       ...(args.sortDirection !== undefined && {
         sortDirection: args.sortDirection,
+      }),
+      ...(args.sidebarWidth !== undefined && {
+        sidebarWidth: args.sidebarWidth,
+      }),
+      ...(args.isSidebarExpanded !== undefined && {
+        isSidebarExpanded: args.isSidebarExpanded,
       }),
     })
 

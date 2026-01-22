@@ -23,6 +23,9 @@ export type FileSidebarContextType = {
   setIsDraggingFiles: (isDragging: boolean) => void
   isSidebarExpanded: boolean
   setIsSidebarExpanded: (isExpanded: boolean) => void
+  sidebarWidth: number
+  setSidebarWidth: (width: number) => void
+  isEditorSettingsLoaded: boolean
   bookmarksOnlyMode: boolean
   toggleBookmarksOnlyMode: () => void
 }

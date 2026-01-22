@@ -34,6 +34,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
+import { useEditorSettings } from '~/hooks/useSidebarWidth'
 import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
@@ -140,10 +141,13 @@ export function FileSidebarProvider({
   const campaignId = campaignWithMembership.data?.campaign._id
   const [renamingId, setRenamingId] = useState<SidebarItemId | null>(null)
   const [deletingId, setDeletingId] = useState<SidebarItemId | null>(null)
-  const [isSidebarExpanded, setIsSidebarExpanded] = usePersistedState<boolean>(
-    campaignId ? `file-sidebar-expanded-${campaignId}` : null,
-    true,
-  )
+  const {
+    isSidebarExpanded,
+    setIsSidebarExpanded,
+    sidebarWidth,
+    setSidebarWidth,
+    isLoaded: isEditorSettingsLoaded,
+  } = useEditorSettings()
 
   const [folderStates, setFolderStates] = usePersistedState<
     Record<string, boolean>
@@ -347,6 +351,9 @@ export function FileSidebarProvider({
     setIsDraggingFiles,
     isSidebarExpanded,
     setIsSidebarExpanded,
+    sidebarWidth,
+    setSidebarWidth,
+    isEditorSettingsLoaded,
     bookmarksOnlyMode,
     toggleBookmarksOnlyMode,
   }

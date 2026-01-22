@@ -29,4 +29,6 @@ export type Editor = {
   userId: Id<'userProfiles'>
   sortOrder: SortOrder
   sortDirection: SortDirection
+  sidebarWidth?: number
+  isSidebarExpanded?: boolean
 }

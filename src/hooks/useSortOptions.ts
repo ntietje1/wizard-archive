@@ -14,12 +14,13 @@ const defaultSortOptions: SortOptions = {
 export const useSortOptions = () => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
-  const currentEditor = useQuery(
-    convexQuery(
+  const currentEditor = useQuery({
+    ...convexQuery(
       api.editors.queries.getCurrentEditor,
       campaign?._id ? { campaignId: campaign._id } : 'skip',
     ),
-  )
+    staleTime: Infinity,
+  })
   const setCurrentEditor = useMutation({
     mutationFn: useConvexMutation(api.editors.mutations.setCurrentEditor),
   })

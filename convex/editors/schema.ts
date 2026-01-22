@@ -18,6 +18,8 @@ const editorTableFields = {
   campaignId: v.id('campaigns'),
   sortOrder: sortOrderValidator,
   sortDirection: sortDirectionValidator,
+  sidebarWidth: v.optional(v.number()),
+  isSidebarExpanded: v.optional(v.boolean()),
 }
 
 export const editorTables = {

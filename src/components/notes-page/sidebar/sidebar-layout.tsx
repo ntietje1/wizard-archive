@@ -1,5 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
-import { motion } from 'motion/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
@@ -9,32 +8,35 @@ import {
 } from '~/components/shadcn/ui/resizable'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
-import usePersistedState from '~/hooks/usePersistedState'
-import { useCampaign } from '~/hooks/useCampaign'
 
-const SIDEBAR_DEFAULT_WIDTH = 280
 const SIDEBAR_MIN_WIDTH = 120
 const SNAP_CLOSED_THRESHOLD = 10
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
-  const { isSidebarExpanded, setIsSidebarExpanded } = useFileSidebar()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-
-  const [sidebarWidth, setSidebarWidth] = usePersistedState<number>(
-    campaignId ? `sidebar-width-${campaignId}` : null,
-    SIDEBAR_DEFAULT_WIDTH,
-  )
+  const {
+    isSidebarExpanded,
+    setIsSidebarExpanded,
+    sidebarWidth,
+    setSidebarWidth,
+    isEditorSettingsLoaded,
+  } = useFileSidebar()
 
   const [skipAnimation, setSkipAnimation] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  const shouldAnimate = hasMounted && isEditorSettingsLoaded && !skipAnimation
   const dragWidthRef = useRef<number>(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const innerRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (!isSidebarExpanded) return
+      if (!isSidebarExpanded || !isEditorSettingsLoaded) return
 
       e.preventDefault()
 
@@ -42,7 +44,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       const startWidth = sidebarWidth
       dragWidthRef.current = startWidth
 
-      // Apply immediate styles for resize mode
+      // Disable transitions for resize mode
+      if (wrapperRef.current) {
+        wrapperRef.current.style.transition = 'none'
+      }
       if (sidebarRef.current) {
         sidebarRef.current.style.transition = 'none'
       }
@@ -64,13 +69,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           displayWidth = rawWidth
         }
 
+        // Update both wrapper (visible area) and sidebar (content width)
+        if (wrapperRef.current) {
+          wrapperRef.current.style.width = `${displayWidth}px`
+        }
         if (sidebarRef.current) {
           sidebarRef.current.style.width = `${displayWidth}px`
-          sidebarRef.current.style.borderRightWidth =
-            displayWidth > 0 ? '1px' : '0px'
-        }
-        if (innerRef.current) {
-          innerRef.current.style.width = `${displayWidth}px`
         }
       }
 
@@ -88,13 +92,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
         // Clear inline styles after React has rendered with skipAnimation=true
         requestAnimationFrame(() => {
+          if (wrapperRef.current) {
+            wrapperRef.current.style.transition = ''
+            wrapperRef.current.style.width = ''
+          }
           if (sidebarRef.current) {
             sidebarRef.current.style.transition = ''
             sidebarRef.current.style.width = ''
-            sidebarRef.current.style.borderRightWidth = ''
-          }
-          if (innerRef.current) {
-            innerRef.current.style.width = ''
           }
           if (handleRef.current) {
             handleRef.current.classList.remove('bg-primary/30')
@@ -110,27 +114,31 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     },
-    [isSidebarExpanded, sidebarWidth, setIsSidebarExpanded, setSidebarWidth],
+    [isSidebarExpanded, isEditorSettingsLoaded, sidebarWidth, setIsSidebarExpanded, setSidebarWidth],
   )
-
-  const displayWidth = isSidebarExpanded ? sidebarWidth : 0
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
-      <motion.div
-        ref={sidebarRef}
-        className="shrink-0 overflow-hidden border-r bg-background"
-        initial={false}
-        animate={{
-          width: displayWidth,
-          borderRightWidth: displayWidth > 0 ? 1 : 0,
+      {/* Wrapper that animates width - contains no reflowing content */}
+      <div
+        ref={wrapperRef}
+        className="shrink-0 overflow-hidden"
+        style={{
+          width: isSidebarExpanded ? sidebarWidth : 0,
+          transition: shouldAnimate ? 'width 0.2s ease-in-out' : 'none',
+          willChange: shouldAnimate ? 'width' : 'auto',
         }}
-        transition={{ duration: skipAnimation ? 0 : 0.2, ease: 'easeInOut' }}
       >
+        {/* Inner container uses transform for smooth animation - no layout recalc */}
         <div
-          ref={innerRef}
-          className="h-full flex flex-col"
-          style={{ width: sidebarWidth }}
+          ref={sidebarRef}
+          className="h-full flex flex-col border-r bg-background"
+          style={{
+            width: sidebarWidth,
+            transform: isSidebarExpanded ? 'translateX(0)' : `translateX(-${sidebarWidth}px)`,
+            transition: shouldAnimate ? 'transform 0.2s ease-in-out' : 'none',
+            willChange: shouldAnimate ? 'transform' : 'auto',
+          }}
         >
           <EditorContextMenu
             viewContext="sidebar"
@@ -154,13 +162,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </ResizablePanelGroup>
           </EditorContextMenu>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Custom resize handle */}
+      {/* Custom resize handle - always rendered for hydration consistency, interactive styles added after mount */}
       <div
         ref={handleRef}
         className={`w-1 shrink-0 ${
-          isSidebarExpanded
+          hasMounted && isEditorSettingsLoaded && isSidebarExpanded
             ? 'cursor-col-resize hover:bg-primary/20 active:bg-primary/30'
             : ''
         }`}

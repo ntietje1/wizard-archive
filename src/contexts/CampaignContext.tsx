@@ -2,7 +2,6 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { useAuth } from '@clerk/tanstack-react-start'
 import type { CampaignContextType } from '~/hooks/useCampaign'
 import { CampaignContext } from '~/hooks/useCampaign'
 
@@ -10,19 +9,14 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug',
   })
-  const { isLoaded, isSignedIn } = useAuth()
 
-  const campaignWithMembership = useQuery(
-    convexQuery(
-      api.campaigns.queries.getCampaignBySlug,
-      isLoaded && isSignedIn
-        ? {
-            dmUsername,
-            slug: campaignSlug,
-          }
-        : 'skip',
-    ),
-  )
+  const campaignWithMembership = useQuery({
+    ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
+      dmUsername,
+      slug: campaignSlug,
+    }),
+    staleTime: Infinity,
+  })
 
   const value: CampaignContextType = {
     dmUsername,
