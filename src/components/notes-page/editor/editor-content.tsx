@@ -10,7 +10,7 @@ import { EMPTY_EDITOR_DROP_TYPE, canDropItem } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 
 export function EditorContent() {
-  const { item, search, isLoading } = useCurrentItem()
+  const { item, editorSearch, isLoading } = useCurrentItem()
 
   if (isLoading) {
     return (
@@ -26,7 +26,7 @@ export function EditorContent() {
 
   return (
     <div className="flex-1 min-h-0">
-      <SidebarItemEditor item={item} search={search} />
+      <SidebarItemEditor item={item} search={editorSearch} />
     </div>
   )
 }

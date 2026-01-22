@@ -3,6 +3,7 @@ import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
+import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
@@ -17,7 +18,9 @@ function RouteComponent() {
         <FileSidebarProvider>
           <div className="flex flex-1 min-h-0">
             <NavigationSidebar />
-            <Outlet />
+            <SidebarLayout>
+              <Outlet />
+            </SidebarLayout>
           </div>
         </FileSidebarProvider>
       </CampaignNotFoundWrapper>

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
+import { useCurrentItem } from './useCurrentItem'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
 import {
   extractHeadingsFromContent,
@@ -17,17 +18,15 @@ export function useScrollToHeading(
   isContentLoaded: boolean,
   editor?: CustomBlockNoteEditor,
 ): { isScrollingToHeading: boolean } {
-  const search = useSearch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-  })
+  const { editorSearch } = useCurrentItem()
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
   const lastScrolledRef = useRef<string | null>(null)
 
-  const hasHeadingParam = Boolean(search.heading)
+  const hasHeadingParam = Boolean(editorSearch.heading)
 
   useEffect(() => {
-    const { heading, ...restSearch } = search
+    const { heading, ...restSearch } = editorSearch
     if (!heading || !isContentLoaded || !content) {
       if (!heading) lastScrolledRef.current = null
       return
@@ -67,7 +66,7 @@ export function useScrollToHeading(
       })
     })
   }, [
-    search,
+    editorSearch,
     content,
     isContentLoaded,
     navigate,

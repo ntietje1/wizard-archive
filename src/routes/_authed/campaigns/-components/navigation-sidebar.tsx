@@ -9,6 +9,7 @@ import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Button } from '~/components/shadcn/ui/button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
+import { Separator } from '~/components/shadcn/ui/separator'
 
 type NavigationItem = {
   name: string
@@ -61,23 +62,25 @@ export const NavigationSidebar = () => {
             )}
           </Button>
         </TooltipButton>
+        <Separator className="w-full" />
         {navigationItems.map((item) => {
           return (
             <TooltipButton key={item.name} tooltip={item.name} side="right">
-              <Button
-                variant="ghost"
-                size="icon"
-                render={(props) => (
-                  <Link
-                    to={item.to}
-                    params={{ dmUsername, campaignSlug }}
-                    search={item.search}
-                    {...props}
+              <Link
+                to={item.to}
+                params={{ dmUsername, campaignSlug }}
+                search={item.search}
+                activeOptions={{ includeSearch: false }}
+              >
+                {({ isActive }) => (
+                  <Button
+                    variant={isActive ? 'secondary' : 'ghost'}
+                    size="icon"
                   >
                     <item.icon className="h-4 w-4" />
-                  </Link>
+                  </Button>
                 )}
-              />
+              </Link>
             </TooltipButton>
           )
         })}

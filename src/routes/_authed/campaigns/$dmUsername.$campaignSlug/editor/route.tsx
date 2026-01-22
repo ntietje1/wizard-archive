@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
 import { validateSearch } from '~/components/notes-page/validate-search'
@@ -16,15 +15,11 @@ export const Route = createFileRoute(
 
 function EditorLayout() {
   return (
-    <div className="flex flex-col flex-1 min-h-0 min-w-0">
-      <SidebarLayout>
-        <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-          <EditorModeProvider>
-            <FileTopbar />
-            <EditorContent />
-          </EditorModeProvider>
-        </div>
-      </SidebarLayout>
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+      <EditorModeProvider>
+        <FileTopbar />
+        <EditorContent />
+      </EditorModeProvider>
     </div>
   )
 }
