@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { Button } from '~/components/shadcn/ui/button'
@@ -13,7 +14,7 @@ export function FileSidebar() {
   const sidebarItems = useSidebarItemsByParent()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { setRenamingId } = useFileSidebar()
+  const { setRenamingId, bookmarksOnlyMode } = useFileSidebar()
   const { createNote } = useNoteActions()
 
   const handleCreateNote = () => {
@@ -27,6 +28,10 @@ export function FileSidebar() {
         console.error(error)
         toast.error('Failed to create note')
       })
+  }
+
+  if (bookmarksOnlyMode) {
+    return <BookmarkedItemsList />
   }
 
   if (sidebarItems.status === 'pending') {

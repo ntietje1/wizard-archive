@@ -24,6 +24,7 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
@@ -53,6 +54,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
   const { endCurrentSession, startNewSession } = useSession()
+  const toggleBookmarkMutation = useToggleBookmark()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
@@ -613,6 +615,24 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.error('Failed to download')
       }
     }, [convex, campaignId]),
+
+    toggleBookmark: useCallback(
+      (ctx: MenuContext) => {
+        if (!campaignId || !ctx.item) return
+
+        toggleBookmarkMutation
+          .mutateAsync({
+            campaignId,
+            sidebarItemId: ctx.item._id,
+            sidebarItemType: ctx.item.type,
+          })
+          .catch((error) => {
+            console.error('Failed to toggle bookmark:', error)
+            toast.error('Failed to toggle bookmark')
+          })
+      },
+      [campaignId, toggleBookmarkMutation],
+    ),
   }
 
   // Helper to close a dialog and notify the parent

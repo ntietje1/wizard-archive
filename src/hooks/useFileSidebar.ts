@@ -23,6 +23,8 @@ export type FileSidebarContextType = {
   setIsDraggingFiles: (isDragging: boolean) => void
   isSidebarExpanded: boolean
   setIsSidebarExpanded: (isExpanded: boolean) => void
+  bookmarksOnlyMode: boolean
+  toggleBookmarksOnlyMode: () => void
 }
 
 export const FileSidebarContext = createContext<FileSidebarContextType | null>(

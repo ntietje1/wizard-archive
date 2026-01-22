@@ -1,5 +1,7 @@
 export {
   Ban,
+  Bookmark,
+  BookmarkCheck,
   FileText,
   FolderPlus,
   FilePlus,

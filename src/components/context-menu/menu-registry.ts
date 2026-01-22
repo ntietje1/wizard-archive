@@ -4,6 +4,7 @@ import {
   SIDEBAR_ITEM_TYPES,
 } from 'convex/sidebarItems/types'
 import {
+  Bookmark,
   Download,
   Eye,
   File,
@@ -89,6 +90,9 @@ export type ActionHandlers = {
   downloadMap: (ctx: MenuContext) => void
   downloadFolder: (ctx: MenuContext) => void
   downloadAll: (ctx: MenuContext) => void
+
+  // Bookmark actions
+  toggleBookmark: (ctx: MenuContext) => void
 }
 
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
@@ -141,6 +145,16 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         p.isPinnedOnActiveMap(ctx) &&
         p.isNotActiveMap(ctx),
       action: actions.goToMapPin,
+    },
+    {
+      id: 'toggle-bookmark',
+      label: (ctx) => (ctx.item?.isBookmarked ? 'Remove Bookmark' : 'Bookmark'),
+      icon: Bookmark,
+      group: 'primary',
+      priority: 2,
+      shouldShow: (ctx) => p.inSidebar(ctx) && p.isSidebarItem(ctx),
+      isChecked: (ctx) => ctx.item?.isBookmarked ?? false,
+      action: actions.toggleBookmark,
     },
 
     // ========== CREATE GROUP ==========

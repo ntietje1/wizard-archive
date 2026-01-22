@@ -13,11 +13,21 @@ export const getAllSidebarItems = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
 ): Promise<Array<AnySidebarItem>> => {
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
+
+  const bookmarks = await ctx.db
+    .query('bookmarks')
+    .withIndex('by_campaign_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('campaignMemberId', campaignWithMembership.member._id),
+    )
+    .collect()
+  const bookmarkedIds = new Set(bookmarks.map((b) => b.sidebarItemId))
 
   const allItems: Array<AnySidebarItem> = []
 
@@ -45,7 +55,10 @@ export const getAllSidebarItems = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItem>))
 
-  return allItems
+  return allItems.map((item) => ({
+    ...item,
+    isBookmarked: bookmarkedIds.has(item._id),
+  }))
 }
 
 export const getSidebarItemsByParent = async (
@@ -53,11 +66,21 @@ export const getSidebarItemsByParent = async (
   campaignId: Id<'campaigns'>,
   parentId: SidebarItemId | undefined,
 ): Promise<Array<AnySidebarItem>> => {
-  await requireCampaignMembership(
+  const { campaignWithMembership } = await requireCampaignMembership(
     ctx,
     { campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
+
+  const bookmarks = await ctx.db
+    .query('bookmarks')
+    .withIndex('by_campaign_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('campaignMemberId', campaignWithMembership.member._id),
+    )
+    .collect()
+  const bookmarkedIds = new Set(bookmarks.map((b) => b.sidebarItemId))
 
   const allItems: Array<AnySidebarItem> = []
 
@@ -93,7 +116,10 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItem>))
 
-  return allItems
+  return allItems.map((item) => ({
+    ...item,
+    isBookmarked: bookmarkedIds.has(item._id),
+  }))
 }
 
 export const getSidebarItemsByParentAndName = async (

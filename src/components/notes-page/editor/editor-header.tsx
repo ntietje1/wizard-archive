@@ -1,10 +1,12 @@
 import { PanelLeft, PanelLeftOpen } from 'lucide-react'
+import { BookmarksFilterButton } from './sidebar-header/bookmarks-filter-button'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { Button } from '~/components/shadcn/ui/button'
 
 export function EditorHeader() {
-  const { isSidebarExpanded, setIsSidebarExpanded } = useFileSidebar()
+  const { isSidebarExpanded, setIsSidebarExpanded, bookmarksOnlyMode } =
+    useFileSidebar()
 
   return (
     <div className="flex items-center h-10 border-b bg-background px-2 shrink-0">
@@ -22,6 +24,11 @@ export function EditorHeader() {
             <PanelLeftOpen className="h-4 w-4" />
           )}
         </Button>
+      </TooltipButton>
+      <TooltipButton
+        tooltip={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'}
+      >
+        <BookmarksFilterButton />
       </TooltipButton>
     </div>
   )

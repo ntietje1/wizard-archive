@@ -155,6 +155,11 @@ export function FileSidebarProvider({
       false,
     )
 
+  const [bookmarksOnlyMode, setBookmarksOnlyMode] = usePersistedState<boolean>(
+    campaignId ? `file-sidebar-bookmarks-mode-${campaignId}` : null,
+    false,
+  )
+
   const { moveNote } = useNoteActions()
   const { moveFolder } = useFolderActions()
   const { navigateToItem } = useEditorNavigation()
@@ -212,6 +217,10 @@ export function FileSidebarProvider({
   const exitCloseAllMode = useCallback(() => {
     setCloseAllFoldersMode(false)
   }, [setCloseAllFoldersMode])
+
+  const toggleBookmarksOnlyMode = useCallback(() => {
+    setBookmarksOnlyMode((prev) => !prev)
+  }, [setBookmarksOnlyMode])
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -338,6 +347,8 @@ export function FileSidebarProvider({
     setIsDraggingFiles,
     isSidebarExpanded,
     setIsSidebarExpanded,
+    bookmarksOnlyMode,
+    toggleBookmarksOnlyMode,
   }
 
   return (

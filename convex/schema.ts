@@ -10,6 +10,7 @@ import { shareTables } from './shares/schema'
 import { fileStorageTables } from './storage/schema'
 import { mapTables } from './gameMaps/schema'
 import { filesTables } from './files/schema'
+import { bookmarkTables } from './bookmarks/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -23,4 +24,5 @@ export default defineSchema({
   ...shareTables,
   ...fileStorageTables,
   ...filesTables,
+  ...bookmarkTables,
 })

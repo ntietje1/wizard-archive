@@ -53,6 +53,7 @@ export type SidebarItem<T extends SidebarItemType> = {
   updatedAt: number
   type: T
   shareStatus?: SidebarItemShareStatus
+  isBookmarked?: boolean
 }
 
 export const DEFAULT_ITEM_COLOR = '#14b8a6'

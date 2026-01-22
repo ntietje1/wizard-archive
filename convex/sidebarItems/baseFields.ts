@@ -31,4 +31,5 @@ export const sidebarItemBaseFields = {
   parentId: v.optional(sidebarItemIdValidator),
   updatedAt: v.number(),
   shareStatus: v.optional(sidebarItemShareStatusValidator),
+  isBookmarked: v.optional(v.boolean()),
 }
