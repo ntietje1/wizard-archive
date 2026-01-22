@@ -1,7 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemType, SidebarItemId } from '../sidebarItems/types'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'
 
 export function slugify(input: string): string {
   const lower = input.toLowerCase().trim()

@@ -36,7 +36,7 @@ export const getUserCampaigns = query({
     )
 
     const campaignsWithNotes = await Promise.all(
-      campaigns.map(async (campaign) => {
+      campaigns.map((campaign) => {
         const membership = campaignMemberships.find(
           (m) => m.campaignId === campaign._id,
         )

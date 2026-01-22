@@ -25,7 +25,7 @@ export function useRemoveLinkExtension(
 
       // Find and unregister the Link extension
       const linkExtension = tiptapEditor.extensionManager.extensions.find(
-        (ext) => ext.name === 'link'
+        (ext) => ext.name === 'link',
       )
 
       if (linkExtension) {
@@ -38,9 +38,10 @@ export function useRemoveLinkExtension(
         const state = tiptapEditor.view.state
         const linkPlugins = state.plugins.filter((plugin) => {
           const key = plugin.spec.key
-          return key && (
-            key.toString().includes('link') ||
-            key.toString().includes('autolink')
+          return (
+            key &&
+            (key.toString().includes('link') ||
+              key.toString().includes('autolink'))
           )
         })
 

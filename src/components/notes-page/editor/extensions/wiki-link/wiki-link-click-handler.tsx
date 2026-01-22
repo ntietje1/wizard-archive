@@ -50,7 +50,9 @@ export function WikiLinkClickHandler({
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
+    null,
+  )
 
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
   const { mutateAsync: createNote } = useMutation({

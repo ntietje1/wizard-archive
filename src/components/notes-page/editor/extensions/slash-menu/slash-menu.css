@@ -24,11 +24,11 @@
   overflow: hidden;
 }
 
-.slash-menu-scroll-area [data-slot="scroll-area-viewport"] {
+.slash-menu-scroll-area [data-slot='scroll-area-viewport'] {
   max-height: 300px;
 }
 
-.slash-menu-scroll-area [data-slot="scroll-area-scrollbar"] {
+.slash-menu-scroll-area [data-slot='scroll-area-scrollbar'] {
   position: absolute;
   right: 2px;
   width: 6px;
@@ -36,7 +36,7 @@
   padding-bottom: 2px;
 }
 
-.slash-menu-scroll-area [data-slot="scroll-area-thumb"] {
+.slash-menu-scroll-area [data-slot='scroll-area-thumb'] {
   background-color: hsl(var(--border));
   min-height: 20px;
   width: 100%;

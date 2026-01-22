@@ -29,7 +29,10 @@ function getMdLinkAt(x: number, y: number) {
   if (!displayEl) return null
   return {
     element: displayEl,
-    type: displayEl.getAttribute('data-md-link-type') as 'external' | 'internal' | null,
+    type: displayEl.getAttribute('data-md-link-type') as
+      | 'external'
+      | 'internal'
+      | null,
     exists: displayEl.getAttribute('data-md-link-exists') === 'true',
     itemName: displayEl.getAttribute('data-md-link-item-name'),
     target: displayEl.getAttribute('data-md-link-target'),
@@ -52,7 +55,9 @@ export function MdLinkClickHandler({
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
+    null,
+  )
 
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
   const { mutateAsync: createNote } = useMutation({
@@ -61,19 +66,17 @@ export function MdLinkClickHandler({
 
   const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
-  const showTooltipFor = useCallback(
-    (link: ReturnType<typeof getMdLinkAt>) => {
-      if (!link || link.type !== 'internal' || link.exists || !link.itemName) return
-      const rect = link.element.getBoundingClientRect()
-      setTooltip({
-        show: true,
-        text: link.itemName,
-        x: rect.left,
-        y: rect.bottom + 4,
-      })
-    },
-    [],
-  )
+  const showTooltipFor = useCallback((link: ReturnType<typeof getMdLinkAt>) => {
+    if (!link || link.type !== 'internal' || link.exists || !link.itemName)
+      return
+    const rect = link.element.getBoundingClientRect()
+    setTooltip({
+      show: true,
+      text: link.itemName,
+      x: rect.left,
+      y: rect.bottom + 4,
+    })
+  }, [])
 
   // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {
@@ -196,7 +199,13 @@ export function MdLinkClickHandler({
       }
 
       // Ghost internal link: ctrl+click creates note
-      if (mdLink.type === 'internal' && !mdLink.exists && isCtrlClick && mdLink.itemName && campaign?._id) {
+      if (
+        mdLink.type === 'internal' &&
+        !mdLink.exists &&
+        isCtrlClick &&
+        mdLink.itemName &&
+        campaign?._id
+      ) {
         e.preventDefault()
         e.stopPropagation()
         hideTooltip()

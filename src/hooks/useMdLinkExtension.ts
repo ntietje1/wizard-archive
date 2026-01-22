@@ -114,9 +114,7 @@ export interface MdLinkResolver {
  * - In editor mode: brackets and target are hidden unless cursor/selection overlaps with the link
  * - In viewer mode: brackets and target are always hidden
  */
-export function useMdLinkExtension(
-  editor: CustomBlockNoteEditor | undefined,
-) {
+export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
   const { data: sidebarItems, itemsMap } = useAllSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode } = useEditorMode()
@@ -127,8 +125,11 @@ export function useMdLinkExtension(
   const resolver = useMemo((): MdLinkResolver => {
     const allItems = sidebarItems || []
 
-    const resolve = (pathSegments: Array<string>): MdLinkItemInfo | undefined => {
-      if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
+    const resolve = (
+      pathSegments: Array<string>,
+    ): MdLinkItemInfo | undefined => {
+      if (!dmUsername || !campaignSlug || pathSegments.length === 0)
+        return undefined
 
       const item = resolveItemByPath(pathSegments, allItems, itemsMap)
       if (!item) return undefined
@@ -216,7 +217,12 @@ function findMdLinks(
   doc: {
     descendants: (
       fn: (
-        node: { isText: boolean; text?: string; type: { name: string }; nodeSize: number },
+        node: {
+          isText: boolean
+          text?: string
+          type: { name: string }
+          nodeSize: number
+        },
         pos: number,
       ) => boolean | void,
     ) => void
@@ -412,7 +418,10 @@ function buildDecorations(
     }
 
     // Only apply item color for existing internal links - ghost links use CSS styling
-    const color = !parsed.isExternal && itemInfo ? validateHexColorOrDefault(itemInfo.item.color) : undefined
+    const color =
+      !parsed.isExternal && itemInfo
+        ? validateHexColorOrDefault(itemInfo.item.color)
+        : undefined
 
     // Check if the selection overlaps with this md-link
     const isActive =
@@ -452,14 +461,20 @@ function buildDecorations(
         style: color ? `color: ${color}` : undefined,
         'data-md-link-type': parsed.isExternal ? 'external' : 'internal',
         'data-md-link-target': target,
-        'data-md-link-exists': parsed.isExternal ? 'true' : itemInfo ? 'true' : 'false',
+        'data-md-link-exists': parsed.isExternal
+          ? 'true'
+          : itemInfo
+            ? 'true'
+            : 'false',
         ...(href && { 'data-href': href }),
-        ...(!parsed.isExternal && parsed.itemName && {
-          'data-md-link-item-name': parsed.itemName,
-        }),
-        ...(!parsed.isExternal && parsed.headingPath.length > 0 && {
-          'data-md-link-heading': parsed.headingPath.join('#'),
-        }),
+        ...(!parsed.isExternal &&
+          parsed.itemName && {
+            'data-md-link-item-name': parsed.itemName,
+          }),
+        ...(!parsed.isExternal &&
+          parsed.headingPath.length > 0 && {
+            'data-md-link-heading': parsed.headingPath.join('#'),
+          }),
       }),
     )
 

@@ -12,9 +12,7 @@ import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import './slash-menu.css'
 
-function shouldShowSlashMenu(
-  editor: CustomBlockNoteEditor,
-): boolean {
+function shouldShowSlashMenu(editor: CustomBlockNoteEditor): boolean {
   const tiptap = editor._tiptapEditor
   if (!tiptap) return false
   const { state } = tiptap
@@ -58,7 +56,9 @@ function CustomSlashMenu(
               className={`slash-menu-item${index === selectedIndex ? ' selected' : ''}`}
               onClick={() => onItemClick?.(item)}
             >
-              {item.icon && <div className="slash-menu-item-icon">{item.icon}</div>}
+              {item.icon && (
+                <div className="slash-menu-item-icon">{item.icon}</div>
+              )}
               <div className="slash-menu-item-body">
                 <div className="slash-menu-item-title">{item.title}</div>
                 {item.subtext && (

@@ -12,7 +12,7 @@ export function useDisableAutolink(editor: CustomBlockNoteEditor | undefined) {
 
     // Find the Link extension and disable autolink
     const linkExtension = tiptapEditor.extensionManager.extensions.find(
-      (ext) => ext.name === 'link'
+      (ext) => ext.name === 'link',
     )
 
     if (linkExtension) {

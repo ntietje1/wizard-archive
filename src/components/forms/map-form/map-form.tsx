@@ -323,7 +323,7 @@ export function MapForm({
         })}
       >
         {({ name, canSubmit }) => {
-          const isDisabled =
+          const isSubmitDisabled =
             !name || !hasImage || isSubmitting || (mapId && !canSubmit)
           return (
             <div className="flex justify-end gap-2 pt-2">
@@ -335,7 +335,7 @@ export function MapForm({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isDisabled}>
+              <Button type="submit" disabled={isSubmitDisabled}>
                 {mapId ? 'Update' : 'Create'}
               </Button>
             </div>

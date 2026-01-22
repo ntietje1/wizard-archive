@@ -158,7 +158,7 @@ a:has(.md-link-bracket):hover ~ .md-link-bracket-close {
 
 /* Remove styling from BlockNote/TipTap links */
 .bn-editor a,
-.bn-editor [data-content-type="link"],
+.bn-editor [data-content-type='link'],
 .bn-block-content a {
   color: inherit !important;
   text-decoration: none !important;

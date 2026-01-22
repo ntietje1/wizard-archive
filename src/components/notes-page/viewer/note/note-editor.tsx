@@ -95,8 +95,6 @@ export const NoteEditorBase = ({
     isScrollingToHeading,
   )
 
-
-
   const handleWrapperContextMenu = useCallback((e: React.MouseEvent) => {
     if (!e.isTrusted) return
 

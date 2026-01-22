@@ -76,12 +76,16 @@ function getAutocompleteContext(
     // File mode - split by / to get folder path and current query
     const segments = query.split('/')
     const currentQuery = segments.at(-1) || ''
-    const completedFolderPath = segments.slice(0, -1).map((s) => s.trim()).filter(Boolean)
+    const completedFolderPath = segments
+      .slice(0, -1)
+      .map((s) => s.trim())
+      .filter(Boolean)
 
     // Resolve the parent folder if we have a completed path
-    const resolvedParentFolder = completedFolderPath.length > 0
-      ? resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null
-      : null
+    const resolvedParentFolder =
+      completedFolderPath.length > 0
+        ? (resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null)
+        : null
 
     return {
       mode: 'file',
@@ -95,7 +99,10 @@ function getAutocompleteContext(
   }
 
   const filePath = query.slice(0, hashIdx)
-  const filePathSegments = filePath.split('/').map((s) => s.trim()).filter(Boolean)
+  const filePathSegments = filePath
+    .split('/')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   // Resolve the item using path-based lookup
   const item = resolveItemByPath(filePathSegments, allItems, itemsMap)
@@ -105,10 +112,14 @@ function getAutocompleteContext(
     // Fall back to file mode
     const segments = query.split('/')
     const currentQuery = segments.at(-1) || ''
-    const completedFolderPath = segments.slice(0, -1).map((s) => s.trim()).filter(Boolean)
-    const resolvedParentFolder = completedFolderPath.length > 0
-      ? resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null
-      : null
+    const completedFolderPath = segments
+      .slice(0, -1)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const resolvedParentFolder =
+      completedFolderPath.length > 0
+        ? (resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null)
+        : null
 
     return {
       mode: 'file',
@@ -132,7 +143,6 @@ function getAutocompleteContext(
     resolvedItem: item,
   }
 }
-
 
 /** Find the length of closing ]] brackets after cursor position */
 function findClosingBrackets(state: EditorState, cursor: number): number {
@@ -255,7 +265,10 @@ export function WikiLinkAutocomplete({
   const hasEditedRef = useRef(false)
 
   const context = useMemo(
-    () => (menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null),
+    () =>
+      menu.show
+        ? getAutocompleteContext(menu.query, sidebarItems, itemsMap)
+        : null,
     [menu, sidebarItems, itemsMap],
   )
 
@@ -282,8 +295,12 @@ export function WikiLinkAutocomplete({
   }, [noteQuery.data?.content])
 
   // Build filtered items
-  const fileResult = useMemo((): { items: Array<FileItem>; totalCount: number } => {
-    if (!sidebarItems || !itemsMap || context?.mode !== 'file') return { items: [], totalCount: 0 }
+  const fileResult = useMemo((): {
+    items: Array<FileItem>
+    totalCount: number
+  } => {
+    if (!sidebarItems || !itemsMap || context?.mode !== 'file')
+      return { items: [], totalCount: 0 }
 
     // Filter items by parent folder if we have a completed folder path
     let itemsToShow = sidebarItems
@@ -295,9 +312,13 @@ export function WikiLinkAutocomplete({
         )
       } else {
         // No valid parent folder found, filter by path prefix match
-        const normalizedPath = context.completedFolderPath.map((s) => s.toLowerCase())
+        const normalizedPath = context.completedFolderPath.map((s) =>
+          s.toLowerCase(),
+        )
         itemsToShow = sidebarItems.filter((item) => {
-          const itemPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
+          const itemPath = getItemPath(item, itemsMap).map((s) =>
+            s.toLowerCase(),
+          )
           // Item path must start with the completed folder path
           if (itemPath.length <= normalizedPath.length) return false
           return normalizedPath.every((segment, i) => itemPath[i] === segment)
@@ -318,9 +339,19 @@ export function WikiLinkAutocomplete({
       ? filterSuggestionItems(all, context.fileQuery)
       : all
     return { items: filtered.slice(0, 10), totalCount: filtered.length }
-  }, [sidebarItems, itemsMap, context?.mode, context?.fileQuery, context?.completedFolderPath, context?.resolvedParentFolder])
+  }, [
+    sidebarItems,
+    itemsMap,
+    context?.mode,
+    context?.fileQuery,
+    context?.completedFolderPath,
+    context?.resolvedParentFolder,
+  ])
 
-  const headingResult = useMemo((): { items: Array<HeadingItem>; totalCount: number } => {
+  const headingResult = useMemo((): {
+    items: Array<HeadingItem>
+    totalCount: number
+  } => {
     if (context?.mode !== 'heading') return { items: [], totalCount: 0 }
     const all = buildHeadingItems(
       headings,
@@ -338,7 +369,10 @@ export function WikiLinkAutocomplete({
   const fileItems = fileResult.items
   const headingItems = headingResult.items
   const items = context?.mode === 'heading' ? headingItems : fileItems
-  const totalCount = context?.mode === 'heading' ? headingResult.totalCount : fileResult.totalCount
+  const totalCount =
+    context?.mode === 'heading'
+      ? headingResult.totalCount
+      : fileResult.totalCount
   const truncatedCount = totalCount - items.length
 
   // Reset selection on mode/path change
@@ -416,18 +450,26 @@ export function WikiLinkAutocomplete({
       if (ctx.mode === 'file') {
         const fileItem = item as FileItem
         // Preserve the user's typed folder path + item name, or use min disambiguation path
-        const pathParts = ctx.completedFolderPath.length > 0
-          ? [...ctx.completedFolderPath, fileItem.title]
-          : fileItem.linkPath
+        const pathParts =
+          ctx.completedFolderPath.length > 0
+            ? [...ctx.completedFolderPath, fileItem.title]
+            : fileItem.linkPath
         const path = pathParts.join('/')
         // Add display name if path includes folders
         linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
       } else {
-        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')
+        const headingPath = [
+          ...ctx.completedHeadingPath,
+          ...(item as HeadingItem).fullPath,
+        ].join('#')
         linkText = `${ctx.fileQuery}#${headingPath}`
       }
 
-      tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}]]`).run()
+      tiptap
+        .chain()
+        .focus()
+        .insertContentAt({ from, to }, `[[${linkText}]]`)
+        .run()
       setMenu({ show: false, query: '', pos: null })
     },
     [editor],
@@ -452,11 +494,18 @@ export function WikiLinkAutocomplete({
         const pathParts = [...ctx.completedFolderPath, fileItem.title]
         linkText = pathParts.join('/')
       } else {
-        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join('#')
+        const headingPath = [
+          ...ctx.completedHeadingPath,
+          ...(item as HeadingItem).fullPath,
+        ].join('#')
         linkText = `${ctx.fileQuery}#${headingPath}`
       }
 
-      tiptap.chain().focus().insertContentAt({ from, to: cursor }, `[[${linkText}#`).run()
+      tiptap
+        .chain()
+        .focus()
+        .insertContentAt({ from, to: cursor }, `[[${linkText}#`)
+        .run()
     },
     [editor],
   )
@@ -475,7 +524,11 @@ export function WikiLinkAutocomplete({
       // Build folder path with trailing / to continue
       const folderPath = item.linkPath.join('/')
 
-      tiptap.chain().focus().insertContentAt({ from, to: cursor }, `[[${folderPath}/`).run()
+      tiptap
+        .chain()
+        .focus()
+        .insertContentAt({ from, to: cursor }, `[[${folderPath}/`)
+        .run()
     },
     [editor],
   )

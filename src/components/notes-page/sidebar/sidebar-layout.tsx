@@ -50,8 +50,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         handleRef.current.classList.add('bg-primary/30')
       }
 
-      const handleMouseMove = (e: MouseEvent) => {
-        const delta = e.clientX - startX
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const delta = moveEvent.clientX - startX
         const rawWidth = Math.max(0, startWidth + delta)
         dragWidthRef.current = rawWidth
 
@@ -66,7 +66,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
         if (sidebarRef.current) {
           sidebarRef.current.style.width = `${displayWidth}px`
-          sidebarRef.current.style.borderRightWidth = displayWidth > 0 ? '1px' : '0px'
+          sidebarRef.current.style.borderRightWidth =
+            displayWidth > 0 ? '1px' : '0px'
         }
         if (innerRef.current) {
           innerRef.current.style.width = `${displayWidth}px`

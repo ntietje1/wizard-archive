@@ -138,11 +138,11 @@ export function useSidebarItemValidation(
    * Returns error message or undefined if valid.
    */
   const validateForCreate = useCallback(
-    async (options: {
+    async (createOptions: {
       name: string | undefined
       parentId: SidebarItemId | undefined
     }): Promise<string | undefined> => {
-      const { name, parentId } = options
+      const { name, parentId } = createOptions
       return validateNameAsync(name, parentId)
     },
     [validateNameAsync],
@@ -154,12 +154,12 @@ export function useSidebarItemValidation(
    * Returns error message or undefined if valid.
    */
   const validateForUpdate = useCallback(
-    async (options: {
+    async (updateOptions: {
       name: string | undefined
       parentId: SidebarItemId | undefined
       itemId: SidebarItemId
     }): Promise<string | undefined> => {
-      const { name, parentId, itemId } = options
+      const { name, parentId, itemId } = updateOptions
       return validateNameAsync(name, parentId, itemId)
     },
     [validateNameAsync],
@@ -171,12 +171,12 @@ export function useSidebarItemValidation(
    * Returns error message or undefined if valid.
    */
   const validateForMove = useCallback(
-    async (options: {
+    async (moveOptions: {
       itemId: SidebarItemId
       newParentId: SidebarItemId | undefined
       itemName: string | undefined
     }): Promise<string | undefined> => {
-      const { itemId, newParentId, itemName } = options
+      const { itemId, newParentId, itemName } = moveOptions
 
       // Check circular parent reference (sync)
       const parentResult = validateParentSync(itemId, newParentId)

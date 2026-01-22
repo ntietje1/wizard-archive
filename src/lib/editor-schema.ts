@@ -4,7 +4,12 @@ import {
   defaultInlineContentSpecs,
   defaultStyleSpecs,
 } from '@blocknote/core'
-import type { Block, BlockNoteEditor, InlineContentSpecs, PartialBlock } from '@blocknote/core'
+import type {
+  Block,
+  BlockNoteEditor,
+  InlineContentSpecs,
+  PartialBlock,
+} from '@blocknote/core'
 
 // remove link from inline content specs
 const { link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs

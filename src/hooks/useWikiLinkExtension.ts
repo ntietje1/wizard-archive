@@ -233,8 +233,11 @@ export function useWikiLinkExtension(
   const resolver = useMemo((): WikiLinkResolver => {
     const allItems = sidebarItems || []
 
-    const resolve = (pathSegments: Array<string>): WikiLinkItemInfo | undefined => {
-      if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
+    const resolve = (
+      pathSegments: Array<string>,
+    ): WikiLinkItemInfo | undefined => {
+      if (!dmUsername || !campaignSlug || pathSegments.length === 0)
+        return undefined
 
       const item = resolveItemByPath(pathSegments, allItems, itemsMap)
       if (!item) return undefined
