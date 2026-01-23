@@ -2,7 +2,8 @@ import { memo, useCallback, useMemo } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
-import { DndSidebarItem } from './dnd-sidebar-item'
+import { DraggableSidebarItem } from './draggable-sidebar-item'
+import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
@@ -84,13 +85,7 @@ function SidebarItemComponent({
   }, [setRenamingId])
 
   const itemButton = (
-    <DndSidebarItem
-      item={item}
-      ancestorIds={ancestorIds}
-      activeDragItem={activeDragItem}
-      isDroppable={isFolder}
-      className={className}
-    >
+    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
@@ -112,28 +107,30 @@ function SidebarItemComponent({
           excludeId={item._id}
         />
       </EditorContextMenu>
-    </DndSidebarItem>
+    </DraggableSidebarItem>
   )
 
-  if (isFolder && hasChildren) {
+  if (isFolder) {
     return (
-      <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
-        {itemButton}
-        <CollapsibleContent
-          transition={{ duration: 0.2, ease: 'circInOut' }}
-          keepRendered
-        >
-          {sortedChildren.map((childItem) => (
-            <SidebarItem
-              key={childItem._id}
-              item={childItem}
-              ancestorIds={currentAncestors}
-              parentItemsMap={parentItemsMap}
-              className="pl-4"
-            />
-          ))}
-        </CollapsibleContent>
-      </Collapsible>
+      <DroppableSidebarItem item={item} ancestorIds={ancestorIds}>
+        <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
+          {itemButton}
+          <CollapsibleContent
+            className="pl-4"
+            transition={{ duration: 0.2, ease: 'circInOut' }}
+            keepRendered
+          >
+            {sortedChildren.map((childItem) => (
+              <SidebarItem
+                key={childItem._id}
+                item={childItem}
+                ancestorIds={currentAncestors}
+                parentItemsMap={parentItemsMap}
+              />
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      </DroppableSidebarItem>
     )
   }
 

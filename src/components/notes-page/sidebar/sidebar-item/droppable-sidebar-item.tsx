@@ -1,7 +1,6 @@
-import { memo, useMemo } from 'react'
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useDroppable } from '@dnd-kit/core'
+import { useMemo } from 'react'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
@@ -9,15 +8,15 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 const EMPTY_ANCESTORS: Array<SidebarItemId> = []
 
-interface DndSidebarItemProps {
+interface DroppableSidebarItemProps {
   item: AnySidebarItem
   ancestorIds?: Array<SidebarItemId>
-  activeDragItem: SidebarDragData | null
-  isDroppable?: boolean
-  className?: string
   children: React.ReactNode
 }
 
+/**
+ * Check if this item can accept files as children according to drag rules
+ */
 function canAcceptFiles(
   item: AnySidebarItem,
   ancestorIds: Array<SidebarItemId>,
@@ -25,87 +24,55 @@ function canAcceptFiles(
   return canDropFilesOnTarget({ ...item, ancestorIds })
 }
 
-function DndSidebarItemComponent({
+export function DroppableSidebarItem({
   item,
-  ancestorIds,
-  activeDragItem,
-  isDroppable = false,
-  className,
+  ancestorIds = [],
   children,
-}: DndSidebarItemProps) {
+}: DroppableSidebarItemProps) {
   const safeAncestorIds = ancestorIds ?? EMPTY_ANCESTORS
 
-  // Shared data for drag/drop
-  const dndData = useMemo(
+  const dropData = useMemo(
     () => ({ ...item, ancestorIds: safeAncestorIds }),
     [item, safeAncestorIds],
   )
 
-  // Draggable setup
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-  } = useDraggable({
+  const { fileDragHoveredId, isDraggingFiles, activeDragItem } =
+    useFileSidebar()
+
+  const { setNodeRef, isOver, active, over } = useDroppable({
     id: item._id,
-    data: dndData,
+    data: dropData,
+    disabled: activeDragItem?._id === item._id,
   })
 
-  // Droppable setup (only for folders)
-  const {
-    setNodeRef: setDropRef,
-    isOver,
-    active,
-    over,
-  } = useDroppable({
-    id: item._id,
-    data: dndData,
-    disabled: !isDroppable || activeDragItem?._id === item._id,
-  })
-
-  // Combine refs
-  const setNodeRef = (node: HTMLElement | null) => {
-    setDragRef(node)
-    if (isDroppable) setDropRef(node)
-  }
-
-  // Drop highlighting logic (only computed if droppable)
-  const canDrop = isDroppable && canDropItem(active, over)
+  const canDrop = canDropItem(active, over)
   const isValidDrop = canDrop && isOver
   const isParentValidDrop =
     canDrop && safeAncestorIds.includes(over?.data.current?._id)
 
-  // File drag-and-drop
-  const canAcceptFileDrops =
-    isDroppable && canAcceptFiles(item, safeAncestorIds)
+  // Handle file drag-and-drop for items that can accept files according to drag rules
+  const canAcceptFileDrops = canAcceptFiles(item, safeAncestorIds)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? item._id : undefined)
-  const { fileDragHoveredId, isDraggingFiles } = useFileSidebar()
 
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === item._id
+
   const isFileParentValidDrop =
     isDraggingFiles &&
     fileDragHoveredId !== null &&
     safeAncestorIds.includes(fileDragHoveredId)
 
   const shouldHighlight =
-    isDroppable &&
-    (isValidDrop ||
-      isParentValidDrop ||
-      isFileValidDrop ||
-      isFileParentValidDrop)
+    isValidDrop || isParentValidDrop || isFileValidDrop || isFileParentValidDrop
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'flex w-full min-w-0',
+        'w-full min-w-0',
         shouldHighlight ? 'bg-muted' : 'bg-background',
-        className,
       )}
-      {...listeners}
-      {...attributes}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
@@ -115,5 +82,3 @@ function DndSidebarItemComponent({
     </div>
   )
 }
-
-export const DndSidebarItem = memo(DndSidebarItemComponent)

@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
-import { DndSidebarItem } from './dnd-sidebar-item'
+import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import { useRenameItem } from '~/hooks/useRenameItem'
@@ -59,17 +59,8 @@ function FlatSidebarItemComponent({
   }, [setRenamingId])
 
   return (
-    <DndSidebarItem
-      item={item}
-      ancestorIds={ancestorIds}
-      activeDragItem={activeDragItem}
-      isDroppable={false}
-    >
-      <EditorContextMenu
-        ref={contextMenuRef}
-        viewContext="sidebar"
-        item={item}
-      >
+    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+      <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
           name={displayName}
@@ -90,7 +81,7 @@ function FlatSidebarItemComponent({
           excludeId={item._id}
         />
       </EditorContextMenu>
-    </DndSidebarItem>
+    </DraggableSidebarItem>
   )
 }
 
