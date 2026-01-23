@@ -54,7 +54,8 @@ const ScrollArea = React.forwardRef<
             style={{ overflowX: 'hidden' }}
           >
             <ScrollAreaPrimitive.Content
-              className={cn('w-full max-w-full min-w-0', contentClassName)}
+              className={cn('w-full max-w-full', contentClassName)}
+              style={{ minWidth: 0 }}
             >
               {children}
             </ScrollAreaPrimitive.Content>
