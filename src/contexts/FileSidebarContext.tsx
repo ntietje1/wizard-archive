@@ -25,6 +25,7 @@ import {
   executeMove,
   isMapDropZone,
   isSidebarItem,
+  wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
 import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
@@ -79,33 +80,43 @@ function DragOverlayContent({
       return null
     }
 
+    const draggedItem = active.data.current as SidebarDragData
     const targetData = over.data.current as SidebarDropData
     const isValidDrop = canDropItem(active, over)
+    const wouldChange = wouldMoveChangePosition(draggedItem, targetData)
 
     // Get target info for display
     if (isMapDropZone(targetData)) {
       return {
         name: targetData.mapName,
         isValid: isValidDrop,
+        wouldChange,
         action: 'pin' as const,
       }
     } else if (isSidebarItem(targetData)) {
       return {
         name: targetData.name || defaultItemName(targetData as AnySidebarItem),
         isValid: isValidDrop,
+        wouldChange,
         action: 'move' as const,
       }
     } else if (targetData.type === SIDEBAR_ROOT_TYPE) {
       return {
         name: campaign?.name || 'root',
         isValid: isValidDrop,
+        wouldChange,
         action: 'move' as const,
       }
     }
 
     return isValidDrop
       ? null
-      : { name: null, isValid: false, action: 'move' as const }
+      : {
+          name: null,
+          isValid: false,
+          wouldChange: false,
+          action: 'move' as const,
+        }
   }, [active, over, campaign])
 
   return (
@@ -116,7 +127,7 @@ function DragOverlayContent({
           {DraggedItemName}
         </span>
       </span>
-      {dropTargetInfo?.isValid ? (
+      {dropTargetInfo?.isValid && dropTargetInfo.wouldChange ? (
         <span className="text-muted-foreground whitespace-nowrap text-xs">
           {dropTargetInfo.action === 'pin' ? 'Pin to' : 'Move to'} &quot;
           {dropTargetInfo.name}&quot;

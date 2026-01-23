@@ -9,7 +9,7 @@ import {
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useFileSidebar'
 
-const SIDEBAR_MIN_WIDTH = 120
+const SIDEBAR_MIN_WIDTH = 160
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {

@@ -24,23 +24,43 @@ export interface MapDropZoneData {
   mapName: string
 }
 
+export interface SidebarRootDropZoneData {
+  type: typeof SIDEBAR_ROOT_TYPE
+}
+
+export interface EmptyEditorDropZoneData {
+  type: typeof EMPTY_EDITOR_DROP_TYPE
+}
+
 export type SidebarDropData =
   | SidebarDragData
-  | { type: typeof SIDEBAR_ROOT_TYPE }
-  | { type: typeof EMPTY_EDITOR_DROP_TYPE }
+  | SidebarRootDropZoneData
+  | EmptyEditorDropZoneData
   | MapDropZoneData
 
 // Type predicates for narrowing drop data types
 export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
   return (
-    data.type !== SIDEBAR_ROOT_TYPE &&
-    data.type !== EMPTY_EDITOR_DROP_TYPE &&
-    data.type !== MAP_DROP_ZONE_TYPE
+    !isSidebarRootDropZone(data) &&
+    !isEmptyEditorDropZone(data) &&
+    !isMapDropZone(data)
   )
 }
 
 export function isMapDropZone(data: SidebarDropData): data is MapDropZoneData {
   return data.type === MAP_DROP_ZONE_TYPE
+}
+
+export function isEmptyEditorDropZone(
+  data: SidebarDropData,
+): data is EmptyEditorDropZoneData {
+  return data.type === EMPTY_EDITOR_DROP_TYPE
+}
+
+export function isSidebarRootDropZone(
+  data: SidebarDropData,
+): data is SidebarRootDropZoneData {
+  return data.type === SIDEBAR_ROOT_TYPE
 }
 
 /**
@@ -50,10 +70,12 @@ export function validateDrop(
   draggedItem: SidebarDragData | null,
   targetData: SidebarDropData | null,
 ): boolean {
-  if (!draggedItem || !targetData) return false
+  if (!draggedItem || !targetData) {
+    return false
+  }
 
   // Handle map drop zone - allow pinning items to map
-  if (isMapDropZone(targetData)) {
+  else if (isMapDropZone(targetData)) {
     // A map cannot be dropped onto itself (pinned to itself)
     if (
       draggedItem.type === SIDEBAR_ITEM_TYPES.gameMaps &&
@@ -65,22 +87,30 @@ export function validateDrop(
   }
 
   // Handle root or empty editor drops
-  if (!isSidebarItem(targetData)) return true
+  else if (
+    isSidebarRootDropZone(targetData) ||
+    isEmptyEditorDropZone(targetData)
+  ) {
+    return true
+  } else if (isSidebarItem(targetData)) {
+    // Only folders accept item drops
+    if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
+      return false
+    }
 
-  // Only folders accept item drops
-  if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
+    // Item cannot be dropped on itself
+    if (targetData._id === draggedItem._id) return false
+
+    // Items cannot be dropped on their own children
+    if (targetData.ancestorIds?.includes(draggedItem._id)) {
+      return false
+    }
+
+    return true
+  } else {
+    console.error('Invalid target data type:', targetData)
     return false
   }
-
-  // Item cannot be dropped on itself
-  if (targetData._id === draggedItem._id) return false
-
-  // Items cannot be dropped on their own children
-  if (targetData.ancestorIds?.includes(draggedItem._id)) {
-    return false
-  }
-
-  return true
 }
 
 export function canDropItem(active: Active | null, over: Over | null): boolean {
@@ -95,20 +125,59 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
 }
 
 /**
+ * Checks if dropping an item would actually change its position.
+ * Returns false if the item is already in the target location.
+ */
+export function wouldMoveChangePosition(
+  draggedItem: SidebarDragData | null,
+  targetData: SidebarDropData | null,
+): boolean {
+  if (!draggedItem || !targetData) {
+    return false
+  }
+
+  // Map drop zones always result in a change (pinning)
+  else if (isMapDropZone(targetData)) {
+    return true
+  }
+
+  // Empty editor drops don't move, they open
+  else if (isEmptyEditorDropZone(targetData)) {
+    return false
+  }
+
+  // Moving to root - check if already at root
+  else if (isSidebarRootDropZone(targetData)) {
+    return draggedItem.parentId !== undefined
+  } else if (isSidebarItem(targetData)) {
+    // Moving to a folder - check if already in that folder
+    return draggedItem.parentId !== targetData._id
+  } else {
+    console.error('Invalid target data type:', targetData)
+    return false
+  }
+}
+
+/**
  * Validates if external files can be dropped on a target item.
  */
 export function canDropFilesOnTarget(
   targetData: SidebarDropData | null,
 ): boolean {
   if (!targetData) return false
-
-  if (!isSidebarItem(targetData)) return true
-
-  if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
+  else if (
+    isSidebarRootDropZone(targetData) ||
+    isEmptyEditorDropZone(targetData)
+  ) {
+    return true
+  } else if (isMapDropZone(targetData)) {
+    return false
+  } else if (isSidebarItem(targetData)) {
+    return targetData.type === SIDEBAR_ITEM_TYPES.folders
+  } else {
+    console.error('Invalid target data type:', targetData)
     return false
   }
-
-  return true
 }
 
 interface MoveMutations {
