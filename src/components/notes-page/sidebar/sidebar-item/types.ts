@@ -14,9 +14,9 @@ export interface SidebarItemState {
   isSelected: boolean
   isRenaming: boolean
   isExpanded?: boolean
+  isDraggingActive?: boolean
 }
 
-// TODO: simplify this
 export interface SidebarItemButtonProps
   extends SidebarItemHandlers,
     SidebarItemState {

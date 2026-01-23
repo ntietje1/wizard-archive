@@ -5,6 +5,7 @@ export function useFolderState(folderId: string) {
   const {
     folderStates,
     setFolderState,
+    toggleFolderState,
     closeAllFoldersMode,
     exitCloseAllMode,
     clearAllFolderStates,
@@ -18,11 +19,11 @@ export function useFolderState(folderId: string) {
       clearAllFolderStates()
       setFolderState(folderId, true)
     } else {
-      setFolderState(folderId, !(folderStates[folderId] ?? false))
+      toggleFolderState(folderId)
     }
   }, [
     folderId,
-    folderStates,
+    toggleFolderState,
     setFolderState,
     closeAllFoldersMode,
     exitCloseAllMode,

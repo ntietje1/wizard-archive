@@ -6,25 +6,25 @@ import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
+import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
 )({
   beforeLoad: async ({ context, params }) => {
-    // Prefetch campaign and editor data in parallel for SSR
-    const [campaign] = await Promise.all([
+    const campaignWithMembership = await 
       context.queryClient.ensureQueryData(
         convexQuery(api.campaigns.queries.getCampaignBySlug, {
           dmUsername: params.dmUsername,
           slug: params.campaignSlug,
         }),
-      ),
-    ])
+      )
+    
 
-    if (campaign?.campaign._id) {
+    if (campaignWithMembership?.campaign._id) {
       await context.queryClient.ensureQueryData(
         convexQuery(api.editors.queries.getCurrentEditor, {
-          campaignId: campaign.campaign._id,
+          campaignId: campaignWithMembership.campaign._id,
         }),
       )
     }
@@ -38,10 +38,12 @@ function RouteComponent() {
       <CampaignNotFoundWrapper>
         <FileSidebarProvider>
           <div className="flex flex-1 min-h-0">
-            <NavigationSidebar />
-            <SidebarLayout>
-              <Outlet />
-            </SidebarLayout>
+            <SidebarLayoutProvider>
+              <NavigationSidebar />
+              <SidebarLayout>
+                <Outlet />
+              </SidebarLayout>
+            </SidebarLayoutProvider>
           </div>
         </FileSidebarProvider>
       </CampaignNotFoundWrapper>

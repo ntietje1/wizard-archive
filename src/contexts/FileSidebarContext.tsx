@@ -34,7 +34,6 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
-import { useEditorSettings } from '~/hooks/useSidebarWidth'
 import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
@@ -141,13 +140,6 @@ export function FileSidebarProvider({
   const campaignId = campaignWithMembership.data?.campaign._id
   const [renamingId, setRenamingId] = useState<SidebarItemId | null>(null)
   const [deletingId, setDeletingId] = useState<SidebarItemId | null>(null)
-  const {
-    isSidebarExpanded,
-    setIsSidebarExpanded,
-    sidebarWidth,
-    setSidebarWidth,
-    isLoaded: isEditorSettingsLoaded,
-  } = useEditorSettings()
 
   const [folderStates, setFolderStates] = usePersistedState<
     Record<string, boolean>
@@ -191,6 +183,16 @@ export function FileSidebarProvider({
       setFolderStates((prev) => ({
         ...prev,
         [folderId]: isOpen,
+      }))
+    },
+    [setFolderStates],
+  )
+
+  const toggleFolderState = useCallback(
+    (folderId: string) => {
+      setFolderStates((prev) => ({
+        ...prev,
+        [folderId]: !(prev[folderId] ?? false),
       }))
     },
     [setFolderStates],
@@ -331,32 +333,52 @@ export function FileSidebarProvider({
     setActiveDragItem(null)
   }, [])
 
-  const value: FileSidebarContextType = {
-    renamingId,
-    setRenamingId,
-    deletingId,
-    setDeletingId,
-    folderStates,
-    setFolderState,
-    openFolder,
-    closeFolder,
-    clearAllFolderStates,
-    activeDragItem,
-    closeAllFoldersMode,
-    toggleCloseAllFoldersMode,
-    exitCloseAllMode,
-    fileDragHoveredId,
-    setFileDragHoveredId,
-    isDraggingFiles,
-    setIsDraggingFiles,
-    isSidebarExpanded,
-    setIsSidebarExpanded,
-    sidebarWidth,
-    setSidebarWidth,
-    isEditorSettingsLoaded,
-    bookmarksOnlyMode,
-    toggleBookmarksOnlyMode,
-  }
+  const value: FileSidebarContextType = useMemo(
+    () => ({
+      renamingId,
+      setRenamingId,
+      deletingId,
+      setDeletingId,
+      folderStates,
+      setFolderState,
+      toggleFolderState,
+      openFolder,
+      closeFolder,
+      clearAllFolderStates,
+      activeDragItem,
+      closeAllFoldersMode,
+      toggleCloseAllFoldersMode,
+      exitCloseAllMode,
+      fileDragHoveredId,
+      setFileDragHoveredId,
+      isDraggingFiles,
+      setIsDraggingFiles,
+      bookmarksOnlyMode,
+      toggleBookmarksOnlyMode,
+    }),
+    [
+      renamingId,
+      setRenamingId,
+      deletingId,
+      setDeletingId,
+      folderStates,
+      setFolderState,
+      toggleFolderState,
+      openFolder,
+      closeFolder,
+      clearAllFolderStates,
+      activeDragItem,
+      closeAllFoldersMode,
+      toggleCloseAllFoldersMode,
+      exitCloseAllMode,
+      fileDragHoveredId,
+      setFileDragHoveredId,
+      isDraggingFiles,
+      setIsDraggingFiles,
+      bookmarksOnlyMode,
+      toggleBookmarksOnlyMode,
+    ],
+  )
 
   return (
     <FileSidebarContext.Provider value={value}>

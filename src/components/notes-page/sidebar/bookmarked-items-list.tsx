@@ -1,13 +1,18 @@
 import { useMemo } from 'react'
-import { SidebarItem } from './sidebar-item/sidebar-item'
+import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
+import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { sortItemsByOptions, useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
+
+const EMPTY_ANCESTORS: Array<SidebarItemId> = []
 
 export function BookmarkedItemsList() {
   const allItems = useAllSidebarItems()
   const { sortOptions } = useSortOptions()
+  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
 
   const bookmarkedItems = useMemo(() => {
     const filtered = allItems.data?.filter((item) => item.isBookmarked) ?? []
@@ -23,7 +28,15 @@ export function BookmarkedItemsList() {
       <ScrollArea className="flex-1 min-h-0 min-w-0 w-full">
         <div className="p-1 min-w-0 w-full max-w-full">
           {bookmarkedItems?.map((item) => (
-            <SidebarItem key={item._id} item={item} />
+            <FlatSidebarItem
+              key={item._id}
+              item={item}
+              ancestorIds={EMPTY_ANCESTORS}
+              isExpanded={false}
+              renamingId={renamingId}
+              setRenamingId={setRenamingId}
+              activeDragItem={activeDragItem}
+            />
           ))}
 
           {bookmarkedItems && bookmarkedItems.length === 0 && (

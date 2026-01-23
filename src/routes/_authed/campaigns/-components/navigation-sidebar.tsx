@@ -6,10 +6,10 @@ import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
 import { FileText, Settings, Users } from '~/lib/icons'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Button } from '~/components/shadcn/ui/button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { Separator } from '~/components/shadcn/ui/separator'
+import { useSidebarLayout } from '~/hooks/useFileSidebar'
 
 type NavigationItem = {
   name: string
@@ -21,7 +21,7 @@ type NavigationItem = {
 export const NavigationSidebar = () => {
   const { dmUsername, campaignSlug } = useCampaign()
   const { lastSelectedItemSearch } = useLastEditorItem()
-  const { isSidebarExpanded, setIsSidebarExpanded } = useFileSidebar()
+  const { isSidebarExpanded, setIsSidebarExpanded } = useSidebarLayout()
 
   const navigationItems: Array<NavigationItem> = [
     {

@@ -93,6 +93,3 @@ export const useEditorSettings = () => {
     isLoaded,
   }
 }
-
-// Backwards compatibility alias
-export const useSidebarWidth = useEditorSettings

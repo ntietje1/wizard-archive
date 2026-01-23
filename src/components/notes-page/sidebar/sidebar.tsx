@@ -1,17 +1,17 @@
 import { toast } from 'sonner'
 import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
-import { SidebarItem } from './sidebar-item/sidebar-item'
+import { SidebarList } from './sidebar-list'
 import { Button } from '~/components/shadcn/ui/button'
-import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useNoteActions } from '~/hooks/useNoteActions'
-import { useSidebarItemsByParent } from '~/hooks/useSidebarItems'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function FileSidebar() {
-  const sidebarItems = useSidebarItemsByParent()
+  const { status, data: allItems } = useAllSidebarItems()
+  const isEmpty = allItems.length === 0
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { setRenamingId, bookmarksOnlyMode } = useFileSidebar()
@@ -34,31 +34,27 @@ export function FileSidebar() {
     return <BookmarkedItemsList />
   }
 
-  if (sidebarItems.status === 'pending') {
+  if (status === 'pending') {
     return <SidebarLoading />
   }
 
   return (
     <DroppableRoot className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
-      <ScrollArea className="flex-1 min-h-0 min-w-0 w-full">
-        <div className="p-1 min-w-0 w-full max-w-full">
-          {sidebarItems.data?.map((item) => (
-            <SidebarItem key={item._id} item={item} />
-          ))}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
+        <SidebarList />
 
-          {sidebarItems.data && sidebarItems.data.length === 0 && (
-            <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
-              <Button
-                className="max-w-24"
-                variant="outline"
-                onClick={handleCreateNote}
-              >
-                New note
-              </Button>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+        {isEmpty && (
+          <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
+            <Button
+              className="max-w-24"
+              variant="outline"
+              onClick={handleCreateNote}
+            >
+              New note
+            </Button>
+          </div>
+        )}
+      </div>
     </DroppableRoot>
   )
 }
