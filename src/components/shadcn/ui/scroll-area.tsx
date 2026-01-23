@@ -33,8 +33,6 @@ const ScrollArea = React.forwardRef<
     },
     ref,
   ) => {
-    const viewportRef = React.useRef<HTMLDivElement>(null)
-
     return (
       <ScrollAreaContext.Provider value={{ type }}>
         <ScrollAreaPrimitive.Root
@@ -48,7 +46,6 @@ const ScrollArea = React.forwardRef<
           {...props}
         >
           <ScrollAreaPrimitive.Viewport
-            ref={viewportRef}
             data-slot="scroll-area-viewport"
             className={cn(
               'focus-ring size-full rounded-[inherit] overflow-x-hidden w-full max-w-full',
@@ -56,9 +53,11 @@ const ScrollArea = React.forwardRef<
             )}
             style={{ overflowX: 'hidden' }}
           >
-            <div className={cn('w-full max-w-full min-w-0', contentClassName)}>
+            <ScrollAreaPrimitive.Content
+              className={cn('w-full max-w-full min-w-0', contentClassName)}
+            >
               {children}
-            </div>
+            </ScrollAreaPrimitive.Content>
           </ScrollAreaPrimitive.Viewport>
           <ScrollBar />
           <ScrollAreaPrimitive.Corner />
