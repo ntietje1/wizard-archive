@@ -1,7 +1,7 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { useCallback, useRef } from 'react'
-import { BookOpen, Pencil } from 'lucide-react'
+import { ClientOnly } from '@tanstack/react-router'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
@@ -10,13 +10,12 @@ import { SideMenuRenderer } from '../../editor/extensions/side-menu/side-menu'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import { NoteViewer } from './note-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import type { Note, NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'convex/notes/types'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/contexts/BlockNoteContextMenuContext'
 import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
@@ -46,11 +45,13 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   }
 
   return (
-    <NoteEditorBase
-      key={note._id}
-      noteWithContent={note}
-      updateContent={updateContent}
-    />
+    <ClientOnly fallback={null}>
+      <NoteEditorBase
+        key={note._id}
+        noteWithContent={note}
+        updateContent={updateContent}
+      />
+    </ClientOnly>
   )
 }
 

@@ -3,6 +3,7 @@ import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation } from '@tanstack/react-query'
 import { useDndMonitor, useDroppable } from '@dnd-kit/core'
 import { useConvexMutation } from '@convex-dev/react-query'
+import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -23,6 +24,8 @@ import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
+import { Skeleton } from '~/components/shadcn/ui/skeleton'
+import usePersistedState from '~/hooks/usePersistedState'
 
 interface PinPosition {
   x: number
@@ -225,6 +228,18 @@ function MapPin({
   )
 }
 
+interface MapTransformState {
+  scale: number
+  positionX: number
+  positionY: number
+}
+
+const DEFAULT_TRANSFORM: MapTransformState = {
+  scale: 1,
+  positionX: 0,
+  positionY: 0,
+}
+
 export function MapViewer({
   item: map,
 }: EditorViewerProps<GameMapWithContent>) {
@@ -232,6 +247,13 @@ export function MapViewer({
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
+
+  // Persist zoom and position state per map
+  const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
+    `map-transform-${map._id}`,
+    DEFAULT_TRANSFORM,
+  )
+  const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pinContextMenu, setPinContextMenu] = useState<{
     pinId: Id<'mapPins'>
     position: PinPosition
@@ -272,17 +294,29 @@ export function MapViewer({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateItemPin),
   })
 
-  // Update CSS variable for pin counter-scaling when transform changes
+  // Update CSS variable for pin counter-scaling and persist transform state
   const handleTransformChange = useCallback(
-    (_: unknown, state: { scale: number }) => {
+    (_: unknown, state: { scale: number; positionX: number; positionY: number }) => {
       if (pinsContainerRef.current) {
         pinsContainerRef.current.style.setProperty(
           '--pin-scale',
           String(1 / state.scale),
         )
       }
+
+      // Debounce saving transform state to localStorage
+      if (transformDebounceRef.current) {
+        clearTimeout(transformDebounceRef.current)
+      }
+      transformDebounceRef.current = setTimeout(() => {
+        setSavedTransform({
+          scale: state.scale,
+          positionX: state.positionX,
+          positionY: state.positionY,
+        })
+      }, 300)
     },
-    [],
+    [setSavedTransform],
   )
 
   // Setup drop zone for sidebar items
@@ -591,7 +625,8 @@ export function MapViewer({
 
   const handleResetTransform = useCallback(() => {
     transformWrapperRef.current?.resetTransform()
-  }, [])
+    setSavedTransform(DEFAULT_TRANSFORM)
+  }, [setSavedTransform])
 
   const mapImageContextMenuRef = useRef<EditorContextMenuRef>(null)
 
@@ -620,8 +655,9 @@ export function MapViewer({
     !!pendingPinItem || !!pendingPinMove || !!draggingPin
 
   return (
-    <MapViewProvider map={map} pins={pins}>
-      <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
+    <ClientOnly fallback={<MapViewerSkeleton />}>
+      <MapViewProvider map={map} pins={pins}>
+        <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
         {/* Zoom controls */}
         <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
           <Button
@@ -657,7 +693,9 @@ export function MapViewer({
           {map.imageUrl ? (
             <TransformWrapper
               ref={transformWrapperRef}
-              initialScale={1}
+              initialScale={savedTransform.scale}
+              initialPositionX={savedTransform.positionX}
+              initialPositionY={savedTransform.positionY}
               minScale={0.5}
               maxScale={4}
               wheel={{ step: 0.1 }}
@@ -804,5 +842,18 @@ export function MapViewer({
         />
       </div>
     </MapViewProvider>
+    </ClientOnly>
+  )
+}
+
+function MapViewerSkeleton() {
+  return (
+    <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="size-8 rounded-md" />
+      </div>
+    </div>
   )
 }

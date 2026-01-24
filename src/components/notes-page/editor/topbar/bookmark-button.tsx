@@ -21,10 +21,9 @@ export function BookmarkButton() {
     })
   }
 
-  if (!item) return null
-
-  const isBookmarked = item.isBookmarked ?? false
+  const isBookmarked = item?.isBookmarked ?? false
   const tooltip = isBookmarked ? 'Remove bookmark' : 'Add bookmark'
+  const isDisabled = !item
 
   return (
     <TooltipButton tooltip={tooltip}>
@@ -33,6 +32,7 @@ export function BookmarkButton() {
         size="icon"
         onClick={handleToggleBookmark}
         aria-label={tooltip}
+        disabled={isDisabled}
       >
         <Bookmark
           className={cn(

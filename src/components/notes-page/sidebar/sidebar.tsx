@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { ClientOnly } from '@tanstack/react-router'
 import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
@@ -31,7 +32,11 @@ export function FileSidebar() {
   }
 
   if (bookmarksOnlyMode) {
-    return <BookmarkedItemsList />
+    return (
+      <ClientOnly fallback={<SidebarLoading />}>
+        <BookmarkedItemsList />
+      </ClientOnly>
+    )
   }
 
   if (status === 'pending') {
@@ -39,23 +44,25 @@ export function FileSidebar() {
   }
 
   return (
-    <DroppableRoot className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
-        <SidebarList />
+    <ClientOnly fallback={<SidebarLoading />}>
+      <DroppableRoot className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full">
+          <SidebarList />
 
-        {isEmpty && (
-          <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
-            <Button
-              className="max-w-24"
-              variant="outline"
-              onClick={handleCreateNote}
-            >
-              New note
-            </Button>
-          </div>
-        )}
-      </div>
-    </DroppableRoot>
+          {isEmpty && (
+            <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center">
+              <Button
+                className="max-w-24"
+                variant="outline"
+                onClick={handleCreateNote}
+              >
+                New note
+              </Button>
+            </div>
+          )}
+        </div>
+      </DroppableRoot>
+    </ClientOnly>
   )
 }
 

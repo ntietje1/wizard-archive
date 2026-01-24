@@ -20,24 +20,36 @@ export const Route = createFileRoute(
       }),
     )
 
-    // if (campaignWithMembership?.campaign._id) {
-    //   await context.queryClient.ensureQueryData(
-    //     convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
-    //       campaignId: campaignWithMembership.campaign._id,
-    //     }),
-    //   )
-    // }
+    if (campaignWithMembership?.campaign._id) {
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
+            campaignId: campaignWithMembership.campaign._id,
+          }),
+        ),
+        context.queryClient.ensureQueryData(
+          convexQuery(api.editors.queries.getCurrentEditor, {
+            campaignId: campaignWithMembership.campaign._id,
+          }),
+        ),
+        context.queryClient.ensureQueryData(
+          convexQuery(api.campaigns.queries.getPlayersByCampaign, {
+            campaignId: campaignWithMembership.campaign._id,
+          }),
+        ),
+      ])
+    }
 
-    // const typeAndSlug = getTypeAndSlug(search)
-    // if (campaignWithMembership?.campaign._id && typeAndSlug) {
-    //   await context.queryClient.ensureQueryData(
-    //     convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
-    //       campaignId: campaignWithMembership.campaign._id,
-    //       type: typeAndSlug.type,
-    //       slug: typeAndSlug.slug,
-    //     }),
-    //   )
-    // }
+    const typeAndSlug = getTypeAndSlug(search)
+    if (campaignWithMembership?.campaign._id && typeAndSlug) {
+      await context.queryClient.ensureQueryData(
+        convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+          campaignId: campaignWithMembership.campaign._id,
+          type: typeAndSlug.type,
+          slug: typeAndSlug.slug,
+        }),
+      )
+    }
   },
   component: EditorLayout,
   validateSearch: (search: Record<string, unknown>) => validateSearch(search),

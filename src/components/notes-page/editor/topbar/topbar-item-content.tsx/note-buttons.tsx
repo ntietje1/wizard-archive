@@ -34,7 +34,11 @@ export const ViewAsPlayerButton = () => {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon" disabled={isPending}>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={isPending}
+          >
             <Eye className="h-4 w-4" />
           </Button>
         }
