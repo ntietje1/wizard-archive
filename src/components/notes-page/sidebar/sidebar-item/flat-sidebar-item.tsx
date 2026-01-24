@@ -4,6 +4,7 @@ import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { Id } from 'convex/_generated/dataModel'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
@@ -14,7 +15,7 @@ import { EditorContextMenu } from '~/components/context-menu/components/EditorCo
 
 interface FlatSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds: Array<SidebarItemId>
+  ancestorIds: Array<Id<'folders'>>
   isExpanded: boolean
   renamingId: SidebarItemId | null
   setRenamingId: (id: SidebarItemId | null) => void

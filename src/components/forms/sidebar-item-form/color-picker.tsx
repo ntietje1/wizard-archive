@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Palette } from 'lucide-react'
-import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types'
+import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   Popover,

@@ -31,7 +31,7 @@ export interface EditorContextMenuRef {
 interface Props {
   viewContext: ViewContext
   item?: AnySidebarItem
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
   menuClassName?: string
   onClose?: () => void
@@ -42,7 +42,7 @@ interface Props {
 const EditorMenuContent = forwardRef<
   EditorContextMenuRef,
   {
-    children: React.ReactNode
+    children?: React.ReactNode
     className?: string
     menuClassName?: string
     onClose?: () => void

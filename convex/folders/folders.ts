@@ -1,44 +1,38 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
-import { getBookmark } from '../bookmarks/bookmarks'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { enhanceFolderWithContent } from './helpers'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
-import type { Folder } from './types'
+import type { Folder, FolderWithContent } from './types'
 
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,
-): Promise<Folder | null> => {
-  const folder = await ctx.db.get(folderId)
-  if (!folder) {
+): Promise<FolderWithContent | null> => {
+  const rawFolder = await ctx.db.get(folderId)
+  if (!rawFolder) {
     return null
   }
 
-  const { campaignWithMembership } = await requireCampaignMembership(
+  await requireCampaignMembership(
     ctx,
-    { campaignId: folder.campaignId },
+    { campaignId: rawFolder.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
-  const bookmark = await getBookmark(
-    ctx,
-    folder.campaignId,
-    campaignWithMembership.member._id,
-    folder._id,
-  )
 
-  return {
-    ...folder,
-    isBookmarked: !!bookmark,
-  }
+  const folder = (await enhanceSidebarItem(ctx, rawFolder)) as Folder
+
+  return enhanceFolderWithContent(ctx, folder)
 }
 
 export const getFolderBySlug = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   slug: string,
-): Promise<Folder | null> => {
+): Promise<FolderWithContent | null> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -121,8 +115,35 @@ export async function deleteFolder(
     await ctx.db.delete(childMap._id)
   }
 
-  // Finally, delete the folder itself
   await ctx.db.delete(folderId)
 
   return folderId
+}
+
+export async function getSidebarItemAncestors(
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  initialParentId: Id<'folders'> | undefined,
+): Promise<Array<Folder>> {
+  await requireCampaignMembership(
+    ctx,
+    { campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
+
+  const ancestors: Array<Folder> = []
+  let currentParentId = initialParentId
+
+  while (currentParentId) {
+    const rawFolder = await ctx.db.get(currentParentId)
+    if (!rawFolder) {
+      break
+    }
+    const folder = (await enhanceSidebarItem(ctx, rawFolder)) as Folder
+
+    ancestors.unshift(folder)
+    currentParentId = folder.parentId
+  }
+
+  return ancestors
 }

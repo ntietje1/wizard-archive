@@ -2,11 +2,11 @@ import { useCallback, useRef, useState } from 'react'
 import { useCampaign } from './useCampaign'
 import { useFileDropHandler } from './useFileDropHandler'
 import { useFileSidebar } from './useFileSidebar'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult } from '~/lib/folder-reader'
 import { processDataTransferItems } from '~/lib/folder-reader'
 
-export function useFileDragDrop(parentId?: SidebarItemId) {
+export function useFileDragDrop(parentId?: Id<'folders'>) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { handleDrop: handleDropFiles } = useFileDropHandler()

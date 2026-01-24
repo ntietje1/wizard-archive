@@ -1,13 +1,14 @@
 import { useDraggable } from '@dnd-kit/core'
 import { useMemo } from 'react'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
 
-const EMPTY_ANCESTORS: Array<SidebarItemId> = []
+const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: Array<SidebarItemId>
+  ancestorIds?: Array<Id<'folders'>>
   children: React.ReactNode
 }
 

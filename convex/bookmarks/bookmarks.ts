@@ -3,19 +3,6 @@ import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { Bookmark } from './types'
 
-export async function getAllBookmarks(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  campaignMemberId: Id<'campaignMembers'>,
-): Promise<Array<Bookmark>> {
-  return await ctx.db
-    .query('bookmarks')
-    .withIndex('by_campaign_member_item', (q) =>
-      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
-    )
-    .collect()
-}
-
 export async function getBookmark(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,

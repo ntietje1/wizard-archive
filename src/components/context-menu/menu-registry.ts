@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import {
   SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/baseTypes'
 import {
   Bookmark,
   Download,

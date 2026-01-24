@@ -1,7 +1,6 @@
 import { FormDialog } from '../base-form/form-dialog'
 import { MapForm } from './map-form'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { MapPin } from '~/lib/icons'
 
 interface MapDialogProps {
@@ -9,7 +8,7 @@ interface MapDialogProps {
   onClose: () => void
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   onSuccess?: (mapSlug?: string) => void
 }
 

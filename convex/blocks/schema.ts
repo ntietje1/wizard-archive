@@ -1,9 +1,5 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import {
-  sidebarItemIdValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/baseFields'
 
 export const blockNoteIdValidator = v.string()
 

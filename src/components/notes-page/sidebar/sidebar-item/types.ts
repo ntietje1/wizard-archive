@@ -27,6 +27,6 @@ export interface SidebarItemButtonProps
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   excludeId?: SidebarItemId
 }

@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
 import type {

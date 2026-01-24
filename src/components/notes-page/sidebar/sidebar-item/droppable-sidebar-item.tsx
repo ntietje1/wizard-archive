@@ -1,25 +1,24 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useMemo } from 'react'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { Folder } from 'convex/folders/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 
-const EMPTY_ANCESTORS: Array<SidebarItemId> = []
+const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 interface DroppableSidebarItemProps {
-  item: AnySidebarItem
-  ancestorIds?: Array<SidebarItemId>
+  item: Folder
+  ancestorIds?: Array<Id<'folders'>>
   children: React.ReactNode
 }
 
-/**
- * Check if this item can accept files as children according to drag rules
- */
+
 function canAcceptFiles(
-  item: AnySidebarItem,
-  ancestorIds: Array<SidebarItemId>,
+  item: Folder,
+  ancestorIds: Array<Id<'folders'>>,
 ): boolean {
   return canDropFilesOnTarget({ ...item, ancestorIds })
 }

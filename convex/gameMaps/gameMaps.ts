@@ -1,43 +1,37 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getBookmark } from '../bookmarks/bookmarks'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { enhanceGameMapWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
-import type { GameMap } from './types'
 import type { MutationCtx } from '../_generated/server'
+import type { GameMap, GameMapWithContent } from './types'
 
 export const getMap = async (
   ctx: Ctx,
   mapId: Id<'gameMaps'>,
-): Promise<GameMap> => {
-  const map = await ctx.db.get(mapId)
-  if (!map) {
-    throw new Error('Map not found')
+): Promise<GameMapWithContent | null> => {
+  const rawMap = await ctx.db.get(mapId)
+  if (!rawMap) {
+    return null
   }
 
-  const { campaignWithMembership } = await requireCampaignMembership(
+  await requireCampaignMembership(
     ctx,
-    { campaignId: map.campaignId },
+    { campaignId: rawMap.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const bookmark = await getBookmark(
-    ctx,
-    map.campaignId,
-    campaignWithMembership.member._id,
-    map._id,
-  )
-  return {
-    ...map,
-    isBookmarked: !!bookmark,
-  }
+  const map = (await enhanceSidebarItem(ctx, rawMap)) as GameMap
+
+  return enhanceGameMapWithContent(ctx, map)
 }
 
 export const getMapBySlug = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   slug: string,
-): Promise<GameMap | null> => {
+): Promise<GameMapWithContent | null> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },
@@ -51,7 +45,11 @@ export const getMapBySlug = async (
     )
     .unique()
 
-  return map
+  if (!map) {
+    return null
+  }
+
+  return getMap(ctx, map._id)
 }
 
 export const deleteMap = async (

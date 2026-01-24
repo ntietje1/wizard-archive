@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { SIDEBAR_ITEM_TYPES } from './types'
+import { SIDEBAR_ITEM_TYPES } from '../baseTypes'
 
 export const sidebarItemIdValidator = v.union(
   v.id('notes'),
@@ -20,16 +20,3 @@ export const sidebarItemShareStatusValidator = v.union(
   v.literal('not_shared'),
   v.literal('individually_shared'),
 )
-
-export const sidebarItemBaseFields = {
-  name: v.optional(v.string()),
-  slug: v.string(),
-  campaignId: v.id('campaigns'),
-  iconName: v.optional(v.string()),
-  color: v.optional(v.string()),
-  type: sidebarItemTypeValidator,
-  parentId: v.optional(sidebarItemIdValidator),
-  updatedAt: v.number(),
-  shareStatus: v.optional(sidebarItemShareStatusValidator),
-  isBookmarked: v.optional(v.boolean()),
-}

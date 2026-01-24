@@ -12,7 +12,7 @@ interface UseNameValidationOptions {
   initialName: string
   isActive: boolean
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   excludeId?: SidebarItemId
 }
 
@@ -143,7 +143,6 @@ export function useNameValidation({
     isNotUnique,
     isLoading,
     checkNameUnique,
-    // New: combined validation for immediate feedback
     validationError,
     hasError,
   }

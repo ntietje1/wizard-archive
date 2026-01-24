@@ -13,11 +13,15 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import {
+  SIDEBAR_ITEM_TYPES,
+  SIDEBAR_ROOT_TYPE,
+} from 'convex/sidebarItems/baseTypes'
 import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import type { Id } from 'convex/_generated/dataModel'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import {
   EMPTY_EDITOR_DROP_TYPE,
@@ -36,6 +40,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
 import { Ban } from '~/lib/icons'
+import { isFolder } from '~/lib/sidebar-item-utils'
 
 const snapTopLeftToCursor: Modifier = ({
   activatorEvent,
@@ -186,7 +191,7 @@ export function FileSidebarProvider({
   )
 
   const [fileDragHoveredId, setFileDragHoveredId] =
-    useState<SidebarItemId | null>(null)
+    useState<Id<'folders'> | null>(null)
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
 
   const setFolderState = useCallback(
@@ -284,7 +289,11 @@ export function FileSidebarProvider({
 
       if (!canDropItem(active, over)) return
 
-      const targetId = isSidebarItem(targetData) ? targetData._id : undefined
+      const targetId =
+        isSidebarItem(targetData) &&
+        targetData.type === SIDEBAR_ITEM_TYPES.folders
+          ? (targetData._id as Id<'folders'>)
+          : undefined
 
       if (draggedItem._id === targetId) {
         return

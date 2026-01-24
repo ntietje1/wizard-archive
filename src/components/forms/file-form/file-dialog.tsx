@@ -2,14 +2,13 @@ import { File } from 'lucide-react'
 import { FormDialog } from '../base-form/form-dialog'
 import { FileForm } from './file-form'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 
 interface FileDialogProps {
   isOpen: boolean
   onClose: () => void
   fileId?: Id<'files'>
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   onSuccess?: (fileSlug?: string) => void
 }
 

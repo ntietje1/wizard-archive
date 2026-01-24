@@ -3,13 +3,12 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { Label } from '~/components/shadcn/ui/label'
@@ -36,7 +35,7 @@ export interface FileFormValues {
 interface FileFormProps {
   fileId?: Id<'files'>
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
 }

@@ -1,10 +1,10 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import escapeHtml from 'escape-html'
 import { editorSchema } from './editor-schema'
-import type { CustomBlock } from './editor-schema'
+import type { CustomPartialBlock } from './editor-schema'
 
 export async function convertBlocksToMarkdown(
-  blocks: Array<CustomBlock>,
+  blocks: Array<CustomPartialBlock>,
 ): Promise<string> {
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
@@ -15,7 +15,7 @@ export async function convertBlocksToMarkdown(
 
 export async function convertTextToBlocks(
   file: File,
-): Promise<Array<CustomBlock>> {
+): Promise<Array<CustomPartialBlock>> {
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
   })

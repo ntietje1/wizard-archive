@@ -20,6 +20,7 @@ import { isNote } from '~/lib/sidebar-item-utils'
 import { useSharedNoteContent } from '~/hooks/useSharedNoteContent'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
+// TODO: make shared query same as normal query
 export function NoteViewer({ item: note }: EditorViewerProps<Note>) {
   const { viewAsPlayerId } = useEditorMode()
   const { sharedNoteQuery: noteQuery } = useSharedNoteContent(

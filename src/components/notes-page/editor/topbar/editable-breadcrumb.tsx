@@ -12,7 +12,7 @@ interface EditableNameProps {
   defaultName: string
   onRename: (newName: string) => Promise<void>
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   excludeId?: SidebarItemId
 }
 
@@ -135,7 +135,7 @@ interface EditableBreadcrumbProps {
   ancestors: Array<AnySidebarItem>
   onNavigateToItem: (item: AnySidebarItem) => void
   campaignId?: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   excludeId?: SidebarItemId
 }
 

@@ -3,9 +3,9 @@ import { mutation } from '../_generated/server'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { findUniqueSidebarItemSlug } from '../common/slug'
-import { sidebarItemIdValidator } from './baseFields'
+import { sidebarItemIdValidator } from './schema/baseValidators'
 import { validateSidebarItemName } from './validation'
-import { SIDEBAR_ITEM_TYPES } from './types'
+import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type { Id } from '../_generated/dataModel'
 
 export const updateSidebarItem = mutation({

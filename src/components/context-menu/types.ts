@@ -1,12 +1,12 @@
 import type {
-  AnySidebarItem,
-  SidebarItemId,
+  AnySidebarItemWithContent,
   SidebarItemShareStatus,
 } from 'convex/sidebarItems/types'
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 
 export interface ShareState {
   shareStatus: SidebarItemShareStatus
@@ -28,7 +28,7 @@ export type ViewContext =
 
 export interface MenuContext {
   // Core data
-  item: AnySidebarItem | undefined
+  item: AnySidebarItemWithContent | undefined
   viewContext: ViewContext
 
   // User/permissions
@@ -36,16 +36,11 @@ export interface MenuContext {
   memberRole?: CampaignMemberRole
 
   // View state
-  activeMapId?: string
-  activeCanvasId?: string
-  pinnedItemIds?: Set<SidebarItemId>
+  activeMap?: GameMapWithContent
+  activePin?: MapPinWithItem
 
   // Session state
   hasActiveSession?: boolean
-
-  // Pin context (for map pin menus)
-  pinId?: Id<'mapPins'>
-  mapId?: Id<'gameMaps'>
 
   // Share state (for sidebar items)
   shareState?: ShareState

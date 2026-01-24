@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { filterSuggestionItems } from '@blocknote/core'
-import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
 import type { EditorState } from '@tiptap/pm/state'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
-import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { HeadingEntry } from '~/lib/heading-utils'
+import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/lib/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/lib/heading-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
@@ -272,27 +273,19 @@ export function WikiLinkAutocomplete({
     [menu, sidebarItems, itemsMap],
   )
 
-  // Fetch note content for heading mode
-  const noteId =
-    context?.mode === 'heading' &&
-    context.resolvedItem?.type === SIDEBAR_ITEM_TYPES.notes
-      ? context.resolvedItem._id
-      : undefined
-
-  const noteQuery = useQuery({
-    ...convexQuery(
-      api.notes.queries.getNoteWithContent,
-      noteId && campaignId ? { noteId } : 'skip',
+  const noteQuery = useQuery(
+    convexQuery(
+      api.notes.queries.getNote,
+      context?.mode === 'heading' && context.resolvedItem?._id
+        ? { noteId: context.resolvedItem._id as Id<'notes'> }
+        : 'skip',
     ),
-    staleTime: 30000,
-  })
+  )
 
   const headings = useMemo(() => {
-    if (!noteQuery.data?.content) return []
-    return extractHeadingsFromContent(
-      noteQuery.data.content as Array<CustomBlock>,
-    )
-  }, [noteQuery.data?.content])
+    if (!noteQuery.data) return []
+    return extractHeadingsFromContent(noteQuery.data.content)
+  }, [noteQuery.data])
 
   // Build filtered items
   const fileResult = useMemo((): {

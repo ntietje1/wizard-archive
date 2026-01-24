@@ -1,11 +1,14 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { sidebarItemBaseFields } from '../sidebarItems/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import {
+  sidebarItemBaseFields,
+  sidebarItemTableFields,
+} from '../sidebarItems/schema/baseFields'
 import { customBlockValidator } from '../blocks/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 
 const folderTableFields = {
-  ...sidebarItemBaseFields,
+  ...sidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
 }
 
@@ -21,10 +24,16 @@ export const foldersTables = {
 const folderValidatorFields = {
   _id: v.id('folders'),
   _creationTime: v.number(),
-  ...folderTableFields,
+  ...sidebarItemBaseFields,
+  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
 } as const
 
 export const folderValidator = v.object(folderValidatorFields)
+
+export const folderWithContentValidator = v.object({
+  ...folderValidatorFields,
+  ancestors: v.array(folderValidator),
+})
 
 export const downloadableItemValidator = v.union(
   v.object({

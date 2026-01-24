@@ -1,13 +1,30 @@
 import type { Id } from '../_generated/dataModel'
 import type {
-  AnySidebarItem,
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
+  SidebarItemFromDb,
   SidebarItemId,
-} from '../sidebarItems/types'
+  SidebarItemWithContent,
+} from '../sidebarItems/baseTypes'
+import type { AnySidebarItem } from '../sidebarItems/types'
+
+export type GameMapFromDb = SidebarItemFromDb<
+  typeof SIDEBAR_ITEM_TYPES.gameMaps
+> & {
+  imageStorageId?: Id<'_storage'>
+}
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
   imageStorageId?: Id<'_storage'>
+  imageUrl: string | null
+}
+
+export type GameMapWithContent = SidebarItemWithContent<
+  typeof SIDEBAR_ITEM_TYPES.gameMaps
+> & {
+  imageStorageId?: Id<'_storage'>
+  imageUrl: string | null
+  pins: Array<MapPinWithItem>
 }
 
 export type MapPin = {

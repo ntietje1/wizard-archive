@@ -3,7 +3,7 @@ import { v } from 'convex/values'
 import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
-} from '../sidebarItems/baseFields'
+} from '../sidebarItems/schema/baseValidators'
 
 const sidebarItemShareTableFields = {
   campaignId: v.id('campaigns'),

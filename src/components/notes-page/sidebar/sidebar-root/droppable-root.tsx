@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'

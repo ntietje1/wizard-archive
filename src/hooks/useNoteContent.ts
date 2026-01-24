@@ -5,14 +5,10 @@ import { api } from 'convex/_generated/api'
 import { debounce } from 'lodash-es'
 import { useNoteActions } from './useNoteActions'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from '~/lib/editor-schema'
+import type { CustomPartialBlock } from '~/lib/editor-schema'
 
 export function useNoteContent(noteId: Id<'notes'>) {
   const { updateNoteContentWithSanitization } = useNoteActions()
-
-  const noteQuery = useQuery({
-    ...convexQuery(api.notes.queries.getNoteWithContent, { noteId }),
-  })
 
   const sharedNoteQuery = useQuery({
     ...convexQuery(api.notes.queries.getNoteWithSharedContent, { noteId }),
@@ -20,7 +16,7 @@ export function useNoteContent(noteId: Id<'notes'>) {
 
   const updateContent = useMemo(
     () =>
-      debounce((newContent: Array<CustomBlock>) => {
+      debounce((newContent: Array<CustomPartialBlock>) => {
         updateNoteContentWithSanitization(noteId, newContent)
       }, 800),
     [updateNoteContentWithSanitization, noteId],
@@ -33,7 +29,6 @@ export function useNoteContent(noteId: Id<'notes'>) {
   }, [updateContent])
 
   return {
-    noteQuery,
     sharedNoteQuery,
     updateContent,
   }

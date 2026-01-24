@@ -28,28 +28,13 @@ import '../../editor/extensions/wiki-link/wiki-link.css'
 import '../../editor/extensions/md-link/md-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
-export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
+export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
-  const { noteQuery, updateContent } = useNoteContent(note._id)
+  const { updateContent } = useNoteContent(note._id)
 
   // When viewing as a player, show the viewer instead
   if (viewAsPlayerId) {
     return <NoteViewer item={note} />
-  }
-
-  if (noteQuery.isPending || !noteQuery.data) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 p-4">
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/5" />
-          </div>
-        </div>
-      </div>
-    )
   }
 
   if (!isNote(note)) {
@@ -62,8 +47,8 @@ export function NoteEditor({ item: note }: EditorViewerProps<Note>) {
 
   return (
     <NoteEditorBase
-      key={noteQuery.data._id}
-      noteWithContent={noteQuery.data}
+      key={note._id}
+      noteWithContent={note}
       updateContent={updateContent}
     />
   )

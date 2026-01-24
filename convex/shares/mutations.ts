@@ -3,19 +3,19 @@ import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
-  sidebarItemIdValidator,
-  sidebarItemShareStatusValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/baseFields'
-import {
-  SIDEBAR_ITEM_SHARE_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from '../sidebarItems/types'
-import {
   blockNoteIdValidator,
   blockShareStatusValidator,
   customBlockValidator,
 } from '../blocks/schema'
+import {
+  sidebarItemIdValidator,
+  sidebarItemShareStatusValidator,
+  sidebarItemTypeValidator,
+} from '../sidebarItems/schema/baseValidators'
+import {
+  SIDEBAR_ITEM_SHARE_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from '../sidebarItems/baseTypes'
 import {
   setBlockShareStatusHelper,
   shareBlockWithMemberHelper,

@@ -2,13 +2,13 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
-import { getBookmark } from '../bookmarks/bookmarks'
-import type { SidebarItemId } from '../sidebarItems/types'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { enhanceNoteWithContent } from './helpers'
 import type { MutationCtx } from '../_generated/server'
-import type { Note } from './types'
+import type { Note, NoteWithContent } from './types'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 
@@ -17,7 +17,7 @@ export const createNote = async (
   input: {
     name?: string
     campaignId: Id<'campaigns'>
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'>
     iconName?: string
     color?: string
   },
@@ -130,35 +130,27 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-): Promise<Note | null> => {
-  const note = await ctx.db.get(noteId)
-  if (!note) {
+): Promise<NoteWithContent | null> => {
+  const rawNote = await ctx.db.get(noteId)
+  if (!rawNote) {
     return null
   }
-
-  const { campaignWithMembership } = await requireCampaignMembership(
+  await requireCampaignMembership(
     ctx,
-    { campaignId: note.campaignId },
+    { campaignId: rawNote.campaignId },
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const bookmark = await getBookmark(
-    ctx,
-    note.campaignId,
-    campaignWithMembership.member._id,
-    note._id,
-  )
-  return {
-    ...note,
-    isBookmarked: !!bookmark,
-  }
+  const note = (await enhanceSidebarItem(ctx, rawNote)) as Note
+
+  return enhanceNoteWithContent(ctx, note)
 }
 
 export const getNoteBySlug = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   slug: string,
-): Promise<Note | null> => {
+): Promise<NoteWithContent | null> => {
   await requireCampaignMembership(
     ctx,
     { campaignId },

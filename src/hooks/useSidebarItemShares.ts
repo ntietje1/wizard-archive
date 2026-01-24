@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_SHARE_STATUS } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_SHARE_STATUS } from 'convex/sidebarItems/baseTypes'
 import { useCampaign } from './useCampaign'
 import type {
   SidebarItemId,
@@ -11,13 +11,7 @@ import type {
 import type { ShareState } from '~/components/context-menu/types'
 import type { Id } from 'convex/_generated/dataModel'
 
-/**
- * Hook to fetch and manage sidebar item share state.
- * Used by context menus to show share options.
- *
- * @param itemId - The sidebar item ID to fetch shares for (can be undefined)
- * @returns ShareState with shareStatus, sharedMemberIds (if individually_shared), playerMembers, and isLoading
- */
+
 export function useSidebarItemShares(
   itemId: SidebarItemId | undefined,
 ): ShareState {

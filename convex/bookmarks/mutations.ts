@@ -5,7 +5,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
-} from '../sidebarItems/baseFields'
+} from '../sidebarItems/schema/baseValidators'
 
 export const toggleBookmark = mutation({
   args: {

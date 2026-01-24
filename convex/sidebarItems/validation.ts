@@ -1,7 +1,7 @@
-import { getSidebarItemsByParentAndName } from './sidebarItems'
+import { getSidebarItemsByParentAndName } from '../sidebarItems/sidebarItems'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
-import type { AnySidebarItem, SidebarItemId } from './types'
+import type { SidebarItemId } from './types'
 
 export interface ValidationResult {
   valid: boolean
@@ -52,7 +52,7 @@ export function validateWikiLinkCompatibleName(
 export async function checkUniqueNameUnderParent(
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  parentId: SidebarItemId | undefined,
+  parentId: Id<'folders'> | undefined,
   name: string | undefined,
   excludeId?: SidebarItemId,
 ): Promise<ValidationResult> {
@@ -127,7 +127,7 @@ export async function validateNoCircularParent(
 export interface ValidateSidebarItemNameOptions {
   ctx: Ctx
   campaignId: Id<'campaigns'>
-  parentId: SidebarItemId | undefined
+  parentId: Id<'folders'> | undefined
   name: string | undefined
   excludeId?: SidebarItemId
 }
@@ -185,7 +185,7 @@ export interface ValidateSidebarItemOptions {
   ctx: Ctx
   campaignId: Id<'campaigns'>
   name?: string
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   itemId?: SidebarItemId
   validateName?: boolean
   validateParent?: boolean

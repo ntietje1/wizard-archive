@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'

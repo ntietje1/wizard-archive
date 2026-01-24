@@ -8,8 +8,7 @@ import {
   validateParentChange,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { deleteFolder as deleteFolderFn } from './folders'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -68,7 +67,7 @@ export const updateFolder = mutation({
 export const moveFolder = mutation({
   args: {
     folderId: v.id('folders'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.id('folders'),
   handler: async (ctx, args): Promise<Id<'folders'>> => {
@@ -130,7 +129,7 @@ export const deleteFolder = mutation({
 export const createFolder = mutation({
   args: {
     name: v.optional(v.string()),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
   },
   returns: v.object({

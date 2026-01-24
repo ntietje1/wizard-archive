@@ -5,11 +5,7 @@ import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useCampaign } from '~/hooks/useCampaign'
 
-/**
- * Hook to open all parent folders for a given sidebar item.
- * This ensures the item is visible in the sidebar by expanding
- * all ancestor folders.
- */
+
 // TODO: for "show in sidebar" operation, flash the item in the sidebar
 export function useOpenParentFolders() {
   const { openFolder } = useFileSidebar()
@@ -22,14 +18,16 @@ export function useOpenParentFolders() {
       if (!campaignId) return
 
       try {
-        const ancestors = await convex.query(
-          api.sidebarItems.queries.getSidebarItemAncestors,
+        const item = await convex.query(
+          api.sidebarItems.queries.getSidebarItem,
           {
             campaignId,
             id: itemId,
           },
         )
+        if (!item) return
 
+        const ancestors = item.ancestors
         ancestors.forEach((ancestor) => {
           openFolder(ancestor._id)
         })

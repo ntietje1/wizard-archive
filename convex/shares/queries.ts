@@ -10,8 +10,8 @@ import {
   sidebarItemIdValidator,
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
-} from '../sidebarItems/baseFields'
-import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/types'
+} from '../sidebarItems/schema/baseValidators'
+import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/baseTypes'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import {
   getBlockSharesForBlock,

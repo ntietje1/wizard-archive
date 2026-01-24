@@ -1,15 +1,16 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'
 import { FileCard } from './file-card'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
 
 export interface ItemCardProps<T extends AnySidebarItem> {
   item: T
   onClick?: () => void
   isLoading?: boolean
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
 }
 
 export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {

@@ -1,7 +1,4 @@
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { NoteButtons } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
@@ -22,18 +19,6 @@ export function FileTopbar() {
     await rename(item, newName)
   }
 
-  const ancestors = useQuery(
-    convexQuery(
-      api.sidebarItems.queries.getSidebarItemAncestors,
-      item
-        ? {
-            campaignId: item.campaignId,
-            id: item._id,
-          }
-        : 'skip',
-    ),
-  )
-
   const defaultName = defaultItemName(item)
 
   if (isLoading) {
@@ -44,7 +29,7 @@ export function FileTopbar() {
     return <TopbarEmpty />
   }
 
-  // Determine middle content based on item type
+  // Determine middle content based on item type TODO: add other item types and wrap in a component
   const middleContent = isNote(item) ? (
     <>
       <NoteButtons />
@@ -62,7 +47,7 @@ export function FileTopbar() {
             initialName={item.name || ''}
             defaultName={defaultName || 'Untitled'}
             onRename={handleRename}
-            ancestors={ancestors.data ?? []}
+            ancestors={item.ancestors}
             onNavigateToItem={navigateToItem}
             campaignId={item.campaignId}
             parentId={item.parentId}

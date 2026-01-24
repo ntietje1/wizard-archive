@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { sortItemsByOptions, useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 
-const EMPTY_ANCESTORS: Array<SidebarItemId> = []
+const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 export function BookmarkedItemsList() {
   const allItems = useAllSidebarItems()

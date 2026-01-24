@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useDndMonitor, useDroppable } from '@dnd-kit/core'
-import {
-  convexQuery,
-  useConvex,
-  useConvexMutation,
-} from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types'
+import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/baseTypes'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
-import type { GameMap, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
@@ -22,6 +18,7 @@ import type { SidebarDragData } from '~/lib/dnd-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useMapView } from '~/hooks/useMapView'
+import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { cn } from '~/lib/shadcn/utils'
@@ -36,47 +33,44 @@ const MAP_DROP_ZONE_ID = 'map-drop-zone'
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
-  mapId: Id<'gameMaps'>
+  pins: Array<MapPinWithItem>
   position: PinPosition
   onClose: () => void
 }
 
 function MapPinContextMenuWrapper({
   pinId,
-  mapId,
+  pins,
   position,
   onClose,
 }: MapPinContextMenuWrapperProps) {
   const contextMenuRef = useRef<EditorContextMenuRef>(null)
-  const { setPinId } = useMapView()
+  const { setActivePinId } = useMapView()
   const dialogOpenRef = useRef(false)
 
-  const pinsQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMapPins, { mapId }),
-  )
-  const pin = pinsQuery.data?.find((p) => p._id === pinId)
+  const pin = pins.find((p) => p._id === pinId)
 
   useEffect(() => {
     if (pin) {
-      setPinId(pinId)
+      setActivePinId(pinId)
       contextMenuRef.current?.open(position)
     }
     return () => {
-      setPinId(null)
+      setActivePinId(null)
     }
-  }, [pin, pinId, position, setPinId])
+  }, [pin, pinId, position, setActivePinId])
 
   const handleDialogOpen = useCallback(() => {
     dialogOpenRef.current = true
   }, [])
 
   const handleMenuClose = useCallback(() => {
-    setPinId(null)
+    setActivePinId(null)
     // Only clean up if no dialog was opened
     if (!dialogOpenRef.current) {
       onClose()
     }
-  }, [setPinId, onClose])
+  }, [setActivePinId, onClose])
 
   const handleDialogClose = useCallback(() => {
     dialogOpenRef.current = false
@@ -97,6 +91,30 @@ function MapPinContextMenuWrapper({
     >
       <div className="w-full h-full" />
     </EditorContextMenu>
+  )
+}
+
+interface MapImageContextMenuWrapperProps {
+  contextMenuRef: React.RefObject<EditorContextMenuRef | null>
+  map: GameMapWithContent
+}
+
+function MapImageContextMenuWrapper({
+  contextMenuRef,
+  map,
+}: MapImageContextMenuWrapperProps) {
+  const { setActivePinId } = useMapView()
+
+  return (
+    <EditorContextMenu
+      ref={contextMenuRef}
+      viewContext="map-view"
+      item={map}
+      className="absolute inset-0 pointer-events-none"
+      onClose={() => {
+        setActivePinId(null)
+      }}
+    />
   )
 }
 
@@ -207,8 +225,9 @@ function MapPin({
   )
 }
 
-export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+export function MapViewer({
+  item: map,
+}: EditorViewerProps<GameMapWithContent>) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
@@ -242,14 +261,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
   // Track if a drag just ended to prevent click firing
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const convex = useConvex()
-  const { setPinId, pinnedItemIds } = useMapView()
-
-  // Query pins for rendering
-  const pinsQuery = useQuery(
-    convexQuery(api.gameMaps.queries.getMapPins, { mapId: map._id }),
-  )
-  const pins = pinsQuery.data || []
+  // Get pins from map content
+  const pins = map.pins
 
   const createItemPinMutation = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.createItemPin),
@@ -293,7 +306,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       const itemId = draggedItem._id
 
       // Check if already pinned
-      if (pinnedItemIds.has(itemId)) {
+      if (map.pins.some((pin) => pin.item._id === itemId)) {
         toast.error('Item is already pinned on this map')
         // TODO: add highlight of pin here
         return
@@ -318,24 +331,6 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
       }
     },
   })
-
-  useEffect(() => {
-    if (!map.imageStorageId) {
-      setImageUrl(null)
-      return
-    }
-
-    convex
-      .query(api.storage.queries.getDownloadUrl, {
-        storageId: map.imageStorageId,
-      })
-      .then((url) => {
-        setImageUrl(url || null)
-      })
-      .catch(() => {
-        setImageUrl(null)
-      })
-  }, [map.imageStorageId, convex])
 
   // Handle escape key for canceling pin placement, move, or dragging
   useEffect(() => {
@@ -625,192 +620,189 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMap>) {
     !!pendingPinItem || !!pendingPinMove || !!draggingPin
 
   return (
-    <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
-      {/* Zoom controls */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleZoomIn}
-          className="bg-white shadow-md"
-          title="Zoom In"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleZoomOut}
-          className="bg-white shadow-md"
-          title="Zoom Out"
-        >
-          <Minus className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleResetTransform}
-          className="bg-white shadow-md"
-          title="Reset View"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </Button>
-      </div>
-
-      <div className="flex-1 relative min-h-0">
-        {imageUrl ? (
-          <TransformWrapper
-            ref={transformWrapperRef}
-            initialScale={1}
-            minScale={0.5}
-            maxScale={4}
-            wheel={{ step: 0.1 }}
-            doubleClick={{ disabled: false }}
-            panning={{ disabled: shouldDisablePanning }}
-            limitToBounds={false}
-            centerOnInit={false}
-            onTransformed={handleTransformChange}
+    <MapViewProvider map={map} pins={pins}>
+      <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
+        {/* Zoom controls */}
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleZoomIn}
+            className="bg-white shadow-md"
+            title="Zoom In"
           >
-            <TransformComponent
-              wrapperClass="!w-full !h-full"
-              contentClass="!w-full !h-full flex items-center justify-center"
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleZoomOut}
+            className="bg-white shadow-md"
+            title="Zoom Out"
+          >
+            <Minus className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleResetTransform}
+            className="bg-white shadow-md"
+            title="Reset View"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="flex-1 relative min-h-0">
+          {map.imageUrl ? (
+            <TransformWrapper
+              ref={transformWrapperRef}
+              initialScale={1}
+              minScale={0.5}
+              maxScale={4}
+              wheel={{ step: 0.1 }}
+              doubleClick={{ disabled: false }}
+              panning={{ disabled: shouldDisablePanning }}
+              limitToBounds={false}
+              centerOnInit={false}
+              onTransformed={handleTransformChange}
             >
-              <div
-                ref={setDropRef}
-                className={cn(
-                  'relative',
-                  isDropOver && 'ring-2 ring-primary ring-offset-2',
-                )}
-                onClick={
-                  pendingPinItem || pendingPinMove ? handleMapClick : undefined
-                }
-                onMouseMove={handleMouseMove}
-                onContextMenu={(e) => {
-                  e.stopPropagation()
-                  if (pendingPinItem) {
-                    const position = getPercentageFromClick(e)
-                    handlePlacePin(position)
-                  } else if (pendingPinMove) {
-                    const position = getPercentageFromClick(e)
-                    handleMovePin(position)
-                  } else {
-                    handleMapImageContextMenu(e)
-                  }
-                }}
+              <TransformComponent
+                wrapperClass="!w-full !h-full"
+                contentClass="!w-full !h-full flex items-center justify-center"
               >
-                <img
-                  ref={imageRef}
-                  src={imageUrl}
-                  alt={map.name || 'Map'}
-                  className="select-none pointer-events-auto"
-                  draggable={false}
-                  style={{
-                    cursor:
-                      pendingPinItem || pendingPinMove
-                        ? 'crosshair'
-                        : draggingPin
-                          ? 'grabbing'
-                          : 'default',
-                    display: 'block',
-                  }}
-                />
-
-                {/* Pins container */}
                 <div
-                  ref={pinsContainerRef}
-                  className="absolute inset-0 pointer-events-none"
+                  ref={setDropRef}
+                  className={cn(
+                    'relative',
+                    isDropOver && 'ring-2 ring-primary ring-offset-2',
+                  )}
+                  onClick={
+                    pendingPinItem || pendingPinMove
+                      ? handleMapClick
+                      : undefined
+                  }
+                  onMouseMove={handleMouseMove}
+                  onContextMenu={(e) => {
+                    e.stopPropagation()
+                    if (pendingPinItem) {
+                      const position = getPercentageFromClick(e)
+                      handlePlacePin(position)
+                    } else if (pendingPinMove) {
+                      const position = getPercentageFromClick(e)
+                      handleMovePin(position)
+                    } else {
+                      handleMapImageContextMenu(e)
+                    }
+                  }}
                 >
-                  {pins.map((pin: MapPinWithItem) => {
-                    const isDraggingThis = draggingPin?.pin._id === pin._id
-                    const isInMoveMode = pendingPinMove?.pinId === pin._id
-                    const displayPosition =
-                      isDraggingThis && draggedPinPosition
-                        ? draggedPinPosition
-                        : { x: pin.x, y: pin.y }
+                  <img
+                    ref={imageRef}
+                    src={map.imageUrl ?? undefined}
+                    alt={map.name || 'Map'}
+                    className="select-none pointer-events-auto"
+                    draggable={false}
+                    style={{
+                      cursor:
+                        pendingPinItem || pendingPinMove
+                          ? 'crosshair'
+                          : draggingPin
+                            ? 'grabbing'
+                            : 'default',
+                      display: 'block',
+                    }}
+                  />
 
-                    return (
-                      <MapPin
-                        key={pin._id}
-                        pin={{
-                          ...pin,
-                          x: displayPosition.x,
-                          y: displayPosition.y,
-                        }}
-                        isHovered={hoveredPinId === pin._id}
-                        isDragging={isDraggingThis}
-                        isInMoveMode={isInMoveMode}
-                        onHover={setHoveredPinId}
-                        onClick={handlePinClick}
-                        onContextMenu={handlePinContextMenu}
-                        onDragStart={handlePinDragStart}
-                      />
-                    )
-                  })}
+                  {/* Pins container */}
+                  <div
+                    ref={pinsContainerRef}
+                    className="absolute inset-0 pointer-events-none"
+                  >
+                    {pins.map((pin: MapPinWithItem) => {
+                      const isDraggingThis = draggingPin?.pin._id === pin._id
+                      const isInMoveMode = pendingPinMove?.pinId === pin._id
+                      const displayPosition =
+                        isDraggingThis && draggedPinPosition
+                          ? draggedPinPosition
+                          : { x: pin.x, y: pin.y }
+
+                      return (
+                        <MapPin
+                          key={pin._id}
+                          pin={{
+                            ...pin,
+                            x: displayPosition.x,
+                            y: displayPosition.y,
+                          }}
+                          isHovered={hoveredPinId === pin._id}
+                          isDragging={isDraggingThis}
+                          isInMoveMode={isInMoveMode}
+                          onHover={setHoveredPinId}
+                          onClick={handlePinClick}
+                          onContextMenu={handlePinContextMenu}
+                          onDragStart={handlePinDragStart}
+                        />
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            </TransformComponent>
-          </TransformWrapper>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <p>No map image available</p>
+              </TransformComponent>
+            </TransformWrapper>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <p>No map image available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Pin placement mode banner */}
+        {pendingPinItem && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <p className="text-sm font-medium">
+              Click on map to place pin. Press Escape to cancel.
+            </p>
           </div>
         )}
-      </div>
 
-      {/* Pin placement mode banner */}
-      {pendingPinItem && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
-          <p className="text-sm font-medium">
-            Click on map to place pin. Press Escape to cancel.
-          </p>
-        </div>
-      )}
+        {/* Pin move mode banner */}
+        {pendingPinMove && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <p className="text-sm font-medium">
+              Click on map or drag to move pin. Press Escape to cancel.
+            </p>
+          </div>
+        )}
 
-      {/* Pin move mode banner */}
-      {pendingPinMove && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
-          <p className="text-sm font-medium">
-            Click on map or drag to move pin. Press Escape to cancel.
-          </p>
-        </div>
-      )}
+        {/* Drag-drop mode banner */}
+        {isDropOver && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <p className="text-sm font-medium">Release to place pin here</p>
+          </div>
+        )}
 
-      {/* Drag-drop mode banner */}
-      {isDropOver && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-          <p className="text-sm font-medium">Release to place pin here</p>
-        </div>
-      )}
+        {/* Pin dragging mode banner */}
+        {draggingPin && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <p className="text-sm font-medium">
+              Release to move pin. Press Escape to cancel.
+            </p>
+          </div>
+        )}
 
-      {/* Pin dragging mode banner */}
-      {draggingPin && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
-          <p className="text-sm font-medium">
-            Release to move pin. Press Escape to cancel.
-          </p>
-        </div>
-      )}
+        {pinContextMenu && (
+          <MapPinContextMenuWrapper
+            pinId={pinContextMenu.pinId}
+            pins={pins}
+            position={pinContextMenu.position}
+            onClose={() => setPinContextMenu(null)}
+          />
+        )}
 
-      {pinContextMenu && (
-        <MapPinContextMenuWrapper
-          pinId={pinContextMenu.pinId}
-          mapId={map._id}
-          position={pinContextMenu.position}
-          onClose={() => setPinContextMenu(null)}
+        <MapImageContextMenuWrapper
+          contextMenuRef={mapImageContextMenuRef}
+          map={map}
         />
-      )}
-
-      <EditorContextMenu
-        ref={mapImageContextMenuRef}
-        viewContext="map-view"
-        item={map}
-        className="absolute inset-0 pointer-events-none"
-        onClose={() => {
-          setPinId(null)
-        }}
-      >
-        <div className="w-full h-full" />
-      </EditorContextMenu>
-    </div>
+      </div>
+    </MapViewProvider>
   )
 }

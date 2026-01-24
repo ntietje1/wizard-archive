@@ -4,7 +4,6 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
-import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import {
@@ -36,7 +35,7 @@ export const updateNote = mutation({
 export const moveNote = mutation({
   args: {
     noteId: v.id('notes'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
@@ -90,7 +89,7 @@ export const deleteNote = mutation({
 export const createNote = mutation({
   args: {
     name: v.optional(v.string()),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
@@ -110,7 +109,7 @@ export const createNote = mutation({
 export const createNoteWithContent = mutation({
   args: {
     name: v.optional(v.string()),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),

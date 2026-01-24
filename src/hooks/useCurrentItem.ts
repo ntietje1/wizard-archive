@@ -2,9 +2,8 @@ import { useMatch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
-import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
+import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useCurrentItem() {
   const { campaignWithMembership } = useCampaign()
@@ -16,24 +15,7 @@ export function useCurrentItem() {
   })
   const editorSearch = editorMatch?.search ?? {}
 
-  // Determine type and slug from search params
-  const getTypeAndSlug = () => {
-    if (editorSearch.note) {
-      return { type: SIDEBAR_ITEM_TYPES.notes, slug: editorSearch.note }
-    }
-    if (editorSearch.map) {
-      return { type: SIDEBAR_ITEM_TYPES.gameMaps, slug: editorSearch.map }
-    }
-    if (editorSearch.folder) {
-      return { type: SIDEBAR_ITEM_TYPES.folders, slug: editorSearch.folder }
-    }
-    if (editorSearch.file) {
-      return { type: SIDEBAR_ITEM_TYPES.files, slug: editorSearch.file }
-    }
-    return null
-  }
-
-  const typeAndSlug = getTypeAndSlug()
+  const typeAndSlug = getTypeAndSlug(editorSearch)
 
   const sidebarItemQuery = useQuery(
     convexQuery(
@@ -48,10 +30,10 @@ export function useCurrentItem() {
     ),
   )
 
-  const item: AnySidebarItem | null = sidebarItemQuery.data ?? null
+  const item = sidebarItemQuery.data ?? null
 
-  const itemType = item?.type as SidebarItemType | undefined
-  const isLoading = typeAndSlug !== null && sidebarItemQuery.isPending
+  const itemType = item?.type
+  const isLoading = typeAndSlug !== null && !item && sidebarItemQuery.isPending
 
   return {
     item,

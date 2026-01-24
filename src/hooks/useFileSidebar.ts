@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { Id } from 'convex/_generated/dataModel'
 
 export type SidebarLayoutContextType = {
   isSidebarExpanded: boolean
@@ -39,8 +40,8 @@ export type FileSidebarContextType = {
   closeAllFoldersMode: boolean
   toggleCloseAllFoldersMode: () => void
   exitCloseAllMode: () => void
-  fileDragHoveredId: SidebarItemId | null
-  setFileDragHoveredId: (id: SidebarItemId | null) => void
+  fileDragHoveredId: Id<'folders'> | null
+  setFileDragHoveredId: (id: Id<'folders'> | null) => void
   isDraggingFiles: boolean
   setIsDraggingFiles: (isDragging: boolean) => void
   bookmarksOnlyMode: boolean

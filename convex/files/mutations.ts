@@ -7,16 +7,15 @@ import {
   validateParentChange,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
-import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
 export const moveFile = mutation({
   args: {
     fileId: v.id('files'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
@@ -71,7 +70,7 @@ export const createFile = mutation({
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     storageId: v.id('_storage'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.object({
     fileId: v.id('files'),

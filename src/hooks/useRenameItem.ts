@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'

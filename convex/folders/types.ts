@@ -1,8 +1,19 @@
 import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
-import type { SIDEBAR_ITEM_TYPES, SidebarItem } from '../sidebarItems/types'
+import type {
+  SIDEBAR_ITEM_TYPES,
+  SidebarItem,
+  SidebarItemFromDb,
+  SidebarItemWithContent,
+} from '../sidebarItems/baseTypes'
+
+export type FolderFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.folders>
 
 export type Folder = SidebarItem<typeof SIDEBAR_ITEM_TYPES.folders>
+
+export type FolderWithContent = SidebarItemWithContent<
+  typeof SIDEBAR_ITEM_TYPES.folders
+>
 
 type DownloadableFile = {
   type: typeof SIDEBAR_ITEM_TYPES.files

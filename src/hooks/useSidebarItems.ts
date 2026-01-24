@@ -6,10 +6,13 @@ import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useSortOptions } from './useSortOptions'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Folder } from 'convex/folders/types'
 import { useCampaign } from '~/hooks/useCampaign'
+import { isFolder } from '~/lib/sidebar-item-utils'
 
 export const useSidebarItemsByParent = (
-  parentId?: SidebarItemId,
+  parentId?: Id<'folders'>,
   enabled = true,
 ) => {
   const { sortOptions } = useSortOptions()
@@ -70,12 +73,12 @@ export const useAllSidebarItems = (enabled = true) => {
       const item = sidebarItemIdMap.get(itemId)
       if (!item) return []
       let currAncestorId = item.parentId
-      const seen = new Set<SidebarItemId>()
-      const ancestorItems = []
+      const seen = new Set<Id<'folders'>>()
+      const ancestorItems: Array<Folder> = []
       while (currAncestorId && !seen.has(currAncestorId)) {
         seen.add(currAncestorId)
         const currAncestor = sidebarItemIdMap.get(currAncestorId)
-        if (currAncestor) {
+        if (currAncestor && isFolder(currAncestor)) {
           ancestorItems.push(currAncestor)
           currAncestorId = currAncestor.parentId
         }

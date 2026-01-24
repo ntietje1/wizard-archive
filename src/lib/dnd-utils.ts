@@ -1,7 +1,7 @@
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/baseTypes'
 import {} from 'convex/sidebarItems/sidebarItems'
 import type {
   SidebarItem,
@@ -15,7 +15,7 @@ export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 
 export interface SidebarDragData extends SidebarItem<SidebarItemType> {
-  ancestorIds?: Array<SidebarItemId>
+  ancestorIds?: Array<Id<'folders'>>
 }
 
 export interface MapDropZoneData {
@@ -101,8 +101,11 @@ export function validateDrop(
     // Item cannot be dropped on itself
     if (targetData._id === draggedItem._id) return false
 
-    // Items cannot be dropped on their own children
-    if (targetData.ancestorIds?.includes(draggedItem._id)) {
+    // Folders cannot be dropped on their own children
+    if (
+      draggedItem.type === SIDEBAR_ITEM_TYPES.folders &&
+      targetData.ancestorIds?.includes(draggedItem._id as Id<'folders'>)
+    ) {
       return false
     }
 
@@ -183,29 +186,29 @@ export function canDropFilesOnTarget(
 interface MoveMutations {
   moveNote: (params: {
     noteId: Id<'notes'>
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'>
   }) => Promise<any>
   moveMap: (params: {
     mapId: Id<'gameMaps'>
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'>
   }) => Promise<any>
   moveFolder: (params: {
     folderId: Id<'folders'>
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'>
   }) => Promise<any>
   moveFile: (params: {
     fileId: Id<'files'>
-    parentId?: SidebarItemId
+    parentId?: Id<'folders'>
   }) => Promise<any>
 }
 
 export async function executeMove(
   itemType: SidebarItemType,
   itemId: SidebarItemId,
-  targetId: SidebarItemId | undefined,
+  targetId: Id<'folders'> | undefined,
   mutations: MoveMutations,
   callbacks?: {
-    openFolder?: (folderId: SidebarItemId) => void
+    openFolder?: (folderId: Id<'folders'>) => void
   },
 ): Promise<void> {
   switch (itemType) {

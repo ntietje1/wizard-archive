@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { LucideIcon } from 'lucide-react'
 import {

@@ -1,4 +1,7 @@
 import React, { useMemo } from 'react'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
+import { useQuery } from '@tanstack/react-query'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
 import { buildMenu } from '../menu-builder'
@@ -30,33 +33,37 @@ export function EditorContextMenuProvider({
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
   const { campaignWithMembership } = useCampaign()
   const { currentSession } = useSession()
-  const { mapId, pinnedItemIds, pinId } = useMapView()
+  const { activeMap, activePin } = useMapView()
   const shareState = useSidebarItemShares(item?._id)
   const { editor, blockId } = useBlockNoteContextMenu()
 
+  const sidebarItemWithContent = useQuery(
+    convexQuery(
+      api.sidebarItems.queries.getSidebarItem,
+      item ? { id: item._id, campaignId: item.campaignId } : 'skip',
+    ),
+  )
+
   const menuContext = useMemo(
     () => ({
-      item,
+      item: sidebarItemWithContent.data ?? undefined,
       viewContext,
       currentUserId: campaignWithMembership.data?.member.userId,
       memberRole: campaignWithMembership.data?.member.role,
-      activeMapId: mapId ?? undefined,
-      pinnedItemIds,
-      pinId: pinId ?? undefined,
-      mapId: mapId ?? undefined,
+      activeMap: activeMap ?? undefined,
+      activePin: activePin ?? undefined,
       hasActiveSession: !!currentSession.data,
       shareState,
       editor: editor ?? undefined,
       blockId,
     }),
     [
-      item,
+      sidebarItemWithContent.data,
       viewContext,
       campaignWithMembership.data?.member.userId,
       campaignWithMembership.data?.member.role,
-      mapId,
-      pinnedItemIds,
-      pinId,
+      activeMap,
+      activePin,
       currentSession.data,
       shareState,
       editor,

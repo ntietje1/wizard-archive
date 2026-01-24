@@ -1,6 +1,23 @@
 import type { Id } from '../_generated/dataModel'
-import type { SIDEBAR_ITEM_TYPES, SidebarItem } from '../sidebarItems/types'
+import type {
+  SIDEBAR_ITEM_TYPES,
+  SidebarItem,
+  SidebarItemFromDb,
+  SidebarItemWithContent,
+} from '../sidebarItems/baseTypes'
+
+export type FileFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.files> & {
+  storageId: Id<'_storage'>
+}
 
 export type File = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
   storageId: Id<'_storage'>
+  downloadUrl: string | null
+}
+
+export type FileWithContent = SidebarItemWithContent<
+  typeof SIDEBAR_ITEM_TYPES.files
+> & {
+  storageId: Id<'_storage'>
+  downloadUrl: string | null
 }

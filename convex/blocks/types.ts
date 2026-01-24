@@ -1,6 +1,5 @@
 import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
-import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types'
 
 export const BLOCK_SHARE_STATUS = {
   ALL_SHARED: 'all_shared',

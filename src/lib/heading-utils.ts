@@ -1,4 +1,4 @@
-import type { CustomBlock } from './editor-schema'
+import type { CustomPartialBlock } from './editor-schema'
 
 export interface HeadingEntry {
   blockId: string
@@ -22,17 +22,18 @@ export function normalizeHeadingText(text: string): string {
 }
 
 export function extractHeadingsFromContent(
-  content: Array<CustomBlock>,
+  content: Array<CustomPartialBlock>,
 ): Array<HeadingEntry> {
   const headings: Array<HeadingEntry> = []
 
-  const process = (block: CustomBlock) => {
+  const process = (block: CustomPartialBlock) => {
     if (block.type === 'heading') {
       const text = extractText(
         block.content as Array<{ type: string; text?: string }>,
       )
       if (text) {
         const level = (block.props as { level?: number })?.level
+        if (!block.id) return
         headings.push({
           blockId: block.id,
           text,
@@ -41,7 +42,7 @@ export function extractHeadingsFromContent(
         })
       }
     }
-    block.children?.forEach((c) => process(c as CustomBlock))
+    block.children?.forEach((c) => process(c as CustomPartialBlock))
   }
 
   content.forEach(process)

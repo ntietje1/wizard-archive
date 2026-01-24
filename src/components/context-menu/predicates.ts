@@ -41,29 +41,29 @@ export const viewingCanvas: Predicate = (ctx) =>
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
-export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMapId)
+export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMap)
 
 export const isPinnedOnActiveMap: Predicate = (ctx) => {
-  if (!ctx.item || !ctx.pinnedItemIds) return false
-  return ctx.pinnedItemIds.has(ctx.item._id)
+  if (!ctx.item || !ctx.activeMap) return false
+  return ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)
 }
 
 export const isNotActiveMap: Predicate = (ctx) => {
-  if (!ctx.item || !ctx.activeMapId) return false
-  return ctx.activeMapId !== ctx.item._id
+  if (!ctx.item || !ctx.activeMap) return false
+  return ctx.activeMap._id !== ctx.item._id
 }
 
 export const isActiveMap: Predicate = (ctx) => {
-  if (!ctx.item || !ctx.activeMapId) return false
-  return ctx.activeMapId === ctx.item._id
+  if (!ctx.item || !ctx.activeMap) return false
+  return ctx.activeMap._id === ctx.item._id
 }
 
 export const hasPinContext: Predicate = (ctx) => {
-  return Boolean(ctx.pinId && ctx.mapId)
+  return Boolean(ctx.activePin && ctx.activeMap)
 }
 
 export const hasMapContext: Predicate = (ctx) => {
-  return Boolean(ctx.mapId)
+  return Boolean(ctx.activeMap)
 }
 
 export const hasActiveSession: Predicate = (ctx) => {

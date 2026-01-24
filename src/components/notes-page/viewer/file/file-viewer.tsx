@@ -7,7 +7,7 @@ import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
 import { VideoFileViewer } from './video-file-viewer'
-import type { File } from 'convex/files/types'
+import type { FileWithContent } from 'convex/files/types'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
@@ -31,7 +31,7 @@ function getFileType(
   }
 }
 
-export function FileViewer({ item: file }: EditorViewerProps<File>) {
+export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

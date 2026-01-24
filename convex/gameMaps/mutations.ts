@@ -7,9 +7,9 @@ import {
   validateParentChange,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types'
 import { findUniqueGameMapSlug, findUniqueSlug } from '../common/slug'
-import { sidebarItemIdValidator } from '../sidebarItems/baseFields'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -18,7 +18,7 @@ export const createMap = mutation({
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     imageStorageId: v.id('_storage'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -143,7 +143,7 @@ export const updateMap = mutation({
 export const moveMap = mutation({
   args: {
     mapId: v.id('gameMaps'),
-    parentId: v.optional(sidebarItemIdValidator),
+    parentId: v.optional(v.id('folders')),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {

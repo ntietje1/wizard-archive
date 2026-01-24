@@ -1,3 +1,4 @@
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
 
 export interface ValidationResult {
@@ -81,7 +82,7 @@ export function checkNameConflict(
  */
 export function validateNoCircularParent(
   itemId: SidebarItemId,
-  newParentId: SidebarItemId | undefined,
+  newParentId: Id<'folders'> | undefined,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): ValidationResult {
   // Moving to root is always valid
@@ -98,8 +99,8 @@ export function validateNoCircularParent(
   }
 
   // Walk up the parent chain from newParentId to check for cycles
-  const seen = new Set<SidebarItemId>()
-  let currentId: SidebarItemId | undefined = newParentId
+  const seen = new Set<Id<'folders'>>()
+  let currentId: Id<'folders'> | undefined = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
@@ -133,8 +134,8 @@ export function getAncestorIds(
   const item = itemsMap.get(itemId)
   if (!item) return []
 
-  const ancestors: Array<SidebarItemId> = []
-  const seen = new Set<SidebarItemId>()
+  const ancestors: Array<Id<'folders'>> = []
+  const seen = new Set<Id<'folders'>>()
   let currentId = item.parentId
 
   while (currentId && !seen.has(currentId)) {
@@ -149,7 +150,7 @@ export function getAncestorIds(
 
 export interface SidebarItemValidationOptions {
   name?: string
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
   itemId?: SidebarItemId // For updates, the item being updated
   siblings?: Array<AnySidebarItem> // Items under the same parent
   itemsMap?: Map<SidebarItemId, AnySidebarItem> // For circular reference detection

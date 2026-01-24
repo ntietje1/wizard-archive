@@ -14,7 +14,6 @@ import { useFolderActions } from './useFolderActions'
 import { useOpenParentFolders } from './useOpenParentFolders'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/lib/folder-reader'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
@@ -28,7 +27,7 @@ import { getErrorMessage, uploadFile } from '~/lib/file-upload'
 
 interface DropOptions {
   campaignId: Id<'campaigns'>
-  parentId?: SidebarItemId
+  parentId?: Id<'folders'>
 }
 
 export interface UploadProgress {
@@ -69,7 +68,7 @@ export function useFileDropHandler() {
     async (
       file: File,
       targetCampaignId: Id<'campaigns'>,
-      parentId?: SidebarItemId,
+      parentId?: Id<'folders'>,
       silent = false,
     ): Promise<boolean> => {
       const fileName = file.name
@@ -197,7 +196,7 @@ export function useFileDropHandler() {
     async (
       folder: FolderStructure,
       targetCampaignId: Id<'campaigns'>,
-      parentId: SidebarItemId | undefined,
+      parentId: Id<'folders'> | undefined,
       progress: UploadProgress,
     ): Promise<Id<'folders'>> => {
       const { folderId } = await createFolder.mutateAsync({

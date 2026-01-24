@@ -6,7 +6,7 @@ import { api } from 'convex/_generated/api'
 import {
   SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
@@ -62,10 +62,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   )
   const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
   const [createMapDialog, setCreateMapDialog] = useState<{
-    parentId?: Id<'folders'> | Id<'notes'> | Id<'gameMaps'> | Id<'files'>
+    parentId?: Id<'folders'>
   } | null>(null)
   const [createFileDialog, setCreateFileDialog] = useState<{
-    parentId?: Id<'folders'> | Id<'notes'> | Id<'gameMaps'> | Id<'files'>
+    parentId?: Id<'folders'>
   } | null>(null)
   const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
@@ -123,6 +123,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       async (ctx: MenuContext) => {
         if (!campaignId) return
 
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
         const parentId = ctx.item?._id
         const { noteId } = await createNote.mutateAsync({
           campaignId,
@@ -138,6 +142,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       async (ctx: MenuContext) => {
         if (!campaignId) return
 
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
         const parentId = ctx.item?._id
         const result = await createFolder.mutateAsync({
           campaignId,
@@ -150,11 +158,19 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     createMap: (ctx: MenuContext) => {
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
       setCreateMapDialog({ parentId: ctx.item?._id })
       onDialogOpen?.()
     },
 
     createFile: (ctx: MenuContext) => {
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
       setCreateFileDialog({ parentId: ctx.item?._id })
       onDialogOpen?.()
     },
@@ -185,10 +201,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     pinToMap: useCallback((ctx: MenuContext) => {
-      if (!ctx.item || !ctx.activeMapId) return
+      if (!ctx.item || !ctx.activeMap) return
 
       // Check if already pinned using context data
-      if (ctx.pinnedItemIds?.has(ctx.item._id)) {
+      if (ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
         toast.error('Item is already pinned on this map')
         // TODO: add highlight of pin here
         return
@@ -205,20 +221,18 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     }, []),
 
     goToMapPin: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !ctx.activeMapId) return
+      (ctx: MenuContext) => {
+        if (!ctx.item || !ctx.activeMap) return
 
         // Check if pinned using context data
-        if (!ctx.pinnedItemIds?.has(ctx.item._id)) {
+        if (!ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
           toast.error('Item is not pinned on this map')
           return
         }
 
         try {
           // Navigate to the map
-          const map = await convex.query(api.gameMaps.queries.getMap, {
-            mapId: ctx.activeMapId as Id<'gameMaps'>,
-          })
+          const map = ctx.activeMap
           navigateToMap(map.slug)
           toast.info('Highlighting map pin... (coming soon)')
         } catch (error) {
@@ -226,22 +240,22 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to navigate to map pin')
         }
       },
-      [convex, navigateToMap],
+      [navigateToMap],
     ),
 
     createMapPin: useCallback((ctx: MenuContext) => {
-      if (!ctx.item || !ctx.activeMapId) return
+      if (!ctx.item || !ctx.activeMap) return
 
       toast.info('Create Pin Here... (coming soon)')
     }, []),
 
     removeMapPin: useCallback(
       async (ctx: MenuContext) => {
-        if (!ctx.pinId) return
+        if (!ctx.activePin) return
 
         try {
           await convex.mutation(api.gameMaps.mutations.removeItemPin, {
-            mapPinId: ctx.pinId,
+            mapPinId: ctx.activePin._id,
           })
           toast.success('Pin removed')
         } catch (error) {
@@ -253,12 +267,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     moveMapPin: useCallback((ctx: MenuContext) => {
-      if (!ctx.pinId) return
+      if (!ctx.activePin) return
 
       // Dispatch event to map viewer to enter pin move mode
       const event = new CustomEvent('map-pin-move-request', {
         detail: {
-          pinId: ctx.pinId,
+          pinId: ctx.activePin._id,
         },
       })
       window.dispatchEvent(event)
@@ -356,110 +370,75 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       [campaignId, convex],
     ),
 
-    downloadFile: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !isFile(ctx.item)) return
+    downloadFile: useCallback((ctx: MenuContext) => {
+      if (!ctx.item || !isFile(ctx.item)) return
 
-        try {
-          const url = await convex.query(api.files.queries.getFileDownloadUrl, {
-            fileId: ctx.item._id,
-          })
+      if (!ctx.item.downloadUrl) {
+        toast.error('Download URL not available')
+        return
+      }
 
-          if (!url) {
-            toast.error('Failed to get download URL')
-            return
-          }
+      try {
+        const fileName = ctx.item.name ?? defaultItemName(ctx.item)
+        const link = document.createElement('a')
+        link.href = ctx.item.downloadUrl ?? ''
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        toast.success('Download started')
+      } catch (error) {
+        console.error('Failed to download file:', error)
+        toast.error('Failed to download file')
+      }
+    }, []),
 
-          const fileName = ctx.item.name ?? defaultItemName(ctx.item)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = fileName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          toast.success('Download started')
-        } catch (error) {
-          console.error('Failed to download file:', error)
-          toast.error('Failed to download file')
-        }
-      },
-      [convex],
-    ),
+    downloadNote: useCallback(async (ctx: MenuContext) => {
+      if (!ctx.item || !isNote(ctx.item)) return
 
-    downloadNote: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !isNote(ctx.item)) return
+      try {
+        const markdown = await convertBlocksToMarkdown(ctx.item.content)
+        const baseName = ctx.item.name ?? defaultItemName(ctx.item)
+        const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
 
-        try {
-          const noteWithContent = await convex.query(
-            api.notes.queries.getNoteWithContent,
-            { noteId: ctx.item._id },
-          )
+        const blob = new Blob([markdown], { type: 'text/markdown' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
 
-          if (!noteWithContent) {
-            toast.error('Failed to get note content')
-            return
-          }
+        toast.success('Download started')
+      } catch (error) {
+        console.error('Failed to download note:', error)
+        toast.error('Failed to download note')
+      }
+    }, []),
 
-          const markdown = await convertBlocksToMarkdown(
-            noteWithContent.content as Array<CustomBlock>,
-          )
-          const baseName =
-            noteWithContent.name ?? defaultItemName(noteWithContent)
-          const fileName = baseName.endsWith('.md')
-            ? baseName
-            : `${baseName}.md`
+    downloadMap: useCallback((ctx: MenuContext) => {
+      if (!ctx.item || !isGameMap(ctx.item)) return
 
-          const blob = new Blob([markdown], { type: 'text/markdown' })
-          const link = document.createElement('a')
-          link.href = URL.createObjectURL(blob)
-          link.download = fileName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          URL.revokeObjectURL(link.href)
+      if (!ctx.item.imageUrl) {
+        toast.error('Map image URL not available')
+        return
+      }
 
-          toast.success('Download started')
-        } catch (error) {
-          console.error('Failed to download note:', error)
-          toast.error('Failed to download note')
-        }
-      },
-      [convex],
-    ),
-
-    downloadMap: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !isGameMap(ctx.item)) return
-
-        try {
-          const url = await convex.query(
-            api.gameMaps.queries.getMapDownloadUrl,
-            {
-              mapId: ctx.item._id,
-            },
-          )
-
-          if (!url) {
-            toast.error('Map has no image')
-            return
-          }
-
-          const mapName = ctx.item.name ?? defaultItemName(ctx.item)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = mapName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          toast.success('Download started')
-        } catch (error) {
-          console.error('Failed to download map:', error)
-          toast.error('Failed to download map')
-        }
-      },
-      [convex],
-    ),
+      try {
+        const mapName = ctx.item.name ?? defaultItemName(ctx.item)
+        const link = document.createElement('a')
+        link.href = ctx.item.imageUrl
+        link.download = mapName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        toast.success('Download started')
+      } catch (error) {
+        console.error('Failed to download map:', error)
+        toast.error('Failed to download map')
+      }
+    }, []),
 
     downloadFolder: useCallback(
       async (ctx: MenuContext) => {
