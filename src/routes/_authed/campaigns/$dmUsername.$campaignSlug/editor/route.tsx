@@ -19,6 +19,7 @@ export const Route = createFileRoute(
         slug: params.campaignSlug,
       }),
     )
+    const typeAndSlug = getTypeAndSlug(search)
 
     if (campaignWithMembership?.campaign._id) {
       await Promise.all([
@@ -37,18 +38,16 @@ export const Route = createFileRoute(
             campaignId: campaignWithMembership.campaign._id,
           }),
         ),
+        typeAndSlug && (
+          context.queryClient.ensureQueryData(
+            convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+              campaignId: campaignWithMembership.campaign._id,
+              type: typeAndSlug.type,
+              slug: typeAndSlug.slug,
+            }),
+          )
+        ),
       ])
-    }
-
-    const typeAndSlug = getTypeAndSlug(search)
-    if (campaignWithMembership?.campaign._id && typeAndSlug) {
-      await context.queryClient.ensureQueryData(
-        convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
-          campaignId: campaignWithMembership.campaign._id,
-          type: typeAndSlug.type,
-          slug: typeAndSlug.slug,
-        }),
-      )
     }
   },
   component: EditorLayout,
