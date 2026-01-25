@@ -5,7 +5,7 @@ import {
   sidebarItemTableFields,
 } from '../sidebarItems/schema/baseFields'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { folderValidator } from '../folders/schema'
+import { folderValidator } from '../folders/baseSchema'
 
 const fileTableFields = {
   ...sidebarItemTableFields,

@@ -150,6 +150,48 @@
   border-radius: 0;
 }
 
+/* Folder card styles */
+.folder-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.folder-content {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+}
+
+.folder-seam-cover {
+  position: absolute;
+  top: 10.75px;
+  left: 20px;
+  right: 20px;
+  bottom: 0px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.folder svg {
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 1));
+  transition: filter 0.1s ease;
+}
+
+.folder-wrapper:hover .folder svg {
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 0.75))
+    drop-shadow(0 1.5px 1.5px rgba(0, 0, 0, 0.2));
+}
+
+.folder-wrapper.valid-drop-target .folder svg {
+  filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 0.75))
+    drop-shadow(0 1px 3px rgba(251, 191, 36, 0.7));
+}
+
 @layer utilities {
   /* Delayed fade-in animation utilities */
   .fade-in-delayed {

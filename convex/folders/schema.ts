@@ -1,38 +1,26 @@
-import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import {
-  sidebarItemBaseFields,
-  sidebarItemTableFields,
-} from '../sidebarItems/schema/baseFields'
 import { customBlockValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { noteValidator } from '../notes/schema'
+import { mapValidator } from '../gameMaps/baseSchema'
+import { fileValidator } from '../files/schema'
+import {
+  folderValidator,
+  folderValidatorFields,
+} from './baseSchema'
 
-const folderTableFields = {
-  ...sidebarItemTableFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
-}
 
-export const foldersTables = {
-  folders: defineTable({
-    ...folderTableFields,
-  })
-    .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
-    .index('by_campaign_name', ['campaignId', 'name'])
-    .index('by_campaign_slug', ['campaignId', 'slug']),
-}
-
-const folderValidatorFields = {
-  _id: v.id('folders'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
-} as const
-
-export const folderValidator = v.object(folderValidatorFields)
+const folderChildValidator = v.union(
+  noteValidator,
+  folderValidator,
+  mapValidator,
+  fileValidator,
+)
 
 export const folderWithContentValidator = v.object({
   ...folderValidatorFields,
   ancestors: v.array(folderValidator),
+  children: v.array(folderChildValidator),
 })
 
 export const downloadableItemValidator = v.union(

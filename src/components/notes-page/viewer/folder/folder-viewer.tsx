@@ -2,27 +2,14 @@ import { ItemCard } from './item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
 import type { ReactNode } from 'react'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import type { Folder } from 'convex/folders/types'
-import { useFolderView } from '~/hooks/useFolderView'
+import type { FolderWithContent } from 'convex/folders/types'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
-export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
-  const { items, isLoading } = useFolderView({
-    parentItem: folder,
-  })
-
-  if (isLoading) {
-    // TODO: improve loading state
-    return (
-      <div className="h-full flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
-  }
-
+export function FolderViewer({
+  item: folder,
+}: EditorViewerProps<FolderWithContent>) {
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
       <EditorContextMenu
@@ -41,7 +28,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
     )
   }
 
-  if (items.length === 0) {
+  if (folder.children.length === 0) {
     return (
       <Wrapper>
         <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -56,7 +43,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<Folder>) {
       <ScrollArea className="flex-1 w-full overflow-x-hidden">
         <div className="w-full min-w-0">
           <ContentGrid className="p-6 min-h-0">
-            {items.map((childItem) => {
+            {folder.children.map((childItem) => {
               return (
                 <ItemCard
                   key={childItem._id}

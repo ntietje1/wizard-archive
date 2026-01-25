@@ -1,3 +1,4 @@
+import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useDraggable } from '@dnd-kit/core'
@@ -58,11 +59,23 @@ function getFileTypeIcon(
   return FileIconLucide
 }
 
-export function FileCard({
-  item: file,
-  onClick,
-  isLoading,
-}: ItemCardProps<File>) {
+function FileCardSkeleton() {
+  return (
+    <div className="w-full h-[140px]">
+      <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="w-6 h-6 rounded" />
+        </div>
+        <div className="flex items-center justify-center flex-1">
+          <Skeleton className="w-12 h-12 rounded" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const { navigateToFile } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
@@ -94,22 +107,6 @@ export function FileCard({
         navigateToFile(file.slug)
       }
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[140px]">
-        <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
-          <div className="flex items-center justify-between mb-2">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="w-6 h-6 rounded" />
-          </div>
-          <div className="flex items-center justify-center flex-1">
-            <Skeleton className="w-12 h-12 rounded" />
-          </div>
-        </Card>
-      </div>
-    )
   }
 
   const cardContent = (
@@ -177,5 +174,17 @@ export function FileCard({
     >
       {cardContent}
     </EditorContextMenu>
+  )
+}
+
+export function FileCard(props: ItemCardProps<File>) {
+  if (props.isLoading) {
+    return <FileCardSkeleton />
+  }
+
+  return (
+    <ClientOnly fallback={<FileCardSkeleton />}>
+      <FileCardInner {...props} />
+    </ClientOnly>
   )
 }

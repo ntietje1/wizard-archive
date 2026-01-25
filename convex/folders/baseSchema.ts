@@ -5,33 +5,28 @@ import {
   sidebarItemTableFields,
 } from '../sidebarItems/schema/baseFields'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { folderValidator } from '../folders/baseSchema'
 
-const noteTableFields = {
+const folderTableFields = {
   ...sidebarItemTableFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
 }
 
-export const notesTables = {
-  notes: defineTable({
-    ...noteTableFields,
+export const foldersTables = {
+  folders: defineTable({
+    ...folderTableFields,
   })
     .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
     .index('by_campaign_name', ['campaignId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 
-const noteValidatorFields = {
-  _id: v.id('notes'),
+const folderValidatorFields = {
+  _id: v.id('folders'),
   _creationTime: v.number(),
   ...sidebarItemBaseFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
 } as const
 
-export const noteValidator = v.object(noteValidatorFields)
+export const folderValidator = v.object(folderValidatorFields)
 
-export const noteWithContentValidator = v.object({
-  ...noteValidatorFields,
-  content: v.array(v.any()),
-  ancestors: v.array(folderValidator),
-})
+export { folderValidatorFields }

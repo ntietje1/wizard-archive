@@ -29,6 +29,7 @@ import type * as files_helpers from "../files/helpers.js";
 import type * as files_mutations from "../files/mutations.js";
 import type * as files_queries from "../files/queries.js";
 import type * as files_types from "../files/types.js";
+import type * as folders_baseSchema from "../folders/baseSchema.js";
 import type * as folders_folders from "../folders/folders.js";
 import type * as folders_helpers from "../folders/helpers.js";
 import type * as folders_mutations from "../folders/mutations.js";
@@ -109,6 +110,7 @@ declare const fullApi: ApiFromModules<{
   "files/mutations": typeof files_mutations;
   "files/queries": typeof files_queries;
   "files/types": typeof files_types;
+  "folders/baseSchema": typeof folders_baseSchema;
   "folders/folders": typeof folders_folders;
   "folders/helpers": typeof folders_helpers;
   "folders/mutations": typeof folders_mutations;

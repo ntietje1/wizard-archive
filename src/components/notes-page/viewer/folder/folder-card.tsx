@@ -1,3 +1,4 @@
+import { ClientOnly } from '@tanstack/react-router'
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { ItemCardProps } from './item-card'
@@ -8,7 +9,6 @@ import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { MoreVertical } from '~/lib/icons'
-import '~/components/notes-page/viewer/folder/folder-card.css'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
@@ -17,10 +17,10 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 function FolderSvg() {
   return (
-    <div className="folder">
+    <div className="folder flex h-full relative text-white">
       {/* Left section */}
-      <div className="folder-left">
-        <svg viewBox="0 0 120 200" preserveAspectRatio="none">
+      <div className="folder-left shrink-0 w-[120px] -mr-px">
+        <svg viewBox="0 0 120 200" preserveAspectRatio="none" className="w-full h-full block">
           <path
             d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
             fill="currentColor"
@@ -29,15 +29,15 @@ function FolderSvg() {
       </div>
 
       {/* Middle section */}
-      <div className="folder-middle">
-        <svg viewBox="0 0 20 200" preserveAspectRatio="none">
+      <div className="folder-middle grow min-w-[20px] -mr-px">
+        <svg viewBox="0 0 20 200" preserveAspectRatio="none" className="w-full h-full block">
           <rect x="0" y="15" width="20" height="200" fill="currentColor" />
         </svg>
       </div>
 
       {/* Right section*/}
-      <div className="folder-right">
-        <svg viewBox="0 0 60 200" preserveAspectRatio="none">
+      <div className="folder-right shrink-0 w-[60px]">
+        <svg viewBox="0 0 60 200" preserveAspectRatio="none" className="w-full h-full block">
           <path
             d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
             fill="currentColor"
@@ -46,15 +46,31 @@ function FolderSvg() {
       </div>
 
       {/* Background (hides seams) */}
-      <div className="folder-seam-cover"></div>
+      <div className="folder-seam-cover absolute top-[11.5px] left-5 right-5 bottom-[1.5px] bg-white pointer-events-none z-[1]"></div>
     </div>
   )
 }
 
-export function FolderCard({
+function FolderCardSkeleton() {
+  return (
+    <div className="h-[140px]">
+      <div className="folder-wrapper">
+        <FolderSvg />
+        <div className="folder-content px-2">
+          <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
+            <div className="pt-2">
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FolderCardInner({
   item: folder,
   onClick,
-  isLoading,
   parentId,
 }: ItemCardProps<Folder>) {
   const { active, over } = useDndContext()
@@ -102,21 +118,6 @@ export function FolderCard({
     } else {
       navigateToFolder(folder.slug)
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="h-[140px]">
-        <div className="folder-wrapper">
-          <FolderSvg />
-          <div className="folder-content p-3">
-            <div className="flex items-center gap-2 mb-2 min-w-0">
-              <Skeleton className="h-5 w-32" />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   const cardContent = (
@@ -182,5 +183,17 @@ export function FolderCard({
     >
       {cardContent}
     </EditorContextMenu>
+  )
+}
+
+export function FolderCard(props: ItemCardProps<Folder>) {
+  if (props.isLoading) {
+    return <FolderCardSkeleton />
+  }
+
+  return (
+    <ClientOnly fallback={<FolderCardSkeleton />}>
+      <FolderCardInner {...props} />
+    </ClientOnly>
   )
 }

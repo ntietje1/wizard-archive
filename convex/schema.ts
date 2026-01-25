@@ -1,6 +1,6 @@
 import { defineSchema } from 'convex/server'
 import { notesTables } from './notes/schema'
-import { foldersTables } from './folders/schema'
+import { foldersTables } from './folders/baseSchema'
 import { blocksTables } from './blocks/schema'
 import { campaignTables } from './campaigns/schema'
 import { editorTables } from './editors/schema'

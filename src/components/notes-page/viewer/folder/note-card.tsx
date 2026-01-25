@@ -1,3 +1,4 @@
+import { ClientOnly } from '@tanstack/react-router'
 import { useDraggable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { SidebarDragData } from '~/lib/dnd-utils'
@@ -12,11 +13,24 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
-export function NoteCard({
-  item: note,
-  onClick,
-  isLoading,
-}: ItemCardProps<Note>) {
+function NoteCardSkeleton() {
+  return (
+    <div className="w-full h-[140px]">
+      <Card className="w-full h-full flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div className="overflow-hidden">
+            <div className="flex items-center gap-2 mb-2 min-w-0">
+              <Skeleton className="h-5 w-32" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
+      </Card>
+    </div>
+  )
+}
+
+function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const { navigateToNote } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
@@ -38,23 +52,6 @@ export function NoteCard({
         navigateToNote(note.slug)
       }
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[140px]">
-        <Card className="w-full h-full flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
-          <div className="flex-1 min-w-0 flex flex-col justify-between">
-            <div className="overflow-hidden">
-              <div className="flex items-center gap-2 mb-2 min-w-0">
-                <Skeleton className="h-5 w-32" />
-              </div>
-            </div>
-          </div>
-          <Skeleton className="w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
-        </Card>
-      </div>
-    )
   }
 
   const cardContent = (
@@ -116,5 +113,17 @@ export function NoteCard({
     >
       {cardContent}
     </EditorContextMenu>
+  )
+}
+
+export function NoteCard(props: ItemCardProps<Note>) {
+  if (props.isLoading) {
+    return <NoteCardSkeleton />
+  }
+
+  return (
+    <ClientOnly fallback={<NoteCardSkeleton />}>
+      <NoteCardInner {...props} />
+    </ClientOnly>
   )
 }

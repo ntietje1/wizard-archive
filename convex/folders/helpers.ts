@@ -2,6 +2,7 @@ import { getSidebarItemSharesForItem } from '../shares/shares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getSidebarItemsByParent } from '../sidebarItems/sidebarItems'
 import { getSidebarItemAncestors } from './folders'
 import type { QueryCtx } from '../_generated/server'
 import type { Folder, FolderFromDb, FolderWithContent } from './types'
@@ -37,13 +38,13 @@ export const enhanceFolderWithContent = async (
   ctx: QueryCtx,
   folder: Folder,
 ): Promise<FolderWithContent> => {
-  const ancestors = await getSidebarItemAncestors(
-    ctx,
-    folder.campaignId,
-    folder.parentId,
-  )
+  const [ancestors, children] = await Promise.all([
+    getSidebarItemAncestors(ctx, folder.campaignId, folder.parentId),
+    getSidebarItemsByParent(ctx, folder.campaignId, folder._id),
+  ])
   return {
     ...folder,
     ancestors,
+    children,
   }
 }

@@ -1,3 +1,4 @@
+import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
@@ -15,11 +16,23 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
-export function MapCard({
-  item: map,
-  onClick,
-  isLoading,
-}: ItemCardProps<GameMap>) {
+function MapCardSkeleton() {
+  return (
+    <div className="w-full h-[140px]">
+      <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="w-6 h-6 rounded" />
+        </div>
+        <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
+          <Skeleton className="w-full h-full" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const { navigateToMap } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
   const isDisabled = activeDragItem !== null
@@ -55,22 +68,6 @@ export function MapCard({
         navigateToMap(map.slug)
       }
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[140px]">
-        <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
-          <div className="flex items-center justify-between mb-2">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="w-6 h-6 rounded" />
-          </div>
-          <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
-            <Skeleton className="w-full h-full" />
-          </div>
-        </Card>
-      </div>
-    )
   }
 
   const cardContent = (
@@ -141,5 +138,17 @@ export function MapCard({
     >
       {cardContent}
     </EditorContextMenu>
+  )
+}
+
+export function MapCard(props: ItemCardProps<GameMap>) {
+  if (props.isLoading) {
+    return <MapCardSkeleton />
+  }
+
+  return (
+    <ClientOnly fallback={<MapCardSkeleton />}>
+      <MapCardInner {...props} />
+    </ClientOnly>
   )
 }

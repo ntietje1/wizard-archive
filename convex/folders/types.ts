@@ -6,6 +6,7 @@ import type {
   SidebarItemFromDb,
   SidebarItemWithContent,
 } from '../sidebarItems/baseTypes'
+import type { AnySidebarItem } from '../sidebarItems/types'
 
 export type FolderFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.folders>
 
@@ -13,7 +14,9 @@ export type Folder = SidebarItem<typeof SIDEBAR_ITEM_TYPES.folders>
 
 export type FolderWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.folders
->
+> & {
+  children: Array<AnySidebarItem>
+}
 
 type DownloadableFile = {
   type: typeof SIDEBAR_ITEM_TYPES.files

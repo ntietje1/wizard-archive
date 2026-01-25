@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { folderValidator } from '../folders/schema'
+import { folderValidator } from '../folders/baseSchema'
 import { anySidebarItemValidator } from '../sidebarItems/schema/schema'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { sidebarItemBaseFields } from '../sidebarItems/schema/baseFields'

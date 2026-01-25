@@ -19,7 +19,9 @@ import type { QueryClient } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
 
 const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
-  const auth = await getAuth(getWebRequest())
+  const auth = await getAuth(getWebRequest(), {
+    treatPendingAsSignedOut: false,
+  })
   const token = await auth.getToken({ template: 'convex' })
 
   return {
@@ -70,20 +72,14 @@ export const Route = createRootRouteWithContext<{
     ],
   }),
   beforeLoad: async (ctx) => {
-    if (typeof window === 'undefined') {
-      const auth = await fetchClerkAuth()
-      const { userId, token } = auth
-      if (token) {
-        ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
-      }
-      return {
-        userId,
-        token,
-      }
+    const auth = await fetchClerkAuth()
+    const { userId, token } = auth
+    if (token) {
+      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
     }
     return {
-      userId: undefined,
-      token: undefined,
+      userId,
+      token,
     }
   },
   component: RootComponent,
