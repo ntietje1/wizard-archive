@@ -38,8 +38,10 @@ export function DroppableSidebarItem({
   const { fileDragHoveredId, isDraggingFiles, activeDragItem } =
     useFileSidebar()
 
+  const droppableId = `drop-${item._id}`
+
   const { setNodeRef, isOver, active, over } = useDroppable({
-    id: item._id,
+    id: droppableId,
     data: dropData,
     disabled: activeDragItem?._id === item._id,
   })

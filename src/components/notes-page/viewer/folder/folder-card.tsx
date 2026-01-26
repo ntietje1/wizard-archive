@@ -85,7 +85,7 @@ function FolderCardInner({
   const dragData: SidebarDragData = { ...folder, ancestorIds }
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: folder._id,
+    id: `drop-${folder._id}`,
     data: dropData,
     disabled: activeDragItem?._id === folder._id,
   })
