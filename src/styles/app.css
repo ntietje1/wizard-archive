@@ -227,4 +227,40 @@
       opacity: 1;
     }
   }
+
+  /* Navigation progress bar - uses scaleX for smooth GPU-accelerated animation */
+  .animate-progress-load {
+    animation: progress-load 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .animate-progress-complete {
+    animation: progress-complete 0.2s ease-out forwards;
+  }
+
+  @keyframes progress-load {
+    0% {
+      transform: scaleX(0.1);
+    }
+    20% {
+      transform: scaleX(0.4);
+    }
+    50% {
+      transform: scaleX(0.65);
+    }
+    80% {
+      transform: scaleX(0.8);
+    }
+    100% {
+      transform: scaleX(0.9);
+    }
+  }
+
+  @keyframes progress-complete {
+    0% {
+      transform: scaleX(0.9);
+    }
+    100% {
+      transform: scaleX(1);
+    }
+  }
 }

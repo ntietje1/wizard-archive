@@ -16,6 +16,7 @@ import { Toaster } from 'sonner'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import { NavigationProgress } from '~/components/navigation-progress'
 import appCss from '~/styles/app.css?url'
 
 const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
@@ -106,6 +107,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="flex flex-col min-h-screen">
+        <NavigationProgress />
         {children}
         <Toaster />
         <TanStackRouterDevtools position="bottom-right" />
