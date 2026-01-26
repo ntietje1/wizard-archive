@@ -223,11 +223,12 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     {
       id: 'share-item',
       label: (ctx) => {
+        const willShowChildren = ctx.shareState?.playerMembers.length !== 0
         // Only say "Unshare" if shared with ALL players
         if (isSharedWithAll(ctx)) {
-          return `Unshare...`
+          return willShowChildren ? `Unshare...` : `Unshare`
         }
-        return `Share...`
+        return willShowChildren ? `Share...` : `Share`
       },
       icon: Share2,
       group: 'share',

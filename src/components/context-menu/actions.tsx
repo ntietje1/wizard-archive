@@ -323,7 +323,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 status: SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED,
               },
             )
-            toast.success(`Shared with ${playerMembers.length} player(s)`)
+            if (playerMembers.length === 0) {
+              toast.success('Shared with all players')
+            } else {
+              toast.success(`Shared with ${playerMembers.length} player(s)`)
+            }
           }
         } catch (error) {
           console.error('Failed to toggle share:', error)
