@@ -29,6 +29,7 @@ const fileValidatorFields = {
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
   storageId: v.id('_storage'),
   downloadUrl: v.union(v.string(), v.null()),
+  contentType: v.union(v.string(), v.null()),
 } as const
 
 export const fileValidator = v.object(fileValidatorFields)

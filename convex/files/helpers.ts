@@ -16,7 +16,7 @@ export const enhanceFile = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const [downloadUrl, bookmark, shares] = await Promise.all([
+  const [downloadUrl, bookmark, shares, storageMetadata] = await Promise.all([
     file.storageId ? ctx.storage.getUrl(file.storageId) : null,
     getBookmark(
       ctx,
@@ -25,6 +25,7 @@ export const enhanceFile = async (
       file._id,
     ),
     getSidebarItemSharesForItem(ctx, file.campaignId, file._id),
+    file.storageId ? ctx.db.system.get(file.storageId) : null,
   ])
 
   return {
@@ -32,6 +33,7 @@ export const enhanceFile = async (
     downloadUrl,
     isBookmarked: !!bookmark,
     shares,
+    contentType: storageMetadata?.contentType ?? null,
   }
 }
 

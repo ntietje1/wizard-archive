@@ -13,6 +13,7 @@ export type FileFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.files> & {
 export type File = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
   storageId: Id<'_storage'>
   downloadUrl: string | null
+  contentType: string | null
 }
 
 export type FileWithContent = SidebarItemWithContent<
@@ -20,4 +21,5 @@ export type FileWithContent = SidebarItemWithContent<
 > & {
   storageId: Id<'_storage'>
   downloadUrl: string | null
+  contentType: string | null
 }
