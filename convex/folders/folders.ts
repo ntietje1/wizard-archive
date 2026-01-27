@@ -1,5 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
+import { pipe } from '../common/pipeline'
 import { deleteNote } from '../notes/notes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { enhanceFolderWithContent } from './helpers'
@@ -11,46 +12,15 @@ import type { Folder, FolderWithContent } from './types'
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FolderWithContent | null> => {
   const rawFolder = await ctx.db.get(folderId)
-  if (!rawFolder) {
-    return null
-  }
+  if (!rawFolder) return null
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: rawFolder.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const folder = (await enhanceSidebarItem(ctx, rawFolder)) as Folder
-
-  return enhanceFolderWithContent(ctx, folder)
-}
-
-export const getFolderBySlug = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  slug: string,
-): Promise<FolderWithContent | null> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const folder = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_slug', (q) =>
-      q.eq('campaignId', campaignId).eq('slug', slug),
-    )
-    .unique()
-
-  if (!folder) {
-    return null
-  }
-
-  return await getFolder(ctx, folder._id)
+  return pipe(ctx, rawFolder)
+    .pipe(enhanceSidebarItem)
+    .pipe((ctx, folder) => enhanceFolderWithContent(ctx, folder, viewAsPlayerId))
+    .run()
 }
 
 export async function deleteFolder(
@@ -128,7 +98,7 @@ export async function getSidebarItemAncestors(
   await requireCampaignMembership(
     ctx,
     { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
   const ancestors: Array<Folder> = []
@@ -139,7 +109,7 @@ export async function getSidebarItemAncestors(
     if (!rawFolder) {
       break
     }
-    const folder = (await enhanceSidebarItem(ctx, rawFolder)) as Folder
+    const folder = (await enhanceSidebarItem(ctx, rawFolder))
 
     ancestors.unshift(folder)
     currentParentId = folder.parentId

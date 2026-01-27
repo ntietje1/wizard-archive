@@ -1,7 +1,7 @@
 import { getSidebarItemsByParentAndName } from '../sidebarItems/sidebarItems'
+import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemId } from './types'
 
 export interface ValidationResult {
   valid: boolean

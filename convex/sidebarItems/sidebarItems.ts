@@ -1,25 +1,23 @@
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import { getCampaignMembership, requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getNote, getNoteBySlug } from '../notes/notes'
-import { getMap, getMapBySlug } from '../gameMaps/gameMaps'
-import { getFolder, getFolderBySlug } from '../folders/folders'
-import { getFile, getFileBySlug } from '../files/files'
+import { pipeList } from '../common/pipeline'
+import { getNote } from '../notes/notes'
+import { getMap } from '../gameMaps/gameMaps'
+import { getFolder, getSidebarItemAncestors } from '../folders/folders'
+import { getFile } from '../files/files'
+import { enforceSidebarItemSharePermissionsOrNull } from '../shares/itemShares'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
-import type {
-  AnySidebarItem,
-  AnySidebarItemFromDb,
-  AnySidebarItemWithContent,
-  SidebarItemId,
-  SidebarItemType,
-} from './types'
+import type { AnySidebarItem, AnySidebarItemFromDb, AnySidebarItemWithContent } from './types'
+import type { SidebarItemId, SidebarItemType } from './baseTypes';
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 
-export const getAllSidebarItems = async (
+const getAllSidebarItems = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
+  viewAsPlayerId?: Id<'campaignMembers'>
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -53,15 +51,52 @@ export const getAllSidebarItems = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return await Promise.all(
-    allItems.map(async (item) => await enhanceSidebarItem(ctx, item)),
+  return pipeList(ctx, allItems)
+    .map(enhanceSidebarItem)
+    .enforce((ctx, item) => enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId))
+    .run()
+}
+
+
+export const getAllSidebarItemsWithAncestors = async (
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  viewAsPlayerId?: Id<'campaignMembers'>
+): Promise<Array<AnySidebarItem>> => {
+  const sharedItems = await getAllSidebarItems(ctx, campaignId, viewAsPlayerId)
+
+  const parentIds = new Set<Id<'folders'>>()
+  for (const item of sharedItems) {
+    if (item.parentId) {
+      parentIds.add(item.parentId)
+    }
+  }
+
+  const ancestorArrays = await Promise.all(
+    [...parentIds].map((parentId) =>
+      getSidebarItemAncestors(ctx, campaignId, parentId),
+    ),
   )
+
+  const sharedItemIds = new Set(sharedItems.map((item) => item._id))
+  const ancestorMap = new Map<Id<'folders'>, AnySidebarItem>()
+
+  for (const ancestors of ancestorArrays) {
+    for (const ancestor of ancestors) {
+      if (!sharedItemIds.has(ancestor._id) && !ancestorMap.has(ancestor._id)) {
+        ancestorMap.set(ancestor._id, ancestor)
+      }
+    }
+  }
+
+  return [...sharedItems, ...ancestorMap.values()]
 }
 
 export const getSidebarItemsByParent = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
+  viewAsPlayerId?: Id<'campaignMembers'>
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -103,9 +138,10 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return await Promise.all(
-    allItems.map(async (item) => await enhanceSidebarItem(ctx, item)),
-  )
+  return pipeList(ctx, allItems)
+    .map(enhanceSidebarItem)
+    .enforce((ctx, item) => enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId))
+    .run()
 }
 
 export const getSidebarItemsByParentAndName = async (
@@ -154,9 +190,10 @@ export const getSidebarItemsByParentAndName = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return await Promise.all(
-    allItems.map(async (item) => await enhanceSidebarItem(ctx, item)),
-  )
+  return pipeList(ctx, allItems)
+    .map(enhanceSidebarItem)
+    .enforce(enforceSidebarItemSharePermissionsOrNull)
+    .run()
 }
 
 export const getSidebarItemByName = async (
@@ -170,7 +207,7 @@ export const getSidebarItemByName = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  let itemId: SidebarItemId | null = null
+  let item: AnySidebarItemFromDb | null = null
 
   const note = await ctx.db
     .query('notes')
@@ -179,7 +216,7 @@ export const getSidebarItemByName = async (
     )
     .first()
   if (note) {
-    itemId = note._id
+    item = note
   }
 
   const folder = await ctx.db
@@ -189,7 +226,7 @@ export const getSidebarItemByName = async (
     )
     .first()
   if (folder) {
-    itemId = folder._id
+    item = folder
   }
 
   const map = await ctx.db
@@ -199,7 +236,7 @@ export const getSidebarItemByName = async (
     )
     .first()
   if (map) {
-    itemId = map._id
+    item = map
   }
 
   const file = await ctx.db
@@ -209,14 +246,14 @@ export const getSidebarItemByName = async (
     )
     .first()
   if (file) {
-    itemId = file._id
+    item = file
   }
 
-  if (!itemId) {
+  if (!item) {
     return null
   }
 
-  return await getSidebarItemById(ctx, campaignId, itemId)
+  return await getSidebarItemById(ctx, campaignId, item._id)
 }
 
 export const getSidebarItemBySlug = async (
@@ -224,6 +261,7 @@ export const getSidebarItemBySlug = async (
   campaignId: Id<'campaigns'>,
   type: SidebarItemType,
   slug: string,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -231,24 +269,57 @@ export const getSidebarItemBySlug = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
+  let item: AnySidebarItemFromDb | null = null
+
   switch (type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      return await getFolderBySlug(ctx, campaignId, slug)
+      item = await ctx.db
+      .query('folders')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
+      break
     case SIDEBAR_ITEM_TYPES.notes:
-      return await getNoteBySlug(ctx, campaignId, slug)
+      item = await ctx.db
+      .query('notes')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
+      break
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return await getMapBySlug(ctx, campaignId, slug)
+      item = await ctx.db
+      .query('gameMaps')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
+      break
     case SIDEBAR_ITEM_TYPES.files:
-      return await getFileBySlug(ctx, campaignId, slug)
+      item = await ctx.db
+      .query('files')
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
+      break
     default:
       throw new Error(`Unknown item type, ${type}`)
   }
+
+  if (!item) {
+    return null
+  }
+
+  return await getSidebarItemById(ctx, campaignId, item._id, viewAsPlayerId)
 }
 
 export const getSidebarItemById = async (
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   id: SidebarItemId,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -263,11 +334,11 @@ export const getSidebarItemById = async (
 
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      return await getFolder(ctx, id as Id<'folders'>)
+      return await getFolder(ctx, id as Id<'folders'>, viewAsPlayerId)
     case SIDEBAR_ITEM_TYPES.notes:
-      return await getNote(ctx, id as Id<'notes'>)
+      return await getNote(ctx, id as Id<'notes'>, viewAsPlayerId)
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return await getMap(ctx, id as Id<'gameMaps'>)
+      return await getMap(ctx, id as Id<'gameMaps'>, viewAsPlayerId)
     case SIDEBAR_ITEM_TYPES.files:
       return await getFile(ctx, id as Id<'files'>)
     default:

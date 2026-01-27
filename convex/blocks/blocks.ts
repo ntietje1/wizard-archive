@@ -1,8 +1,11 @@
 import { getNote } from '../notes/notes'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { BLOCK_SHARE_STATUS } from './types'
-import type { Block, BlockShareStatus } from './types'
+import { pipeList } from '../common/pipeline'
+import { enforceBlockSharePermissionsOrNull } from '../shares/blockShares'
+import { SHARE_STATUS } from '../shares/types'
+import type { Block } from './types'
+import type { ShareStatus } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type { Ctx } from '../common/types'
@@ -49,6 +52,7 @@ export async function getTopLevelBlocksByNote(
   ctx: Ctx,
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<Block>> {
   const blocks = await ctx.db
     .query('blocks')
@@ -57,68 +61,13 @@ export async function getTopLevelBlocksByNote(
     )
     .collect()
 
-  return blocks
-    .filter((block) => block.isTopLevel)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
-}
+  const topLevelBlocks = blocks.filter((block) => block.isTopLevel)
 
-export async function getSharedBlocksByNoteAndPlayer(
-  ctx: Ctx,
-  noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
-  sharedWithPlayerId?: Id<'campaignMembers'>,
-): Promise<Array<Block>> {
-  const { campaignWithMembership } = await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-  const targetPlayerId = sharedWithPlayerId ?? campaignWithMembership.member._id
-  if (
-    targetPlayerId !== campaignWithMembership.member._id &&
-    campaignWithMembership.member.role !== CAMPAIGN_MEMBER_ROLE.DM
-  ) {
-    throw new Error('You are not allowed to access this content')
-  }
+  const permittedBlocks = await pipeList(ctx, topLevelBlocks)
+    .enforce((ctx, block) => enforceBlockSharePermissionsOrNull(ctx, block, viewAsPlayerId))
+    .run()
 
-  const allSharedBlocks = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_shareStatus', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('noteId', noteId)
-        .eq('shareStatus', BLOCK_SHARE_STATUS.ALL_SHARED),
-    )
-    .collect()
-
-  const individuallySharedBlocks = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_shareStatus', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('noteId', noteId)
-        .eq('shareStatus', BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED),
-    )
-    .collect()
-
-  for (const block of individuallySharedBlocks) {
-    const share = await ctx.db
-      .query('blockShares')
-      .withIndex('by_campaign_block_member', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('blockId', block._id)
-          .eq('campaignMemberId', targetPlayerId),
-      )
-      .unique()
-    if (share) {
-      allSharedBlocks.push(block)
-    }
-  }
-
-  return allSharedBlocks
-    .filter((block) => block.isTopLevel)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
+  return permittedBlocks.sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
 export async function getBlocksByCampaign(
@@ -194,7 +143,7 @@ export async function saveTopLevelBlocksForNote(
         position: positions.get(block.id),
         content: block,
         now,
-        shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
+        shareStatus: SHARE_STATUS.NOT_SHARED,
       })
     }
   }
@@ -216,7 +165,7 @@ export async function insertBlock(
     position?: number
     content: CustomBlock
     now: number
-    shareStatus: BlockShareStatus
+    shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {
   return await ctx.db.insert('blocks', {
@@ -227,7 +176,7 @@ export async function insertBlock(
     content: params.content,
     isTopLevel: params.isTopLevel,
     updatedAt: params.now,
-    shareStatus: params.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED,
+    shareStatus: params.shareStatus ?? SHARE_STATUS.NOT_SHARED,
   })
 }
 
@@ -238,7 +187,7 @@ export async function updateBlock(
     position?: number
     content?: CustomBlock
     isTopLevel?: boolean
-    shareStatus?: BlockShareStatus
+    shareStatus?: ShareStatus
     updatedAt?: number
   },
 ): Promise<void> {
@@ -260,7 +209,7 @@ export async function removeBlockIfNotNeeded(
     !block ||
     block.campaignId !== campaignId ||
     block.isTopLevel ||
-    block.shareStatus !== BLOCK_SHARE_STATUS.NOT_SHARED
+    block.shareStatus !== SHARE_STATUS.NOT_SHARED
   ) {
     return
   }

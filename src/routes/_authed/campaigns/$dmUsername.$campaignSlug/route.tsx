@@ -7,6 +7,7 @@ import { CampaignProvider } from '~/contexts/CampaignContext'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
+import { EditorModeProvider } from '~/contexts/EditorModeContext'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
@@ -38,9 +39,11 @@ function RouteComponent() {
           <div className="flex flex-1 min-h-0">
             <SidebarLayoutProvider>
               <NavigationSidebar />
-              <SidebarLayout>
-                <Outlet />
-              </SidebarLayout>
+              <EditorModeProvider>
+                <SidebarLayout>
+                  <Outlet />
+                </SidebarLayout>
+              </EditorModeProvider>
             </SidebarLayoutProvider>
           </div>
         </FileSidebarProvider>

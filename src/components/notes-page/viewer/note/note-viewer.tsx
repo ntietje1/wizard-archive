@@ -1,5 +1,7 @@
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
+import { useEffect } from 'react'
+import { ClientOnly } from '@tanstack/react-router'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
@@ -8,54 +10,25 @@ import '../../editor/extensions/wiki-link/wiki-link.css'
 import '../../editor/extensions/md-link/md-link.css'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import type { Note, NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'convex/notes/types'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
 import { useDisableAutolink } from '~/hooks/useDisableAutolink'
-import { useEditorMode } from '~/hooks/useEditorMode'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { editorSchema } from '~/lib/editor-schema'
-import { isNote } from '~/lib/sidebar-item-utils'
-import { useSharedNoteContent } from '~/hooks/useSharedNoteContent'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
+import { useEditorMode } from '~/hooks/useEditorMode'
 
-// TODO: make shared query same as normal query
-export function NoteViewer({ item: note }: EditorViewerProps<Note>) {
+export function NoteViewer({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
-  const { sharedNoteQuery: noteQuery } = useSharedNoteContent(
-    note._id,
-    viewAsPlayerId,
-  )
-
-  if (noteQuery.isPending || !noteQuery.data) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 p-4">
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/5" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isNote(note)) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Invalid item type for note viewer.
-      </div>
-    )
-  }
 
   return (
-    <NoteViewerBase
-      key={noteQuery.data._id + '-' + viewAsPlayerId}
-      noteWithContent={noteQuery.data}
-    />
+    <ClientOnly fallback={null}>
+      <NoteViewerBase
+        key={note._id + '-' + viewAsPlayerId}
+        noteWithContent={note}
+      />
+    </ClientOnly>
   )
 }
 
@@ -71,6 +44,10 @@ export const NoteViewerBase = ({
     schema: editorSchema,
     initialContent,
   })
+
+  useEffect(() => {
+    editor.replaceBlocks(editor.document, noteWithContent.content)
+  }, [editor, noteWithContent.content])
 
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)

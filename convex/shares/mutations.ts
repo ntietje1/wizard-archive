@@ -13,16 +13,15 @@ import {
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
 import {
-  SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from '../sidebarItems/baseTypes'
+import { SHARE_STATUS } from './types'
 import {
   setBlockShareStatusHelper,
   shareBlockWithMemberHelper,
-  shareSidebarItemWithMember,
-  unshareBlockFromMemberHelper,
-  unshareSidebarItemFromMember,
-} from './shares'
+  unshareBlockFromMemberHelper
+} from './blockShares'
+import { shareSidebarItemWithMember, unshareSidebarItemFromMember } from "./itemShares"
 import type { Id } from '../_generated/dataModel'
 
 /**
@@ -60,7 +59,7 @@ export const setSidebarItemShareStatus = mutation({
     })
 
     // If setting to not_shared, clear any individual shares
-    if (args.status === SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED) {
+    if (args.status === SHARE_STATUS.NOT_SHARED) {
       const shares = await ctx.db
         .query('sidebarItemShares')
         .withIndex('by_campaign_item_member', (q) =>
@@ -104,9 +103,9 @@ export const shareSidebarItem = mutation({
       throw new Error('Sidebar item not found')
     }
 
-    if (item.shareStatus !== SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+    if (item.shareStatus !== SHARE_STATUS.INDIVIDUALLY_SHARED) {
       await ctx.db.patch(args.sidebarItemId, {
-        shareStatus: SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED,
+        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
       })
     }
 
@@ -163,7 +162,7 @@ export const unshareSidebarItem = mutation({
     // If no shares remain, set status to not_shared
     if (!remainingShares) {
       await ctx.db.patch(args.sidebarItemId, {
-        shareStatus: SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED,
+        shareStatus: SHARE_STATUS.NOT_SHARED,
       })
     }
 

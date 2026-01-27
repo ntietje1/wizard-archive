@@ -1,9 +1,10 @@
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../folders/folders'
-import { getSidebarItemSharesForItem } from '../shares/shares'
+import { getSidebarItemSharesForItem } from "../shares/itemShares"
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type { Note, NoteFromDb, NoteWithContent } from './types'
 
@@ -37,17 +38,16 @@ export const enhanceNote = async (
 export const enhanceNoteWithContent = async (
   ctx: QueryCtx,
   note: Note,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent> => {
-  const ancestors = await getSidebarItemAncestors(
-    ctx,
-    note.campaignId,
-    note.parentId,
-  )
-  const topLevelBlocks = await getTopLevelBlocksByNote(
-    ctx,
-    note._id,
-    note.campaignId,
-  )
+  const [ancestors = [], topLevelBlocks = []] = await Promise.all([
+    getSidebarItemAncestors(
+      ctx,
+      note.campaignId,
+      note.parentId,
+    ),
+    getTopLevelBlocksByNote(ctx, note._id, note.campaignId, viewAsPlayerId),
+  ])
   const content = topLevelBlocks.map((block) => block.content)
   return {
     ...note,

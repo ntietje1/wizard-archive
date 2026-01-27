@@ -1,6 +1,6 @@
 import type { Folder } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemShare } from '../shares/types'
+import type { ShareStatus, SidebarItemShare } from '../shares/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -29,15 +29,6 @@ export const SIDEBAR_ITEM_OR_ROOT_TYPES = {
 export type SidebarItemOrRootType =
   (typeof SIDEBAR_ITEM_OR_ROOT_TYPES)[keyof typeof SIDEBAR_ITEM_OR_ROOT_TYPES]
 
-export const SIDEBAR_ITEM_SHARE_STATUS = {
-  ALL_SHARED: 'all_shared',
-  NOT_SHARED: 'not_shared',
-  INDIVIDUALLY_SHARED: 'individually_shared',
-} as const
-
-export type SidebarItemShareStatus =
-  (typeof SIDEBAR_ITEM_SHARE_STATUS)[keyof typeof SIDEBAR_ITEM_SHARE_STATUS]
-
 export type SidebarItemId =
   | Id<'notes'>
   | Id<'folders'>
@@ -56,7 +47,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   parentId?: Id<'folders'>
   updatedAt: number
   type: T
-  shareStatus?: SidebarItemShareStatus
+  shareStatus?: ShareStatus
 }
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {

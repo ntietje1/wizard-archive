@@ -7,15 +7,6 @@ import type { Note, NoteFromDb, NoteWithContent } from '../notes/types'
 import type { Folder, FolderFromDb, FolderWithContent } from '../folders/types'
 import type { File, FileFromDb, FileWithContent } from '../files/types'
 
-export type {
-  SidebarItemType,
-  SidebarItemOrRootType,
-  SidebarItemShareStatus,
-  SidebarItemId,
-  SidebarItem,
-  SidebarItemFromDb,
-} from './baseTypes'
-
 export type AnySidebarItemFromDb =
   | NoteFromDb
   | FolderFromDb
@@ -29,3 +20,11 @@ export type AnySidebarItemWithContent =
   | GameMapWithContent
   | FolderWithContent
   | FileWithContent
+
+
+export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> =
+  T extends NoteFromDb ? Note :
+  T extends FolderFromDb ? Folder :
+  T extends GameMapFromDb ? GameMap :
+  T extends FileFromDb ? File :
+  never

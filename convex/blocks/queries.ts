@@ -5,19 +5,19 @@ import {
   getCampaignMembers,
   requireCampaignMembership,
 } from '../campaigns/campaigns'
-import { getBlockSharesForBlock } from '../shares/shares'
+import { getBlockSharesForBlock } from '../shares/blockShares'
 import { blockShareValidator } from '../shares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
+import { SHARE_STATUS } from '../shares/types'
 import {
   blockNoteIdValidator,
   blockShareStatusValidator,
   blockValidator,
 } from './schema'
 import { findBlockByBlockNoteId } from './blocks'
-import { BLOCK_SHARE_STATUS } from './types'
 import type { Id } from '../_generated/dataModel'
-import type { Block, BlockShareStatus } from './types'
-import type { BlockShare } from '../shares/types'
+import type { Block } from './types'
+import type { BlockShare, ShareStatus  } from '../shares/types'
 import type { CampaignMember } from '../campaigns/types'
 
 export const getBlockById = query({
@@ -58,7 +58,7 @@ export const getBlockWithShares = query({
     args,
   ): Promise<{
     block: Block
-    shareStatus: BlockShareStatus
+    shareStatus: ShareStatus
     shares: Array<BlockShare>
     playerMembers: Array<CampaignMember>
   } | null> => {
@@ -76,8 +76,8 @@ export const getBlockWithShares = query({
       return null
     }
 
-    const shareStatus: BlockShareStatus =
-      block.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+    const shareStatus: ShareStatus =
+      block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
     const allMembers = await getCampaignMembers(ctx, note.campaignId)
     const playerMembers = allMembers.filter(
@@ -85,7 +85,7 @@ export const getBlockWithShares = query({
     )
 
     let shares: Array<BlockShare> = []
-    if (shareStatus === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+    if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
       shares = await getBlockSharesForBlock(ctx, note.campaignId, block._id)
     }
 
@@ -107,7 +107,7 @@ const blockShareInfoValidator = v.object({
 
 export type BlockShareInfo = {
   blockNoteId: string
-  shareStatus: BlockShareStatus
+  shareStatus: ShareStatus
   sharedMemberIds: Array<Id<'campaignMembers'>>
   isTopLevel: boolean
 }
@@ -151,18 +151,18 @@ export const getBlocksWithShares = query({
         // Block doesn't exist in DB yet - treat as not shared, top-level
         blocks.push({
           blockNoteId: blockId,
-          shareStatus: BLOCK_SHARE_STATUS.NOT_SHARED,
+          shareStatus: SHARE_STATUS.NOT_SHARED,
           sharedMemberIds: [],
           isTopLevel: true,
         })
         continue
       }
 
-      const shareStatus: BlockShareStatus =
-        block.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+      const shareStatus: ShareStatus =
+        block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
       let sharedMemberIds: Array<Id<'campaignMembers'>> = []
-      if (shareStatus === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+      if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
         const shares = await getBlockSharesForBlock(
           ctx,
           note.campaignId,

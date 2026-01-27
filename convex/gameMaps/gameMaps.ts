@@ -1,55 +1,24 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { pipe } from '../common/pipeline'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { enhanceGameMapWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
-import type { GameMap, GameMapWithContent } from './types'
+import type { GameMapWithContent } from './types'
 
 export const getMap = async (
   ctx: Ctx,
   mapId: Id<'gameMaps'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
-  if (!rawMap) {
-    return null
-  }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: rawMap.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const map = (await enhanceSidebarItem(ctx, rawMap)) as GameMap
-
-  return enhanceGameMapWithContent(ctx, map)
-}
-
-export const getMapBySlug = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  slug: string,
-): Promise<GameMapWithContent | null> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const map = await ctx.db
-    .query('gameMaps')
-    .withIndex('by_campaign_slug', (q) =>
-      q.eq('campaignId', campaignId).eq('slug', slug),
-    )
-    .unique()
-
-  if (!map) {
-    return null
-  }
-
-  return getMap(ctx, map._id)
+  return pipe(ctx, rawMap)
+    .pipe(enhanceSidebarItem)
+    .pipe((ctx, map) => enhanceGameMapWithContent(ctx, map, viewAsPlayerId))
+    .run()
 }
 
 export const deleteMap = async (

@@ -1,5 +1,5 @@
 import { getSidebarItemAncestors } from '../folders/folders'
-import { getSidebarItemSharesForItem } from '../shares/shares'
+import { getSidebarItemSharesForItem } from "../shares/itemShares"
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'

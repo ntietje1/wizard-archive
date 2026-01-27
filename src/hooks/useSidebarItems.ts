@@ -1,22 +1,24 @@
 import { useCallback, useMemo } from 'react'
 import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { useSortOptions } from './useSortOptions'
 import type { SortOptions } from 'convex/editors/types'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { isFolder } from '~/lib/sidebar-item-utils'
 
+// TODO: remove the need for this hook
 export const useSidebarItemsByParent = (
   parentId?: Id<'folders'>,
   enabled = true,
 ) => {
-  const { sortOptions } = useSortOptions()
   const { campaignWithMembership } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
   const campaign = campaignWithMembership.data?.campaign
   const sidebarItems = useQuery(
     convexQuery(
@@ -25,26 +27,30 @@ export const useSidebarItemsByParent = (
         ? {
             campaignId: campaign._id,
             parentId,
+            viewAsPlayerId,
           }
         : 'skip',
-    ),
+    ),  
   )
   return {
     ...sidebarItems,
-    data: sortItemsByOptions(sortOptions, sidebarItems.data),
+    data: sidebarItems.data,
   }
 }
 
 export const useAllSidebarItems = (enabled = true) => {
   const { campaignWithMembership } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
   const campaign = campaignWithMembership.data?.campaign
-
-  const sidebarItemsQuery = useQuery(
-    convexQuery(
+  const sidebarItemsQuery = useQuery({
+    ...convexQuery(
       api.sidebarItems.queries.getAllSidebarItems,
-      campaign?._id && enabled ? { campaignId: campaign._id } : 'skip',
+      campaign?._id && enabled
+        ? { campaignId: campaign._id, viewAsPlayerId }
+        : 'skip',
     ),
-  )
+    placeholderData: keepPreviousData,
+  })
 
   const sidebarItemIdMap = useMemo(() => {
     const sidebarItems = sidebarItemsQuery.data ?? []
@@ -57,7 +63,7 @@ export const useAllSidebarItems = (enabled = true) => {
 
   const sidebarItemParentIdMap = useMemo(() => {
     const sidebarItems = sidebarItemsQuery.data ?? []
-    const map = new Map<SidebarItemId | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
     sidebarItems.forEach((item) => {
       if (map.has(item.parentId)) {
         map.get(item.parentId)?.push(item)

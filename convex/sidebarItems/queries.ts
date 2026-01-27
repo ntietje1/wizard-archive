@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import {
-  getAllSidebarItems as getAllSidebarItemsFn,
+  getAllSidebarItemsWithAncestors as getAllSidebarItemsWithAncestorsFn,
   getSidebarItemById as getSidebarItemByIdFn,
   getSidebarItemBySlug as getSidebarItemBySlugFn,
   getSidebarItemByName as getSidebarItemsByNameFn,
@@ -20,10 +20,11 @@ import type { AnySidebarItem, AnySidebarItemWithContent } from './types'
 export const getAllSidebarItems = query({
   args: {
     campaignId: v.id('campaigns'),
+    viewAsPlayerId: v.optional(v.id('campaignMembers')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsFn(ctx, args.campaignId)
+    return await getAllSidebarItemsWithAncestorsFn(ctx, args.campaignId, args.viewAsPlayerId)
   },
 })
 
@@ -42,10 +43,11 @@ export const getSidebarItem = query({
   args: {
     id: sidebarItemIdValidator,
     campaignId: v.id('campaigns'),
+    viewAsPlayerId: v.optional(v.id('campaignMembers')),
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    const result = await getSidebarItemByIdFn(ctx, args.campaignId, args.id)
+    const result = await getSidebarItemByIdFn(ctx, args.campaignId, args.id, args.viewAsPlayerId)
     if (!result) {
       throw new Error('Sidebar item not found')
     }
@@ -58,6 +60,7 @@ export const getSidebarItemBySlug = query({
     campaignId: v.id('campaigns'),
     type: sidebarItemTypeValidator,
     slug: v.string(),
+    viewAsPlayerId: v.optional(v.id('campaignMembers')),
   },
   returns: v.union(anySidebarItemWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
@@ -66,6 +69,7 @@ export const getSidebarItemBySlug = query({
       args.campaignId,
       args.type,
       args.slug,
+      args.viewAsPlayerId,
     )
   },
 })

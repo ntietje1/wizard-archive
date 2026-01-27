@@ -3,6 +3,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import type { CampaignWithMembership } from 'convex/campaigns/types'
 
 export type CampaignContextType = {
+  isDm: boolean | undefined
   dmUsername: string
   campaignSlug: string
   campaignWithMembership: UseQueryResult<CampaignWithMembership, Error>

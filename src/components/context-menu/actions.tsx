@@ -4,10 +4,10 @@ import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import {
-  SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { SHARE_STATUS } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
@@ -302,13 +302,13 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         try {
           // all_shared -> not_shared
-          if (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED) {
+          if (shareStatus === SHARE_STATUS.ALL_SHARED) {
             await convex.mutation(
               api.shares.mutations.setSidebarItemShareStatus,
               {
                 campaignId,
                 sidebarItemId: ctx.item._id,
-                status: SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED,
+                status: SHARE_STATUS.NOT_SHARED,
               },
             )
             toast.success('Unshared from all players')
@@ -320,7 +320,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               {
                 campaignId,
                 sidebarItemId: ctx.item._id,
-                status: SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED,
+                status: SHARE_STATUS.ALL_SHARED,
               },
             )
             if (playerMembers.length === 0) {
@@ -345,8 +345,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         // Determine if currently shared with this member
         const isCurrentlyShared =
-          shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
-          (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+          shareStatus === SHARE_STATUS.ALL_SHARED ||
+          (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED &&
             sharedMemberIds.has(memberId))
 
         try {

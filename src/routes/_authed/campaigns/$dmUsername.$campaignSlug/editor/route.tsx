@@ -57,10 +57,8 @@ export const Route = createFileRoute(
 function EditorLayout() {
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-      <EditorModeProvider>
-        <FileTopbar />
-        <EditorContent />
-      </EditorModeProvider>
+      <FileTopbar />
+      <EditorContent />
     </div>
   )
 }

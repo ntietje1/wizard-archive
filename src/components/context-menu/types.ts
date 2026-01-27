@@ -1,15 +1,15 @@
 import type {
   AnySidebarItemWithContent,
-  SidebarItemShareStatus,
 } from 'convex/sidebarItems/types'
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { ShareStatus } from 'convex/shares/types'
 
 export interface ShareState {
-  shareStatus: SidebarItemShareStatus
+  shareStatus: ShareStatus
   sharedMemberIds: Set<Id<'campaignMembers'>>
   playerMembers: Array<CampaignMember>
   isLoading: boolean

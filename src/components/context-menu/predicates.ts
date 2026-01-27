@@ -1,5 +1,6 @@
-import type { SidebarItemType } from 'convex/sidebarItems/types'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { Predicate, ViewContext } from './types'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 
 export const always: Predicate = () => true
 export const never: Predicate = () => false
@@ -72,4 +73,12 @@ export const hasActiveSession: Predicate = (ctx) => {
 
 export const hasNoActiveSession: Predicate = (ctx) => {
   return ctx.hasActiveSession !== true
+}
+
+export const isDm: Predicate = (ctx) => {
+  return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM
+}
+
+export const isPlayer: Predicate = (ctx) => {
+  return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.Player
 }

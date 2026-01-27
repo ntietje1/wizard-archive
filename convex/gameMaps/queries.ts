@@ -7,9 +7,10 @@ import type { GameMapWithContent } from './types'
 export const getMap = query({
   args: {
     mapId: v.id('gameMaps'),
+    viewAsPlayerId: v.optional(v.id('campaignMembers')),
   },
   returns: v.union(mapWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<GameMapWithContent | null> => {
-    return getMapFn(ctx, args.mapId)
+    return getMapFn(ctx, args.mapId, args.viewAsPlayerId)
   },
 })

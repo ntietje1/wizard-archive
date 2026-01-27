@@ -8,25 +8,10 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { getFolder as getFolderFn } from './folders'
-import { downloadableItemValidator, folderWithContentValidator } from './schema'
-import type { DownloadableItem, FolderWithContent } from './types'
+import { downloadableItemValidator } from './schema'
+import type { DownloadableItem } from './types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
-
-export const getFolder = query({
-  args: {
-    folderId: v.id('folders'),
-  },
-  returns: folderWithContentValidator,
-  handler: async (ctx, args): Promise<FolderWithContent> => {
-    const folder = await getFolderFn(ctx, args.folderId)
-    if (!folder) {
-      throw new Error('Folder not found')
-    }
-    return folder
-  },
-})
 
 async function collectItemsRecursively(
   ctx: QueryCtx,

@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { BLOCK_SHARE_STATUS } from 'convex/blocks/types'
+import { SHARE_STATUS } from 'convex/shares/types'
 import type { CustomBlock } from '~/lib/editor-schema'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
@@ -78,14 +78,14 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
     const statuses = topLevelBlocks.map(
       (b) =>
-        blockInfoMap.get(b.id)?.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED,
+        blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
     )
 
-    if (statuses.some((s) => s === BLOCK_SHARE_STATUS.NOT_SHARED))
+    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED))
       return 'not_shared'
-    if (statuses.every((s) => s === BLOCK_SHARE_STATUS.ALL_SHARED))
+    if (statuses.every((s) => s === SHARE_STATUS.ALL_SHARED))
       return 'all_shared'
-    if (statuses.every((s) => s === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED))
+    if (statuses.every((s) => s === SHARE_STATUS.INDIVIDUALLY_SHARED))
       return 'individually_shared'
     return 'mixed_shared'
   }, [topLevelBlocks, blockInfoMap, hasCompleteData])
@@ -95,7 +95,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       topLevelBlocks.filter(
         (b) =>
           (blockInfoMap.get(b.id)?.shareStatus ??
-            BLOCK_SHARE_STATUS.NOT_SHARED) === BLOCK_SHARE_STATUS.NOT_SHARED,
+            SHARE_STATUS.NOT_SHARED) === SHARE_STATUS.NOT_SHARED,
       ),
     [topLevelBlocks, blockInfoMap],
   )
@@ -111,10 +111,10 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       let count = 0
       for (const block of topLevelBlocks) {
         const info = blockInfoMap.get(block.id)
-        const status = info?.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+        const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
         if (
-          status === BLOCK_SHARE_STATUS.ALL_SHARED ||
-          (status === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+          status === SHARE_STATUS.ALL_SHARED ||
+          (status === SHARE_STATUS.INDIVIDUALLY_SHARED &&
             info?.sharedMemberIds.includes(memberId))
         ) {
           count++
@@ -140,8 +140,8 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         unsharedBlocks.length > 0 ? unsharedBlocks : topLevelBlocks
       const newStatus =
         unsharedBlocks.length > 0
-          ? BLOCK_SHARE_STATUS.ALL_SHARED
-          : BLOCK_SHARE_STATUS.NOT_SHARED
+          ? SHARE_STATUS.ALL_SHARED
+          : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
         campaignId: campaign._id,
@@ -174,10 +174,10 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       } else {
         const blocksToShare = topLevelBlocks.filter((block) => {
           const info = blockInfoMap.get(block.id)
-          const status = info?.shareStatus ?? BLOCK_SHARE_STATUS.NOT_SHARED
+          const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
           return (
-            status === BLOCK_SHARE_STATUS.NOT_SHARED ||
-            (status === BLOCK_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+            status === SHARE_STATUS.NOT_SHARED ||
+            (status === SHARE_STATUS.INDIVIDUALLY_SHARED &&
               !info?.sharedMemberIds.includes(memberId))
           )
         })

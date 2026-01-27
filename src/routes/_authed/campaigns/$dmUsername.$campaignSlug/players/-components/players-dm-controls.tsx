@@ -19,7 +19,7 @@ export default function PlayersDmControls({
   onOpenRequests,
   onCopyJoinUrl,
 }: PlayersDmControlsProps) {
-  const { dmUsername, campaignSlug, campaignWithMembership } = useCampaign()
+  const { dmUsername, campaignSlug, campaignWithMembership, isDm } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
   const campaignMember = campaignWithMembership.data?.member
   const players = useQuery(
@@ -36,6 +36,10 @@ export default function PlayersDmControls({
       p.role === CAMPAIGN_MEMBER_ROLE.Player &&
       p.status === CAMPAIGN_MEMBER_STATUS.Pending,
   ).length
+
+  if (!isDm) {
+    return null
+  }
 
   return (
     <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

@@ -1,55 +1,25 @@
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { pipe } from '../common/pipeline'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { enforceSidebarItemSharePermissionsOrNull } from '../shares/itemShares'
 import { enhanceFileWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
-import type { File, FileWithContent } from './types'
+import type { FileWithContent } from './types'
 
 export const getFile = async (
   ctx: Ctx,
   fileId: Id<'files'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
-  if (!rawFile) {
-    return null
-  }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: rawFile.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
-  const file = (await enhanceSidebarItem(ctx, rawFile)) as File
-
-  return enhanceFileWithContent(ctx, file)
-}
-
-export const getFileBySlug = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  slug: string,
-): Promise<FileWithContent | null> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
-  const file = await ctx.db
-    .query('files')
-    .withIndex('by_campaign_slug', (q) =>
-      q.eq('campaignId', campaignId).eq('slug', slug),
-    )
-    .unique()
-
-  if (!file) {
-    return null
-  }
-
-  return getFile(ctx, file._id)
+  return pipe(ctx, rawFile)
+    .pipe(enhanceSidebarItem)
+    .enforce(enforceSidebarItemSharePermissionsOrNull)
+    .pipe(enhanceFileWithContent)
+    .run()
 }
 
 export const deleteFile = async (

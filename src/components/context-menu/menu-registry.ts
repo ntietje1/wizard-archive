@@ -1,6 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import {
-  SIDEBAR_ITEM_SHARE_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from 'convex/sidebarItems/baseTypes'
 import {
@@ -23,6 +21,7 @@ import {
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
+import { SHARE_STATUS } from 'convex/shares/types'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -48,7 +47,7 @@ function getTypeName(ctx: MenuContext): string {
 function isSharedWithAll(ctx: MenuContext): boolean {
   const shareState = ctx.shareState
   if (!shareState) return false
-  return shareState.shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED
+  return shareState.shareStatus === SHARE_STATUS.ALL_SHARED
 }
 
 export type ActionHandlers = {
@@ -165,6 +164,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'create',
       priority: 5,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         !p.inView('topbar')(ctx) &&
         !p.hasPinContext(ctx) &&
         (p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) || p.atRoot(ctx)),
@@ -223,7 +223,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     {
       id: 'share-item',
       label: (ctx) => {
-        const willShowChildren = ctx.shareState?.playerMembers.length !== 0
+        const willShowChildren = (ctx.shareState?.playerMembers.length ?? 0) > 0
         // Only say "Unshare" if shared with ALL players
         if (isSharedWithAll(ctx)) {
           return willShowChildren ? `Unshare...` : `Unshare`
@@ -235,7 +235,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       variant: 'share',
       priority: 20,
       shouldShow: (ctx) =>
-        ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM &&
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.folders)(ctx),
       isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
@@ -268,9 +268,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
 
             // Check if shared with this member based on shareStatus
             const isShared =
-              shareState.shareStatus === SIDEBAR_ITEM_SHARE_STATUS.ALL_SHARED ||
+              shareState.shareStatus === SHARE_STATUS.ALL_SHARED ||
               (shareState.shareStatus ===
-                SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED &&
+                SHARE_STATUS.INDIVIDUALLY_SHARED &&
                 shareState.sharedMemberIds.has(member._id))
 
             return {
@@ -334,6 +334,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 1,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.inSidebar(ctx) &&
         p.isSidebarItem(ctx) &&
         !p.isPinnedOnActiveMap(ctx) &&
@@ -347,7 +348,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 50,
       shouldShow: (ctx) =>
-        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+        p.isDm(ctx) &&
+        p.hasPinContext(ctx),
       action: actions.moveMapPin,
     },
     {
@@ -358,7 +360,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 51,
       variant: 'danger',
       shouldShow: (ctx) =>
-        p.hasPinContext(ctx) && ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
+        p.isDm(ctx) &&
+        p.hasPinContext(ctx),
       action: actions.removeMapPin,
     },
     {
@@ -367,7 +370,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: MapPin,
       group: 'pin-actions',
       priority: 52,
-      shouldShow: (ctx) => p.isActiveMap(ctx) && p.inView('map-view')(ctx),
+      shouldShow: (ctx) =>
+        p.isDm(ctx) &&
+        p.isActiveMap(ctx) &&
+        p.inView('map-view')(ctx),
       action: actions.createMapPin,
     },
 
@@ -379,6 +385,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) &&
         !p.hasPinContext(ctx),
@@ -391,6 +398,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
         !p.hasMapContext(ctx),
@@ -403,6 +411,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) &&
         !p.hasMapContext(ctx),
@@ -415,6 +424,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 81,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) &&
         !p.hasMapContext(ctx),
@@ -426,7 +436,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FolderDown,
       group: 'download',
       priority: 82,
-      shouldShow: (ctx) => p.atRoot(ctx),
+      shouldShow: (ctx) => p.isDm(ctx) && p.atRoot(ctx),
       action: actions.downloadAll,
     },
 
@@ -437,7 +447,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileTypeIcon,
       group: 'edit',
       priority: 90,
-      shouldShow: (ctx) => p.inSidebar(ctx) && p.isSidebarItem(ctx),
+      shouldShow: (ctx) => p.isDm(ctx) && p.inSidebar(ctx) && p.isSidebarItem(ctx),
       action: actions.rename,
     },
     {
@@ -446,7 +456,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) => p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+      shouldShow: (ctx) => p.isDm(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
       action: actions.editMap,
     },
     {
@@ -455,7 +465,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FileEdit,
       group: 'edit',
       priority: 99,
-      shouldShow: (ctx) => p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+      shouldShow: (ctx) => p.isDm(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editFile,
     },
     {
@@ -465,6 +475,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,
@@ -479,6 +490,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 100,
       variant: 'danger',
       shouldShow: (ctx) =>
+        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         (p.inView('sidebar')(ctx) ||
           p.inView('folder-view')(ctx) ||

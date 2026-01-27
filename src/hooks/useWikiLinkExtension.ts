@@ -5,7 +5,8 @@ import { useAllSidebarItems } from './useSidebarItems'
 import { useCampaign } from './useCampaign'
 import { useEditorMode } from './useEditorMode'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 
 const PLUGIN_KEY = new PluginKey('wikiLinkDecoration')

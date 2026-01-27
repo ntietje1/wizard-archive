@@ -1,12 +1,14 @@
 import { useMatch } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useCurrentItem() {
   const { campaignWithMembership } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
   const campaignId = campaignWithMembership.data?.campaign._id
 
   const editorMatch = useMatch({
@@ -17,18 +19,20 @@ export function useCurrentItem() {
 
   const typeAndSlug = getTypeAndSlug(editorSearch)
 
-  const sidebarItemQuery = useQuery(
-    convexQuery(
+  const sidebarItemQuery = useQuery({
+    ...convexQuery(
       api.sidebarItems.queries.getSidebarItemBySlug,
       typeAndSlug && campaignId
         ? {
             campaignId,
             type: typeAndSlug.type,
             slug: typeAndSlug.slug,
+            viewAsPlayerId,
           }
         : 'skip',
     ),
-  )
+    placeholderData: keepPreviousData,
+  })
 
   const item = sidebarItemQuery.data ?? null
 

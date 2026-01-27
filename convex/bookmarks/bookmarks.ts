@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../sidebarItems/types'
+import type { SidebarItemId } from '../sidebarItems/baseTypes'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { Bookmark } from './types'

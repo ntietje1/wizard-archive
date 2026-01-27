@@ -131,7 +131,7 @@ export const getCampaignBySlug = query({
     const { campaignWithMembership } = await requireCampaignMembership(ctx, {
       dmUsername: args.dmUsername,
       campaignSlug: args.slug,
-    })
+    }, { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] })
     return campaignWithMembership
   },
 })
@@ -173,7 +173,7 @@ export const getPlayersByCampaign = query({
     const { campaignWithMembership } = await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
     const { campaign } = campaignWithMembership
 

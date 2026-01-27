@@ -3,18 +3,18 @@ import { filterSuggestionItems } from '@blocknote/core'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES  } from 'convex/sidebarItems/baseTypes'
 import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
+import type {SidebarItemId} from 'convex/sidebarItems/baseTypes';
 import type { EditorState } from '@tiptap/pm/state'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { HeadingEntry } from '~/lib/heading-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/lib/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/lib/heading-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
-import { useCampaign } from '~/hooks/useCampaign'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import {
   getItemPath,
@@ -249,8 +249,6 @@ export function WikiLinkAutocomplete({
   editor: CustomBlockNoteEditor | undefined
 }) {
   const { data: sidebarItems, itemsMap } = useAllSidebarItems()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
 
   const [menu, setMenu] = useState<{
     show: boolean

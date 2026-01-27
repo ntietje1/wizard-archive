@@ -1,5 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
+import { pipe } from '../common/pipeline'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
@@ -8,7 +9,7 @@ import { deleteBlocksByNote } from '../blocks/blocks'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { enhanceNoteWithContent } from './helpers'
 import type { MutationCtx } from '../_generated/server'
-import type { Note, NoteWithContent } from './types'
+import type { NoteWithContent } from './types'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 
@@ -130,45 +131,14 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
+  viewAsPlayerId?: Id<'campaignMembers'>
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
-  if (!rawNote) {
-    return null
-  }
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: rawNote.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
 
-  const note = (await enhanceSidebarItem(ctx, rawNote)) as Note
-
-  return enhanceNoteWithContent(ctx, note)
-}
-
-export const getNoteBySlug = async (
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  slug: string,
-): Promise<NoteWithContent | null> => {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
-  const note = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_slug', (q) =>
-      q.eq('campaignId', campaignId).eq('slug', slug),
-    )
-    .unique()
-
-  if (!note) {
-    return null
-  }
-
-  return getNote(ctx, note._id)
+  return pipe(ctx, rawNote)
+    .pipe(enhanceSidebarItem)
+    .pipe((ctx, note) => enhanceNoteWithContent(ctx, note, viewAsPlayerId))
+    .run()
 }
 
 export async function deleteNote(

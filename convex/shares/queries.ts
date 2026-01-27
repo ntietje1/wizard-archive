@@ -11,20 +11,17 @@ import {
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { SIDEBAR_ITEM_SHARE_STATUS } from '../sidebarItems/baseTypes'
+import { SHARE_STATUS } from './types'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import {
   getBlockSharesForBlock,
   getBlockSharesForMember,
-  getSharesForSession,
-  getSidebarItemSharesForItem,
-  getSidebarItemSharesForMember,
-  isBlockSharedWithMember,
-  isSidebarItemSharedWithMember,
-} from './shares'
+  isBlockSharedWithMember
+} from './blockShares'
+import { getSharesForSession } from "./shares"
+import { getSidebarItemSharesForItem, isSidebarItemSharedWithMember } from "./itemShares"
 import type { CampaignMember } from '../campaigns/types'
-import type { SidebarItemShareStatus } from '../sidebarItems/types'
-import type { BlockShare, SidebarItemShare } from './types'
+import type { BlockShare, ShareStatus, SidebarItemShare  } from './types'
 
 export const getSidebarItemShares = query({
   args: {
@@ -69,7 +66,7 @@ export const getSidebarItemWithShares = query({
     ctx,
     args,
   ): Promise<{
-    shareStatus: SidebarItemShareStatus
+    shareStatus: ShareStatus
     shares: Array<SidebarItemShare>
     playerMembers: Array<CampaignMember>
   }> => {
@@ -86,8 +83,8 @@ export const getSidebarItemWithShares = query({
     }
 
     // Get share status (default to 'not_shared' for legacy items)
-    const shareStatus: SidebarItemShareStatus =
-      item.shareStatus ?? SIDEBAR_ITEM_SHARE_STATUS.NOT_SHARED
+    const shareStatus: ShareStatus =
+      item.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
     // Get player members (always needed for UI)
     const allMembers = await getCampaignMembers(ctx, args.campaignId)
@@ -97,7 +94,7 @@ export const getSidebarItemWithShares = query({
 
     // Only  fetch individual shares if status is 'individually_shared'
     let shares: Array<SidebarItemShare> = []
-    if (shareStatus === SIDEBAR_ITEM_SHARE_STATUS.INDIVIDUALLY_SHARED) {
+    if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
       shares = await getSidebarItemSharesForItem(
         ctx,
         args.campaignId,
@@ -110,25 +107,6 @@ export const getSidebarItemWithShares = query({
       shares,
       playerMembers,
     }
-  },
-})
-
-export const getMySharedSidebarItems = query({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
-  returns: v.array(sidebarItemShareValidator),
-  handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-    return await getSidebarItemSharesForMember(
-      ctx,
-      args.campaignId,
-      campaignWithMembership.member._id,
-    )
   },
 })
 
