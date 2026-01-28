@@ -15,7 +15,6 @@ interface DroppableSidebarItemProps {
   children: React.ReactNode
 }
 
-
 function canAcceptFiles(
   item: Folder,
   ancestorIds: Array<Id<'folders'>>,

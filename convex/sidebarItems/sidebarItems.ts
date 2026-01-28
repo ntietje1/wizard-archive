@@ -1,4 +1,7 @@
-import { getCampaignMembership, requireCampaignMembership } from '../campaigns/campaigns'
+import {
+  getCampaignMembership,
+  requireCampaignMembership,
+} from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { pipeList } from '../common/pipeline'
 import { getNote } from '../notes/notes'
@@ -8,8 +11,12 @@ import { getFile } from '../files/files'
 import { enforceSidebarItemSharePermissionsOrNull } from '../shares/itemShares'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
-import type { AnySidebarItem, AnySidebarItemFromDb, AnySidebarItemWithContent } from './types'
-import type { SidebarItemId, SidebarItemType } from './baseTypes';
+import type {
+  AnySidebarItem,
+  AnySidebarItemFromDb,
+  AnySidebarItemWithContent,
+} from './types'
+import type { SidebarItemId, SidebarItemType } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
@@ -17,7 +24,7 @@ import type { QueryCtx } from '../_generated/server'
 const getAllSidebarItems = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  viewAsPlayerId?: Id<'campaignMembers'>
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -53,15 +60,16 @@ const getAllSidebarItems = async (
 
   return pipeList(ctx, allItems)
     .map(enhanceSidebarItem)
-    .enforce((ctx, item) => enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId))
+    .enforce((ctx, item) =>
+      enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
+    )
     .run()
 }
-
 
 export const getAllSidebarItemsWithAncestors = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  viewAsPlayerId?: Id<'campaignMembers'>
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
   const sharedItems = await getAllSidebarItems(ctx, campaignId, viewAsPlayerId)
 
@@ -96,7 +104,7 @@ export const getSidebarItemsByParent = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
-  viewAsPlayerId?: Id<'campaignMembers'>
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -140,7 +148,9 @@ export const getSidebarItemsByParent = async (
 
   return pipeList(ctx, allItems)
     .map(enhanceSidebarItem)
-    .enforce((ctx, item) => enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId))
+    .enforce((ctx, item) =>
+      enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
+    )
     .run()
 }
 
@@ -274,35 +284,35 @@ export const getSidebarItemBySlug = async (
   switch (type) {
     case SIDEBAR_ITEM_TYPES.folders:
       item = await ctx.db
-      .query('folders')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
+        .query('folders')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', campaignId).eq('slug', slug),
+        )
+        .unique()
       break
     case SIDEBAR_ITEM_TYPES.notes:
       item = await ctx.db
-      .query('notes')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
+        .query('notes')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', campaignId).eq('slug', slug),
+        )
+        .unique()
       break
     case SIDEBAR_ITEM_TYPES.gameMaps:
       item = await ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
+        .query('gameMaps')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', campaignId).eq('slug', slug),
+        )
+        .unique()
       break
     case SIDEBAR_ITEM_TYPES.files:
       item = await ctx.db
-      .query('files')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
+        .query('files')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', campaignId).eq('slug', slug),
+        )
+        .unique()
       break
     default:
       throw new Error(`Unknown item type, ${type}`)
@@ -332,18 +342,34 @@ export const getSidebarItemById = async (
     return null
   }
 
+  let result: AnySidebarItemWithContent | null = null
+
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      return await getFolder(ctx, id as Id<'folders'>, viewAsPlayerId)
+      result = await getFolder(ctx, id as Id<'folders'>, viewAsPlayerId)
+      break
     case SIDEBAR_ITEM_TYPES.notes:
-      return await getNote(ctx, id as Id<'notes'>, viewAsPlayerId)
+      result = await getNote(ctx, id as Id<'notes'>, viewAsPlayerId)
+      break
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return await getMap(ctx, id as Id<'gameMaps'>, viewAsPlayerId)
+      result = await getMap(ctx, id as Id<'gameMaps'>, viewAsPlayerId)
+      break
     case SIDEBAR_ITEM_TYPES.files:
-      return await getFile(ctx, id as Id<'files'>)
+      result = await getFile(ctx, id as Id<'files'>)
+      break
     default:
       throw new Error(`Unknown item type`)
   }
+
+  if (!result) {
+    return null
+  }
+
+  return await enforceSidebarItemSharePermissionsOrNull(
+    ctx,
+    result,
+    viewAsPlayerId,
+  )
 }
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

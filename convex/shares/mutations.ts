@@ -12,16 +12,17 @@ import {
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
-import {
-  SIDEBAR_ITEM_TYPES,
-} from '../sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { SHARE_STATUS } from './types'
 import {
   setBlockShareStatusHelper,
   shareBlockWithMemberHelper,
-  unshareBlockFromMemberHelper
+  unshareBlockFromMemberHelper,
 } from './blockShares'
-import { shareSidebarItemWithMember, unshareSidebarItemFromMember } from "./itemShares"
+import {
+  shareSidebarItemWithMember,
+  unshareSidebarItemFromMember,
+} from './itemShares'
 import type { Id } from '../_generated/dataModel'
 
 /**

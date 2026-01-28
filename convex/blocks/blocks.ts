@@ -64,7 +64,9 @@ export async function getTopLevelBlocksByNote(
   const topLevelBlocks = blocks.filter((block) => block.isTopLevel)
 
   const permittedBlocks = await pipeList(ctx, topLevelBlocks)
-    .enforce((ctx, block) => enforceBlockSharePermissionsOrNull(ctx, block, viewAsPlayerId))
+    .enforce((ctx, block) =>
+      enforceBlockSharePermissionsOrNull(ctx, block, viewAsPlayerId),
+    )
     .run()
 
   return permittedBlocks.sort((a, b) => (a.position || 0) - (b.position || 0))

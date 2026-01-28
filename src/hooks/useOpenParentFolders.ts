@@ -5,7 +5,6 @@ import type { SidebarItemId } from 'convex/sidebarItems/types'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useCampaign } from '~/hooks/useCampaign'
 
-
 // TODO: for "show in sidebar" operation, flash the item in the sidebar
 export function useOpenParentFolders() {
   const { openFolder } = useFileSidebar()

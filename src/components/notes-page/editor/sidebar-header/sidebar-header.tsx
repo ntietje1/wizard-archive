@@ -11,20 +11,21 @@ export function SidebarHeader() {
 
   return (
     <div className="flex items-center justify-center px-8 h-10 border-b bg-background">
-      <TooltipButton tooltip="New note">
+      <TooltipButton tooltip="New note" side="bottom">
         <NewNoteButton />
       </TooltipButton>
-      <TooltipButton tooltip="New folder">
+      <TooltipButton tooltip="New folder" side="bottom">
         <NewFolderButton />
       </TooltipButton>
-      <TooltipButton tooltip="Close all folders">
+      <TooltipButton tooltip="Close all folders" side="bottom">
         <CloseAllFoldersButton />
       </TooltipButton>
-      <TooltipButton tooltip="Change sort order">
+      <TooltipButton tooltip="Change sort order" side="bottom">
         <SortMenu />
       </TooltipButton>
       <TooltipButton
         tooltip={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'}
+        side="bottom"
       >
         <BookmarksFilterButton />
       </TooltipButton>

@@ -19,7 +19,9 @@ export const getFolder = async (
 
   return pipe(ctx, rawFolder)
     .pipe(enhanceSidebarItem)
-    .pipe((ctx, folder) => enhanceFolderWithContent(ctx, folder, viewAsPlayerId))
+    .pipe((ctx, folder) =>
+      enhanceFolderWithContent(ctx, folder, viewAsPlayerId),
+    )
     .run()
 }
 
@@ -109,7 +111,7 @@ export async function getSidebarItemAncestors(
     if (!rawFolder) {
       break
     }
-    const folder = (await enhanceSidebarItem(ctx, rawFolder))
+    const folder = await enhanceSidebarItem(ctx, rawFolder)
 
     ancestors.unshift(folder)
     currentParentId = folder.parentId

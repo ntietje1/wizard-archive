@@ -38,15 +38,14 @@ export const Route = createFileRoute(
             campaignId: campaignWithMembership.campaign._id,
           }),
         ),
-        typeAndSlug && (
+        typeAndSlug &&
           context.queryClient.ensureQueryData(
             convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
               campaignId: campaignWithMembership.campaign._id,
               type: typeAndSlug.type,
               slug: typeAndSlug.slug,
             }),
-          )
-        ),
+          ),
       ])
     }
   },

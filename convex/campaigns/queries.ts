@@ -128,10 +128,14 @@ export const getCampaignBySlug = query({
     slug: v.string(),
   },
   handler: async (ctx, args): Promise<CampaignWithMembership> => {
-    const { campaignWithMembership } = await requireCampaignMembership(ctx, {
-      dmUsername: args.dmUsername,
-      campaignSlug: args.slug,
-    }, { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] })
+    const { campaignWithMembership } = await requireCampaignMembership(
+      ctx,
+      {
+        dmUsername: args.dmUsername,
+        campaignSlug: args.slug,
+      },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
     return campaignWithMembership
   },
 })

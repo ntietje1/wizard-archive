@@ -77,12 +77,10 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     if (!hasCompleteData || topLevelBlocks.length === 0) return 'not_shared'
 
     const statuses = topLevelBlocks.map(
-      (b) =>
-        blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+      (b) => blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
     )
 
-    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED))
-      return 'not_shared'
+    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED)) return 'not_shared'
     if (statuses.every((s) => s === SHARE_STATUS.ALL_SHARED))
       return 'all_shared'
     if (statuses.every((s) => s === SHARE_STATUS.INDIVIDUALLY_SHARED))
@@ -94,8 +92,8 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     () =>
       topLevelBlocks.filter(
         (b) =>
-          (blockInfoMap.get(b.id)?.shareStatus ??
-            SHARE_STATUS.NOT_SHARED) === SHARE_STATUS.NOT_SHARED,
+          (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) ===
+          SHARE_STATUS.NOT_SHARED,
       ),
     [topLevelBlocks, blockInfoMap],
   )

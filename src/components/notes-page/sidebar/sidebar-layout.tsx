@@ -126,6 +126,16 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         ref={handleRef}
         className="w-1 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30"
         onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transitionProperty = 'background-color'
+          e.currentTarget.style.transitionDuration = '200ms'
+          e.currentTarget.style.transitionTimingFunction = 'circ-in'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transitionProperty = 'none'
+          e.currentTarget.style.transitionDuration = ''
+          e.currentTarget.style.transitionTimingFunction = ''
+        }}
       />
 
       {/* Main content */}

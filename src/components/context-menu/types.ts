@@ -1,6 +1,4 @@
-import type {
-  AnySidebarItemWithContent,
-} from 'convex/sidebarItems/types'
+import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'

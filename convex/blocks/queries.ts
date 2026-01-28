@@ -17,7 +17,7 @@ import {
 import { findBlockByBlockNoteId } from './blocks'
 import type { Id } from '../_generated/dataModel'
 import type { Block } from './types'
-import type { BlockShare, ShareStatus  } from '../shares/types'
+import type { BlockShare, ShareStatus } from '../shares/types'
 import type { CampaignMember } from '../campaigns/types'
 
 export const getBlockById = query({

@@ -24,7 +24,11 @@ export const getAllSidebarItems = query({
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsWithAncestorsFn(ctx, args.campaignId, args.viewAsPlayerId)
+    return await getAllSidebarItemsWithAncestorsFn(
+      ctx,
+      args.campaignId,
+      args.viewAsPlayerId,
+    )
   },
 })
 
@@ -47,7 +51,12 @@ export const getSidebarItem = query({
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    const result = await getSidebarItemByIdFn(ctx, args.campaignId, args.id, args.viewAsPlayerId)
+    const result = await getSidebarItemByIdFn(
+      ctx,
+      args.campaignId,
+      args.id,
+      args.viewAsPlayerId,
+    )
     if (!result) {
       throw new Error('Sidebar item not found')
     }

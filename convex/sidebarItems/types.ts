@@ -21,10 +21,13 @@ export type AnySidebarItemWithContent =
   | FolderWithContent
   | FileWithContent
 
-
 export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> =
-  T extends NoteFromDb ? Note :
-  T extends FolderFromDb ? Folder :
-  T extends GameMapFromDb ? GameMap :
-  T extends FileFromDb ? File :
-  never
+  T extends NoteFromDb
+    ? Note
+    : T extends FolderFromDb
+      ? Folder
+      : T extends GameMapFromDb
+        ? GameMap
+        : T extends FileFromDb
+          ? File
+          : never

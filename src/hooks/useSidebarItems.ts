@@ -30,7 +30,7 @@ export const useSidebarItemsByParent = (
             viewAsPlayerId,
           }
         : 'skip',
-    ),  
+    ),
   )
   return {
     ...sidebarItems,

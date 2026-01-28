@@ -3,9 +3,7 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import {
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SHARE_STATUS } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'

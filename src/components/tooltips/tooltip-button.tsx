@@ -1,5 +1,8 @@
-import { Tooltip } from '@base-ui/react/tooltip'
-import { TooltipContent, TooltipTrigger } from '~/components/shadcn/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/components/shadcn/ui/tooltip'
 
 export function TooltipButton({
   children,
@@ -11,7 +14,7 @@ export function TooltipButton({
   side?: 'top' | 'right' | 'bottom' | 'left'
 }) {
   return (
-    <Tooltip.Root>
+    <Tooltip>
       <TooltipTrigger
         render={(props) => (
           <span {...props} className="inline-flex">
@@ -20,6 +23,6 @@ export function TooltipButton({
         )}
       />
       <TooltipContent side={side}>{tooltip}</TooltipContent>
-    </Tooltip.Root>
+    </Tooltip>
   )
 }

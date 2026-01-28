@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
@@ -14,6 +15,7 @@ interface EditableNameProps {
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
+  disabled?: boolean
 }
 
 export function EditableName({
@@ -23,6 +25,7 @@ export function EditableName({
   campaignId,
   parentId,
   excludeId,
+  disabled,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
@@ -75,10 +78,10 @@ export function EditableName({
   }, [name, initialName, onRename, checkNameUnique, isSubmitting])
 
   const handleFocus = useCallback(() => {
-    if (!isEditing) {
+    if (!isEditing && !disabled) {
       setIsEditing(true)
     }
-  }, [isEditing])
+  }, [isEditing, disabled])
 
   const handleCancel = useCallback(() => {
     setName(initialName)
@@ -95,8 +98,8 @@ export function EditableName({
         type="text"
         value={name}
         placeholder={defaultName}
-        readOnly={!isEditing}
-        disabled={isSubmitting}
+        readOnly={!isEditing || disabled}
+        disabled={isSubmitting || disabled}
         onChange={(e) => setName(e.target.value)}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -110,8 +113,9 @@ export function EditableName({
           }
         }}
         className={cn(
-          'absolute inset-0 min-w-0 flex-shrink-0 w-full cursor-text',
-          isEditing ? 'underline' : 'hover:underline',
+          'absolute inset-0 min-w-0 flex-shrink-0 w-full',
+          disabled ? 'cursor-default' : 'cursor-text',
+          isEditing ? 'underline' : !disabled && 'hover:underline',
           isSubmitting && 'opacity-50',
         )}
       />
@@ -137,6 +141,7 @@ interface EditableBreadcrumbProps {
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
+  disabled?: boolean
 }
 
 export function EditableBreadcrumb({
@@ -148,6 +153,7 @@ export function EditableBreadcrumb({
   campaignId,
   parentId,
   excludeId,
+  disabled,
 }: EditableBreadcrumbProps) {
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
@@ -165,13 +171,26 @@ export function EditableBreadcrumb({
             >
               <button
                 onClick={() => onNavigateToItem(ancestor)}
-                className="hover:text-gray-900 hover:bg-muted rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-pointer"
+                disabled={disabled}
+                className={cn(
+                  'rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5',
+                  disabled
+                    ? 'cursor-default'
+                    : 'cursor-pointer hover:text-gray-900 hover:bg-muted',
+                )}
                 title={ancestorName}
                 type="button"
               >
                 {ancestorName}
               </button>
-              <span className="text-gray-400 flex-shrink-0">/</span>
+              <span
+                className={cn(
+                  'text-gray-400 flex-shrink-0',
+                  disabled && 'cursor-default',
+                )}
+              >
+                /
+              </span>
             </div>
           )
         })}
@@ -183,6 +202,7 @@ export function EditableBreadcrumb({
         campaignId={campaignId}
         parentId={parentId}
         excludeId={excludeId}
+        disabled={disabled}
       />
     </div>
   )

@@ -8,9 +8,11 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { EMPTY_EDITOR_DROP_TYPE, canDropItem } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
+import { useEditorMode } from '~/hooks/useEditorMode'
 
 export function EditorContent() {
-  const { item, editorSearch, isLoading } = useCurrentItem()
+  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { viewAsPlayerId } = useEditorMode()
 
   if (isLoading) {
     return (
@@ -21,6 +23,9 @@ export function EditorContent() {
   }
 
   if (!item) {
+    if (viewAsPlayerId && hasRequestedItem) {
+      return <NotSharedContent />
+    }
     return <EmptyEditorContent />
   }
 
@@ -88,6 +93,16 @@ function EmptyEditorContent() {
       >
         Create new note
       </span>
+    </div>
+  )
+}
+
+function NotSharedContent() {
+  return (
+    <div className="flex-1 min-h-0 flex items-center justify-center">
+      <div className="text-center text-muted-foreground">
+        <p>This page doesn't exist or isn't shared with you.</p>
+      </div>
     </div>
   )
 }

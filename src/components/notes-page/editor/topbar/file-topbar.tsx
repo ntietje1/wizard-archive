@@ -1,6 +1,6 @@
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { EditableBreadcrumb } from './editable-breadcrumb'
-import { NoteButtons } from './topbar-item-content.tsx/note-buttons'
+import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
@@ -8,9 +8,10 @@ import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { isNote } from '~/lib/sidebar-item-utils'
+import { cn } from '~/lib/shadcn/utils'
 
 export function FileTopbar() {
-  const { item, isLoading } = useCurrentItem()
+  const { item, itemForDm, isLoading } = useCurrentItem()
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
 
@@ -19,40 +20,43 @@ export function FileTopbar() {
     await rename(item, newName)
   }
 
-  const defaultName = defaultItemName(item)
+  const defaultName = defaultItemName(itemForDm)
+  const isNotSharedWithPlayer = itemForDm && !item
 
   if (isLoading) {
     return <TopbarLoading />
   }
 
-  if (!item) {
-    return <TopbarEmpty />
-  }
-
-  // Determine middle content based on item type TODO: add other item types and wrap in a component
-  const middleContent = isNote(item) ? (
-    <>
-      <NoteButtons />
-    </>
-  ) : (
-    <ItemButtonWrapper />
+  const middleContent = (
+    <ItemButtonWrapper>
+      {itemForDm && isNote(itemForDm) && (
+        <EditorViewModeToggleButton disabled={!item} />
+      )}
+    </ItemButtonWrapper>
   )
 
   return (
-    <EditorContextMenu viewContext="topbar" item={item}>
+    <EditorContextMenu viewContext="topbar" item={item ?? undefined}>
       <div className="flex items-center px-4 pt-1 h-10 shrink-0 w-full min-w-0 overflow-hidden gap-4">
-        {/* Left section: Breadcrumb */}
-        <div className="flex-1 min-w-0">
-          <EditableBreadcrumb
-            initialName={item.name || ''}
-            defaultName={defaultName || 'Untitled'}
-            onRename={handleRename}
-            ancestors={item.ancestors}
-            onNavigateToItem={navigateToItem}
-            campaignId={item.campaignId}
-            parentId={item.parentId}
-            excludeId={item._id}
-          />
+        <div
+          className={cn(
+            'flex-1 min-w-0',
+            isNotSharedWithPlayer && 'opacity-50',
+          )}
+        >
+          {itemForDm && (
+            <EditableBreadcrumb
+              initialName={itemForDm.name || ''}
+              defaultName={defaultName || 'Untitled'}
+              onRename={handleRename}
+              ancestors={itemForDm.ancestors}
+              onNavigateToItem={navigateToItem}
+              campaignId={itemForDm.campaignId}
+              parentId={itemForDm.parentId}
+              excludeId={itemForDm._id}
+              disabled={isNotSharedWithPlayer ?? false}
+            />
+          )}
         </div>
 
         {middleContent}
@@ -71,14 +75,6 @@ function TopbarLoading() {
           <Skeleton className="h-8 w-8" />
         </div>
       </div>
-    </div>
-  )
-}
-
-function TopbarEmpty() {
-  return (
-    <div className="flex items-center justify-between px-4 py-2 h-12 shrink-0 w-full min-w-0 max-w-full overflow-hidden">
-      <div className="flex items-center justify-between w-full h-12" />
     </div>
   )
 }

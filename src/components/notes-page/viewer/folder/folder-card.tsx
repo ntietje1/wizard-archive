@@ -20,7 +20,11 @@ function FolderSvg() {
     <div className="folder flex h-full relative text-white">
       {/* Left section */}
       <div className="folder-left shrink-0 w-[120px] -mr-px">
-        <svg viewBox="0 0 120 200" preserveAspectRatio="none" className="w-full h-full block">
+        <svg
+          viewBox="0 0 120 200"
+          preserveAspectRatio="none"
+          className="w-full h-full block"
+        >
           <path
             d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
             fill="currentColor"
@@ -30,14 +34,22 @@ function FolderSvg() {
 
       {/* Middle section */}
       <div className="folder-middle grow min-w-[20px] -mr-px">
-        <svg viewBox="0 0 20 200" preserveAspectRatio="none" className="w-full h-full block">
+        <svg
+          viewBox="0 0 20 200"
+          preserveAspectRatio="none"
+          className="w-full h-full block"
+        >
           <rect x="0" y="15" width="20" height="200" fill="currentColor" />
         </svg>
       </div>
 
       {/* Right section*/}
       <div className="folder-right shrink-0 w-[60px]">
-        <svg viewBox="0 0 60 200" preserveAspectRatio="none" className="w-full h-full block">
+        <svg
+          viewBox="0 0 60 200"
+          preserveAspectRatio="none"
+          className="w-full h-full block"
+        >
           <path
             d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
             fill="currentColor"

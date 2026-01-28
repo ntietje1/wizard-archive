@@ -1,64 +1,75 @@
-import { getCampaignMembership, requireCampaignMembership } from "../campaigns/campaigns";
-import { CAMPAIGN_MEMBER_ROLE } from "../campaigns/types";
-import { getCurrentSession } from "../sessions/sessions";
-import { findBlockByBlockNoteId, insertBlock, removeBlockIfNotNeeded, updateBlock } from "../blocks/blocks";
-import { SHARE_STATUS } from './types';
-import type { Ctx } from "../common/types";
-import type { BlockItem } from "./itemShares";
-import type {Block} from "../blocks/types";
-import type { BlockShare, ShareStatus  } from './types';
-import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
+import {
+  getCampaignMembership,
+  requireCampaignMembership,
+} from '../campaigns/campaigns'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getCurrentSession } from '../sessions/sessions'
+import {
+  findBlockByBlockNoteId,
+  insertBlock,
+  removeBlockIfNotNeeded,
+  updateBlock,
+} from '../blocks/blocks'
+import { SHARE_STATUS } from './types'
+import type { Ctx } from '../common/types'
+import type { BlockItem } from './itemShares'
+import type { Block } from '../blocks/types'
+import type { BlockShare, ShareStatus } from './types'
+import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { Id } from '../_generated/dataModel'
 
 export async function getBlockPermissionStatus(
-    ctx: Ctx,
-    block: Block,
-    viewAsPlayerId?: Id<'campaignMembers'>
+  ctx: Ctx,
+  block: Block,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<boolean> {
-    const { campaignWithMembership } = await getCampaignMembership(
-        ctx,
-        { campaignId: block.campaignId },
-    )
+  const { campaignWithMembership } = await getCampaignMembership(ctx, {
+    campaignId: block.campaignId,
+  })
 
-    if (!campaignWithMembership) {
-        return false
+  if (!campaignWithMembership) {
+    return false
+  }
+
+  let checkId = campaignWithMembership.member._id
+
+  // DMs can choose to view as a specific player
+  if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+    if (!viewAsPlayerId) {
+      return true // DMs see all blocks
+    } else {
+      checkId = viewAsPlayerId // Check permissions for specific player
     }
+  }
 
-    let checkId = campaignWithMembership.member._id
+  const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
-    // DMs can choose to view as a specific player
-    if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
-        if (!viewAsPlayerId) {
-            return true // DMs see all blocks
-        } else {
-            checkId = viewAsPlayerId // Check permissions for specific player
-        }
+  switch (shareStatus) {
+    case SHARE_STATUS.ALL_SHARED:
+      return true
+    case SHARE_STATUS.INDIVIDUALLY_SHARED: {
+      return isBlockSharedWithMember(ctx, block.campaignId, block._id, checkId)
     }
-
-    const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
-
-    switch (shareStatus) {
-        case SHARE_STATUS.ALL_SHARED:
-            return true
-        case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-            return isBlockSharedWithMember(ctx, block.campaignId, block._id, checkId)
-        }
-        case SHARE_STATUS.NOT_SHARED:
-            return false
-    }
+    case SHARE_STATUS.NOT_SHARED:
+      return false
+  }
 }
 
 export async function enforceBlockSharePermissionsOrNull(
-    ctx: Ctx,
-    block: Block,
-    viewAsPlayerId?: Id<'campaignMembers'>
+  ctx: Ctx,
+  block: Block,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Block | null> {
-    const permissionStatus = await getBlockPermissionStatus(ctx, block, viewAsPlayerId);
-    if (!permissionStatus) {
-        return null;
-    }
+  const permissionStatus = await getBlockPermissionStatus(
+    ctx,
+    block,
+    viewAsPlayerId,
+  )
+  if (!permissionStatus) {
+    return null
+  }
 
-    return block;
+  return block
 }
 
 export async function setBlockShareStatusHelper(
@@ -66,12 +77,12 @@ export async function setBlockShareStatusHelper(
   campaignId: Id<'campaigns'>,
   noteId: Id<'notes'>,
   blockItem: BlockItem,
-  status: ShareStatus
+  status: ShareStatus,
 ): Promise<void> {
   const existingBlock = await findBlockByBlockNoteId(
     ctx,
     noteId,
-    blockItem.blockNoteId
+    blockItem.blockNoteId,
   )
 
   let blockId: Id<'blocks'>
@@ -99,7 +110,8 @@ export async function setBlockShareStatusHelper(
   if (status === SHARE_STATUS.NOT_SHARED) {
     const shares = await ctx.db
       .query('blockShares')
-      .withIndex('by_campaign_block_member', (q) => q.eq('campaignId', campaignId).eq('blockId', blockId)
+      .withIndex('by_campaign_block_member', (q) =>
+        q.eq('campaignId', campaignId).eq('blockId', blockId),
       )
       .collect()
 
@@ -116,12 +128,12 @@ export async function shareBlockWithMemberHelper(
   campaignId: Id<'campaigns'>,
   noteId: Id<'notes'>,
   blockItem: BlockItem,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
   const existingBlock = await findBlockByBlockNoteId(
     ctx,
     noteId,
-    blockItem.blockNoteId
+    blockItem.blockNoteId,
   )
 
   let blockId: Id<'blocks'>
@@ -153,7 +165,7 @@ export async function unshareBlockFromMemberHelper(
   campaignId: Id<'campaigns'>,
   noteId: Id<'notes'>,
   blockNoteId: string,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
   const block = await findBlockByBlockNoteId(ctx, noteId, blockNoteId)
   if (!block || block.campaignId !== campaignId) return
@@ -163,7 +175,8 @@ export async function unshareBlockFromMemberHelper(
   // Check if any shares remain
   const remainingShares = await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) => q.eq('campaignId', campaignId).eq('blockId', block._id)
+    .withIndex('by_campaign_block_member', (q) =>
+      q.eq('campaignId', campaignId).eq('blockId', block._id),
     )
     .first()
 
@@ -180,12 +193,12 @@ export async function shareBlockWithMember(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
   blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Id<'blockShares'>> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
   // Verify block exists
@@ -197,10 +210,11 @@ export async function shareBlockWithMember(
   // Check if share already exists
   const existingShare = await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) => q
-      .eq('campaignId', campaignId)
-      .eq('blockId', blockId)
-      .eq('campaignMemberId', campaignMemberId)
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
 
@@ -223,20 +237,21 @@ export async function unshareBlockFromMember(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
   blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
   await requireCampaignMembership(
     ctx,
     { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] }
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
   const share = await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) => q
-      .eq('campaignId', campaignId)
-      .eq('blockId', blockId)
-      .eq('campaignMemberId', campaignMemberId)
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
 
@@ -248,11 +263,12 @@ export async function unshareBlockFromMember(
 export async function getBlockSharesForBlock(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
-  blockId: Id<'blocks'>
+  blockId: Id<'blocks'>,
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) => q.eq('campaignId', campaignId).eq('blockId', blockId)
+    .withIndex('by_campaign_block_member', (q) =>
+      q.eq('campaignId', campaignId).eq('blockId', blockId),
     )
     .collect()
 }
@@ -260,11 +276,12 @@ export async function getBlockSharesForBlock(
 export async function getBlockSharesForMember(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_member', (q) => q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId)
+    .withIndex('by_campaign_member', (q) =>
+      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
     )
     .collect()
 }
@@ -273,17 +290,17 @@ export async function isBlockSharedWithMember(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: Id<'campaignMembers'>,
 ): Promise<boolean> {
   const share = await ctx.db
     .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) => q
-      .eq('campaignId', campaignId)
-      .eq('blockId', blockId)
-      .eq('campaignMemberId', campaignMemberId)
+    .withIndex('by_campaign_block_member', (q) =>
+      q
+        .eq('campaignId', campaignId)
+        .eq('blockId', blockId)
+        .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
 
   return share !== null
 }
-

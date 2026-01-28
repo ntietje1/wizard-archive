@@ -1,19 +1,15 @@
 import { useComponentsContext } from '@blocknote/react'
 import { toast } from 'sonner'
-import { Minus } from 'lucide-react'
 import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
 import { Share2 } from '~/lib/icons'
 import { useBlocksShare } from '~/hooks/useBlocksShare'
 import {
   ContextMenu,
-  ContextMenuCheckboxItem,
   ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuLabel,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '~/components/shadcn/ui/context-menu'
+import { ShareMenuContent } from '~/components/share/share-menu-content'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
@@ -103,80 +99,25 @@ export default function ShareSideMenuButton({
         />
       </div>
       <ContextMenuContent className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]">
-        <ContextMenuGroup>
-          <ContextMenuLabel className="pb-0 pt-0.5">
-            Share
-            {isMultiBlock
-              ? ` ${blockCount} block${blockCount !== 1 ? 's' : ''}`
-              : ''}{' '}
-            with
-          </ContextMenuLabel>
-          {hasNonTopLevelBlocks && (
-            <div className="px-2 py-1">
-              <div className="text-xs text-muted-foreground">
-                {skippedCount} nested block{skippedCount !== 1 ? 's' : ''} will
-                be skipped
-              </div>
-            </div>
-          )}
-          <ContextMenuSeparator />
-          {isPending ? (
-            <div className="px-2 py-2">
-              <div className="text-xs text-muted-foreground">Loading...</div>
-            </div>
-          ) : isDisabled ? (
-            <div className="px-2 py-2">
-              <div className="text-xs text-muted-foreground">
-                No shareable blocks.
-              </div>
-            </div>
-          ) : shareItems.length === 0 ? (
-            <div className="px-2 py-2">
-              <div className="text-xs text-muted-foreground">
-                No players in this campaign yet.
-              </div>
-            </div>
-          ) : (
-            shareItems.map((shareItem) => {
-              const profile = shareItem.member.userProfile
-              const displayText = profile.name
-                ? profile.name
-                : profile.username
-                  ? `@${profile.username}`
-                  : 'Player'
-              const isChecked = shareItem.shareState === 'all'
-              const isIndeterminate = shareItem.shareState === 'some'
-
-              return (
-                <ContextMenuCheckboxItem
-                  key={shareItem.key}
-                  checked={isChecked}
-                  disabled={isMutating || isDisabled}
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    await toggleShareWithMember(shareItem.member._id)
-                  }}
-                  className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
-                >
-                  <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                    <span className="truncate font-medium">{displayText}</span>
-                    {profile.name && profile.username && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        @{profile.username}
-                      </span>
-                    )}
-                  </span>
-                  {isIndeterminate && (
-                    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-                      <Minus className="h-3 w-3" />
-                    </span>
-                  )}
-                </ContextMenuCheckboxItem>
-              )
-            })
-          )}
-        </ContextMenuGroup>
+        <ShareMenuContent
+          label={
+            isMultiBlock
+              ? `Share ${blockCount} block${blockCount !== 1 ? 's' : ''} with`
+              : 'Share with'
+          }
+          isPending={isPending}
+          isMutating={isMutating}
+          isDisabled={isDisabled}
+          shareItems={shareItems}
+          onToggleShareWithMember={toggleShareWithMember}
+          unsharableMessage={
+            hasNonTopLevelBlocks
+              ? `${skippedCount} nested block${skippedCount !== 1 ? 's' : ''} will be skipped`
+              : isDisabled && !isPending
+                ? 'No shareable blocks.'
+                : undefined
+          }
+        />
       </ContextMenuContent>
     </ContextMenu>
   )

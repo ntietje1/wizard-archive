@@ -20,7 +20,8 @@ import { PlayerDeleteConfirmDialog } from '~/components/dialogs/delete/player-de
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 
 export default function PlayersContent() {
-  const { dmUsername, campaignSlug, campaignWithMembership, isDm } = useCampaign()
+  const { dmUsername, campaignSlug, campaignWithMembership, isDm } =
+    useCampaign()
   const campaign = campaignWithMembership.data?.campaign
 
   const players = useQuery(

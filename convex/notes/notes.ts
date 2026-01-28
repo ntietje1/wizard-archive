@@ -131,7 +131,7 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  viewAsPlayerId?: Id<'campaignMembers'>
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
 

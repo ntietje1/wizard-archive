@@ -43,7 +43,10 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
   switch (fileType) {
     case 'image':
       return (
-        <ImageFileViewer imageUrl={file.downloadUrl} alt={file.name || 'File'} />
+        <ImageFileViewer
+          imageUrl={file.downloadUrl}
+          alt={file.name || 'File'}
+        />
       )
     case 'pdf':
       return (

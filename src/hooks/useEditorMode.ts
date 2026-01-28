@@ -12,10 +12,13 @@ export interface EditorModeActionsContextType {
   setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }
 
-export type EditorModeContextType = EditorModeStateContextType & EditorModeActionsContextType
+export type EditorModeContextType = EditorModeStateContextType &
+  EditorModeActionsContextType
 
-export const EditorModeStateContext = createContext<EditorModeStateContextType | null>(null)
-export const EditorModeActionsContext = createContext<EditorModeActionsContextType | null>(null)
+export const EditorModeStateContext =
+  createContext<EditorModeStateContextType | null>(null)
+export const EditorModeActionsContext =
+  createContext<EditorModeActionsContextType | null>(null)
 
 // For backwards compatibility - returns both state and actions
 export function useEditorMode(): EditorModeContextType {

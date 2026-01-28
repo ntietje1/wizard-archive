@@ -16,12 +16,15 @@ import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import {
   getBlockSharesForBlock,
   getBlockSharesForMember,
-  isBlockSharedWithMember
+  isBlockSharedWithMember,
 } from './blockShares'
-import { getSharesForSession } from "./shares"
-import { getSidebarItemSharesForItem, isSidebarItemSharedWithMember } from "./itemShares"
+import { getSharesForSession } from './shares'
+import {
+  getSidebarItemSharesForItem,
+  isSidebarItemSharedWithMember,
+} from './itemShares'
 import type { CampaignMember } from '../campaigns/types'
-import type { BlockShare, ShareStatus, SidebarItemShare  } from './types'
+import type { BlockShare, ShareStatus, SidebarItemShare } from './types'
 
 export const getSidebarItemShares = query({
   args: {
@@ -83,8 +86,7 @@ export const getSidebarItemWithShares = query({
     }
 
     // Get share status (default to 'not_shared' for legacy items)
-    const shareStatus: ShareStatus =
-      item.shareStatus ?? SHARE_STATUS.NOT_SHARED
+    const shareStatus: ShareStatus = item.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
     // Get player members (always needed for UI)
     const allMembers = await getCampaignMembers(ctx, args.campaignId)

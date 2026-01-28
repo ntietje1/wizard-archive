@@ -13,7 +13,10 @@ export class Pipeline<TCtx extends Ctx, T> {
   /**
    * Start a pipeline with an initial value
    */
-  static start<TCtx extends Ctx, T>(ctx: TCtx, value: T | null): Pipeline<TCtx, T> {
+  static start<TCtx extends Ctx, T>(
+    ctx: TCtx,
+    value: T | null,
+  ): Pipeline<TCtx, T> {
     return new Pipeline(ctx, Promise.resolve(value))
   }
 
@@ -63,8 +66,10 @@ export class Pipeline<TCtx extends Ctx, T> {
 /**
  * Shorthand for Pipeline.start
  */
-export const pipe = <TCtx extends Ctx, T>(ctx: TCtx, value: T | null): Pipeline<TCtx, T> =>
-  Pipeline.start(ctx, value)
+export const pipe = <TCtx extends Ctx, T>(
+  ctx: TCtx,
+  value: T | null,
+): Pipeline<TCtx, T> => Pipeline.start(ctx, value)
 
 /**
  * Shorthand for Pipeline.startAsync
@@ -87,7 +92,10 @@ export class ListPipeline<TCtx extends Ctx, T> {
   /**
    * Start a list pipeline with an array
    */
-  static start<TCtx extends Ctx, T>(ctx: TCtx, items: Array<T>): ListPipeline<TCtx, T> {
+  static start<TCtx extends Ctx, T>(
+    ctx: TCtx,
+    items: Array<T>,
+  ): ListPipeline<TCtx, T> {
     return new ListPipeline(ctx, Promise.resolve(items))
   }
 
@@ -121,9 +129,7 @@ export class ListPipeline<TCtx extends Ctx, T> {
   ): ListPipeline<TCtx, Awaited<TResult>> {
     const newPromise = this.promise.then(async (items) => {
       const results = await Promise.all(items.map((item) => fn(this.ctx, item)))
-      return results.filter(
-        (item): item is Awaited<TResult> => item !== null,
-      )
+      return results.filter((item): item is Awaited<TResult> => item !== null)
     })
     return new ListPipeline(this.ctx, newPromise)
   }
@@ -131,7 +137,9 @@ export class ListPipeline<TCtx extends Ctx, T> {
   /**
    * Filter items based on a predicate
    */
-  filter(fn: (ctx: TCtx, value: T) => Promise<boolean> | boolean): ListPipeline<TCtx, T> {
+  filter(
+    fn: (ctx: TCtx, value: T) => Promise<boolean> | boolean,
+  ): ListPipeline<TCtx, T> {
     const newPromise = this.promise.then(async (items) => {
       const results = await Promise.all(
         items.map(async (item) => ({

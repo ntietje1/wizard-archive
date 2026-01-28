@@ -2,13 +2,12 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SHARE_STATUS  } from 'convex/shares/types'
+import { SHARE_STATUS } from 'convex/shares/types'
 import { useCampaign } from './useCampaign'
-import type {ShareStatus} from 'convex/shares/types';
+import type { ShareStatus } from 'convex/shares/types'
 import type { ShareState } from '~/components/context-menu/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
-
 
 export function useSidebarItemShares(
   itemId: SidebarItemId | undefined,

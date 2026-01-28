@@ -4,11 +4,7 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { noteValidator } from '../notes/schema'
 import { mapValidator } from '../gameMaps/baseSchema'
 import { fileValidator } from '../files/schema'
-import {
-  folderValidator,
-  folderValidatorFields,
-} from './baseSchema'
-
+import { folderValidator, folderValidatorFields } from './baseSchema'
 
 const folderChildValidator = v.union(
   noteValidator,

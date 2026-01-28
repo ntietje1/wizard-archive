@@ -13,7 +13,9 @@ export function NavigationProgress() {
   const isSamePage =
     location.pathname === resolvedLocation?.pathname &&
     location.searchStr === resolvedLocation?.searchStr
-  const [state, setState] = useState<'idle' | 'loading' | 'completing' | 'fading'>('idle')
+  const [state, setState] = useState<
+    'idle' | 'loading' | 'completing' | 'fading'
+  >('idle')
 
   useEffect(() => {
     if (isLoading && !isSamePage) {
