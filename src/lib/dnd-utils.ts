@@ -1,13 +1,9 @@
 import {
   SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
+  SIDEBAR_ROOT_TYPE
 } from 'convex/sidebarItems/baseTypes'
+import type {SidebarItem, SidebarItemId, SidebarItemType} from 'convex/sidebarItems/baseTypes';
 import {} from 'convex/sidebarItems/sidebarItems'
-import type {
-  SidebarItem,
-  SidebarItemId,
-  SidebarItemType,
-} from 'convex/sidebarItems/types'
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 
