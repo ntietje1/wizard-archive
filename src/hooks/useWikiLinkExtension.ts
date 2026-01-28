@@ -8,8 +8,10 @@ import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
+import { createSelectionStabilizerPlugin } from '~/lib/selection-stabilizer'
 
 const PLUGIN_KEY = new PluginKey('wikiLinkDecoration')
+const SELECTION_STABILIZER_KEY = new PluginKey('wikiLinkSelectionStabilizer')
 
 const TYPE_TO_URL_PARAM: Record<string, string> = {
   note: 'note',
@@ -289,17 +291,28 @@ export function useWikiLinkExtension(
 
       if (cancelled) return
 
-      const plugin = createWikiLinkPlugin(resolver, isViewerMode)
+      // Selection stabilizer plugin to prevent oscillating selection transactions
+      const stabilizerPlugin = createSelectionStabilizerPlugin(
+        SELECTION_STABILIZER_KEY,
+      )
+      const decorationPlugin = createWikiLinkPlugin(resolver, isViewerMode)
 
       // Always try to unregister first (handles HMR and dependency changes)
+      try {
+        tiptapEditor.unregisterPlugin(SELECTION_STABILIZER_KEY)
+      } catch {
+        // Plugin might not be registered, that's fine
+      }
       try {
         tiptapEditor.unregisterPlugin(PLUGIN_KEY)
       } catch {
         // Plugin might not be registered, that's fine
       }
 
-      tiptapEditor.registerPlugin(plugin)
-      pluginRef.current = plugin
+      // Register stabilizer first so it filters before decoration plugin runs
+      tiptapEditor.registerPlugin(stabilizerPlugin)
+      tiptapEditor.registerPlugin(decorationPlugin)
+      pluginRef.current = decorationPlugin
 
       try {
         const { tr } = tiptapEditor.view.state
@@ -317,6 +330,11 @@ export function useWikiLinkExtension(
         cancelAnimationFrame(frameId)
       }
       // Always try to unregister on cleanup
+      try {
+        tiptapEditor.unregisterPlugin(SELECTION_STABILIZER_KEY)
+      } catch {
+        // Plugin might already be unregistered
+      }
       try {
         tiptapEditor.unregisterPlugin(PLUGIN_KEY)
       } catch {
