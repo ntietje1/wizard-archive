@@ -27,3 +27,12 @@ export const SHARE_STATUS = {
 } as const
 
 export type ShareStatus = (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
+
+export const PERMISSION_STATUS = {
+  NO_ACCESS: 'no_access',
+  VIEW: 'view',
+  EDIT: 'edit',
+} as const
+
+export type PermissionStatus =
+  (typeof PERMISSION_STATUS)[keyof typeof PERMISSION_STATUS]

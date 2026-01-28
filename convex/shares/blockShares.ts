@@ -10,11 +10,11 @@ import {
   removeBlockIfNotNeeded,
   updateBlock,
 } from '../blocks/blocks'
-import { SHARE_STATUS } from './types'
+import { PERMISSION_STATUS, SHARE_STATUS } from './types'
 import type { Ctx } from '../common/types'
 import type { BlockItem } from './itemShares'
 import type { Block } from '../blocks/types'
-import type { BlockShare, ShareStatus } from './types'
+import type { BlockShare, PermissionStatus, ShareStatus } from './types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 
@@ -22,13 +22,13 @@ export async function getBlockPermissionStatus(
   ctx: Ctx,
   block: Block,
   viewAsPlayerId?: Id<'campaignMembers'>,
-): Promise<boolean> {
+): Promise<PermissionStatus> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: block.campaignId,
   })
 
   if (!campaignWithMembership) {
-    return false
+    return PERMISSION_STATUS.NO_ACCESS
   }
 
   let checkId = campaignWithMembership.member._id
@@ -36,7 +36,7 @@ export async function getBlockPermissionStatus(
   // DMs can choose to view as a specific player
   if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
     if (!viewAsPlayerId) {
-      return true // DMs see all blocks
+      return PERMISSION_STATUS.EDIT // DMs see all blocks
     } else {
       checkId = viewAsPlayerId // Check permissions for specific player
     }
@@ -46,12 +46,18 @@ export async function getBlockPermissionStatus(
 
   switch (shareStatus) {
     case SHARE_STATUS.ALL_SHARED:
-      return true
+      return PERMISSION_STATUS.VIEW
     case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-      return isBlockSharedWithMember(ctx, block.campaignId, block._id, checkId)
+      const isShared = await isBlockSharedWithMember(
+        ctx,
+        block.campaignId,
+        block._id,
+        checkId,
+      )
+      return isShared ? PERMISSION_STATUS.VIEW : PERMISSION_STATUS.NO_ACCESS
     }
     case SHARE_STATUS.NOT_SHARED:
-      return false
+      return PERMISSION_STATUS.NO_ACCESS
   }
 }
 
@@ -65,7 +71,7 @@ export async function enforceBlockSharePermissionsOrNull(
     block,
     viewAsPlayerId,
   )
-  if (!permissionStatus) {
+  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
     return null
   }
 

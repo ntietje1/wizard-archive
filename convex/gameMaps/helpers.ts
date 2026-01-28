@@ -7,7 +7,7 @@ import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { pipeList } from '../common/pipeline'
+import { PERMISSION_STATUS } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type {
@@ -72,12 +72,15 @@ const enforceMapPinPermissions = async (
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
   if (!pin) return null
-  const isPermitted = await getSidebarItemPermissionStatus(
+  const permissionStatus = await getSidebarItemPermissionStatus(
     ctx,
     pin.item,
     viewAsPlayerId,
   )
-  return isPermitted ? pin : null
+  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
+    return null
+  }
+  return pin
 }
 
 export const enhanceGameMapWithContent = async (
@@ -96,10 +99,16 @@ export const enhanceGameMapWithContent = async (
     .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
     .collect()
 
-  const pins = await pipeList(ctx, rawPins)
-    .map((ctx, pin) => enhanceMapPin(ctx, pin))
-    .enforce((ctx, pin) => enforceMapPinPermissions(ctx, pin, viewAsPlayerId))
-    .run()
+  const enhancedPins = await Promise.all(
+    rawPins.map((pin) => enhanceMapPin(ctx, pin)),
+  )
+  const pins = (
+    await Promise.all(
+      enhancedPins.map((pin) =>
+        enforceMapPinPermissions(ctx, pin, viewAsPlayerId),
+      ),
+    )
+  ).filter((pin): pin is MapPinWithItem => pin !== null)
 
   return {
     ...gameMap,

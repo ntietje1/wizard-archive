@@ -8,6 +8,9 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { getSidebarItemPermissionStatus } from '../shares/itemShares'
+import { PERMISSION_STATUS } from '../shares/types'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { downloadableItemValidator } from './schema'
 import type { DownloadableItem } from './types'
 import type { Id } from '../_generated/dataModel'
@@ -93,16 +96,17 @@ export const getFolderContentsForDownload = query({
     ctx,
     args,
   ): Promise<{ folderName: string; items: Array<DownloadableItem> }> => {
-    const folder = await ctx.db.get(args.folderId)
-    if (!folder) {
+    const folderFromDb = await ctx.db.get(args.folderId)
+    if (!folderFromDb) {
       throw new Error('Folder not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folder.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
+    const folder = await enhanceSidebarItem(ctx, folderFromDb)
+
+    const permissionStatus = await getSidebarItemPermissionStatus(ctx, folder)
+    if (permissionStatus !== PERMISSION_STATUS.EDIT) {
+      throw new Error('You do not have permission to access this folder')
+    }
 
     const folderName = folder.name ?? defaultItemName(folder)
     const items = await collectItemsRecursively(
@@ -127,7 +131,7 @@ export const getRootContentsForDownload = query({
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
     const items = await collectItemsRecursively(

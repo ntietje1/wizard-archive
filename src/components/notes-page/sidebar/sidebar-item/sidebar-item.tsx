@@ -114,7 +114,10 @@ function SidebarItemComponent({
           {itemButton}
           <CollapsibleContent
             className="pl-4"
-            transition={{ duration: isExpanded ? 0.2 : 0.15, ease: 'easeInOut' }}
+            transition={{
+              duration: isExpanded ? 0.2 : 0.15,
+              ease: 'easeInOut',
+            }}
             keepRendered
           >
             {sortedChildren.map((childItem) => (

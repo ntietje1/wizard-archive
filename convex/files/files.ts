@@ -1,8 +1,8 @@
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { pipe } from '../common/pipeline'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { enforceSidebarItemSharePermissionsOrNull } from '../shares/itemShares'
+import {
+  enforceSidebarItemSharePermissionsOrNull,
+  requireEditPermission,
+} from '../shares/itemShares'
 import { enhanceFileWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
@@ -14,28 +14,26 @@ export const getFile = async (
   fileId: Id<'files'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
+  if (!rawFile) return null
 
-  return pipe(ctx, rawFile)
-    .pipe(enhanceSidebarItem)
-    .enforce(enforceSidebarItemSharePermissionsOrNull)
-    .pipe(enhanceFileWithContent)
-    .run()
+  const file = await enhanceSidebarItem(ctx, rawFile)
+  const permitted = await enforceSidebarItemSharePermissionsOrNull(ctx, file)
+  if (!permitted) return null
+
+  return enhanceFileWithContent(ctx, permitted)
 }
 
 export const deleteFile = async (
   ctx: MutationCtx,
   fileId: Id<'files'>,
 ): Promise<Id<'files'>> => {
-  const file = await ctx.db.get(fileId)
-  if (!file) {
+  const rawFile = await ctx.db.get(fileId)
+  if (!rawFile) {
     throw new Error('File not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: file.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const file = await enhanceSidebarItem(ctx, rawFile)
+  await requireEditPermission(ctx, file)
 
   await ctx.db.delete(fileId)
   return fileId

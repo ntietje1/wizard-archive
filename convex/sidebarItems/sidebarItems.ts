@@ -1,9 +1,5 @@
-import {
-  getCampaignMembership,
-  requireCampaignMembership,
-} from '../campaigns/campaigns'
+import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { pipeList } from '../common/pipeline'
 import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder, getSidebarItemAncestors } from '../folders/folders'
@@ -58,12 +54,15 @@ const getAllSidebarItems = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return pipeList(ctx, allItems)
-    .map(enhanceSidebarItem)
-    .enforce((ctx, item) =>
+  const enhanced = await Promise.all(
+    allItems.map((item) => enhanceSidebarItem(ctx, item)),
+  )
+  const permitted = await Promise.all(
+    enhanced.map((item) =>
       enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
-    )
-    .run()
+    ),
+  )
+  return permitted.filter((item): item is AnySidebarItem => item !== null)
 }
 
 export const getAllSidebarItemsWithAncestors = async (
@@ -146,12 +145,15 @@ export const getSidebarItemsByParent = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return pipeList(ctx, allItems)
-    .map(enhanceSidebarItem)
-    .enforce((ctx, item) =>
+  const enhanced = await Promise.all(
+    allItems.map((item) => enhanceSidebarItem(ctx, item)),
+  )
+  const permitted = await Promise.all(
+    enhanced.map((item) =>
       enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
-    )
-    .run()
+    ),
+  )
+  return permitted.filter((item): item is AnySidebarItem => item !== null)
 }
 
 export const getSidebarItemsByParentAndName = async (
@@ -200,10 +202,13 @@ export const getSidebarItemsByParentAndName = async (
     .collect()
   allItems.push(...(files as Array<AnySidebarItemFromDb>))
 
-  return pipeList(ctx, allItems)
-    .map(enhanceSidebarItem)
-    .enforce(enforceSidebarItemSharePermissionsOrNull)
-    .run()
+  const enhanced = await Promise.all(
+    allItems.map((item) => enhanceSidebarItem(ctx, item)),
+  )
+  const permitted = await Promise.all(
+    enhanced.map((item) => enforceSidebarItemSharePermissionsOrNull(ctx, item)),
+  )
+  return permitted.filter((item): item is AnySidebarItem => item !== null)
 }
 
 export const getSidebarItemByName = async (

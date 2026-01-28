@@ -1,12 +1,12 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { pipe } from '../common/pipeline'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import { enhanceNoteWithContent } from './helpers'
 import type { MutationCtx } from '../_generated/server'
 import type { NoteWithContent } from './types'
@@ -83,16 +83,13 @@ export const updateNote = async (
     color?: string | null
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-  const note = await ctx.db.get(input.noteId)
-  if (!note) {
+  const rawNote = await ctx.db.get(input.noteId)
+  if (!rawNote) {
     throw new Error('Note not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: note.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const note = await enhanceSidebarItem(ctx, rawNote)
+  await requireEditPermission(ctx, note)
 
   const now = Date.now()
   const updates: Partial<Doc<'notes'>> = {
@@ -134,27 +131,23 @@ export const getNote = async (
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
+  if (!rawNote) return null
 
-  return pipe(ctx, rawNote)
-    .pipe(enhanceSidebarItem)
-    .pipe((ctx, note) => enhanceNoteWithContent(ctx, note, viewAsPlayerId))
-    .run()
+  const note = await enhanceSidebarItem(ctx, rawNote)
+  return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
 }
 
 export async function deleteNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
 ): Promise<Id<'notes'>> {
-  const note = await ctx.db.get(noteId)
-  if (!note) {
+  const rawNote = await ctx.db.get(noteId)
+  if (!rawNote) {
     throw new Error('Note not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: note.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const note = await enhanceSidebarItem(ctx, rawNote)
+  await requireEditPermission(ctx, note)
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
   await ctx.db.delete(noteId)

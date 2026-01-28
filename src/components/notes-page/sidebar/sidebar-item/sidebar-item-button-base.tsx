@@ -53,7 +53,10 @@ function SidebarItemButtonBaseComponent({
             >
               <motion.div
                 animate={{ rotate: isExpanded ? 90 : 0 }}
-                transition={{ duration: isExpanded ? 0.2 : 0.15, ease: 'easeInOut' }}
+                transition={{
+                  duration: isExpanded ? 0.2 : 0.15,
+                  ease: 'easeInOut',
+                }}
                 className="flex items-center justify-center"
               >
                 <ChevronRight className="h-3 w-3" />

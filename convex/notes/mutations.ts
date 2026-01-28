@@ -6,6 +6,8 @@ import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import {
   createNote as createNoteFn,
   deleteNote as deleteNoteFn,
@@ -39,16 +41,13 @@ export const moveNote = mutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const note = await ctx.db.get(args.noteId)
-    if (!note) {
+    const rawNote = await ctx.db.get(args.noteId)
+    if (!rawNote) {
       throw new Error('Note not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: note.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const note = await enhanceSidebarItem(ctx, rawNote)
+    await requireEditPermission(ctx, note)
 
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
@@ -136,6 +135,13 @@ export const updateNoteContent = mutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
+    const rawNote = await ctx.db.get(args.noteId)
+    if (!rawNote) {
+      throw new Error('Note not found')
+    }
+
+    const note = await enhanceSidebarItem(ctx, rawNote)
+    await requireEditPermission(ctx, note)
     await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
     return args.noteId
   },

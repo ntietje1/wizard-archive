@@ -1,12 +1,10 @@
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { pipe } from '../common/pipeline'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import { enhanceGameMapWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
-import type { GameMapWithContent } from './types'
+import type { GameMapFromDb, GameMapWithContent } from './types'
 
 export const getMap = async (
   ctx: Ctx,
@@ -14,27 +12,23 @@ export const getMap = async (
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
+  if (!rawMap) return null
 
-  return pipe(ctx, rawMap)
-    .pipe(enhanceSidebarItem)
-    .pipe((ctx, map) => enhanceGameMapWithContent(ctx, map, viewAsPlayerId))
-    .run()
+  const map = await enhanceSidebarItem(ctx, rawMap)
+  return enhanceGameMapWithContent(ctx, map, viewAsPlayerId)
 }
 
 export const deleteMap = async (
   ctx: MutationCtx,
   mapId: Id<'gameMaps'>,
 ): Promise<Id<'gameMaps'>> => {
-  const map = await ctx.db.get(mapId)
-  if (!map) {
+  const rawMap = await ctx.db.get(mapId)
+  if (!rawMap) {
     throw new Error('Map not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: map.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const map = await enhanceSidebarItem(ctx, rawMap as GameMapFromDb)
+  await requireEditPermission(ctx, map)
 
   const pins = await ctx.db
     .query('mapPins')

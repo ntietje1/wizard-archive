@@ -9,6 +9,8 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import { deleteFolder as deleteFolderFn } from './folders'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -25,16 +27,13 @@ export const updateFolder = mutation({
     ctx,
     args,
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
-    const folder = await ctx.db.get(args.folderId)
-    if (!folder) {
+    const rawFolder = await ctx.db.get(args.folderId)
+    if (!rawFolder) {
       throw new Error('Folder not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folder.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const folder = await enhanceSidebarItem(ctx, rawFolder)
+    await requireEditPermission(ctx, folder)
 
     const now = Date.now()
     const updates: Partial<Doc<'folders'>> = {
@@ -71,16 +70,13 @@ export const moveFolder = mutation({
   },
   returns: v.id('folders'),
   handler: async (ctx, args): Promise<Id<'folders'>> => {
-    const folder = await ctx.db.get(args.folderId)
-    if (!folder) {
+    const rawFolder = await ctx.db.get(args.folderId)
+    if (!rawFolder) {
       throw new Error('Folder not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folder.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const folder = await enhanceSidebarItem(ctx, rawFolder)
+    await requireEditPermission(ctx, folder)
 
     // Validate no circular parent reference
     await validateParentChange({

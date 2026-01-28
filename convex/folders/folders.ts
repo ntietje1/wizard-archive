@@ -1,8 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { pipe } from '../common/pipeline'
 import { deleteNote } from '../notes/notes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import { enhanceFolderWithContent } from './helpers'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
@@ -17,28 +17,21 @@ export const getFolder = async (
   const rawFolder = await ctx.db.get(folderId)
   if (!rawFolder) return null
 
-  return pipe(ctx, rawFolder)
-    .pipe(enhanceSidebarItem)
-    .pipe((ctx, folder) =>
-      enhanceFolderWithContent(ctx, folder, viewAsPlayerId),
-    )
-    .run()
+  const folder = await enhanceSidebarItem(ctx, rawFolder)
+  return enhanceFolderWithContent(ctx, folder, viewAsPlayerId)
 }
 
 export async function deleteFolder(
   ctx: MutationCtx,
   folderId: Id<'folders'>,
 ): Promise<Id<'folders'>> {
-  const folder = await ctx.db.get(folderId)
-  if (!folder) {
+  const rawFolder = await ctx.db.get(folderId)
+  if (!rawFolder) {
     throw new Error('Folder not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: folder.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const folder = await enhanceSidebarItem(ctx, rawFolder)
+  await requireEditPermission(ctx, folder)
 
   // Cascade delete all children
   // First, delete child folders (recursively)

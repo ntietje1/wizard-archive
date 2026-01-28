@@ -1,8 +1,7 @@
 import { getNote } from '../notes/notes'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { pipeList } from '../common/pipeline'
 import { enforceBlockSharePermissionsOrNull } from '../shares/blockShares'
+import { requireEditPermission } from '../shares/itemShares'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SHARE_STATUS } from '../shares/types'
 import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
@@ -63,13 +62,15 @@ export async function getTopLevelBlocksByNote(
 
   const topLevelBlocks = blocks.filter((block) => block.isTopLevel)
 
-  const permittedBlocks = await pipeList(ctx, topLevelBlocks)
-    .enforce((ctx, block) =>
+  const permittedBlocks = await Promise.all(
+    topLevelBlocks.map((block) =>
       enforceBlockSharePermissionsOrNull(ctx, block, viewAsPlayerId),
-    )
-    .run()
+    ),
+  )
 
-  return permittedBlocks.sort((a, b) => (a.position || 0) - (b.position || 0))
+  return permittedBlocks
+    .filter((block): block is Block => block !== null)
+    .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
 export async function getBlocksByCampaign(
@@ -101,16 +102,13 @@ export async function saveTopLevelBlocksForNote(
 ) {
   const now = Date.now()
 
-  const note = await ctx.db.get(noteId)
-  if (!note) {
+  const rawNote = await ctx.db.get(noteId)
+  if (!rawNote) {
     throw new Error('Note not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: note.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  const note = await enhanceSidebarItem(ctx, rawNote)
+  await requireEditPermission(ctx, note)
 
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')

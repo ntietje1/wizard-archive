@@ -13,7 +13,9 @@ import {
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
+import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorModeActions, useEditorModeState } from '~/hooks/useEditorMode'
 import { cn } from '~/lib/shadcn/utils'
 
@@ -21,6 +23,8 @@ const label = 'View as player'
 
 export const ViewAsPlayerButton = () => {
   const campaignMembersQuery = useCampaignMembers()
+  const { isDm } = useCampaign()
+  const { itemForDm } = useCurrentItem()
   const playerMembers =
     campaignMembersQuery.data?.filter(
       (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
@@ -30,6 +34,10 @@ export const ViewAsPlayerButton = () => {
   const [isOpen, setIsOpen] = useState(false)
 
   const isPending = campaignMembersQuery.isPending
+
+  if (!isDm || !itemForDm) {
+    return null
+  }
 
   return (
     <EmptyContextMenu>

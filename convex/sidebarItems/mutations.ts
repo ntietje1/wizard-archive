@@ -1,12 +1,13 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { findUniqueSidebarItemSlug } from '../common/slug'
+import { requireEditPermission } from '../shares/itemShares'
 import { sidebarItemIdValidator } from './schema/baseValidators'
 import { validateSidebarItemName } from './validation'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
+import { enhanceSidebarItem } from './helpers'
 import type { Id } from '../_generated/dataModel'
+import type { AnySidebarItemFromDb } from './types'
 
 export const updateSidebarItem = mutation({
   args: {
@@ -19,16 +20,14 @@ export const updateSidebarItem = mutation({
     slug: v.string(),
   }),
   handler: async (ctx, args): Promise<{ slug: string }> => {
-    const item = await ctx.db.get(args.itemId)
-    if (!item) {
+    const rawItem = await ctx.db.get(args.itemId)
+    if (!rawItem) {
       throw new Error('Item not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: item.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const item = await enhanceSidebarItem(ctx, rawItem as AnySidebarItemFromDb)
+    await requireEditPermission(ctx, item)
+
     const patch: {
       name?: string
       slug?: string

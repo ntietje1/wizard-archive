@@ -9,6 +9,8 @@ import {
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireEditPermission } from '../shares/itemShares'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -19,16 +21,13 @@ export const moveFile = mutation({
   },
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
-    const file = await ctx.db.get(args.fileId)
-    if (!file) {
+    const rawFile = await ctx.db.get(args.fileId)
+    if (!rawFile) {
       throw new Error('File not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: file.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const file = await enhanceSidebarItem(ctx, rawFile)
+    await requireEditPermission(ctx, file)
 
     // Validate no circular parent reference
     await validateParentChange({
@@ -146,16 +145,13 @@ export const updateFile = mutation({
     ctx,
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
-    const file = await ctx.db.get(args.fileId)
-    if (!file) {
+    const rawFile = await ctx.db.get(args.fileId)
+    if (!rawFile) {
       throw new Error('File not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: file.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
+    const file = await enhanceSidebarItem(ctx, rawFile)
+    await requireEditPermission(ctx, file)
 
     const updates: Partial<Doc<'files'>> = {
       updatedAt: Date.now(),

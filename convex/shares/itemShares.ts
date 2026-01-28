@@ -4,33 +4,33 @@ import {
 } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
-import { SHARE_STATUS } from './types'
+import { PERMISSION_STATUS, SHARE_STATUS } from './types'
 import type { CustomBlock } from '../notes/editorSpecs'
 import type { Ctx } from '../common/types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { AnySidebarItem } from '../sidebarItems/types'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
-import type { SidebarItemShare } from './types'
+import type { PermissionStatus, SidebarItemShare } from './types'
 
-export async function getSidebarItemPermissionStatus<T extends AnySidebarItem>(
+export async function getSidebarItemPermissionStatus(
   ctx: Ctx,
-  item: T,
+  item: AnySidebarItem,
   viewAsPlayerId?: Id<'campaignMembers'>,
-): Promise<boolean> {
+): Promise<PermissionStatus> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: item.campaignId,
   })
 
   if (!campaignWithMembership) {
-    return false
+    return PERMISSION_STATUS.NO_ACCESS
   }
 
   let checkId = campaignWithMembership.member._id
 
   if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
     if (!viewAsPlayerId) {
-      return true
+      return PERMISSION_STATUS.EDIT
     } else {
       checkId = viewAsPlayerId
     }
@@ -40,11 +40,18 @@ export async function getSidebarItemPermissionStatus<T extends AnySidebarItem>(
 
   switch (shareStatus) {
     case SHARE_STATUS.ALL_SHARED:
-      return true
-    case SHARE_STATUS.INDIVIDUALLY_SHARED:
-      return item.shares.some((share) => share.campaignMemberId === checkId)
+      return PERMISSION_STATUS.VIEW
+    case SHARE_STATUS.INDIVIDUALLY_SHARED: {
+      const isShared = await isSidebarItemSharedWithMember(
+        ctx,
+        item.campaignId,
+        item._id,
+        checkId,
+      )
+      return isShared ? PERMISSION_STATUS.VIEW : PERMISSION_STATUS.NO_ACCESS
+    }
     case SHARE_STATUS.NOT_SHARED:
-      return false
+      return PERMISSION_STATUS.NO_ACCESS
   }
 }
 
@@ -55,16 +62,26 @@ export async function enforceSidebarItemSharePermissionsOrNull<
   item: T,
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<T | null> {
-  const permissionStatus = await getSidebarItemPermissionStatus<T>(
+  const permissionStatus = await getSidebarItemPermissionStatus(
     ctx,
     item,
     viewAsPlayerId,
   )
-  if (!permissionStatus) {
+  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
     return null
   }
 
   return item
+}
+
+export async function requireEditPermission(
+  ctx: Ctx,
+  item: AnySidebarItem,
+): Promise<void> {
+  const permissionStatus = await getSidebarItemPermissionStatus(ctx, item)
+  if (permissionStatus !== PERMISSION_STATUS.EDIT) {
+    throw new Error('You do not have permission to edit this item')
+  }
 }
 
 export async function shareSidebarItemWithMember(

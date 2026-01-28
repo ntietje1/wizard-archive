@@ -3,7 +3,6 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { toast } from 'sonner'
 import { useFolderActions } from './useFolderActions'
 import { useMapActions } from './useMapActions'
 import { useNoteActions } from './useNoteActions'
@@ -89,7 +88,6 @@ export function useRenameItem() {
         })
       } catch (error) {
         console.error(error)
-        toast.error('Failed to update name')
         throw error
       }
     },
