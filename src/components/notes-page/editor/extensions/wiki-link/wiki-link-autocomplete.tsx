@@ -7,7 +7,6 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
-import type { EditorState } from '@tiptap/pm/state'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { HeadingEntry } from '~/lib/heading-utils'
@@ -143,41 +142,6 @@ function getAutocompleteContext(
     completedHeadingPath: parts.slice(0, -1),
     resolvedItem: item,
   }
-}
-
-/** Find the length of closing ]] brackets after cursor position */
-function findClosingBrackets(state: EditorState, cursor: number): number {
-  const maxLookahead = 100
-  const endPos = Math.min(cursor + maxLookahead, state.doc.content.size)
-  if (cursor >= endPos) return 0
-
-  const after = state.doc.textBetween(cursor, endPos)
-  let brackets = 0
-  let openBrackets = 0
-
-  for (let i = 0; i < after.length; i++) {
-    const char = after[i]
-
-    if (char === '[') {
-      openBrackets++
-      // If we see [[, there's a new link starting - our link has no closing brackets
-      if (openBrackets >= 2) {
-        return 0
-      }
-      brackets = 0
-    } else if (char === ']') {
-      openBrackets = 0
-      brackets++
-      if (brackets >= 2 && after[i + 1] !== ']') {
-        return i + 1 // Position after the last ]
-      }
-    } else {
-      brackets = 0
-      openBrackets = 0
-    }
-  }
-
-  return 0
 }
 
 /** Get child headings under a parent level, stopping at same-or-higher level */
@@ -430,11 +394,8 @@ export function WikiLinkAutocomplete({
       const tiptap = editor._tiptapEditor
       if (!tiptap) return
 
-      const { state } = tiptap
       const from = wikiCtx.startPos
-      const cursor = state.selection.from
-      const closingBracketsLen = findClosingBrackets(state, cursor)
-      const to = cursor + closingBracketsLen
+      const to = wikiCtx.endPos
 
       // Build link text
       let linkText: string
@@ -475,7 +436,7 @@ export function WikiLinkAutocomplete({
       if (!tiptap) return
 
       const from = wikiCtx.startPos
-      const cursor = tiptap.state.selection.from
+      const to = wikiCtx.endPos
 
       // Build link text with trailing # to continue
       let linkText: string
@@ -495,7 +456,7 @@ export function WikiLinkAutocomplete({
       tiptap
         .chain()
         .focus()
-        .insertContentAt({ from, to: cursor }, `[[${linkText}#`)
+        .insertContentAt({ from, to }, `[[${linkText}#`)
         .run()
     },
     [editor],
@@ -510,7 +471,7 @@ export function WikiLinkAutocomplete({
       if (!tiptap) return
 
       const from = wikiCtx.startPos
-      const cursor = tiptap.state.selection.from
+      const to = wikiCtx.endPos
 
       // Build folder path with trailing / to continue
       const folderPath = item.linkPath.join('/')
@@ -518,7 +479,7 @@ export function WikiLinkAutocomplete({
       tiptap
         .chain()
         .focus()
-        .insertContentAt({ from, to: cursor }, `[[${folderPath}/`)
+        .insertContentAt({ from, to }, `[[${folderPath}/`)
         .run()
     },
     [editor],

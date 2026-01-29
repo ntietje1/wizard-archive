@@ -4,40 +4,34 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { useAllSidebarItems } from './useSidebarItems'
 import { useCampaign } from './useCampaign'
 import { useEditorMode } from './useEditorMode'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
-import { createSelectionStabilizerPlugin } from '~/lib/selection-stabilizer'
+import {
+  TYPE_TO_URL_PARAM,
+  overlapsSelection,
+  registerLinkPlugins,
+} from '~/lib/link-extension-utils'
 
 const PLUGIN_KEY = new PluginKey('wikiLinkDecoration')
 const SELECTION_STABILIZER_KEY = new PluginKey('wikiLinkSelectionStabilizer')
-
-const TYPE_TO_URL_PARAM: Record<string, string> = {
-  note: 'note',
-  folder: 'folder',
-  gameMap: 'map',
-  file: 'file',
-}
 
 export interface WikiLinkItemInfo {
   item: AnySidebarItem
   href: string
 }
 
-export type WikiLinkItemsMap = Map<string, WikiLinkItemInfo>
-
 export interface ParsedWikiLink {
-  itemPath: Array<string> // Path segments ["folder", "subfolder", "note"]
-  itemName: string // The final item name (last segment of path)
-  headingPath: Array<string> // Array of heading anchors ["h1", "h2"]
-  displayName: string | null // Optional display override
+  itemPath: Array<string>
+  itemName: string
+  headingPath: Array<string>
+  displayName: string | null
 }
 
 export function parseWikiLinkText(text: string): ParsedWikiLink {
-  // Find last | for display name (allows | in item name)
   const lastPipeIndex = text.lastIndexOf('|')
-
   let displayName: string | null = null
   let remainingText = text
 
@@ -46,32 +40,21 @@ export function parseWikiLinkText(text: string): ParsedWikiLink {
     remainingText = text.slice(0, lastPipeIndex)
   }
 
-  // Split by # to get item path and heading path
   const parts = remainingText.split('#')
   const itemPathStr = parts[0].trim()
   const headingPath = parts
     .slice(1)
     .map((h) => h.trim())
     .filter(Boolean)
-
-  // Split item path by / to get path segments
   const itemPath = itemPathStr
     .split('/')
     .map((s) => s.trim())
     .filter(Boolean)
   const itemName = itemPath.at(-1) || ''
 
-  return {
-    itemPath,
-    itemName,
-    headingPath,
-    displayName,
-  }
+  return { itemPath, itemName, headingPath, displayName }
 }
 
-/**
- * Get the full path of an item from root to item (array of names)
- */
 export function getItemPath(
   item: AnySidebarItem,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
@@ -82,20 +65,13 @@ export function getItemPath(
 
   while (current && !seen.has(current._id)) {
     seen.add(current._id)
-    if (current.name) {
-      path.unshift(current.name)
-    }
+    if (current.name) path.unshift(current.name)
     current = current.parentId ? itemsMap.get(current.parentId) : undefined
   }
 
   return path
 }
 
-/**
- * Resolve a path (array of names) to an item.
- * The path can be partial - it matches from the end of the full path.
- * Returns the first matching item if found, or undefined if not found.
- */
 export function resolveItemByPath(
   pathSegments: Array<string>,
   allItems: Array<AnySidebarItem>,
@@ -107,16 +83,10 @@ export function resolveItemByPath(
 
   for (const item of allItems) {
     const fullPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
-
-    // Check if the provided path matches the end of the full path
     if (fullPath.length < normalizedPath.length) continue
 
     const startIdx = fullPath.length - normalizedPath.length
-    const pathMatches = normalizedPath.every(
-      (segment, i) => fullPath[startIdx + i] === segment,
-    )
-
-    if (pathMatches) {
+    if (normalizedPath.every((seg, i) => fullPath[startIdx + i] === seg)) {
       return item
     }
   }
@@ -124,10 +94,7 @@ export function resolveItemByPath(
   return undefined
 }
 
-/**
- * Check if a path uniquely identifies an item (no other items match the same path)
- */
-export function isPathUnique(
+function isPathUnique(
   pathSegments: Array<string>,
   allItems: Array<AnySidebarItem>,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
@@ -139,15 +106,10 @@ export function isPathUnique(
 
   for (const item of allItems) {
     const fullPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
-
     if (fullPath.length < normalizedPath.length) continue
 
     const startIdx = fullPath.length - normalizedPath.length
-    const pathMatches = normalizedPath.every(
-      (segment, i) => fullPath[startIdx + i] === segment,
-    )
-
-    if (pathMatches) {
+    if (normalizedPath.every((seg, i) => fullPath[startIdx + i] === seg)) {
       matchCount++
       if (matchCount > 1) return false
     }
@@ -156,21 +118,6 @@ export function isPathUnique(
   return matchCount === 1
 }
 
-/**
- * Get all items with a given name (case-insensitive)
- */
-export function getItemsByName(
-  name: string,
-  allItems: Array<AnySidebarItem>,
-): Array<AnySidebarItem> {
-  const normalizedName = name.toLowerCase()
-  return allItems.filter((item) => item.name?.toLowerCase() === normalizedName)
-}
-
-/**
- * Calculate the minimum path needed to uniquely identify an item.
- * Returns the shortest suffix of the full path that uniquely identifies this item.
- */
 export function getMinDisambiguationPath(
   item: AnySidebarItem,
   allItems: Array<AnySidebarItem>,
@@ -179,7 +126,6 @@ export function getMinDisambiguationPath(
   const fullPath = getItemPath(item, itemsMap)
   if (fullPath.length === 0) return []
 
-  // Start with just the name and add parent folders until unique
   for (let i = fullPath.length - 1; i >= 0; i--) {
     const partialPath = fullPath.slice(i)
     if (isPathUnique(partialPath, allItems, itemsMap)) {
@@ -187,7 +133,6 @@ export function getMinDisambiguationPath(
     }
   }
 
-  // Fall back to full path (should always be unique)
   return fullPath
 }
 
@@ -205,10 +150,6 @@ interface PluginState {
   selTo: number
 }
 
-// Match [[content]] where:
-// - Content cannot contain [[ (would look like nested link start)
-// - Content cannot contain ]] followed by non-]
-// - The final ]] must be followed by end or non-] to handle names ending with ]
 export const WIKI_LINK_REGEX =
   /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
 
@@ -218,21 +159,15 @@ export interface WikiLinkResolver {
   itemsMap: Map<SidebarItemId, AnySidebarItem>
 }
 
-/**
- * Hook that applies wiki-link styling to [[text]] patterns in the editor.
- * - In editor mode: brackets are hidden unless cursor/selection overlaps with the link
- * - In viewer mode: brackets are always hidden
- */
 export function useWikiLinkExtension(
   editor: CustomBlockNoteEditor | undefined,
 ) {
   const { data: sidebarItems, itemsMap } = useAllSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
-  const { editorMode } = useEditorMode()
+  const { editorMode, viewAsPlayerId } = useEditorMode()
   const pluginRef = useRef<Plugin | null>(null)
-  const isViewerMode = editorMode === 'viewer'
+  const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
 
-  // Build resolver for path-based lookups
   const resolver = useMemo((): WikiLinkResolver => {
     const allItems = sidebarItems || []
 
@@ -255,105 +190,25 @@ export function useWikiLinkExtension(
     return { resolve, allItems, itemsMap }
   }, [sidebarItems, itemsMap, dmUsername, campaignSlug])
 
-  // Legacy map for backwards compatibility (keyed by lowercase name)
-  const itemsByName = useMemo((): WikiLinkItemsMap => {
-    const map = new Map<string, WikiLinkItemInfo>()
-    if (!sidebarItems || !dmUsername || !campaignSlug) return map
-
-    for (const item of sidebarItems) {
-      if (!item.name) continue
-      const urlParam = TYPE_TO_URL_PARAM[item.type]
-      if (!urlParam) continue
-
-      const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
-      // Only set if not already set (first item with this name wins for legacy map)
-      if (!map.has(item.name.toLowerCase())) {
-        map.set(item.name.toLowerCase(), { item, href })
-      }
-    }
-    return map
-  }, [sidebarItems, dmUsername, campaignSlug])
-
-  // Create and register the decoration plugin
   useEffect(() => {
     const tiptapEditor = editor?._tiptapEditor
     if (!tiptapEditor) return
 
-    let cancelled = false
-    let frameId: number | null = null
-
-    const registerPluginWhenReady = () => {
-      // Wait for the editor's view to be ready before registering plugins
-      if (!tiptapEditor.view) {
-        frameId = requestAnimationFrame(registerPluginWhenReady)
-        return
-      }
-
-      if (cancelled) return
-
-      // Selection stabilizer plugin to prevent oscillating selection transactions
-      const stabilizerPlugin = createSelectionStabilizerPlugin(
-        SELECTION_STABILIZER_KEY,
-      )
-      const decorationPlugin = createWikiLinkPlugin(resolver, isViewerMode)
-
-      // Always try to unregister first (handles HMR and dependency changes)
-      try {
-        tiptapEditor.unregisterPlugin(SELECTION_STABILIZER_KEY)
-      } catch {
-        // Plugin might not be registered, that's fine
-      }
-      try {
-        tiptapEditor.unregisterPlugin(PLUGIN_KEY)
-      } catch {
-        // Plugin might not be registered, that's fine
-      }
-
-      // Register stabilizer first so it filters before decoration plugin runs
-      tiptapEditor.registerPlugin(stabilizerPlugin)
-      tiptapEditor.registerPlugin(decorationPlugin)
-      pluginRef.current = decorationPlugin
-
-      try {
-        const { tr } = tiptapEditor.view.state
-        tiptapEditor.view.dispatch(tr.setMeta(PLUGIN_KEY, true))
-      } catch {
-        // View might not be ready, decorations will apply on next transaction
-      }
-    }
-
-    registerPluginWhenReady()
-
-    return () => {
-      cancelled = true
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId)
-      }
-      // Always try to unregister on cleanup
-      try {
-        tiptapEditor.unregisterPlugin(SELECTION_STABILIZER_KEY)
-      } catch {
-        // Plugin might already be unregistered
-      }
-      try {
-        tiptapEditor.unregisterPlugin(PLUGIN_KEY)
-      } catch {
-        // Plugin might already be unregistered
-      }
-      pluginRef.current = null
-    }
+    return registerLinkPlugins({
+      tiptapEditor,
+      pluginKey: PLUGIN_KEY,
+      stabilizerKey: SELECTION_STABILIZER_KEY,
+      createDecorationPlugin: () =>
+        createWikiLinkPlugin(resolver, isViewerMode),
+      pluginRef,
+    })
   }, [editor, resolver, isViewerMode])
 
-  return { itemsByName, resolver }
+  return { resolver }
 }
 
-// Find all wiki-link matches in the document
 function findWikiLinks(
-  doc: {
-    descendants: (
-      fn: (node: { isText: boolean; text?: string }, pos: number) => void,
-    ) => void
-  },
+  doc: ProseMirrorNode,
   resolver: WikiLinkResolver,
 ): Array<WikiLinkMatch> {
   const matches: Array<WikiLinkMatch> = []
@@ -368,23 +223,12 @@ function findWikiLinks(
       const to = pos + match.index + match[0].length
       const innerText = match[1]
       const parsed = parseWikiLinkText(innerText)
-      // Resolve using the full item path
       const itemInfo = resolver.resolve(parsed.itemPath)
       matches.push({ from, to, innerText, parsed, itemInfo })
     }
   })
 
   return matches
-}
-
-// Check if a wiki-link overlaps with the selection
-function overlapsSelection(
-  matchFrom: number,
-  matchTo: number,
-  selFrom: number,
-  selTo: number,
-): boolean {
-  return selFrom <= matchTo && selTo >= matchFrom
 }
 
 function createWikiLinkPlugin(
@@ -395,35 +239,56 @@ function createWikiLinkPlugin(
     key: PLUGIN_KEY,
     state: {
       init(_, { doc, selection }) {
-        try {
-          const matches = findWikiLinks(doc, resolver)
-          return {
-            decorations: buildDecorations(
-              doc,
-              matches,
-              isViewerMode,
-              selection.from,
-              selection.to,
-            ),
-            selFrom: selection.from,
-            selTo: selection.to,
-          }
-        } catch {
-          return {
-            decorations: DecorationSet.empty,
-            selFrom: selection.from,
-            selTo: selection.to,
-          }
+        const matches = findWikiLinks(doc, resolver)
+        return {
+          decorations: buildDecorations(
+            doc,
+            matches,
+            isViewerMode,
+            selection.from,
+            selection.to,
+          ),
+          selFrom: selection.from,
+          selTo: selection.to,
         }
       },
-      apply(tr, oldState, _oldEditorState, newEditorState) {
-        try {
-          const forceRebuild = tr.getMeta(PLUGIN_KEY)
-          const { from: selFrom, to: selTo } = newEditorState.selection
+      apply(tr, oldState, _, newEditorState) {
+        const forceRebuild = tr.getMeta(PLUGIN_KEY)
+        const { from: selFrom, to: selTo } = newEditorState.selection
 
-          // If doc changed, rebuild everything
-          if (tr.docChanged || forceRebuild) {
-            const matches = findWikiLinks(newEditorState.doc, resolver)
+        if (tr.docChanged || forceRebuild) {
+          const matches = findWikiLinks(newEditorState.doc, resolver)
+          return {
+            decorations: buildDecorations(
+              newEditorState.doc,
+              matches,
+              isViewerMode,
+              selFrom,
+              selTo,
+            ),
+            selFrom,
+            selTo,
+          }
+        }
+
+        if (tr.selectionSet && !isViewerMode) {
+          const matches = findWikiLinks(newEditorState.doc, resolver)
+          const oldOverlapping = matches.filter((m) =>
+            overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
+          )
+          const newOverlapping = matches.filter((m) =>
+            overlapsSelection(m.from, m.to, selFrom, selTo),
+          )
+
+          const overlappingChanged =
+            oldOverlapping.length !== newOverlapping.length ||
+            oldOverlapping.some(
+              (old, i) =>
+                old.from !== newOverlapping[i]?.from ||
+                old.to !== newOverlapping[i]?.to,
+            )
+
+          if (overlappingChanged) {
             return {
               decorations: buildDecorations(
                 newEditorState.doc,
@@ -436,55 +301,12 @@ function createWikiLinkPlugin(
               selTo,
             }
           }
+        }
 
-          // If selection changed, check if we need to rebuild
-          if (tr.selectionSet && !isViewerMode) {
-            const matches = findWikiLinks(newEditorState.doc, resolver)
-
-            // Check if the set of overlapping wiki-links changed
-            const oldOverlapping = matches.filter((m) =>
-              overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
-            )
-            const newOverlapping = matches.filter((m) =>
-              overlapsSelection(m.from, m.to, selFrom, selTo),
-            )
-
-            // Compare by checking if the sets are different
-            const overlappingChanged =
-              oldOverlapping.length !== newOverlapping.length ||
-              oldOverlapping.some(
-                (old, i) =>
-                  old.from !== newOverlapping[i]?.from ||
-                  old.to !== newOverlapping[i]?.to,
-              )
-
-            if (overlappingChanged) {
-              return {
-                decorations: buildDecorations(
-                  newEditorState.doc,
-                  matches,
-                  isViewerMode,
-                  selFrom,
-                  selTo,
-                ),
-                selFrom,
-                selTo,
-              }
-            }
-          }
-
-          // No changes needed, just map decorations and update selection
-          return {
-            decorations: oldState.decorations.map(tr.mapping, tr.doc),
-            selFrom,
-            selTo,
-          }
-        } catch {
-          return {
-            decorations: DecorationSet.empty,
-            selFrom: newEditorState.selection.from,
-            selTo: newEditorState.selection.to,
-          }
+        return {
+          decorations: oldState.decorations.map(tr.mapping, tr.doc),
+          selFrom,
+          selTo,
         }
       },
     },
@@ -497,11 +319,7 @@ function createWikiLinkPlugin(
 }
 
 function buildDecorations(
-  doc: {
-    descendants: (
-      fn: (node: { isText: boolean; text?: string }, pos: number) => void,
-    ) => void
-  },
+  doc: ProseMirrorNode,
   matches: Array<WikiLinkMatch>,
   isViewerMode: boolean,
   selFrom: number,
@@ -510,63 +328,80 @@ function buildDecorations(
   const decorations: Array<Decoration> = []
 
   for (const { from, to, innerText, parsed, itemInfo } of matches) {
-    const color = validateHexColorOrDefault(itemInfo?.item.color)
+    const color = itemInfo
+      ? validateHexColorOrDefault(itemInfo.item.color)
+      : undefined
     const baseClass = itemInfo ? 'wiki-link-exists' : 'wiki-link-ghost'
-
-    // Check if the selection overlaps with this wiki-link
     const isActive =
       !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
-    const activeClass = isActive ? ' wiki-link-active' : ''
+    const classes = `${baseClass}${isViewerMode ? ' wiki-link-viewer' : ''}${isActive ? ' wiki-link-active' : ''}`
 
-    // Build href with heading parameter when heading exists
     let href = itemInfo?.href
     if (href && parsed.headingPath.length > 0) {
-      const headingParam = encodeURIComponent(parsed.headingPath.join('#'))
-      href = `${href}&heading=${headingParam}`
+      href = `${href}&heading=${encodeURIComponent(parsed.headingPath.join('#'))}`
     }
 
-    // Determine display text: displayName > itemName
-    const displayText = parsed.displayName || parsed.itemName
-    const hasDisplayName = !!parsed.displayName
+    const contentAttrs = {
+      'data-wiki-link': innerText,
+      'data-wiki-link-item-name': parsed.itemName,
+      'data-wiki-link-exists': itemInfo ? 'true' : 'false',
+      ...(href && { 'data-href': href }),
+      ...(parsed.headingPath.length > 0 && {
+        'data-wiki-link-heading': parsed.headingPath.join('#'),
+      }),
+    }
 
     // Opening bracket [[
     decorations.push(
       Decoration.inline(from, from + 2, {
         nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-open ${baseClass}${isViewerMode ? ' wiki-link-viewer' : ''}${activeClass}`,
-        style: itemInfo ? `color: ${color}` : undefined,
+        class: `wiki-link-bracket wiki-link-bracket-open ${classes}`,
+        style: color ? `color: ${color}` : undefined,
       }),
     )
 
-    // Content (the text between brackets)
-    decorations.push(
-      Decoration.inline(from + 2, to - 2, {
-        nodeName: 'span',
-        class: `wiki-link-content ${baseClass}${activeClass}`,
-        style: itemInfo ? `color: ${color}` : undefined,
-        'data-wiki-link': innerText,
-        'data-wiki-link-item-name': parsed.itemName,
-        'data-wiki-link-exists': itemInfo ? 'true' : 'false',
-        ...(href && { 'data-href': href }),
-        ...(parsed.headingPath.length > 0 && {
-          'data-wiki-link-heading': parsed.headingPath.join('#'),
+    // Content - in viewer mode with display name, split to make display name selectable
+    if (isViewerMode && parsed.displayName) {
+      const pipeIndex = innerText.lastIndexOf('|')
+      const prefixEnd = from + 2 + pipeIndex + 1
+
+      decorations.push(
+        Decoration.inline(from + 2, prefixEnd, {
+          nodeName: 'span',
+          class: 'wiki-link-hidden-prefix',
         }),
-        ...(hasDisplayName && { 'data-display-name': displayText }),
-      }),
-    )
+      )
+      decorations.push(
+        Decoration.inline(prefixEnd, to - 2, {
+          nodeName: 'span',
+          class: `wiki-link-content ${classes}`,
+          style: color ? `color: ${color}` : undefined,
+          ...contentAttrs,
+        }),
+      )
+    } else {
+      decorations.push(
+        Decoration.inline(from + 2, to - 2, {
+          nodeName: 'span',
+          class: `wiki-link-content ${classes}`,
+          style: color ? `color: ${color}` : undefined,
+          ...contentAttrs,
+          ...(parsed.displayName && {
+            'data-display-name': parsed.displayName,
+          }),
+        }),
+      )
+    }
 
     // Closing bracket ]]
     decorations.push(
       Decoration.inline(to - 2, to, {
         nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-close ${baseClass}${isViewerMode ? ' wiki-link-viewer' : ''}${activeClass}`,
-        style: itemInfo ? `color: ${color}` : undefined,
+        class: `wiki-link-bracket wiki-link-bracket-close ${classes}`,
+        style: color ? `color: ${color}` : undefined,
       }),
     )
   }
 
-  return DecorationSet.create(
-    doc as Parameters<typeof DecorationSet.create>[0],
-    decorations,
-  )
+  return DecorationSet.create(doc, decorations)
 }

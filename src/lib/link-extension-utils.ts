@@ -1,0 +1,107 @@
+import { createSelectionStabilizerPlugin } from './selection-stabilizer'
+import type { RefObject } from 'react'
+import type { Plugin, PluginKey } from '@tiptap/pm/state'
+import type { EditorView } from '@tiptap/pm/view'
+
+export const TYPE_TO_URL_PARAM: Record<string, string> = {
+  note: 'note',
+  folder: 'folder',
+  gameMap: 'map',
+  file: 'file',
+}
+
+/**
+ * Check if a range overlaps with the selection
+ */
+export function overlapsSelection(
+  matchFrom: number,
+  matchTo: number,
+  selFrom: number,
+  selTo: number,
+): boolean {
+  return selFrom <= matchTo && selTo >= matchFrom
+}
+
+/** Minimal interface for the tiptap editor methods we use */
+interface TiptapEditorLike {
+  view: EditorView | undefined
+  registerPlugin: (plugin: Plugin) => void
+  unregisterPlugin: (keyOrName: PluginKey | string) => void
+}
+
+interface RegisterPluginsOptions {
+  tiptapEditor: TiptapEditorLike
+  pluginKey: PluginKey
+  stabilizerKey: PluginKey
+  createDecorationPlugin: () => Plugin
+  pluginRef: RefObject<Plugin | null>
+}
+
+/**
+ * Registers decoration and stabilizer plugins for link extensions.
+ * Returns a cleanup function.
+ */
+export function registerLinkPlugins({
+  tiptapEditor,
+  pluginKey,
+  stabilizerKey,
+  createDecorationPlugin,
+  pluginRef,
+}: RegisterPluginsOptions): () => void {
+  let cancelled = false
+  let frameId: number | null = null
+
+  const registerPluginWhenReady = () => {
+    if (!tiptapEditor.view) {
+      frameId = requestAnimationFrame(registerPluginWhenReady)
+      return
+    }
+
+    if (cancelled) return
+
+    const stabilizerPlugin = createSelectionStabilizerPlugin(stabilizerKey)
+    const decorationPlugin = createDecorationPlugin()
+
+    try {
+      tiptapEditor.unregisterPlugin(stabilizerKey)
+    } catch {
+      // Plugin might not be registered
+    }
+    try {
+      tiptapEditor.unregisterPlugin(pluginKey)
+    } catch {
+      // Plugin might not be registered
+    }
+
+    tiptapEditor.registerPlugin(stabilizerPlugin)
+    tiptapEditor.registerPlugin(decorationPlugin)
+    pluginRef.current = decorationPlugin
+
+    try {
+      const { tr } = tiptapEditor.view.state
+      tiptapEditor.view.dispatch(tr.setMeta(pluginKey, true))
+    } catch {
+      // View might not be ready
+    }
+  }
+
+  registerPluginWhenReady()
+
+  return () => {
+    cancelled = true
+    if (frameId !== null) {
+      cancelAnimationFrame(frameId)
+    }
+    try {
+      tiptapEditor.unregisterPlugin(stabilizerKey)
+    } catch {
+      // Plugin might already be unregistered
+    }
+    try {
+      tiptapEditor.unregisterPlugin(pluginKey)
+    } catch {
+      // Plugin might already be unregistered
+    }
+    pluginRef.current = null
+  }
+}
