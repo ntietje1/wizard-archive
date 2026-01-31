@@ -1,4 +1,4 @@
-import type { CustomPartialBlock } from './editor-schema'
+import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 
 export interface HeadingEntry {
   blockId: string
@@ -28,9 +28,7 @@ export function extractHeadingsFromContent(
 
   const process = (block: CustomPartialBlock) => {
     if (block.type === 'heading') {
-      const text = extractText(
-        block.content as Array<{ type: string; text?: string }>,
-      )
+      const text = extractText(block.content)
       if (text) {
         const level = (block.props as { level?: number })?.level
         if (!block.id) return
@@ -42,7 +40,7 @@ export function extractHeadingsFromContent(
         })
       }
     }
-    block.children?.forEach((c) => process(c as CustomPartialBlock))
+    block.children?.forEach((c) => process(c))
   }
 
   content.forEach(process)

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { filterSuggestionItems } from '@blocknote/core'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
@@ -8,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { HeadingEntry } from '~/lib/heading-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/lib/sidebar-item-utils'
@@ -20,6 +19,7 @@ import {
   getMinDisambiguationPath,
   resolveItemByPath,
 } from '~/hooks/useWikiLinkExtension'
+import { filterSuggestionItems } from '~/lib/filter-suggestion-items'
 import './wiki-link-autocomplete.css'
 
 type AutocompleteMode = 'file' | 'heading' | 'display-name'

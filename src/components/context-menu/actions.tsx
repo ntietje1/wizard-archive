@@ -15,7 +15,7 @@ import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlock } from '~/lib/editor-schema'
+import type { CustomBlock } from 'convex/notes/editorSpecs'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -395,11 +395,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
     }, []),
 
-    downloadNote: useCallback(async (ctx: MenuContext) => {
+    downloadNote: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !isNote(ctx.item)) return
 
       try {
-        const markdown = await convertBlocksToMarkdown(ctx.item.content)
+        const markdown = convertBlocksToMarkdown(ctx.item.content)
         const baseName = ctx.item.name ?? defaultItemName(ctx.item)
         const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
 
@@ -482,9 +482,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 const blob = await response.blob()
                 zip.file(item.path, blob)
               } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                const markdown = await convertBlocksToMarkdown(
-                  item.content as Array<CustomBlock>,
-                )
+                const markdown = convertBlocksToMarkdown(item.content)
                 zip.file(item.path, markdown)
               } else {
                 console.warn(`Unknown item type`, item)
@@ -560,9 +558,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               const blob = await response.blob()
               zip.file(item.path, blob)
             } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-              const markdown = await convertBlocksToMarkdown(
-                item.content as Array<CustomBlock>,
-              )
+              const markdown = convertBlocksToMarkdown(item.content)
               zip.file(item.path, markdown)
             } else {
               console.warn(`Unknown item type`, item)

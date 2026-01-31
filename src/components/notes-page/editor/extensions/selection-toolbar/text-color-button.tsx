@@ -1,71 +1,40 @@
 import {
   useBlockNoteEditor,
   useComponentsContext,
-  useEditorContentOrSelectionChange,
+  useEditorSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
 import { useCallback, useMemo, useState } from 'react'
 import { ColorIcon } from './color-picker/color-icon'
 import { ColorPicker } from './color-picker/color-picker'
 import type {
-  BlockNoteEditor,
-  BlockSchema,
-  InlineContentSchema,
-  StyleSchema,
-} from '@blocknote/core'
-
-function checkTextColorInSchema(
-  editor: BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema>,
-): editor is BlockNoteEditor<
-  BlockSchema,
-  InlineContentSchema,
-  {
-    textColor: {
-      type: 'textColor'
-      propSchema: 'string'
-    }
-  }
-> {
-  return (
-    'textColor' in editor.schema.styleSchema &&
-    editor.schema.styleSchema.textColor.type === 'textColor' &&
-    editor.schema.styleSchema.textColor.propSchema === 'string'
-  )
-}
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema,
+} from 'convex/notes/editorSpecs'
 
 export const TextColorButton = () => {
   const Components = useComponentsContext()!
   const editor = useBlockNoteEditor<
-    BlockSchema,
-    InlineContentSchema,
-    StyleSchema
+    CustomBlockSchema,
+    CustomInlineContentSchema,
+    CustomStyleSchema
   >()
 
-  const textColorInSchema = checkTextColorInSchema(editor)
   const selectedBlocks = useSelectedBlocks(editor)
 
   const [currentTextColor, setCurrentTextColor] = useState<string>(
-    textColorInSchema
-      ? editor.getActiveStyles().textColor || 'default'
-      : 'default',
+    editor.getActiveStyles().textColor || 'default',
   )
 
-  useEditorContentOrSelectionChange(() => {
-    if (textColorInSchema) {
-      setCurrentTextColor(editor.getActiveStyles().textColor || 'default')
-    }
+  useEditorSelectionChange(() => {
+    setCurrentTextColor(editor.getActiveStyles().textColor || 'default')
   }, editor)
 
   const setTextColor = useCallback(
     (color: string) => {
-      if (!textColorInSchema) {
-        throw Error(
-          'Tried to set text color, but style does not exist in editor schema.',
-        )
-      }
-
       if (color === 'default') {
-        editor.removeStyles({ textColor: color })
+        editor.removeStyles({ textColor: 'default' })
       } else {
         editor.addStyles({ textColor: color })
       }
@@ -75,18 +44,12 @@ export const TextColorButton = () => {
         editor.focus()
       })
     },
-    [editor, textColorInSchema],
+    [editor],
   )
 
   const show = useMemo(() => {
-    if (!textColorInSchema) {
-      return false
-    }
-
     return selectedBlocks.length > 0
-
-    return false
-  }, [selectedBlocks, textColorInSchema])
+  }, [selectedBlocks])
 
   if (!show || !editor.isEditable) {
     return null

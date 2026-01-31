@@ -1,13 +1,12 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { requireEditPermission } from '../shares/itemShares'
+import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
 import {
   createNote as createNoteFn,
   deleteNote as deleteNoteFn,
@@ -101,7 +100,9 @@ export const createNote = mutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    return await createNoteFn(ctx, args)
+    const { noteId, slug } = await createNoteFn(ctx, args)
+    await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
+    return { noteId, slug }
   },
 })
 
@@ -124,6 +125,7 @@ export const createNoteWithContent = mutation({
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     const { noteId, slug } = await createNoteFn(ctx, args)
     await saveTopLevelBlocksForNote(ctx, noteId, args.content)
+    await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
     return { noteId, slug }
   },
 })

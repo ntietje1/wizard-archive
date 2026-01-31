@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { ViewContext } from '~/components/context-menu/types'
 
 export interface BlockNoteContextMenuEvent {

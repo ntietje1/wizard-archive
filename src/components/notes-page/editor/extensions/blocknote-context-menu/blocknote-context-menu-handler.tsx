@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useBlockNoteEditor } from '@blocknote/react'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 
 /**

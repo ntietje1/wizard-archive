@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useCurrentItem } from './useCurrentItem'
-import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import {
   extractHeadingsFromContent,
   resolveHeadingPath,

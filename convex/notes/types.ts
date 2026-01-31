@@ -1,4 +1,4 @@
-import type { CustomPartialBlock } from './editorSpecs'
+import type { CustomBlock } from './editorSpecs'
 import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
@@ -13,5 +13,5 @@ export type Note = SidebarItem<typeof SIDEBAR_ITEM_TYPES.notes>
 export type NoteWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.notes
 > & {
-  content: Array<CustomPartialBlock>
+  content: Array<CustomBlock>
 }
