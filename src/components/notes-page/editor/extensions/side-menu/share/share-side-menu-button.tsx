@@ -20,6 +20,7 @@ import {
 } from '~/components/shadcn/ui/context-menu'
 import { ShareMenuContent } from '~/components/share/share-menu-content'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useCampaign } from '~/hooks/useCampaign'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
@@ -34,6 +35,7 @@ const getButtonColorClass = (status: AggregateShareStatus): string => {
 }
 
 export default function ShareSideMenuButton() {
+  const { isDm } = useCampaign()
   const { item } = useCurrentItem()
   const Components = useComponentsContext()!
   const editor = useBlockNoteEditor() as CustomBlockNoteEditor
@@ -89,7 +91,7 @@ export default function ShareSideMenuButton() {
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
   const isDisabled = topLevelBlocks.length === 0
 
-  if (!block) return null
+  if (!block || !isDm) return null
 
   return (
     <ContextMenu
