@@ -4,7 +4,7 @@ import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder, getSidebarItemAncestors } from '../folders/folders'
 import { getFile } from '../files/files'
-import { enforceSidebarItemSharePermissionsOrNull } from '../shares/itemShares'
+import { hasViewPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type {
@@ -57,12 +57,11 @@ const getAllSidebarItems = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permitted = await Promise.all(
-    enhanced.map((item) =>
-      enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
-    ),
+  const permissionResults = await Promise.all(
+    enhanced.map((item) => hasViewPermission(ctx, item, viewAsPlayerId)),
   )
-  return permitted.filter((item): item is AnySidebarItem => item !== null)
+  const permitted = enhanced.filter((_, index) => permissionResults[index])
+  return permitted
 }
 
 export const getAllSidebarItemsWithAncestors = async (
@@ -148,12 +147,11 @@ export const getSidebarItemsByParent = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permitted = await Promise.all(
-    enhanced.map((item) =>
-      enforceSidebarItemSharePermissionsOrNull(ctx, item, viewAsPlayerId),
-    ),
+  const permissionResults = await Promise.all(
+    enhanced.map((item) => hasViewPermission(ctx, item, viewAsPlayerId)),
   )
-  return permitted.filter((item): item is AnySidebarItem => item !== null)
+  const permitted = enhanced.filter((_, index) => permissionResults[index])
+  return permitted
 }
 
 export const getSidebarItemsByParentAndName = async (
@@ -205,10 +203,11 @@ export const getSidebarItemsByParentAndName = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permitted = await Promise.all(
-    enhanced.map((item) => enforceSidebarItemSharePermissionsOrNull(ctx, item)),
+  const permissionResults = await Promise.all(
+    enhanced.map((item) => hasViewPermission(ctx, item)),
   )
-  return permitted.filter((item): item is AnySidebarItem => item !== null)
+  const permitted = enhanced.filter((_, index) => permissionResults[index])
+  return permitted
 }
 
 export const getSidebarItemByName = async (
@@ -370,11 +369,12 @@ export const getSidebarItemById = async (
     return null
   }
 
-  return await enforceSidebarItemSharePermissionsOrNull(
-    ctx,
-    result,
-    viewAsPlayerId,
-  )
+  const hasPermission = await hasViewPermission(ctx, result, viewAsPlayerId)
+  if (!hasPermission) {
+    return null
+  }
+
+  return result
 }
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

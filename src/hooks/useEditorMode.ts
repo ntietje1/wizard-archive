@@ -1,10 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
+import type { PermissionLevel } from 'convex/shares/types'
 import type { EditorMode } from '~/contexts/EditorModeContext'
 
 export interface EditorModeStateContextType {
   editorMode: EditorMode
   viewAsPlayerId: Id<'campaignMembers'> | undefined
+  permissionLevel: PermissionLevel
+  isPermissionLoading: boolean
 }
 
 export interface EditorModeActionsContextType {
@@ -27,6 +30,8 @@ export function useEditorMode(): EditorModeContextType {
   return {
     editorMode: state?.editorMode ?? 'viewer',
     viewAsPlayerId: state?.viewAsPlayerId,
+    permissionLevel: state?.permissionLevel ?? 'none',
+    isPermissionLoading: state?.isPermissionLoading ?? false,
     setEditorMode: actions?.setEditorMode ?? (() => {}),
     setViewAsPlayerId: actions?.setViewAsPlayerId ?? (() => {}),
   }
@@ -35,7 +40,14 @@ export function useEditorMode(): EditorModeContextType {
 // Use this when you only need the state values (will re-render on state changes)
 export function useEditorModeState(): EditorModeStateContextType {
   const context = useContext(EditorModeStateContext)
-  return context ?? { editorMode: 'viewer', viewAsPlayerId: undefined }
+  return (
+    context ?? {
+      editorMode: 'viewer',
+      viewAsPlayerId: undefined,
+      permissionLevel: 'none',
+      isPermissionLoading: false,
+    }
+  )
 }
 
 // Use this when you only need the setters (won't re-render on state changes)

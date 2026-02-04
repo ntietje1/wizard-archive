@@ -1,6 +1,9 @@
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../folders/folders'
-import { getSidebarItemSharesForItem } from '../shares/itemShares'
+import {
+  getSidebarItemSharesForItem,
+  hasEditPermission,
+} from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -40,9 +43,17 @@ export const enhanceNoteWithContent = async (
   note: Note,
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent> => {
+  const canEdit = await hasEditPermission(ctx, note)
+
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, note.campaignId, note.parentId),
-    getTopLevelBlocksByNote(ctx, note._id, note.campaignId, viewAsPlayerId),
+    getTopLevelBlocksByNote(
+      ctx,
+      note._id,
+      note.campaignId,
+      viewAsPlayerId,
+      canEdit,
+    ),
   ])
   const content = topLevelBlocks.map((block) => block.content)
   return {

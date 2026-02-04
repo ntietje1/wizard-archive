@@ -52,6 +52,7 @@ export async function getTopLevelBlocksByNote(
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
   viewAsPlayerId?: Id<'campaignMembers'>,
+  skipBlockFiltering?: boolean,
 ): Promise<Array<Block>> {
   const blocks = await ctx.db
     .query('blocks')
@@ -61,6 +62,13 @@ export async function getTopLevelBlocksByNote(
     .collect()
 
   const topLevelBlocks = blocks.filter((block) => block.isTopLevel)
+
+  // Players with edit or full_access see all blocks (no block-share filtering)
+  if (skipBlockFiltering) {
+    return topLevelBlocks.sort(
+      (a, b) => (a.position || 0) - (b.position || 0),
+    )
+  }
 
   const permittedBlocks = await Promise.all(
     topLevelBlocks.map((block) =>

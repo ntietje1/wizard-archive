@@ -1,6 +1,38 @@
 import type { SidebarItemType } from '../sidebarItems/baseTypes'
 import type { Id } from '../_generated/dataModel'
 
+export const PERMISSION_LEVEL = {
+  NONE: 'none',
+  VIEW: 'view',
+  EDIT: 'edit',
+  FULL_ACCESS: 'full_access',
+} as const
+
+export type PermissionLevel =
+  (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL]
+
+export const ATLEAST_PERMISSION_LEVEL: Record<
+  PermissionLevel,
+  Array<PermissionLevel>
+> = {
+  [PERMISSION_LEVEL.FULL_ACCESS]: [PERMISSION_LEVEL.FULL_ACCESS],
+  [PERMISSION_LEVEL.EDIT]: [
+    PERMISSION_LEVEL.EDIT,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  ],
+  [PERMISSION_LEVEL.VIEW]: [
+    PERMISSION_LEVEL.VIEW,
+    PERMISSION_LEVEL.EDIT,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  ],
+  [PERMISSION_LEVEL.NONE]: [
+    PERMISSION_LEVEL.NONE,
+    PERMISSION_LEVEL.VIEW,
+    PERMISSION_LEVEL.EDIT,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  ],
+}
+
 export type SidebarItemShare = {
   _id: Id<'sidebarItemShares'>
   _creationTime: number
@@ -9,6 +41,7 @@ export type SidebarItemShare = {
   sidebarItemType: SidebarItemType
   campaignMemberId: Id<'campaignMembers'>
   sessionId?: Id<'sessions'>
+  permissionLevel?: PermissionLevel
 }
 
 export type BlockShare = {

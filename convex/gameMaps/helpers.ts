@@ -1,7 +1,7 @@
 import { getSidebarItemAncestors } from '../folders/folders'
 import {
-  getSidebarItemPermissionStatus,
   getSidebarItemSharesForItem,
+  hasViewPermission,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
@@ -72,14 +72,8 @@ const enforceMapPinPermissions = async (
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
   if (!pin) return null
-  const permissionStatus = await getSidebarItemPermissionStatus(
-    ctx,
-    pin.item,
-    viewAsPlayerId,
-  )
-  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
-    return null
-  }
+  const canSee = await hasViewPermission(ctx, pin.item, viewAsPlayerId)
+  if (!canSee) return null
   return pin
 }
 

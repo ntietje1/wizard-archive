@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { sidebarItemShareValidator } from '../../shares/schema'
 import {
+  permissionLevelValidator,
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from './baseValidators'
@@ -15,6 +16,7 @@ export const sidebarItemTableFields = {
   parentId: v.optional(v.id('folders')),
   updatedAt: v.number(),
   shareStatus: v.optional(sidebarItemShareStatusValidator),
+  allPermissionLevel: v.optional(permissionLevelValidator),
 }
 
 export const sidebarItemBaseFields = {

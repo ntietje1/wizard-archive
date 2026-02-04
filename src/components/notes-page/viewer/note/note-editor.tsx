@@ -29,12 +29,7 @@ import '../../editor/extensions/md-link/md-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
-  const { viewAsPlayerId } = useEditorMode()
-
-  // When viewing as a player, show the viewer instead
-  if (viewAsPlayerId) {
-    return <NoteViewer item={note} />
-  }
+  const { viewAsPlayerId, permissionLevel } = useEditorMode()
 
   if (!isNote(note)) {
     return (
@@ -42,6 +37,15 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
         Invalid item type for note editor.
       </div>
     )
+  }
+
+  const isViewOnly =
+    viewAsPlayerId &&
+    permissionLevel !== 'edit' &&
+    permissionLevel !== 'full_access'
+
+  if (isViewOnly) {
+    return <NoteViewer item={note} />
   }
 
   return (

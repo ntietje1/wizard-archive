@@ -5,7 +5,10 @@ import { customBlockValidator } from '../blocks/schema'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
 import {
   createNote as createNoteFn,
@@ -46,7 +49,7 @@ export const moveNote = mutation({
     }
 
     const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireEditPermission(ctx, note)
+    await requireFullAccessPermission(ctx, note)
 
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
@@ -91,6 +94,7 @@ export const createNote = mutation({
     campaignId: v.id('campaigns'),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
+    content: v.optional(v.array(customBlockValidator)),
   },
   returns: v.object({
     noteId: v.id('notes'),
@@ -101,30 +105,9 @@ export const createNote = mutation({
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     const { noteId, slug } = await createNoteFn(ctx, args)
-    await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
-    return { noteId, slug }
-  },
-})
-
-export const createNoteWithContent = mutation({
-  args: {
-    name: v.optional(v.string()),
-    parentId: v.optional(v.id('folders')),
-    campaignId: v.id('campaigns'),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
-    content: v.array(customBlockValidator),
-  },
-  returns: v.object({
-    noteId: v.id('notes'),
-    slug: v.string(),
-  }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    const { noteId, slug } = await createNoteFn(ctx, args)
-    await saveTopLevelBlocksForNote(ctx, noteId, args.content)
+    if (args.content) {
+      await saveTopLevelBlocksForNote(ctx, noteId, args.content)
+    }
     await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
     return { noteId, slug }
   },

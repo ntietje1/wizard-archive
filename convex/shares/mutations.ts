@@ -8,6 +8,7 @@ import {
   customBlockValidator,
 } from '../blocks/schema'
 import {
+  permissionLevelValidator,
   sidebarItemIdValidator,
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
@@ -24,6 +25,7 @@ import {
   unshareSidebarItemFromMember,
 } from './itemShares'
 import type { Id } from '../_generated/dataModel'
+import type { PermissionLevel, ShareStatus } from './types'
 
 /**
  * Set the share status for a sidebar item (used for left-click toggle).
@@ -36,6 +38,7 @@ export const setSidebarItemShareStatus = mutation({
     campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     status: sidebarItemShareStatusValidator,
+    allPermissionLevel: v.optional(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
@@ -54,10 +57,17 @@ export const setSidebarItemShareStatus = mutation({
       throw new Error('Cannot share folders')
     }
 
-    // Update the item's share status
-    await ctx.db.patch(args.sidebarItemId, {
+    // Update the item's share status and optional allPermissionLevel
+    const patch: {
+      shareStatus: ShareStatus
+      allPermissionLevel?: PermissionLevel
+    } = {
       shareStatus: args.status,
-    })
+    }
+    if (args.allPermissionLevel !== undefined) {
+      patch.allPermissionLevel = args.allPermissionLevel
+    }
+    await ctx.db.patch(args.sidebarItemId, patch)
 
     // If setting to not_shared, clear any individual shares
     if (args.status === SHARE_STATUS.NOT_SHARED) {
@@ -89,6 +99,7 @@ export const shareSidebarItem = mutation({
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
+    permissionLevel: v.optional(permissionLevelValidator),
   },
   returns: v.id('sidebarItemShares'),
   handler: async (ctx, args): Promise<Id<'sidebarItemShares'>> => {
@@ -116,6 +127,7 @@ export const shareSidebarItem = mutation({
       args.sidebarItemId,
       args.sidebarItemType,
       args.campaignMemberId,
+      args.permissionLevel,
     )
   },
 })
@@ -164,6 +176,135 @@ export const unshareSidebarItem = mutation({
     if (!remainingShares) {
       await ctx.db.patch(args.sidebarItemId, {
         shareStatus: SHARE_STATUS.NOT_SHARED,
+      })
+    }
+
+    return null
+  },
+})
+
+/**
+ * Update the permission level for a specific member's share on a sidebar item.
+ * If level is 'none', removes the share. If no share exists for other levels, creates one.
+ */
+export const updateSidebarItemSharePermission = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemType: sidebarItemTypeValidator,
+    campaignMemberId: v.id('campaignMembers'),
+    permissionLevel: permissionLevelValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
+    }
+
+    if (args.permissionLevel === 'none') {
+      // Remove the share
+      await unshareSidebarItemFromMember(
+        ctx,
+        args.campaignId,
+        args.sidebarItemId,
+        args.campaignMemberId,
+      )
+
+      // Check if any shares remain
+      const remainingShares = await ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q
+            .eq('campaignId', args.campaignId)
+            .eq('sidebarItemId', args.sidebarItemId),
+        )
+        .first()
+
+      if (!remainingShares) {
+        await ctx.db.patch(args.sidebarItemId, {
+          shareStatus: SHARE_STATUS.NOT_SHARED,
+        })
+      }
+    } else {
+      // Create or update the share with the new permission level
+      if (item.shareStatus !== SHARE_STATUS.INDIVIDUALLY_SHARED) {
+        await ctx.db.patch(args.sidebarItemId, {
+          shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+        })
+      }
+
+      await shareSidebarItemWithMember(
+        ctx,
+        args.campaignId,
+        args.sidebarItemId,
+        args.sidebarItemType,
+        args.campaignMemberId,
+        args.permissionLevel,
+      )
+    }
+
+    return null
+  },
+})
+
+/**
+ * Set the permission level for all players on a sidebar item.
+ * Sets shareStatus to 'all_shared' with the given permission level, or 'not_shared' if level is 'none'.
+ */
+export const setAllPlayersPermission = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    permissionLevel: permissionLevelValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
+    }
+
+    if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+      throw new Error('Cannot share folders')
+    }
+
+    if (args.permissionLevel === 'none') {
+      // Unshare from all - clear individual shares too
+      await ctx.db.patch(args.sidebarItemId, {
+        shareStatus: SHARE_STATUS.NOT_SHARED,
+        allPermissionLevel: undefined, // TODO: remove allPermissionLevel entirely
+      })
+
+      const shares = await ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q
+            .eq('campaignId', args.campaignId)
+            .eq('sidebarItemId', args.sidebarItemId),
+        )
+        .collect()
+
+      for (const share of shares) {
+        await ctx.db.delete(share._id)
+      }
+    } else {
+      // Share with all at the given permission level
+      await ctx.db.patch(args.sidebarItemId, {
+        shareStatus: SHARE_STATUS.ALL_SHARED,
+        allPermissionLevel: args.permissionLevel,
       })
     }
 

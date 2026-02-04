@@ -9,9 +9,6 @@ export const useNoteActions = () => {
   const createNote = useMutation({
     mutationFn: useConvexMutation(api.notes.mutations.createNote),
   })
-  const createNoteWithContent = useMutation({
-    mutationFn: useConvexMutation(api.notes.mutations.createNoteWithContent),
-  })
   const deleteNote = useMutation({
     mutationFn: useConvexMutation(api.notes.mutations.deleteNote),
   })
@@ -25,7 +22,6 @@ export const useNoteActions = () => {
   return {
     updateNote,
     createNote,
-    createNoteWithContent,
     deleteNote,
     moveNote,
     updateNoteContent,

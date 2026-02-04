@@ -1,5 +1,8 @@
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  hasViewPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { enhanceGameMapWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { Ctx } from '../common/types'
@@ -15,6 +18,8 @@ export const getMap = async (
   if (!rawMap) return null
 
   const map = await enhanceSidebarItem(ctx, rawMap)
+  const hasPermission = await hasViewPermission(ctx, map, viewAsPlayerId)
+  if (!hasPermission) return null
   return enhanceGameMapWithContent(ctx, map, viewAsPlayerId)
 }
 
@@ -28,7 +33,7 @@ export const deleteMap = async (
   }
 
   const map = await enhanceSidebarItem(ctx, rawMap as GameMapFromDb)
-  await requireEditPermission(ctx, map)
+  await requireFullAccessPermission(ctx, map)
 
   const pins = await ctx.db
     .query('mapPins')

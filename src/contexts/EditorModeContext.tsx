@@ -1,10 +1,15 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import type { PermissionLevel } from 'convex/shares/types'
 import {
   EditorModeActionsContext,
   EditorModeStateContext,
 } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export type EditorMode = 'viewer' | 'editor'
 
@@ -19,14 +24,51 @@ export function EditorModeProvider({
     Id<'campaignMembers'> | undefined
   >(undefined)
 
+  const { item: currentItem } = useCurrentItem()
+  const campaignId = campaignWithMembership.data?.campaign._id
+
+  // Query the current user's permission level on the current item
+  const permissionQuery = useQuery(
+    convexQuery(
+      api.shares.queries.getMyPermissionLevel,
+      campaignId && currentItem?._id
+        ? { campaignId, sidebarItemId: currentItem._id }
+        : 'skip',
+    ),
+  )
+
+  const isPermissionLoading = !isDm && permissionQuery.isPending
+  const permissionLevel: PermissionLevel = isDm
+    ? 'full_access'
+    : (permissionQuery.data ?? 'none')
+
+  const canEdit =
+    permissionLevel === 'edit' || permissionLevel === 'full_access'
+
   const stateValue = useMemo(
     () => ({
-      editorMode: isDm ? editorMode : 'viewer',
+      editorMode: isDm
+        ? editorMode
+        : canEdit
+          ? 'editor'
+          : ('viewer' as EditorMode),
       viewAsPlayerId: isDm
         ? viewAsPlayerId
-        : campaignWithMembership.data?.member._id,
+        : canEdit
+          ? undefined
+          : campaignWithMembership.data?.member._id,
+      permissionLevel,
+      isPermissionLoading,
     }),
-    [editorMode, viewAsPlayerId, isDm, campaignWithMembership.data?.member._id],
+    [
+      editorMode,
+      viewAsPlayerId,
+      isDm,
+      canEdit,
+      permissionLevel,
+      isPermissionLoading,
+      campaignWithMembership.data?.member._id,
+    ],
   )
 
   const setEditorMode = useCallback(

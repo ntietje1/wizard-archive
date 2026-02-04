@@ -82,3 +82,13 @@ export const isDm: Predicate = (ctx) => {
 export const isPlayer: Predicate = (ctx) => {
   return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.Player
 }
+
+export const hasFullAccess: Predicate = (ctx) => {
+  return ctx.permissionLevel === 'full_access'
+}
+
+export const hasEditAccess: Predicate = (ctx) => {
+  return (
+    ctx.permissionLevel === 'edit' || ctx.permissionLevel === 'full_access'
+  )
+}

@@ -1,10 +1,13 @@
 import { BlockNoteEditor, nodeToBlock } from '@blocknote/core'
 import { ProsemirrorSync } from '@convex-dev/prosemirror-sync'
 import { components } from './_generated/api'
-import { requireCampaignMembership } from './campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from './campaigns/types'
 import { saveTopLevelBlocksForNote } from './blocks/blocks'
+import {
+  requireEditPermission,
+  requireViewPermission,
+} from './shares/itemShares'
 import { editorSchema } from './notes/editorSpecs'
+import { enhanceSidebarItem } from './sidebarItems/helpers'
 import type { Id } from './_generated/dataModel'
 import type { Ctx } from './common/types'
 import type { MutationCtx } from './_generated/server'
@@ -27,17 +30,20 @@ export const EMPTY_PM_DOC = {
   ],
 }
 
-async function checkDmAccess(ctx: Ctx, documentId: string) {
+async function checkReadAccess(ctx: Ctx, documentId: string) {
   const noteId = documentId as Id<'notes'>
-  const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: note.campaignId },
-    {
-      allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM],
-    },
-  )
+  const noteFromDb = await ctx.db.get(noteId)
+  if (!noteFromDb) throw new Error('Note not found')
+  const note = await enhanceSidebarItem(ctx, noteFromDb)
+  await requireViewPermission(ctx, note)
+}
+
+async function checkWriteAccess(ctx: Ctx, documentId: string) {
+  const noteId = documentId as Id<'notes'>
+  const noteFromDb = await ctx.db.get(noteId)
+  if (!noteFromDb) throw new Error('Note not found')
+  const note = await enhanceSidebarItem(ctx, noteFromDb)
+  await requireEditPermission(ctx, note)
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -57,8 +63,8 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
 }
 
 const sync = prosemirrorSync.syncApi({
-  checkRead: checkDmAccess,
-  checkWrite: checkDmAccess,
+  checkRead: checkReadAccess,
+  checkWrite: checkWriteAccess,
   onSnapshot: async (
     ctx: MutationCtx,
     documentId: string,

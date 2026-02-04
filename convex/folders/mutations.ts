@@ -10,7 +10,10 @@ import {
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { deleteFolder as deleteFolderFn } from './folders'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -33,7 +36,7 @@ export const updateFolder = mutation({
     }
 
     const folder = await enhanceSidebarItem(ctx, rawFolder)
-    await requireEditPermission(ctx, folder)
+    await requireFullAccessPermission(ctx, folder)
 
     const now = Date.now()
     const updates: Partial<Doc<'folders'>> = {
@@ -76,7 +79,7 @@ export const moveFolder = mutation({
     }
 
     const folder = await enhanceSidebarItem(ctx, rawFolder)
-    await requireEditPermission(ctx, folder)
+    await requireFullAccessPermission(ctx, folder)
 
     // Validate no circular parent reference
     await validateParentChange({

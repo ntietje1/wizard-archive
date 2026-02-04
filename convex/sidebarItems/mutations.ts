@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { findUniqueSidebarItemSlug } from '../common/slug'
-import { requireEditPermission } from '../shares/itemShares'
+import { requireFullAccessPermission } from '../shares/itemShares'
 import { sidebarItemIdValidator } from './schema/baseValidators'
 import { validateSidebarItemName } from './validation'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
@@ -26,7 +26,7 @@ export const updateSidebarItem = mutation({
     }
 
     const item = await enhanceSidebarItem(ctx, rawItem as AnySidebarItemFromDb)
-    await requireEditPermission(ctx, item)
+    await requireFullAccessPermission(ctx, item)
 
     const patch: {
       name?: string

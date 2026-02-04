@@ -7,10 +7,12 @@ import {
 import { campaignMemberValidator } from '../campaigns/schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
+  permissionLevelValidator,
   sidebarItemIdValidator,
   sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
+import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SHARE_STATUS } from './types'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import {
@@ -20,11 +22,17 @@ import {
 } from './blockShares'
 import { getSharesForSession } from './shares'
 import {
+  getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
   isSidebarItemSharedWithMember,
 } from './itemShares'
 import type { CampaignMember } from '../campaigns/types'
-import type { BlockShare, ShareStatus, SidebarItemShare } from './types'
+import type {
+  BlockShare,
+  PermissionLevel,
+  ShareStatus,
+  SidebarItemShare,
+} from './types'
 
 export const getSidebarItemShares = query({
   args: {
@@ -62,6 +70,7 @@ export const getSidebarItemWithShares = query({
   },
   returns: v.object({
     shareStatus: sidebarItemShareStatusValidator,
+    allPermissionLevel: v.optional(permissionLevelValidator),
     shares: v.array(sidebarItemShareValidator), // Only populated if individually_shared
     playerMembers: v.array(campaignMemberValidator),
   }),
@@ -70,6 +79,7 @@ export const getSidebarItemWithShares = query({
     args,
   ): Promise<{
     shareStatus: ShareStatus
+    allPermissionLevel?: PermissionLevel
     shares: Array<SidebarItemShare>
     playerMembers: Array<CampaignMember>
   }> => {
@@ -87,6 +97,9 @@ export const getSidebarItemWithShares = query({
 
     // Get share status (default to 'not_shared' for legacy items)
     const shareStatus: ShareStatus = item.shareStatus ?? SHARE_STATUS.NOT_SHARED
+    const allPermissionLevel = (
+      item as { allPermissionLevel?: PermissionLevel }
+    ).allPermissionLevel
 
     // Get player members (always needed for UI)
     const allMembers = await getCampaignMembers(ctx, args.campaignId)
@@ -94,7 +107,7 @@ export const getSidebarItemWithShares = query({
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
 
-    // Only  fetch individual shares if status is 'individually_shared'
+    // Only fetch individual shares if status is 'individually_shared'
     let shares: Array<SidebarItemShare> = []
     if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
       shares = await getSidebarItemSharesForItem(
@@ -106,6 +119,7 @@ export const getSidebarItemWithShares = query({
 
     return {
       shareStatus,
+      allPermissionLevel,
       shares,
       playerMembers,
     }
@@ -199,6 +213,30 @@ export const checkBlockAccess = query({
       args.blockId,
       campaignWithMembership.member._id,
     )
+  },
+})
+
+export const getMyPermissionLevel = query({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+  },
+  returns: permissionLevelValidator,
+  handler: async (ctx, args): Promise<PermissionLevel> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item) return 'none'
+
+    const enhanced = await enhanceSidebarItem(
+      ctx,
+      item as Parameters<typeof enhanceSidebarItem>[1],
+    )
+    return await getSidebarItemPermissionLevel(ctx, enhanced)
   },
 })
 

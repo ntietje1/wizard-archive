@@ -8,8 +8,7 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { getSidebarItemPermissionStatus } from '../shares/itemShares'
-import { PERMISSION_STATUS } from '../shares/types'
+import { hasEditPermission, requireEditPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { downloadableItemValidator } from './schema'
 import type { DownloadableItem } from './types'
@@ -101,12 +100,14 @@ export const getFolderContentsForDownload = query({
       throw new Error('Folder not found')
     }
 
-    const folder = await enhanceSidebarItem(ctx, folderFromDb)
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: folderFromDb.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
 
-    const permissionStatus = await getSidebarItemPermissionStatus(ctx, folder)
-    if (permissionStatus !== PERMISSION_STATUS.EDIT) {
-      throw new Error('You do not have permission to access this folder')
-    }
+    const folder = await enhanceSidebarItem(ctx, folderFromDb)
+    await requireEditPermission(ctx, folder)
 
     const folderName = folder.name ?? defaultItemName(folder)
     const items = await collectItemsRecursively(

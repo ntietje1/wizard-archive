@@ -3,16 +3,15 @@ import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
 import { Share2 } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuTrigger,
-} from '~/components/shadcn/ui/context-menu'
-import { ShareMenuContent } from '~/components/share/share-menu-content'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '~/components/shadcn/ui/popover'
+import { SharePermissionMenu } from '~/components/share/share-permission-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
 import { cn } from '~/lib/shadcn/utils'
-import { EmptyContextMenu } from '~/components/context-menu/components/EmptyContextMenu'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
@@ -29,7 +28,7 @@ const getButtonColorClass = (status: AggregateShareStatus): string => {
 
 export function ShareButton() {
   const { itemForDm } = useCurrentItem()
-  const { isDm } = useCampaign()
+  const { isDm, dmUsername } = useCampaign()
 
   const items = useMemo(() => (itemForDm ? [itemForDm] : []), [itemForDm])
 
@@ -37,9 +36,10 @@ export function ShareButton() {
     isPending,
     isMutating,
     aggregateShareStatus,
+    allPlayersPermissionLevel,
     shareItems,
-    toggleShareStatus,
-    toggleShareWithMember,
+    setMemberPermission,
+    setAllPlayersPermission,
     canShare,
     allFolders,
   } = useSidebarItemsShare(items)
@@ -54,48 +54,46 @@ export function ShareButton() {
   const label = allFolders
     ? 'Folders are automatically shared as needed'
     : aggregateShareStatus === 'all_shared'
-      ? 'Unshare item'
-      : 'Share item'
-
-  const handleClick = () => {
-    if (isDisabled || isPending) return
-    toggleShareStatus()
-  }
+      ? 'Shared with all players'
+      : aggregateShareStatus === 'individually_shared' ||
+          aggregateShareStatus === 'mixed_shared'
+        ? 'Shared with some players'
+        : 'Share item'
 
   return (
-    <EmptyContextMenu>
-      <TooltipButton tooltip={label} side="bottom">
-        <ContextMenu>
-          <ContextMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isDisabled}
-                aria-label={label}
-                title={label}
-                className={cn(buttonColorClass)}
-                onClick={handleClick}
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            }
+    <TooltipButton tooltip={label} side="bottom">
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isDisabled}
+              aria-label={label}
+              title={label}
+              className={cn(buttonColorClass)}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          }
+        />
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          className="w-auto p-2"
+        >
+          <SharePermissionMenu
+            dmName={dmUsername}
+            isPending={isPending}
+            isMutating={isMutating}
+            shareItems={shareItems}
+            allPlayersPermissionLevel={allPlayersPermissionLevel}
+            onSetMemberPermission={setMemberPermission}
+            onSetAllPlayersPermission={setAllPlayersPermission}
           />
-          <ContextMenuContent
-            className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]"
-            side="bottom"
-            align="start"
-          >
-            <ShareMenuContent
-              isPending={isPending}
-              isMutating={isMutating}
-              isDisabled={isDisabled}
-              shareItems={shareItems}
-              onToggleShareWithMember={toggleShareWithMember}
-            />
-          </ContextMenuContent>
-        </ContextMenu>
-      </TooltipButton>
-    </EmptyContextMenu>
+        </PopoverContent>
+      </Popover>
+    </TooltipButton>
   )
 }

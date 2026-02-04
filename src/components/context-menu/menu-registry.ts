@@ -439,7 +439,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 90,
       shouldShow: (ctx) =>
-        p.isDm(ctx) && p.inSidebar(ctx) && p.isSidebarItem(ctx),
+        p.hasFullAccess(ctx) && p.inSidebar(ctx) && p.isSidebarItem(ctx),
       action: actions.rename,
     },
     {
@@ -484,7 +484,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 100,
       variant: 'danger',
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         (p.inView('sidebar')(ctx) ||
           p.inView('folder-view')(ctx) ||

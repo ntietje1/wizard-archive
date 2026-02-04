@@ -6,7 +6,10 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  hasViewPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { enhanceNoteWithContent } from './helpers'
 import type { MutationCtx } from '../_generated/server'
 import type { NoteWithContent } from './types'
@@ -89,7 +92,7 @@ export const updateNote = async (
   }
 
   const note = await enhanceSidebarItem(ctx, rawNote)
-  await requireEditPermission(ctx, note)
+  await requireFullAccessPermission(ctx, note)
 
   const now = Date.now()
   const updates: Partial<Doc<'notes'>> = {
@@ -134,6 +137,8 @@ export const getNote = async (
   if (!rawNote) return null
 
   const note = await enhanceSidebarItem(ctx, rawNote)
+  const hasPermission = await hasViewPermission(ctx, note, viewAsPlayerId)
+  if (!hasPermission) return null
   return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
 }
 
@@ -147,7 +152,7 @@ export async function deleteNote(
   }
 
   const note = await enhanceSidebarItem(ctx, rawNote)
-  await requireEditPermission(ctx, note)
+  await requireFullAccessPermission(ctx, note)
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
   await ctx.db.delete(noteId)

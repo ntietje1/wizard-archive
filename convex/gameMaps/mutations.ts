@@ -11,7 +11,10 @@ import { findUniqueGameMapSlug, findUniqueSlug } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -102,7 +105,7 @@ export const updateMap = mutation({
     }
 
     const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireFullAccessPermission(ctx, map)
 
     const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
@@ -152,7 +155,7 @@ export const moveMap = mutation({
     }
 
     const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireFullAccessPermission(ctx, map)
 
     // Validate no circular parent reference
     await validateParentChange({

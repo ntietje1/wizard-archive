@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
 import { PanelLeft, PanelLeftOpen } from 'lucide-react'
 import type { LucideIcon } from '~/lib/icons'
@@ -87,9 +87,11 @@ export const NavigationSidebar = () => {
       </div>
 
       {/* User profile at bottom */}
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
+      <ClientOnly>
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+      </ClientOnly>
     </div>
   )
 }

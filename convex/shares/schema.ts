@@ -1,6 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import {
+  permissionLevelValidator,
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
@@ -11,6 +12,7 @@ const sidebarItemShareTableFields = {
   sidebarItemType: sidebarItemTypeValidator,
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.optional(v.id('sessions')),
+  permissionLevel: v.optional(permissionLevelValidator),
 }
 
 const blockShareTableFields = {
