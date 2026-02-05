@@ -12,7 +12,7 @@ import type {
 } from 'convex/notes/editorSpecs'
 import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
 import { Share2 } from '~/lib/icons'
-import { useBlocksShare } from '~/hooks/useBlocksShare'
+import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/hooks/useBlocksShare'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -24,13 +24,15 @@ import { useCampaign } from '~/hooks/useCampaign'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
-    case 'all_shared':
+    case AGGREGATE_SHARE_STATUS.ALL_SHARED:
       return '!text-blue-600'
-    case 'individually_shared':
-    case 'mixed_shared':
+    case AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED:
+    case AGGREGATE_SHARE_STATUS.MIXED_SHARED:
       return '!text-amber-500'
+    case AGGREGATE_SHARE_STATUS.NOT_SHARED:
+      return '!text-gray-500'
     default:
-      return ''
+      return '!text-gray-500'
   }
 }
 

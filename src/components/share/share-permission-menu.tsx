@@ -1,47 +1,115 @@
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type { PermissionLevel } from 'convex/shares/types'
 import type { CampaignMember } from 'convex/campaigns/types'
+import type { UserProfile } from 'convex/users/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ShareItemWithPermission } from '~/hooks/useSidebarItemsShare'
+import { ChevronDown, ChevronUp, Users } from '~/lib/icons'
+import usePersistedState from '~/hooks/usePersistedState'
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '~/components/shadcn/ui/select'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '~/components/shadcn/ui/avatar'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/components/shadcn/ui/tooltip'
+import { Switch } from '~/components/shadcn/ui/switch'
 
-const PERMISSION_OPTIONS: Array<{
-  value: PermissionLevel
-  label: string
-}> = [
-  { value: 'none', label: 'None' },
-  { value: 'view', label: 'View' },
-  { value: 'edit', label: 'Edit' },
-  { value: 'full_access', label: 'Full access' },
-]
+type PermissionLevelOrDefault = PermissionLevel | 'default'
+
+const PERMISSION_LABELS: Record<PermissionLevel, string> = {
+  [PERMISSION_LEVEL.NONE]: 'None',
+  [PERMISSION_LEVEL.VIEW]: 'View',
+  [PERMISSION_LEVEL.EDIT]: 'Edit',
+  [PERMISSION_LEVEL.FULL_ACCESS]: 'Full access',
+}
+
+function permissionLabel(level: PermissionLevel | undefined): string {
+  return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
+}
+
+function getInitial(profile: UserProfile): string {
+  return (profile.name ?? profile.username ?? '?').charAt(0).toUpperCase()
+}
+
+function getDisplayName(profile: UserProfile): string {
+  return profile.name || profile.username || 'Player'
+}
+
+function RowTooltip({
+  text,
+  className,
+  children,
+}: {
+  text: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<div className={className} />}>
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="left" className="max-w-[220px]">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+// --- Main component ---
 
 interface SharePermissionMenuProps {
-  dmName: string
+  dmUserProfile?: UserProfile
   isPending: boolean
   isMutating: boolean
   shareItems: Array<ShareItemWithPermission>
-  allPlayersPermissionLevel: PermissionLevel
+  allPlayersPermissionLevel: PermissionLevel | undefined
+  inheritedAllPermissionLevel?: PermissionLevel
+  inheritedFromFolderName?: string
+  isFolder?: boolean
+  inheritShares?: boolean
   onSetMemberPermission: (
     memberId: Id<'campaignMembers'>,
     level: PermissionLevel,
   ) => Promise<void>
-  onSetAllPlayersPermission: (level: PermissionLevel) => Promise<void>
+  onClearMemberPermission: (memberId: Id<'campaignMembers'>) => Promise<void>
+  onSetAllPlayersPermission: (
+    level: PermissionLevel | undefined,
+  ) => Promise<void>
+  onSetInheritShares?: (enabled: boolean) => Promise<void>
 }
 
 export function SharePermissionMenu({
-  dmName,
+  dmUserProfile,
   isPending,
   isMutating,
   shareItems,
   allPlayersPermissionLevel,
+  inheritedAllPermissionLevel,
+  inheritedFromFolderName,
+  isFolder,
+  inheritShares,
   onSetMemberPermission,
+  onClearMemberPermission,
   onSetAllPlayersPermission,
+  onSetInheritShares,
 }: SharePermissionMenuProps) {
+  const [showPlayers, setShowPlayers] = usePersistedState(
+    'share-show-players',
+    false,
+  )
   const isDisabled = isMutating || isPending
 
   if (isPending) {
@@ -52,112 +120,421 @@ export function SharePermissionMenu({
     )
   }
 
-  return (
-    <div className="flex flex-col gap-0.5 min-w-[280px]">
-      <div className="text-sm font-medium px-1 pb-1">Share</div>
+  const explicitShareItems = shareItems.filter((s) => s.hasExplicitShare)
+  const inheritingShareItems = shareItems.filter((s) => !s.hasExplicitShare)
 
-      {/* DM row - locked */}
-      <div className="flex items-center justify-between px-1 py-1">
-        <span className="text-sm truncate mr-2">{dmName || 'DM'}</span>
-        <span className="text-xs text-muted-foreground whitespace-nowrap">
-          Full access
-        </span>
-      </div>
+  function getPlayerInfoText(item: ShareItemWithPermission): string {
+    const name = getDisplayName(item.member.userProfile)
+    if (item.hasExplicitShare) {
+      return `${name}'s access has been explicitly set`
+    }
+    if (
+      item.inheritedFromFolderName &&
+      allPlayersPermissionLevel === undefined
+    ) {
+      return `${name}'s access is based on ${item.inheritedFromFolderName}`
+    }
+    return `${name}'s access is based on the All Players permission level`
+  }
+
+  function handlePlayerChange(
+    memberId: Id<'campaignMembers'>,
+    value: PermissionLevelOrDefault,
+  ) {
+    if (value === 'default') {
+      onClearMemberPermission(memberId)
+    } else {
+      onSetMemberPermission(memberId, value)
+    }
+  }
+
+  const effectiveAllLabel =
+    allPlayersPermissionLevel !== undefined
+      ? permissionLabel(allPlayersPermissionLevel)
+      : permissionLabel(inheritedAllPermissionLevel)
+
+  const isInheritingAll =
+    allPlayersPermissionLevel === undefined &&
+    inheritedAllPermissionLevel !== undefined
+
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[300px]">
+      <div className="text-sm font-medium px-1 pb-1">Share</div>
+      <div className="h-px bg-border mb-0.5" />
+
+      {dmUserProfile && <DmRow profile={dmUserProfile} />}
+
+      {explicitShareItems.length > 0 && (
+        <>
+          <div className="h-px bg-border my-0.5" />
+          {explicitShareItems.map((item) => (
+            <PlayerRow
+              key={item.key}
+              shareItem={item}
+              infoText={getPlayerInfoText(item)}
+              disabled={isDisabled}
+              onChange={(val) => handlePlayerChange(item.member._id, val)}
+            />
+          ))}
+        </>
+      )}
 
       <div className="h-px bg-border my-0.5" />
 
-      {/* All players bulk control */}
-      <PermissionRow
-        label="All players"
-        value={allPlayersPermissionLevel}
+      <AllPlayersRow
+        selectValue={allPlayersPermissionLevel ?? 'default'}
+        selectLabel={effectiveAllLabel}
+        inheritedLevel={inheritedAllPermissionLevel}
         disabled={isDisabled}
-        onChange={(level) => onSetAllPlayersPermission(level)}
+        expanded={showPlayers}
+        label={
+          explicitShareItems.length === 0 ? 'All Players' : 'Other Players'
+        }
+        inheritingMembers={inheritingShareItems.map((s) => s.member)}
+        isInheriting={isInheritingAll}
+        inheritedFromFolderName={inheritedFromFolderName}
+        onToggleExpand={() => setShowPlayers((prev) => !prev)}
+        onChange={(val) =>
+          onSetAllPlayersPermission(val === 'default' ? undefined : val)
+        }
       />
 
-      {shareItems.length > 0 && <div className="h-px bg-border my-0.5" />}
-
-      {/* Individual player rows */}
-      {shareItems.map((shareItem) => (
-        <PlayerPermissionRow
-          key={shareItem.key}
-          member={shareItem.member}
-          permissionLevel={shareItem.permissionLevel}
+      {showPlayers && (
+        <ExpandedPlayerList
+          inheritingItems={inheritingShareItems}
+          hasAnyPlayers={shareItems.length > 0}
+          getInfoText={getPlayerInfoText}
           disabled={isDisabled}
-          onChange={(level) =>
-            onSetMemberPermission(shareItem.member._id, level)
-          }
+          onPlayerChange={handlePlayerChange}
         />
-      ))}
+      )}
 
-      {shareItems.length === 0 && (
-        <div className="px-1 py-1">
-          <div className="text-xs text-muted-foreground">
-            No players in this campaign yet.
+      {isFolder && onSetInheritShares && (
+        <>
+          <div className="h-px bg-border my-0.5" />
+          <div className="flex items-center justify-between px-1 py-1 gap-2">
+            <span className="text-sm truncate flex-1">
+              Copy permissions to new items
+            </span>
+            <Switch
+              size="sm"
+              checked={inheritShares ?? false}
+              disabled={isDisabled}
+              onCheckedChange={onSetInheritShares}
+            />
           </div>
-        </div>
+        </>
       )}
     </div>
   )
 }
 
-function PlayerPermissionRow({
-  member,
-  permissionLevel,
-  disabled,
-  onChange,
-}: {
-  member: CampaignMember
-  permissionLevel: PermissionLevel
-  disabled: boolean
-  onChange: (level: PermissionLevel) => void
-}) {
-  const profile = member.userProfile
-  const displayText = profile.name
-    ? profile.name
-    : profile.username
-      ? `@${profile.username}`
-      : 'Player'
+// --- Row components ---
 
+function DmRow({ profile }: { profile: UserProfile }) {
   return (
-    <PermissionRow
-      label={displayText}
-      value={permissionLevel}
-      disabled={disabled}
-      onChange={onChange}
-    />
+    <RowTooltip
+      text="DMs always have full access"
+      className="flex items-center gap-2.5 px-1 py-1.5"
+    >
+      <Avatar size="sm">
+        {profile.imageUrl && (
+          <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
+        )}
+        <AvatarFallback>{getInitial(profile)}</AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col flex-1 min-w-0 select-none">
+        <span className="text-sm font-medium truncate">
+          {getDisplayName(profile)}
+        </span>
+        {profile.username && (
+          <span className="text-xs text-muted-foreground truncate">
+            @{profile.username}
+          </span>
+        )}
+      </div>
+      <Select value="full_access" disabled>
+        <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
+          <SelectValue>Full access</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="full_access">Full access</SelectItem>
+        </SelectContent>
+      </Select>
+    </RowTooltip>
   )
 }
 
-function PermissionRow({
-  label,
-  value,
+function PlayerRow({
+  shareItem,
+  infoText,
   disabled,
   onChange,
 }: {
-  label: string
-  value: PermissionLevel
+  shareItem: ShareItemWithPermission
+  infoText: string
   disabled: boolean
-  onChange: (level: PermissionLevel) => void
+  onChange: (value: PermissionLevelOrDefault) => void
 }) {
+  const {
+    member,
+    hasExplicitShare,
+    permissionLevel,
+    inheritedPermissionLevel,
+  } = shareItem
+  const profile = member.userProfile
+  const selectValue: PermissionLevelOrDefault = hasExplicitShare
+    ? permissionLevel
+    : 'default'
+
   return (
-    <div className="flex items-center justify-between px-1 py-0.5 gap-2">
-      <span className="text-sm truncate flex-1">{label}</span>
+    <RowTooltip
+      text={infoText}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+    >
+      <Avatar size="sm">
+        {profile.imageUrl && (
+          <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
+        )}
+        <AvatarFallback>{getInitial(profile)}</AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-sm font-medium truncate">
+          {getDisplayName(profile)}
+        </span>
+        {profile.username && (
+          <span className="text-xs text-muted-foreground truncate">
+            @{profile.username}
+          </span>
+        )}
+      </div>
       <Select
-        value={value}
-        onValueChange={(val) => onChange(val as PermissionLevel)}
+        value={selectValue}
+        onValueChange={(val) => {
+          if (val !== null) onChange(val)
+        }}
         disabled={disabled}
       >
         <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
-          <SelectValue />
+          <SelectValue>{permissionLabel(permissionLevel)}</SelectValue>
         </SelectTrigger>
-        <SelectContent align="end" alignItemWithTrigger={false}>
-          {PERMISSION_OPTIONS.map((opt) => (
+        <SelectContent className="p-1" align="end" alignItemWithTrigger={false}>
+          {!hasExplicitShare && (
+            <SelectItem value="default">
+              Default ({permissionLabel(inheritedPermissionLevel)})
+            </SelectItem>
+          )}
+          <SelectItem value="none">None</SelectItem>
+          <SelectItem value="view">View</SelectItem>
+          <SelectItem value="edit">Edit</SelectItem>
+          <SelectItem value="full_access">Full access</SelectItem>
+          {hasExplicitShare && (
+            <>
+              <SelectSeparator />
+              <SelectItem value="default" className="text-destructive">
+                Remove
+              </SelectItem>
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    </RowTooltip>
+  )
+}
+
+function AllPlayersRow({
+  selectValue,
+  selectLabel,
+  inheritedLevel,
+  disabled,
+  expanded,
+  label,
+  inheritingMembers,
+  isInheriting,
+  inheritedFromFolderName,
+  onToggleExpand,
+  onChange,
+}: {
+  selectValue: PermissionLevelOrDefault
+  selectLabel: string
+  inheritedLevel: PermissionLevel | undefined
+  disabled: boolean
+  expanded: boolean
+  label: string
+  inheritingMembers: Array<CampaignMember>
+  isInheriting: boolean
+  inheritedFromFolderName?: string
+  onToggleExpand: () => void
+  onChange: (value: PermissionLevelOrDefault) => void
+}) {
+  const Chevron = expanded ? ChevronUp : ChevronDown
+  const showStack = !expanded && inheritingMembers.length > 0
+  const badgeCount =
+    Math.min(inheritingMembers.length, 3) +
+    (inheritingMembers.length > 3 ? 1 : 0)
+  const iconAreaWidth =
+    inheritingMembers.length > 0 ? 24 + (badgeCount - 1) * 16 : 24
+
+  let infoText = 'This is the default permission level for all players.'
+  if (isInheriting && inheritedFromFolderName) {
+    infoText += ` Access is based on ${inheritedFromFolderName}.`
+  }
+
+  const options: Array<{ value: PermissionLevelOrDefault; label: string }> = [
+    { value: 'default', label: `Default (${permissionLabel(inheritedLevel)})` },
+    { value: PERMISSION_LEVEL.NONE, label: 'None' },
+    { value: PERMISSION_LEVEL.VIEW, label: 'View' },
+    { value: PERMISSION_LEVEL.EDIT, label: 'Edit' },
+    { value: PERMISSION_LEVEL.FULL_ACCESS, label: 'Full access' },
+  ]
+
+  return (
+    <RowTooltip
+      text={infoText}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+    >
+      <button
+        type="button"
+        className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+        onClick={onToggleExpand}
+      >
+        <div
+          className="flex items-center justify-center shrink-0"
+          style={{ width: iconAreaWidth }}
+        >
+          {showStack ? (
+            <AvatarStack members={inheritingMembers} />
+          ) : (
+            <div className="flex items-center justify-center size-6 rounded-full bg-muted">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <span className="text-sm font-medium truncate flex items-center gap-1">
+          {label}
+          <Chevron className="h-3.5 w-3.5 text-muted-foreground shrink-0 pt-0.5" />
+        </span>
+      </button>
+      <Select
+        value={selectValue}
+        onValueChange={(val) => {
+          if (val !== null) onChange(val)
+        }}
+        disabled={disabled}
+      >
+        <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
+          <SelectValue>{selectLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent className="p-1" align="end" alignItemWithTrigger={false}>
+          {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
+    </RowTooltip>
+  )
+}
+
+function AvatarStack({ members }: { members: Array<CampaignMember> }) {
+  return (
+    <div className="flex items-center -space-x-2">
+      {members.slice(0, 3).map((member) => (
+        <Avatar key={member._id} size="sm" className="ring-2 ring-background">
+          {member.userProfile.imageUrl && (
+            <AvatarImage
+              src={member.userProfile.imageUrl}
+              alt={getDisplayName(member.userProfile)}
+            />
+          )}
+          <AvatarFallback>{getInitial(member.userProfile)}</AvatarFallback>
+        </Avatar>
+      ))}
+      {members.length > 3 && (
+        <Avatar size="sm" className="ring-2 ring-background">
+          <AvatarFallback>+{members.length - 3}</AvatarFallback>
+        </Avatar>
+      )}
+    </div>
+  )
+}
+
+// --- Expanded player list ---
+
+function ExpandedPlayerList({
+  inheritingItems,
+  hasAnyPlayers,
+  getInfoText,
+  disabled,
+  onPlayerChange,
+}: {
+  inheritingItems: Array<ShareItemWithPermission>
+  hasAnyPlayers: boolean
+  getInfoText: (item: ShareItemWithPermission) => string
+  disabled: boolean
+  onPlayerChange: (
+    memberId: Id<'campaignMembers'>,
+    value: PermissionLevelOrDefault,
+  ) => void
+}) {
+  if (inheritingItems.length > 0) {
+    return (
+      <div className="ml-4">
+        {inheritingItems.map((item, index) => (
+          <TreeItem
+            key={item.key}
+            isLast={index === inheritingItems.length - 1}
+          >
+            <PlayerRow
+              shareItem={item}
+              infoText={getInfoText(item)}
+              disabled={disabled}
+              onChange={(val) => onPlayerChange(item.member._id, val)}
+            />
+          </TreeItem>
+        ))}
+      </div>
+    )
+  }
+
+  if (!hasAnyPlayers) {
+    return (
+      <div className="px-1 py-1">
+        <div className="text-xs text-muted-foreground">
+          No players in this campaign yet.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="ml-4">
+      <TreeItem isLast>
+        <div className="pl-1">
+          <div className="text-xs text-muted-foreground py-1">
+            All players have explicit permissions set.
+          </div>
+        </div>
+      </TreeItem>
+    </div>
+  )
+}
+
+function TreeItem({
+  isLast,
+  children,
+}: {
+  isLast: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative flex items-center">
+      <div
+        className={`absolute left-0 w-px bg-border ${isLast ? 'top-0 h-1/2' : 'top-0 h-full'}`}
+      />
+      <div className="w-2 border-t border-border shrink-0" />
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   )
 }

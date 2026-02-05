@@ -5,17 +5,16 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SHARE_STATUS } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
+import type { PermissionLevel } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
 import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -292,81 +291,26 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       toast.success('Session ended')
     }, [campaignId, endCurrentSession]),
 
-    toggleShareWithAll: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId || !ctx.item || !ctx.shareState) return
-
-        const { shareStatus, playerMembers } = ctx.shareState
+    setGeneralAccessLevel: useCallback(
+      async (ctx: MenuContext, level: PermissionLevel | undefined) => {
+        if (!campaignId || !ctx.item) return
 
         try {
-          // all_shared -> not_shared
-          if (shareStatus === SHARE_STATUS.ALL_SHARED) {
-            await convex.mutation(
-              api.shares.mutations.setSidebarItemShareStatus,
-              {
-                campaignId,
-                sidebarItemId: ctx.item._id,
-                status: SHARE_STATUS.NOT_SHARED,
-              },
-            )
-            toast.success('Unshared from all players')
+          await convex.mutation(api.shares.mutations.setAllPlayersPermission, {
+            campaignId,
+            sidebarItemId: ctx.item._id,
+            permissionLevel: level,
+          })
+          if (level === undefined) {
+            toast.success('Reset to default access')
+          } else if (level === 'none') {
+            toast.success('Access set to none')
           } else {
-            // not_shared -> all_shared
-            // individually_shared -> all_shared
-            await convex.mutation(
-              api.shares.mutations.setSidebarItemShareStatus,
-              {
-                campaignId,
-                sidebarItemId: ctx.item._id,
-                status: SHARE_STATUS.ALL_SHARED,
-              },
-            )
-            if (playerMembers.length === 0) {
-              toast.success('Shared with all players')
-            } else {
-              toast.success(`Shared with ${playerMembers.length} player(s)`)
-            }
+            toast.success(`Access set to ${level}`)
           }
         } catch (error) {
-          console.error('Failed to toggle share:', error)
-          toast.error('Failed to toggle share')
-        }
-      },
-      [campaignId, convex],
-    ),
-
-    toggleShareWithMember: useCallback(
-      async (ctx: MenuContext, memberId: Id<'campaignMembers'>) => {
-        if (!campaignId || !ctx.item || !ctx.shareState) return
-
-        const { shareStatus, sharedMemberIds } = ctx.shareState
-
-        // Determine if currently shared with this member
-        const isCurrentlyShared =
-          shareStatus === SHARE_STATUS.ALL_SHARED ||
-          (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED &&
-            sharedMemberIds.has(memberId))
-
-        try {
-          if (isCurrentlyShared) {
-            await convex.mutation(api.shares.mutations.unshareSidebarItem, {
-              campaignId,
-              sidebarItemId: ctx.item._id,
-              campaignMemberId: memberId,
-            })
-            toast.success('Unshared from player')
-          } else {
-            await convex.mutation(api.shares.mutations.shareSidebarItem, {
-              campaignId,
-              sidebarItemId: ctx.item._id,
-              sidebarItemType: ctx.item.type,
-              campaignMemberId: memberId,
-            })
-            toast.success('Shared with player')
-          }
-        } catch (error) {
-          console.error('Failed to toggle individual share:', error)
-          toast.error('Failed to toggle share')
+          console.error('Failed to set general access level:', error)
+          toast.error('Failed to update access level')
         }
       },
       [campaignId, convex],

@@ -18,12 +18,15 @@ export interface ShareItem {
   shareState: 'all' | 'some' | 'none'
 }
 
-// Aggregate share status for blocks
+export const AGGREGATE_SHARE_STATUS = {
+  ALL_SHARED: 'all_shared',
+  INDIVIDUALLY_SHARED: 'individually_shared',
+  NOT_SHARED: 'not_shared',
+  MIXED_SHARED: 'mixed_shared',
+} as const
+
 export type AggregateShareStatus =
-  | 'all_shared'
-  | 'individually_shared'
-  | 'not_shared'
-  | 'mixed_shared'
+  (typeof AGGREGATE_SHARE_STATUS)[keyof typeof AGGREGATE_SHARE_STATUS]
 
 export function useBlocksShare(blocks: Array<CustomBlock>) {
   const { item } = useCurrentItem()
@@ -74,18 +77,22 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   )
 
   const aggregateShareStatus: AggregateShareStatus = useMemo(() => {
-    if (!hasCompleteData || topLevelBlocks.length === 0) return 'not_shared'
+    if (!hasCompleteData || topLevelBlocks.length === 0)
+      return AGGREGATE_SHARE_STATUS.NOT_SHARED
 
     const statuses = topLevelBlocks.map(
       (b) => blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
     )
 
-    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED)) return 'not_shared'
-    if (statuses.every((s) => s === SHARE_STATUS.ALL_SHARED))
-      return 'all_shared'
-    if (statuses.every((s) => s === SHARE_STATUS.INDIVIDUALLY_SHARED))
-      return 'individually_shared'
-    return 'mixed_shared'
+    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED)) {
+      return AGGREGATE_SHARE_STATUS.NOT_SHARED
+    } else if (statuses.every((s) => s === SHARE_STATUS.ALL_SHARED)) {
+      return AGGREGATE_SHARE_STATUS.ALL_SHARED
+    } else if (statuses.every((s) => s === SHARE_STATUS.INDIVIDUALLY_SHARED)) {
+      return AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED
+    } else {
+      return AGGREGATE_SHARE_STATUS.MIXED_SHARED
+    }
   }, [topLevelBlocks, blockInfoMap, hasCompleteData])
 
   const unsharedBlocks = useMemo(

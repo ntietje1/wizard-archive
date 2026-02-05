@@ -1,6 +1,6 @@
 import type { Folder } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
-import type { ShareStatus, SidebarItemShare } from '../shares/types'
+import type { PermissionLevel, SidebarItemShare } from '../shares/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -47,7 +47,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   parentId?: Id<'folders'>
   updatedAt: number
   type: T
-  shareStatus?: ShareStatus
+  allPermissionLevel?: PermissionLevel
 }
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {

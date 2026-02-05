@@ -79,6 +79,7 @@ export const createMap = mutation({
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.gameMaps,
     })
+
     return { mapId, slug: uniqueSlug }
   },
 })

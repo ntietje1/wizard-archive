@@ -9,11 +9,10 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   permissionLevelValidator,
   sidebarItemIdValidator,
-  sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { SHARE_STATUS } from './types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import {
   getBlockSharesForBlock,
@@ -24,15 +23,12 @@ import { getSharesForSession } from './shares'
 import {
   getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
-  isSidebarItemSharedWithMember,
+  resolveInheritedAllPermissionLevelWithSource,
+  resolveInheritedMemberPermissionWithSource,
 } from './itemShares'
 import type { CampaignMember } from '../campaigns/types'
-import type {
-  BlockShare,
-  PermissionLevel,
-  ShareStatus,
-  SidebarItemShare,
-} from './types'
+import type { Id } from '../_generated/dataModel'
+import type { BlockShare, PermissionLevel, SidebarItemShare } from './types'
 
 export const getSidebarItemShares = query({
   args: {
@@ -55,13 +51,8 @@ export const getSidebarItemShares = query({
 })
 
 /**
- * Get share status for a sidebar item along with player members.
- * Returns shareStatus and player members in a single query to avoid waterfalls.
- *
- * Share status optimization:
- * - 'all_shared': Item visible to all players (shares array will be empty)
- * - 'not_shared': Item visible to no players (shares array will be empty)
- * - 'individually_shared': Must query sidebarItemShares table for specific shares
+ * Get share info for a sidebar item along with player members.
+ * Returns allPermissionLevel and individual shares.
  */
 export const getSidebarItemWithShares = query({
   args: {
@@ -69,19 +60,27 @@ export const getSidebarItemWithShares = query({
     sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.object({
-    shareStatus: sidebarItemShareStatusValidator,
     allPermissionLevel: v.optional(permissionLevelValidator),
-    shares: v.array(sidebarItemShareValidator), // Only populated if individually_shared
+    inheritShares: v.optional(v.boolean()),
+    shares: v.array(sidebarItemShareValidator),
     playerMembers: v.array(campaignMemberValidator),
+    inheritedAllPermissionLevel: v.optional(permissionLevelValidator),
+    inheritedFromFolderName: v.optional(v.string()),
+    memberInheritedPermissions: v.record(v.string(), permissionLevelValidator),
+    memberInheritedFromFolderNames: v.record(v.string(), v.string()),
   }),
   handler: async (
     ctx,
     args,
   ): Promise<{
-    shareStatus: ShareStatus
     allPermissionLevel?: PermissionLevel
+    inheritShares?: boolean
     shares: Array<SidebarItemShare>
     playerMembers: Array<CampaignMember>
+    inheritedAllPermissionLevel?: PermissionLevel
+    inheritedFromFolderName?: string
+    memberInheritedPermissions: Record<string, PermissionLevel>
+    memberInheritedFromFolderNames: Record<string, string>
   }> => {
     await requireCampaignMembership(
       ctx,
@@ -89,39 +88,61 @@ export const getSidebarItemWithShares = query({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Get the sidebar item to retrieve its shareStatus
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item) {
       throw new Error('Sidebar item not found')
     }
 
-    // Get share status (default to 'not_shared' for legacy items)
-    const shareStatus: ShareStatus = item.shareStatus ?? SHARE_STATUS.NOT_SHARED
-    const allPermissionLevel = (
-      item as { allPermissionLevel?: PermissionLevel }
-    ).allPermissionLevel
+    let inheritShares: boolean | undefined = undefined
+    if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+      inheritShares = item.inheritShares
+    }
 
-    // Get player members (always needed for UI)
+    // Get player members
     const allMembers = await getCampaignMembers(ctx, args.campaignId)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
 
-    // Only fetch individual shares if status is 'individually_shared'
-    let shares: Array<SidebarItemShare> = []
-    if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-      shares = await getSidebarItemSharesForItem(
-        ctx,
-        args.campaignId,
-        args.sidebarItemId,
-      )
+    // Always fetch individual shares
+    const shares = await getSidebarItemSharesForItem(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+    )
+
+    // Resolve inherited all-players permission level with source folder name
+    const {
+      level: inheritedAllPermissionLevel,
+      folderName: inheritedFromFolderName,
+    } = await resolveInheritedAllPermissionLevelWithSource(ctx, item.parentId)
+
+    // Resolve per-member inherited permissions with source folder names
+    const memberInheritedPermissions: Record<string, PermissionLevel> = {}
+    const memberInheritedFromFolderNames: Record<string, string> = {}
+    for (const member of playerMembers) {
+      const { level: inherited, folderName } =
+        await resolveInheritedMemberPermissionWithSource(
+          ctx,
+          args.campaignId,
+          item.parentId,
+          member._id,
+        )
+      memberInheritedPermissions[member._id] = inherited
+      if (folderName) {
+        memberInheritedFromFolderNames[member._id] = folderName
+      }
     }
 
     return {
-      shareStatus,
-      allPermissionLevel,
+      allPermissionLevel: item.allPermissionLevel,
+      inheritShares,
       shares,
       playerMembers,
+      inheritedAllPermissionLevel,
+      inheritedFromFolderName,
+      memberInheritedPermissions,
+      memberInheritedFromFolderNames,
     }
   },
 })
@@ -180,12 +201,16 @@ export const checkSidebarItemAccess = query({
       return true
     }
 
-    return await isSidebarItemSharedWithMember(
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item) return false
+
+    const enhanced = await enhanceSidebarItem(
       ctx,
-      args.campaignId,
-      args.sidebarItemId,
-      campaignWithMembership.member._id,
+      item as Parameters<typeof enhanceSidebarItem>[1],
     )
+
+    const level = await getSidebarItemPermissionLevel(ctx, enhanced)
+    return level !== 'none'
   },
 })
 

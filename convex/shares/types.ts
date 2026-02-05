@@ -53,6 +53,7 @@ export type BlockShare = {
   sessionId?: Id<'sessions'>
 }
 
+// Block-specific share status (sidebar items no longer use this)
 export const SHARE_STATUS = {
   ALL_SHARED: 'all_shared',
   NOT_SHARED: 'not_shared',
@@ -61,6 +62,7 @@ export const SHARE_STATUS = {
 
 export type ShareStatus = (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
 
+// Block-specific permission status (sidebar items use PermissionLevel instead)
 export const PERMISSION_STATUS = {
   NO_ACCESS: 'no_access',
   VIEW: 'view',

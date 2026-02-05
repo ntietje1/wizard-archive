@@ -4,10 +4,11 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
-import type { PermissionLevel, ShareStatus } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/shares/types'
 
 export interface ShareState {
-  shareStatus: ShareStatus
+  allPermissionLevel?: PermissionLevel
+  inheritedAllPermissionLevel?: PermissionLevel
   sharedMemberIds: Set<Id<'campaignMembers'>>
   playerMembers: Array<CampaignMember>
   isLoading: boolean

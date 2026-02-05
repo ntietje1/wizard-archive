@@ -12,11 +12,11 @@ import {
 } from '../blocks/blocks'
 import { PERMISSION_STATUS, SHARE_STATUS } from './types'
 import type { Ctx } from '../common/types'
-import type { BlockItem } from './itemShares'
 import type { Block } from '../blocks/types'
 import type { BlockShare, PermissionStatus, ShareStatus } from './types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
+import type { CustomBlock } from '../notes/editorSpecs'
 
 export async function getBlockPermissionStatus(
   ctx: Ctx,
@@ -309,4 +309,9 @@ export async function isBlockSharedWithMember(
     .unique()
 
   return share !== null
+}
+
+export interface BlockItem {
+  blockNoteId: string
+  content: CustomBlock
 }

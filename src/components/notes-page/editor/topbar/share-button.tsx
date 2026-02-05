@@ -1,6 +1,5 @@
-import { useMemo } from 'react'
-import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
-import { Share2 } from '~/lib/icons'
+import { useMemo, useState } from 'react'
+import { ChevronDown, ChevronUp, Lock, Users } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   Popover,
@@ -11,24 +10,11 @@ import { SharePermissionMenu } from '~/components/share/share-permission-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
-import { cn } from '~/lib/shadcn/utils'
-import { TooltipButton } from '~/components/tooltips/tooltip-button'
-
-const getButtonColorClass = (status: AggregateShareStatus): string => {
-  switch (status) {
-    case 'all_shared':
-      return 'text-blue-600 hover:text-blue-700 aria-expanded:text-blue-600'
-    case 'individually_shared':
-    case 'mixed_shared':
-      return 'text-amber-500 hover:text-amber-600 aria-expanded:text-amber-500'
-    default:
-      return ''
-  }
-}
 
 export function ShareButton() {
   const { itemForDm } = useCurrentItem()
-  const { isDm, dmUsername } = useCampaign()
+  const { isDm, campaignWithMembership } = useCampaign()
+  const [open, setOpen] = useState(false)
 
   const items = useMemo(() => (itemForDm ? [itemForDm] : []), [itemForDm])
 
@@ -37,63 +23,67 @@ export function ShareButton() {
     isMutating,
     aggregateShareStatus,
     allPlayersPermissionLevel,
+    inheritedAllPermissionLevel,
+    inheritedFromFolderName,
+    isFolder,
+    inheritShares,
     shareItems,
     setMemberPermission,
+    clearMemberPermission,
     setAllPlayersPermission,
+    setInheritShares,
     canShare,
-    allFolders,
   } = useSidebarItemsShare(items)
 
   if (!isDm || !itemForDm) {
     return null
   }
 
-  const buttonColorClass = getButtonColorClass(aggregateShareStatus)
-  const isDisabled = !canShare || isMutating || allFolders
+  const dmUserProfile = campaignWithMembership.data?.campaign.dmUserProfile
+  const isDisabled = !canShare || isMutating
+  const isShared = aggregateShareStatus !== 'not_shared'
 
-  const label = allFolders
-    ? 'Folders are automatically shared as needed'
-    : aggregateShareStatus === 'all_shared'
-      ? 'Shared with all players'
-      : aggregateShareStatus === 'individually_shared' ||
-          aggregateShareStatus === 'mixed_shared'
-        ? 'Shared with some players'
-        : 'Share item'
+  const Chevron = open ? ChevronUp : ChevronDown
+  const StatusIcon = isShared ? Users : Lock
 
   return (
-    <TooltipButton tooltip={label} side="bottom">
-      <Popover>
-        <PopoverTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={isDisabled}
-              aria-label={label}
-              title={label}
-              className={cn(buttonColorClass)}
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          }
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isDisabled}
+            className="gap-1.5"
+          >
+            <StatusIcon className="h-3.5 w-3.5" />
+            <span className="text-xs">{isShared ? 'Shared' : 'Private'}</span>
+            <Chevron className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        }
+      />
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        className="w-auto p-2"
+      >
+        <SharePermissionMenu
+          dmUserProfile={dmUserProfile}
+          isPending={isPending}
+          isMutating={isMutating}
+          shareItems={shareItems}
+          allPlayersPermissionLevel={allPlayersPermissionLevel}
+          inheritedAllPermissionLevel={inheritedAllPermissionLevel}
+          inheritedFromFolderName={inheritedFromFolderName}
+          isFolder={isFolder}
+          inheritShares={inheritShares}
+          onSetMemberPermission={setMemberPermission}
+          onClearMemberPermission={clearMemberPermission}
+          onSetAllPlayersPermission={setAllPlayersPermission}
+          onSetInheritShares={setInheritShares}
         />
-        <PopoverContent
-          align="start"
-          side="bottom"
-          sideOffset={4}
-          className="w-auto p-2"
-        >
-          <SharePermissionMenu
-            dmName={dmUsername}
-            isPending={isPending}
-            isMutating={isMutating}
-            shareItems={shareItems}
-            allPlayersPermissionLevel={allPlayersPermissionLevel}
-            onSetMemberPermission={setMemberPermission}
-            onSetAllPlayersPermission={setAllPlayersPermission}
-          />
-        </PopoverContent>
-      </Popover>
-    </TooltipButton>
+      </PopoverContent>
+    </Popover>
   )
 }

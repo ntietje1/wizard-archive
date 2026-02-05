@@ -128,6 +128,7 @@ export const createFile = mutation({
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.files,
     })
+
     return { fileId, slug: uniqueSlug }
   },
 })

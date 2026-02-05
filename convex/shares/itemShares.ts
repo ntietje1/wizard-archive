@@ -4,13 +4,8 @@ import {
 } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
-import {
-  ATLEAST_PERMISSION_LEVEL,
-  PERMISSION_LEVEL,
-  PERMISSION_STATUS,
-  SHARE_STATUS,
-} from './types'
-import type { CustomBlock } from '../notes/editorSpecs'
+import { defaultItemName } from '../sidebarItems/sidebarItems'
+import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from './types'
 import type { Ctx } from '../common/types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
@@ -41,27 +36,118 @@ export async function getSidebarItemPermissionLevel(
     }
   }
 
-  const shareStatus = item.shareStatus ?? SHARE_STATUS.NOT_SHARED
-
-  switch (shareStatus) {
-    case SHARE_STATUS.ALL_SHARED:
-      return (
-        (item as { allPermissionLevel?: PermissionLevel }).allPermissionLevel ?? // TODO: clean this up
-        PERMISSION_LEVEL.VIEW
-      )
-    case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-      const share = await getSidebarItemShareForMember(
-        ctx,
-        item.campaignId,
-        item._id,
-        checkId,
-      )
-      if (!share) return PERMISSION_LEVEL.NONE
-      return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
-    }
-    case SHARE_STATUS.NOT_SHARED:
-      return PERMISSION_LEVEL.NONE
+  // Check for an explicit per-player share
+  const share = await getSidebarItemShareForMember(
+    ctx,
+    item.campaignId,
+    item._id,
+    checkId,
+  )
+  if (share) {
+    return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
   }
+
+  // Check item's own explicit allPermissionLevel
+  const allPerm = (item as { allPermissionLevel?: PermissionLevel })
+    .allPermissionLevel
+  if (allPerm !== undefined) {
+    return allPerm
+  }
+
+  // Walk up folder hierarchy for inherited permission
+  const parentId = (item as { parentId?: Id<'folders'> }).parentId
+  return await resolveInheritedPermission(
+    ctx,
+    item.campaignId,
+    parentId,
+    checkId,
+  )
+}
+
+async function resolveInheritedPermission(
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: Id<'folders'> | undefined,
+  playerId: Id<'campaignMembers'>,
+): Promise<PermissionLevel> {
+  let currentParentId = parentId
+  while (currentParentId) {
+    const folder = await ctx.db.get(currentParentId)
+    if (!folder || !folder.inheritShares) break
+
+    // Check individual share on this ancestor
+    const share = await getSidebarItemShareForMember(
+      ctx,
+      campaignId,
+      currentParentId,
+      playerId,
+    )
+    if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
+
+    // Check ancestor's explicit allPermissionLevel
+    const allPerm = folder.allPermissionLevel
+    if (allPerm !== undefined) return allPerm
+
+    // Continue walking up
+    currentParentId = folder.parentId
+  }
+  return PERMISSION_LEVEL.NONE
+}
+
+export async function resolveInheritedAllPermissionLevelWithSource(
+  ctx: QueryCtx,
+  parentId: Id<'folders'> | undefined,
+): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
+  let currentParentId = parentId
+  while (currentParentId) {
+    const folder = await ctx.db.get(currentParentId)
+    if (!folder || !folder.inheritShares) break
+
+    const allPerm = folder.allPermissionLevel
+    if (allPerm !== undefined) {
+      const name = folder.name || defaultItemName(folder)
+      return { level: allPerm, folderName: name }
+    }
+
+    currentParentId = folder.parentId
+  }
+  return { level: undefined }
+}
+
+export async function resolveInheritedMemberPermissionWithSource(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  parentId: Id<'folders'> | undefined,
+  memberId: Id<'campaignMembers'>,
+): Promise<{ level: PermissionLevel; folderName?: string }> {
+  let currentParentId = parentId
+  while (currentParentId) {
+    const folder = await ctx.db.get(currentParentId)
+    if (!folder || !folder.inheritShares) break
+
+    const share = await getSidebarItemShareForMember(
+      ctx,
+      campaignId,
+      currentParentId,
+      memberId,
+    )
+    if (share) {
+      const name = folder.name || defaultItemName(folder)
+      return {
+        level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+        folderName: name,
+      }
+    }
+
+    const allPerm = folder.allPermissionLevel
+    if (allPerm !== undefined) {
+      const name = folder.name || defaultItemName(folder)
+      return { level: allPerm, folderName: name }
+    }
+
+    currentParentId = folder.parentId
+  }
+  return { level: PERMISSION_LEVEL.NONE }
 }
 
 function hasAtLeastPermissionLevel(
@@ -260,8 +346,4 @@ export async function isSidebarItemSharedWithMember(
     campaignMemberId,
   )
   return share !== null
-}
-export interface BlockItem {
-  blockNoteId: string
-  content: CustomBlock
 }

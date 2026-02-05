@@ -15,14 +15,12 @@ import {
   Navigation,
   Pencil,
   Plus,
-  Share2,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
-import { SHARE_STATUS } from 'convex/shares/types'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { PermissionLevel } from 'convex/shares/types'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
@@ -39,13 +37,6 @@ function getTypeName(ctx: MenuContext): string {
     default:
       return 'Item'
   }
-}
-
-// Helper to check if shared with ALL players based on shareStatus enum
-function isSharedWithAll(ctx: MenuContext): boolean {
-  const shareState = ctx.shareState
-  if (!shareState) return false
-  return shareState.shareStatus === SHARE_STATUS.ALL_SHARED
 }
 
 export type ActionHandlers = {
@@ -75,10 +66,9 @@ export type ActionHandlers = {
   endSession: (ctx: MenuContext) => void
 
   // Share actions
-  toggleShareWithAll: (ctx: MenuContext) => void
-  toggleShareWithMember: (
+  setGeneralAccessLevel: (
     ctx: MenuContext,
-    memberId: Id<'campaignMembers'>,
+    level: PermissionLevel | undefined,
   ) => void
 
   // Download actions
@@ -217,74 +207,69 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       ],
     },
 
-    // ========== SHARE GROUP ==========
-    {
-      id: 'share-item',
-      label: (ctx) => {
-        const willShowChildren = (ctx.shareState?.playerMembers.length ?? 0) > 0
-        // Only say "Unshare" if shared with ALL players
-        if (isSharedWithAll(ctx)) {
-          return willShowChildren ? `Unshare...` : `Unshare`
-        }
-        return willShowChildren ? `Share...` : `Share`
-      },
-      icon: Share2,
-      group: 'share',
-      variant: 'share',
-      priority: 20,
-      shouldShow: (ctx) =>
-        p.isDm(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isNotType(SIDEBAR_ITEM_TYPES.folders)(ctx),
-      isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
-      action: actions.toggleShareWithAll,
-      // Dynamic children for individual player sharing (empty = no submenu)
-      children: (ctx): Array<MenuItemDef> => {
-        const shareState = ctx.shareState
-        if (!shareState || shareState.playerMembers.length === 0) {
-          return []
-        }
+    // // ========== SHARE GROUP ==========
+    // {
+    //   id: 'share-item',
+    //   label: 'Share...',
+    //   icon: Share2,
+    //   group: 'share',
+    //   variant: 'share',
+    //   priority: 20,
+    //   shouldShow: (ctx) => p.isDm(ctx) && p.isSidebarItem(ctx),
+    //   isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
+    //   action: () => {},
+    //   children: (ctx): Array<MenuItemDef> => {
+    //     const shareState = ctx.shareState
+    //     if (!shareState) return []
 
-        const allPlayersItem: MenuItemDef = {
-          id: 'share-all-players',
-          label: 'All Players',
-          group: 'share',
-          priority: 0,
-          shouldShow: p.always,
-          isChecked: () => isSharedWithAll(ctx),
-          action: actions.toggleShareWithAll,
-        }
+    //     const currentLevel = shareState.allPermissionLevel
+    //     const inheritedLevel = shareState.inheritedAllPermissionLevel
+    //     const hasInherited = inheritedLevel !== undefined
 
-        const playerItems: Array<MenuItemDef> = shareState.playerMembers.map(
-          (member) => {
-            const profile = member.userProfile
-            const displayText = profile.name
-              ? profile.name
-              : profile.username
-                ? `@${profile.username}`
-                : 'Player'
+    //     const PERMISSION_LABELS: Record<string, string> = {
+    //       none: 'None',
+    //       view: 'View',
+    //       edit: 'Edit',
+    //       full_access: 'Full access',
+    //     }
 
-            // Check if shared with this member based on shareStatus
-            const isShared =
-              shareState.shareStatus === SHARE_STATUS.ALL_SHARED ||
-              (shareState.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED &&
-                shareState.sharedMemberIds.has(member._id))
+    //     const items: Array<MenuItemDef> = []
 
-            return {
-              id: `share-player-${member._id}`,
-              label: displayText,
-              group: 'share',
-              priority: 1,
-              shouldShow: p.always,
-              isChecked: () => isShared,
-              action: () => actions.toggleShareWithMember(ctx, member._id),
-            }
-          },
-        )
+    //     if (hasInherited) {
+    //       const inheritedLabel = PERMISSION_LABELS[inheritedLevel] ?? 'None'
+    //       items.push({
+    //         id: 'general-access-default',
+    //         label: `Default (${inheritedLabel})`,
+    //         group: 'share',
+    //         priority: 0,
+    //         shouldShow: p.always,
+    //         isChecked: () => currentLevel === undefined,
+    //         action: () => actions.setGeneralAccessLevel(ctx, undefined),
+    //       })
+    //     }
 
-        return [allPlayersItem, ...playerItems]
-      },
-    },
+    //     const levels: Array<{ key: string; level: PermissionLevel }> = [
+    //       { key: 'none', level: 'none' },
+    //       { key: 'view', level: 'view' },
+    //       { key: 'edit', level: 'edit' },
+    //       { key: 'full_access', level: 'full_access' },
+    //     ]
+
+    //     for (const { key, level } of levels) {
+    //       items.push({
+    //         id: `general-access-${key}`,
+    //         label: PERMISSION_LABELS[key],
+    //         group: 'share',
+    //         priority: items.length,
+    //         shouldShow: p.always,
+    //         isChecked: () => currentLevel === level,
+    //         action: () => actions.setGeneralAccessLevel(ctx, level),
+    //       })
+    //     }
+
+    //     return items
+    //   },
+    // },
 
     // ========== NAVIGATION GROUP ==========
     {
