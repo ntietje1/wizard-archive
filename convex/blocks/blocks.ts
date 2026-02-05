@@ -65,9 +65,7 @@ export async function getTopLevelBlocksByNote(
 
   // Players with edit or full_access see all blocks (no block-share filtering)
   if (skipBlockFiltering) {
-    return topLevelBlocks.sort(
-      (a, b) => (a.position || 0) - (b.position || 0),
-    )
+    return topLevelBlocks.sort((a, b) => (a.position || 0) - (b.position || 0))
   }
 
   const permittedBlocks = await Promise.all(

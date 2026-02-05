@@ -21,4 +21,3 @@ export const permissionLevelValidator = v.union(
   v.literal('edit'),
   v.literal('full_access'),
 )
-
