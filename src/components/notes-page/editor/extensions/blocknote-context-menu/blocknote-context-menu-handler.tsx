@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useBlockNoteEditor } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
+import { useEditorDomElement } from '~/hooks/useEditorDomElement'
 
 /**
  * Component that handles right-click context menu events for the entire BlockNote editor.
@@ -9,11 +10,9 @@ import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
  */
 export function BlockNoteContextMenuHandler() {
   const editor = useBlockNoteEditor() as CustomBlockNoteEditor
+  const domElement = useEditorDomElement(editor)
 
   useEffect(() => {
-    if (!editor) return
-
-    const domElement = editor.domElement
     if (!domElement) return
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -42,7 +41,7 @@ export function BlockNoteContextMenuHandler() {
     return () => {
       domElement.removeEventListener('contextmenu', handleContextMenu, true)
     }
-  }, [editor])
+  }, [domElement])
 
   return null
 }
