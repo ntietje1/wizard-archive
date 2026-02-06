@@ -31,7 +31,7 @@ const mapPinWithItemValidatorFields = {
   x: v.number(),
   y: v.number(),
   updatedAt: v.number(),
-  item: anySidebarItemValidator,
+  item: v.optional(anySidebarItemValidator),
 }
 
 export const mapWithContentValidator = v.object({

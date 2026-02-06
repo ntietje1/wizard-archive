@@ -200,8 +200,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     pinToMap: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !ctx.activeMap) return
 
-      // Check if already pinned using context data
-      if (ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
+      if (ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)) {
         toast.error('Item is already pinned on this map')
         // TODO: add highlight of pin here
         return
@@ -221,8 +220,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       (ctx: MenuContext) => {
         if (!ctx.item || !ctx.activeMap) return
 
-        // Check if pinned using context data
-        if (!ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
+        if (
+          !ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)
+        ) {
           toast.error('Item is not pinned on this map')
           return
         }

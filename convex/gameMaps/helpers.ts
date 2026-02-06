@@ -71,9 +71,12 @@ const enforceMapPinPermissions = async (
   pin: MapPinWithItem | null,
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
-  if (!pin) return null
+  if (!pin || !pin.item) return null
   const canSee = await hasViewPermission(ctx, pin.item, viewAsPlayerId)
-  if (!canSee) return null
+  if (!canSee) {
+    const { item: _, ...pinWithoutItem } = pin
+    return pinWithoutItem
+  }
   return pin
 }
 

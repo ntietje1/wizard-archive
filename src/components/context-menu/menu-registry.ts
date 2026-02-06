@@ -126,7 +126,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: Navigation,
       group: 'primary',
       priority: 1,
-      shouldShow: (ctx) =>
+      shouldShow: (
+        ctx, // TODO: check view access on both item and map
+      ) =>
         p.inSidebar(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isPinnedOnActiveMap(ctx) &&
@@ -152,7 +154,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'create',
       priority: 5,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasFullAccess(ctx) &&
         !p.inView('topbar')(ctx) &&
         !p.hasPinContext(ctx) &&
         (p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) || p.atRoot(ctx)),
@@ -316,7 +318,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 1,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasEditAccess(ctx) &&
         p.inSidebar(ctx) &&
         p.isSidebarItem(ctx) &&
         !p.isPinnedOnActiveMap(ctx) &&
@@ -329,7 +331,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: Move,
       group: 'pin-actions',
       priority: 50,
-      shouldShow: (ctx) => p.isDm(ctx) && p.hasPinContext(ctx),
+      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.hasPinContext(ctx),
       action: actions.moveMapPin,
     },
     {
@@ -339,7 +341,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 51,
       variant: 'danger',
-      shouldShow: (ctx) => p.isDm(ctx) && p.hasPinContext(ctx),
+      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.hasPinContext(ctx),
       action: actions.removeMapPin,
     },
     {
@@ -349,7 +351,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'pin-actions',
       priority: 52,
       shouldShow: (ctx) =>
-        p.isDm(ctx) && p.isActiveMap(ctx) && p.inView('map-view')(ctx),
+        p.hasEditAccess(ctx) && p.isActiveMap(ctx) && p.inView('map-view')(ctx),
       action: actions.createMapPin,
     },
 
@@ -434,7 +436,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.isDm(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+        p.hasFullAccess(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
       action: actions.editMap,
     },
     {
@@ -444,7 +446,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.isDm(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+        p.hasFullAccess(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editFile,
     },
     {
@@ -454,7 +456,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,

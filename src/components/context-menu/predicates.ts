@@ -46,7 +46,7 @@ export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMap)
 
 export const isPinnedOnActiveMap: Predicate = (ctx) => {
   if (!ctx.item || !ctx.activeMap) return false
-  return ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)
+  return ctx.activeMap.pins.some((pin) => pin.itemId === ctx.item?._id)
 }
 
 export const isNotActiveMap: Predicate = (ctx) => {
