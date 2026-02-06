@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import {
-  getAllSidebarItemsWithAncestors as getAllSidebarItemsWithAncestorsFn,
+  getAllSidebarItems as getAllSidebarItemsFn,
   getSidebarItemById as getSidebarItemByIdFn,
   getSidebarItemBySlug as getSidebarItemBySlugFn,
   getSidebarItemByName as getSidebarItemsByNameFn,
@@ -24,11 +24,7 @@ export const getAllSidebarItems = query({
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsWithAncestorsFn(
-      ctx,
-      args.campaignId,
-      args.viewAsPlayerId,
-    )
+    return await getAllSidebarItemsFn(ctx, args.campaignId, args.viewAsPlayerId)
   },
 })
 

@@ -2,8 +2,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { EDITOR_MODE } from 'convex/editors/types'
+import type { EditorMode } from 'convex/editors/types'
 import type { PermissionLevel } from 'convex/shares/types'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   EditorModeActionsContext,
   EditorModeStateContext,
@@ -11,15 +15,15 @@ import {
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
-export type EditorMode = 'viewer' | 'editor'
-
 export function EditorModeProvider({
   children,
 }: {
   children: React.ReactNode
 }) {
   const { campaignWithMembership, isDm } = useCampaign()
-  const [editorMode, setEditorModeState] = useState<EditorMode>('editor')
+  const [editorMode, setEditorModeState] = useState<EditorMode>(
+    EDITOR_MODE.EDITOR,
+  )
   const [viewAsPlayerId, setViewAsPlayerIdState] = useState<
     Id<'campaignMembers'> | undefined
   >(undefined)
@@ -39,43 +43,38 @@ export function EditorModeProvider({
 
   const isPermissionLoading = !isDm && permissionQuery.isPending
   const permissionLevel: PermissionLevel = isDm
-    ? 'full_access'
-    : (permissionQuery.data ?? 'none')
+    ? PERMISSION_LEVEL.FULL_ACCESS
+    : (permissionQuery.data ?? PERMISSION_LEVEL.NONE)
 
-  const canEdit =
-    permissionLevel === 'edit' || permissionLevel === 'full_access'
+  const canEdit = hasAtLeastPermissionLevel(
+    permissionLevel,
+    PERMISSION_LEVEL.EDIT,
+  )
+  const effectiveEditorMode = isDm || canEdit ? editorMode : EDITOR_MODE.VIEWER
 
   const stateValue = useMemo(
     () => ({
-      editorMode: isDm
-        ? editorMode
-        : canEdit
-          ? 'editor'
-          : ('viewer' as EditorMode),
-      viewAsPlayerId: isDm
-        ? viewAsPlayerId
-        : canEdit
-          ? undefined
-          : campaignWithMembership.data?.member._id,
+      editorMode: effectiveEditorMode,
+      viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
+      canEdit,
       permissionLevel,
       isPermissionLoading,
     }),
     [
-      editorMode,
+      effectiveEditorMode,
       viewAsPlayerId,
       isDm,
       canEdit,
       permissionLevel,
       isPermissionLoading,
-      campaignWithMembership.data?.member._id,
     ],
   )
 
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
-      if (isDm) setEditorModeState(mode)
+      if (isDm || canEdit) setEditorModeState(mode)
     },
-    [isDm],
+    [isDm, canEdit],
   )
 
   const setViewAsPlayerId = useCallback(

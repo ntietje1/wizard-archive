@@ -363,7 +363,6 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) &&
         !p.hasPinContext(ctx),
@@ -376,7 +375,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasEditAccess(ctx) && // TODO: change download note to only get visible lines
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
         !p.hasMapContext(ctx),
@@ -389,7 +388,6 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) &&
         !p.hasMapContext(ctx),

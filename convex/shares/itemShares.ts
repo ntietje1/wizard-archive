@@ -150,7 +150,7 @@ export async function resolveInheritedMemberPermissionWithSource(
   return { level: PERMISSION_LEVEL.NONE }
 }
 
-function hasAtLeastPermissionLevel(
+export function hasAtLeastPermissionLevel(
   level: PermissionLevel,
   requiredLevel: PermissionLevel,
 ): boolean {

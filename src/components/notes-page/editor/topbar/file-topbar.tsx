@@ -7,11 +7,12 @@ import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { isNote } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
+import { useEditorModeState } from '~/hooks/useEditorMode'
 
 export function FileTopbar() {
   const { item, itemForDm, isLoading } = useCurrentItem()
+  const { canEdit } = useEditorModeState()
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
 
@@ -29,9 +30,7 @@ export function FileTopbar() {
 
   const middleContent = (
     <ItemButtonWrapper>
-      {itemForDm && isNote(itemForDm) && (
-        <EditorViewModeToggleButton disabled={!item} />
-      )}
+      {canEdit && <EditorViewModeToggleButton disabled={!item} />}
     </ItemButtonWrapper>
   )
 

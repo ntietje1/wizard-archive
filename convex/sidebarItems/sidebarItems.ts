@@ -17,7 +17,7 @@ import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 
-const getAllSidebarItems = async (
+export const getAllSidebarItems = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   viewAsPlayerId?: Id<'campaignMembers'>,

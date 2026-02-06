@@ -21,6 +21,13 @@ export interface SortOptions {
   direction: SortDirection
 }
 
+export const EDITOR_MODE = {
+  VIEWER: 'viewer',
+  EDITOR: 'editor',
+} as const
+
+export type EditorMode = (typeof EDITOR_MODE)[keyof typeof EDITOR_MODE]
+
 export type Editor = {
   _id: Id<'editor'>
   _creationTime: number
@@ -31,4 +38,4 @@ export type Editor = {
   sortDirection: SortDirection
   sidebarWidth?: number
   isSidebarExpanded?: boolean
-}
+} // TODO: add editor mode here
