@@ -55,7 +55,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
     attributes,
     isDragging,
   } = useDraggable({
-    id: map._id,
+    id: `card-${map._id}`,
     data: dragData,
     disabled: isDisabled,
   })

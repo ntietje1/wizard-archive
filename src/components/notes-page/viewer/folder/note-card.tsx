@@ -39,7 +39,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const dragData: SidebarDragData = note
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: note._id,
+    id: `card-${note._id}`,
     data: dragData,
     disabled: isDisabled,
   })

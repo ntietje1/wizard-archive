@@ -94,7 +94,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const dragData: SidebarDragData = file
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: file._id,
+    id: `card-${file._id}`,
     data: dragData,
     disabled: isDisabled,
   })
