@@ -6,7 +6,6 @@ import { api } from 'convex/_generated/api'
 import { validateSearch } from '~/components/notes-page/validate-search'
 import { FileTopbar } from '~/components/notes-page/editor/topbar/file-topbar'
 import { EditorContent } from '~/components/notes-page/editor/editor-content'
-import { EditorModeProvider } from '~/contexts/EditorModeContext'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export const Route = createFileRoute(
