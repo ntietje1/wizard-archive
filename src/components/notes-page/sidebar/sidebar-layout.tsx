@@ -2,6 +2,7 @@ import { memo, useCallback, useRef, useState } from 'react'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -139,7 +140,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0">{children}</div>
+      <ScrollArea className="flex-1 min-h-0 min-w-0">{children}</ScrollArea>
     </div>
   )
 }
