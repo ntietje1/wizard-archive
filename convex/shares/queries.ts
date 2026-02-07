@@ -23,11 +23,10 @@ import { getSharesForSession } from './shares'
 import {
   getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
-  resolveInheritedAllPermissionLevelWithSource,
-  resolveInheritedMemberPermissionWithSource,
+  resolveInheritedPermissionWithSource,
 } from './itemShares'
+import { PERMISSION_LEVEL } from './types'
 import type { CampaignMember } from '../campaigns/types'
-import type { Id } from '../_generated/dataModel'
 import type { BlockShare, PermissionLevel, SidebarItemShare } from './types'
 
 export const getSidebarItemShares = query({
@@ -115,20 +114,23 @@ export const getSidebarItemWithShares = query({
     const {
       level: inheritedAllPermissionLevel,
       folderName: inheritedFromFolderName,
-    } = await resolveInheritedAllPermissionLevelWithSource(ctx, item.parentId)
+    } = await resolveInheritedPermissionWithSource(
+      ctx,
+      args.campaignId,
+      item.parentId,
+    )
 
     // Resolve per-member inherited permissions with source folder names
     const memberInheritedPermissions: Record<string, PermissionLevel> = {}
     const memberInheritedFromFolderNames: Record<string, string> = {}
     for (const member of playerMembers) {
-      const { level: inherited, folderName } =
-        await resolveInheritedMemberPermissionWithSource(
-          ctx,
-          args.campaignId,
-          item.parentId,
-          member._id,
-        )
-      memberInheritedPermissions[member._id] = inherited
+      const { level, folderName } = await resolveInheritedPermissionWithSource(
+        ctx,
+        args.campaignId,
+        item.parentId,
+        member._id,
+      )
+      memberInheritedPermissions[member._id] = level ?? PERMISSION_LEVEL.NONE
       if (folderName) {
         memberInheritedFromFolderNames[member._id] = folderName
       }

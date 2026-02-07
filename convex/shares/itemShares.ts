@@ -70,84 +70,59 @@ async function resolveInheritedPermission(
   parentId: Id<'folders'> | undefined,
   playerId: Id<'campaignMembers'>,
 ): Promise<PermissionLevel> {
-  let currentParentId = parentId
-  while (currentParentId) {
-    const folder = await ctx.db.get(currentParentId)
-    if (!folder || !folder.inheritShares) break
-
-    // Check individual share on this ancestor
-    const share = await getSidebarItemShareForMember(
-      ctx,
-      campaignId,
-      currentParentId,
-      playerId,
-    )
-    if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
-
-    // Check ancestor's explicit allPermissionLevel
-    const allPerm = folder.allPermissionLevel
-    if (allPerm !== undefined) return allPerm
-
-    // Continue walking up
-    currentParentId = folder.parentId
-  }
-  return PERMISSION_LEVEL.NONE
+  const { level } = await resolveInheritedPermissionWithSource(
+    ctx,
+    campaignId,
+    parentId,
+    playerId,
+  )
+  return level ?? PERMISSION_LEVEL.NONE
 }
 
-export async function resolveInheritedAllPermissionLevelWithSource(
+export async function resolveInheritedPermissionWithSource(
   ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
+  memberId?: Id<'campaignMembers'>,
 ): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
   let currentParentId = parentId
   while (currentParentId) {
     const folder = await ctx.db.get(currentParentId)
-    if (!folder || !folder.inheritShares) break
+    if (!folder) break
 
-    const allPerm = folder.allPermissionLevel
-    if (allPerm !== undefined) {
-      const name = folder.name || defaultItemName(folder)
-      return { level: allPerm, folderName: name }
+    // continue walking up until we find a folder that inherits shares
+    if (!folder.inheritShares) {
+      currentParentId = folder.parentId
+      continue
+    }
+
+    // Check individual member share if memberId provided
+    if (memberId) {
+      const share = await getSidebarItemShareForMember(
+        ctx,
+        campaignId,
+        currentParentId,
+        memberId,
+      )
+      if (share) {
+        return {
+          level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+          folderName: folder.name || defaultItemName(folder),
+        }
+      }
+    }
+
+    // Check allPermissionLevel
+    if (folder.allPermissionLevel !== undefined) {
+      return {
+        level: folder.allPermissionLevel,
+        folderName: folder.name || defaultItemName(folder),
+      }
     }
 
     currentParentId = folder.parentId
   }
   return { level: undefined }
-}
-
-export async function resolveInheritedMemberPermissionWithSource(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
-  parentId: Id<'folders'> | undefined,
-  memberId: Id<'campaignMembers'>,
-): Promise<{ level: PermissionLevel; folderName?: string }> {
-  let currentParentId = parentId
-  while (currentParentId) {
-    const folder = await ctx.db.get(currentParentId)
-    if (!folder || !folder.inheritShares) break
-
-    const share = await getSidebarItemShareForMember(
-      ctx,
-      campaignId,
-      currentParentId,
-      memberId,
-    )
-    if (share) {
-      const name = folder.name || defaultItemName(folder)
-      return {
-        level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-        folderName: name,
-      }
-    }
-
-    const allPerm = folder.allPermissionLevel
-    if (allPerm !== undefined) {
-      const name = folder.name || defaultItemName(folder)
-      return { level: allPerm, folderName: name }
-    }
-
-    currentParentId = folder.parentId
-  }
-  return { level: PERMISSION_LEVEL.NONE }
 }
 
 export function hasAtLeastPermissionLevel(

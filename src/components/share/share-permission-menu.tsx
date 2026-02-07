@@ -212,17 +212,27 @@ export function SharePermissionMenu({
       {isFolder && onSetInheritShares && (
         <>
           <div className="h-px bg-border my-0.5" />
-          <div className="flex items-center justify-between px-1 py-1 gap-2">
-            <span className="text-sm truncate flex-1">
-              Copy permissions to new items
-            </span>
-            <Switch
-              size="sm"
-              checked={inheritShares ?? false}
-              disabled={isDisabled}
-              onCheckedChange={onSetInheritShares}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <div className="flex items-center justify-between px-1 py-1 gap-2" />
+              }
+            >
+              <span className="text-sm truncate flex-1">
+                Copy permissions to new items
+              </span>
+              <Switch
+                size="sm"
+                checked={inheritShares ?? false}
+                disabled={isDisabled}
+                onCheckedChange={onSetInheritShares}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[220px]">
+              All items and folders inside this folder will share the same
+              permissions
+            </TooltipContent>
+          </Tooltip>
         </>
       )}
     </div>
