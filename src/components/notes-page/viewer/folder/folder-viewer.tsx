@@ -40,7 +40,7 @@ export function FolderViewer({
 
   return (
     <Wrapper>
-      <ScrollArea className="flex-1 w-full overflow-x-hidden">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="w-full min-w-0">
           <ContentGrid className="p-6 min-h-0">
             {folder.children.map((childItem) => {

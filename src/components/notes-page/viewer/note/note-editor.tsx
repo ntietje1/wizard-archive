@@ -134,8 +134,7 @@ const NoteEditorReady = ({
     <BlockNoteContextMenuProvider editor={editor}>
       <ScrollArea
         ref={scrollAreaRef}
-        className="flex-1 h-full"
-        contentClassName="h-full"
+        className="flex-1 min-h-0"
         onContextMenu={handleWrapperContextMenu}
       >
         <div className="note-editor-fill-height">

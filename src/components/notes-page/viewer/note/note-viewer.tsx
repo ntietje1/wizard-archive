@@ -54,7 +54,7 @@ export const NoteViewerBase = ({
   useDisableAutolink(editor)
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 min-h-0">
       <BlockNoteView
         className="mx-auto w-full max-w-3xl mt-2"
         key={noteWithContent._id + 'viewer'}
