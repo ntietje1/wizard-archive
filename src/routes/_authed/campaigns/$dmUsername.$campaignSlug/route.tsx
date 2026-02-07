@@ -39,7 +39,6 @@ function RouteComponent() {
         <FileSidebarProvider>
           <EditorModeProvider>
             <div className="flex flex-col flex-1 min-h-0">
-              <ViewAsBanner />
               <div className="flex flex-1 min-h-0">
                 <SidebarLayoutProvider>
                   <NavigationSidebar />
@@ -48,6 +47,7 @@ function RouteComponent() {
                   </SidebarLayout>
                 </SidebarLayoutProvider>
               </div>
+              <ViewAsBanner />
             </div>
           </EditorModeProvider>
         </FileSidebarProvider>
