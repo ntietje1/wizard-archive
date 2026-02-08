@@ -3,7 +3,10 @@ import { mutation } from '../_generated/server'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
-import { validateSidebarItemName } from '../sidebarItems/validation'
+import {
+  validateParentChange,
+  validateSidebarItemName,
+} from '../sidebarItems/validation'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   requireEditPermission,
@@ -50,6 +53,12 @@ export const moveNote = mutation({
 
     const note = await enhanceSidebarItem(ctx, rawNote)
     await requireFullAccessPermission(ctx, note)
+
+    await validateParentChange({
+      ctx,
+      item: note,
+      newParentId: args.parentId,
+    })
 
     if (args.parentId) {
       const parentItem = await getSidebarItemById(

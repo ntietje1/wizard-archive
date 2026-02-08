@@ -1,6 +1,8 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { useDraggable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
@@ -33,7 +35,11 @@ function NoteCardSkeleton() {
 function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const { navigateToNote } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
-  const isDisabled = activeDragItem !== null
+  const canDrag = hasAtLeastPermissionLevel(
+    note.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
+  const isDisabled = activeDragItem !== null || !canDrag
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const dragData: SidebarDragData = note

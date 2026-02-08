@@ -1,6 +1,8 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
 import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
@@ -90,6 +92,10 @@ function FolderCardInner({
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { activeDragItem, fileDragHoveredId, isDraggingFiles } =
     useFileSidebar()
+  const canDrag = hasAtLeastPermissionLevel(
+    folder.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
 
   // Include parentId in ancestorIds for circular drop prevention
   const ancestorIds = parentId ? [parentId] : []
@@ -122,6 +128,7 @@ function FolderCardInner({
   } = useDraggable({
     id: `card-${folder._id}`,
     data: dragData,
+    disabled: !canDrag,
   })
 
   const handleCardActivate = () => {

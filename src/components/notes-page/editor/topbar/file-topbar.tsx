@@ -1,4 +1,6 @@
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
@@ -15,6 +17,12 @@ export function FileTopbar() {
   const { canEdit } = useEditorModeState()
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
+  const canRename =
+    item &&
+    hasAtLeastPermissionLevel(
+      item.myPermissionLevel,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
   const handleRename = async (newName: string) => {
     if (!item) return
@@ -53,7 +61,7 @@ export function FileTopbar() {
               campaignId={itemForDm.campaignId}
               parentId={itemForDm.parentId}
               excludeId={itemForDm._id}
-              disabled={isNotSharedWithPlayer ?? false}
+              disabled={!canRename || (isNotSharedWithPlayer ?? false)}
             />
           )}
         </div>

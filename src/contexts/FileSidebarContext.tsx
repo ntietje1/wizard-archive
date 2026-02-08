@@ -17,16 +17,22 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import type {
+  DropRejectionReason,
+  SidebarDragData,
+  SidebarDropData,
+} from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import {
   EMPTY_EDITOR_DROP_TYPE,
   canDropItem,
   executeMove,
+  getDropValidation,
   isMapDropZone,
   isSidebarItem,
   wouldMoveChangePosition,
@@ -40,7 +46,6 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
 import { Ban } from '~/lib/icons'
-import { isFolder } from '~/lib/sidebar-item-utils'
 
 const snapTopLeftToCursor: Modifier = ({
   activatorEvent,
@@ -67,6 +72,19 @@ const snapTopLeftToCursor: Modifier = ({
   return transform
 }
 
+function rejectionReasonMessage(reason: DropRejectionReason): string {
+  switch (reason) {
+    case 'no_permission':
+      return 'No permission to move here'
+    case 'circular':
+      return 'Cannot move folder into itself'
+    case 'self_pin':
+      return 'Cannot pin map to itself'
+    case 'not_folder':
+      return 'Cannot drop here'
+  }
+}
+
 function DragOverlayContent({
   activeDragItem,
 }: {
@@ -87,45 +105,50 @@ function DragOverlayContent({
 
     const draggedItem = active.data.current as SidebarDragData
     const targetData = over.data.current as SidebarDropData
-    const isValidDrop = canDropItem(active, over)
+    const validation = getDropValidation(active, over)
     const wouldChange = wouldMoveChangePosition(draggedItem, targetData)
+    const rejectionReason = !validation.valid ? validation.reason : undefined
 
     // Get target info for display
     if (isMapDropZone(targetData)) {
       return {
         name: targetData.mapName,
-        isValid: isValidDrop,
+        isValid: validation.valid,
         wouldChange,
+        rejectionReason,
         action: 'pin' as const,
       }
     } else if (isSidebarItem(targetData)) {
       return {
         name: targetData.name || defaultItemName(targetData as AnySidebarItem),
-        isValid: isValidDrop,
+        isValid: validation.valid,
         wouldChange,
+        rejectionReason,
         action: 'move' as const,
       }
     } else if (targetData.type === SIDEBAR_ROOT_TYPE) {
       return {
         name: campaign?.name || 'root',
-        isValid: isValidDrop,
+        isValid: validation.valid,
         wouldChange,
+        rejectionReason,
         action: 'move' as const,
       }
     }
 
-    return isValidDrop
+    return validation.valid
       ? null
       : {
           name: null,
           isValid: false,
           wouldChange: false,
+          rejectionReason,
           action: 'move' as const,
         }
   }, [active, over, campaign])
 
   return (
-    <div className="bg-background rounded-sm shadow-lg shadow-foreground/25 px-2 py-1 font-semibold flex flex-col items-left animate-overlay-shrink w-fit max-w-full opacity-70 ">
+    <div className="bg-background rounded-sm shadow-lg shadow-foreground/25 px-2 py-1 font-semibold flex flex-col items-left animate-overlay-shrink w-fit opacity-70">
       <span className="flex items-center gap-1 whitespace-nowrap">
         <DraggedItemIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
         <span className="truncate text-xs text-foreground">
@@ -137,10 +160,10 @@ function DragOverlayContent({
           {dropTargetInfo.action === 'pin' ? 'Pin to' : 'Move to'} &quot;
           {dropTargetInfo.name}&quot;
         </span>
-      ) : dropTargetInfo && !dropTargetInfo.isValid ? (
+      ) : dropTargetInfo?.rejectionReason ? (
         <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
           <Ban className="w-3 h-3" />
-          Cannot drop here
+          {rejectionReasonMessage(dropTargetInfo.rejectionReason)}
         </span>
       ) : null}
     </div>

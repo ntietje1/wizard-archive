@@ -14,7 +14,6 @@ import { useSession } from '~/hooks/useSession'
 import { useMapView } from '~/hooks/useMapView'
 import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
 import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
-import { useEditorMode } from '~/hooks/useEditorMode'
 
 interface ProviderProps {
   viewContext: ViewContext
@@ -37,7 +36,6 @@ export function EditorContextMenuProvider({
   const { activeMap, activePin } = useMapView()
   const shareState = useSidebarItemShares(item?._id)
   const { editor, blockId } = useBlockNoteContextMenu()
-  const { permissionLevel } = useEditorMode()
 
   const sidebarItemWithContent = useQuery(
     convexQuery(
@@ -45,6 +43,8 @@ export function EditorContextMenuProvider({
       item ? { id: item._id, campaignId: item.campaignId } : 'skip',
     ),
   )
+
+  const permissionLevel = item?.myPermissionLevel
 
   const menuContext = useMemo(
     () => ({

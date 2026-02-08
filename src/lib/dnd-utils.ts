@@ -2,6 +2,7 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/baseTypes'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type {
   SidebarItem,
   SidebarItemId,
@@ -63,27 +64,37 @@ export function isSidebarRootDropZone(
   return data.type === SIDEBAR_ROOT_TYPE
 }
 
+export type DropRejectionReason =
+  | 'self_pin'
+  | 'not_folder'
+  | 'circular'
+  | 'no_permission'
+
+export type DropValidationResult =
+  | { valid: true }
+  | { valid: false; reason: DropRejectionReason }
+
 /**
  * Validates if a drag item can be dropped on a target.
+ * Returns a result with a specific rejection reason when invalid.
  */
 export function validateDrop(
   draggedItem: SidebarDragData | null,
   targetData: SidebarDropData | null,
-): boolean {
+): DropValidationResult {
   if (!draggedItem || !targetData) {
-    return false
+    return { valid: false, reason: 'not_folder' }
   }
 
   // Handle map drop zone - allow pinning items to map
   else if (isMapDropZone(targetData)) {
-    // A map cannot be dropped onto itself (pinned to itself)
     if (
       draggedItem.type === SIDEBAR_ITEM_TYPES.gameMaps &&
       draggedItem._id === targetData.mapId
     ) {
-      return false
+      return { valid: false, reason: 'self_pin' }
     }
-    return true
+    return { valid: true }
   }
 
   // Handle root or empty editor drops
@@ -91,28 +102,36 @@ export function validateDrop(
     isSidebarRootDropZone(targetData) ||
     isEmptyEditorDropZone(targetData)
   ) {
-    return true
+    return { valid: true }
   } else if (isSidebarItem(targetData)) {
     // Only folders accept item drops
     if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
-      return false
+      return { valid: false, reason: 'not_folder' }
     }
 
-    // Item cannot be dropped on itself
-    if (targetData._id === draggedItem._id) return false
+    // Item dropped on itself is allowed (no-op, won't change position)
+    if (targetData._id === draggedItem._id) {
+      return { valid: true }
+    }
 
     // Folders cannot be dropped on their own children
     if (
       draggedItem.type === SIDEBAR_ITEM_TYPES.folders &&
       targetData.ancestorIds?.includes(draggedItem._id as Id<'folders'>)
     ) {
-      return false
+      return { valid: false, reason: 'circular' }
     }
 
-    return true
+    // Check permission on target folder (for moving items into it)
+    // Only allow drop if user explicitly has full_access on the target folder
+    if (targetData.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
+      return { valid: false, reason: 'no_permission' }
+    }
+
+    return { valid: true }
   } else {
     console.error('Invalid target data type:', targetData)
-    return false
+    return { valid: false, reason: 'not_folder' }
   }
 }
 
@@ -123,6 +142,20 @@ export function canDropItem(active: Active | null, over: Over | null): boolean {
   const targetData = over.data.current as SidebarDropData | undefined
 
   if (!draggedItem || !targetData) return false
+
+  return validateDrop(draggedItem, targetData).valid
+}
+
+export function getDropValidation(
+  active: Active | null,
+  over: Over | null,
+): DropValidationResult {
+  if (!active || !over) return { valid: false, reason: 'not_folder' }
+
+  const draggedItem = active.data.current as SidebarDragData | undefined
+  const targetData = over.data.current as SidebarDropData | undefined
+
+  if (!draggedItem || !targetData) return { valid: false, reason: 'not_folder' }
 
   return validateDrop(draggedItem, targetData)
 }
@@ -153,6 +186,8 @@ export function wouldMoveChangePosition(
   else if (isSidebarRootDropZone(targetData)) {
     return draggedItem.parentId !== undefined
   } else if (isSidebarItem(targetData)) {
+    // Dropping on itself is a no-op
+    if (draggedItem._id === targetData._id) return false
     // Moving to a folder - check if already in that folder
     return draggedItem.parentId !== targetData._id
   } else {

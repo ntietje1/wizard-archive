@@ -1,5 +1,6 @@
 import { getSidebarItemsByParentAndName } from '../sidebarItems/sidebarItems'
 import { hasFullAccessPermission } from '../shares/itemShares'
+import { enhanceSidebarItem } from './helpers'
 import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
@@ -169,7 +170,8 @@ export interface ValidateParentChangeOptions {
 }
 
 /**
- * Validates that a parent change won't create a circular reference.
+ * Validates that a parent change won't create a circular reference
+ * and that the user has full access to the target folder.
  * Throws an error if validation fails.
  */
 export async function validateParentChange(
@@ -181,8 +183,15 @@ export async function validateParentChange(
   if (!result.valid) {
     throw new Error(result.error)
   }
-  const hasAccess = await hasFullAccessPermission(ctx, item)
-  if (!hasAccess) {
-    throw new Error('You do not have permission to move items here')
+  if (newParentId) {
+    const parentFromDb = await ctx.db.get(newParentId)
+    if (!parentFromDb) {
+      throw new Error('Target folder not found')
+    }
+    const parentItem = await enhanceSidebarItem(ctx, parentFromDb)
+    const hasAccess = await hasFullAccessPermission(ctx, parentItem)
+    if (!hasAccess) {
+      throw new Error('You do not have permission to move items here')
+    }
   }
 }

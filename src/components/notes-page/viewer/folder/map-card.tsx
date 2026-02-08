@@ -4,6 +4,8 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useDraggable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
 import type { SidebarDragData } from '~/lib/dnd-utils'
@@ -35,7 +37,11 @@ function MapCardSkeleton() {
 function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const { navigateToMap } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
-  const isDisabled = activeDragItem !== null
+  const canDrag = hasAtLeastPermissionLevel(
+    map.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
+  const isDisabled = activeDragItem !== null || !canDrag
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const imageUrlQuery = useQuery(

@@ -5,6 +5,8 @@ import { useCallback, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { editorSchema } from 'convex/notes/editorSpecs'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
@@ -29,7 +31,7 @@ import '../../editor/extensions/md-link/md-link.css'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
-  const { viewAsPlayerId, permissionLevel } = useEditorMode()
+  const { viewAsPlayerId } = useEditorMode()
 
   if (!isNote(note)) {
     return (
@@ -41,8 +43,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
 
   const isViewOnly =
     viewAsPlayerId &&
-    permissionLevel !== 'edit' &&
-    permissionLevel !== 'full_access'
+    !hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.EDIT)
 
   if (isViewOnly) {
     return <NoteViewer item={note} />

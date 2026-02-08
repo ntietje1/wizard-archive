@@ -53,6 +53,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {
   shares: Array<SidebarItemShare>
   isBookmarked: boolean
+  myPermissionLevel: PermissionLevel
 }
 
 export type SidebarItemWithContent<T extends SidebarItemType> =

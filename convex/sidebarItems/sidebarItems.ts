@@ -4,7 +4,12 @@ import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder, getSidebarItemAncestors } from '../folders/folders'
 import { getFile } from '../files/files'
-import { hasViewPermission } from '../shares/itemShares'
+import {
+  getSidebarItemPermissionLevel,
+  hasAtLeastPermissionLevel,
+  hasViewPermission,
+} from '../shares/itemShares'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type {
@@ -57,11 +62,21 @@ export const getAllSidebarItems = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permissionResults = await Promise.all(
-    enhanced.map((item) => hasViewPermission(ctx, item, viewAsPlayerId)),
+  const permissionLevels = await Promise.all(
+    enhanced.map((item) =>
+      getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId),
+    ),
   )
-  const permitted = enhanced.filter((_, index) => permissionResults[index])
-  return permitted
+  return enhanced
+    .map((item, index) => ({
+      ...item,
+      myPermissionLevel: viewAsPlayerId
+        ? PERMISSION_LEVEL.FULL_ACCESS
+        : permissionLevels[index],
+    }))
+    .filter((_, index) =>
+      hasAtLeastPermissionLevel(permissionLevels[index], PERMISSION_LEVEL.VIEW),
+    )
 }
 
 export const getAllSidebarItemsWithAncestors = async (
@@ -147,11 +162,21 @@ export const getSidebarItemsByParent = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permissionResults = await Promise.all(
-    enhanced.map((item) => hasViewPermission(ctx, item, viewAsPlayerId)),
+  const permissionLevels = await Promise.all(
+    enhanced.map((item) =>
+      getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId),
+    ),
   )
-  const permitted = enhanced.filter((_, index) => permissionResults[index])
-  return permitted
+  return enhanced
+    .map((item, index) => ({
+      ...item,
+      myPermissionLevel: viewAsPlayerId
+        ? PERMISSION_LEVEL.FULL_ACCESS
+        : permissionLevels[index],
+    }))
+    .filter((_, index) =>
+      hasAtLeastPermissionLevel(permissionLevels[index], PERMISSION_LEVEL.VIEW),
+    )
 }
 
 export const getSidebarItemsByParentAndName = async (
@@ -374,7 +399,9 @@ export const getSidebarItemById = async (
     return null
   }
 
-  return result
+  // Compute current user's own permission level (not viewAs player's)
+  const myPermissionLevel = await getSidebarItemPermissionLevel(ctx, result)
+  return { ...result, myPermissionLevel }
 }
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

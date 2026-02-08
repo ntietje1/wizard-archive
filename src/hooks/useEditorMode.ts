@@ -1,7 +1,5 @@
 import { createContext, useContext } from 'react'
 import { EDITOR_MODE } from 'convex/editors/types'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import type { PermissionLevel } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorMode } from 'convex/editors/types'
 
@@ -9,8 +7,6 @@ export interface EditorModeStateContextType {
   editorMode: EditorMode
   viewAsPlayerId: Id<'campaignMembers'> | undefined
   canEdit: boolean
-  permissionLevel: PermissionLevel
-  isPermissionLoading: boolean
 }
 
 export interface EditorModeActionsContextType {
@@ -33,8 +29,6 @@ export function useEditorMode(): EditorModeContextType {
     editorMode: state?.editorMode ?? EDITOR_MODE.VIEWER,
     viewAsPlayerId: state?.viewAsPlayerId,
     canEdit: state?.canEdit ?? false,
-    permissionLevel: state?.permissionLevel ?? PERMISSION_LEVEL.NONE,
-    isPermissionLoading: state?.isPermissionLoading ?? false,
     setEditorMode: actions?.setEditorMode ?? (() => {}),
     setViewAsPlayerId: actions?.setViewAsPlayerId ?? (() => {}),
   }
@@ -47,8 +41,6 @@ export function useEditorModeState(): EditorModeStateContextType {
       editorMode: EDITOR_MODE.VIEWER,
       viewAsPlayerId: undefined,
       canEdit: false,
-      permissionLevel: PERMISSION_LEVEL.NONE,
-      isPermissionLoading: false,
     }
   )
 }
