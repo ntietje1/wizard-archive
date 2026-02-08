@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
+import { SidebarShareButton } from './sidebar-item-share-button'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -102,6 +103,7 @@ function SidebarItemComponent({
           campaignId={item.campaignId}
           parentId={item.parentId}
           excludeId={item._id}
+          shareButton={<SidebarShareButton item={item} />}
         />
       </EditorContextMenu>
     </DraggableSidebarItem>
