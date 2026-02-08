@@ -35,7 +35,7 @@ export const moveFile = mutation({
     // Validate no circular parent reference
     await validateParentChange({
       ctx,
-      itemId: args.fileId,
+      item: file,
       newParentId: args.parentId,
     })
 

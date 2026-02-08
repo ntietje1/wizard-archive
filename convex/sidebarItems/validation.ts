@@ -1,7 +1,9 @@
 import { getSidebarItemsByParentAndName } from '../sidebarItems/sidebarItems'
+import { hasFullAccessPermission } from '../shares/itemShares'
 import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
+import type { AnySidebarItem } from './types'
 
 export interface ValidationResult {
   valid: boolean
@@ -162,7 +164,7 @@ export async function validateSidebarItemName(
 
 export interface ValidateParentChangeOptions {
   ctx: Ctx
-  itemId: SidebarItemId
+  item: AnySidebarItem
   newParentId: SidebarItemId | undefined
 }
 
@@ -173,58 +175,14 @@ export interface ValidateParentChangeOptions {
 export async function validateParentChange(
   options: ValidateParentChangeOptions,
 ): Promise<void> {
-  const { ctx, itemId, newParentId } = options
+  const { ctx, item, newParentId } = options
 
-  const result = await validateNoCircularParent(ctx, itemId, newParentId)
+  const result = await validateNoCircularParent(ctx, item._id, newParentId)
   if (!result.valid) {
     throw new Error(result.error)
   }
-}
-
-export interface ValidateSidebarItemOptions {
-  ctx: Ctx
-  campaignId: Id<'campaigns'>
-  name?: string
-  parentId?: Id<'folders'>
-  itemId?: SidebarItemId
-  validateName?: boolean
-  validateParent?: boolean
-}
-
-/**
- * Combined validation for sidebar item create/update/move operations.
- * Throws an error if any validation fails.
- */
-export async function validateSidebarItem(
-  options: ValidateSidebarItemOptions,
-): Promise<void> {
-  const {
-    ctx,
-    campaignId,
-    name,
-    parentId,
-    itemId,
-    validateName = true,
-    validateParent = false,
-  } = options
-
-  // Validate name if requested
-  if (validateName && name !== undefined) {
-    await validateSidebarItemName({
-      ctx,
-      campaignId,
-      parentId,
-      name,
-      excludeId: itemId,
-    })
-  }
-
-  // Validate parent change if requested
-  if (validateParent && itemId) {
-    await validateParentChange({
-      ctx,
-      itemId,
-      newParentId: parentId,
-    })
+  const hasAccess = await hasFullAccessPermission(ctx, item)
+  if (!hasAccess) {
+    throw new Error('You do not have permission to move items here')
   }
 }

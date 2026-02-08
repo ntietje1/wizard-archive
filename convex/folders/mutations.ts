@@ -84,7 +84,7 @@ export const moveFolder = mutation({
     // Validate no circular parent reference
     await validateParentChange({
       ctx,
-      itemId: args.folderId,
+      item: folder,
       newParentId: args.parentId,
     })
 

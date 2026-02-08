@@ -161,7 +161,7 @@ export const moveMap = mutation({
     // Validate no circular parent reference
     await validateParentChange({
       ctx,
-      itemId: args.mapId,
+      item: map,
       newParentId: args.parentId,
     })
 
