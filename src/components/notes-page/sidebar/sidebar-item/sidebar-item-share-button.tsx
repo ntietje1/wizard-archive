@@ -1,8 +1,5 @@
 import { useMemo, useState } from 'react'
-import type {
-  AnySidebarItem,
-  AnySidebarItemWithContent,
-} from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { Share2 } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import {
@@ -16,10 +13,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 
 function SharePopoverContent({ item }: { item: AnySidebarItem }) {
   const { campaignWithMembership } = useCampaign()
-  const items = useMemo(
-    () => [item as unknown as AnySidebarItemWithContent],
-    [item],
-  )
+  const items = useMemo(() => [item], [item])
 
   const {
     isPending,
