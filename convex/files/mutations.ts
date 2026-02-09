@@ -138,8 +138,8 @@ export const updateFile = mutation({
     fileId: v.id('files'),
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     fileId: v.id('files'),

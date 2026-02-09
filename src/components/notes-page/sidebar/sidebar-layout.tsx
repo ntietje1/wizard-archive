@@ -145,7 +145,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         onMouseEnter={(e) => {
           e.currentTarget.style.transitionProperty = 'background-color'
           e.currentTarget.style.transitionDuration = '200ms'
-          e.currentTarget.style.transitionTimingFunction = 'circ-in'
+          e.currentTarget.style.transitionTimingFunction =
+            'cubic-bezier(0.55, 0, 1, 0.45)'
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transitionProperty = 'none'

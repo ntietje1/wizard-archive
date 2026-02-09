@@ -35,11 +35,11 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToEditor = useCallback(
-    (
+    async (
       search: EditorSearch | ((prev: EditorSearch) => EditorSearch),
       replace?: boolean,
     ) => {
-      navigate({
+      await navigate({
         to: EDITOR_ROUTE,
         params: routeParams,
         search,
@@ -50,8 +50,8 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToNote = useCallback(
-    (slug: string | null, replace?: boolean) => {
-      navigateToEditor(
+    async (slug: string | null, replace?: boolean) => {
+      await navigateToEditor(
         createContentSearch({
           note: slug || undefined,
         }),
@@ -62,8 +62,8 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToMap = useCallback(
-    (slug: string, replace?: boolean) => {
-      navigateToEditor(
+    async (slug: string, replace?: boolean) => {
+      await navigateToEditor(
         createContentSearch({
           map: slug,
         }),
@@ -74,8 +74,8 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToFolder = useCallback(
-    (slug: string, replace?: boolean) => {
-      navigateToEditor(
+    async (slug: string, replace?: boolean) => {
+      await navigateToEditor(
         createContentSearch({
           folder: slug,
         }),
@@ -86,8 +86,8 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToFile = useCallback(
-    (slug: string, replace?: boolean) => {
-      navigateToEditor(
+    async (slug: string, replace?: boolean) => {
+      await navigateToEditor(
         createContentSearch({
           file: slug,
         }),
@@ -121,22 +121,22 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToItem = useCallback(
-    (item: AnySidebarItem, replace?: boolean) => {
+    async (item: AnySidebarItem, replace?: boolean) => {
       optimisticUpdateSidebarItem(item)
       setLastSelectedItem({ type: item.type, slug: item.slug })
 
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes:
-          navigateToNote(item.slug, replace)
+          await navigateToNote(item.slug, replace)
           break
         case SIDEBAR_ITEM_TYPES.gameMaps:
-          navigateToMap(item.slug, replace)
+          await navigateToMap(item.slug, replace)
           break
         case SIDEBAR_ITEM_TYPES.folders:
-          navigateToFolder(item.slug, replace)
+          await navigateToFolder(item.slug, replace)
           break
         case SIDEBAR_ITEM_TYPES.files:
-          navigateToFile(item.slug, replace)
+          await navigateToFile(item.slug, replace)
           break
         default: {
           console.warn('Unknown item type', item)
@@ -153,8 +153,8 @@ export const useEditorNavigation = () => {
     ],
   )
 
-  const clearEditorContent = useCallback(() => {
-    navigateToEditor(createContentSearch({}))
+  const clearEditorContent = useCallback(async () => {
+    await navigateToEditor(createContentSearch({}))
     setLastSelectedItem(null)
   }, [navigateToEditor, setLastSelectedItem])
 

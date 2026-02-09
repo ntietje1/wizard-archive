@@ -89,8 +89,8 @@ export const updateMap = mutation({
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -133,10 +133,10 @@ export const updateMap = mutation({
       updates.imageStorageId = args.imageStorageId
     }
     if (args.iconName !== undefined) {
-      updates.iconName = args.iconName ?? undefined
+      updates.iconName = args.iconName
     }
     if (args.color !== undefined) {
-      updates.color = args.color ?? undefined
+      updates.color = args.color
     }
     await ctx.db.patch(args.mapId, updates)
     return { mapId: args.mapId, slug: updates.slug || map.slug }

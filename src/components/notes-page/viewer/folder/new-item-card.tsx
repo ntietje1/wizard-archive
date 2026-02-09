@@ -46,8 +46,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
           button: 2,
         }),
       )
+      setIsOpen(true)
     }
-    setIsOpen(true)
   }, [])
 
   const handleClick = useCallback(

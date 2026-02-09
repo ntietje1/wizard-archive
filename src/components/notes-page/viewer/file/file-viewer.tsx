@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
 import { AudioFileViewer } from './audio-file-viewer'
@@ -36,12 +36,19 @@ function getFileType(
 
 function FileUpload({ fileId }: { fileId: Id<'files'> }) {
   const { updateFile } = useFileActions()
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
     uploadOnSelect: true,
     fileTypeValidator: validateFileForUpload,
+    onUploadComplete: async (storageId) => {
+      try {
+        await updateFile.mutateAsync({ fileId, storageId })
+        toast.success('File uploaded')
+      } catch {
+        toast.error('Failed to attach file. Please try again.')
+      }
+    },
   })
 
   const handleFileSelected = useCallback(
@@ -51,29 +58,14 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
     [fileUpload],
   )
 
-  const handleUploadComplete = useCallback(async () => {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      const storageId = await fileUpload.handleSubmit()
-      await updateFile.mutateAsync({
-        fileId,
-        storageId,
-      })
-      toast.success('File uploaded')
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to upload file')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [isSubmitting, fileUpload, updateFile, fileId])
-
-  const hasUploadedFile =
-    fileUpload.file && !fileUpload.isUploading && !fileUpload.uploadError
-
   return (
-    <div className="w-full h-full flex items-center justify-center p-8">
+    <div
+      className="w-full h-full flex items-center justify-center p-8"
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+    >
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <File className="h-10 w-10 mx-auto text-muted-foreground" />
@@ -87,7 +79,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
           <FileUploadSection
             fileUpload={fileUpload}
             handleFileSelect={handleFileSelected}
-            isSubmitting={isSubmitting}
+            isSubmitting={false}
             acceptPattern="*"
             dragDropText="Drag a file here or click to browse"
           />
@@ -96,22 +88,6 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
             <p className="text-sm text-destructive text-center">
               {fileUpload.uploadError}
             </p>
-          )}
-
-          {hasUploadedFile && !isSubmitting && (
-            <button
-              type="button"
-              onClick={handleUploadComplete}
-              className="w-full py-2 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
-            >
-              Attach File
-            </button>
-          )}
-
-          {isSubmitting && (
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Uploading...</p>
-            </div>
           )}
         </div>
       </div>

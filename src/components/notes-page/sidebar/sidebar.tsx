@@ -22,6 +22,9 @@ export function FileSidebar() {
     return <SidebarLoading />
   }
 
+  if (status === 'error') {
+    return <SidebarLoading /> // TODO: have a better error state
+  }
   return (
     <ClientOnly fallback={<SidebarLoading />}>
       <DroppableRoot className="flex-1 flex min-h-0 min-w-0 overflow-hidden">

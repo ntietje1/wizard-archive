@@ -26,7 +26,13 @@ export function NewFolderButton() {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={handleNewFolder}>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleNewFolder}
+      disabled={createFolder.isPending}
+      aria-label="Create new folder"
+    >
       <FolderPlus className="h-4 w-4" />
     </Button>
   )

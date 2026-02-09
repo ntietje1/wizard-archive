@@ -6,7 +6,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/hooks/useCampaign'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
-// TODO: simplify this by taking in the viewAsPlayerId (optional)
 export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id

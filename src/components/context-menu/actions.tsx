@@ -5,10 +5,11 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
+import type { PermissionLevel } from 'convex/shares/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
-import type { PermissionLevel } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
 import type { DownloadableItem, Folder } from 'convex/folders/types'
@@ -60,7 +61,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const campaignId = campaignWithMembership.data?.campaign._id
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
-  const { endCurrentSession, startNewSession } = useSession()
+  const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
@@ -311,18 +312,30 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     startSession: useCallback(() => {
       if (!campaignId) return
-
-      // Start new session
-      startNewSession({})
-      toast.success('Session started')
+      startNewSession.mutate(
+        { campaignId },
+        {
+          onSuccess: () => toast.success('Session started'),
+          onError: (error: any) => {
+            console.error('Failed to start session:', error)
+            toast.error('Failed to start session')
+          },
+        },
+      )
     }, [campaignId, startNewSession]),
 
     endSession: useCallback(() => {
       if (!campaignId) return
-
-      // End current session
-      endCurrentSession.mutate({ campaignId })
-      toast.success('Session ended')
+      endCurrentSession.mutate(
+        { campaignId },
+        {
+          onSuccess: () => toast.success('Session ended'),
+          onError: (error) => {
+            console.error('Failed to end session:', error)
+            toast.error('Failed to end session')
+          },
+        },
+      )
     }, [campaignId, endCurrentSession]),
 
     setGeneralAccessLevel: useCallback(
@@ -337,7 +350,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           })
           if (level === undefined) {
             toast.success('Reset to default access')
-          } else if (level === 'none') {
+          } else if (level === PERMISSION_LEVEL.NONE) {
             toast.success('Access set to none')
           } else {
             toast.success(`Access set to ${level}`)

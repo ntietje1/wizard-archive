@@ -264,6 +264,16 @@ export function MapViewer({
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (transformDebounceRef.current) {
+        clearTimeout(transformDebounceRef.current)
+      }
+    }
+  }, [])
+
   const [pinContextMenu, setPinContextMenu] = useState<{
     pinId: Id<'mapPins'>
     position: PinPosition
@@ -336,7 +346,6 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-
   // Setup drop zone for sidebar items
   const { setNodeRef: setDropRef, isOver: isDropOver } = useDroppable({
     id: MAP_DROP_ZONE_ID,
@@ -868,7 +877,6 @@ export function MapViewer({
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
   const { updateMap } = useMapActions()
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -882,6 +890,15 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
       }
       return { success: true }
     },
+    onUploadComplete: async (storageId) => {
+      try {
+        await updateMap.mutateAsync({ mapId, imageStorageId: storageId })
+        toast.success('Map image uploaded')
+      } catch (error) {
+        console.error('Failed to set map image:', error)
+        toast.error('Failed to set map image')
+      }
+    },
   })
 
   const handleFileSelected = useCallback(
@@ -891,29 +908,14 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     [fileUpload],
   )
 
-  const handleUploadComplete = useCallback(async () => {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      const storageId = await fileUpload.handleSubmit()
-      await updateMap.mutateAsync({
-        mapId,
-        imageStorageId: storageId,
-      })
-      toast.success('Map image uploaded')
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to upload map image')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [isSubmitting, fileUpload, updateMap, mapId])
-
-  const hasUploadedFile =
-    fileUpload.file && !fileUpload.isUploading && !fileUpload.uploadError
-
   return (
-    <div className="w-full h-full flex items-center justify-center p-8">
+    <div
+      className="w-full h-full flex items-center justify-center p-8"
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+    >
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <Image className="h-10 w-10 mx-auto text-muted-foreground" />
@@ -927,7 +929,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
           <FileUploadSection
             fileUpload={fileUpload}
             handleFileSelect={handleFileSelected}
-            isSubmitting={isSubmitting}
+            isSubmitting={false}
             acceptPattern="image/*"
             dragDropText="Drag an image here or click to browse"
           />
@@ -936,22 +938,6 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
             <p className="text-sm text-destructive text-center">
               {fileUpload.uploadError}
             </p>
-          )}
-
-          {hasUploadedFile && !isSubmitting && (
-            <button
-              type="button"
-              onClick={handleUploadComplete}
-              className="w-full py-2 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
-            >
-              Set Map Image
-            </button>
-          )}
-
-          {isSubmitting && (
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Uploading...</p>
-            </div>
           )}
         </div>
       </div>
