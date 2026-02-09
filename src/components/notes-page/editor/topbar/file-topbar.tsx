@@ -11,13 +11,18 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
 import { useEditorModeState } from '~/hooks/useEditorMode'
+import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorModeState()
-  const { item, isLoading } = useCurrentItem()
+  const { item, isLoading, hasRequestedItem } = useCurrentItem()
   const { item: viewAsItem } = useCurrentItem(viewAsPlayerId)
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
+  const { setPendingItemName } = usePendingItemName()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
   const canRename =
     item &&
     hasAtLeastPermissionLevel(
@@ -32,6 +37,7 @@ export function FileTopbar() {
 
   const defaultName = defaultItemName(item)
   const isNotSharedWithPlayer = item && !viewAsItem
+  const isEmptyEditor = !item && !hasRequestedItem
 
   if (isLoading) {
     return <TopbarLoading />
@@ -64,6 +70,17 @@ export function FileTopbar() {
               excludeId={item._id}
               disabled={!canRename || (isNotSharedWithPlayer ?? false)}
               showNotSharedTooltip={!!isNotSharedWithPlayer}
+            />
+          )}
+          {isEmptyEditor && (
+            <EditableBreadcrumb
+              initialName=""
+              defaultName={defaultName}
+              onRename={handleRename}
+              onChange={setPendingItemName}
+              ancestors={[]}
+              onNavigateToItem={navigateToItem}
+              campaignId={campaignId}
             />
           )}
         </div>

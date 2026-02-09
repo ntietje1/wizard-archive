@@ -17,6 +17,7 @@ interface EditableNameProps {
   initialName: string
   defaultName: string
   onRename: (newName: string) => Promise<void>
+  onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
@@ -28,6 +29,7 @@ export function EditableName({
   initialName,
   defaultName,
   onRename,
+  onChange,
   campaignId,
   parentId,
   excludeId,
@@ -70,6 +72,7 @@ export function EditableName({
       if (error) {
         toast.error(error)
         setName(initialName)
+        onChange?.(initialName)
         setIsEditing(false)
         return
       }
@@ -79,10 +82,11 @@ export function EditableName({
       toast.error('Failed to rename. Please try again.')
       console.error(error)
       setName(initialName)
+      onChange?.(initialName)
     } finally {
       setIsSubmitting(false)
     }
-  }, [name, initialName, onRename, checkNameUnique, isSubmitting])
+  }, [name, initialName, onRename, onChange, checkNameUnique, isSubmitting])
 
   const handleFocus = useCallback(() => {
     if (!isEditing && !disabled) {
@@ -92,8 +96,9 @@ export function EditableName({
 
   const handleCancel = useCallback(() => {
     setName(initialName)
+    onChange?.(initialName)
     setIsEditing(false)
-  }, [initialName])
+  }, [initialName, onChange])
 
   const innerContent = (
     <>
@@ -107,7 +112,10 @@ export function EditableName({
         placeholder={defaultName}
         readOnly={!isEditing || disabled}
         disabled={isSubmitting || disabled}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          setName(e.target.value)
+          onChange?.(e.target.value)
+        }}
         onFocus={handleFocus}
         onBlur={handleBlur}
         aria-invalid={hasError}
@@ -162,6 +170,7 @@ interface EditableBreadcrumbProps {
   initialName: string
   defaultName: string
   onRename: (newName: string) => Promise<void>
+  onChange?: (name: string) => void
   ancestors: Array<AnySidebarItem>
   onNavigateToItem: (item: AnySidebarItem) => void
   campaignId?: Id<'campaigns'>
@@ -175,6 +184,7 @@ export function EditableBreadcrumb({
   initialName,
   defaultName,
   onRename,
+  onChange,
   ancestors,
   onNavigateToItem,
   campaignId,
@@ -227,6 +237,7 @@ export function EditableBreadcrumb({
         initialName={initialName}
         defaultName={defaultName}
         onRename={onRename}
+        onChange={onChange}
         campaignId={campaignId}
         parentId={parentId}
         excludeId={excludeId}

@@ -35,8 +35,18 @@ export function ShareButton() {
     canShare,
   } = useSidebarItemsShare(items)
 
-  if (!isDm || !item) {
+  if (!isDm) {
     return null
+  }
+
+  if (!item) {
+    return (
+      <Button variant="outline" size="sm" disabled className="gap-1.5">
+        <Lock className="h-3.5 w-3.5" />
+        <span className="text-xs">Private</span>
+        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+      </Button>
+    )
   }
 
   const dmUserProfile = campaignWithMembership.data?.campaign.dmUserProfile

@@ -19,6 +19,7 @@ import { useFileActions } from '~/hooks/useFileActions'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
+import { usePendingItemName } from '~/hooks/usePendingItemName'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -84,7 +85,9 @@ export function CreateNewDashboard({
   const { navigateToNote, navigateToFolder, navigateToMap, navigateToFile } =
     useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
+  const { pendingItemName } = usePendingItemName()
   const [isNavigating, setIsNavigating] = useState(false)
+  const name = pendingItemName.trim() || undefined
 
   const isAnyCreating =
     createNote.isPending ||
@@ -100,6 +103,7 @@ export function CreateNewDashboard({
       const { noteId, slug } = await createNote.mutateAsync({
         campaignId,
         parentId,
+        name,
       })
       setIsNavigating(true)
       await openParentFolders(noteId)
@@ -117,6 +121,7 @@ export function CreateNewDashboard({
       const { folderId, slug } = await createFolder.mutateAsync({
         campaignId,
         parentId,
+        name,
       })
       setIsNavigating(true)
       await openParentFolders(folderId)
@@ -134,6 +139,7 @@ export function CreateNewDashboard({
       const { mapId, slug } = await createMap.mutateAsync({
         campaignId,
         parentId,
+        name,
       })
       setIsNavigating(true)
       await openParentFolders(mapId)
@@ -151,6 +157,7 @@ export function CreateNewDashboard({
       const { fileId, slug } = await createFile.mutateAsync({
         campaignId,
         parentId,
+        name,
       })
       setIsNavigating(true)
       await openParentFolders(fileId)

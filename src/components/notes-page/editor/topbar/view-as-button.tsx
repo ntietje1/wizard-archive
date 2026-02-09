@@ -35,8 +35,26 @@ export const ViewAsPlayerButton = () => {
 
   const isPending = campaignMembersQuery.isPending
 
-  if (!isDm || !item) {
+  if (!isDm) {
     return null
+  }
+
+  if (!item) {
+    return (
+      <EmptyContextMenu>
+        <TooltipButton tooltip={label} side="bottom">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled
+            aria-label={label}
+            title={label}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </TooltipButton>
+      </EmptyContextMenu>
+    )
   }
 
   return (
