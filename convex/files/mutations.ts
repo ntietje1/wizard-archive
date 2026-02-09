@@ -71,7 +71,7 @@ export const createFile = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
-    storageId: v.id('_storage'),
+    storageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.object({

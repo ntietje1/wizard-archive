@@ -27,7 +27,9 @@ async function collectItemsRecursively(
   for (const child of children) {
     if (child.type === SIDEBAR_ITEM_TYPES.files) {
       const fileName = child.name ?? defaultItemName(child)
-      const downloadUrl = await ctx.storage.getUrl(child.storageId)
+      const downloadUrl = child.storageId
+        ? await ctx.storage.getUrl(child.storageId)
+        : null
       items.push({
         type: SIDEBAR_ITEM_TYPES.files,
         id: child._id,

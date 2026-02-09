@@ -1,6 +1,7 @@
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../folders/folders'
 import {
+  getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
   hasEditPermission,
 } from '../shares/itemShares'
@@ -21,7 +22,7 @@ export const enhanceNote = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const [bookmark, shares] = await Promise.all([
+  const [bookmark, shares, myPermissionLevel] = await Promise.all([
     getBookmark(
       ctx,
       note.campaignId,
@@ -29,12 +30,14 @@ export const enhanceNote = async (
       note._id,
     ),
     getSidebarItemSharesForItem(ctx, note.campaignId, note._id),
+    getSidebarItemPermissionLevel(ctx, note),
   ])
 
   return {
     ...note,
     isBookmarked: !!bookmark,
     shares,
+    myPermissionLevel,
   }
 }
 

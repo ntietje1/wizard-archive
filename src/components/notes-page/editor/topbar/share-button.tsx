@@ -12,11 +12,11 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
 
 export function ShareButton() {
-  const { itemForDm } = useCurrentItem()
+  const { item } = useCurrentItem()
   const { isDm, campaignWithMembership } = useCampaign()
   const [open, setOpen] = useState(false)
 
-  const items = useMemo(() => (itemForDm ? [itemForDm] : []), [itemForDm])
+  const items = useMemo(() => (item ? [item] : []), [item])
 
   const {
     isPending,
@@ -35,7 +35,7 @@ export function ShareButton() {
     canShare,
   } = useSidebarItemsShare(items)
 
-  if (!isDm || !itemForDm) {
+  if (!isDm || !item) {
     return null
   }
 

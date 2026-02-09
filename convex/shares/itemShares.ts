@@ -9,13 +9,16 @@ import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from './types'
 import type { Ctx } from '../common/types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
-import type { AnySidebarItem } from '../sidebarItems/types'
+import type {
+  AnySidebarItem,
+  AnySidebarItemFromDb,
+} from '../sidebarItems/types'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
 import type { PermissionLevel, SidebarItemShare } from './types'
 
 export async function getSidebarItemPermissionLevel(
   ctx: Ctx,
-  item: AnySidebarItem,
+  item: AnySidebarItem | AnySidebarItemFromDb,
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<PermissionLevel> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
@@ -48,14 +51,13 @@ export async function getSidebarItemPermissionLevel(
   }
 
   // Check item's own explicit allPermissionLevel
-  const allPerm = (item as { allPermissionLevel?: PermissionLevel })
-    .allPermissionLevel
+  const allPerm = item.allPermissionLevel
   if (allPerm !== undefined) {
     return allPerm
   }
 
   // Walk up folder hierarchy for inherited permission
-  const parentId = (item as { parentId?: Id<'folders'> }).parentId
+  const parentId = item.parentId
   return await resolveInheritedPermission(
     ctx,
     item.campaignId,

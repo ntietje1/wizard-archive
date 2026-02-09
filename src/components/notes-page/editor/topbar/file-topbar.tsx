@@ -1,6 +1,6 @@
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
@@ -13,8 +13,9 @@ import { cn } from '~/lib/shadcn/utils'
 import { useEditorModeState } from '~/hooks/useEditorMode'
 
 export function FileTopbar() {
-  const { item, itemForDm, isLoading } = useCurrentItem()
-  const { canEdit } = useEditorModeState()
+  const { canEdit, viewAsPlayerId } = useEditorModeState()
+  const { item, isLoading } = useCurrentItem()
+  const { item: viewAsItem } = useCurrentItem(viewAsPlayerId)
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
   const canRename =
@@ -29,8 +30,8 @@ export function FileTopbar() {
     await rename(item, newName)
   }
 
-  const defaultName = defaultItemName(itemForDm)
-  const isNotSharedWithPlayer = itemForDm && !item
+  const defaultName = defaultItemName(item)
+  const isNotSharedWithPlayer = item && !viewAsItem
 
   if (isLoading) {
     return <TopbarLoading />
@@ -51,17 +52,18 @@ export function FileTopbar() {
             isNotSharedWithPlayer && 'opacity-50',
           )}
         >
-          {itemForDm && (
+          {item && (
             <EditableBreadcrumb
-              initialName={itemForDm.name || ''}
-              defaultName={defaultName || 'Untitled'}
+              initialName={item.name || ''}
+              defaultName={defaultName}
               onRename={handleRename}
-              ancestors={itemForDm.ancestors}
+              ancestors={item.ancestors}
               onNavigateToItem={navigateToItem}
-              campaignId={itemForDm.campaignId}
-              parentId={itemForDm.parentId}
-              excludeId={itemForDm._id}
+              campaignId={item.campaignId}
+              parentId={item.parentId}
+              excludeId={item._id}
               disabled={!canRename || (isNotSharedWithPlayer ?? false)}
+              showNotSharedTooltip={!!isNotSharedWithPlayer}
             />
           )}
         </div>

@@ -2,40 +2,55 @@ import { memo, useCallback, useRef, useState } from 'react'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
-import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useFileSidebar'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { Button } from '~/components/shadcn/ui/button'
+import { Plus } from '~/lib/icons'
 
 const SIDEBAR_MIN_WIDTH = 160
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
+  const { clearEditorContent } = useEditorNavigation()
+
   return (
-    <EditorContextMenu
-      viewContext="sidebar"
-      className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden"
-    >
-      <SidebarHeader />
-      <ResizablePanelGroup
-        direction="vertical"
-        className="flex-1"
-        autoSaveId="notes-sidebar-layout-vertical"
+    <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+      <EditorContextMenu
+        viewContext="sidebar"
+        className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden"
       >
-        <ResizablePanel
-          defaultSize={75}
-          minSize={50}
-          className="flex flex-col min-h-0 min-w-0"
+        <SidebarHeader />
+        <ResizablePanelGroup
+          direction="vertical"
+          className="flex-1"
+          autoSaveId="notes-sidebar-layout-vertical"
         >
-          <FileSidebar />
-        </ResizablePanel>
-        <div className="h-px w-full bg-border" />
-        <SessionPanel />
-      </ResizablePanelGroup>
-    </EditorContextMenu>
+          <ResizablePanel
+            defaultSize={75}
+            minSize={50}
+            className="flex flex-col min-h-0 min-w-0"
+          >
+            <FileSidebar />
+          </ResizablePanel>
+          <div className="shrink-0 p-2 border-t border-b">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={clearEditorContent}
+            >
+              <Plus className="h-4 w-4" />
+              New
+            </Button>
+          </div>
+          <SessionPanel />
+        </ResizablePanelGroup>
+      </EditorContextMenu>
+    </div>
   )
 })
 

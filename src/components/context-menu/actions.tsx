@@ -20,6 +20,8 @@ import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useMapActions } from '~/hooks/useMapActions'
+import { useFileActions } from '~/hooks/useFileActions'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
@@ -40,12 +42,20 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigation()
+  const {
+    navigateToItem,
+    navigateToNote,
+    navigateToFolder,
+    navigateToMap,
+    navigateToFile,
+    clearEditorContent,
+  } = useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createNote } = useNoteActions()
   const { createFolder } = useFolderActions()
+  const { createMap } = useMapActions()
+  const { createFile } = useFileActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const convex = useConvex()
@@ -58,12 +68,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     null,
   )
   const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
-  const [createMapDialog, setCreateMapDialog] = useState<{
-    parentId?: Id<'folders'>
-  } | null>(null)
-  const [createFileDialog, setCreateFileDialog] = useState<{
-    parentId?: Id<'folders'>
-  } | null>(null)
   const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
     null,
@@ -125,14 +129,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           return
         }
         const parentId = ctx.item?._id
-        const { noteId } = await createNote.mutateAsync({
+        const { noteId, slug } = await createNote.mutateAsync({
           campaignId,
           parentId,
         })
         await openParentFolders(noteId)
-        setRenamingId(noteId)
+        navigateToNote(slug)
       },
-      [campaignId, createNote, openParentFolders, setRenamingId],
+      [campaignId, createNote, openParentFolders, navigateToNote],
     ),
 
     createFolder: useCallback(
@@ -149,28 +153,58 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           parentId,
         })
         await openParentFolders(result.folderId)
-        setRenamingId(result.folderId)
+        navigateToFolder(result.slug)
       },
-      [campaignId, createFolder, openParentFolders, setRenamingId],
+      [campaignId, createFolder, openParentFolders, navigateToFolder],
     ),
 
-    createMap: (ctx: MenuContext) => {
-      if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
-        return
-      }
-      setCreateMapDialog({ parentId: ctx.item?._id })
-      onDialogOpen?.()
-    },
+    createMap: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId) return
 
-    createFile: (ctx: MenuContext) => {
-      if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
-        return
-      }
-      setCreateFileDialog({ parentId: ctx.item?._id })
-      onDialogOpen?.()
-    },
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
+        const parentId = ctx.item?._id
+        try {
+          const { mapId, slug } = await createMap.mutateAsync({
+            campaignId,
+            parentId,
+          })
+          await openParentFolders(mapId)
+          navigateToMap(slug)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create map')
+        }
+      },
+      [campaignId, createMap, openParentFolders, navigateToMap],
+    ),
+
+    createFile: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId) return
+
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
+        const parentId = ctx.item?._id
+        try {
+          const { fileId, slug } = await createFile.mutateAsync({
+            campaignId,
+            parentId,
+          })
+          await openParentFolders(fileId)
+          navigateToFile(slug)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create file')
+        }
+      },
+      [campaignId, createFile, openParentFolders, navigateToFile],
+    ),
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
@@ -626,26 +660,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           />
         )}
 
-        {createMapDialog && campaignId && (
-          <MapDialog
-            key={`create-map-${createMapDialog.parentId || 'root'}`}
-            isOpen={true}
-            onClose={closeDialog(setCreateMapDialog)}
-            campaignId={campaignId}
-            parentId={createMapDialog.parentId}
-          />
-        )}
-
-        {createFileDialog && campaignId && (
-          <FileDialog
-            key={`create-file-${createFileDialog.parentId || 'root'}`}
-            isOpen={true}
-            onClose={closeDialog(setCreateFileDialog)}
-            campaignId={campaignId}
-            parentId={createFileDialog.parentId}
-          />
-        )}
-
         {editMapDialog && campaignId && (
           <MapDialog
             key={`edit-map-${editMapDialog}`}
@@ -681,14 +695,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       deleteNoteDialog,
       deleteFolderDialog,
       deleteMapDialog,
-      createMapDialog,
       editMapDialog,
       editFileDialog,
       editSidebarItemDialog,
       campaignId,
       currentItem,
       clearEditorContent,
-      createFileDialog,
       deleteFileDialog,
       closeDialog,
     ],

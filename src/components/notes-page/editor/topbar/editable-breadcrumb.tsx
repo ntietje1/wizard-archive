@@ -7,6 +7,11 @@ import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/components/shadcn/ui/tooltip'
 
 interface EditableNameProps {
   initialName: string
@@ -16,6 +21,7 @@ interface EditableNameProps {
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
   disabled?: boolean
+  showNotSharedTooltip?: boolean
 }
 
 export function EditableName({
@@ -26,6 +32,7 @@ export function EditableName({
   parentId,
   excludeId,
   disabled,
+  showNotSharedTooltip,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
@@ -88,8 +95,8 @@ export function EditableName({
     setIsEditing(false)
   }, [initialName])
 
-  return (
-    <div className="truncate min-w-0 flex-shrink-0 relative">
+  const innerContent = (
+    <>
       <span className="invisible px-1 block whitespace-pre">
         {name || defaultName}
       </span>
@@ -128,7 +135,26 @@ export function EditableName({
         errorMessage={validationError}
         anchorRef={inputRef}
       />
-    </div>
+    </>
+  )
+
+  if (!showNotSharedTooltip) {
+    return (
+      <div className="truncate min-w-0 flex-shrink-0 relative">
+        {innerContent}
+      </div>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<div className="truncate min-w-0 flex-shrink-0 relative" />}>
+        {innerContent}
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        This item is not visible to the current player
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -142,6 +168,7 @@ interface EditableBreadcrumbProps {
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
   disabled?: boolean
+  showNotSharedTooltip?: boolean
 }
 
 export function EditableBreadcrumb({
@@ -154,6 +181,7 @@ export function EditableBreadcrumb({
   parentId,
   excludeId,
   disabled,
+  showNotSharedTooltip,
 }: EditableBreadcrumbProps) {
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
@@ -203,6 +231,7 @@ export function EditableBreadcrumb({
         parentId={parentId}
         excludeId={excludeId}
         disabled={disabled}
+        showNotSharedTooltip={showNotSharedTooltip}
       />
     </div>
   )

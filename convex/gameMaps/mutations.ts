@@ -22,7 +22,7 @@ export const createMap = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
-    imageStorageId: v.id('_storage'),
+    imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.object({

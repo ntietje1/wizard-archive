@@ -24,7 +24,7 @@ const label = 'View as player'
 export const ViewAsPlayerButton = () => {
   const campaignMembersQuery = useCampaignMembers()
   const { isDm } = useCampaign()
-  const { itemForDm } = useCurrentItem()
+  const { item } = useCurrentItem()
   const playerMembers =
     campaignMembersQuery.data?.filter(
       (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
@@ -35,7 +35,7 @@ export const ViewAsPlayerButton = () => {
 
   const isPending = campaignMembersQuery.isPending
 
-  if (!isDm || !itemForDm) {
+  if (!isDm || !item) {
     return null
   }
 
