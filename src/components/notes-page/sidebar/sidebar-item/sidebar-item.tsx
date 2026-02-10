@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
+import { useLiveQuery } from '@tanstack/react-db'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
@@ -21,18 +22,14 @@ import {
 } from '~/components/shadcn/ui/collapsible'
 import { sortItemsByOptions } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
+import { useSidebarItemsCollection } from '~/contexts/SidebarItemsCollectionContext'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   ancestorIds?: Array<Id<'folders'>>
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
 }
 
-function SidebarItemComponent({
-  item,
-  ancestorIds = [],
-  parentItemsMap,
-}: SidebarItemProps) {
+function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
@@ -40,6 +37,7 @@ function SidebarItemComponent({
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
   const { sortOptions } = useSortOptions()
+  const collection = useSidebarItemsCollection()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
@@ -48,15 +46,21 @@ function SidebarItemComponent({
   const isSelected = currentItem?._id === item._id
   const isDraggingActive = !!activeDragItem
 
-  // Get children from the map
-  const children = useMemo(() => {
-    if (!isFolder) return []
-    return parentItemsMap.get(item._id) ?? []
-  }, [parentItemsMap, item._id, isFolder])
-  const sortedChildren = useMemo(
-    () => sortItemsByOptions(sortOptions, children) ?? [],
-    [sortOptions, children],
+  // Get children from live query using fn.where for closure capture of folderId
+  const children = useLiveQuery(
+    (q) => {
+      if (!isFolder || !collection) return undefined
+      const folderId = item._id
+      return q
+        .from({ i: collection })
+        .fn.where((row) => row.i.parentId === folderId)
+    },
+    [collection, item._id, isFolder],
   )
+
+  const sortedChildren = useMemo(() => {
+    return sortItemsByOptions(sortOptions, children?.data) ?? []
+  }, [sortOptions, children?.data])
 
   // Build ancestor IDs for children
   const currentAncestors = useMemo(() => {
@@ -127,7 +131,6 @@ function SidebarItemComponent({
                 key={childItem._id}
                 item={childItem}
                 ancestorIds={currentAncestors}
-                parentItemsMap={parentItemsMap}
               />
             ))}
           </CollapsibleContent>

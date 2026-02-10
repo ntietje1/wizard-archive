@@ -65,6 +65,7 @@ import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_schema_baseFields from "../sidebarItems/schema/baseFields.js";
 import type * as sidebarItems_schema_baseValidators from "../sidebarItems/schema/baseValidators.js";
 import type * as sidebarItems_schema_contentSchema from "../sidebarItems/schema/contentSchema.js";
+import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValidation.js";
 import type * as sidebarItems_sidebarItems from "../sidebarItems/sidebarItems.js";
 import type * as sidebarItems_types from "../sidebarItems/types.js";
 import type * as sidebarItems_validation from "../sidebarItems/validation.js";
@@ -149,6 +150,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/schema/baseFields": typeof sidebarItems_schema_baseFields;
   "sidebarItems/schema/baseValidators": typeof sidebarItems_schema_baseValidators;
   "sidebarItems/schema/contentSchema": typeof sidebarItems_schema_contentSchema;
+  "sidebarItems/sharedValidation": typeof sidebarItems_sharedValidation;
   "sidebarItems/sidebarItems": typeof sidebarItems_sidebarItems;
   "sidebarItems/types": typeof sidebarItems_types;
   "sidebarItems/validation": typeof sidebarItems_validation;

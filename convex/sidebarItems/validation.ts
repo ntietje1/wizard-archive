@@ -1,56 +1,21 @@
-import { getSidebarItemsByParentAndName } from '../sidebarItems/sidebarItems'
+import { getSidebarItemsByParent } from '../sidebarItems/sidebarItems'
 import { hasFullAccessPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from './helpers'
+import {
+  validateWikiLinkCompatibleName,
+  checkNameConflict,
+} from './sharedValidation'
 import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
 import type { AnySidebarItem } from './types'
 
-export interface ValidationResult {
-  valid: boolean
-  error?: string
-}
+export type { ValidationResult } from './sharedValidation'
+export { validateWikiLinkCompatibleName } from './sharedValidation'
 
 /**
- * Validates that a name is compatible with wiki-link syntax.
- * Names cannot contain [ ] # | as these are wiki-link delimiters/modifiers.
- */
-export function validateWikiLinkCompatibleName(
-  name: string | undefined,
-): ValidationResult {
-  if (!name) return { valid: true }
-
-  if (name.includes('[')) {
-    return {
-      valid: false,
-      error: 'Name cannot contain "[" as it conflicts with wiki-link syntax',
-    }
-  }
-  if (name.includes(']')) {
-    return {
-      valid: false,
-      error: 'Name cannot contain "]" as it conflicts with wiki-link syntax',
-    }
-  }
-  if (name.includes('#')) {
-    return {
-      valid: false,
-      error:
-        'Name cannot contain "#" as it conflicts with wiki-link heading syntax',
-    }
-  }
-  if (name.includes('|')) {
-    return {
-      valid: false,
-      error:
-        'Name cannot contain "|" as it conflicts with wiki-link display name syntax',
-    }
-  }
-  return { valid: true }
-}
-
-/**
- * Checks if a name is unique under a parent.
+ * Checks if a name is unique under a parent (case-insensitive).
+ * Fetches all siblings and delegates to shared checkNameConflict.
  */
 export async function checkUniqueNameUnderParent(
   ctx: Ctx,
@@ -58,43 +23,28 @@ export async function checkUniqueNameUnderParent(
   parentId: Id<'folders'> | undefined,
   name: string | undefined,
   excludeId?: SidebarItemId,
-): Promise<ValidationResult> {
+): Promise<{ valid: boolean; error?: string }> {
   if (!name || name.trim() === '') {
     return { valid: true }
   }
 
-  const items = await getSidebarItemsByParentAndName(
-    ctx,
-    campaignId,
-    parentId,
-    name,
-  )
-
-  const hasConflict = items.some((item) => item._id !== excludeId)
-
-  if (hasConflict) {
-    return {
-      valid: false,
-      error: 'An item with this name already exists here',
-    }
-  }
-  return { valid: true }
+  const siblings = await getSidebarItemsByParent(ctx, campaignId, parentId)
+  return checkNameConflict(name, siblings, excludeId)
 }
 
 /**
  * Walks up the parent chain to check if setting newParentId would create a cycle.
+ * Server version uses async ctx.db.get lookups.
  */
 export async function validateNoCircularParent(
   ctx: Ctx,
   itemId: SidebarItemId,
   newParentId: SidebarItemId | undefined,
-): Promise<ValidationResult> {
-  // Moving to root is always valid
+): Promise<{ valid: boolean; error?: string }> {
   if (!newParentId) {
     return { valid: true }
   }
 
-  // Can't set parent to self
   if (newParentId === itemId) {
     return {
       valid: false,
@@ -102,13 +52,11 @@ export async function validateNoCircularParent(
     }
   }
 
-  // Walk up the parent chain from newParentId
   const seen = new Set<string>()
   let currentId: SidebarItemId | undefined = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
-      // Cycle in existing data (shouldn't happen)
       break
     }
     seen.add(currentId)
@@ -144,13 +92,11 @@ export async function validateSidebarItemName(
 ): Promise<void> {
   const { ctx, campaignId, parentId, name, excludeId } = options
 
-  // Check wiki link compatibility
   const wikiLinkResult = validateWikiLinkCompatibleName(name)
   if (!wikiLinkResult.valid) {
     throw new Error(wikiLinkResult.error)
   }
 
-  // Check name uniqueness
   const uniqueResult = await checkUniqueNameUnderParent(
     ctx,
     campaignId,

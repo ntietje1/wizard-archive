@@ -1,21 +1,14 @@
 import { useCallback } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useFolderActions } from './useFolderActions'
-import { useMapActions } from './useMapActions'
-import { useNoteActions } from './useNoteActions'
-import { useFileActions } from './useFileActions'
 import { useNavigateOnSlugChange } from './useNavigateOnSlugChange'
+import { useSidebarItemMutations } from './useSidebarItemMutations'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function useRenameItem() {
-  const { updateNote } = useNoteActions()
-  const { updateMap } = useMapActions()
-  const { updateFolder } = useFolderActions()
-  const { updateFile } = useFileActions()
+  const { rename: collectionRename } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
@@ -26,80 +19,41 @@ export function useRenameItem() {
       if (!item || !campaignId) return
 
       const previousSlug = item.slug
-      let newSlug: string = previousSlug
 
       try {
-        let response
-        switch (item.type) {
-          case SIDEBAR_ITEM_TYPES.notes:
-            response = await updateNote.mutateAsync({
-              noteId: item._id,
-              name: newName,
-            })
-            break
-          case SIDEBAR_ITEM_TYPES.gameMaps:
-            response = await updateMap.mutateAsync({
-              mapId: item._id,
-              name: newName,
-            })
-            break
-          case SIDEBAR_ITEM_TYPES.folders:
-            response = await updateFolder.mutateAsync({
-              folderId: item._id,
-              name: newName,
-            })
-            break
-          case SIDEBAR_ITEM_TYPES.files:
-            response = await updateFile.mutateAsync({
-              fileId: item._id,
-              name: newName,
-            })
-            break
-          default:
-            break
-        }
+        // Optimistic update via collection (validates before applying)
+        const tx = collectionRename(item, newName)
+        if (!tx) return
 
-        if (response && response.slug) {
-          newSlug = response.slug
-        }
+        // Wait for server confirmation to get the new slug
+        await tx.isPersisted.promise
 
-        // Update the cache for getSidebarItemBySlug with the new slug
-        const updatedItem: AnySidebarItem = {
-          ...item,
-          slug: newSlug,
-          name: newName,
-        }
-
-        queryClient.setQueryData(
+        // After server confirms, refetch the slug-based query to get the actual slug
+        const updatedBySlugData = queryClient.getQueryData(
           convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
             campaignId,
             type: item.type,
-            slug: newSlug,
+            slug: previousSlug,
           }).queryKey,
-          updatedItem,
-        )
+        ) as AnySidebarItem | null | undefined
 
-        navigateIfSlugChanged({
-          itemId: item._id,
-          itemType: item.type,
-          previousSlug,
-          newSlug,
-          updatedItem,
-        })
+        // The collection refetch will bring in the server-confirmed data
+        // but we also need to handle URL navigation if the slug changed
+        if (updatedBySlugData && updatedBySlugData.slug !== previousSlug) {
+          navigateIfSlugChanged({
+            itemId: item._id,
+            itemType: item.type,
+            previousSlug,
+            newSlug: updatedBySlugData.slug,
+            updatedItem: updatedBySlugData,
+          })
+        }
       } catch (error) {
         console.error(error)
         throw error
       }
     },
-    [
-      campaignId,
-      updateNote,
-      updateMap,
-      updateFolder,
-      updateFile,
-      navigateIfSlugChanged,
-      queryClient,
-    ],
+    [campaignId, collectionRename, navigateIfSlugChanged, queryClient],
   )
 
   return {

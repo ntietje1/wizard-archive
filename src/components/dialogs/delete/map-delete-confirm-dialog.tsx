@@ -1,10 +1,8 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { GameMap } from 'convex/gameMaps/types'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 
 interface MapDeleteConfirmDialogProps {
   map: GameMap
@@ -19,25 +17,21 @@ export function MapDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: MapDeleteConfirmDialogProps) {
-  const deleteMapMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.deleteMap),
-  })
+  const { deleteItem } = useSidebarItemMutations()
 
   const handleConfirm = useCallback(async () => {
-    await deleteMapMutation
-      .mutateAsync({ mapId: map._id })
-      .then(() => {
-        toast.success('Map deleted')
-      })
-      .catch((error: Error) => {
-        console.error(error)
-        toast.error('Failed to delete map')
-      })
-      .finally(() => {
-        onConfirm?.()
-        onClose()
-      })
-  }, [deleteMapMutation, map._id, onConfirm, onClose])
+    try {
+      const tx = deleteItem(map)
+      if (tx) await tx.isPersisted.promise
+      toast.success('Map deleted')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to delete map')
+    } finally {
+      onConfirm?.()
+      onClose()
+    }
+  }, [deleteItem, map, onConfirm, onClose])
 
   return (
     <ConfirmationDialog
@@ -48,7 +42,6 @@ export function MapDeleteConfirmDialog({
       description={`Are you sure you want to delete "${map.name || 'this map'}"? This action cannot be undone.`}
       confirmLabel="Delete Map"
       confirmVariant="destructive"
-      isLoading={deleteMapMutation.isPending}
     />
   )
 }

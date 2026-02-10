@@ -8,9 +8,6 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { getEventCoordinates } from '@dnd-kit/utilities'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import {
@@ -27,17 +24,14 @@ import type {
   SidebarDropData,
 } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
-import { useNoteActions } from '~/hooks/useNoteActions'
 import {
   EMPTY_EDITOR_DROP_TYPE,
   canDropItem,
-  executeMove,
   getDropValidation,
   isMapDropZone,
   isSidebarItem,
   wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
-import { useFolderActions } from '~/hooks/useFolderActions'
 import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
 import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
@@ -45,6 +39,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
@@ -195,19 +190,10 @@ export function FileSidebarProvider({
     false,
   )
 
-  const { moveNote } = useNoteActions()
-  const { moveFolder } = useFolderActions()
   const { navigateToItem } = useEditorNavigation()
-  const { validateNameConflictSync, canMoveToParent } =
+  const { canMoveToParent, validateNameConflictSync } =
     useSidebarItemValidation()
-
-  const moveMap = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.moveMap),
-  })
-
-  const moveFile = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.moveFile),
-  })
+  const { move } = useSidebarItemMutations()
 
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
@@ -342,30 +328,22 @@ export function FileSidebarProvider({
         return
       }
 
-      await executeMove(
-        draggedItem.type,
-        draggedItem._id,
-        targetId,
-        {
-          moveNote: (params) => moveNote.mutateAsync(params),
-          moveMap: (params) => moveMap.mutateAsync(params),
-          moveFolder: (params) => moveFolder.mutateAsync(params),
-          moveFile: (params) => moveFile.mutateAsync(params),
-        },
-        {
-          openFolder: (id) => openFolder(id),
-        },
-      ).catch((error: Error) => {
+      try {
+        // Optimistic move via collection
+        move(draggedItem as AnySidebarItem, targetId)
+
+        // Open the target folder so the moved item is visible
+        if (targetId) {
+          openFolder(targetId)
+        }
+      } catch (error) {
         console.error('Failed to move item:', error)
         toast.error('Failed to move item')
-      })
+      }
     },
     [
-      moveNote,
-      moveMap,
-      moveFolder,
+      move,
       openFolder,
-      moveFile,
       navigateToItem,
       canMoveToParent,
       validateNameConflictSync,

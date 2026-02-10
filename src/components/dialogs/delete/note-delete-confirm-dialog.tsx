@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Note } from 'convex/notes/types'
-import { useNoteActions } from '~/hooks/useNoteActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 
 interface NoteDeleteConfirmDialogProps {
   note: Note
@@ -16,22 +16,20 @@ export function NoteDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: NoteDeleteConfirmDialogProps) {
-  const { deleteNote } = useNoteActions()
+  const { deleteItem } = useSidebarItemMutations()
   const handleConfirm = useCallback(async () => {
-    await deleteNote
-      .mutateAsync({ noteId: note._id })
-      .then(() => {
-        toast.success('Note deleted')
-      })
-      .catch((error: Error) => {
-        console.error(error)
-        toast.error('Failed to delete note')
-      })
-      .finally(() => {
-        onConfirm?.()
-        onClose()
-      })
-  }, [deleteNote, note._id, onConfirm, onClose])
+    try {
+      const tx = deleteItem(note)
+      if (tx) await tx.isPersisted.promise
+      toast.success('Note deleted')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to delete note')
+    } finally {
+      onConfirm?.()
+      onClose()
+    }
+  }, [deleteItem, note, onConfirm, onClose])
 
   return (
     <ConfirmationDialog

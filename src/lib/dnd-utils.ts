@@ -5,10 +5,8 @@ import {
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type {
   SidebarItem,
-  SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/baseTypes'
-import {} from 'convex/sidebarItems/sidebarItems'
 import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 
@@ -215,66 +213,5 @@ export function canDropFilesOnTarget(
   } else {
     console.error('Invalid target data type:', targetData)
     return false
-  }
-}
-
-interface MoveMutations {
-  moveNote: (params: {
-    noteId: Id<'notes'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveMap: (params: {
-    mapId: Id<'gameMaps'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveFolder: (params: {
-    folderId: Id<'folders'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveFile: (params: {
-    fileId: Id<'files'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-}
-
-export async function executeMove(
-  itemType: SidebarItemType,
-  itemId: SidebarItemId,
-  targetId: Id<'folders'> | undefined,
-  mutations: MoveMutations,
-  callbacks?: {
-    openFolder?: (folderId: Id<'folders'>) => void
-  },
-): Promise<void> {
-  switch (itemType) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      await mutations.moveNote({
-        noteId: itemId as Id<'notes'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      await mutations.moveMap({
-        mapId: itemId as Id<'gameMaps'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.folders:
-      await mutations.moveFolder({
-        folderId: itemId as Id<'folders'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      await mutations.moveFile({
-        fileId: itemId as Id<'files'>,
-        parentId: targetId,
-      })
-      break
-    default:
-      throw new Error(`Invalid item type: ${itemType}`)
-  }
-  if (targetId && callbacks?.openFolder) {
-    callbacks.openFolder(targetId)
   }
 }

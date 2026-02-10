@@ -11,13 +11,8 @@ export function useFileActions() {
     mutationFn: useConvexMutation(api.files.mutations.updateFile),
   })
 
-  const deleteFile = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.deleteFile),
-  })
-
   return {
     createFile,
     updateFile,
-    deleteFile,
   }
 }

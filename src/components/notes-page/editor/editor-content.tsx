@@ -24,7 +24,7 @@ export function EditorContent() {
   const { viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } =
     useCurrentItem(viewAsPlayerId)
-  useItemRedirect(item)
+  // useItemRedirect(item)
 
   if (isLoading) {
     return (

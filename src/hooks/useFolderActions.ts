@@ -7,22 +7,7 @@ export const useFolderActions = () => {
     mutationFn: useConvexMutation(api.folders.mutations.createFolder),
   })
 
-  const updateFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.updateFolder),
-  })
-
-  const deleteFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.deleteFolder),
-  })
-
-  const moveFolder = useMutation({
-    mutationFn: useConvexMutation(api.folders.mutations.moveFolder),
-  })
-
   return {
     createFolder,
-    updateFolder,
-    deleteFolder,
-    moveFolder,
   }
 }

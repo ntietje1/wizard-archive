@@ -1,25 +1,36 @@
 import { useMemo } from 'react'
+import { useLiveQuery } from '@tanstack/react-db'
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import type { Id } from 'convex/_generated/dataModel'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { sortItemsByOptions, useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarItemsCollection } from '~/contexts/SidebarItemsCollectionContext'
 
 const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 export function BookmarkedItemsList() {
-  const allItems = useAllSidebarItems()
+  const collection = useSidebarItemsCollection()
   const { sortOptions } = useSortOptions()
   const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
 
-  const bookmarkedItems = useMemo(() => {
-    const filtered = allItems.data?.filter((item) => item.isBookmarked) ?? []
-    return sortItemsByOptions(sortOptions, filtered)
-  }, [allItems.data, sortOptions])
+  const rawBookmarked = useLiveQuery(
+    (q) => {
+      if (!collection) return undefined
+      return q
+        .from({ item: collection })
+        .fn.where((row) => row.item.isBookmarked === true)
+    },
+    [collection],
+  )
 
-  if (allItems.status === 'pending') {
+  const bookmarkedItems = useMemo(() => {
+    return sortItemsByOptions(sortOptions, rawBookmarked?.data) ?? []
+  }, [rawBookmarked?.data, sortOptions])
+
+  if (!collection) {
     return <BookmarkedItemsLoading />
   }
 

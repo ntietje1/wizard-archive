@@ -5,6 +5,7 @@ import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
 import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
+import { SidebarItemsCollectionProvider } from '~/contexts/SidebarItemsCollectionContext'
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
 import { EditorModeProvider } from '~/contexts/EditorModeContext'
@@ -36,21 +37,23 @@ function RouteComponent() {
   return (
     <CampaignProvider>
       <CampaignNotFoundWrapper>
-        <FileSidebarProvider>
-          <EditorModeProvider>
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex flex-1 min-h-0">
-                <SidebarLayoutProvider>
-                  <NavigationSidebar />
-                  <SidebarLayout>
-                    <Outlet />
-                  </SidebarLayout>
-                </SidebarLayoutProvider>
+        <EditorModeProvider>
+          <SidebarItemsCollectionProvider>
+            <FileSidebarProvider>
+              <div className="flex flex-col flex-1 min-h-0">
+                <div className="flex flex-1 min-h-0">
+                  <SidebarLayoutProvider>
+                    <NavigationSidebar />
+                    <SidebarLayout>
+                      <Outlet />
+                    </SidebarLayout>
+                  </SidebarLayoutProvider>
+                </div>
+                <ViewAsBanner />
               </div>
-              <ViewAsBanner />
-            </div>
-          </EditorModeProvider>
-        </FileSidebarProvider>
+            </FileSidebarProvider>
+          </SidebarItemsCollectionProvider>
+        </EditorModeProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>
   )
