@@ -38,7 +38,10 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
 
   if (sidebarItemQuery.data) {
     lastItemRef.current = sidebarItemQuery.data
-  } else if (lastItemRef.current?.slug !== typeAndSlug?.slug) {
+  } else if (
+    lastItemRef.current?.slug !== typeAndSlug?.slug ||
+    lastItemRef.current?.type !== typeAndSlug?.type
+  ) {
     lastItemRef.current = null
   }
 

@@ -3,10 +3,10 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
 import type {
-  AnySidebarItem,
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 interface NavigateOnSlugChangeParams {
   itemId: SidebarItemId
