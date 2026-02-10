@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useCampaign } from '~/hooks/useCampaign'
 

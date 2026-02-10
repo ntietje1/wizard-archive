@@ -106,8 +106,8 @@ export function CreateNewDashboard({
         name,
       })
       setIsNavigating(true)
-      await openParentFolders(noteId)
       await navigateToNote(slug)
+      await openParentFolders(noteId)
       setIsNavigating(false)
     } catch (error) {
       console.error(error)
@@ -124,8 +124,8 @@ export function CreateNewDashboard({
         name,
       })
       setIsNavigating(true)
-      await openParentFolders(folderId)
       await navigateToFolder(slug)
+      await openParentFolders(folderId)
       setIsNavigating(false)
     } catch (error) {
       console.error(error)
@@ -142,8 +142,8 @@ export function CreateNewDashboard({
         name,
       })
       setIsNavigating(true)
-      await openParentFolders(mapId)
       await navigateToMap(slug)
+      await openParentFolders(mapId)
       setIsNavigating(false)
     } catch (error) {
       console.error(error)
@@ -160,8 +160,8 @@ export function CreateNewDashboard({
         name,
       })
       setIsNavigating(true)
-      await openParentFolders(fileId)
       await navigateToFile(slug)
+      await openParentFolders(fileId)
       setIsNavigating(false)
     } catch (error) {
       console.error(error)
