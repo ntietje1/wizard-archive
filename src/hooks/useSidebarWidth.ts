@@ -11,8 +11,6 @@ export const useEditorSettings = () => {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
 
-  // Fetch editor data (prefetched on server, so this should be instant)
-  // staleTime prevents immediate refetch after hydration, giving auth time to initialize.
   const editorQuery = useQuery({
     ...convexQuery(
       api.editors.queries.getCurrentEditor,

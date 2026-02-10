@@ -63,7 +63,6 @@ export const useFileUpload = () => {
                   storageId,
                   originalFileName: file.name,
                 })
-                setUploadProgress({ loaded: 0, total: 0, percentage: 0 })
                 resolve(storageId)
               } catch (error) {
                 console.error('Failed to track upload', error)

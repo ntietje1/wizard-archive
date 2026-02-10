@@ -44,12 +44,15 @@ export function EditorContextMenuProvider({
     ),
   )
 
+  const permissionLevel = item?.myPermissionLevel
+
   const menuContext = useMemo(
     () => ({
       item: sidebarItemWithContent.data ?? undefined,
       viewContext,
       currentUserId: campaignWithMembership.data?.member.userId,
       memberRole: campaignWithMembership.data?.member.role,
+      permissionLevel,
       activeMap: activeMap ?? undefined,
       activePin: activePin ?? undefined,
       hasActiveSession: !!currentSession.data,
@@ -62,6 +65,7 @@ export function EditorContextMenuProvider({
       viewContext,
       campaignWithMembership.data?.member.userId,
       campaignWithMembership.data?.member.role,
+      permissionLevel,
       activeMap,
       activePin,
       currentSession.data,

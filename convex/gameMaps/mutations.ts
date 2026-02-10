@@ -11,7 +11,10 @@ import { findUniqueGameMapSlug, findUniqueSlug } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -19,7 +22,7 @@ export const createMap = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
-    imageStorageId: v.id('_storage'),
+    imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.object({
@@ -76,6 +79,7 @@ export const createMap = mutation({
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.gameMaps,
     })
+
     return { mapId, slug: uniqueSlug }
   },
 })
@@ -85,8 +89,8 @@ export const updateMap = mutation({
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -102,7 +106,7 @@ export const updateMap = mutation({
     }
 
     const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireFullAccessPermission(ctx, map)
 
     const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
@@ -129,10 +133,10 @@ export const updateMap = mutation({
       updates.imageStorageId = args.imageStorageId
     }
     if (args.iconName !== undefined) {
-      updates.iconName = args.iconName ?? undefined
+      updates.iconName = args.iconName
     }
     if (args.color !== undefined) {
-      updates.color = args.color ?? undefined
+      updates.color = args.color
     }
     await ctx.db.patch(args.mapId, updates)
     return { mapId: args.mapId, slug: updates.slug || map.slug }
@@ -152,12 +156,12 @@ export const moveMap = mutation({
     }
 
     const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireFullAccessPermission(ctx, map)
 
     // Validate no circular parent reference
     await validateParentChange({
       ctx,
-      itemId: args.mapId,
+      item: map,
       newParentId: args.parentId,
     })
 

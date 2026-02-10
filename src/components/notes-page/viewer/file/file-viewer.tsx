@@ -1,10 +1,18 @@
+import { useCallback } from 'react'
+import { toast } from 'sonner'
+import { File } from 'lucide-react'
 import { AudioFileViewer } from './audio-file-viewer'
 import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
 import { VideoFileViewer } from './video-file-viewer'
 import type { FileWithContent } from 'convex/files/types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
+import { useFileActions } from '~/hooks/useFileActions'
+import { useFileWithPreview } from '~/hooks/useFileWithPreview'
+import { FileUploadSection } from '~/components/file-upload/file-upload-section'
+import { validateFileForUpload } from '~/lib/file-validation'
 
 function getFileType(
   contentType: string | null | undefined,
@@ -26,16 +34,70 @@ function getFileType(
   }
 }
 
-export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
-  if (!file.downloadUrl) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <p className="text-lg font-medium">File not found</p>
-          <p className="text-sm mt-2">{file.name || 'Untitled File'}</p>
+function FileUpload({ fileId }: { fileId: Id<'files'> }) {
+  const { updateFile } = useFileActions()
+
+  const fileUpload = useFileWithPreview({
+    isOpen: true,
+    uploadOnSelect: true,
+    fileTypeValidator: validateFileForUpload,
+    onUploadComplete: async (storageId) => {
+      try {
+        await updateFile.mutateAsync({ fileId, storageId })
+        toast.success('File uploaded')
+      } catch {
+        toast.error('Failed to attach file. Please try again.')
+      }
+    },
+  })
+
+  const handleFileSelected = useCallback(
+    (file: globalThis.File) => {
+      fileUpload.handleFileSelect(file)
+    },
+    [fileUpload],
+  )
+
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center p-8"
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+    >
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <File className="h-10 w-10 mx-auto text-muted-foreground" />
+          <h2 className="text-lg font-medium">Upload File</h2>
+          <p className="text-sm text-muted-foreground">
+            Upload a file to add it to your campaign.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <FileUploadSection
+            fileUpload={fileUpload}
+            handleFileSelect={handleFileSelected}
+            isSubmitting={false}
+            acceptPattern="*"
+            dragDropText="Drag a file here or click to browse"
+          />
+
+          {fileUpload.uploadError && (
+            <p className="text-sm text-destructive text-center">
+              {fileUpload.uploadError}
+            </p>
+          )}
         </div>
       </div>
-    )
+    </div>
+  )
+}
+
+export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
+  if (!file.downloadUrl) {
+    return <FileUpload fileId={file._id} />
   }
 
   const fileType = getFileType(file.contentType)

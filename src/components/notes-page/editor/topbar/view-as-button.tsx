@@ -24,7 +24,7 @@ const label = 'View as player'
 export const ViewAsPlayerButton = () => {
   const campaignMembersQuery = useCampaignMembers()
   const { isDm } = useCampaign()
-  const { itemForDm } = useCurrentItem()
+  const { item } = useCurrentItem()
   const playerMembers =
     campaignMembersQuery.data?.filter(
       (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
@@ -35,8 +35,26 @@ export const ViewAsPlayerButton = () => {
 
   const isPending = campaignMembersQuery.isPending
 
-  if (!isDm || !itemForDm) {
+  if (!isDm) {
     return null
+  }
+
+  if (!item) {
+    return (
+      <EmptyContextMenu>
+        <TooltipButton tooltip={label} side="bottom">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled
+            aria-label={label}
+            title={label}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </TooltipButton>
+      </EmptyContextMenu>
+    )
   }
 
   return (

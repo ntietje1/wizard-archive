@@ -1,13 +1,13 @@
 import { getSidebarItemAncestors } from '../folders/folders'
 import {
-  getSidebarItemPermissionStatus,
+  getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
+  hasViewPermission,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { PERMISSION_STATUS } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type {
@@ -29,7 +29,7 @@ export const enhanceGameMap = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const [imageUrl, bookmark, shares] = await Promise.all([
+  const [imageUrl, bookmark, shares, myPermissionLevel] = await Promise.all([
     gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
     getBookmark(
       ctx,
@@ -38,6 +38,7 @@ export const enhanceGameMap = async (
       gameMap._id,
     ),
     getSidebarItemSharesForItem(ctx, gameMap.campaignId, gameMap._id),
+    getSidebarItemPermissionLevel(ctx, gameMap),
   ])
 
   return {
@@ -45,6 +46,7 @@ export const enhanceGameMap = async (
     imageUrl,
     isBookmarked: !!bookmark,
     shares,
+    myPermissionLevel,
   }
 }
 
@@ -71,14 +73,11 @@ const enforceMapPinPermissions = async (
   pin: MapPinWithItem | null,
   viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
-  if (!pin) return null
-  const permissionStatus = await getSidebarItemPermissionStatus(
-    ctx,
-    pin.item,
-    viewAsPlayerId,
-  )
-  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
-    return null
+  if (!pin || !pin.item) return null
+  const canSee = await hasViewPermission(ctx, pin.item, viewAsPlayerId)
+  if (!canSee) {
+    const { item: _, ...pinWithoutItem } = pin
+    return pinWithoutItem
   }
   return pin
 }

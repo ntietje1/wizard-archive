@@ -5,8 +5,9 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SHARE_STATUS } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
+import type { PermissionLevel } from 'convex/shares/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
@@ -15,12 +16,13 @@ import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { CustomBlock } from '~/lib/editor-schema'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useNoteActions } from '~/hooks/useNoteActions'
 import { useFolderActions } from '~/hooks/useFolderActions'
+import { useMapActions } from '~/hooks/useMapActions'
+import { useFileActions } from '~/hooks/useFileActions'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
@@ -41,17 +43,25 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigation()
+  const {
+    navigateToItem,
+    navigateToNote,
+    navigateToFolder,
+    navigateToMap,
+    navigateToFile,
+    clearEditorContent,
+  } = useEditorNavigation()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createNote } = useNoteActions()
   const { createFolder } = useFolderActions()
+  const { createMap } = useMapActions()
+  const { createFile } = useFileActions()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const convex = useConvex()
   const { item: currentItem } = useCurrentItem()
-  const { endCurrentSession, startNewSession } = useSession()
+  const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
 
   const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
@@ -59,12 +69,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     null,
   )
   const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
-  const [createMapDialog, setCreateMapDialog] = useState<{
-    parentId?: Id<'folders'>
-  } | null>(null)
-  const [createFileDialog, setCreateFileDialog] = useState<{
-    parentId?: Id<'folders'>
-  } | null>(null)
   const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
     null,
@@ -126,14 +130,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           return
         }
         const parentId = ctx.item?._id
-        const { noteId } = await createNote.mutateAsync({
+        const { noteId, slug } = await createNote.mutateAsync({
           campaignId,
           parentId,
         })
         await openParentFolders(noteId)
-        setRenamingId(noteId)
+        navigateToNote(slug)
       },
-      [campaignId, createNote, openParentFolders, setRenamingId],
+      [campaignId, createNote, openParentFolders, navigateToNote],
     ),
 
     createFolder: useCallback(
@@ -150,28 +154,58 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           parentId,
         })
         await openParentFolders(result.folderId)
-        setRenamingId(result.folderId)
+        navigateToFolder(result.slug)
       },
-      [campaignId, createFolder, openParentFolders, setRenamingId],
+      [campaignId, createFolder, openParentFolders, navigateToFolder],
     ),
 
-    createMap: (ctx: MenuContext) => {
-      if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
-        return
-      }
-      setCreateMapDialog({ parentId: ctx.item?._id })
-      onDialogOpen?.()
-    },
+    createMap: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId) return
 
-    createFile: (ctx: MenuContext) => {
-      if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
-        return
-      }
-      setCreateFileDialog({ parentId: ctx.item?._id })
-      onDialogOpen?.()
-    },
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
+        const parentId = ctx.item?._id
+        try {
+          const { mapId, slug } = await createMap.mutateAsync({
+            campaignId,
+            parentId,
+          })
+          await openParentFolders(mapId)
+          navigateToMap(slug)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create map')
+        }
+      },
+      [campaignId, createMap, openParentFolders, navigateToMap],
+    ),
+
+    createFile: useCallback(
+      async (ctx: MenuContext) => {
+        if (!campaignId) return
+
+        if (ctx.item && !isFolder(ctx.item)) {
+          console.error('Invalid parent type')
+          return
+        }
+        const parentId = ctx.item?._id
+        try {
+          const { fileId, slug } = await createFile.mutateAsync({
+            campaignId,
+            parentId,
+          })
+          await openParentFolders(fileId)
+          navigateToFile(slug)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create file')
+        }
+      },
+      [campaignId, createFile, openParentFolders, navigateToFile],
+    ),
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
@@ -201,8 +235,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     pinToMap: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !ctx.activeMap) return
 
-      // Check if already pinned using context data
-      if (ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
+      if (ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)) {
         toast.error('Item is already pinned on this map')
         // TODO: add highlight of pin here
         return
@@ -222,8 +255,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       (ctx: MenuContext) => {
         if (!ctx.item || !ctx.activeMap) return
 
-        // Check if pinned using context data
-        if (!ctx.activeMap.pins.some((pin) => pin.item._id === ctx.item?._id)) {
+        if (
+          !ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)
+        ) {
           toast.error('Item is not pinned on this map')
           return
         }
@@ -278,95 +312,52 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     startSession: useCallback(() => {
       if (!campaignId) return
-
-      // Start new session
-      startNewSession({})
-      toast.success('Session started')
+      startNewSession.mutate(
+        { campaignId },
+        {
+          onSuccess: () => toast.success('Session started'),
+          onError: (error: any) => {
+            console.error('Failed to start session:', error)
+            toast.error('Failed to start session')
+          },
+        },
+      )
     }, [campaignId, startNewSession]),
 
     endSession: useCallback(() => {
       if (!campaignId) return
-
-      // End current session
-      endCurrentSession.mutate({ campaignId })
-      toast.success('Session ended')
+      endCurrentSession.mutate(
+        { campaignId },
+        {
+          onSuccess: () => toast.success('Session ended'),
+          onError: (error) => {
+            console.error('Failed to end session:', error)
+            toast.error('Failed to end session')
+          },
+        },
+      )
     }, [campaignId, endCurrentSession]),
 
-    toggleShareWithAll: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId || !ctx.item || !ctx.shareState) return
-
-        const { shareStatus, playerMembers } = ctx.shareState
+    setGeneralAccessLevel: useCallback(
+      async (ctx: MenuContext, level: PermissionLevel | undefined) => {
+        if (!campaignId || !ctx.item) return
 
         try {
-          // all_shared -> not_shared
-          if (shareStatus === SHARE_STATUS.ALL_SHARED) {
-            await convex.mutation(
-              api.shares.mutations.setSidebarItemShareStatus,
-              {
-                campaignId,
-                sidebarItemId: ctx.item._id,
-                status: SHARE_STATUS.NOT_SHARED,
-              },
-            )
-            toast.success('Unshared from all players')
+          await convex.mutation(api.shares.mutations.setAllPlayersPermission, {
+            campaignId,
+            sidebarItemId: ctx.item._id,
+            permissionLevel: level,
+          })
+          if (level === undefined) {
+            toast.success('Reset to default access')
+          } else if (level === PERMISSION_LEVEL.NONE) {
+            toast.success('Access set to none')
           } else {
-            // not_shared -> all_shared
-            // individually_shared -> all_shared
-            await convex.mutation(
-              api.shares.mutations.setSidebarItemShareStatus,
-              {
-                campaignId,
-                sidebarItemId: ctx.item._id,
-                status: SHARE_STATUS.ALL_SHARED,
-              },
-            )
-            if (playerMembers.length === 0) {
-              toast.success('Shared with all players')
-            } else {
-              toast.success(`Shared with ${playerMembers.length} player(s)`)
-            }
+            toast.success(`Access set to ${level}`)
           }
         } catch (error) {
-          console.error('Failed to toggle share:', error)
-          toast.error('Failed to toggle share')
-        }
-      },
-      [campaignId, convex],
-    ),
-
-    toggleShareWithMember: useCallback(
-      async (ctx: MenuContext, memberId: Id<'campaignMembers'>) => {
-        if (!campaignId || !ctx.item || !ctx.shareState) return
-
-        const { shareStatus, sharedMemberIds } = ctx.shareState
-
-        // Determine if currently shared with this member
-        const isCurrentlyShared =
-          shareStatus === SHARE_STATUS.ALL_SHARED ||
-          (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED &&
-            sharedMemberIds.has(memberId))
-
-        try {
-          if (isCurrentlyShared) {
-            await convex.mutation(api.shares.mutations.unshareSidebarItem, {
-              campaignId,
-              sidebarItemId: ctx.item._id,
-              campaignMemberId: memberId,
-            })
-            toast.success('Unshared from player')
-          } else {
-            await convex.mutation(api.shares.mutations.shareSidebarItem, {
-              campaignId,
-              sidebarItemId: ctx.item._id,
-              sidebarItemType: ctx.item.type,
-              campaignMemberId: memberId,
-            })
-            toast.success('Shared with player')
-          }
-        } catch (error) {
-          console.error('Failed to toggle individual share:', error)
-          toast.error('Failed to toggle share')
+          console.error('Failed to set general access level:', error)
+          toast.error('Failed to update access level')
         }
       },
       [campaignId, convex],
@@ -395,11 +386,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
     }, []),
 
-    downloadNote: useCallback(async (ctx: MenuContext) => {
+    downloadNote: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !isNote(ctx.item)) return
 
       try {
-        const markdown = await convertBlocksToMarkdown(ctx.item.content)
+        const markdown = convertBlocksToMarkdown(ctx.item.content)
         const baseName = ctx.item.name ?? defaultItemName(ctx.item)
         const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
 
@@ -482,9 +473,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 const blob = await response.blob()
                 zip.file(item.path, blob)
               } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                const markdown = await convertBlocksToMarkdown(
-                  item.content as Array<CustomBlock>,
-                )
+                const markdown = convertBlocksToMarkdown(item.content)
                 zip.file(item.path, markdown)
               } else {
                 console.warn(`Unknown item type`, item)
@@ -560,9 +549,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               const blob = await response.blob()
               zip.file(item.path, blob)
             } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-              const markdown = await convertBlocksToMarkdown(
-                item.content as Array<CustomBlock>,
-              )
+              const markdown = convertBlocksToMarkdown(item.content)
               zip.file(item.path, markdown)
             } else {
               console.warn(`Unknown item type`, item)
@@ -686,26 +673,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           />
         )}
 
-        {createMapDialog && campaignId && (
-          <MapDialog
-            key={`create-map-${createMapDialog.parentId || 'root'}`}
-            isOpen={true}
-            onClose={closeDialog(setCreateMapDialog)}
-            campaignId={campaignId}
-            parentId={createMapDialog.parentId}
-          />
-        )}
-
-        {createFileDialog && campaignId && (
-          <FileDialog
-            key={`create-file-${createFileDialog.parentId || 'root'}`}
-            isOpen={true}
-            onClose={closeDialog(setCreateFileDialog)}
-            campaignId={campaignId}
-            parentId={createFileDialog.parentId}
-          />
-        )}
-
         {editMapDialog && campaignId && (
           <MapDialog
             key={`edit-map-${editMapDialog}`}
@@ -741,14 +708,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       deleteNoteDialog,
       deleteFolderDialog,
       deleteMapDialog,
-      createMapDialog,
       editMapDialog,
       editFileDialog,
       editSidebarItemDialog,
       campaignId,
       currentItem,
       clearEditorContent,
-      createFileDialog,
       deleteFileDialog,
       closeDialog,
     ],

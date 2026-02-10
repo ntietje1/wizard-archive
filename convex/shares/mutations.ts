@@ -8,12 +8,10 @@ import {
   customBlockValidator,
 } from '../blocks/schema'
 import {
+  permissionLevelValidator,
   sidebarItemIdValidator,
-  sidebarItemShareStatusValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { SHARE_STATUS } from './types'
 import {
   setBlockShareStatusHelper,
   shareBlockWithMemberHelper,
@@ -26,62 +24,8 @@ import {
 import type { Id } from '../_generated/dataModel'
 
 /**
- * Set the share status for a sidebar item (used for left-click toggle).
- * - all_shared -> not_shared
- * - not_shared -> all_shared
- * - individually_shared -> not_shared (and clears individual shares)
- */
-export const setSidebarItemShareStatus = mutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    sidebarItemId: sidebarItemIdValidator,
-    status: sidebarItemShareStatusValidator,
-  },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const item = await ctx.db.get(args.sidebarItemId)
-    if (!item || item.campaignId !== args.campaignId) {
-      throw new Error('Sidebar item not found')
-    }
-
-    if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      throw new Error('Cannot share folders')
-    }
-
-    // Update the item's share status
-    await ctx.db.patch(args.sidebarItemId, {
-      shareStatus: args.status,
-    })
-
-    // If setting to not_shared, clear any individual shares
-    if (args.status === SHARE_STATUS.NOT_SHARED) {
-      const shares = await ctx.db
-        .query('sidebarItemShares')
-        .withIndex('by_campaign_item_member', (q) =>
-          q
-            .eq('campaignId', args.campaignId)
-            .eq('sidebarItemId', args.sidebarItemId),
-        )
-        .collect()
-
-      for (const share of shares) {
-        await ctx.db.delete(share._id)
-      }
-    }
-
-    return null
-  },
-})
-
-/**
  * Share a sidebar item with a specific member.
- * Sets shareStatus to 'individually_shared'.
+ * Creates or updates an individual share record.
  */
 export const shareSidebarItem = mutation({
   args: {
@@ -89,6 +33,7 @@ export const shareSidebarItem = mutation({
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
+    permissionLevel: v.optional(permissionLevelValidator),
   },
   returns: v.id('sidebarItemShares'),
   handler: async (ctx, args): Promise<Id<'sidebarItemShares'>> => {
@@ -98,16 +43,9 @@ export const shareSidebarItem = mutation({
       { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
     )
 
-    // Set status to individually_shared
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
-    }
-
-    if (item.shareStatus !== SHARE_STATUS.INDIVIDUALLY_SHARED) {
-      await ctx.db.patch(args.sidebarItemId, {
-        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-      })
     }
 
     return await shareSidebarItemWithMember(
@@ -116,13 +54,14 @@ export const shareSidebarItem = mutation({
       args.sidebarItemId,
       args.sidebarItemType,
       args.campaignMemberId,
+      args.permissionLevel,
     )
   },
 })
 
 /**
  * Unshare a sidebar item from a specific member.
- * If no shares remain, sets shareStatus to 'not_shared'.
+ * Deletes the individual share record.
  */
 export const unshareSidebarItem = mutation({
   args: {
@@ -150,22 +89,108 @@ export const unshareSidebarItem = mutation({
       args.campaignMemberId,
     )
 
-    // Check if any shares remain
-    const remainingShares = await ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_item_member', (q) =>
-        q
-          .eq('campaignId', args.campaignId)
-          .eq('sidebarItemId', args.sidebarItemId),
-      )
-      .first()
+    return null
+  },
+})
 
-    // If no shares remain, set status to not_shared
-    if (!remainingShares) {
-      await ctx.db.patch(args.sidebarItemId, {
-        shareStatus: SHARE_STATUS.NOT_SHARED,
-      })
+/**
+ * Update the permission level for a specific member's share on a sidebar item.
+ * If level is 'none', removes the share. If no share exists for other levels, creates one.
+ */
+export const updateSidebarItemSharePermission = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemType: sidebarItemTypeValidator,
+    campaignMemberId: v.id('campaignMembers'),
+    permissionLevel: permissionLevelValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
     }
+
+    // Create or update the share with the specified permission level
+    // (including 'none' — removing the share is handled by unshareSidebarItem/clearMemberPermission)
+    await shareSidebarItemWithMember(
+      ctx,
+      args.campaignId,
+      args.sidebarItemId,
+      args.sidebarItemType,
+      args.campaignMemberId,
+      args.permissionLevel,
+    )
+
+    return null
+  },
+})
+
+/**
+ * Set the default permission level for all players on a sidebar item.
+ * Sets allPermissionLevel on the item directly.
+ * Individual share overrides are preserved independently.
+ */
+export const setAllPlayersPermission = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    sidebarItemId: sidebarItemIdValidator,
+    permissionLevel: v.optional(permissionLevelValidator),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    if (!item || item.campaignId !== args.campaignId) {
+      throw new Error('Sidebar item not found')
+    }
+
+    await ctx.db.patch(args.sidebarItemId, {
+      allPermissionLevel: args.permissionLevel,
+    })
+
+    return null
+  },
+})
+
+/**
+ * Toggle whether a folder passes its share settings to newly created child items.
+ * When enabled, new items inherit the folder's allPermissionLevel and individual shares.
+ */
+export const setFolderInheritShares = mutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    folderId: v.id('folders'),
+    inheritShares: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: args.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+
+    const folder = await ctx.db.get(args.folderId)
+    if (!folder || folder.campaignId !== args.campaignId) {
+      throw new Error('Folder not found')
+    }
+
+    await ctx.db.patch(args.folderId, {
+      inheritShares: args.inheritShares,
+    })
 
     return null
   },

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
@@ -75,6 +75,26 @@ export function FileForm({
     fileTypeValidator: validateFileForUpload,
   })
 
+  // Accept drag-and-drop anywhere on screen
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+    }
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      const droppedFile = e.dataTransfer?.files[0]
+      if (droppedFile) {
+        fileUpload.handleFileSelect(droppedFile)
+      }
+    }
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('drop', handleDrop)
+    return () => {
+      document.removeEventListener('dragover', handleDragOver)
+      document.removeEventListener('drop', handleDrop)
+    }
+  }, [fileUpload.handleFileSelect, fileUpload])
+
   // Get initial values based on current props
   const defaultValues = useMemo((): FileFormValues => {
     if (fileId && file.data) {
@@ -143,8 +163,8 @@ export function FileForm({
             fileId,
             name: finalName,
             storageId: finalStorageId,
-            iconName: values.iconName,
-            color: values.color,
+            iconName: values.iconName ?? undefined,
+            color: values.color ?? undefined,
           })
 
           navigateIfSlugChanged({

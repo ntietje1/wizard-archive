@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
 /**
  * Hook that disables autolink behavior in the editor.

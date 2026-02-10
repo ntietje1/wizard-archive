@@ -15,8 +15,9 @@ export const sidebarItemTypeValidator = v.union(
   v.literal(SIDEBAR_ITEM_TYPES.files),
 )
 
-export const sidebarItemShareStatusValidator = v.union(
-  v.literal('all_shared'),
-  v.literal('not_shared'),
-  v.literal('individually_shared'),
+export const permissionLevelValidator = v.union(
+  v.literal('none'),
+  v.literal('view'),
+  v.literal('edit'),
+  v.literal('full_access'),
 )

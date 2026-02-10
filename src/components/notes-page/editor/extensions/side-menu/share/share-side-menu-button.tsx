@@ -1,9 +1,18 @@
-import { useComponentsContext } from '@blocknote/react'
+import { SideMenuExtension } from '@blocknote/core/extensions'
+import {
+  useBlockNoteEditor,
+  useComponentsContext,
+  useExtension,
+  useExtensionState,
+} from '@blocknote/react'
 import { toast } from 'sonner'
-import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type {
+  CustomBlock,
+  CustomBlockNoteEditor,
+} from 'convex/notes/editorSpecs'
 import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
 import { Share2 } from '~/lib/icons'
-import { useBlocksShare } from '~/hooks/useBlocksShare'
+import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/hooks/useBlocksShare'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -11,34 +20,31 @@ import {
 } from '~/components/shadcn/ui/context-menu'
 import { ShareMenuContent } from '~/components/share/share-menu-content'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useCampaign } from '~/hooks/useCampaign'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
-    case 'all_shared':
+    case AGGREGATE_SHARE_STATUS.ALL_SHARED:
       return '!text-blue-600'
-    case 'individually_shared':
-    case 'mixed_shared':
+    case AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED:
+    case AGGREGATE_SHARE_STATUS.MIXED_SHARED:
       return '!text-amber-500'
+    case AGGREGATE_SHARE_STATUS.NOT_SHARED:
+      return '!text-gray-500'
     default:
-      return ''
+      return '!text-gray-500'
   }
 }
 
-interface ShareSideMenuButtonProps {
-  block: CustomBlock
-  editor: CustomBlockNoteEditor
-  freezeMenu: () => void
-  unfreezeMenu: () => void
-}
-
-export default function ShareSideMenuButton({
-  block,
-  editor,
-  freezeMenu,
-  unfreezeMenu,
-}: ShareSideMenuButtonProps) {
+export default function ShareSideMenuButton() {
+  const { isDm } = useCampaign()
   const { item } = useCurrentItem()
   const Components = useComponentsContext()!
+  const editor = useBlockNoteEditor() as CustomBlockNoteEditor
+  const sideMenuExtension = useExtension(SideMenuExtension)
+  const block = useExtensionState(SideMenuExtension, {
+    selector: (state) => state?.block,
+  }) as CustomBlock | undefined
 
   // Determine blocks to operate on: selection if hovered block is in it, otherwise just the hovered block
   const selection = editor.getSelection()
@@ -47,9 +53,13 @@ export default function ShareSideMenuButton({
       ? (selection.blocks as Array<CustomBlock>)
       : null
   const hoveredBlockInSelection =
-    selectedBlocks?.some((b) => b.id === block.id) ?? false
-  const blocks =
-    selectedBlocks && hoveredBlockInSelection ? selectedBlocks : [block]
+    (block && selectedBlocks?.some((b) => b.id === block.id)) ?? false
+  const blocks: Array<CustomBlock> =
+    selectedBlocks && hoveredBlockInSelection
+      ? selectedBlocks
+      : block
+        ? [block]
+        : []
 
   const {
     isPending,
@@ -83,9 +93,13 @@ export default function ShareSideMenuButton({
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
   const isDisabled = topLevelBlocks.length === 0
 
+  if (!block || !isDm) return null
+
   return (
     <ContextMenu
-      onOpenChange={(open) => (open ? freezeMenu() : unfreezeMenu())}
+      onOpenChange={(open) =>
+        open ? sideMenuExtension.freezeMenu() : sideMenuExtension.unfreezeMenu()
+      }
     >
       <div onClick={handleButtonClick}>
         <ContextMenuTrigger

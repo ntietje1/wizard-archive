@@ -5,7 +5,7 @@ import { useDndMonitor, useDroppable } from '@dnd-kit/core'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { Minus, Plus, RotateCcw } from 'lucide-react'
+import { Image, Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/baseTypes'
@@ -18,6 +18,7 @@ import type { EditorContextMenuRef } from '~/components/context-menu/components/
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useEditorModeState } from '~/hooks/useEditorMode'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
@@ -26,6 +27,9 @@ import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import usePersistedState from '~/hooks/usePersistedState'
+import { useMapActions } from '~/hooks/useMapActions'
+import { useFileWithPreview } from '~/hooks/useFileWithPreview'
+import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 
 interface PinPosition {
   x: number
@@ -142,9 +146,12 @@ function MapPin({
   onContextMenu,
   onDragStart,
 }: MapPinProps) {
+  const ghost = !pin.item
   const Icon = getSidebarItemIcon(pin.item)
-  const color = validateHexColorOrDefault(pin.item.color, DEFAULT_ITEM_COLOR)
-  const itemName = pin.item.name || defaultItemName(pin.item)
+  const color = ghost
+    ? '#9ca3af'
+    : validateHexColorOrDefault(pin.item?.color, DEFAULT_ITEM_COLOR)
+  const itemName = ghost ? '???' : pin.item?.name || defaultItemName(pin.item)
 
   const hoverScale = isHovered && !isDragging ? 1.2 : 1
 
@@ -257,6 +264,16 @@ export function MapViewer({
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (transformDebounceRef.current) {
+        clearTimeout(transformDebounceRef.current)
+      }
+    }
+  }, [])
+
   const [pinContextMenu, setPinContextMenu] = useState<{
     pinId: Id<'mapPins'>
     position: PinPosition
@@ -286,8 +303,13 @@ export function MapViewer({
   // Track if a drag just ended to prevent click firing
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  // Get pins from map content
-  const pins = map.pins
+  const { editorMode } = useEditorModeState()
+
+  // In viewer mode, filter out ghost pins — players shouldn't see them at all
+  const pins =
+    editorMode === 'viewer'
+      ? map.pins.filter((pin) => pin.item !== undefined)
+      : map.pins
 
   const createItemPinMutation = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.createItemPin),
@@ -324,7 +346,6 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-
   // Setup drop zone for sidebar items
   const { setNodeRef: setDropRef, isOver: isDropOver } = useDroppable({
     id: MAP_DROP_ZONE_ID,
@@ -346,7 +367,7 @@ export function MapViewer({
       const itemId = draggedItem._id
 
       // Check if already pinned
-      if (map.pins.some((pin) => pin.item._id === itemId)) {
+      if (map.pins.some((pin) => pin.itemId === itemId)) {
         toast.error('Item is already pinned on this map')
         // TODO: add highlight of pin here
         return
@@ -582,6 +603,10 @@ export function MapViewer({
       if (justFinishedDraggingRef.current === pin._id) {
         return
       }
+      if (!pin.item) {
+        toast.error('You do not have permission to view this item')
+        return
+      }
       toast.info(`Pin clicked: ${pin.item.name}`)
       // TODO: add action here
     },
@@ -762,7 +787,7 @@ export function MapViewer({
                       ref={pinsContainerRef}
                       className="absolute inset-0 pointer-events-none"
                     >
-                      {pins.map((pin: MapPinWithItem) => {
+                      {pins.map((pin) => {
                         const isDraggingThis = draggingPin?.pin._id === pin._id
                         const isInMoveMode = pendingPinMove?.pinId === pin._id
                         const displayPosition =
@@ -793,9 +818,7 @@ export function MapViewer({
                 </TransformComponent>
               </TransformWrapper>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                <p>No map image available</p>
-              </div>
+              <MapImageUpload mapId={map._id} />
             )}
           </div>
 
@@ -849,6 +872,76 @@ export function MapViewer({
         </div>
       </MapViewProvider>
     </ClientOnly>
+  )
+}
+
+function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
+  const { updateMap } = useMapActions()
+
+  const fileUpload = useFileWithPreview({
+    isOpen: true,
+    uploadOnSelect: true,
+    fileTypeValidator: (file: globalThis.File) => {
+      if (!file.type.startsWith('image/')) {
+        return {
+          success: false,
+          error: 'Only image files are allowed for maps',
+        }
+      }
+      return { success: true }
+    },
+    onUploadComplete: async (storageId) => {
+      try {
+        await updateMap.mutateAsync({ mapId, imageStorageId: storageId })
+        toast.success('Map image uploaded')
+      } catch (error) {
+        console.error('Failed to set map image:', error)
+        toast.error('Failed to set map image')
+      }
+    },
+  })
+
+  const handleFileSelected = useCallback(
+    (file: globalThis.File) => {
+      fileUpload.handleFileSelect(file)
+    },
+    [fileUpload],
+  )
+
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center p-8"
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+    >
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <Image className="h-10 w-10 mx-auto text-muted-foreground" />
+          <h2 className="text-lg font-medium">Upload Map Image</h2>
+          <p className="text-sm text-muted-foreground">
+            Upload an image to create your map. You can pin items to it later.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <FileUploadSection
+            fileUpload={fileUpload}
+            handleFileSelect={handleFileSelected}
+            isSubmitting={false}
+            acceptPattern="image/*"
+            dragDropText="Drag an image here or click to browse"
+          />
+
+          {fileUpload.uploadError && (
+            <p className="text-sm text-destructive text-center">
+              {fileUpload.uploadError}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

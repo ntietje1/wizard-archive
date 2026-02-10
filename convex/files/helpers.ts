@@ -1,5 +1,8 @@
 import { getSidebarItemAncestors } from '../folders/folders'
-import { getSidebarItemSharesForItem } from '../shares/itemShares'
+import {
+  getSidebarItemPermissionLevel,
+  getSidebarItemSharesForItem,
+} from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -16,17 +19,19 @@ export const enhanceFile = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const [downloadUrl, bookmark, shares, storageMetadata] = await Promise.all([
-    file.storageId ? ctx.storage.getUrl(file.storageId) : null,
-    getBookmark(
-      ctx,
-      file.campaignId,
-      campaignWithMembership.member._id,
-      file._id,
-    ),
-    getSidebarItemSharesForItem(ctx, file.campaignId, file._id),
-    file.storageId ? ctx.db.system.get(file.storageId) : null,
-  ])
+  const [downloadUrl, bookmark, shares, storageMetadata, myPermissionLevel] =
+    await Promise.all([
+      file.storageId ? ctx.storage.getUrl(file.storageId) : null,
+      getBookmark(
+        ctx,
+        file.campaignId,
+        campaignWithMembership.member._id,
+        file._id,
+      ),
+      getSidebarItemSharesForItem(ctx, file.campaignId, file._id),
+      file.storageId ? ctx.db.system.get(file.storageId) : null,
+      getSidebarItemPermissionLevel(ctx, file),
+    ])
 
   return {
     ...file,
@@ -34,6 +39,7 @@ export const enhanceFile = async (
     isBookmarked: !!bookmark,
     shares,
     contentType: storageMetadata?.contentType ?? null,
+    myPermissionLevel,
   }
 }
 

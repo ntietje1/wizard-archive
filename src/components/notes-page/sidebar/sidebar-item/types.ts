@@ -1,7 +1,7 @@
-import type { MouseEvent } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import type { LucideIcon } from '~/lib/icons'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 
 export interface SidebarItemHandlers {
   onSelect?: (e: MouseEvent) => void
@@ -29,4 +29,5 @@ export interface SidebarItemButtonProps
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
+  shareButton?: ReactNode
 }

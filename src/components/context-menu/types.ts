@@ -2,12 +2,13 @@ import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
 import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
-import type { ShareStatus } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/shares/types'
 
 export interface ShareState {
-  shareStatus: ShareStatus
+  allPermissionLevel?: PermissionLevel
+  inheritedAllPermissionLevel?: PermissionLevel
   sharedMemberIds: Set<Id<'campaignMembers'>>
   playerMembers: Array<CampaignMember>
   isLoading: boolean
@@ -32,6 +33,7 @@ export interface MenuContext {
   // User/permissions
   currentUserId?: string
   memberRole?: CampaignMemberRole
+  permissionLevel?: PermissionLevel
 
   // View state
   activeMap?: GameMapWithContent

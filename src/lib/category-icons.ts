@@ -1,6 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { HelpCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import {
   Apple,
   Axe,
@@ -87,16 +88,13 @@ const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
   [SIDEBAR_ITEM_TYPES.files]: File,
 }
 
-/**
- * Gets the appropriate icon for any sidebar item.
- * Uses custom iconName if set, otherwise falls back to default for the item type.
- */
-export const getSidebarItemIcon = (item: AnySidebarItem): LucideIcon => {
-  // If item has a custom icon, use it
+export const getSidebarItemIcon = (
+  item: AnySidebarItem | undefined,
+): LucideIcon => {
+  if (!item) return HelpCircle
   if (item.iconName) {
     return getIconByName(item.iconName)
   }
 
-  // Otherwise use the default for the item type
   return DEFAULT_SIDEBAR_ITEM_ICONS[item.type] ?? FileText
 }

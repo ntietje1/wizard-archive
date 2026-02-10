@@ -1,8 +1,8 @@
 import { BookOpen, Pencil } from 'lucide-react'
 import { useCallback } from 'react'
+import { EDITOR_MODE } from 'convex/editors/types'
 import { useEditorModeActions, useEditorModeState } from '~/hooks/useEditorMode'
 import { Button } from '~/components/shadcn/ui/button'
-import { useCampaign } from '~/hooks/useCampaign'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { EmptyContextMenu } from '~/components/context-menu/components/EmptyContextMenu'
 
@@ -11,15 +11,20 @@ export const EditorViewModeToggleButton = ({
 }: {
   disabled?: boolean
 }) => {
-  const { editorMode } = useEditorModeState()
+  const { editorMode, canEdit } = useEditorModeState()
   const { setEditorMode } = useEditorModeActions()
-  const { isDm } = useCampaign()
   const handleEditorModeToggle = useCallback(() => {
-    setEditorMode(editorMode === 'editor' ? 'viewer' : 'editor')
+    setEditorMode(
+      editorMode === EDITOR_MODE.EDITOR
+        ? EDITOR_MODE.VIEWER
+        : EDITOR_MODE.EDITOR,
+    )
   }, [editorMode, setEditorMode])
   const label =
-    editorMode === 'editor' ? 'Switch to viewer mode' : 'Switch to editor mode'
-  if (!isDm) {
+    editorMode === EDITOR_MODE.EDITOR
+      ? 'Switch to viewer mode'
+      : 'Switch to editor mode'
+  if (!canEdit) {
     return null
   }
   return (
@@ -33,7 +38,7 @@ export const EditorViewModeToggleButton = ({
           title={label}
           disabled={disabled}
         >
-          {editorMode === 'editor' ? (
+          {editorMode === EDITOR_MODE.EDITOR ? (
             <Pencil className="h-4 w-4" />
           ) : (
             <BookOpen className="h-4 w-4" />

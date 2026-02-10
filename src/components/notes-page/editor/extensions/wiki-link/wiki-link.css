@@ -28,7 +28,9 @@
 .wiki-link-bracket-open:hover,
 .wiki-link-bracket-close:hover,
 .wiki-link-bracket-open:has(+ .wiki-link-content:hover),
-.wiki-link-bracket-open:has(+ .wiki-link-content + .wiki-link-bracket-close:hover),
+.wiki-link-bracket-open:has(
+  + .wiki-link-content + .wiki-link-bracket-close:hover
+),
 .wiki-link-content:hover + .wiki-link-bracket-close,
 .wiki-link-bracket-open:hover + .wiki-link-content + .wiki-link-bracket-close {
   font-size: inherit;
@@ -54,15 +56,21 @@
 /* Reveal full text on active/hover in editor mode */
 .wiki-link-content.wiki-link-active[data-display-name],
 .wiki-link-content[data-display-name]:not(.wiki-link-viewer):hover,
-.wiki-link-bracket-open:not(.wiki-link-viewer):hover + .wiki-link-content[data-display-name],
-.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:not(.wiki-link-viewer):hover) {
+.wiki-link-bracket-open:not(.wiki-link-viewer):hover
+  + .wiki-link-content[data-display-name],
+.wiki-link-content[data-display-name]:has(
+    + .wiki-link-bracket-close:not(.wiki-link-viewer):hover
+  ) {
   font-size: inherit;
 }
 
 .wiki-link-content.wiki-link-active[data-display-name]::before,
 .wiki-link-content[data-display-name]:not(.wiki-link-viewer):hover::before,
-.wiki-link-bracket-open:not(.wiki-link-viewer):hover + .wiki-link-content[data-display-name]::before,
-.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:not(.wiki-link-viewer):hover)::before {
+.wiki-link-bracket-open:not(.wiki-link-viewer):hover
+  + .wiki-link-content[data-display-name]::before,
+.wiki-link-content[data-display-name]:has(
+    + .wiki-link-bracket-close:not(.wiki-link-viewer):hover
+  )::before {
   content: none;
 }
 
@@ -72,7 +80,9 @@
   color: hsl(var(--popover-foreground));
   border: 1px solid hsl(var(--border));
   border-radius: calc(var(--radius) - 2px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
   padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
   white-space: nowrap;

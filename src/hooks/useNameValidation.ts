@@ -4,7 +4,7 @@ import { convexQuery, useConvex } from '@convex-dev/react-query'
 import { debounce } from 'lodash-es'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'
 
 interface UseNameValidationOptions {

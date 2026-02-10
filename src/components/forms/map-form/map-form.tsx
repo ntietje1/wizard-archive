@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
@@ -79,6 +79,26 @@ export function MapForm({
     },
   })
 
+  // Accept drag-and-drop anywhere on screen
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+    }
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      const droppedFile = e.dataTransfer?.files[0]
+      if (droppedFile) {
+        imageUpload.handleFileSelect(droppedFile)
+      }
+    }
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('drop', handleDrop)
+    return () => {
+      document.removeEventListener('dragover', handleDragOver)
+      document.removeEventListener('drop', handleDrop)
+    }
+  }, [imageUpload.handleFileSelect, imageUpload])
+
   // Get initial values based on current props
   const defaultValues = useMemo((): MapFormValues => {
     if (mapId && map.data) {
@@ -139,8 +159,8 @@ export function MapForm({
             mapId,
             name: values.name,
             imageStorageId: finalImageStorageId,
-            iconName: values.iconName,
-            color: values.color,
+            iconName: values.iconName ?? undefined,
+            color: values.color ?? undefined,
           })
 
           navigateIfSlugChanged({

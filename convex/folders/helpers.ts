@@ -1,4 +1,7 @@
-import { getSidebarItemSharesForItem } from '../shares/itemShares'
+import {
+  getSidebarItemPermissionLevel,
+  getSidebarItemSharesForItem,
+} from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
@@ -18,7 +21,7 @@ export const enhanceFolder = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
 
-  const [bookmark, shares] = await Promise.all([
+  const [bookmark, shares, myPermissionLevel] = await Promise.all([
     getBookmark(
       ctx,
       folder.campaignId,
@@ -26,12 +29,14 @@ export const enhanceFolder = async (
       folder._id,
     ),
     getSidebarItemSharesForItem(ctx, folder.campaignId, folder._id),
+    getSidebarItemPermissionLevel(ctx, folder),
   ])
 
   return {
     ...folder,
     isBookmarked: !!bookmark,
     shares,
+    myPermissionLevel,
   }
 }
 

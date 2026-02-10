@@ -2,7 +2,10 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { enhanceFolderWithContent } from './helpers'
 import type { Ctx } from '../common/types'
 import type { MutationCtx } from '../_generated/server'
@@ -18,6 +21,7 @@ export const getFolder = async (
   if (!rawFolder) return null
 
   const folder = await enhanceSidebarItem(ctx, rawFolder)
+  // folders don't have permissions currently
   return enhanceFolderWithContent(ctx, folder, viewAsPlayerId)
 }
 
@@ -30,11 +34,15 @@ export async function deleteFolder(
     throw new Error('Folder not found')
   }
 
-  const folder = await enhanceSidebarItem(ctx, rawFolder)
-  await requireEditPermission(ctx, folder)
+  await requireCampaignMembership(
+    ctx,
+    { campaignId: rawFolder.campaignId },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+  )
 
-  // Cascade delete all children
-  // First, delete child folders (recursively)
+  const folder = await enhanceSidebarItem(ctx, rawFolder)
+  await requireFullAccessPermission(ctx, folder)
+
   const childFolders = await ctx.db
     .query('folders')
     .withIndex('by_campaign_parent_name', (q) =>
@@ -46,7 +54,6 @@ export async function deleteFolder(
     await deleteFolder(ctx, childFolder._id)
   }
 
-  // Delete child notes
   const childNotes = await ctx.db
     .query('notes')
     .withIndex('by_campaign_parent_name', (q) =>
@@ -58,7 +65,6 @@ export async function deleteFolder(
     await deleteNote(ctx, childNote._id)
   }
 
-  // Delete child maps
   const childMaps = await ctx.db
     .query('gameMaps')
     .withIndex('by_campaign_parent_name', (q) =>
@@ -67,7 +73,6 @@ export async function deleteFolder(
     .collect()
 
   for (const childMap of childMaps) {
-    // Delete map pins first
     const pins = await ctx.db
       .query('mapPins')
       .withIndex('by_map_item', (q) => q.eq('mapId', childMap._id))

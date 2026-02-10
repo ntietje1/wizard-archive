@@ -1,5 +1,7 @@
 import { useDraggable } from '@dnd-kit/core'
 import { useMemo } from 'react'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
@@ -18,6 +20,10 @@ export function DraggableSidebarItem({
   children,
 }: DraggableSidebarItemProps) {
   const safeAncestorIds = ancestorIds ?? EMPTY_ANCESTORS
+  const canDrag = hasAtLeastPermissionLevel(
+    item.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
 
   const dragData = useMemo(
     () => ({ ...item, ancestorIds: safeAncestorIds }),
@@ -27,6 +33,7 @@ export function DraggableSidebarItem({
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: item._id,
     data: dragData,
+    disabled: !canDrag,
   })
 
   return (

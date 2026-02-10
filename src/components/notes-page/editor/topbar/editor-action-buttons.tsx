@@ -18,6 +18,7 @@ export function ContextMenuButton() {
         <Button
           variant="ghost"
           size="icon"
+          disabled={!item}
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()

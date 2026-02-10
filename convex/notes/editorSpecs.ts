@@ -1,13 +1,18 @@
-import { defaultInlineContentSpecs } from '@blocknote/core'
+import {
+  BlockNoteSchema,
+  defaultBlockSpecs,
+  defaultInlineContentSpecs,
+  defaultStyleSpecs,
+} from '@blocknote/core'
 import type {
   Block,
-  BlockSchemaFromSpecs,
-  InlineContentSchemaFromSpecs,
+  BlockNoteEditor,
+  BlockSpecs,
+  InlineContent,
   InlineContentSpecs,
   PartialBlock,
-  StyleSchemaFromSpecs,
-  defaultBlockSpecs,
-  defaultStyleSpecs,
+  PartialInlineContent,
+  StyleSpecs,
 } from '@blocknote/core'
 
 // remove link from inline content specs
@@ -17,15 +22,23 @@ export const customInlineContentSpecs = {
   ...remainingInlineContentSpecs,
 } as InlineContentSpecs
 
-export type CustomInlineContentSpecs = typeof customInlineContentSpecs
-export type CustomInlineContentSchema =
-  InlineContentSchemaFromSpecs<CustomInlineContentSpecs>
+export const customStyleSpecs = {
+  ...defaultStyleSpecs,
+} as StyleSpecs
 
-export type CustomBlockSpecs = typeof defaultBlockSpecs
-export type CustomBlockSchema = BlockSchemaFromSpecs<CustomBlockSpecs>
+export const customBlockSpecs = {
+  ...defaultBlockSpecs,
+} as BlockSpecs
 
-export type CustomStyleSpecs = typeof defaultStyleSpecs
-export type CustomStyleSchema = StyleSchemaFromSpecs<CustomStyleSpecs>
+export const editorSchema = BlockNoteSchema.create({
+  blockSpecs: customBlockSpecs,
+  inlineContentSpecs: customInlineContentSpecs,
+  styleSpecs: customStyleSpecs,
+})
+
+export type CustomBlockSchema = typeof editorSchema.blockSchema
+export type CustomInlineContentSchema = typeof editorSchema.inlineContentSchema
+export type CustomStyleSchema = typeof editorSchema.styleSchema
 
 export type CustomBlock = Block<
   CustomBlockSchema,
@@ -34,6 +47,22 @@ export type CustomBlock = Block<
 >
 
 export type CustomPartialBlock = PartialBlock<
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema
+>
+
+export type CustomInlineContent = InlineContent<
+  CustomInlineContentSchema,
+  CustomStyleSchema
+>
+
+export type CustomPartialInlineContent = PartialInlineContent<
+  CustomInlineContentSchema,
+  CustomStyleSchema
+>
+
+export type CustomBlockNoteEditor = BlockNoteEditor<
   CustomBlockSchema,
   CustomInlineContentSchema,
   CustomStyleSchema

@@ -2,6 +2,7 @@ import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { useEffect } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
+import { editorSchema } from 'convex/notes/editorSpecs'
 import SelectionToolbar from '../../editor/extensions/selection-toolbar/selection-toolbar'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
@@ -11,11 +12,10 @@ import '../../editor/extensions/md-link/md-link.css'
 import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { NoteWithContent } from 'convex/notes/types'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
 import { useDisableAutolink } from '~/hooks/useDisableAutolink'
-import { editorSchema } from '~/lib/editor-schema'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useEditorMode } from '~/hooks/useEditorMode'
 
@@ -54,7 +54,7 @@ export const NoteViewerBase = ({
   useDisableAutolink(editor)
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 min-h-0">
       <BlockNoteView
         className="mx-auto w-full max-w-3xl mt-2"
         key={noteWithContent._id + 'viewer'}

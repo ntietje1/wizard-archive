@@ -12,6 +12,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { LoadingPage } from '~/components/loading/loading-page'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/settings/',
@@ -55,7 +56,8 @@ function CampaignSettingsPage() {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-8">
+    <ScrollArea className="flex-1 min-h-0">
+    <div className="p-6 space-y-8">
       <div>
         <h2 className="text-2xl font-bold">Campaign Settings</h2>
         <p className="text-gray-600 mt-1">
@@ -283,5 +285,6 @@ function CampaignSettingsPage() {
         </div>
       </div>
     </div>
+    </ScrollArea>
   )
 }

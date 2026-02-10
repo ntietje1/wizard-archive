@@ -10,5 +10,6 @@ export type UserProfile = {
   name?: string
   firstName?: string
   lastName?: string
+  imageUrl?: string
   updatedAt: number
 }

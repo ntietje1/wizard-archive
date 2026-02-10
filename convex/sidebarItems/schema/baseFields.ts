@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { sidebarItemShareValidator } from '../../shares/schema'
 import {
-  sidebarItemShareStatusValidator,
+  permissionLevelValidator,
   sidebarItemTypeValidator,
 } from './baseValidators'
 
@@ -14,11 +14,12 @@ export const sidebarItemTableFields = {
   type: sidebarItemTypeValidator,
   parentId: v.optional(v.id('folders')),
   updatedAt: v.number(),
-  shareStatus: v.optional(sidebarItemShareStatusValidator),
+  allPermissionLevel: v.optional(permissionLevelValidator),
 }
 
 export const sidebarItemBaseFields = {
   ...sidebarItemTableFields,
   shares: v.optional(v.array(sidebarItemShareValidator)),
   isBookmarked: v.optional(v.boolean()),
-}
+  myPermissionLevel: v.optional(permissionLevelValidator),
+} // TODO: potentially make these required

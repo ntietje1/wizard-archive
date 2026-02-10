@@ -1,73 +1,42 @@
 import {
   useBlockNoteEditor,
   useComponentsContext,
-  useEditorContentOrSelectionChange,
+  useEditorSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
 import { useCallback, useMemo, useState } from 'react'
 import { BackgroundColorIcon } from './color-picker/background-color-icon'
 import { ColorPicker } from './color-picker/color-picker'
 import type {
-  BlockNoteEditor,
-  BlockSchema,
-  InlineContentSchema,
-  StyleSchema,
-} from '@blocknote/core'
-
-function checkBackgroundColorInSchema(
-  editor: BlockNoteEditor<BlockSchema, InlineContentSchema, StyleSchema>,
-): editor is BlockNoteEditor<
-  BlockSchema,
-  InlineContentSchema,
-  {
-    backgroundColor: {
-      type: 'backgroundColor'
-      propSchema: 'string'
-    }
-  }
-> {
-  return (
-    'backgroundColor' in editor.schema.styleSchema &&
-    editor.schema.styleSchema.backgroundColor.type === 'backgroundColor' &&
-    editor.schema.styleSchema.backgroundColor.propSchema === 'string'
-  )
-}
+  CustomBlockSchema,
+  CustomInlineContentSchema,
+  CustomStyleSchema,
+} from 'convex/notes/editorSpecs'
 
 export const BackgroundColorButton = () => {
   const Components = useComponentsContext()!
   const editor = useBlockNoteEditor<
-    BlockSchema,
-    InlineContentSchema,
-    StyleSchema
+    CustomBlockSchema,
+    CustomInlineContentSchema,
+    CustomStyleSchema
   >()
 
-  const backgroundColorInSchema = checkBackgroundColorInSchema(editor)
   const selectedBlocks = useSelectedBlocks(editor)
 
   const [currentBackgroundColor, setCurrentBackgroundColor] = useState<string>(
-    backgroundColorInSchema
-      ? editor.getActiveStyles().backgroundColor || 'default'
-      : 'default',
+    editor.getActiveStyles().backgroundColor || 'default',
   )
 
-  useEditorContentOrSelectionChange(() => {
-    if (backgroundColorInSchema) {
-      setCurrentBackgroundColor(
-        editor.getActiveStyles().backgroundColor || 'default',
-      )
-    }
+  useEditorSelectionChange(() => {
+    setCurrentBackgroundColor(
+      editor.getActiveStyles().backgroundColor || 'default',
+    )
   }, editor)
 
   const setBackgroundColor = useCallback(
     (color: string) => {
-      if (!backgroundColorInSchema) {
-        throw Error(
-          'Tried to set background color, but style does not exist in editor schema.',
-        )
-      }
-
       if (color === 'default') {
-        editor.removeStyles({ backgroundColor: color })
+        editor.removeStyles({ backgroundColor: 'default' })
       } else {
         editor.addStyles({ backgroundColor: color })
       }
@@ -77,18 +46,12 @@ export const BackgroundColorButton = () => {
         editor.focus()
       })
     },
-    [backgroundColorInSchema, editor],
+    [editor],
   )
 
   const show = useMemo(() => {
-    if (!backgroundColorInSchema) {
-      return false
-    }
-
     return selectedBlocks.length > 0
-
-    return false
-  }, [backgroundColorInSchema, selectedBlocks])
+  }, [selectedBlocks])
 
   if (!show || !editor.isEditable) {
     return null

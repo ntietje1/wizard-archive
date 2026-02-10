@@ -39,15 +39,6 @@ export const useSession = () => {
 
   const nextSessionNumber = (sessions.data?.length ?? 0) + 1
 
-  const startNewSession = (args?: { name?: string }) => {
-    if (!campaignId) return Promise.reject(new Error('Campaign ID is required'))
-    const name = args?.name ?? `Session ${nextSessionNumber}`
-    return startSession.mutateAsync({
-      name,
-      campaignId,
-    })
-  }
-
   return {
     currentSession,
     sessions,
@@ -55,6 +46,5 @@ export const useSession = () => {
     endCurrentSession,
     setCurrentSession,
     nextSessionNumber,
-    startNewSession,
   }
 }

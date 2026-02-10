@@ -10,7 +10,10 @@ import {
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireEditPermission } from '../shares/itemShares'
+import {
+  requireEditPermission,
+  requireFullAccessPermission,
+} from '../shares/itemShares'
 import { deleteFile as deleteFileFn } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -27,12 +30,12 @@ export const moveFile = mutation({
     }
 
     const file = await enhanceSidebarItem(ctx, rawFile)
-    await requireEditPermission(ctx, file)
+    await requireFullAccessPermission(ctx, file)
 
     // Validate no circular parent reference
     await validateParentChange({
       ctx,
-      itemId: args.fileId,
+      item: file,
       newParentId: args.parentId,
     })
 
@@ -68,7 +71,7 @@ export const createFile = mutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
-    storageId: v.id('_storage'),
+    storageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.object({
@@ -125,6 +128,7 @@ export const createFile = mutation({
       updatedAt: Date.now(),
       type: SIDEBAR_ITEM_TYPES.files,
     })
+
     return { fileId, slug: uniqueSlug }
   },
 })
@@ -134,8 +138,8 @@ export const updateFile = mutation({
     fileId: v.id('files'),
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -151,7 +155,7 @@ export const updateFile = mutation({
     }
 
     const file = await enhanceSidebarItem(ctx, rawFile)
-    await requireEditPermission(ctx, file)
+    await requireFullAccessPermission(ctx, file)
 
     const updates: Partial<Doc<'files'>> = {
       updatedAt: Date.now(),

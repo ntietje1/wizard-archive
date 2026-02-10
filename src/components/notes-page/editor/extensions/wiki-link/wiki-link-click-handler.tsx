@@ -4,10 +4,11 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
+import { useEditorDomElement } from '~/hooks/useEditorDomElement'
 import { validateSidebarItemName } from '~/lib/sidebar-validation'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import './wiki-link.css'
@@ -47,6 +48,7 @@ export function WikiLinkClickHandler({
   const campaign = campaignWithMembership.data?.campaign
   const { editorMode } = useEditorMode()
   const { parentItemsMap } = useAllSidebarItems()
+  const editorEl = useEditorDomElement(editor)
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
@@ -112,7 +114,6 @@ export function WikiLinkClickHandler({
 
   // Mouse tracking for ghost link tooltips
   useEffect(() => {
-    const editorEl = editor?.domElement
     if (!editorEl) return
 
     const onMouseMove = (e: MouseEvent) => {
@@ -142,11 +143,10 @@ export function WikiLinkClickHandler({
       editorEl.removeEventListener('mousemove', onMouseMove)
       editorEl.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [editor, ctrlHeld, hideTooltip, showTooltipFor])
+  }, [editorEl, ctrlHeld, hideTooltip, showTooltipFor])
 
   // Click handling
   useEffect(() => {
-    const editorEl = editor?.domElement
     if (!editorEl) return
 
     const onMouseDown = async (e: MouseEvent) => {
@@ -213,7 +213,7 @@ export function WikiLinkClickHandler({
     editorEl.addEventListener('mousedown', onMouseDown, true)
     return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
   }, [
-    editor,
+    editorEl,
     navigate,
     campaign?._id,
     createNote,

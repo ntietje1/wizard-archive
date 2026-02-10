@@ -1,4 +1,4 @@
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
 /**
  * Check if the cursor is currently inside a wikilink [[...]]

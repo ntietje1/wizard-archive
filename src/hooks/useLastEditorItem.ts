@@ -1,7 +1,7 @@
 import { useCampaign } from './useCampaign'
 import usePersistedState from './usePersistedState'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
-import type { SidebarItemType } from 'convex/sidebarItems/types'
 
 export function useLastEditorItem() {
   const { campaignWithMembership } = useCampaign()

@@ -8,6 +8,7 @@ const userProfileTableFields = {
   name: v.optional(v.string()),
   firstName: v.optional(v.string()),
   lastName: v.optional(v.string()),
+  imageUrl: v.optional(v.string()),
   updatedAt: v.number(),
 }
 

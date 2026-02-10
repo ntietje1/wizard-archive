@@ -1,5 +1,8 @@
 import { ItemCard } from './item-card'
+import { NewItemCard } from './new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
+import { CreateNewDashboard } from '~/components/notes-page/editor/create-new-dashboard'
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type { ReactNode } from 'react'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
@@ -10,6 +13,11 @@ import { EditorContextMenu } from '~/components/context-menu/components/EditorCo
 export function FolderViewer({
   item: folder,
 }: EditorViewerProps<FolderWithContent>) {
+  const folderPath = [
+    ...folder.ancestors.map((a) => a.name || defaultItemName(a)),
+    folder.name || defaultItemName(folder),
+  ].join(' / ')
+
   const Wrapper: React.FC<{ children: ReactNode }> = ({ children }) => {
     return (
       <EditorContextMenu
@@ -31,16 +39,14 @@ export function FolderViewer({
   if (folder.children.length === 0) {
     return (
       <Wrapper>
-        <div className="h-full flex items-center justify-center text-muted-foreground">
-          This folder has no items.
-        </div>
+        <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
       </Wrapper>
     )
   }
 
   return (
     <Wrapper>
-      <ScrollArea className="flex-1 w-full overflow-x-hidden">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="w-full min-w-0">
           <ContentGrid className="p-6 min-h-0">
             {folder.children.map((childItem) => {
@@ -52,6 +58,7 @@ export function FolderViewer({
                 />
               )
             })}
+            <NewItemCard parentId={folder._id} />
           </ContentGrid>
         </div>
       </ScrollArea>

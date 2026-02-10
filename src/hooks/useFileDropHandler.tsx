@@ -45,7 +45,7 @@ export function useFileDropHandler() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { createFile } = useFileActions()
-  const { createNoteWithContent } = useNoteActions()
+  const { createNote } = useNoteActions()
   const { createFolder } = useFolderActions()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToFile, navigateToNote } = useEditorNavigation()
@@ -99,7 +99,7 @@ export function useFileDropHandler() {
       try {
         if (isTextFile(file.type, file.name)) {
           const blocks = await convertTextToBlocks(file)
-          const { noteId, slug } = await createNoteWithContent.mutateAsync({
+          const { noteId, slug } = await createNote.mutateAsync({
             campaignId: targetCampaignId,
             name: fileName,
             parentId,
@@ -181,7 +181,7 @@ export function useFileDropHandler() {
       }
     },
     [
-      createNoteWithContent,
+      createNote,
       generateUploadUrl,
       trackUpload,
       commitUpload,

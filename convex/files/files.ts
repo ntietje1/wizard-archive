@@ -1,7 +1,7 @@
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
-  enforceSidebarItemSharePermissionsOrNull,
-  requireEditPermission,
+  hasViewPermission,
+  requireFullAccessPermission,
 } from '../shares/itemShares'
 import { enhanceFileWithContent } from './helpers'
 import type { Id } from '../_generated/dataModel'
@@ -12,15 +12,16 @@ import type { FileWithContent } from './types'
 export const getFile = async (
   ctx: Ctx,
   fileId: Id<'files'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
   if (!rawFile) return null
 
   const file = await enhanceSidebarItem(ctx, rawFile)
-  const permitted = await enforceSidebarItemSharePermissionsOrNull(ctx, file)
-  if (!permitted) return null
+  const hasPermission = await hasViewPermission(ctx, file, viewAsPlayerId)
+  if (!hasPermission) return null
 
-  return enhanceFileWithContent(ctx, permitted)
+  return enhanceFileWithContent(ctx, file)
 }
 
 export const deleteFile = async (
@@ -33,7 +34,7 @@ export const deleteFile = async (
   }
 
   const file = await enhanceSidebarItem(ctx, rawFile)
-  await requireEditPermission(ctx, file)
+  await requireFullAccessPermission(ctx, file)
 
   await ctx.db.delete(fileId)
   return fileId

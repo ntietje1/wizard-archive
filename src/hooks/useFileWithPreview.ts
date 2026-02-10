@@ -11,6 +11,7 @@ export interface FileWithPreviewOptions {
   uploadOnSelect?: boolean
   fileTypeValidator?: (file: File) => { success: boolean; error?: string }
   maxFileSize?: number
+  onUploadComplete?: (storageId: Id<'_storage'>) => void | Promise<void>
 }
 
 export interface FileMetadata {
@@ -58,6 +59,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     uploadOnSelect = true,
     fileTypeValidator,
     maxFileSize = MAX_FILE_SIZE,
+    onUploadComplete,
   } = options
   const convex = useConvex()
   const { uploadFile, uploadProgress, commitUpload } = useFileUpload()
@@ -211,23 +213,26 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
         setIsUploading(true)
         uploadFile
           .mutateAsync(selectedFile)
-          .then((uploadedStorageId) => {
+          .then(async (uploadedStorageId) => {
             setStorageId(uploadedStorageId)
+            if (onUploadComplete) {
+              await commitUpload.mutateAsync({ storageId: uploadedStorageId })
+              await onUploadComplete(uploadedStorageId)
+            }
+            setIsUploading(false)
           })
           .catch((error) => {
             console.error('Failed to upload file:', error)
             setUploadError(
               error instanceof Error ? error.message : 'Upload failed',
             )
-          })
-          .finally(() => {
             setIsUploading(false)
           })
       }
 
       return { success: true }
     },
-    [verifyFile, uploadOnSelect, uploadFile],
+    [verifyFile, uploadOnSelect, uploadFile, onUploadComplete, commitUpload],
   )
 
   const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {

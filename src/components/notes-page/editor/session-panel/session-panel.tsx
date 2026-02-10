@@ -24,7 +24,7 @@ export function SessionPanel() {
     sessions,
     endCurrentSession,
     setCurrentSession,
-    startNewSession,
+    startSession,
   } = useSession()
 
   const hasActiveSession = !!currentSession.data
@@ -42,7 +42,7 @@ export function SessionPanel() {
 
   const handleStart = () => {
     if (!campaignId) return
-    startNewSession()
+    startSession.mutate({ campaignId })
   }
 
   const handleStop = () => {
@@ -92,7 +92,12 @@ export function SessionPanel() {
               Stop Session
             </Button>
           ) : (
-            <Button size="lg" className="w-full" onClick={handleStart}>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleStart}
+              disabled={startSession.isPending}
+            >
               Start Session
             </Button>
           )}

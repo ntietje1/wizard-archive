@@ -4,11 +4,12 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useDraggable } from '@dnd-kit/core'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { LucideIcon } from 'lucide-react'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { File } from 'convex/files/types'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -23,6 +24,7 @@ import {
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useFileSidebar } from '~/hooks/useFileSidebar'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -78,7 +80,11 @@ function FileCardSkeleton() {
 function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const { navigateToFile } = useEditorNavigation()
   const { activeDragItem } = useFileSidebar()
-  const isDisabled = activeDragItem !== null
+  const canDrag = hasAtLeastPermissionLevel(
+    file.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
+  const isDisabled = activeDragItem !== null || !canDrag
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const metadataQuery = useQuery(
@@ -94,7 +100,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const dragData: SidebarDragData = file
 
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: file._id,
+    id: `card-${file._id}`,
     data: dragData,
     disabled: isDisabled,
   })

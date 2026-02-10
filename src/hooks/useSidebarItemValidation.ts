@@ -3,8 +3,10 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useAllSidebarItems } from './useSidebarItems'
 import { useCampaign } from './useCampaign'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { ValidationResult } from '~/lib/sidebar-validation'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   checkNameConflict,
   validateNoCircularParent,
@@ -38,7 +40,7 @@ export function useSidebarItemValidation(
    * Get siblings under a parent (items that share the same parentId).
    */
   const getSiblings = useCallback(
-    (parentId: SidebarItemId | undefined): Array<AnySidebarItem> => {
+    (parentId: Id<'folders'> | undefined): Array<AnySidebarItem> => {
       return parentItemsMap.get(parentId) ?? []
     },
     [parentItemsMap],
@@ -62,7 +64,7 @@ export function useSidebarItemValidation(
   const validateNameConflictSync = useCallback(
     (
       name: string | undefined,
-      parentId: SidebarItemId | undefined,
+      parentId: Id<'folders'> | undefined,
       excludeId?: SidebarItemId,
     ): ValidationResult => {
       const siblings = getSiblings(parentId)
@@ -77,7 +79,7 @@ export function useSidebarItemValidation(
   const validateParentSync = useCallback(
     (
       itemId: SidebarItemId,
-      newParentId: SidebarItemId | undefined,
+      newParentId: Id<'folders'> | undefined,
     ): ValidationResult => {
       return validateNoCircularParent(itemId, newParentId, itemsMap)
     },
@@ -90,7 +92,7 @@ export function useSidebarItemValidation(
   const validateNameSync = useCallback(
     (
       name: string | undefined,
-      parentId: SidebarItemId | undefined,
+      parentId: Id<'folders'> | undefined,
       excludeId?: SidebarItemId,
     ): ValidationResult => {
       const siblings = getSiblings(parentId)
@@ -106,7 +108,7 @@ export function useSidebarItemValidation(
   const validateNameAsync = useCallback(
     async (
       name: string | undefined,
-      parentId: SidebarItemId | undefined,
+      parentId: Id<'folders'> | undefined,
       excludeId?: SidebarItemId,
     ): Promise<string | undefined> => {
       if (!campaignId) return undefined
@@ -140,7 +142,7 @@ export function useSidebarItemValidation(
   const validateForCreate = useCallback(
     async (createOptions: {
       name: string | undefined
-      parentId: SidebarItemId | undefined
+      parentId: Id<'folders'> | undefined
     }): Promise<string | undefined> => {
       const { name, parentId } = createOptions
       return validateNameAsync(name, parentId)
@@ -156,7 +158,7 @@ export function useSidebarItemValidation(
   const validateForUpdate = useCallback(
     async (updateOptions: {
       name: string | undefined
-      parentId: SidebarItemId | undefined
+      parentId: Id<'folders'> | undefined
       itemId: SidebarItemId
     }): Promise<string | undefined> => {
       const { name, parentId, itemId } = updateOptions
@@ -173,7 +175,7 @@ export function useSidebarItemValidation(
   const validateForMove = useCallback(
     async (moveOptions: {
       itemId: SidebarItemId
-      newParentId: SidebarItemId | undefined
+      newParentId: Id<'folders'> | undefined
       itemName: string | undefined
     }): Promise<string | undefined> => {
       const { itemId, newParentId, itemName } = moveOptions
@@ -203,7 +205,7 @@ export function useSidebarItemValidation(
   const canMoveToParent = useCallback(
     (
       itemId: SidebarItemId,
-      newParentId: SidebarItemId | undefined,
+      newParentId: Id<'folders'> | undefined,
     ): boolean => {
       const result = validateParentSync(itemId, newParentId)
       return result.valid
@@ -217,7 +219,7 @@ export function useSidebarItemValidation(
    * Use this in form field validators for async validation.
    */
   const createNameValidator = useCallback(
-    (parentId: SidebarItemId | undefined, excludeId?: SidebarItemId) => {
+    (parentId: Id<'folders'> | undefined, excludeId?: SidebarItemId) => {
       return async (name: string): Promise<string | undefined> => {
         return validateNameAsync(name, parentId, excludeId)
       }

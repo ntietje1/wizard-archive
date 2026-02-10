@@ -39,6 +39,7 @@ export {
   Highlighter,
   Link,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Folder,
   FolderOpen,

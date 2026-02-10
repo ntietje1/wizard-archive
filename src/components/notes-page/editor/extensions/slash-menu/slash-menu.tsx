@@ -1,4 +1,3 @@
-import { filterSuggestionItems } from '@blocknote/core'
 import {
   SuggestionMenuController,
   getDefaultReactSlashMenuItems,
@@ -8,7 +7,8 @@ import type {
   DefaultReactSuggestionItem,
   SuggestionMenuProps,
 } from '@blocknote/react'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import { filterSuggestionItems } from '~/lib/filter-suggestion-items'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import './slash-menu.css'
 

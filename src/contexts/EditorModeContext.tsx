@@ -1,39 +1,51 @@
 import { useCallback, useMemo, useState } from 'react'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { EDITOR_MODE } from 'convex/editors/types'
+import type { EditorMode } from 'convex/editors/types'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   EditorModeActionsContext,
   EditorModeStateContext,
 } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
-
-export type EditorMode = 'viewer' | 'editor'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export function EditorModeProvider({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { campaignWithMembership, isDm } = useCampaign()
-  const [editorMode, setEditorModeState] = useState<EditorMode>('editor')
+  const { isDm } = useCampaign()
+  const [editorMode, setEditorModeState] = useState<EditorMode>(
+    EDITOR_MODE.EDITOR,
+  )
   const [viewAsPlayerId, setViewAsPlayerIdState] = useState<
     Id<'campaignMembers'> | undefined
   >(undefined)
 
+  const { item: currentItem } = useCurrentItem()
+
+  const canEdit = hasAtLeastPermissionLevel(
+    currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+    PERMISSION_LEVEL.EDIT,
+  )
+  const effectiveEditorMode = canEdit ? editorMode : EDITOR_MODE.VIEWER
+
   const stateValue = useMemo(
     () => ({
-      editorMode: isDm ? editorMode : 'viewer',
-      viewAsPlayerId: isDm
-        ? viewAsPlayerId
-        : campaignWithMembership.data?.member._id,
+      editorMode: effectiveEditorMode,
+      viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
+      canEdit,
     }),
-    [editorMode, viewAsPlayerId, isDm, campaignWithMembership.data?.member._id],
+    [effectiveEditorMode, viewAsPlayerId, isDm, canEdit],
   )
 
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
-      if (isDm) setEditorModeState(mode)
+      if (canEdit) setEditorModeState(mode)
     },
-    [isDm],
+    [canEdit],
   )
 
   const setViewAsPlayerId = useCallback(

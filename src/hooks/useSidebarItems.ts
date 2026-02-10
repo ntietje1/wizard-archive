@@ -65,14 +65,19 @@ export const useAllSidebarItems = (enabled = true) => {
     const sidebarItems = sidebarItemsQuery.data ?? []
     const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
     sidebarItems.forEach((item) => {
-      if (map.has(item.parentId)) {
-        map.get(item.parentId)?.push(item)
+      // If the item's parent folder isn't in our permitted set, show at root
+      const effectiveParentId =
+        item.parentId && !sidebarItemIdMap.has(item.parentId)
+          ? undefined
+          : item.parentId
+      if (map.has(effectiveParentId)) {
+        map.get(effectiveParentId)?.push(item)
       } else {
-        map.set(item.parentId, [item])
+        map.set(effectiveParentId, [item])
       }
     })
     return map
-  }, [sidebarItemsQuery.data])
+  }, [sidebarItemsQuery.data, sidebarItemIdMap])
 
   const getAncestorSidebarItems = useCallback(
     (itemId: SidebarItemId) => {

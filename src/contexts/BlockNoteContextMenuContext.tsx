@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import type { CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
 import type { BlockNoteContextMenuEvent } from '~/hooks/useBlockNoteContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'

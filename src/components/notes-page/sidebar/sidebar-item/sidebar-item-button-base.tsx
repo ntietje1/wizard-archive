@@ -25,6 +25,7 @@ function SidebarItemButtonBaseComponent({
   campaignId,
   parentId,
   excludeId,
+  shareButton,
 }: SidebarItemButtonProps) {
   return (
     <div
@@ -90,11 +91,11 @@ function SidebarItemButtonBaseComponent({
         )}
       </button>
 
-      {/* More Options Button */}
+      {/* Action Buttons */}
       {!isRenaming && !isDraggingActive && (
-        <HoverToggleButton
-          className="relative h-6 w-6 shrink-0 flex items-center justify-center"
-          hoverComponent={
+        <div className="flex items-center shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 group-hover:transition-opacity">
+          {shareButton}
+          <div className="relative h-6 w-6 shrink-0 flex items-center justify-center">
             <Button
               variant="ghost"
               size="sm"
@@ -103,8 +104,8 @@ function SidebarItemButtonBaseComponent({
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
-          }
-        />
+          </div>
+        </div>
       )}
     </div>
   )

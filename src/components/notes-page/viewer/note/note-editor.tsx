@@ -1,7 +1,12 @@
 import { BlockNoteView } from '@blocknote/shadcn'
-import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
+import { SideMenuController } from '@blocknote/react'
+import { useBlockNoteSync } from '@convex-dev/prosemirror-sync/blocknote'
 import { useCallback, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
+import { editorSchema } from 'convex/notes/editorSpecs'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { WikiLinkAutocomplete } from '../../editor/extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../editor/extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../editor/extensions/md-link/md-link-click-handler'
@@ -11,12 +16,10 @@ import { SlashMenu } from '../../editor/extensions/slash-menu/slash-menu'
 import { NoteViewer } from './note-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { NoteWithContent } from 'convex/notes/types'
-import type { CustomBlock, CustomBlockNoteEditor } from '~/lib/editor-schema'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/contexts/BlockNoteContextMenuContext'
-import { editorSchema } from '~/lib/editor-schema'
 import { isNote } from '~/lib/sidebar-item-utils'
-import { useNoteContent } from '~/hooks/useNoteContent'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useWikiLinkExtension } from '~/hooks/useWikiLinkExtension'
 import { useMdLinkExtension } from '~/hooks/useMdLinkExtension'
@@ -29,12 +32,6 @@ import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
-  const { updateContent } = useNoteContent(note._id)
-
-  // When viewing as a player, show the viewer instead
-  if (viewAsPlayerId) {
-    return <NoteViewer item={note} />
-  }
 
   if (!isNote(note)) {
     return (
@@ -44,40 +41,70 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     )
   }
 
+  const isViewOnly =
+    viewAsPlayerId &&
+    !hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.EDIT)
+
+  if (isViewOnly) {
+    return <NoteViewer item={note} />
+  }
+
   return (
     <ClientOnly fallback={null}>
-      <NoteEditorBase
-        key={note._id}
-        noteWithContent={note}
-        updateContent={updateContent}
-      />
+      <NoteEditorSync key={note._id} noteWithContent={note} />
     </ClientOnly>
   )
 }
 
-export const NoteEditorBase = ({
+const NoteEditorSync = ({
   noteWithContent,
-  updateContent,
 }: {
   noteWithContent: NoteWithContent
-  updateContent: (newContent: Array<CustomBlock>) => void
 }) => {
   const { editorMode } = useEditorMode()
-  const initialContent =
-    noteWithContent.content.length > 0 ? noteWithContent.content : undefined
 
-  const editor: CustomBlockNoteEditor = useCreateBlockNote({
-    schema: editorSchema,
-    initialContent,
-  })
+  const sync = useBlockNoteSync<CustomBlockNoteEditor>(
+    api.prosemirrorSync,
+    noteWithContent._id,
+    { editorOptions: { schema: editorSchema } },
+  )
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
+  if (!sync.editor) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    )
+  }
+
+  return (
+    <NoteEditorReady
+      editor={sync.editor}
+      noteWithContent={noteWithContent}
+      editorMode={editorMode}
+      scrollAreaRef={scrollAreaRef}
+    />
+  )
+}
+
+const NoteEditorReady = ({
+  editor,
+  noteWithContent,
+  editorMode,
+  scrollAreaRef,
+}: {
+  editor: CustomBlockNoteEditor
+  noteWithContent: NoteWithContent
+  editorMode: string
+  scrollAreaRef: React.RefObject<HTMLDivElement | null>
+}) => {
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)
   useDisableAutolink(editor)
   const { isScrollingToHeading } = useScrollToHeading(
-    noteWithContent.content as Array<CustomBlock>,
+    noteWithContent.content,
     true,
     editor,
   )
@@ -108,8 +135,7 @@ export const NoteEditorBase = ({
     <BlockNoteContextMenuProvider editor={editor}>
       <ScrollArea
         ref={scrollAreaRef}
-        className="flex-1 h-full"
-        contentClassName="h-full"
+        className="flex-1 min-h-0"
         onContextMenu={handleWrapperContextMenu}
       >
         <div className="note-editor-fill-height">
@@ -117,7 +143,6 @@ export const NoteEditorBase = ({
             className="mx-auto w-full max-w-3xl mt-2"
             key={noteWithContent._id + 'editor'}
             editor={editor}
-            onChange={() => updateContent(editor.document)}
             theme="light"
             linkToolbar={false}
             sideMenu={false}

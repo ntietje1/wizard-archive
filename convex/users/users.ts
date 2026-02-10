@@ -51,6 +51,7 @@ export async function createUserProfileHandler(
     name: identity.name,
     firstName: identity.givenName,
     lastName: identity.familyName,
+    imageUrl: identity.pictureUrl,
     updatedAt: Date.now(),
   })
 }
@@ -87,6 +88,13 @@ export async function updateUserProfileHandler(
 
   if (identity.familyName && identity.familyName !== profile.lastName) {
     updates.lastName = identity.familyName
+  }
+
+  if (
+    identity.pictureUrl !== undefined &&
+    identity.pictureUrl !== profile.imageUrl
+  ) {
+    updates.imageUrl = identity.pictureUrl
   }
 
   // updatedAt is always included

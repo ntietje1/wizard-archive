@@ -38,5 +38,5 @@ export type MapPin = {
 }
 
 export type MapPinWithItem = MapPin & {
-  item: AnySidebarItem
+  item?: AnySidebarItem
 }

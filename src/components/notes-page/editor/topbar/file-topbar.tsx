@@ -1,3 +1,5 @@
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
@@ -7,21 +9,35 @@ import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { isNote } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
+import { useEditorModeState } from '~/hooks/useEditorMode'
+import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { useCampaign } from '~/hooks/useCampaign'
 
 export function FileTopbar() {
-  const { item, itemForDm, isLoading } = useCurrentItem()
+  const { canEdit, viewAsPlayerId } = useEditorModeState()
+  const { item, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item: viewAsItem } = useCurrentItem(viewAsPlayerId)
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
+  const { setPendingItemName } = usePendingItemName()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const canRename =
+    item &&
+    hasAtLeastPermissionLevel(
+      item.myPermissionLevel,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
   const handleRename = async (newName: string) => {
     if (!item) return
     await rename(item, newName)
   }
 
-  const defaultName = defaultItemName(itemForDm)
-  const isNotSharedWithPlayer = itemForDm && !item
+  const defaultName = defaultItemName(item)
+  const isNotSharedWithPlayer = item && !viewAsItem
+  const isEmptyEditor = !item && !hasRequestedItem
 
   if (isLoading) {
     return <TopbarLoading />
@@ -29,9 +45,7 @@ export function FileTopbar() {
 
   const middleContent = (
     <ItemButtonWrapper>
-      {itemForDm && isNote(itemForDm) && (
-        <EditorViewModeToggleButton disabled={!item} />
-      )}
+      {canEdit && <EditorViewModeToggleButton disabled={!item} />}
     </ItemButtonWrapper>
   )
 
@@ -44,17 +58,29 @@ export function FileTopbar() {
             isNotSharedWithPlayer && 'opacity-50',
           )}
         >
-          {itemForDm && (
+          {item && (
             <EditableBreadcrumb
-              initialName={itemForDm.name || ''}
-              defaultName={defaultName || 'Untitled'}
+              initialName={item.name || ''}
+              defaultName={defaultName}
               onRename={handleRename}
-              ancestors={itemForDm.ancestors}
+              ancestors={item.ancestors}
               onNavigateToItem={navigateToItem}
-              campaignId={itemForDm.campaignId}
-              parentId={itemForDm.parentId}
-              excludeId={itemForDm._id}
-              disabled={isNotSharedWithPlayer ?? false}
+              campaignId={item.campaignId}
+              parentId={item.parentId}
+              excludeId={item._id}
+              disabled={!canRename || (isNotSharedWithPlayer ?? false)}
+              showNotSharedTooltip={!!isNotSharedWithPlayer}
+            />
+          )}
+          {isEmptyEditor && (
+            <EditableBreadcrumb
+              initialName=""
+              defaultName={defaultName}
+              onRename={handleRename}
+              onChange={setPendingItemName}
+              ancestors={[]}
+              onNavigateToItem={navigateToItem}
+              campaignId={campaignId}
             />
           )}
         </div>

@@ -1,5 +1,5 @@
 import { Plugin } from '@tiptap/pm/state'
-import type { PluginKey } from '@tiptap/pm/state';
+import type { PluginKey } from '@tiptap/pm/state'
 
 /**
  * Creates a plugin that prevents selection oscillation caused by font-size:0 decorations.

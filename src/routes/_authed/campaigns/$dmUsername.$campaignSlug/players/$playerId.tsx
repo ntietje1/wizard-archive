@@ -1,4 +1,5 @@
 import { createFileRoute, useParams } from '@tanstack/react-router'
+import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId',
@@ -11,5 +12,5 @@ function RouteComponent() {
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId',
   }).playerId
 
-  return <div>{playerId}</div>
+  return <ScrollArea className="flex-1 min-h-0">{playerId}</ScrollArea>
 }

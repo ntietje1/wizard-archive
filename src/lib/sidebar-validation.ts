@@ -1,5 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 
 export interface ValidationResult {
   valid: boolean

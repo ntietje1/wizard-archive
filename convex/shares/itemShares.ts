@@ -4,83 +4,190 @@ import {
 } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
-import { PERMISSION_STATUS, SHARE_STATUS } from './types'
-import type { CustomBlock } from '../notes/editorSpecs'
+import { defaultItemName } from '../sidebarItems/sidebarItems'
+import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from './types'
 import type { Ctx } from '../common/types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
-import type { AnySidebarItem } from '../sidebarItems/types'
+import type {
+  AnySidebarItem,
+  AnySidebarItemFromDb,
+} from '../sidebarItems/types'
 import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
-import type { PermissionStatus, SidebarItemShare } from './types'
+import type { PermissionLevel, SidebarItemShare } from './types'
 
-export async function getSidebarItemPermissionStatus(
+export async function getSidebarItemPermissionLevel(
   ctx: Ctx,
-  item: AnySidebarItem,
+  item: AnySidebarItem | AnySidebarItemFromDb,
   viewAsPlayerId?: Id<'campaignMembers'>,
-): Promise<PermissionStatus> {
+): Promise<PermissionLevel> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: item.campaignId,
   })
 
   if (!campaignWithMembership) {
-    return PERMISSION_STATUS.NO_ACCESS
+    return PERMISSION_LEVEL.NONE
   }
 
   let checkId = campaignWithMembership.member._id
 
   if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
     if (!viewAsPlayerId) {
-      return PERMISSION_STATUS.EDIT
+      return PERMISSION_LEVEL.FULL_ACCESS
     } else {
       checkId = viewAsPlayerId
     }
   }
 
-  const shareStatus = item.shareStatus ?? SHARE_STATUS.NOT_SHARED
+  // Check for an explicit per-player share
+  const share = await getSidebarItemShareForMember(
+    ctx,
+    item.campaignId,
+    item._id,
+    checkId,
+  )
+  if (share) {
+    return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
+  }
 
-  switch (shareStatus) {
-    case SHARE_STATUS.ALL_SHARED:
-      return PERMISSION_STATUS.VIEW
-    case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-      const isShared = await isSidebarItemSharedWithMember(
-        ctx,
-        item.campaignId,
-        item._id,
-        checkId,
-      )
-      return isShared ? PERMISSION_STATUS.VIEW : PERMISSION_STATUS.NO_ACCESS
+  // Check item's own explicit allPermissionLevel
+  const allPerm = item.allPermissionLevel
+  if (allPerm !== undefined) {
+    return allPerm
+  }
+
+  // Walk up folder hierarchy for inherited permission
+  const parentId = item.parentId
+  return await resolveInheritedPermission(
+    ctx,
+    item.campaignId,
+    parentId,
+    checkId,
+  )
+}
+
+async function resolveInheritedPermission(
+  ctx: Ctx,
+  campaignId: Id<'campaigns'>,
+  parentId: Id<'folders'> | undefined,
+  playerId: Id<'campaignMembers'>,
+): Promise<PermissionLevel> {
+  const { level } = await resolveInheritedPermissionWithSource(
+    ctx,
+    campaignId,
+    parentId,
+    playerId,
+  )
+  return level ?? PERMISSION_LEVEL.NONE
+}
+
+export async function resolveInheritedPermissionWithSource(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  parentId: Id<'folders'> | undefined,
+  memberId?: Id<'campaignMembers'>,
+): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
+  let currentParentId = parentId
+  while (currentParentId) {
+    const folder = await ctx.db.get(currentParentId)
+    if (!folder) break
+
+    // continue walking up until we find a folder that inherits shares
+    if (!folder.inheritShares) {
+      currentParentId = folder.parentId
+      continue
     }
-    case SHARE_STATUS.NOT_SHARED:
-      return PERMISSION_STATUS.NO_ACCESS
+
+    // Check individual member share if memberId provided
+    if (memberId) {
+      const share = await getSidebarItemShareForMember(
+        ctx,
+        campaignId,
+        currentParentId,
+        memberId,
+      )
+      if (share) {
+        return {
+          level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+          folderName: folder.name || defaultItemName(folder),
+        }
+      }
+    }
+
+    // Check allPermissionLevel
+    if (folder.allPermissionLevel !== undefined) {
+      return {
+        level: folder.allPermissionLevel,
+        folderName: folder.name || defaultItemName(folder),
+      }
+    }
+
+    currentParentId = folder.parentId
+  }
+  return { level: undefined }
+}
+
+export function hasAtLeastPermissionLevel(
+  level: PermissionLevel,
+  requiredLevel: PermissionLevel,
+): boolean {
+  return ATLEAST_PERMISSION_LEVEL[requiredLevel].includes(level)
+}
+
+export async function hasViewPermission(
+  ctx: Ctx,
+  item: AnySidebarItem,
+  viewAsPlayerId?: Id<'campaignMembers'>,
+): Promise<boolean> {
+  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)
+}
+
+export async function requireViewPermission(
+  ctx: Ctx,
+  item: AnySidebarItem,
+  viewAsPlayerId?: Id<'campaignMembers'>,
+): Promise<void> {
+  if (!(await hasViewPermission(ctx, item, viewAsPlayerId))) {
+    throw new Error('You do not have permission to view this item')
   }
 }
 
-export async function enforceSidebarItemSharePermissionsOrNull<
-  T extends AnySidebarItem,
->(
+export async function hasEditPermission(
   ctx: Ctx,
-  item: T,
+  item: AnySidebarItem,
   viewAsPlayerId?: Id<'campaignMembers'>,
-): Promise<T | null> {
-  const permissionStatus = await getSidebarItemPermissionStatus(
-    ctx,
-    item,
-    viewAsPlayerId,
-  )
-  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
-    return null
-  }
-
-  return item
+): Promise<boolean> {
+  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.EDIT)
 }
 
 export async function requireEditPermission(
   ctx: Ctx,
   item: AnySidebarItem,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<void> {
-  const permissionStatus = await getSidebarItemPermissionStatus(ctx, item)
-  if (permissionStatus !== PERMISSION_STATUS.EDIT) {
+  if (!(await hasEditPermission(ctx, item, viewAsPlayerId))) {
     throw new Error('You do not have permission to edit this item')
+  }
+}
+
+export async function hasFullAccessPermission(
+  ctx: Ctx,
+  item: AnySidebarItem,
+  viewAsPlayerId?: Id<'campaignMembers'>,
+): Promise<boolean> {
+  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)
+}
+
+export async function requireFullAccessPermission(
+  ctx: Ctx,
+  item: AnySidebarItem,
+  viewAsPlayerId?: Id<'campaignMembers'>,
+): Promise<void> {
+  if (!(await hasFullAccessPermission(ctx, item, viewAsPlayerId))) {
+    throw new Error('You do not have full access permission for this item')
   }
 }
 
@@ -90,6 +197,7 @@ export async function shareSidebarItemWithMember(
   sidebarItemId: SidebarItemId,
   sidebarItemType: SidebarItemType,
   campaignMemberId: Id<'campaignMembers'>,
+  permissionLevel?: PermissionLevel,
 ): Promise<Id<'sidebarItemShares'>> {
   await requireCampaignMembership(
     ctx,
@@ -109,6 +217,13 @@ export async function shareSidebarItemWithMember(
     .unique()
 
   if (existingShare) {
+    // Update permission level if provided and different
+    if (
+      permissionLevel !== undefined &&
+      existingShare.permissionLevel !== permissionLevel
+    ) {
+      await ctx.db.patch(existingShare._id, { permissionLevel })
+    }
     return existingShare._id
   }
 
@@ -121,6 +236,7 @@ export async function shareSidebarItemWithMember(
     sidebarItemType,
     campaignMemberId,
     sessionId: currentSession?._id,
+    permissionLevel,
   })
 }
 
@@ -177,13 +293,13 @@ export async function getSidebarItemSharesForMember(
     .collect()
 }
 
-export async function isSidebarItemSharedWithMember(
+export async function getSidebarItemShareForMember(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   sidebarItemId: SidebarItemId,
   campaignMemberId: Id<'campaignMembers'>,
-): Promise<boolean> {
-  const share = await ctx.db
+): Promise<SidebarItemShare | null> {
+  return await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
       q
@@ -192,10 +308,19 @@ export async function isSidebarItemSharedWithMember(
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
-
-  return share !== null
 }
-export interface BlockItem {
-  blockNoteId: string
-  content: CustomBlock
+
+export async function isSidebarItemSharedWithMember(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+  sidebarItemId: SidebarItemId,
+  campaignMemberId: Id<'campaignMembers'>,
+): Promise<boolean> {
+  const share = await getSidebarItemShareForMember(
+    ctx,
+    campaignId,
+    sidebarItemId,
+    campaignMemberId,
+  )
+  return share !== null
 }
