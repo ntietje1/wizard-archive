@@ -4,7 +4,6 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useState } from 'react'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 import { CreateNewDashboard } from './create-new-dashboard'
-import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE, canDropItem } from '~/lib/dnd-utils'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
@@ -13,6 +12,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useItemRedirect } from '~/hooks/useItemRedirect'
 import { useFileActions } from '~/hooks/useFileActions'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useFolderActions } from '~/hooks/useFolderActions'
@@ -24,6 +24,7 @@ export function EditorContent() {
   const { viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } =
     useCurrentItem(viewAsPlayerId)
+  useItemRedirect(item)
 
   if (isLoading) {
     return (

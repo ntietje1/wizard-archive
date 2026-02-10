@@ -1,8 +1,10 @@
 import { useMatch } from '@tanstack/react-router'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { useRef } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
@@ -18,7 +20,6 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
 
   const typeAndSlug = getTypeAndSlug(editorSearch)
 
-  // Query with viewAsPlayerId filter (what the player would see)
   const sidebarItemQuery = useQuery({
     ...convexQuery(
       api.sidebarItems.queries.getSidebarItemBySlug,
@@ -31,20 +32,22 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
           }
         : 'skip',
     ),
-    placeholderData: keepPreviousData,
   })
 
-  // When no item is requested (no search params), always return null
-  // regardless of stale placeholderData from keepPreviousData
-  const item = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
+  const lastItemRef = useRef<AnySidebarItemWithContent | null>(null)
 
-  const itemType = item?.type
-  const isLoading = typeAndSlug !== null && !item && sidebarItemQuery.isPending
+  if (sidebarItemQuery.data) {
+    lastItemRef.current = sidebarItemQuery.data
+  } else if (lastItemRef.current?.slug !== typeAndSlug?.slug) {
+    lastItemRef.current = null
+  }
+
+  const item = sidebarItemQuery.data ?? lastItemRef.current
 
   return {
     item,
-    itemType,
-    isLoading,
+    itemType: item?.type,
+    isLoading: typeAndSlug !== null && !item && sidebarItemQuery.isPending,
     editorSearch,
     hasRequestedItem: typeAndSlug !== null,
   }
