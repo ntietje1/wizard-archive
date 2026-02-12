@@ -1,5 +1,7 @@
 import { toast } from 'sonner'
 import { useState } from 'react'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
@@ -12,14 +14,11 @@ import {
   MapPin,
   Plus,
 } from '~/lib/icons'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useMapActions } from '~/hooks/useMapActions'
-import { useFileActions } from '~/hooks/useFileActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
-import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { usePendingItemName } from '~/hooks/useSidebarItemsCollection'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -78,94 +77,33 @@ export function CreateNewDashboard({
 }: CreateNewDashboardProps) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
-  const { createMap } = useMapActions()
-  const { createFile } = useFileActions()
-  const { navigateToNote, navigateToFolder, navigateToMap, navigateToFile } =
-    useEditorNavigation()
+  const { createItem } = useSidebarItemMutations()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const { pendingItemName } = usePendingItemName()
-  const [isNavigating, setIsNavigating] = useState(false)
+  const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
+  const [successType, setSuccessType] = useState<SidebarItemType | null>(null)
   const name = pendingItemName.trim() || undefined
 
-  const isAnyCreating =
-    createNote.isPending ||
-    createFolder.isPending ||
-    createMap.isPending ||
-    createFile.isPending
+  const isDisabled = creatingType !== null
 
-  const isDisabled = isAnyCreating || isNavigating
+  const handleCreate = (type: SidebarItemType) => {
+    if (!campaignId || isDisabled) return
 
-  const handleCreateNote = async () => {
-    if (!campaignId || isAnyCreating) return
+    setCreatingType(type)
+
     try {
-      const { noteId, slug } = await createNote.mutateAsync({
-        campaignId,
-        parentId,
-        name,
-      })
-      setIsNavigating(true)
-      await navigateToNote(slug)
-      await openParentFolders(noteId)
-      setIsNavigating(false)
+      const result = createItem({ type, campaignId, parentId, name })
+      if (!result) return
+
+      openParentFolders(result.tempId)
+      navigateToItem(result.optimisticItem)
+      setSuccessType(type)
     } catch (error) {
       console.error(error)
-      toast.error('Failed to create note')
-    }
-  }
-
-  const handleCreateFolder = async () => {
-    if (!campaignId || isAnyCreating) return
-    try {
-      const { folderId, slug } = await createFolder.mutateAsync({
-        campaignId,
-        parentId,
-        name,
-      })
-      setIsNavigating(true)
-      await navigateToFolder(slug)
-      await openParentFolders(folderId)
-      setIsNavigating(false)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create folder')
-    }
-  }
-
-  const handleCreateMap = async () => {
-    if (!campaignId || isAnyCreating) return
-    try {
-      const { mapId, slug } = await createMap.mutateAsync({
-        campaignId,
-        parentId,
-        name,
-      })
-      setIsNavigating(true)
-      await navigateToMap(slug)
-      await openParentFolders(mapId)
-      setIsNavigating(false)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create map')
-    }
-  }
-
-  const handleCreateFile = async () => {
-    if (!campaignId || isAnyCreating) return
-    try {
-      const { fileId, slug } = await createFile.mutateAsync({
-        campaignId,
-        parentId,
-        name,
-      })
-      setIsNavigating(true)
-      await navigateToFile(slug)
-      await openParentFolders(fileId)
-      setIsNavigating(false)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create file')
+      toast.error('Failed to create item')
+    } finally {
+      setCreatingType(null)
     }
   }
 
@@ -187,37 +125,37 @@ export function CreateNewDashboard({
               icon={FileText}
               name="Note"
               description="Write and organize your thoughts"
-              onClick={handleCreateNote}
+              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
               disabled={isDisabled}
-              isCreating={isDisabled && createNote.isPending}
-              isSuccess={createNote.isSuccess}
+              isCreating={creatingType === SIDEBAR_ITEM_TYPES.notes}
+              isSuccess={successType === SIDEBAR_ITEM_TYPES.notes}
             />
             <CreateNewButton
               icon={Folder}
               name="Folder"
               description="Group related items together"
-              onClick={handleCreateFolder}
+              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
               disabled={isDisabled}
-              isCreating={isDisabled && createFolder.isPending}
-              isSuccess={createFolder.isSuccess}
+              isCreating={creatingType === SIDEBAR_ITEM_TYPES.folders}
+              isSuccess={successType === SIDEBAR_ITEM_TYPES.folders}
             />
             <CreateNewButton
               icon={MapPin}
               name="Map"
               description="Upload an image to pin items on"
-              onClick={handleCreateMap}
+              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
               disabled={isDisabled}
-              isCreating={isDisabled && createMap.isPending}
-              isSuccess={createMap.isSuccess}
+              isCreating={creatingType === SIDEBAR_ITEM_TYPES.gameMaps}
+              isSuccess={successType === SIDEBAR_ITEM_TYPES.gameMaps}
             />
             <CreateNewButton
               icon={File}
               name="File"
               description="Upload a document, image, or media"
-              onClick={handleCreateFile}
+              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
               disabled={isDisabled}
-              isCreating={isDisabled && createFile.isPending}
-              isSuccess={createFile.isSuccess}
+              isCreating={creatingType === SIDEBAR_ITEM_TYPES.files}
+              isSuccess={successType === SIDEBAR_ITEM_TYPES.files}
             />
           </div>
         </div>

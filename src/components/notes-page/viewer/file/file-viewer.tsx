@@ -1,6 +1,9 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import { AudioFileViewer } from './audio-file-viewer'
 import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
@@ -9,7 +12,6 @@ import { VideoFileViewer } from './video-file-viewer'
 import type { FileWithContent } from 'convex/files/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import { useFileActions } from '~/hooks/useFileActions'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 import { validateFileForUpload } from '~/lib/file-validation'
@@ -35,7 +37,9 @@ function getFileType(
 }
 
 function FileUpload({ fileId }: { fileId: Id<'files'> }) {
-  const { updateFile } = useFileActions()
+  const updateFile = useMutation({
+    mutationFn: useConvexMutation(api.files.mutations.updateFile),
+  })
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

@@ -38,7 +38,6 @@ import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { useSidebarItemValidation } from '~/hooks/useSidebarItemValidation'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { Ban } from '~/lib/icons'
 
@@ -191,9 +190,7 @@ export function FileSidebarProvider({
   )
 
   const { navigateToItem } = useEditorNavigation()
-  const { canMoveToParent, validateNameConflictSync } =
-    useSidebarItemValidation()
-  const { move } = useSidebarItemMutations()
+  const { canMoveToParent, validateName, move } = useSidebarItemMutations()
 
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
     null,
@@ -315,7 +312,7 @@ export function FileSidebarProvider({
       }
 
       // Validate name conflict in target location
-      const nameConflictResult = validateNameConflictSync(
+      const nameConflictResult = validateName(
         draggedItem.name,
         targetId,
         draggedItem._id,
@@ -341,13 +338,7 @@ export function FileSidebarProvider({
         toast.error('Failed to move item')
       }
     },
-    [
-      move,
-      openFolder,
-      navigateToItem,
-      canMoveToParent,
-      validateNameConflictSync,
-    ],
+    [move, openFolder, navigateToItem, canMoveToParent, validateName],
   )
 
   const handleDragCancel = useCallback(() => {

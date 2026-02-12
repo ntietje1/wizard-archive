@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvex } from '@convex-dev/react-query'
 import { debounce } from 'lodash-es'
-import { api } from 'convex/_generated/api'
+import { useSidebarItemMutations } from './useSidebarItemMutations'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'
@@ -24,7 +22,7 @@ export function useNameValidation({
   parentId,
   excludeId,
 }: UseNameValidationOptions) {
-  const convex = useConvex()
+  const { validateName } = useSidebarItemMutations()
   const [debouncedName, setDebouncedName] = useState(name)
   const debouncedSetNameRef = useRef(
     debounce((value: string) => {
@@ -49,73 +47,50 @@ export function useNameValidation({
   // Check if current typed name differs from debounced name (pending new validation)
   const isPendingDebounce = trimmedName !== trimmedDebouncedName
 
-  const shouldValidate = useMemo(() => {
-    if (!campaignId || !isActive) return false
-    if (!trimmedDebouncedName) return false
-    if (trimmedDebouncedName === trimmedInitialName) return false
-    return true
-  }, [campaignId, isActive, trimmedDebouncedName, trimmedInitialName])
-
-  // Also check if we should validate based on current (non-debounced) name
-  // This is used to determine if we should show loading state
-  const willValidate = useMemo(() => {
-    if (!campaignId || !isActive) return false
-    if (!trimmedName) return false
-    if (trimmedName === trimmedInitialName) return false
-    return true
-  }, [campaignId, isActive, trimmedName, trimmedInitialName])
-
-  // Check uniqueness
-  const isUniqueQuery = useQuery(
-    convexQuery(
-      api.sidebarItems.queries.checkUniqueNameUnderParent,
-      shouldValidate && campaignId
-        ? {
-            campaignId,
-            parentId,
-            name: trimmedDebouncedName,
-            excludeId,
-          }
-        : 'skip',
-    ),
-  )
-
   // Wiki-link validation (sync, immediate feedback)
   const wikiLinkValidation = useMemo(() => {
     if (!isActive || !trimmedName) return { valid: true, error: undefined }
     return validateWikiLinkCompatibleName(trimmedName)
   }, [isActive, trimmedName])
 
-  // Only consider query result valid if the debounced name matches current name
-  // This prevents showing stale error messages while typing
-  const isResultValid = !isPendingDebounce && shouldValidate
-  const isUnique = isResultValid && isUniqueQuery.data?.valid
-  const isNotUnique = isResultValid && isUniqueQuery.data?.valid === false
+  // Collection-based uniqueness validation (sync, after debounce)
+  const uniquenessValidation = useMemo(() => {
+    if (!isActive || !campaignId) return { valid: true }
+    if (!trimmedDebouncedName) return { valid: true }
+    if (trimmedDebouncedName === trimmedInitialName) return { valid: true }
+    return validateName(trimmedDebouncedName, parentId, excludeId)
+  }, [
+    isActive,
+    campaignId,
+    trimmedDebouncedName,
+    trimmedInitialName,
+    parentId,
+    excludeId,
+    validateName,
+  ])
 
-  // Combined validation error for immediate feedback
-  // Wiki-link errors show immediately, uniqueness errors show after debounce
+  // Only consider uniqueness result valid if the debounced name matches current name
+  const isResultValid = !isPendingDebounce
+  const isUnique = isResultValid && uniquenessValidation.valid
+  const isNotUnique = isResultValid && !uniquenessValidation.valid
+
+  // Combined validation error
   const validationError = useMemo(() => {
     if (!wikiLinkValidation.valid) return wikiLinkValidation.error
-    if (isNotUnique) return 'An item with this name already exists here'
+    if (isNotUnique) return uniquenessValidation.error
     return undefined
-  }, [wikiLinkValidation, isNotUnique])
-
+  }, [wikiLinkValidation, isNotUnique, uniquenessValidation.error])
   const hasError = !wikiLinkValidation.valid || isNotUnique
 
-  // Show loading if:
-  // - Query is loading OR
-  // - We're waiting for debounce to catch up (and will trigger validation)
-  const isLoading =
-    (shouldValidate && isUniqueQuery.isLoading) ||
-    (willValidate && isPendingDebounce)
+  // No async loading needed — validation is sync from collection
+  const isLoading = false
 
-  // Async validation function for form validators
-  // Combines wiki-link validation with uniqueness check
+  // Sync validation function for form validators (kept as async for interface compat)
   const checkNameUnique = useCallback(
     async (nameToCheck: string): Promise<string | undefined> => {
       const trimmed = nameToCheck.trim()
 
-      // Check wiki-link compatibility (sync)
+      // Check wiki-link compatibility
       const wikiLinkResult = validateWikiLinkCompatibleName(trimmed)
       if (!wikiLinkResult.valid) {
         return wikiLinkResult.error
@@ -126,19 +101,17 @@ export function useNameValidation({
         return undefined
       }
 
-      // Check uniqueness (async)
-      const result = await convex.query(
-        api.sidebarItems.queries.checkUniqueNameUnderParent,
-        { campaignId, parentId, name: trimmed, excludeId },
-      )
+      // Check uniqueness from collection
+      const result = validateName(trimmed, parentId, excludeId)
       return result.valid ? undefined : result.error
     },
-    [convex, campaignId, parentId, excludeId, trimmedInitialName],
+    [campaignId, parentId, excludeId, trimmedInitialName, validateName],
   )
 
   return {
     debouncedName: trimmedDebouncedName,
-    shouldValidate: willValidate,
+    shouldValidate:
+      isActive && !!trimmedName && trimmedName !== trimmedInitialName,
     isUnique,
     isNotUnique,
     isLoading,

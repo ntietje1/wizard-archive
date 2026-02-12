@@ -8,6 +8,7 @@ import { useLastEditorItem } from './useLastEditorItem'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
+import { isOptimistic } from '~/lib/sidebar-item-utils'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
@@ -108,14 +109,16 @@ export const useEditorNavigation = () => {
         ],
         item,
       )
-      queryClient.setQueryData(
-        [
-          convexQuery,
-          api.sidebarItems.queries.getSidebarItem,
-          { campaignId, id: item._id },
-        ],
-        item,
-      )
+      if (!isOptimistic(item)) {
+        queryClient.setQueryData(
+          [
+            convexQuery,
+            api.sidebarItems.queries.getSidebarItem,
+            { campaignId, id: item._id },
+          ],
+          item,
+        )
+      }
     },
     [queryClient, campaignId],
   )

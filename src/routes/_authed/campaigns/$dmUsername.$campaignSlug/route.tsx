@@ -9,6 +9,7 @@ import { SidebarItemsCollectionProvider } from '~/contexts/SidebarItemsCollectio
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
 import { EditorModeProvider } from '~/contexts/EditorModeContext'
+import { SessionProvider } from '~/contexts/SessionContext'
 import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
 
 export const Route = createFileRoute(
@@ -21,7 +22,6 @@ export const Route = createFileRoute(
         slug: params.campaignSlug,
       }),
     )
-
     if (campaignWithMembership?.campaign._id) {
       await context.queryClient.ensureQueryData(
         convexQuery(api.editors.queries.getCurrentEditor, {
@@ -38,6 +38,7 @@ function RouteComponent() {
     <CampaignProvider>
       <CampaignNotFoundWrapper>
         <EditorModeProvider>
+          <SessionProvider>
           <SidebarItemsCollectionProvider>
             <FileSidebarProvider>
               <div className="flex flex-col flex-1 min-h-0">
@@ -53,6 +54,7 @@ function RouteComponent() {
               </div>
             </FileSidebarProvider>
           </SidebarItemsCollectionProvider>
+          </SessionProvider>
         </EditorModeProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>

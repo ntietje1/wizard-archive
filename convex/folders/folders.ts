@@ -3,7 +3,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
-  requireEditPermission,
+  hasViewPermission,
   requireFullAccessPermission,
 } from '../shares/itemShares'
 import { enhanceFolderWithContent } from './helpers'
@@ -15,14 +15,14 @@ import type { Folder, FolderWithContent } from './types'
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FolderWithContent | null> => {
   const rawFolder = await ctx.db.get(folderId)
   if (!rawFolder) return null
 
   const folder = await enhanceSidebarItem(ctx, rawFolder)
-  // folders don't have permissions currently
-  return enhanceFolderWithContent(ctx, folder, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, folder)
+  if (!hasPermission) return null
+  return enhanceFolderWithContent(ctx, folder)
 }
 
 export async function deleteFolder(

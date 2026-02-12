@@ -11,7 +11,7 @@ import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
 import { useEditorModeState } from '~/hooks/useEditorMode'
-import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { usePendingItemName } from '~/hooks/useSidebarItemsCollection'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function FileTopbar() {

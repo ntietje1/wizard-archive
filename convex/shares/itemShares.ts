@@ -19,7 +19,6 @@ import type { PermissionLevel, SidebarItemShare } from './types'
 export async function getSidebarItemPermissionLevel(
   ctx: Ctx,
   item: AnySidebarItem | AnySidebarItemFromDb,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<PermissionLevel> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: item.campaignId,
@@ -29,14 +28,8 @@ export async function getSidebarItemPermissionLevel(
     return PERMISSION_LEVEL.NONE
   }
 
-  let checkId = campaignWithMembership.member._id
-
   if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
-    if (!viewAsPlayerId) {
-      return PERMISSION_LEVEL.FULL_ACCESS
-    } else {
-      checkId = viewAsPlayerId
-    }
+    return PERMISSION_LEVEL.FULL_ACCESS
   }
 
   // Check for an explicit per-player share
@@ -44,7 +37,7 @@ export async function getSidebarItemPermissionLevel(
     ctx,
     item.campaignId,
     item._id,
-    checkId,
+    campaignWithMembership.member._id,
   )
   if (share) {
     return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
@@ -62,7 +55,7 @@ export async function getSidebarItemPermissionLevel(
     ctx,
     item.campaignId,
     parentId,
-    checkId,
+    campaignWithMembership.member._id,
   )
 }
 
@@ -137,18 +130,16 @@ export function hasAtLeastPermissionLevel(
 export async function hasViewPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  const level = await getSidebarItemPermissionLevel(ctx, item)
   return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)
 }
 
 export async function requireViewPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<void> {
-  if (!(await hasViewPermission(ctx, item, viewAsPlayerId))) {
+  if (!(await hasViewPermission(ctx, item))) {
     throw new Error('You do not have permission to view this item')
   }
 }
@@ -156,18 +147,16 @@ export async function requireViewPermission(
 export async function hasEditPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  const level = await getSidebarItemPermissionLevel(ctx, item)
   return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.EDIT)
 }
 
 export async function requireEditPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<void> {
-  if (!(await hasEditPermission(ctx, item, viewAsPlayerId))) {
+  if (!(await hasEditPermission(ctx, item))) {
     throw new Error('You do not have permission to edit this item')
   }
 }
@@ -175,18 +164,16 @@ export async function requireEditPermission(
 export async function hasFullAccessPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId)
+  const level = await getSidebarItemPermissionLevel(ctx, item)
   return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)
 }
 
 export async function requireFullAccessPermission(
   ctx: Ctx,
   item: AnySidebarItem,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<void> {
-  if (!(await hasFullAccessPermission(ctx, item, viewAsPlayerId))) {
+  if (!(await hasFullAccessPermission(ctx, item))) {
     throw new Error('You do not have full access permission for this item')
   }
 }

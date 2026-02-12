@@ -23,12 +23,12 @@ export function MapDeleteConfirmDialog({
     try {
       const tx = deleteItem(map)
       if (tx) await tx.isPersisted.promise
+      onConfirm?.()
       toast.success('Map deleted')
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete map')
     } finally {
-      onConfirm?.()
       onClose()
     }
   }, [deleteItem, map, onConfirm, onClose])

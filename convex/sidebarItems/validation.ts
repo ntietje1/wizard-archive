@@ -2,8 +2,8 @@ import { getSidebarItemsByParent } from '../sidebarItems/sidebarItems'
 import { hasFullAccessPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from './helpers'
 import {
-  validateWikiLinkCompatibleName,
   checkNameConflict,
+  validateWikiLinkCompatibleName,
 } from './sharedValidation'
 import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
@@ -13,6 +13,7 @@ import type { AnySidebarItem } from './types'
 export type { ValidationResult } from './sharedValidation'
 export { validateWikiLinkCompatibleName } from './sharedValidation'
 
+// TODO: share as much of this as possible with the frontend validation
 /**
  * Checks if a name is unique under a parent (case-insensitive).
  * Fetches all siblings and delegates to shared checkNameConflict.

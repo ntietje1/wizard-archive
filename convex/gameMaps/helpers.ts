@@ -71,10 +71,9 @@ const enhanceMapPin = async (
 const enforceMapPinPermissions = async (
   ctx: QueryCtx,
   pin: MapPinWithItem | null,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
   if (!pin || !pin.item) return null
-  const canSee = await hasViewPermission(ctx, pin.item, viewAsPlayerId)
+  const canSee = await hasViewPermission(ctx, pin.item)
   if (!canSee) {
     const { item: _, ...pinWithoutItem } = pin
     return pinWithoutItem
@@ -85,7 +84,6 @@ const enforceMapPinPermissions = async (
 export const enhanceGameMapWithContent = async (
   ctx: QueryCtx,
   gameMap: GameMap,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent> => {
   const ancestors = await getSidebarItemAncestors(
     ctx,
@@ -103,9 +101,7 @@ export const enhanceGameMapWithContent = async (
   )
   const pins = (
     await Promise.all(
-      enhancedPins.map((pin) =>
-        enforceMapPinPermissions(ctx, pin, viewAsPlayerId),
-      ),
+      enhancedPins.map((pin) => enforceMapPinPermissions(ctx, pin)),
     )
   ).filter((pin): pin is MapPinWithItem => pin !== null)
 

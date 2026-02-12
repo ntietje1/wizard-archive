@@ -73,6 +73,10 @@ export const Route = createRootRouteWithContext<{
     ],
   }),
   beforeLoad: async (ctx) => {
+    if (typeof window !== 'undefined') {
+      return { userId: null, token: null }
+    }
+
     const auth = await fetchClerkAuth()
     const { userId, token } = auth
     if (token) {

@@ -1,59 +1,43 @@
 import { useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import { useNavigateOnSlugChange } from './useNavigateOnSlugChange'
+import { useMatch } from '@tanstack/react-router'
+import { useEditorNavigation } from './useEditorNavigation'
 import { useSidebarItemMutations } from './useSidebarItemMutations'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { useCampaign } from '~/hooks/useCampaign'
+import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useRenameItem() {
   const { rename: collectionRename } = useSidebarItemMutations()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
-  const queryClient = useQueryClient()
+  const { navigateToItem } = useEditorNavigation()
+
+  const editorMatch = useMatch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+    shouldThrow: false,
+  })
+  const editorSearch = editorMatch?.search ?? {}
+  const selectedTypeAndSlug = getTypeAndSlug(editorSearch)
 
   const rename = useCallback(
     async (item: AnySidebarItem, newName: string) => {
-      if (!item || !campaignId) return
+      if (!item) return
 
       const previousSlug = item.slug
 
-      try {
-        // Optimistic update via collection (validates before applying)
-        const tx = collectionRename(item, newName)
-        if (!tx) return
+      // Optimistic update via collection (validates before applying, returns predicted slug)
+      const result = collectionRename(item, newName)
+      if (!result) return
 
-        // Wait for server confirmation to get the new slug
-        await tx.isPersisted.promise
+      // If this is the currently viewed item and slug changed, update URL immediately
+      const isCurrentItem =
+        selectedTypeAndSlug &&
+        item.type === selectedTypeAndSlug.type &&
+        item.slug === selectedTypeAndSlug.slug
 
-        // After server confirms, refetch the slug-based query to get the actual slug
-        const updatedBySlugData = queryClient.getQueryData(
-          convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
-            campaignId,
-            type: item.type,
-            slug: previousSlug,
-          }).queryKey,
-        ) as AnySidebarItem | null | undefined
-
-        // The collection refetch will bring in the server-confirmed data
-        // but we also need to handle URL navigation if the slug changed
-        if (updatedBySlugData && updatedBySlugData.slug !== previousSlug) {
-          navigateIfSlugChanged({
-            itemId: item._id,
-            itemType: item.type,
-            previousSlug,
-            newSlug: updatedBySlugData.slug,
-            updatedItem: updatedBySlugData,
-          })
-        }
-      } catch (error) {
-        console.error(error)
-        throw error
+      if (isCurrentItem && result.newSlug !== previousSlug) {
+        const updatedItem = { ...item, name: newName, slug: result.newSlug }
+        await navigateToItem(updatedItem, true)
       }
     },
-    [campaignId, collectionRename, navigateIfSlugChanged, queryClient],
+    [collectionRename, selectedTypeAndSlug, navigateToItem],
   )
 
   return {

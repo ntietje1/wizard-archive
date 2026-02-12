@@ -4,7 +4,7 @@ import { useLiveQuery } from '@tanstack/react-db'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Folder } from 'convex/folders/types'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { useSidebarItemsCollection } from '~/contexts/SidebarItemsCollectionContext'
+import { useSidebarItemsCollection } from '~/hooks/useSidebarItemsCollection'
 
 interface FolderDeleteConfirmDialogProps {
   folder: Folder
@@ -36,8 +36,10 @@ export function FolderDeleteConfirmDialog({
   const handleConfirm = useCallback(async () => {
     try {
       const tx = deleteItem(folder)
-      if (tx) await tx.isPersisted.promise
-      toast.success('Folder deleted')
+      if (tx) {
+        await tx.isPersisted.promise
+        toast.success('Folder deleted')
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete folder')

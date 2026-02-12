@@ -3,10 +3,31 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useRef } from 'react'
+import type {
+  AnySidebarItem,
+  AnySidebarItemWithContent,
+} from 'convex/sidebarItems/types'
+
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
+
+/**
+ * Lightweight hook that checks if a sidebar item matches the currently
+ * selected item by comparing type+slug from URL search params.
+ * Does NOT subscribe to any query — safe to call in every sidebar item.
+ */
+export function useIsSelectedItem(item: AnySidebarItem): boolean {
+  const editorMatch = useMatch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+    shouldThrow: false,
+  })
+  const editorSearch = editorMatch?.search ?? {}
+  const typeAndSlug = getTypeAndSlug(editorSearch)
+
+  if (!typeAndSlug) return false
+  return item.type === typeAndSlug.type && item.slug === typeAndSlug.slug
+}
 
 export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
   const { campaignWithMembership } = useCampaign()
@@ -28,7 +49,6 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
             campaignId,
             type: typeAndSlug.type,
             slug: typeAndSlug.slug,
-            viewAsPlayerId,
           }
         : 'skip',
     ),
@@ -36,16 +56,13 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
 
   const lastItemRef = useRef<AnySidebarItemWithContent | null>(null)
 
+  const item = sidebarItemQuery.data ?? lastItemRef.current
+
   if (sidebarItemQuery.data) {
     lastItemRef.current = sidebarItemQuery.data
-  } else if (
-    lastItemRef.current?.slug !== typeAndSlug?.slug ||
-    lastItemRef.current?.type !== typeAndSlug?.type
-  ) {
+  } else if (!typeAndSlug) {
     lastItemRef.current = null
   }
-
-  const item = sidebarItemQuery.data ?? lastItemRef.current
 
   return {
     item,

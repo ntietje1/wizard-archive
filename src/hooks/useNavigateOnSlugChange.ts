@@ -16,6 +16,7 @@ interface NavigateOnSlugChangeParams {
   updatedItem?: AnySidebarItem
 }
 
+// TODO: remove the need for this
 export function useNavigateOnSlugChange() {
   const { item: currentItem } = useCurrentItem()
   const {

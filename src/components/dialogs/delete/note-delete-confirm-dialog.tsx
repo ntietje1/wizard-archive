@@ -20,8 +20,10 @@ export function NoteDeleteConfirmDialog({
   const handleConfirm = useCallback(async () => {
     try {
       const tx = deleteItem(note)
-      if (tx) await tx.isPersisted.promise
-      toast.success('Note deleted')
+      if (tx) {
+        await tx.isPersisted.promise
+        toast.success('Note deleted')
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete note')

@@ -130,6 +130,9 @@ export const createFolder = mutation({
     name: v.optional(v.string()),
     parentId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    slug: v.optional(v.string()),
   },
   returns: v.object({
     folderId: v.id('folders'),
@@ -157,8 +160,11 @@ export const createFolder = mutation({
     }
 
     const slugBasis =
-      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
-
+      args.slug && args.slug.trim() !== ''
+        ? args.slug
+        : args.name && args.name.trim() !== ''
+          ? args.name
+          : crypto.randomUUID()
     const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
       const conflict = await ctx.db
         .query('folders')
@@ -179,6 +185,8 @@ export const createFolder = mutation({
     const folderId = await ctx.db.insert('folders', {
       name: args.name || '',
       slug: uniqueSlug,
+      iconName: args.iconName,
+      color: args.color,
       parentId: args.parentId,
       updatedAt: Date.now(),
       campaignId: args.campaignId,

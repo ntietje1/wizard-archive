@@ -12,7 +12,7 @@ import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useIsSelectedItem } from '~/hooks/useCurrentItem'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
@@ -22,7 +22,7 @@ import {
 } from '~/components/shadcn/ui/collapsible'
 import { sortItemsByOptions } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
-import { useSidebarItemsCollection } from '~/contexts/SidebarItemsCollectionContext'
+import { useSidebarItemsCollection } from '~/hooks/useSidebarItemsCollection'
 
 interface SidebarItemProps {
   item: AnySidebarItem
@@ -33,7 +33,7 @@ function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
-  const { item: currentItem } = useCurrentItem()
+  const isSelected = useIsSelectedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
   const { sortOptions } = useSortOptions()
@@ -43,7 +43,6 @@ function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
   const icon = getSidebarItemIcon(item)
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
-  const isSelected = currentItem?._id === item._id
   const isDraggingActive = !!activeDragItem
 
   // Get children from live query using fn.where for closure capture of folderId

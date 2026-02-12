@@ -6,10 +6,8 @@ import { getFolder, getSidebarItemAncestors } from '../folders/folders'
 import { getFile } from '../files/files'
 import {
   getSidebarItemPermissionLevel,
-  hasAtLeastPermissionLevel,
   hasViewPermission,
 } from '../shares/itemShares'
-import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type {
@@ -25,7 +23,6 @@ import type { QueryCtx } from '../_generated/server'
 export const getAllSidebarItems = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -62,29 +59,14 @@ export const getAllSidebarItems = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permissionLevels = await Promise.all(
-    enhanced.map((item) =>
-      getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId),
-    ),
-  )
   return enhanced
-    .map((item, index) => ({
-      ...item,
-      myPermissionLevel: viewAsPlayerId
-        ? PERMISSION_LEVEL.FULL_ACCESS
-        : permissionLevels[index],
-    }))
-    .filter((_, index) =>
-      hasAtLeastPermissionLevel(permissionLevels[index], PERMISSION_LEVEL.VIEW),
-    )
 }
 
 export const getAllSidebarItemsWithAncestors = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
-  const sharedItems = await getAllSidebarItems(ctx, campaignId, viewAsPlayerId)
+  const sharedItems = await getAllSidebarItems(ctx, campaignId)
 
   const parentIds = new Set<Id<'folders'>>()
   for (const item of sharedItems) {
@@ -117,7 +99,6 @@ export const getSidebarItemsByParent = async (
   ctx: Ctx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Array<AnySidebarItem>> => {
   await requireCampaignMembership(
     ctx,
@@ -162,21 +143,7 @@ export const getSidebarItemsByParent = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permissionLevels = await Promise.all(
-    enhanced.map((item) =>
-      getSidebarItemPermissionLevel(ctx, item, viewAsPlayerId),
-    ),
-  )
   return enhanced
-    .map((item, index) => ({
-      ...item,
-      myPermissionLevel: viewAsPlayerId
-        ? PERMISSION_LEVEL.FULL_ACCESS
-        : permissionLevels[index],
-    }))
-    .filter((_, index) =>
-      hasAtLeastPermissionLevel(permissionLevels[index], PERMISSION_LEVEL.VIEW),
-    )
 }
 
 export const getSidebarItemsByParentAndName = async (
@@ -228,11 +195,7 @@ export const getSidebarItemsByParentAndName = async (
   const enhanced = await Promise.all(
     allItems.map((item) => enhanceSidebarItem(ctx, item)),
   )
-  const permissionResults = await Promise.all(
-    enhanced.map((item) => hasViewPermission(ctx, item)),
-  )
-  const permitted = enhanced.filter((_, index) => permissionResults[index])
-  return permitted
+  return enhanced
 }
 
 export const getSidebarItemByName = async (
@@ -300,7 +263,6 @@ export const getSidebarItemBySlug = async (
   campaignId: Id<'campaigns'>,
   type: SidebarItemType,
   slug: string,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -351,14 +313,13 @@ export const getSidebarItemBySlug = async (
     return null
   }
 
-  return await getSidebarItemById(ctx, campaignId, item._id, viewAsPlayerId)
+  return await getSidebarItemById(ctx, campaignId, item._id)
 }
 
 export const getSidebarItemById = async (
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   id: SidebarItemId,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -375,13 +336,13 @@ export const getSidebarItemById = async (
 
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      result = await getFolder(ctx, id as Id<'folders'>, viewAsPlayerId)
+      result = await getFolder(ctx, id as Id<'folders'>)
       break
     case SIDEBAR_ITEM_TYPES.notes:
-      result = await getNote(ctx, id as Id<'notes'>, viewAsPlayerId)
+      result = await getNote(ctx, id as Id<'notes'>)
       break
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      result = await getMap(ctx, id as Id<'gameMaps'>, viewAsPlayerId)
+      result = await getMap(ctx, id as Id<'gameMaps'>)
       break
     case SIDEBAR_ITEM_TYPES.files:
       result = await getFile(ctx, id as Id<'files'>)
@@ -394,7 +355,7 @@ export const getSidebarItemById = async (
     return null
   }
 
-  const hasPermission = await hasViewPermission(ctx, result, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, result)
   if (!hasPermission) {
     return null
   }

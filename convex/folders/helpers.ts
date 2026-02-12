@@ -43,11 +43,10 @@ export const enhanceFolder = async (
 export const enhanceFolderWithContent = async (
   ctx: QueryCtx,
   folder: Folder,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FolderWithContent> => {
   const [ancestors, children] = await Promise.all([
     getSidebarItemAncestors(ctx, folder.campaignId, folder.parentId),
-    getSidebarItemsByParent(ctx, folder.campaignId, folder._id, viewAsPlayerId),
+    getSidebarItemsByParent(ctx, folder.campaignId, folder._id),
   ])
   return {
     ...folder,

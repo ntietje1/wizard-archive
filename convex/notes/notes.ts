@@ -24,6 +24,7 @@ export const createNote = async (
     parentId?: Id<'folders'>
     iconName?: string
     color?: string
+    slug?: string
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
   await requireCampaignMembership(
@@ -32,8 +33,11 @@ export const createNote = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const slugBasis =
-    input.name && input.name.trim() !== '' ? input.name : crypto.randomUUID() // use a uuid if the name is blank
+  const slugBasis = input.slug
+    ? input.slug
+    : input.name && input.name.trim() !== ''
+      ? input.name
+      : crypto.randomUUID()
 
   const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
     const conflict = await ctx.db
@@ -131,15 +135,14 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
   if (!rawNote) return null
 
   const note = await enhanceSidebarItem(ctx, rawNote)
-  const hasPermission = await hasViewPermission(ctx, note, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, note)
   if (!hasPermission) return null
-  return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
+  return enhanceNoteWithContent(ctx, note)
 }
 
 export async function deleteNote(

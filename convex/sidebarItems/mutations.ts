@@ -13,6 +13,7 @@ export const updateSidebarItem = mutation({
   args: {
     itemId: sidebarItemIdValidator,
     name: v.optional(v.string()),
+    slug: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
@@ -47,11 +48,12 @@ export const updateSidebarItem = mutation({
         excludeId: args.itemId,
       })
       patch.name = args.name
+      // Use client-provided slug as basis when available, otherwise derive from name
       patch.slug = await findUniqueSidebarItemSlug(
         ctx,
         item.campaignId,
         item.type,
-        args.name,
+        args.slug ?? args.name,
         args.itemId,
       )
     }

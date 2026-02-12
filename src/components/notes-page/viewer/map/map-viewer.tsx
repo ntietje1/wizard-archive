@@ -27,7 +27,6 @@ import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import usePersistedState from '~/hooks/usePersistedState'
-import { useMapActions } from '~/hooks/useMapActions'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 
@@ -876,7 +875,9 @@ export function MapViewer({
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const { updateMap } = useMapActions()
+  const updateMap = useMutation({
+    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
+  })
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

@@ -1,13 +1,19 @@
 import { useCallback, useMemo } from 'react'
 import { useLiveQuery } from '@tanstack/react-db'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { useSidebarItemsCollection } from './useSidebarItemsCollection'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
-import { useSidebarItemsCollection } from '~/contexts/SidebarItemsCollectionContext'
 import { isFolder } from '~/lib/sidebar-item-utils'
+import { useEditorMode } from '~/hooks/useEditorMode'
+import {
+  hasAtLeastPermissionLevel,
+  resolvePermissionLevel,
+} from '~/lib/permission-utils'
 
 export const useAllSidebarItems = (_enabled = true) => {
   const collection = useSidebarItemsCollection()
@@ -110,4 +116,76 @@ export const sortItemsByOptions = (
   }
 
   return [...items].sort(sortFn)
+}
+
+/**
+ * Returns sidebar items filtered by "view as player" permissions.
+ * When viewAsPlayerId is set, filters to items the player can VIEW.
+ * When unset (DM mode), returns all items.
+ */
+export const useFilteredSidebarItems = () => {
+  const { viewAsPlayerId } = useEditorMode()
+  const allItems = useAllSidebarItems()
+
+  const filteredData = useMemo(() => {
+    if (!viewAsPlayerId) return allItems.data
+    return allItems.data.filter((item) => {
+      const level = resolvePermissionLevel(
+        item,
+        viewAsPlayerId,
+        allItems.itemsMap,
+      )
+      return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)
+    })
+  }, [allItems.data, allItems.itemsMap, viewAsPlayerId])
+
+  const filteredItemsMap = useMemo(() => {
+    const map = new Map<SidebarItemId, AnySidebarItem>()
+    filteredData.forEach((item) => map.set(item._id, item))
+    return map
+  }, [filteredData])
+
+  const filteredParentItemsMap = useMemo(() => {
+    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    filteredData.forEach((item) => {
+      const effectiveParentId =
+        item.parentId && !filteredItemsMap.has(item.parentId)
+          ? undefined
+          : item.parentId
+      if (map.has(effectiveParentId)) {
+        map.get(effectiveParentId)?.push(item)
+      } else {
+        map.set(effectiveParentId, [item])
+      }
+    })
+    return map
+  }, [filteredData, filteredItemsMap])
+
+  const getAncestorSidebarItems = useCallback(
+    (itemId: SidebarItemId) => {
+      const item = filteredItemsMap.get(itemId)
+      if (!item) return []
+      let currAncestorId = item.parentId
+      const seen = new Set<Id<'folders'>>()
+      const ancestorItems: Array<Folder> = []
+      while (currAncestorId && !seen.has(currAncestorId)) {
+        seen.add(currAncestorId)
+        const currAncestor = filteredItemsMap.get(currAncestorId)
+        if (currAncestor && isFolder(currAncestor)) {
+          ancestorItems.push(currAncestor)
+          currAncestorId = currAncestor.parentId
+        }
+      }
+      return ancestorItems
+    },
+    [filteredItemsMap],
+  )
+
+  return {
+    data: filteredData,
+    status: allItems.status,
+    itemsMap: filteredItemsMap,
+    parentItemsMap: filteredParentItemsMap,
+    getAncestorSidebarItems,
+  }
 }

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from '~/lib/icons'
 import { Card } from '~/components/shadcn/ui/card'
@@ -9,10 +10,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '~/components/shadcn/ui/context-menu'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useMapActions } from '~/hooks/useMapActions'
-import { useFileActions } from '~/hooks/useFileActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -27,12 +25,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
 
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
-  const { createMap } = useMapActions()
-  const { createFile } = useFileActions()
-  const { navigateToNote, navigateToFolder, navigateToMap, navigateToFile } =
-    useEditorNavigation()
+  const { createItem } = useSidebarItemMutations()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 
   const openMenuAt = useCallback((clientX: number, clientY: number) => {
@@ -58,65 +52,77 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     [openMenuAt],
   )
 
-  const handleCreateNote = useCallback(async () => {
+  const handleCreateNote = useCallback(() => {
     if (!campaignId) return
     try {
-      const { noteId, slug } = await createNote.mutateAsync({
+      const result = createItem({
+        type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
         parentId,
       })
-      await openParentFolders(noteId)
-      navigateToNote(slug)
+      if (result) {
+        openParentFolders(result.tempId)
+        navigateToItem(result.optimisticItem)
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to create note')
     }
-  }, [campaignId, parentId, createNote, openParentFolders, navigateToNote])
+  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
 
-  const handleCreateFolder = useCallback(async () => {
+  const handleCreateFolder = useCallback(() => {
     if (!campaignId) return
     try {
-      const { folderId, slug } = await createFolder.mutateAsync({
+      const result = createItem({
+        type: SIDEBAR_ITEM_TYPES.folders,
         campaignId,
         parentId,
       })
-      await openParentFolders(folderId)
-      navigateToFolder(slug)
+      if (result) {
+        openParentFolders(result.tempId)
+        navigateToItem(result.optimisticItem)
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')
     }
-  }, [campaignId, parentId, createFolder, openParentFolders, navigateToFolder])
+  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
 
-  const handleCreateMap = useCallback(async () => {
+  const handleCreateMap = useCallback(() => {
     if (!campaignId) return
     try {
-      const { mapId, slug } = await createMap.mutateAsync({
+      const result = createItem({
+        type: SIDEBAR_ITEM_TYPES.gameMaps,
         campaignId,
         parentId,
       })
-      await openParentFolders(mapId)
-      navigateToMap(slug)
+      if (result) {
+        openParentFolders(result.tempId)
+        navigateToItem(result.optimisticItem)
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to create map')
     }
-  }, [campaignId, parentId, createMap, openParentFolders, navigateToMap])
+  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
 
-  const handleCreateFile = useCallback(async () => {
+  const handleCreateFile = useCallback(() => {
     if (!campaignId) return
     try {
-      const { fileId, slug } = await createFile.mutateAsync({
+      const result = createItem({
+        type: SIDEBAR_ITEM_TYPES.files,
         campaignId,
         parentId,
       })
-      await openParentFolders(fileId)
-      navigateToFile(slug)
+      if (result) {
+        openParentFolders(result.tempId)
+        navigateToItem(result.optimisticItem)
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to create file')
     }
-  }, [campaignId, parentId, createFile, openParentFolders, navigateToFile])
+  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
 
   return (
     <ContextMenu open={isOpen} onOpenChange={setIsOpen}>

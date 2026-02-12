@@ -2,14 +2,15 @@ import { memo, useCallback } from 'react'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
-import type { AnySidebarItem, SidebarItemId } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useIsSelectedItem } from '~/hooks/useCurrentItem'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
@@ -33,13 +34,12 @@ function FlatSidebarItemComponent({
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { navigateToItem } = useEditorNavigation()
-  const { item: currentItem } = useCurrentItem()
+  const isSelected = useIsSelectedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
 
   const icon = getSidebarItemIcon(item)
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
-  const isSelected = currentItem?._id === item._id
   const isDraggingActive = !!activeDragItem
 
   const handleSelect = useCallback(

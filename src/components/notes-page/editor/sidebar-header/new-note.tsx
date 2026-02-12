@@ -1,24 +1,30 @@
 import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
 import { FilePlus } from '~/lib/icons'
-import { useNoteActions } from '~/hooks/useNoteActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createNote } = useNoteActions()
+  const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const campaignId = campaignWithMembership.data?.campaign._id
 
-  const handleNewNote = async () => {
+  const handleNewNote = () => {
     if (!campaignId) return
     try {
-      const { noteId, slug } = await createNote.mutateAsync({ campaignId })
-      await openParentFolders(noteId)
-      navigateToNote(slug)
+      const result = createItem({
+        type: SIDEBAR_ITEM_TYPES.notes,
+        campaignId,
+      })
+      if (result) {
+        openParentFolders(result.tempId)
+        navigateToItem(result.optimisticItem)
+      }
     } catch (error) {
       console.error(error)
       toast.error('Failed to create note')

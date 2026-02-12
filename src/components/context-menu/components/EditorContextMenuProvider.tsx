@@ -14,6 +14,7 @@ import { useSession } from '~/hooks/useSession'
 import { useMapView } from '~/hooks/useMapView'
 import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
 import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
+import { isOptimistic } from '~/lib/sidebar-item-utils'
 
 interface ProviderProps {
   viewContext: ViewContext
@@ -34,13 +35,17 @@ export function EditorContextMenuProvider({
   const { campaignWithMembership } = useCampaign()
   const { currentSession } = useSession()
   const { activeMap, activePin } = useMapView()
-  const shareState = useSidebarItemShares(item?._id)
+  const shareState = useSidebarItemShares(
+    isOptimistic(item) ? undefined : item?._id,
+  )
   const { editor, blockId } = useBlockNoteContextMenu()
 
   const sidebarItemWithContent = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItem,
-      item ? { id: item._id, campaignId: item.campaignId } : 'skip',
+      item && !isOptimistic(item)
+        ? { id: item._id, campaignId: item.campaignId }
+        : 'skip',
     ),
   )
 

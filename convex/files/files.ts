@@ -12,15 +12,13 @@ import type { FileWithContent } from './types'
 export const getFile = async (
   ctx: Ctx,
   fileId: Id<'files'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
   if (!rawFile) return null
 
   const file = await enhanceSidebarItem(ctx, rawFile)
-  const hasPermission = await hasViewPermission(ctx, file, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, file)
   if (!hasPermission) return null
-
   return enhanceFileWithContent(ctx, file)
 }
 

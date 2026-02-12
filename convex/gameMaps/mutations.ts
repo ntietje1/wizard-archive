@@ -24,6 +24,9 @@ export const createMap = mutation({
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
+    slug: v.optional(v.string()),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -57,8 +60,11 @@ export const createMap = mutation({
       name: args.name,
     })
 
-    const slugBasis =
-      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
+    const slugBasis = args.slug
+      ? args.slug
+      : args.name && args.name.trim() !== ''
+        ? args.name
+        : crypto.randomUUID()
 
     const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
       const conflict = await ctx.db
@@ -74,6 +80,8 @@ export const createMap = mutation({
       campaignId: args.campaignId,
       name: args.name,
       slug: uniqueSlug,
+      iconName: args.iconName,
+      color: args.color,
       imageStorageId: args.imageStorageId,
       parentId: args.parentId,
       updatedAt: Date.now(),

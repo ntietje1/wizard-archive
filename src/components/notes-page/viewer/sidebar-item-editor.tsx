@@ -19,13 +19,13 @@ export function SidebarItemEditor({
 }: EditorViewerProps<AnySidebarItemWithContent>) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return <NoteEditor key={item._id} item={item} search={search} />
+      return <NoteEditor item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return <MapViewer key={item._id} item={item} search={search} />
+      return <MapViewer item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.folders:
-      return <FolderViewer key={item._id} item={item} search={search} />
+      return <FolderViewer item={item} search={search} />
     case SIDEBAR_ITEM_TYPES.files:
-      return <FileViewer key={item._id} item={item} search={search} />
+      return <FileViewer item={item} search={search} />
     default: {
       console.warn(`Unknown item type`, item)
       return null
