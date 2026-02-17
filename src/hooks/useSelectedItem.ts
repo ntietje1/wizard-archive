@@ -1,43 +1,19 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
+import { useShallow } from 'zustand/shallow'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 interface TypeAndSlug {
   type: SidebarItemType
   slug: string
 }
 
-// Simple external store for selected type+slug
-let selectedTypeSlug: TypeAndSlug | null = null
-const listeners = new Set<() => void>()
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-function setSelected(ts: TypeAndSlug | null) {
-  if (
-    selectedTypeSlug?.type === ts?.type &&
-    selectedTypeSlug?.slug === ts?.slug
-  ) {
-    return
-  }
-  selectedTypeSlug = ts
-  listeners.forEach((l) => l())
-}
-
-function getSnapshot() {
-  return selectedTypeSlug
-}
-
 /**
  * Renders once near the top of the editor tree to sync the URL-based
- * selection into the external store. Must be rendered as a component,
+ * selection into the store. Must be rendered as a component,
  * not called in every sidebar item.
  */
 export function useSelectedItemSync() {
@@ -49,34 +25,41 @@ export function useSelectedItemSync() {
   const typeAndSlug = getTypeAndSlug(editorSearch)
 
   useEffect(() => {
-    setSelected(typeAndSlug)
-  }, [typeAndSlug?.type, typeAndSlug?.slug])
+    const setSelected = useSidebarUIStore.getState().setSelected
+    if (typeAndSlug) {
+      setSelected(typeAndSlug.type, typeAndSlug.slug)
+    } else {
+      setSelected(null, null)
+    }
+  }, [typeAndSlug])
 
   return typeAndSlug
 }
 
 /**
  * Efficient per-item hook that only re-renders when the `isSelected` boolean
- * changes for THIS specific item. Uses useSyncExternalStore for fine-grained
- * subscriptions — on navigation, only 2 items re-render (old + new selection).
+ * changes for THIS specific item.
  */
 export function useIsSelectedItem(item: AnySidebarItem): boolean {
   const itemType = item.type
   const itemSlug = item.slug
-
-  return useSyncExternalStore(subscribe, () => {
-    const s = getSnapshot()
-    if (!s) return false
-    return s.type === itemType && s.slug === itemSlug
-  })
+  return useSidebarUIStore(
+    (s) => s.selectedType === itemType && s.selectedSlug === itemSlug,
+  )
 }
 
 /**
- * Returns the currently selected type+slug from the external store.
+ * Returns the currently selected type+slug from the store.
  * Only re-renders when the selection changes.
  */
 export function useSelectedTypeAndSlug(): TypeAndSlug | null {
-  return useSyncExternalStore(subscribe, getSnapshot)
+  return useSidebarUIStore(
+    useShallow((s) =>
+      s.selectedType && s.selectedSlug
+        ? { type: s.selectedType, slug: s.selectedSlug }
+        : null,
+    ),
+  )
 }
 
 /**
@@ -84,5 +67,8 @@ export function useSelectedTypeAndSlug(): TypeAndSlug | null {
  * Use this when you need the current value at call time without triggering re-renders.
  */
 export function getSelectedTypeAndSlug(): TypeAndSlug | null {
-  return getSnapshot()
+  const s = useSidebarUIStore.getState()
+  return s.selectedType && s.selectedSlug
+    ? { type: s.selectedType, slug: s.selectedSlug }
+    : null
 }

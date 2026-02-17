@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -14,10 +14,8 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { FileSidebarContextType } from '~/hooks/useFileSidebar'
 import type {
   DropRejectionReason,
   SidebarDragData,
@@ -32,13 +30,12 @@ import {
   isSidebarItem,
   wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
-import usePersistedState from '~/hooks/usePersistedState'
-import { FileSidebarContext } from '~/hooks/useFileSidebar'
 import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { Ban } from '~/lib/icons'
 
 const snapTopLeftToCursor: Modifier = ({
@@ -164,91 +161,20 @@ function DragOverlayContent({
   )
 }
 
-export function FileSidebarProvider({
+export function SidebarDndWrapper({
   children,
 }: {
   children: React.ReactNode
 }) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const [renamingId, setRenamingId] = useState<SidebarItemId | null>(null)
-  const [deletingId, setDeletingId] = useState<SidebarItemId | null>(null)
-
-  const [folderStates, setFolderStates] = usePersistedState<
-    Record<string, boolean>
-  >(campaignId ? `file-sidebar-folder-states-${campaignId}` : null, {})
-
-  const [closeAllFoldersMode, setCloseAllFoldersMode] =
-    usePersistedState<boolean>(
-      campaignId ? `file-sidebar-close-all-folders-mode-${campaignId}` : null,
-      false,
-    )
-
-  const [bookmarksOnlyMode, setBookmarksOnlyMode] = usePersistedState<boolean>(
-    campaignId ? `file-sidebar-bookmarks-mode-${campaignId}` : null,
-    false,
-  )
 
   const { navigateToItem } = useEditorNavigationContext()
   const { canMoveToParent, validateName, move } = useSidebarItemMutations()
 
-  const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(
-    null,
-  )
-
-  const [fileDragHoveredId, setFileDragHoveredId] =
-    useState<Id<'folders'> | null>(null)
-  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
-
-  const setFolderState = useCallback(
-    (folderId: string, isOpen: boolean) => {
-      setFolderStates((prev) => ({
-        ...prev,
-        [folderId]: isOpen,
-      }))
-    },
-    [setFolderStates],
-  )
-
-  const toggleFolderState = useCallback(
-    (folderId: string) => {
-      setFolderStates((prev) => ({
-        ...prev,
-        [folderId]: !(prev[folderId] ?? false),
-      }))
-    },
-    [setFolderStates],
-  )
-
-  const openFolder = useCallback(
-    (folderId: string) => {
-      setFolderState(folderId, true)
-    },
-    [setFolderState],
-  )
-
-  const closeFolder = useCallback(
-    (folderId: string) => {
-      setFolderState(folderId, false)
-    },
-    [setFolderState],
-  )
-
-  const clearAllFolderStates = useCallback(() => {
-    setFolderStates({})
-  }, [setFolderStates])
-
-  const toggleCloseAllFoldersMode = useCallback(() => {
-    setCloseAllFoldersMode((prev) => !prev)
-  }, [setCloseAllFoldersMode])
-
-  const exitCloseAllMode = useCallback(() => {
-    setCloseAllFoldersMode(false)
-  }, [setCloseAllFoldersMode])
-
-  const toggleBookmarksOnlyMode = useCallback(() => {
-    setBookmarksOnlyMode((prev) => !prev)
-  }, [setBookmarksOnlyMode])
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
+  const setActiveDragItem = useSidebarUIStore((s) => s.setActiveDragItem)
+  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -264,13 +190,16 @@ export function FileSidebarProvider({
     }),
   )
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const { active } = event
-    const item = active.data.current as SidebarDragData | null | undefined
-    if (item) {
-      setActiveDragItem(item)
-    }
-  }, [])
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event
+      const item = active.data.current as SidebarDragData | null | undefined
+      if (item) {
+        setActiveDragItem(item)
+      }
+    },
+    [setActiveDragItem],
+  )
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -330,94 +259,53 @@ export function FileSidebarProvider({
         move(draggedItem as AnySidebarItem, targetId)
 
         // Open the target folder so the moved item is visible
-        if (targetId) {
-          openFolder(targetId)
+        if (targetId && campaignId) {
+          setFolderState(campaignId, targetId, true)
         }
       } catch (error) {
         console.error('Failed to move item:', error)
         toast.error('Failed to move item')
       }
     },
-    [move, openFolder, navigateToItem, canMoveToParent, validateName],
+    [
+      move,
+      setFolderState,
+      campaignId,
+      navigateToItem,
+      canMoveToParent,
+      validateName,
+      setActiveDragItem,
+    ],
   )
 
   const handleDragCancel = useCallback(() => {
     setActiveDragItem(null)
-  }, [])
-
-  const value: FileSidebarContextType = useMemo(
-    () => ({
-      renamingId,
-      setRenamingId,
-      deletingId,
-      setDeletingId,
-      folderStates,
-      setFolderState,
-      toggleFolderState,
-      openFolder,
-      closeFolder,
-      clearAllFolderStates,
-      activeDragItem,
-      closeAllFoldersMode,
-      toggleCloseAllFoldersMode,
-      exitCloseAllMode,
-      fileDragHoveredId,
-      setFileDragHoveredId,
-      isDraggingFiles,
-      setIsDraggingFiles,
-      bookmarksOnlyMode,
-      toggleBookmarksOnlyMode,
-    }),
-    [
-      renamingId,
-      setRenamingId,
-      deletingId,
-      setDeletingId,
-      folderStates,
-      setFolderState,
-      toggleFolderState,
-      openFolder,
-      closeFolder,
-      clearAllFolderStates,
-      activeDragItem,
-      closeAllFoldersMode,
-      toggleCloseAllFoldersMode,
-      exitCloseAllMode,
-      fileDragHoveredId,
-      setFileDragHoveredId,
-      isDraggingFiles,
-      setIsDraggingFiles,
-      bookmarksOnlyMode,
-      toggleBookmarksOnlyMode,
-    ],
-  )
+  }, [setActiveDragItem])
 
   return (
-    <FileSidebarContext.Provider value={value}>
-      <DndContext
-        autoScroll={{
-          threshold: {
-            x: 0,
-            y: 0.25,
-          },
-        }}
-        collisionDetection={pointerWithin}
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
+    <DndContext
+      autoScroll={{
+        threshold: {
+          x: 0,
+          y: 0.25,
+        },
+      }}
+      collisionDetection={pointerWithin}
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      {children}
+      <DragOverlay
+        modifiers={[snapTopLeftToCursor]}
+        dropAnimation={null}
+        className="pointer-events-none inline-block"
       >
-        {children}
-        <DragOverlay
-          modifiers={[snapTopLeftToCursor]}
-          dropAnimation={null}
-          className="pointer-events-none inline-block"
-        >
-          {activeDragItem && (
-            <DragOverlayContent activeDragItem={activeDragItem} />
-          )}
-        </DragOverlay>
-      </DndContext>
-    </FileSidebarContext.Provider>
+        {activeDragItem && (
+          <DragOverlayContent activeDragItem={activeDragItem} />
+        )}
+      </DragOverlay>
+    </DndContext>
   )
 }

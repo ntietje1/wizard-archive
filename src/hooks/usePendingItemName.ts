@@ -1,10 +1,7 @@
-import { createContext, useContext } from 'react'
-
-export const PendingItemNameContext = createContext<{
-  pendingItemName: string
-  setPendingItemName: (name: string) => void
-}>(null!)
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 export function usePendingItemName() {
-  return useContext(PendingItemNameContext)
+  const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
+  const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
+  return { pendingItemName, setPendingItemName }
 }

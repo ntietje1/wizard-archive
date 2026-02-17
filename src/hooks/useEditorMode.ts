@@ -1,7 +1,12 @@
-import { createContext, useContext } from 'react'
+import { useCallback } from 'react'
 import { EDITOR_MODE } from 'convex/editors/types'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorMode } from 'convex/editors/types'
+import { useEditorModeStore } from '~/stores/editorModeStore'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 
 export interface EditorModeStateContextType {
   editorMode: EditorMode
@@ -17,35 +22,55 @@ export interface EditorModeActionsContextType {
 export type EditorModeContextType = EditorModeStateContextType &
   EditorModeActionsContextType
 
-export const EditorModeStateContext =
-  createContext<EditorModeStateContextType | null>(null)
-export const EditorModeActionsContext =
-  createContext<EditorModeActionsContextType | null>(null)
+export function useEditorModeState(): EditorModeStateContextType {
+  const rawEditorMode = useEditorModeStore((s) => s.editorMode)
+  const viewAsPlayerId = useEditorModeStore((s) => s.viewAsPlayerId)
+  const { isDm } = useCampaign()
+  const { item: currentItem } = useCurrentItem()
 
-export function useEditorMode(): EditorModeContextType {
-  const state = useContext(EditorModeStateContext)
-  const actions = useContext(EditorModeActionsContext)
+  const canEdit = hasAtLeastPermissionLevel(
+    currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+    PERMISSION_LEVEL.EDIT,
+  )
+  const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
+
   return {
-    editorMode: state?.editorMode ?? EDITOR_MODE.VIEWER,
-    viewAsPlayerId: state?.viewAsPlayerId,
-    canEdit: state?.canEdit ?? false,
-    setEditorMode: actions?.setEditorMode ?? (() => {}),
-    setViewAsPlayerId: actions?.setViewAsPlayerId ?? (() => {}),
+    editorMode: effectiveEditorMode,
+    viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
+    canEdit,
   }
 }
 
-export function useEditorModeState(): EditorModeStateContextType {
-  const context = useContext(EditorModeStateContext)
-  return (
-    context ?? {
-      editorMode: EDITOR_MODE.VIEWER,
-      viewAsPlayerId: undefined,
-      canEdit: false,
-    }
+export function useEditorModeActions(): EditorModeActionsContextType {
+  const { isDm } = useCampaign()
+  const { item: currentItem } = useCurrentItem()
+  const storeSetEditorMode = useEditorModeStore((s) => s.setEditorMode)
+  const storeSetViewAsPlayerId = useEditorModeStore((s) => s.setViewAsPlayerId)
+
+  const canEdit = hasAtLeastPermissionLevel(
+    currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+    PERMISSION_LEVEL.EDIT,
   )
+
+  const setEditorMode = useCallback(
+    (mode: EditorMode) => {
+      if (canEdit) storeSetEditorMode(mode)
+    },
+    [canEdit, storeSetEditorMode],
+  )
+
+  const setViewAsPlayerId = useCallback(
+    (playerId: Id<'campaignMembers'> | undefined) => {
+      if (isDm) storeSetViewAsPlayerId(playerId)
+    },
+    [isDm, storeSetViewAsPlayerId],
+  )
+
+  return { setEditorMode, setViewAsPlayerId }
 }
 
-export function useEditorModeActions(): EditorModeActionsContextType {
-  const context = useContext(EditorModeActionsContext)
-  return context ?? { setEditorMode: () => {}, setViewAsPlayerId: () => {} }
+export function useEditorMode(): EditorModeContextType {
+  const state = useEditorModeState()
+  const actions = useEditorModeActions()
+  return { ...state, ...actions }
 }
