@@ -23,7 +23,11 @@ export function SidebarList() {
   return (
     <ScrollArea className="flex-1 min-h-0 min-w-0 w-full p-1">
       {rootItems.map((item) => (
-        <SidebarItem key={item._id} item={item} />
+        <SidebarItem
+          key={item._id}
+          item={item}
+          parentItemsMap={parentItemsMap}
+        />
       ))}
     </ScrollArea>
   )

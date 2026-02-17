@@ -21,8 +21,7 @@ export function MapDeleteConfirmDialog({
 
   const handleConfirm = useCallback(async () => {
     try {
-      const tx = deleteItem(map)
-      if (tx) await tx.isPersisted.promise
+      await deleteItem(map)
       onConfirm?.()
       toast.success('Map deleted')
     } catch (error) {

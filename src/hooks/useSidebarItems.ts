@@ -1,8 +1,10 @@
-import { useCallback, useMemo } from 'react'
-import { useLiveQuery } from '@tanstack/react-db'
+import { createContext, useCallback, useContext, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { useSidebarItemsCollection } from './useSidebarItemsCollection'
+import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
@@ -10,25 +12,41 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
+import { useCampaign } from '~/hooks/useCampaign'
 import {
   hasAtLeastPermissionLevel,
   resolvePermissionLevel,
 } from '~/lib/permission-utils'
 
-export const useAllSidebarItems = (_enabled = true) => {
-  const collection = useSidebarItemsCollection()
+export interface AllSidebarItemsValue {
+  data: Array<AnySidebarItem>
+  status: UseQueryResult['status']
+  itemsMap: Map<SidebarItemId, AnySidebarItem>
+  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  getAncestorSidebarItems: (itemId: SidebarItemId) => Array<Folder>
+}
 
-  const liveResult = useLiveQuery(
-    (q) => {
-      if (!collection) return undefined
-      return q.from({ item: collection })
-    },
-    [collection],
-  )
+export const AllSidebarItemsContext =
+  createContext<AllSidebarItemsValue | null>(null)
+
+/**
+ * Provider hook — call ONCE at the provider level to create the query + derived data.
+ * Renders a single React Query observer for `getAllSidebarItems`.
+ */
+export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+
+  const query = useQuery({
+    ...convexQuery(
+      api.sidebarItems.queries.getAllSidebarItems,
+      campaignId ? { campaignId } : 'skip',
+    ),
+  })
 
   const data: Array<AnySidebarItem> = useMemo(
-    () => liveResult?.data ?? [],
-    [liveResult?.data],
+    () => query.data ?? [],
+    [query.data],
   )
 
   const sidebarItemIdMap = useMemo(() => {
@@ -76,15 +94,27 @@ export const useAllSidebarItems = (_enabled = true) => {
     [sidebarItemIdMap],
   )
 
-  const status = collection ? 'success' : ('pending' as const)
-
   return {
     data,
-    status,
+    status: query.status,
     itemsMap: sidebarItemIdMap,
     parentItemsMap: sidebarItemParentIdMap,
     getAncestorSidebarItems,
   }
+}
+
+/**
+ * Consumer hook — reads from context. Many components can call this
+ * without creating additional React Query observers.
+ */
+export const useAllSidebarItems = (): AllSidebarItemsValue => {
+  const ctx = useContext(AllSidebarItemsContext)
+  if (!ctx) {
+    throw new Error(
+      'useAllSidebarItems must be used within an AllSidebarItemsProvider',
+    )
+  }
+  return ctx
 }
 
 export const sortItemsByOptions = (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash-es'
-import { useSidebarItemMutations } from './useSidebarItemMutations'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'

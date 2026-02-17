@@ -18,7 +18,7 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
-import { usePendingItemName } from '~/hooks/useSidebarItemsCollection'
+import { usePendingItemName } from '~/hooks/usePendingItemName'
 
 interface CreateNewButtonProps {
   icon: LucideIcon

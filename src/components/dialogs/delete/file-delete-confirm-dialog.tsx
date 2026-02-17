@@ -21,8 +21,7 @@ export function FileDeleteConfirmDialog({
 
   const handleConfirm = useCallback(async () => {
     try {
-      const tx = deleteItem(file)
-      if (tx) await tx.isPersisted.promise
+      await deleteItem(file)
       toast.success('File deleted')
     } catch (error) {
       console.error(error)

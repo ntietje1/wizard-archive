@@ -26,13 +26,13 @@ export function findUniqueSlugFromCollection(
   name: string | undefined,
   type: SidebarItemType,
   campaignId: Id<'campaigns'>,
-  collectionState: Map<string, AnySidebarItem>,
+  itemsMap: Map<SidebarItemId, AnySidebarItem>,
   excludeId?: SidebarItemId,
 ): string {
   const slugBasis = name && name.trim() !== '' ? name : crypto.randomUUID()
 
   const existingSlugs = new Set<string>()
-  for (const item of collectionState.values()) {
+  for (const item of itemsMap.values()) {
     if (
       item.type === type &&
       item.campaignId === campaignId &&
@@ -55,7 +55,5 @@ export function findUniqueSlugFromCollection(
       `Could not generate unique slug for "${name}" after 100 attempts`,
     )
   }
-  return uniqueSlug
-
   return uniqueSlug
 }

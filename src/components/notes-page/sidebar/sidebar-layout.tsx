@@ -8,7 +8,7 @@ import {
 } from '~/components/shadcn/ui/resizable'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useFileSidebar'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { Button } from '~/components/shadcn/ui/button'
 import { Plus } from '~/lib/icons'
 
@@ -16,7 +16,7 @@ const SIDEBAR_MIN_WIDTH = 160
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
-  const { clearEditorContent } = useEditorNavigation()
+  const { clearEditorContent } = useEditorNavigationContext()
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">

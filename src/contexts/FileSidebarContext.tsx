@@ -36,7 +36,7 @@ import usePersistedState from '~/hooks/usePersistedState'
 import { FileSidebarContext } from '~/hooks/useFileSidebar'
 import { MouseSensor, TouchSensor } from '~/lib/dnd-sensors'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { Ban } from '~/lib/icons'
@@ -189,7 +189,7 @@ export function FileSidebarProvider({
     false,
   )
 
-  const { navigateToItem } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigationContext()
   const { canMoveToParent, validateName, move } = useSidebarItemMutations()
 
   const [activeDragItem, setActiveDragItem] = useState<SidebarDragData | null>(

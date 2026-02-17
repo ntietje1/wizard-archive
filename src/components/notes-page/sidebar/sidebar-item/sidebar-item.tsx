@@ -1,5 +1,4 @@
 import { memo, useCallback, useMemo } from 'react'
-import { useLiveQuery } from '@tanstack/react-db'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
@@ -8,12 +7,12 @@ import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useIsSelectedItem } from '~/hooks/useCurrentItem'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useRenameItem } from '~/hooks/useRenameItem'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import {
@@ -22,22 +21,25 @@ import {
 } from '~/components/shadcn/ui/collapsible'
 import { sortItemsByOptions } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
-import { useSidebarItemsCollection } from '~/hooks/useSidebarItemsCollection'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   ancestorIds?: Array<Id<'folders'>>
+  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
 }
 
-function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
+function SidebarItemComponent({
+  item,
+  ancestorIds = [],
+  parentItemsMap,
+}: SidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { navigateToItem } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigationContext()
   const isSelected = useIsSelectedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
   const { sortOptions } = useSortOptions()
-  const collection = useSidebarItemsCollection()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
@@ -45,21 +47,13 @@ function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
   const displayName = item.name || defaultName
   const isDraggingActive = !!activeDragItem
 
-  // Get children from live query using fn.where for closure capture of folderId
-  const children = useLiveQuery(
-    (q) => {
-      if (!isFolder || !collection) return undefined
-      const folderId = item._id
-      return q
-        .from({ i: collection })
-        .fn.where((row) => row.i.parentId === folderId)
-    },
-    [collection, item._id, isFolder],
-  )
+  const children = isFolder
+    ? parentItemsMap.get(item._id as Id<'folders'>)
+    : undefined
 
   const sortedChildren = useMemo(() => {
-    return sortItemsByOptions(sortOptions, children?.data) ?? []
-  }, [sortOptions, children?.data])
+    return sortItemsByOptions(sortOptions, children) ?? []
+  }, [sortOptions, children])
 
   // Build ancestor IDs for children
   const currentAncestors = useMemo(() => {
@@ -130,6 +124,7 @@ function SidebarItemComponent({ item, ancestorIds = [] }: SidebarItemProps) {
                 key={childItem._id}
                 item={childItem}
                 ancestorIds={currentAncestors}
+                parentItemsMap={parentItemsMap}
               />
             ))}
           </CollapsibleContent>

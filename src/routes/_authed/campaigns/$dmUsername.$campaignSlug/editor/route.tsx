@@ -7,6 +7,7 @@ import { validateSearch } from '~/components/notes-page/validate-search'
 import { FileTopbar } from '~/components/notes-page/editor/topbar/file-topbar'
 import { EditorContent } from '~/components/notes-page/editor/editor-content'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
+import { useSelectedItemSync } from '~/hooks/useSelectedItem'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
@@ -53,6 +54,10 @@ export const Route = createFileRoute(
 })
 
 function EditorLayout() {
+  // Sync URL selection into the external store so useIsSelectedItem
+  // works without per-item useMatch subscriptions
+  useSelectedItemSync()
+
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
       <FileTopbar />

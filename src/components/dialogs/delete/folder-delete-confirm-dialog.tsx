@@ -1,10 +1,9 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { useLiveQuery } from '@tanstack/react-db'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Folder } from 'convex/folders/types'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { useSidebarItemsCollection } from '~/hooks/useSidebarItemsCollection'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface FolderDeleteConfirmDialogProps {
   folder: Folder
@@ -19,27 +18,15 @@ export function FolderDeleteConfirmDialog({
   onClose,
 }: FolderDeleteConfirmDialogProps) {
   const { deleteItem } = useSidebarItemMutations()
-  const collection = useSidebarItemsCollection()
+  const { parentItemsMap } = useAllSidebarItems()
 
-  const children = useLiveQuery(
-    (q) => {
-      if (!collection) return undefined
-      return q
-        .from({ item: collection })
-        .fn.where((row) => row.item.parentId === folder._id)
-    },
-    [collection, folder._id],
-  )
-
-  const hasDirectChildren = (children?.data?.length ?? 0) > 0
+  const children = parentItemsMap.get(folder._id)
+  const hasDirectChildren = (children?.length ?? 0) > 0
 
   const handleConfirm = useCallback(async () => {
     try {
-      const tx = deleteItem(folder)
-      if (tx) {
-        await tx.isPersisted.promise
-        toast.success('Folder deleted')
-      }
+      await deleteItem(folder)
+      toast.success('Folder deleted')
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete folder')

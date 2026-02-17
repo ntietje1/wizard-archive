@@ -9,8 +9,8 @@ import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useIsSelectedItem } from '~/hooks/useCurrentItem'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
@@ -33,7 +33,7 @@ function FlatSidebarItemComponent({
 }: FlatSidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { navigateToItem } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigationContext()
   const isSelected = useIsSelectedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
 

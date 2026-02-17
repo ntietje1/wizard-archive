@@ -6,7 +6,6 @@ import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { useMatch } from '@tanstack/react-router'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { PermissionLevel } from 'convex/shares/types'
 import type { MenuContext } from './types'
@@ -17,14 +16,14 @@ import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
+import { getSelectedTypeAndSlug } from '~/hooks/useSelectedItem'
 import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import {
-  getTypeAndSlug,
   isFile,
   isFolder,
   isGameMap,
@@ -47,19 +46,13 @@ interface UseMenuActionsOptions {
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
   const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigation()
+    useEditorNavigationContext()
   const { setRenamingId } = useFileSidebar()
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const convex = useConvex()
-  const editorMatch = useMatch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-    shouldThrow: false,
-  })
-  const editorSearch = editorMatch?.search ?? {}
-  const selectedTypeAndSlug = getTypeAndSlug(editorSearch)
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
 
@@ -636,10 +629,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             note={deleteNoteDialog}
             isDeleting={true}
             onConfirm={() => {
+              const current = getSelectedTypeAndSlug()
               if (
-                selectedTypeAndSlug &&
-                deleteNoteDialog.type === selectedTypeAndSlug.type &&
-                deleteNoteDialog.slug === selectedTypeAndSlug.slug
+                current &&
+                deleteNoteDialog.type === current.type &&
+                deleteNoteDialog.slug === current.slug
               ) {
                 clearEditorContent()
               }
@@ -654,10 +648,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             folder={deleteFolderDialog}
             isDeleting={true}
             onConfirm={() => {
+              const current = getSelectedTypeAndSlug()
               if (
-                selectedTypeAndSlug &&
-                deleteFolderDialog.type === selectedTypeAndSlug.type &&
-                deleteFolderDialog.slug === selectedTypeAndSlug.slug
+                current &&
+                deleteFolderDialog.type === current.type &&
+                deleteFolderDialog.slug === current.slug
               ) {
                 clearEditorContent()
               }
@@ -672,10 +667,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             map={deleteMapDialog}
             isDeleting={true}
             onConfirm={() => {
+              const current = getSelectedTypeAndSlug()
               if (
-                selectedTypeAndSlug &&
-                deleteMapDialog.type === selectedTypeAndSlug.type &&
-                deleteMapDialog.slug === selectedTypeAndSlug.slug
+                current &&
+                deleteMapDialog.type === current.type &&
+                deleteMapDialog.slug === current.slug
               ) {
                 clearEditorContent()
               }
@@ -690,10 +686,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             file={deleteFileDialog}
             isDeleting={true}
             onConfirm={() => {
+              const current = getSelectedTypeAndSlug()
               if (
-                selectedTypeAndSlug &&
-                deleteFileDialog.type === selectedTypeAndSlug.type &&
-                deleteFileDialog.slug === selectedTypeAndSlug.slug
+                current &&
+                deleteFileDialog.type === current.type &&
+                deleteFileDialog.slug === current.slug
               ) {
                 clearEditorContent()
               }
@@ -741,7 +738,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       editFileDialog,
       editSidebarItemDialog,
       campaignId,
-      selectedTypeAndSlug,
       clearEditorContent,
       deleteFileDialog,
       closeDialog,

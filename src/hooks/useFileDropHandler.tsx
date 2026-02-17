@@ -9,12 +9,12 @@ import {
   validateFileForUpload,
 } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import { useSidebarItemMutations } from './useSidebarItemMutations'
 import { useOpenParentFolders } from './useOpenParentFolders'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/lib/folder-reader'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
 import {
   FileProgressContent,

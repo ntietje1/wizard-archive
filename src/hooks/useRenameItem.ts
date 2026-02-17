@@ -1,20 +1,12 @@
 import { useCallback } from 'react'
-import { useMatch } from '@tanstack/react-router'
-import { useEditorNavigation } from './useEditorNavigation'
-import { useSidebarItemMutations } from './useSidebarItemMutations'
+import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
+import { getSelectedTypeAndSlug } from './useSelectedItem'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useRenameItem() {
   const { rename: collectionRename } = useSidebarItemMutations()
-  const { navigateToItem } = useEditorNavigation()
-
-  const editorMatch = useMatch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
-    shouldThrow: false,
-  })
-  const editorSearch = editorMatch?.search ?? {}
-  const selectedTypeAndSlug = getTypeAndSlug(editorSearch)
+  const { navigateToItem } = useEditorNavigationContext()
 
   const rename = useCallback(
     async (item: AnySidebarItem, newName: string) => {
@@ -22,22 +14,23 @@ export function useRenameItem() {
 
       const previousSlug = item.slug
 
-      // Optimistic update via collection (validates before applying, returns predicted slug)
+      // Optimistic update via mutations (validates before applying, returns predicted slug)
       const result = collectionRename(item, newName)
       if (!result) return
 
       // If this is the currently viewed item and slug changed, update URL immediately
+      const current = getSelectedTypeAndSlug()
       const isCurrentItem =
-        selectedTypeAndSlug &&
-        item.type === selectedTypeAndSlug.type &&
-        item.slug === selectedTypeAndSlug.slug
+        current &&
+        item.type === current.type &&
+        item.slug === current.slug
 
       if (isCurrentItem && result.newSlug !== previousSlug) {
         const updatedItem = { ...item, name: newName, slug: result.newSlug }
         await navigateToItem(updatedItem, true)
       }
     },
-    [collectionRename, selectedTypeAndSlug, navigateToItem],
+    [collectionRename, navigateToItem],
   )
 
   return {
