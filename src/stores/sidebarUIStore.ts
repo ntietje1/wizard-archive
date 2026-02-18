@@ -177,19 +177,31 @@ export function useCampaignSidebarState(campaignId: string | undefined) {
 }
 
 export function useCampaignSidebarActions(campaignId: string | undefined) {
-  const cid = campaignId ?? ''
-  return useMemo(() => ({
-    setFolderState: (folderId: string, isOpen: boolean) =>
-      useSidebarUIStore.getState().setFolderState(cid, folderId, isOpen),
-    toggleFolderState: (folderId: string) =>
-      useSidebarUIStore.getState().toggleFolderState(cid, folderId),
-    clearAllFolderStates: () =>
-      useSidebarUIStore.getState().clearAllFolderStates(cid),
-    toggleCloseAllFoldersMode: () =>
-      useSidebarUIStore.getState().toggleCloseAllFoldersMode(cid),
-    exitCloseAllMode: () =>
-      useSidebarUIStore.getState().exitCloseAllMode(cid),
-    toggleBookmarksOnlyMode: () =>
-      useSidebarUIStore.getState().toggleBookmarksOnlyMode(cid),
-  }), [cid])
+  return useMemo(() => {
+    if (!campaignId) {
+      const noop = () => {}
+      return {
+        setFolderState: noop as (folderId: string, isOpen: boolean) => void,
+        toggleFolderState: noop as (folderId: string) => void,
+        clearAllFolderStates: noop,
+        toggleCloseAllFoldersMode: noop,
+        exitCloseAllMode: noop,
+        toggleBookmarksOnlyMode: noop,
+      }
+    }
+    return {
+      setFolderState: (folderId: string, isOpen: boolean) =>
+        useSidebarUIStore.getState().setFolderState(campaignId, folderId, isOpen),
+      toggleFolderState: (folderId: string) =>
+        useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
+      clearAllFolderStates: () =>
+        useSidebarUIStore.getState().clearAllFolderStates(campaignId),
+      toggleCloseAllFoldersMode: () =>
+        useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId),
+      exitCloseAllMode: () =>
+        useSidebarUIStore.getState().exitCloseAllMode(campaignId),
+      toggleBookmarksOnlyMode: () =>
+        useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
+    }
+  }, [campaignId])
 }

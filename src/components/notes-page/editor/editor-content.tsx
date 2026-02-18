@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { toast } from 'sonner'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
@@ -82,23 +83,25 @@ function NotSharedContent() {
   const { createItem } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
+  const [isPending, setIsPending] = useState(false)
 
   const typeAndSlug = getTypeAndSlug(editorSearch)
   const requestedType = typeAndSlug?.type
 
-  const handleCreate = () => {
-    if (!campaignId || !requestedType) return
+  const handleCreate = async () => {
+    if (!campaignId || !requestedType || isPending) return
 
+    setIsPending(true)
     try {
-      const result = createItem({ type: requestedType, campaignId })
-      if (!result) return
-
-      openParentFolders(result.tempId)
-      navigateToItem(result.optimisticItem)
+      const result = await createItem({ type: requestedType, campaignId })
+      openParentFolders(result.id)
+      navigateToItem(result)
     } catch (error) {
       console.error('Failed to create item:', error)
       const typeLabel = requestedType ? getItemTypeLabel(requestedType) : 'item'
       toast.error(`Failed to create ${typeLabel}`)
+    } finally {
+      setIsPending(false)
     }
   }
 
@@ -116,6 +119,7 @@ function NotSharedContent() {
           <p className="mt-2">
             <button
               onClick={handleCreate}
+              disabled={isPending}
               className="underline underline-offset-4 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create it

@@ -1,10 +1,13 @@
 import { createContext, useContext, useRef } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 
 export interface EditorNavigationValue {
-  navigateToItem: (item: AnySidebarItem, replace?: boolean) => Promise<void>
-  navigateToNote: (slug: string | null, replace?: boolean) => Promise<void>
+  navigateToItem: (
+    item: { type: SidebarItemType; slug: string },
+    replace?: boolean,
+  ) => Promise<void>
+  navigateToNote: (slug: string, replace?: boolean) => Promise<void>
   navigateToMap: (slug: string, replace?: boolean) => Promise<void>
   navigateToFolder: (slug: string, replace?: boolean) => Promise<void>
   navigateToFile: (slug: string, replace?: boolean) => Promise<void>

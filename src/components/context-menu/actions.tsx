@@ -114,22 +114,20 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     createNote: useCallback(
-      (ctx: MenuContext) => {
+      async (ctx: MenuContext) => {
         if (!campaignId) return
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
         try {
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId,
             parentId: ctx.item?._id,
           })
-          if (result) {
-            openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem)
-          }
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create note')
@@ -139,22 +137,20 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     createFolder: useCallback(
-      (ctx: MenuContext) => {
+      async (ctx: MenuContext) => {
         if (!campaignId) return
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
         try {
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.folders,
             campaignId,
             parentId: ctx.item?._id,
           })
-          if (result) {
-            openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem)
-          }
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create folder')
@@ -164,22 +160,20 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     createMap: useCallback(
-      (ctx: MenuContext) => {
+      async (ctx: MenuContext) => {
         if (!campaignId) return
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
         try {
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
             parentId: ctx.item?._id,
           })
-          if (result) {
-            openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem)
-          }
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create map')
@@ -189,22 +183,20 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
 
     createFile: useCallback(
-      (ctx: MenuContext) => {
+      async (ctx: MenuContext) => {
         if (!campaignId) return
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
         try {
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
             parentId: ctx.item?._id,
           })
-          if (result) {
-            openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem)
-          }
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create file')

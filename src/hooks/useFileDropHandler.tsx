@@ -96,7 +96,7 @@ export function useFileDropHandler() {
       try {
         if (isTextFile(file.type, file.name)) {
           const blocks = await convertTextToBlocks(file)
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId: targetCampaignId,
             name: fileName,
@@ -104,16 +104,14 @@ export function useFileDropHandler() {
             content: blocks,
           })
 
-          if (!silent && result) {
+          if (!silent) {
             toast.dismiss(toastId)
             toast.success(
               <ToastContent title={fileName} message="Note created" />,
               { duration: 3000, style: TOAST_STYLE },
             )
-            openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem, true)
-          } else if (!result) {
-            return false
+            openParentFolders(result.id)
+            navigateToItem(result, true)
           }
         } else if (isMediaFile(file.type)) {
           const uploadUrl = await generateUploadUrl.mutateAsync({})
@@ -143,7 +141,7 @@ export function useFileDropHandler() {
             originalFileName: fileName,
           })
           await commitUpload.mutateAsync({ storageId })
-          const result = createItem({
+          const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId: targetCampaignId,
             name: fileName,
@@ -151,14 +149,14 @@ export function useFileDropHandler() {
             parentId,
           })
 
-          if (!silent && result) {
+          if (!silent) {
             toast.dismiss(toastId)
             toast.success(
               <ToastContent title={fileName} message="File created" />,
               { duration: 3000, style: TOAST_STYLE },
             )
-            await openParentFolders(result.tempId)
-            navigateToItem(result.optimisticItem)
+            await openParentFolders(result.id)
+            navigateToItem(result)
           }
         } else {
           if (silent) {
@@ -198,16 +196,13 @@ export function useFileDropHandler() {
       parentId: Id<'folders'> | undefined,
       progress: UploadProgress,
     ): Promise<Id<'folders'>> => {
-      const result = createItem({
+      const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.folders,
         campaignId: targetCampaignId,
         name: folder.name,
         parentId,
       })
-      if (!result) {
-        throw new Error(`Failed to create folder: ${folder.name}`)
-      }
-      const folderId = result?.tempId as Id<'folders'>
+      const folderId = result.id as Id<'folders'>
 
       progress.processedFolders++
       toast.loading(<FolderProgressContent progress={progress} />, {

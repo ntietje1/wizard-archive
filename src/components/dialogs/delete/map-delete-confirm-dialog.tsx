@@ -22,12 +22,12 @@ export function MapDeleteConfirmDialog({
   const handleConfirm = useCallback(async () => {
     try {
       await deleteItem(map)
-      onConfirm?.()
       toast.success('Map deleted')
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete map')
     } finally {
+      onConfirm?.()
       onClose()
     }
   }, [deleteItem, map, onConfirm, onClose])

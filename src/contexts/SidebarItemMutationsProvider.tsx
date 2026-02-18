@@ -8,17 +8,16 @@ import {
   validateWikiLinkCompatibleName,
 } from 'convex/sidebarItems/sharedValidation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   CreateItemArgs,
+  CreateItemResult,
   SidebarItemMutationsValue,
 } from '~/hooks/useSidebarItemMutations'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
-import { findUniqueSlugFromCollection } from '~/lib/slug'
 import { SidebarItemMutationsContext } from '~/hooks/useSidebarItemMutations'
 
 export function SidebarItemMutationsProvider({
@@ -104,92 +103,58 @@ export function SidebarItemMutationsProvider({
   // --- Mutations ---
 
   const createItem = useCallback(
-    (args: CreateItemArgs) => {
+    async (args: CreateItemArgs): Promise<CreateItemResult> => {
       const nameResult = validateName(args.name, args.parentId)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
-      const slug = findUniqueSlugFromCollection(
-        args.name,
-        args.type,
-        args.campaignId,
-        itemsMap,
-      )
-      const tempId = crypto.randomUUID() as unknown as SidebarItemId
-      const now = Date.now()
-
-      const optimisticItem = {
-        _id: tempId,
-        _creationTime: now,
-        name: args.name,
-        slug,
-        campaignId: args.campaignId,
-        parentId: args.parentId,
-        iconName: args.iconName,
-        color: args.color,
-        updatedAt: now,
-        type: args.type,
-        shares: [],
-        isBookmarked: false,
-        myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
-        _optimistic: true,
-      } as AnySidebarItem
-
-      optimisticUpdate((prev) => [...prev, optimisticItem])
-
-      const mutationPromise = (() => {
-        switch (args.type) {
-          case SIDEBAR_ITEM_TYPES.notes:
-            return createNoteMutation({
-              campaignId: args.campaignId,
-              name: args.name,
-              parentId: args.parentId,
-              iconName: args.iconName,
-              color: args.color,
-              content: args.content,
-              slug,
-            })
-          case SIDEBAR_ITEM_TYPES.folders:
-            return createFolderMutation({
-              campaignId: args.campaignId,
-              name: args.name,
-              parentId: args.parentId,
-              slug,
-              iconName: args.iconName,
-              color: args.color,
-            })
-          case SIDEBAR_ITEM_TYPES.gameMaps:
-            return createMapMutation({
-              campaignId: args.campaignId,
-              name: args.name,
-              parentId: args.parentId,
-              imageStorageId: args.imageStorageId,
-              slug,
-              iconName: args.iconName,
-              color: args.color,
-            })
-          case SIDEBAR_ITEM_TYPES.files:
-            return createFileMutation({
-              campaignId: args.campaignId,
-              name: args.name,
-              parentId: args.parentId,
-              storageId: args.storageId,
-              slug,
-              iconName: args.iconName,
-              color: args.color,
-            })
+      switch (args.type) {
+        case SIDEBAR_ITEM_TYPES.notes: {
+          const { noteId, slug } = await createNoteMutation({
+            campaignId: args.campaignId,
+            name: args.name,
+            parentId: args.parentId,
+            iconName: args.iconName,
+            color: args.color,
+            content: args.content,
+          })
+          return { id: noteId, slug, type: args.type }
         }
-      })()
-
-      mutationPromise.catch(() => {
-        optimisticUpdate((prev) => prev.filter((item) => item._id !== tempId))
-      })
-
-      return { tempId, slug, optimisticItem }
+        case SIDEBAR_ITEM_TYPES.folders: {
+          const { folderId, slug } = await createFolderMutation({
+            campaignId: args.campaignId,
+            name: args.name,
+            parentId: args.parentId,
+            iconName: args.iconName,
+            color: args.color,
+          })
+          return { id: folderId, slug, type: args.type }
+        }
+        case SIDEBAR_ITEM_TYPES.gameMaps: {
+          const { mapId, slug } = await createMapMutation({
+            campaignId: args.campaignId,
+            name: args.name,
+            parentId: args.parentId,
+            imageStorageId: args.imageStorageId,
+            iconName: args.iconName,
+            color: args.color,
+          })
+          return { id: mapId, slug, type: args.type }
+        }
+        case SIDEBAR_ITEM_TYPES.files: {
+          const { fileId, slug } = await createFileMutation({
+            campaignId: args.campaignId,
+            name: args.name,
+            parentId: args.parentId,
+            storageId: args.storageId,
+            iconName: args.iconName,
+            color: args.color,
+          })
+          return { id: fileId, slug, type: args.type }
+        }
+      }
     },
     [
       validateName,
-      itemsMap,
-      optimisticUpdate,
       createNoteMutation,
       createFolderMutation,
       createMapMutation,
@@ -202,26 +167,26 @@ export function SidebarItemMutationsProvider({
       const result = validateName(newName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
 
-      const newSlug = findUniqueSlugFromCollection(
-        newName,
-        item.type,
-        item.campaignId,
-        itemsMap,
-        item._id,
-      )
-
       optimisticUpdate((prev) =>
         prev.map((i) =>
-          i._id === item._id ? { ...i, name: newName, slug: newSlug } : i,
+          i._id === item._id ? { ...i, name: newName } : i,
         ),
       )
 
       const promise = updateSidebarItemMutation({
         itemId: item._id,
         name: newName,
-        slug: newSlug,
       }).then(
-        () => {},
+        (res) => {
+          // Update slug in cache with server response
+          if (res?.slug) {
+            optimisticUpdate((prev) =>
+              prev.map((i) =>
+                i._id === item._id ? { ...i, slug: res.slug } : i,
+              ),
+            )
+          }
+        },
         () => {
           optimisticUpdate((prev) =>
             prev.map((i) =>
@@ -233,9 +198,9 @@ export function SidebarItemMutationsProvider({
         },
       )
 
-      return { newSlug, promise }
+      return { newSlug: newName, promise }
     },
-    [validateName, itemsMap, optimisticUpdate, updateSidebarItemMutation],
+    [validateName, optimisticUpdate, updateSidebarItemMutation],
   )
 
   const move = useCallback(

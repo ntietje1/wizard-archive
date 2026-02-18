@@ -3,6 +3,13 @@ import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
 import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 
+/**
+ * Returns a slug basis from a name, falling back to a random UUID if empty.
+ */
+export function resolveSlugBasis(name?: string): string {
+  return name && name.trim() !== '' ? name.trim() : crypto.randomUUID()
+}
+
 export function slugify(input: string): string {
   const lower = input.toLowerCase().trim()
   // Replace whitespace/underscores with hyphen

@@ -103,7 +103,6 @@ export const createNote = mutation({
     campaignId: v.id('campaigns'),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
-    slug: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
   },
   returns: v.object({

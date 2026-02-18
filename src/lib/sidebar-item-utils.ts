@@ -14,11 +14,6 @@ import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 
-/** True when the item is a client-side optimistic placeholder not yet persisted to the server. */
-export function isOptimistic(item: AnySidebarItem | null | undefined): boolean {
-  return !!item?._optimistic
-}
-
 // Determine type and slug from search params
 export const getTypeAndSlug = (
   search: EditorSearch,

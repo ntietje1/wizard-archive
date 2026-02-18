@@ -6,7 +6,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import {
-  Check,
   File,
   FileText,
   Folder,
@@ -26,7 +25,6 @@ interface CreateNewButtonProps {
   description: string
   onClick: () => void
   isCreating: boolean
-  isSuccess: boolean
   disabled: boolean
 }
 
@@ -36,7 +34,6 @@ function CreateNewButton({
   description,
   onClick,
   isCreating,
-  isSuccess,
   disabled,
 }: CreateNewButtonProps) {
   return (
@@ -56,8 +53,6 @@ function CreateNewButton({
       <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-colors text-muted-foreground group-hover:text-foreground">
         {isCreating ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : isSuccess ? (
-          <Check className="h-4 w-4" />
         ) : (
           <Plus className="h-4 w-4" />
         )}
@@ -82,23 +77,19 @@ export function CreateNewDashboard({
   const { openParentFolders } = useOpenParentFolders()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
-  const [successType, setSuccessType] = useState<SidebarItemType | null>(null)
   const name = pendingItemName.trim() || undefined
 
   const isDisabled = creatingType !== null
 
-  const handleCreate = (type: SidebarItemType) => {
+  const handleCreate = async (type: SidebarItemType) => {
     if (!campaignId || isDisabled) return
 
     setCreatingType(type)
 
     try {
-      const result = createItem({ type, campaignId, parentId, name })
-      if (!result) return
-
-      openParentFolders(result.tempId)
-      navigateToItem(result.optimisticItem)
-      setSuccessType(type)
+      const result = await createItem({ type, campaignId, parentId, name })
+      openParentFolders(result.id)
+      await navigateToItem(result)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create item')
@@ -128,7 +119,6 @@ export function CreateNewDashboard({
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.notes}
-              isSuccess={successType === SIDEBAR_ITEM_TYPES.notes}
             />
             <CreateNewButton
               icon={Folder}
@@ -137,7 +127,6 @@ export function CreateNewDashboard({
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.folders}
-              isSuccess={successType === SIDEBAR_ITEM_TYPES.folders}
             />
             <CreateNewButton
               icon={MapPin}
@@ -146,7 +135,6 @@ export function CreateNewDashboard({
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.gameMaps}
-              isSuccess={successType === SIDEBAR_ITEM_TYPES.gameMaps}
             />
             <CreateNewButton
               icon={File}
@@ -155,7 +143,6 @@ export function CreateNewDashboard({
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.files}
-              isSuccess={successType === SIDEBAR_ITEM_TYPES.files}
             />
           </div>
         </div>

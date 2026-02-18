@@ -3,7 +3,7 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
+import { findUniqueNoteSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
@@ -24,7 +24,6 @@ export const createNote = async (
     parentId?: Id<'folders'>
     iconName?: string
     color?: string
-    slug?: string
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
   await requireCampaignMembership(
@@ -33,13 +32,7 @@ export const createNote = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const slugBasis = input.slug
-    ? input.slug
-    : input.name && input.name.trim() !== ''
-      ? input.name
-      : crypto.randomUUID()
-
-  const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+  const uniqueSlug = await findUniqueSlug(resolveSlugBasis(input.name), async (slug) => {
     const conflict = await ctx.db
       .query('notes')
       .withIndex('by_campaign_slug', (q) =>

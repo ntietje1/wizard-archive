@@ -8,7 +8,7 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
+import { findUniqueFileSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   requireEditPermission,
@@ -75,7 +75,6 @@ export const createFile = mutation({
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
-    slug: v.optional(v.string()),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -109,13 +108,7 @@ export const createFile = mutation({
       name: args.name,
     })
 
-    const slugBasis =
-      args.slug && args.slug.trim() !== ''
-        ? args.slug.trim()
-        : args.name && args.name.trim() !== ''
-          ? args.name
-          : crypto.randomUUID()
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
       const conflict = await ctx.db
         .query('files')
         .withIndex('by_campaign_slug', (q) =>

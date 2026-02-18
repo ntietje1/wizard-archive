@@ -7,7 +7,7 @@ import {
   validateParentChange,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { findUniqueGameMapSlug, findUniqueSlug } from '../common/slug'
+import { findUniqueGameMapSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
@@ -26,7 +26,6 @@ export const createMap = mutation({
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
-    slug: v.optional(v.string()),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -60,13 +59,7 @@ export const createMap = mutation({
       name: args.name,
     })
 
-    const slugBasis = args.slug
-      ? args.slug
-      : args.name && args.name.trim() !== ''
-        ? args.name
-        : crypto.randomUUID()
-
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
       const conflict = await ctx.db
         .query('gameMaps')
         .withIndex('by_campaign_slug', (q) =>

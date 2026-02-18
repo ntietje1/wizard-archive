@@ -9,7 +9,6 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/hooks/useBlocksShare'
 import { useCampaign } from '~/hooks/useCampaign'
-import { isOptimistic } from '~/lib/sidebar-item-utils'
 
 export interface ShareItemWithPermission extends ShareItem {
   permissionLevel: PermissionLevel
@@ -44,7 +43,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const query = useQuery(
     convexQuery(
       api.shares.queries.getSidebarItemWithShares,
-      campaign?._id && singleItem && isDm && !isOptimistic(singleItem)
+      campaign?._id && singleItem && isDm
         ? {
             campaignId: campaign._id,
             sidebarItemId: singleItem._id,

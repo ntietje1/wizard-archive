@@ -82,9 +82,6 @@ export function useNameValidation({
   }, [wikiLinkValidation, isNotUnique, uniquenessValidation.error])
   const hasError = !wikiLinkValidation.valid || isNotUnique
 
-  // No async loading needed — validation is sync from collection
-  const isLoading = false
-
   // Sync validation function for form validators (kept as async for interface compat)
   const checkNameUnique = useCallback(
     async (nameToCheck: string): Promise<string | undefined> => {
@@ -114,7 +111,6 @@ export function useNameValidation({
       isActive && !!trimmedName && trimmedName !== trimmedInitialName,
     isUnique,
     isNotUnique,
-    isLoading,
     checkNameUnique,
     validationError,
     hasError,

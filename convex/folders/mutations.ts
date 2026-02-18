@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { findUniqueFolderSlug, findUniqueSlug } from '../common/slug'
+import { findUniqueFolderSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
   validateParentChange,
@@ -132,7 +132,6 @@ export const createFolder = mutation({
     campaignId: v.id('campaigns'),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
-    slug: v.optional(v.string()),
   },
   returns: v.object({
     folderId: v.id('folders'),
@@ -159,13 +158,7 @@ export const createFolder = mutation({
       }
     }
 
-    const slugBasis =
-      args.slug && args.slug.trim() !== ''
-        ? args.slug
-        : args.name && args.name.trim() !== ''
-          ? args.name
-          : crypto.randomUUID()
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
+    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
       const conflict = await ctx.db
         .query('folders')
         .withIndex('by_campaign_slug', (q) =>

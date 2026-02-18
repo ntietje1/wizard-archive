@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import type {
   SIDEBAR_ITEM_TYPES as SIDEBAR_ITEM_TYPES_TYPE,
   SidebarItemId,
+  SidebarItemType,
 } from 'convex/sidebarItems/baseTypes'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -41,12 +42,10 @@ export type CreateItemArgs =
   | CreateMapArgs
   | CreateFileArgs
 
+export type CreateItemResult = { id: SidebarItemId; slug: string; type: SidebarItemType }
+
 export interface SidebarItemMutationsValue {
-  createItem: (args: CreateItemArgs) => {
-    tempId: SidebarItemId
-    slug: string
-    optimisticItem: AnySidebarItem
-  }
+  createItem: (args: CreateItemArgs) => Promise<CreateItemResult>
   rename: (
     item: AnySidebarItem,
     newName: string,

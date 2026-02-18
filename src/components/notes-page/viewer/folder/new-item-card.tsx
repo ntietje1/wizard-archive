@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from '~/lib/icons'
 import { Card } from '~/components/shadcn/ui/card'
@@ -52,77 +53,24 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     [openMenuAt],
   )
 
-  const handleCreateNote = useCallback(() => {
-    if (!campaignId) return
-    try {
-      const result = createItem({
-        type: SIDEBAR_ITEM_TYPES.notes,
-        campaignId,
-        parentId,
-      })
-      if (result) {
-        openParentFolders(result.tempId)
-        navigateToItem(result.optimisticItem)
+  const handleCreate = useCallback(
+    async (type: SidebarItemType) => {
+      if (!campaignId) return
+      try {
+        const result = await createItem({
+          type,
+          campaignId,
+          parentId,
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+        toast.error(`Failed to create item`)
       }
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create note')
-    }
-  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
-
-  const handleCreateFolder = useCallback(() => {
-    if (!campaignId) return
-    try {
-      const result = createItem({
-        type: SIDEBAR_ITEM_TYPES.folders,
-        campaignId,
-        parentId,
-      })
-      if (result) {
-        openParentFolders(result.tempId)
-        navigateToItem(result.optimisticItem)
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create folder')
-    }
-  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
-
-  const handleCreateMap = useCallback(() => {
-    if (!campaignId) return
-    try {
-      const result = createItem({
-        type: SIDEBAR_ITEM_TYPES.gameMaps,
-        campaignId,
-        parentId,
-      })
-      if (result) {
-        openParentFolders(result.tempId)
-        navigateToItem(result.optimisticItem)
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create map')
-    }
-  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
-
-  const handleCreateFile = useCallback(() => {
-    if (!campaignId) return
-    try {
-      const result = createItem({
-        type: SIDEBAR_ITEM_TYPES.files,
-        campaignId,
-        parentId,
-      })
-      if (result) {
-        openParentFolders(result.tempId)
-        navigateToItem(result.optimisticItem)
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create file')
-    }
-  }, [campaignId, parentId, createItem, openParentFolders, navigateToItem])
+    },
+    [campaignId, parentId, createItem, openParentFolders, navigateToItem],
+  )
 
   return (
     <ContextMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -151,19 +99,27 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onSelect={handleCreateNote}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
+        >
           <FilePlus className="h-4 w-4 mr-2" />
           New Note
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateFolder}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
+        >
           <FolderPlus className="h-4 w-4 mr-2" />
           New Folder
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateMap}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
+        >
           <MapPin className="h-4 w-4 mr-2" />
           New Map
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateFile}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
+        >
           <File className="h-4 w-4 mr-2" />
           New File
         </ContextMenuItem>

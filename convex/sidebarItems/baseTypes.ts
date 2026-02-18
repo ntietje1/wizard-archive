@@ -54,8 +54,6 @@ export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {
   shares: Array<SidebarItemShare>
   isBookmarked: boolean
   myPermissionLevel: PermissionLevel
-  /** True only on client-side optimistic items that haven't been persisted yet. */
-  _optimistic?: true
 }
 
 export type SidebarItemWithContent<T extends SidebarItemType> =

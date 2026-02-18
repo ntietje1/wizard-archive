@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
-import { FolderPlus } from '~/lib/icons'
+import { FolderPlus, Loader2 } from '~/lib/icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
@@ -13,21 +14,23 @@ export function NewFolderButton() {
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const [isPending, setIsPending] = useState(false)
 
-  const handleNewFolder = () => {
-    if (!campaignId) return
+  const handleNewFolder = async () => {
+    if (!campaignId || isPending) return
+    setIsPending(true)
     try {
-      const result = createItem({
+      const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.folders,
         campaignId,
       })
-      if (result) {
-        openParentFolders(result.tempId)
-        navigateToItem(result.optimisticItem)
-      }
+      openParentFolders(result.id)
+      navigateToItem(result)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')
+    } finally {
+      setIsPending(false)
     }
   }
 
@@ -36,9 +39,14 @@ export function NewFolderButton() {
       variant="ghost"
       size="icon"
       onClick={handleNewFolder}
+      disabled={isPending}
       aria-label="Create new folder"
     >
-      <FolderPlus className="h-4 w-4" />
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <FolderPlus className="h-4 w-4" />
+      )}
     </Button>
   )
 }
