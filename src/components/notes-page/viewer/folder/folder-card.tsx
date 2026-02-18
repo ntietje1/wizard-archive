@@ -133,13 +133,13 @@ function FolderCardInner({
   })
 
   const handleCardActivate = () => {
-    if (!isDragging && onClick) {
+    if (isDragging) return
+    if (onClick) {
       onClick()
     } else {
       navigateToFolder(folder.slug)
     }
   }
-
   const cardContent = (
     <div
       ref={(el) => {

@@ -168,9 +168,7 @@ export function SidebarItemMutationsProvider({
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
-        prev.map((i) =>
-          i._id === item._id ? { ...i, name: newName } : i,
-        ),
+        prev.map((i) => (i._id === item._id ? { ...i, name: newName } : i)),
       )
 
       const promise = updateSidebarItemMutation({
@@ -186,6 +184,7 @@ export function SidebarItemMutationsProvider({
               ),
             )
           }
+          return res
         },
         () => {
           optimisticUpdate((prev) =>
@@ -198,7 +197,7 @@ export function SidebarItemMutationsProvider({
         },
       )
 
-      return { newSlug: newName, promise }
+      return { promise }
     },
     [validateName, optimisticUpdate, updateSidebarItemMutation],
   )

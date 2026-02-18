@@ -12,22 +12,20 @@ export function useRenameItem() {
     async (item: AnySidebarItem, newName: string) => {
       if (!item) return
 
-      const previousSlug = item.slug
-
-      // Optimistic update via mutations (validates before applying, returns predicted slug)
-      const result = collectionRename(item, newName)
-      if (!result) return
-
-      // If this is the currently viewed item and slug changed, update URL immediately
       const current = getSelectedTypeAndSlug()
       const isCurrentItem =
         current &&
         item.type === current.type &&
         item.slug === current.slug
 
-      if (isCurrentItem && result.newSlug !== previousSlug) {
-        const updatedItem = { ...item, name: newName, slug: result.newSlug }
-        await navigateToItem(updatedItem, true)
+      const { promise } = collectionRename(item, newName)
+
+      // If this is the currently viewed item, await the server slug and navigate
+      if (isCurrentItem) {
+        const res = await promise
+        if (res?.slug && res.slug !== item.slug) {
+          await navigateToItem({ type: item.type, slug: res.slug }, true)
+        }
       }
     },
     [collectionRename, navigateToItem],

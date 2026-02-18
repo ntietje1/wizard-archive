@@ -110,7 +110,7 @@ export function useFileDropHandler() {
               <ToastContent title={fileName} message="Note created" />,
               { duration: 3000, style: TOAST_STYLE },
             )
-            openParentFolders(result.id)
+            await openParentFolders(result.id)
             navigateToItem(result, true)
           }
         } else if (isMediaFile(file.type)) {

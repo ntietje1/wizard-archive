@@ -23,12 +23,7 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
-import {
-  isFile,
-  isFolder,
-  isGameMap,
-  isNote,
-} from '~/lib/sidebar-item-utils'
+import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
@@ -108,7 +103,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     showInSidebar: useCallback(
       async (ctx: MenuContext) => {
         if (!ctx.item) return
-        await openParentFolders(ctx.item._id)
+        openParentFolders(ctx.item._id)
       },
       [openParentFolders],
     ),

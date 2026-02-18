@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type {
-  SIDEBAR_ITEM_TYPES as SIDEBAR_ITEM_TYPES_TYPE,
+  SIDEBAR_ITEM_TYPES,
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/baseTypes'
@@ -18,21 +18,21 @@ interface CreateItemBase {
 }
 
 export type CreateNoteArgs = CreateItemBase & {
-  type: typeof SIDEBAR_ITEM_TYPES_TYPE.notes
+  type: typeof SIDEBAR_ITEM_TYPES.notes
   content?: Array<CustomPartialBlock>
 }
 
 export type CreateFolderArgs = CreateItemBase & {
-  type: typeof SIDEBAR_ITEM_TYPES_TYPE.folders
+  type: typeof SIDEBAR_ITEM_TYPES.folders
 }
 
 export type CreateMapArgs = CreateItemBase & {
-  type: typeof SIDEBAR_ITEM_TYPES_TYPE.gameMaps
+  type: typeof SIDEBAR_ITEM_TYPES.gameMaps
   imageStorageId?: Id<'_storage'>
 }
 
 export type CreateFileArgs = CreateItemBase & {
-  type: typeof SIDEBAR_ITEM_TYPES_TYPE.files
+  type: typeof SIDEBAR_ITEM_TYPES.files
   storageId?: Id<'_storage'>
 }
 
@@ -42,14 +42,18 @@ export type CreateItemArgs =
   | CreateMapArgs
   | CreateFileArgs
 
-export type CreateItemResult = { id: SidebarItemId; slug: string; type: SidebarItemType }
+export type CreateItemResult = {
+  id: SidebarItemId
+  slug: string
+  type: SidebarItemType
+}
 
 export interface SidebarItemMutationsValue {
   createItem: (args: CreateItemArgs) => Promise<CreateItemResult>
   rename: (
     item: AnySidebarItem,
     newName: string,
-  ) => { newSlug: string; promise: Promise<void> }
+  ) => { promise: Promise<{ slug: string } | void> }
   move: (
     item: AnySidebarItem,
     newParentId: Id<'folders'> | undefined,
