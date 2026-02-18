@@ -18,7 +18,7 @@ import type { EditorContextMenuRef } from '~/components/context-menu/components/
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useEditorModeState } from '~/hooks/useEditorMode'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
@@ -302,7 +302,7 @@ export function MapViewer({
   // Track if a drag just ended to prevent click firing
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const { editorMode } = useEditorModeState()
+  const { editorMode } = useEditorMode()
 
   // In viewer mode, filter out ghost pins — players shouldn't see them at all
   const pins =

@@ -3,7 +3,7 @@ import type { Folder } from 'convex/folders/types'
 import type { SidebarDropData } from '~/lib/dnd-utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { cn } from '~/lib/shadcn/utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
@@ -20,7 +20,7 @@ export function DroppableFolderZone({
   className,
   highlightClassName = 'bg-muted',
 }: DroppableFolderZoneProps) {
-  const { activeDragItem } = useFileSidebar()
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
   const { getAncestorSidebarItems } = useAllSidebarItems()
   const ancestorItems = getAncestorSidebarItems(folder._id)
   const ancestorIds = ancestorItems.map((item) => item._id)
@@ -40,7 +40,8 @@ export function DroppableFolderZone({
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const { fileDragHoveredId, isDraggingFiles } = useFileSidebar()
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id

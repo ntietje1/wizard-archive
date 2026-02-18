@@ -7,7 +7,7 @@ import {
   ResizablePanelGroup,
 } from '~/components/shadcn/ui/resizable'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useSidebarLayout } from '~/hooks/useFileSidebar'
+import { useSidebarLayout } from '~/contexts/SidebarLayoutContext'
 import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { Button } from '~/components/shadcn/ui/button'
 import { Plus } from '~/lib/icons'

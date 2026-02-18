@@ -5,7 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { cn } from '~/lib/shadcn/utils'
 import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
@@ -34,8 +34,9 @@ export function DroppableSidebarItem({
     [item, safeAncestorIds],
   )
 
-  const { fileDragHoveredId, isDraggingFiles, activeDragItem } =
-    useFileSidebar()
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
 
   const droppableId = `drop-${item._id}`
 

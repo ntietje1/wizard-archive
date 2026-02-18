@@ -1,9 +1,13 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { FolderDot, FolderOpenDot } from '~/lib/icons'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignSidebarState, useCampaignSidebarActions } from '~/stores/sidebarUIStore'
 
 export function CloseAllFoldersButton() {
-  const { closeAllFoldersMode, toggleCloseAllFoldersMode } = useFileSidebar()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const { closeAllFoldersMode } = useCampaignSidebarState(campaignId)
+  const { toggleCloseAllFoldersMode } = useCampaignSidebarActions(campaignId)
 
   return (
     <Button

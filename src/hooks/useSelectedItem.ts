@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
-import { useShallow } from 'zustand/shallow'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
@@ -45,20 +44,6 @@ export function useIsSelectedItem(item: AnySidebarItem): boolean {
   const itemSlug = item.slug
   return useSidebarUIStore(
     (s) => s.selectedType === itemType && s.selectedSlug === itemSlug,
-  )
-}
-
-/**
- * Returns the currently selected type+slug from the store.
- * Only re-renders when the selection changes.
- */
-export function useSelectedTypeAndSlug(): TypeAndSlug | null {
-  return useSidebarUIStore(
-    useShallow((s) =>
-      s.selectedType && s.selectedSlug
-        ? { type: s.selectedType, slug: s.selectedSlug }
-        : null,
-    ),
   )
 }
 

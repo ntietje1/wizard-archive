@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useShallow } from 'zustand/shallow'
 import type {
   SidebarItemId,
   SidebarItemType,
@@ -19,7 +21,6 @@ interface SidebarUIState {
 
   // Transient
   renamingId: SidebarItemId | null
-  deletingId: SidebarItemId | null
   activeDragItem: SidebarDragData | null
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
@@ -30,7 +31,6 @@ interface SidebarUIState {
 
 interface SidebarUIActions {
   setRenamingId: (id: SidebarItemId | null) => void
-  setDeletingId: (id: SidebarItemId | null) => void
   setFolderState: (
     campaignId: string,
     folderId: string,
@@ -83,7 +83,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       // Transient
       renamingId: null,
-      deletingId: null,
       activeDragItem: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
@@ -93,7 +92,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       // Actions
       setRenamingId: (id) => set({ renamingId: id }),
-      setDeletingId: (id) => set({ deletingId: id }),
 
       setFolderState: (campaignId, folderId, isOpen) =>
         set((state) =>
@@ -164,3 +162,34 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
     },
   ),
 )
+
+const EMPTY_FOLDER_STATES: Record<string, boolean> = {}
+
+export function useCampaignSidebarState(campaignId: string | undefined) {
+  return useSidebarUIStore(useShallow(s => {
+    const cs = campaignId ? s.campaignStates[campaignId] : undefined
+    return {
+      folderStates: cs?.folderStates ?? EMPTY_FOLDER_STATES,
+      closeAllFoldersMode: cs?.closeAllFoldersMode ?? false,
+      bookmarksOnlyMode: cs?.bookmarksOnlyMode ?? false,
+    }
+  }))
+}
+
+export function useCampaignSidebarActions(campaignId: string | undefined) {
+  const cid = campaignId ?? ''
+  return useMemo(() => ({
+    setFolderState: (folderId: string, isOpen: boolean) =>
+      useSidebarUIStore.getState().setFolderState(cid, folderId, isOpen),
+    toggleFolderState: (folderId: string) =>
+      useSidebarUIStore.getState().toggleFolderState(cid, folderId),
+    clearAllFolderStates: () =>
+      useSidebarUIStore.getState().clearAllFolderStates(cid),
+    toggleCloseAllFoldersMode: () =>
+      useSidebarUIStore.getState().toggleCloseAllFoldersMode(cid),
+    exitCloseAllMode: () =>
+      useSidebarUIStore.getState().exitCloseAllMode(cid),
+    toggleBookmarksOnlyMode: () =>
+      useSidebarUIStore.getState().toggleBookmarksOnlyMode(cid),
+  }), [cid])
+}

@@ -24,7 +24,7 @@ import {
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -79,7 +79,7 @@ function FileCardSkeleton() {
 
 function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const { navigateToFile } = useEditorNavigation()
-  const { activeDragItem } = useFileSidebar()
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
   const canDrag = hasAtLeastPermissionLevel(
     file.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,

@@ -11,7 +11,6 @@ interface EditorModeState {
 interface EditorModeActions {
   setEditorMode: (mode: EditorMode) => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | undefined) => void
-  reset: () => void
 }
 
 const initialState: EditorModeState = {
@@ -24,6 +23,5 @@ export const useEditorModeStore = create<EditorModeState & EditorModeActions>()(
     ...initialState,
     setEditorMode: (mode) => set({ editorMode: mode }),
     setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),
-    reset: () => set(initialState),
   }),
 )

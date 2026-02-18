@@ -1,6 +1,26 @@
-import { useMemo } from 'react'
-import { SidebarLayoutContext } from '~/hooks/useFileSidebar'
+import { createContext, useContext, useMemo } from 'react'
 import { useEditorSettings } from '~/hooks/useSidebarWidth'
+
+export type SidebarLayoutContextType = {
+  isSidebarExpanded: boolean
+  setIsSidebarExpanded: (isExpanded: boolean) => void
+  sidebarWidth: number
+  setSidebarWidth: (width: number) => void
+  isEditorSettingsLoaded: boolean
+}
+
+export const SidebarLayoutContext =
+  createContext<SidebarLayoutContextType | null>(null)
+
+export const useSidebarLayout = (): SidebarLayoutContextType => {
+  const context = useContext(SidebarLayoutContext)
+  if (!context) {
+    throw new Error(
+      'useSidebarLayout must be used within a SidebarLayoutProvider',
+    )
+  }
+  return context
+}
 
 export function SidebarLayoutProvider({
   children,

@@ -8,14 +8,16 @@ import {
   useFilteredSidebarItems,
 } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 export function BookmarkedItemsList() {
   const { data: filteredItems, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
-  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
+  const renamingId = useSidebarUIStore((s) => s.renamingId)
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
 
   const bookmarkedItems = useMemo(() => {
     const bookmarked = filteredItems.filter(

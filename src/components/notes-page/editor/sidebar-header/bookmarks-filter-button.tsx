@@ -1,9 +1,13 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { Bookmark, BookmarkCheck } from '~/lib/icons'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignSidebarState, useCampaignSidebarActions } from '~/stores/sidebarUIStore'
 
 export function BookmarksFilterButton() {
-  const { bookmarksOnlyMode, toggleBookmarksOnlyMode } = useFileSidebar()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
+  const { toggleBookmarksOnlyMode } = useCampaignSidebarActions(campaignId)
 
   return (
     <Button

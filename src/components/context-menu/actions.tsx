@@ -18,7 +18,7 @@ import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSelectedTypeAndSlug } from '~/hooks/useSelectedItem'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -47,7 +47,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
   const { navigateToItem, navigateToMap, clearEditorContent } =
     useEditorNavigationContext()
-  const { setRenamingId } = useFileSidebar()
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()

@@ -8,21 +8,15 @@ import { useEditorModeStore } from '~/stores/editorModeStore'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
-export interface EditorModeStateContextType {
+export interface EditorModeContextType {
   editorMode: EditorMode
   viewAsPlayerId: Id<'campaignMembers'> | undefined
   canEdit: boolean
-}
-
-export interface EditorModeActionsContextType {
   setEditorMode: (editorMode: EditorMode) => void
   setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }
 
-export type EditorModeContextType = EditorModeStateContextType &
-  EditorModeActionsContextType
-
-export function useEditorModeState(): EditorModeStateContextType {
+export function useEditorMode(): EditorModeContextType {
   const rawEditorMode = useEditorModeStore((s) => s.editorMode)
   const viewAsPlayerId = useEditorModeStore((s) => s.viewAsPlayerId)
   const { isDm } = useCampaign()
@@ -34,23 +28,8 @@ export function useEditorModeState(): EditorModeStateContextType {
   )
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
 
-  return {
-    editorMode: effectiveEditorMode,
-    viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
-    canEdit,
-  }
-}
-
-export function useEditorModeActions(): EditorModeActionsContextType {
-  const { isDm } = useCampaign()
-  const { item: currentItem } = useCurrentItem()
   const storeSetEditorMode = useEditorModeStore((s) => s.setEditorMode)
   const storeSetViewAsPlayerId = useEditorModeStore((s) => s.setViewAsPlayerId)
-
-  const canEdit = hasAtLeastPermissionLevel(
-    currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-    PERMISSION_LEVEL.EDIT,
-  )
 
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
@@ -66,11 +45,11 @@ export function useEditorModeActions(): EditorModeActionsContextType {
     [isDm, storeSetViewAsPlayerId],
   )
 
-  return { setEditorMode, setViewAsPlayerId }
-}
-
-export function useEditorMode(): EditorModeContextType {
-  const state = useEditorModeState()
-  const actions = useEditorModeActions()
-  return { ...state, ...actions }
+  return {
+    editorMode: effectiveEditorMode,
+    viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
+    canEdit,
+    setEditorMode,
+    setViewAsPlayerId,
+  }
 }

@@ -10,17 +10,17 @@ import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
-import { useEditorModeState } from '~/hooks/useEditorMode'
-import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { useEditorMode } from '~/hooks/useEditorMode'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function FileTopbar() {
-  const { canEdit, viewAsPlayerId } = useEditorModeState()
+  const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, isLoading, hasRequestedItem } = useCurrentItem()
   const { item: viewAsItem } = useCurrentItem(viewAsPlayerId)
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
-  const { setPendingItemName } = usePendingItemName()
+  const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const canRename =

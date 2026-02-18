@@ -6,7 +6,7 @@ import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -34,7 +34,7 @@ function NoteCardSkeleton() {
 
 function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const { navigateToNote } = useEditorNavigation()
-  const { activeDragItem } = useFileSidebar()
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
   const canDrag = hasAtLeastPermissionLevel(
     note.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,

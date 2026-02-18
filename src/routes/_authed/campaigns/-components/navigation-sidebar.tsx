@@ -9,7 +9,7 @@ import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { Button } from '~/components/shadcn/ui/button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { Separator } from '~/components/shadcn/ui/separator'
-import { useSidebarLayout } from '~/hooks/useFileSidebar'
+import { useSidebarLayout } from '~/contexts/SidebarLayoutContext'
 
 type NavigationItem = {
   name: string

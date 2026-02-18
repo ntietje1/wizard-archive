@@ -15,7 +15,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
   return (
@@ -90,8 +90,9 @@ function FolderCardInner({
   const { active, over } = useDndContext()
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { activeDragItem, fileDragHoveredId, isDraggingFiles } =
-    useFileSidebar()
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
   const canDrag = hasAtLeastPermissionLevel(
     folder.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,

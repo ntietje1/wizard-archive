@@ -10,7 +10,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { useIsSelectedItem } from '~/hooks/useSelectedItem'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSidebarItemIcon } from '~/lib/category-icons'
@@ -38,7 +38,9 @@ function SidebarItemComponent({
   const { navigateToItem } = useEditorNavigationContext()
   const isSelected = useIsSelectedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
-  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
+  const renamingId = useSidebarUIStore((s) => s.renamingId)
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
+  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
   const { sortOptions } = useSortOptions()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders

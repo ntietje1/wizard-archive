@@ -18,7 +18,7 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
-import { usePendingItemName } from '~/hooks/usePendingItemName'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -80,7 +80,7 @@ export function CreateNewDashboard({
   const { createItem } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const { pendingItemName } = usePendingItemName()
+  const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
   const [successType, setSuccessType] = useState<SidebarItemType | null>(null)
   const name = pendingItemName.trim() || undefined
