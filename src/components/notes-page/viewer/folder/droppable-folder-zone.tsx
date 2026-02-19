@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useMemo, useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { cn } from '~/lib/shadcn/utils'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-import { cn } from '~/lib/shadcn/utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface DroppableFolderZoneProps {
@@ -30,33 +29,17 @@ export function DroppableFolderZone({
     [folder._id, getAncestorSidebarItems],
   )
 
-  // Store mutable data in refs so the useEffect doesn't need to re-run
-  const dropDataRef = useRef<SidebarDropData>({ ...folder, ancestorIds })
-  dropDataRef.current = { ...folder, ancestorIds }
+  const dropData = { ...folder, ancestorIds }
 
   // Highlight when this folder is the drag target
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
 
-  // Only re-register when the folder ID changes (not on every render)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    return dropTargetForElements({
-      element: el,
-      getData: () =>
-        dropDataRef.current,
-      canDrop: ({ source }) => {
-        const dragData = source.data as SidebarDragData
-        return validateDrop(dragData, dropDataRef.current).valid
-      },
-    })
-  }, [folder._id])
+  useDroppable({ ref, data: dropData })
 
   // Handle native file drag-and-drop
-  const canAcceptFileDrops = canDropFilesOnTarget(dropDataRef.current)
+  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)

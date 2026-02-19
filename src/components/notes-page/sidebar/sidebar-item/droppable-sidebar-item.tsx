@@ -1,14 +1,11 @@
-import { useEffect, useRef } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useRef } from 'react'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-
-const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -22,7 +19,6 @@ export function DroppableSidebarItem({
   children,
 }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const safeAncestorIds = ancestorIds ?? EMPTY_ANCESTORS
 
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
@@ -34,34 +30,15 @@ export function DroppableSidebarItem({
     if (id === null) return false
     if (id === item._id) return true
     if (id === SIDEBAR_ROOT_TYPE) return true
-    return safeAncestorIds.includes(id as Id<'folders'>)
+    return ancestorIds.includes(id as Id<'folders'>)
   })
 
-  // Store mutable data in ref so useEffect doesn't re-run on data changes
-  const dropDataRef = useRef<SidebarDropData>({
-    ...item,
-    ancestorIds: safeAncestorIds,
-  })
-  dropDataRef.current = { ...item, ancestorIds: safeAncestorIds }
+  const dropData = { ...item, ancestorIds }
 
-  // Register as drop target — only re-register when item ID changes
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    return dropTargetForElements({
-      element: el,
-      getData: () =>
-        dropDataRef.current,
-      canDrop: ({ source }) => {
-        const dragData = source.data as SidebarDragData
-        return validateDrop(dragData, dropDataRef.current).valid
-      },
-    })
-  }, [item._id])
+  useDroppable({ ref, data: dropData })
 
   // Handle file drag-and-drop
-  const canAcceptFileDrops = canDropFilesOnTarget(dropDataRef.current)
+  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? item._id : undefined)
 
@@ -71,7 +48,7 @@ export function DroppableSidebarItem({
   const isFileParentValidDrop =
     isDraggingFiles &&
     fileDragHoveredId !== null &&
-    safeAncestorIds.includes(fileDragHoveredId)
+    ancestorIds.includes(fileDragHoveredId)
 
   const shouldHighlight =
     isDropTarget || isFileValidDrop || isFileParentValidDrop

@@ -1,16 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { disableNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/disable-native-drag-preview'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -18,6 +15,7 @@ import { MapPin, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useDraggable } from '~/hooks/useDraggable'
 
 function MapCardSkeleton() {
   return (
@@ -38,7 +36,6 @@ function MapCardSkeleton() {
 function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToMap } = useEditorNavigation()
-  const isDraggingRef = useRef(false)
   const canDrag = hasAtLeastPermissionLevel(
     map.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
@@ -54,29 +51,12 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
 
   const imageUrl = imageUrlQuery.data || null
 
-  const dragDataRef = useRef<SidebarDragData>(map)
-  dragDataRef.current = map
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el || !canDrag) return
-
-    return draggable({
-      element: el,
-      getInitialData: () => dragDataRef.current,
-      onGenerateDragPreview: ({ nativeSetDragImage }) => {
-        disableNativeDragPreview({ nativeSetDragImage })
-      },
-      onDragStart: () => {
-        isDraggingRef.current = true
-        el.style.opacity = '0.2'
-      },
-      onDrop: () => {
-        isDraggingRef.current = false
-        el.style.opacity = ''
-      },
-    })
-  }, [map._id, canDrag])
+  const { isDraggingRef } = useDraggable({
+    ref,
+    data: map,
+    canDrag,
+    dragOpacity: '0.2',
+  })
 
   const handleCardActivate = () => {
     if (!isDraggingRef.current) {

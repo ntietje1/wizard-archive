@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useRef } from 'react'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
-import type { SidebarDragData } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
-import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
@@ -15,29 +14,14 @@ interface DroppableRootProps {
 export function DroppableRoot({ children, className }: DroppableRootProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const rootTargetData = { type: SIDEBAR_ROOT_TYPE }
-
-  const rootTargetDataRef = useRef(rootTargetData)
-  rootTargetDataRef.current = rootTargetData
+  const rootTargetData = { type: SIDEBAR_ROOT_TYPE } as const
 
   // Highlight only when root itself is the topmost drop target
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
   )
 
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    return dropTargetForElements({
-      element: el,
-      getData: () => rootTargetDataRef.current,
-      canDrop: ({ source }) => {
-        const dragData = source.data as SidebarDragData
-        return validateDrop(dragData, rootTargetDataRef.current).valid
-      },
-    })
-  }, [])
+  useDroppable({ ref, data: rootTargetData })
 
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
   const {

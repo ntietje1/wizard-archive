@@ -1,11 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { disableNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/disable-native-drag-preview'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
@@ -15,6 +12,7 @@ import { FileText, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useDraggable } from '~/hooks/useDraggable'
 
 function NoteCardSkeleton() {
   return (
@@ -36,36 +34,17 @@ function NoteCardSkeleton() {
 function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToNote } = useEditorNavigation()
-  const isDraggingRef = useRef(false)
   const canDrag = hasAtLeastPermissionLevel(
     note.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const dragDataRef = useRef<SidebarDragData>(note)
-  dragDataRef.current = note
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el || !canDrag) return
-
-    return draggable({
-      element: el,
-      getInitialData: () => dragDataRef.current,
-      onGenerateDragPreview: ({ nativeSetDragImage }) => {
-        disableNativeDragPreview({ nativeSetDragImage })
-      },
-      onDragStart: () => {
-        isDraggingRef.current = true
-        el.style.opacity = '0.5'
-      },
-      onDrop: () => {
-        isDraggingRef.current = false
-        el.style.opacity = ''
-      },
-    })
-  }, [note._id, canDrag])
+  const { isDraggingRef } = useDraggable({
+    ref,
+    data: note,
+    canDrag,
+  })
 
   const handleCardActivate = () => {
     if (!isDraggingRef.current) {

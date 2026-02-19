@@ -1,17 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import {
-  draggable,
-  dropTargetForElements,
-} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { disableNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/disable-native-drag-preview'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -19,6 +13,8 @@ import { MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useDraggable } from '~/hooks/useDraggable'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
@@ -97,7 +93,6 @@ function FolderCardInner({
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const isDraggingRef = useRef(false)
 
   // Highlight when this folder card is the drag target
   const isDropTarget = useSidebarUIStore(
@@ -111,56 +106,19 @@ function FolderCardInner({
 
   // Include parentId in ancestorIds for circular drop prevention
   const ancestorIds = parentId ? [parentId] : []
+  const dropData = { ...folder, ancestorIds }
 
-  // Store mutable data in refs so useEffect doesn't re-run on data changes
-  const dropDataRef = useRef<SidebarDropData>({ ...folder, ancestorIds })
-  const dragDataRef = useRef<SidebarDragData>({ ...folder, ancestorIds })
-  dropDataRef.current = { ...folder, ancestorIds }
-  dragDataRef.current = { ...folder, ancestorIds }
+  const { isDraggingRef } = useDraggable({
+    ref,
+    data: { ...folder, ancestorIds },
+    canDrag,
+    dragOpacity: '0.2',
+  })
 
-  // Register as both draggable and drop target — only re-register when ID or permissions change
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const cleanups: Array<() => void> = []
-
-    if (canDrag) {
-      cleanups.push(
-        draggable({
-          element: el,
-          getInitialData: () => dragDataRef.current,
-          onGenerateDragPreview: ({ nativeSetDragImage }) => {
-            disableNativeDragPreview({ nativeSetDragImage })
-          },
-          onDragStart: () => {
-            isDraggingRef.current = true
-            el.style.opacity = '0.2'
-          },
-          onDrop: () => {
-            isDraggingRef.current = false
-            el.style.opacity = ''
-          },
-        }),
-      )
-    }
-
-    cleanups.push(
-      dropTargetForElements({
-        element: el,
-        getData: () => dropDataRef.current,
-        canDrop: ({ source }) => {
-          const srcData = source.data as SidebarDragData
-          return validateDrop(srcData, dropDataRef.current).valid
-        },
-      }),
-    )
-
-    return () => cleanups.forEach((fn) => fn())
-  }, [folder._id, canDrag])
+  useDroppable({ ref, data: dropData })
 
   // Handle native file drag-and-drop
-  const canAcceptFileDrops = canDropFilesOnTarget(dropDataRef.current)
+  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
   const isFileValidDrop =
