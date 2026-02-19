@@ -47,9 +47,9 @@ export function DroppableFolderZone({
     return dropTargetForElements({
       element: el,
       getData: () =>
-        dropDataRef.current as unknown as Record<string, unknown>,
+        dropDataRef.current,
       canDrop: ({ source }) => {
-        const dragData = source.data as unknown as SidebarDragData
+        const dragData = source.data as SidebarDragData
         return validateDrop(dragData, dropDataRef.current).valid
       },
     })

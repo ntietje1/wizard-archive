@@ -133,7 +133,7 @@ export function PlayerRequestsDialog({
     status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
   ) => {
     try {
-      setUpdatingId(memberId as unknown as string)
+      setUpdatingId(memberId)
       await updateStatus.mutateAsync({ memberId, status })
       toast.success('Player status updated')
     } catch (e) {

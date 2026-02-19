@@ -51,7 +51,7 @@ function EmptyEditorContent() {
       getData: () =>
         ({
           type: EMPTY_EDITOR_DROP_TYPE,
-        }) as unknown as Record<string, unknown>,
+        }),
       onDragEnter: () => {
         el.classList.add('bg-muted')
       },

@@ -39,7 +39,7 @@ export function DraggableSidebarItem({
     return draggable({
       element: el,
       getInitialData: () =>
-        dragDataRef.current as unknown as Record<string, unknown>,
+        dragDataRef.current,
       onGenerateDragPreview: ({ nativeSetDragImage }) => {
         disableNativeDragPreview({ nativeSetDragImage })
       },

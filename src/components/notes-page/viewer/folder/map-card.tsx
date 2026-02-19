@@ -63,7 +63,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
 
     return draggable({
       element: el,
-      getInitialData: () => dragDataRef.current as unknown as Record<string, unknown>,
+      getInitialData: () => dragDataRef.current,
       onGenerateDragPreview: ({ nativeSetDragImage }) => {
         disableNativeDragPreview({ nativeSetDragImage })
       },
@@ -89,10 +89,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   }
 
   const cardContent = (
-    <div
-      ref={ref}
-      className="w-full h-[140px]"
-    >
+    <div ref={ref} className="w-full h-[140px]">
       <Card
         className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md"
         onClick={handleCardActivate}

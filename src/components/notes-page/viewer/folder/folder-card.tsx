@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import {
+  draggable,
+  dropTargetForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { disableNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/disable-native-drag-preview'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
@@ -126,8 +129,7 @@ function FolderCardInner({
       cleanups.push(
         draggable({
           element: el,
-          getInitialData: () =>
-            dragDataRef.current as unknown as Record<string, unknown>,
+          getInitialData: () => dragDataRef.current,
           onGenerateDragPreview: ({ nativeSetDragImage }) => {
             disableNativeDragPreview({ nativeSetDragImage })
           },
@@ -146,10 +148,9 @@ function FolderCardInner({
     cleanups.push(
       dropTargetForElements({
         element: el,
-        getData: () =>
-          dropDataRef.current as unknown as Record<string, unknown>,
+        getData: () => dropDataRef.current,
         canDrop: ({ source }) => {
-          const srcData = source.data as unknown as SidebarDragData
+          const srcData = source.data as SidebarDragData
           return validateDrop(srcData, dropDataRef.current).valid
         },
       }),

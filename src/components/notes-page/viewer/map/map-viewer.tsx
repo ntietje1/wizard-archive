@@ -360,12 +360,11 @@ export function MapViewer({
 
       dropCleanupRef.current = dropTargetForElements({
         element: el,
-        getData: () =>
-          ({
-            type: MAP_DROP_ZONE_TYPE,
-            mapId: map._id,
-            mapName: map.name || defaultItemName(map),
-          }) as unknown as Record<string, unknown>,
+        getData: () => ({
+          type: MAP_DROP_ZONE_TYPE,
+          mapId: map._id,
+          mapName: map.name || defaultItemName(map),
+        }),
         onDragEnter: () => {
           el.setAttribute('data-drop-over', '')
         },
@@ -546,11 +545,11 @@ export function MapViewer({
         const topTarget = dropTargets[0]
         if (!topTarget) return
 
-        const targetData = topTarget.data as unknown as Record<string, unknown>
+        const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== map._id) return
 
-        const draggedItem = source.data as unknown as SidebarDragData
+        const draggedItem = source.data as SidebarDragData
         const itemId = draggedItem._id
 
         // Check if already pinned

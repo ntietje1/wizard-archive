@@ -69,7 +69,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   useEffect(() => {
     return monitorForElements({
       onDragStart: ({ source, location }) => {
-        const dragData = source.data as unknown as SidebarDragData
+        const dragData = source.data as SidebarDragData
         const input = location.current.input
 
         // Show and position immediately via ref
@@ -91,7 +91,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         // Only update drop target when it actually changes (compare by ID, not reference)
         const topTarget = location.current.dropTargets[0]
         const dropTarget = topTarget
-          ? (topTarget.data as unknown as SidebarDropData)
+          ? (topTarget.data as SidebarDropData)
           : null
         const key = getDropTargetKey(dropTarget)
 
@@ -224,8 +224,8 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         const topTarget = dropTargets[0]
         if (!topTarget) return
 
-        const draggedItem = source.data as unknown as SidebarDragData
-        const targetData = topTarget.data as unknown as SidebarDropData
+        const draggedItem = source.data as SidebarDragData
+        const targetData = topTarget.data as SidebarDropData
 
         // Map drop zones are handled by the map viewer's own monitor
         if (isMapDropZone(targetData)) {

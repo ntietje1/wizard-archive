@@ -52,7 +52,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
 
     return draggable({
       element: el,
-      getInitialData: () => dragDataRef.current as unknown as Record<string, unknown>,
+      getInitialData: () => dragDataRef.current,
       onGenerateDragPreview: ({ nativeSetDragImage }) => {
         disableNativeDragPreview({ nativeSetDragImage })
       },

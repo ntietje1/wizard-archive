@@ -13,20 +13,24 @@ export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 
 export interface SidebarDragData extends SidebarItem<SidebarItemType> {
+  [key: string | symbol]: unknown
   ancestorIds?: Array<Id<'folders'>>
 }
 
 export interface MapDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
   mapId: Id<'gameMaps'>
   mapName: string
 }
 
 export interface SidebarRootDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof SIDEBAR_ROOT_TYPE
 }
 
 export interface EmptyEditorDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
 
