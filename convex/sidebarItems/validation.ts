@@ -5,6 +5,7 @@ import {
   checkNameConflict,
   validateWikiLinkCompatibleName,
 } from './sharedValidation'
+import type { FolderFromDb } from '../folders/types'
 import type { SidebarItemId } from './baseTypes'
 import type { Ctx } from '../common/types'
 import type { Id } from '../_generated/dataModel'
@@ -69,8 +70,8 @@ export async function validateNoCircularParent(
       }
     }
 
-    const current = await ctx.db.get(currentId)
-    currentId = current?.parentId as Id<'folders'> | undefined
+    const current: FolderFromDb | null = await ctx.db.get(currentId)
+    currentId = current?.parentId
   }
 
   return { valid: true }
