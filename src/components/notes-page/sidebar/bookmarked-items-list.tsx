@@ -17,7 +17,6 @@ export function BookmarkedItemsList() {
   const { sortOptions } = useSortOptions()
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
 
   const bookmarkedItems = useMemo(() => {
     const bookmarked = filteredItems.filter(
@@ -42,7 +41,6 @@ export function BookmarkedItemsList() {
               isExpanded={false}
               renamingId={renamingId}
               setRenamingId={setRenamingId}
-              activeDragItem={activeDragItem}
             />
           ))}
 

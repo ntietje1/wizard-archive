@@ -1,7 +1,8 @@
-import { useDroppable } from '@dnd-kit/core'
+import { useEffect, useMemo, useRef } from 'react'
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { Folder } from 'convex/folders/types'
-import type { SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { cn } from '~/lib/shadcn/utils'
@@ -18,26 +19,44 @@ export function DroppableFolderZone({
   folder,
   children,
   className,
-  highlightClassName = 'bg-muted',
+  highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
-  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
+  const ref = useRef<HTMLDivElement>(null)
   const { getAncestorSidebarItems } = useAllSidebarItems()
-  const ancestorItems = getAncestorSidebarItems(folder._id)
-  const ancestorIds = ancestorItems.map((item) => item._id)
 
-  const dropData: SidebarDropData = { ...folder, ancestorIds }
+  // Memoize ancestor computation — only recompute when folder ID or ancestor function changes
+  const ancestorIds = useMemo(
+    () => getAncestorSidebarItems(folder._id).map((item) => item._id),
+    [folder._id, getAncestorSidebarItems],
+  )
 
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: `folder-zone-${folder._id}`,
-    data: dropData,
-    disabled: activeDragItem?._id === folder._id,
-  })
+  // Store mutable data in refs so the useEffect doesn't need to re-run
+  const dropDataRef = useRef<SidebarDropData>({ ...folder, ancestorIds })
+  dropDataRef.current = { ...folder, ancestorIds }
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = canDrop && isOver
+  // Highlight when this folder is the drag target
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === folder._id,
+  )
+
+  // Only re-register when the folder ID changes (not on every render)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    return dropTargetForElements({
+      element: el,
+      getData: () =>
+        dropDataRef.current as unknown as Record<string, unknown>,
+      canDrop: ({ source }) => {
+        const dragData = source.data as unknown as SidebarDragData
+        return validateDrop(dragData, dropDataRef.current).valid
+      },
+    })
+  }, [folder._id])
 
   // Handle native file drag-and-drop
-  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
+  const canAcceptFileDrops = canDropFilesOnTarget(dropDataRef.current)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
@@ -46,12 +65,14 @@ export function DroppableFolderZone({
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
 
-  const shouldHighlight = isValidDrop || isFileValidDrop
-
   return (
     <div
-      ref={setNodeRef}
-      className={cn(className, shouldHighlight && highlightClassName)}
+      ref={ref}
+      className={cn(
+        className,
+        isDropTarget && highlightClassName,
+        isFileValidDrop && highlightClassName,
+      )}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}

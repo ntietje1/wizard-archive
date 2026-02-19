@@ -3,7 +3,6 @@ import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
@@ -20,7 +19,6 @@ interface FlatSidebarItemProps {
   isExpanded: boolean
   renamingId: SidebarItemId | null
   setRenamingId: (id: SidebarItemId | null) => void
-  activeDragItem: SidebarDragData | null
 }
 
 function FlatSidebarItemComponent({
@@ -29,7 +27,6 @@ function FlatSidebarItemComponent({
   isExpanded,
   renamingId,
   setRenamingId,
-  activeDragItem,
 }: FlatSidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
@@ -40,7 +37,6 @@ function FlatSidebarItemComponent({
   const icon = getSidebarItemIcon(item)
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
-  const isDraggingActive = !!activeDragItem
 
   const handleSelect = useCallback(
     () => navigateToItem(item),
@@ -60,7 +56,10 @@ function FlatSidebarItemComponent({
   }, [setRenamingId])
 
   return (
-    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+    <DraggableSidebarItem
+      item={item}
+      ancestorIds={ancestorIds}
+    >
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
@@ -69,8 +68,6 @@ function FlatSidebarItemComponent({
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
-          isDragging={activeDragItem?._id === item._id}
-          isDraggingActive={isDraggingActive}
           onSelect={handleSelect}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={handleMoreOptions}

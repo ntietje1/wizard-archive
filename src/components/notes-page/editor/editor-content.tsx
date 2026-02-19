@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { useDroppable } from '@dnd-kit/core'
+import { useEffect, useRef, useState } from 'react'
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
-import { EMPTY_EDITOR_DROP_TYPE, canDropItem } from '~/lib/dnd-utils'
+import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-utils'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -40,14 +40,29 @@ export function EditorContent() {
 }
 
 function EmptyEditorContent() {
-  const dropData = { type: EMPTY_EDITOR_DROP_TYPE }
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: EMPTY_EDITOR_DROP_TYPE,
-    data: dropData,
-  })
+  const ref = useRef<HTMLDivElement>(null)
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = isOver && canDrop
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    return dropTargetForElements({
+      element: el,
+      getData: () =>
+        ({
+          type: EMPTY_EDITOR_DROP_TYPE,
+        }) as unknown as Record<string, unknown>,
+      onDragEnter: () => {
+        el.classList.add('bg-muted')
+      },
+      onDragLeave: () => {
+        el.classList.remove('bg-muted')
+      },
+      onDrop: () => {
+        el.classList.remove('bg-muted')
+      },
+    })
+  }, [])
 
   const {
     isDraggingFiles,
@@ -59,10 +74,9 @@ function EmptyEditorContent() {
 
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
-        isValidDrop && 'bg-muted',
         isDraggingFiles && 'bg-muted/50',
       )}
       onDragEnter={handleDragEnter}

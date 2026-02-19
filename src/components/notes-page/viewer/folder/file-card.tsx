@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
-import { useDraggable } from '@dnd-kit/core'
+import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { disableNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/disable-native-drag-preview'
 import { api } from 'convex/_generated/api'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
@@ -24,7 +26,6 @@ import {
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -78,13 +79,13 @@ function FileCardSkeleton() {
 }
 
 function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
+  const ref = useRef<HTMLDivElement>(null)
   const { navigateToFile } = useEditorNavigation()
-  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
+  const isDraggingRef = useRef(false)
   const canDrag = hasAtLeastPermissionLevel(
     file.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
-  const isDisabled = activeDragItem !== null || !canDrag
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const metadataQuery = useQuery(
@@ -97,16 +98,32 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   const contentType = metadataQuery.data?.contentType ?? null
   const FileIcon = getFileTypeIcon(contentType, file.name)
 
-  const dragData: SidebarDragData = file
+  const dragDataRef = useRef<SidebarDragData>(file)
+  dragDataRef.current = file
 
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: `card-${file._id}`,
-    data: dragData,
-    disabled: isDisabled,
-  })
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !canDrag) return
+
+    return draggable({
+      element: el,
+      getInitialData: () => dragDataRef.current as unknown as Record<string, unknown>,
+      onGenerateDragPreview: ({ nativeSetDragImage }) => {
+        disableNativeDragPreview({ nativeSetDragImage })
+      },
+      onDragStart: () => {
+        isDraggingRef.current = true
+        el.style.opacity = '0.5'
+      },
+      onDrop: () => {
+        isDraggingRef.current = false
+        el.style.opacity = ''
+      },
+    })
+  }, [file._id, canDrag])
 
   const handleCardActivate = () => {
-    if (!isDragging) {
+    if (!isDraggingRef.current) {
       if (onClick) {
         onClick()
       } else if (file.slug) {
@@ -117,10 +134,8 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
 
   const cardContent = (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className={`w-full h-[140px] ${isDragging ? 'opacity-50' : ''}`}
+      ref={ref}
+      className="w-full h-[140px]"
     >
       <Card
         className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md"

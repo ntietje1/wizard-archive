@@ -13,9 +13,7 @@ function SidebarItemButtonBaseComponent({
   defaultName,
   isExpanded = false,
   isSelected = false,
-  isDragging = false,
   isRenaming = false,
-  isDraggingActive = false,
   showChevron = true,
   onSelect = () => {},
   onMoreOptions = () => {},
@@ -31,10 +29,10 @@ function SidebarItemButtonBaseComponent({
     <div
       className={cn(
         'relative flex items-center w-full h-8 px-1 rounded-sm',
-        !isDraggingActive && 'group',
+        'group',
+        '[[data-item-dragging]_&]:bg-amber-500/10',
         isSelected && 'bg-muted',
-        isDragging && 'bg-amber-500/10',
-        !isSelected && !isDragging && !isDraggingActive && 'hover:bg-muted/50',
+        !isSelected && 'hover:bg-muted/50',
       )}
     >
       {/* Icon / Chevron Toggle */}
@@ -42,7 +40,7 @@ function SidebarItemButtonBaseComponent({
         className="relative h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground"
         nonHoverComponent={<Icon className="h-4 w-4 shrink-0" />}
         hoverComponent={
-          showChevron && !isDraggingActive ? (
+          showChevron ? (
             <Button
               variant="ghost"
               size="sm"
@@ -92,7 +90,7 @@ function SidebarItemButtonBaseComponent({
       </button>
 
       {/* Action Buttons */}
-      {!isRenaming && !isDraggingActive && (
+      {!isRenaming && (
         <div className="flex items-center shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 group-hover:transition-opacity">
           {shareButton}
           <div className="relative h-6 w-6 shrink-0 flex items-center justify-center">

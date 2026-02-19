@@ -7,7 +7,6 @@ import type {
   SidebarItem,
   SidebarItemType,
 } from 'convex/sidebarItems/baseTypes'
-import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
@@ -131,31 +130,6 @@ export function validateDrop(
     console.error('Invalid target data type:', targetData)
     return { valid: false, reason: 'not_folder' }
   }
-}
-
-export function canDropItem(active: Active | null, over: Over | null): boolean {
-  if (!active || !over) return false
-
-  const draggedItem = active.data.current as SidebarDragData | undefined
-  const targetData = over.data.current as SidebarDropData | undefined
-
-  if (!draggedItem || !targetData) return false
-
-  return validateDrop(draggedItem, targetData).valid
-}
-
-export function getDropValidation(
-  active: Active | null,
-  over: Over | null,
-): DropValidationResult {
-  if (!active || !over) return { valid: false, reason: 'not_folder' }
-
-  const draggedItem = active.data.current as SidebarDragData | undefined
-  const targetData = over.data.current as SidebarDropData | undefined
-
-  if (!draggedItem || !targetData) return { valid: false, reason: 'not_folder' }
-
-  return validateDrop(draggedItem, targetData)
 }
 
 /**

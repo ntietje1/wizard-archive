@@ -22,6 +22,7 @@ interface SidebarUIState {
   // Transient
   renamingId: SidebarItemId | null
   activeDragItem: SidebarDragData | null
+  sidebarDragTargetId: string | null
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
   pendingItemName: string
@@ -42,6 +43,7 @@ interface SidebarUIActions {
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setActiveDragItem: (item: SidebarDragData | null) => void
+  setSidebarDragTargetId: (id: string | null) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
@@ -84,6 +86,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       // Transient
       renamingId: null,
       activeDragItem: null,
+      sidebarDragTargetId: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
       pendingItemName: '',
@@ -142,6 +145,11 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         }),
 
       setActiveDragItem: (item) => set({ activeDragItem: item }),
+      setSidebarDragTargetId: (id) =>
+        set((state) => {
+          if (state.sidebarDragTargetId === id) return state
+          return { sidebarDragTargetId: id }
+        }),
       setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
       setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
       setPendingItemName: (name) => set({ pendingItemName: name }),

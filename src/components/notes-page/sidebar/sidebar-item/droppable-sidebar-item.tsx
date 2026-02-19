@@ -1,9 +1,10 @@
-import { useDroppable } from '@dnd-kit/core'
-import { useMemo } from 'react'
+import { useEffect, useRef } from 'react'
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { cn } from '~/lib/shadcn/utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
@@ -15,44 +16,52 @@ interface DroppableSidebarItemProps {
   children: React.ReactNode
 }
 
-function canAcceptFiles(
-  item: Folder,
-  ancestorIds: Array<Id<'folders'>>,
-): boolean {
-  return canDropFilesOnTarget({ ...item, ancestorIds })
-}
-
 export function DroppableSidebarItem({
   item,
   ancestorIds = [],
   children,
 }: DroppableSidebarItemProps) {
+  const ref = useRef<HTMLDivElement>(null)
   const safeAncestorIds = ancestorIds ?? EMPTY_ANCESTORS
-
-  const dropData = useMemo(
-    () => ({ ...item, ancestorIds: safeAncestorIds }),
-    [item, safeAncestorIds],
-  )
 
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
 
-  const droppableId = `drop-${item._id}`
-
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: droppableId,
-    data: dropData,
-    disabled: activeDragItem?._id === item._id,
+  // Highlight when this folder IS the target, OR an ancestor is the target,
+  // OR root is the target. Boolean selector — only re-renders when value changes.
+  const isDropTarget = useSidebarUIStore((s) => {
+    const id = s.sidebarDragTargetId
+    if (id === null) return false
+    if (id === item._id) return true
+    if (id === SIDEBAR_ROOT_TYPE) return true
+    return safeAncestorIds.includes(id as Id<'folders'>)
   })
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = canDrop && isOver
-  const isParentValidDrop =
-    canDrop && safeAncestorIds.includes(over?.data.current?._id)
+  // Store mutable data in ref so useEffect doesn't re-run on data changes
+  const dropDataRef = useRef<SidebarDropData>({
+    ...item,
+    ancestorIds: safeAncestorIds,
+  })
+  dropDataRef.current = { ...item, ancestorIds: safeAncestorIds }
 
-  // Handle file drag-and-drop for items that can accept files according to drag rules
-  const canAcceptFileDrops = canAcceptFiles(item, safeAncestorIds)
+  // Register as drop target — only re-register when item ID changes
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    return dropTargetForElements({
+      element: el,
+      getData: () =>
+        dropDataRef.current as unknown as Record<string, unknown>,
+      canDrop: ({ source }) => {
+        const dragData = source.data as unknown as SidebarDragData
+        return validateDrop(dragData, dropDataRef.current).valid
+      },
+    })
+  }, [item._id])
+
+  // Handle file drag-and-drop
+  const canAcceptFileDrops = canDropFilesOnTarget(dropDataRef.current)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? item._id : undefined)
 
@@ -65,15 +74,12 @@ export function DroppableSidebarItem({
     safeAncestorIds.includes(fileDragHoveredId)
 
   const shouldHighlight =
-    isValidDrop || isParentValidDrop || isFileValidDrop || isFileParentValidDrop
+    isDropTarget || isFileValidDrop || isFileParentValidDrop
 
   return (
     <div
-      ref={setNodeRef}
-      className={cn(
-        'w-full min-w-0',
-        shouldHighlight ? 'bg-muted' : 'bg-background',
-      )}
+      ref={ref}
+      className={`w-full min-w-0 ${shouldHighlight ? 'bg-muted' : 'bg-background'}`}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}

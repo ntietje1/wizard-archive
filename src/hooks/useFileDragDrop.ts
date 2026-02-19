@@ -19,8 +19,11 @@ export function useFileDragDrop(parentId?: Id<'folders'>) {
   const dragDepthRef = useRef(0)
 
   const isFileDrag = useCallback((e: React.DragEvent): boolean => {
-    const types = Array.from(e.dataTransfer.types)
-    return types.includes('Files') && !types.includes('application/x-dndkit')
+    const types = e.dataTransfer.types
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true
+    }
+    return false
   }, [])
 
   const handleDragEnter = useCallback(

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation } from '@tanstack/react-query'
-import { useDndMonitor, useDroppable } from '@dnd-kit/core'
+import {
+  dropTargetForElements,
+  monitorForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
@@ -34,8 +37,6 @@ interface PinPosition {
   x: number
   y: number
 }
-
-const MAP_DROP_ZONE_ID = 'map-drop-zone'
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
@@ -345,52 +346,46 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-  // Setup drop zone for sidebar items
-  const { setNodeRef: setDropRef, isOver: isDropOver } = useDroppable({
-    id: MAP_DROP_ZONE_ID,
-    data: {
-      type: MAP_DROP_ZONE_TYPE,
-      mapId: map._id,
-      mapName: map.name || defaultItemName(map),
+  // Map drop zone — uses a callback ref to register immediately when element
+  // mounts (avoids timing issues with ClientOnly deferred rendering).
+  const dropCleanupRef = useRef<(() => void) | null>(null)
+
+  const mapContainerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      // Clean up previous registration
+      dropCleanupRef.current?.()
+      dropCleanupRef.current = null
+
+      if (!el) return
+
+      dropCleanupRef.current = dropTargetForElements({
+        element: el,
+        getData: () =>
+          ({
+            type: MAP_DROP_ZONE_TYPE,
+            mapId: map._id,
+            mapName: map.name || defaultItemName(map),
+          }) as unknown as Record<string, unknown>,
+        onDragEnter: () => {
+          el.setAttribute('data-drop-over', '')
+        },
+        onDragLeave: () => {
+          el.removeAttribute('data-drop-over')
+        },
+        onDrop: () => {
+          el.removeAttribute('data-drop-over')
+        },
+      })
     },
-  })
+    [map],
+  )
 
-  // Listen for drag end events from dnd-kit
-  useDndMonitor({
-    onDragEnd: (event) => {
-      const { active, over } = event
-      if (!over || over.id !== MAP_DROP_ZONE_ID) return
-      if (!active.data.current) return
-
-      const draggedItem = active.data.current as SidebarDragData
-      const itemId = draggedItem._id
-
-      // Check if already pinned
-      if (map.pins.some((pin) => pin.itemId === itemId)) {
-        toast.error('Item is already pinned on this map')
-        // TODO: add highlight of pin here
-        return
-      }
-
-      // Calculate position from last mouse position
-      if (lastMousePositionRef.current && imageRef.current) {
-        const rect = imageRef.current.getBoundingClientRect()
-        const x =
-          ((lastMousePositionRef.current.clientX - rect.left) / rect.width) *
-          100
-        const y =
-          ((lastMousePositionRef.current.clientY - rect.top) / rect.height) *
-          100
-
-        const position = {
-          x: Math.max(0, Math.min(100, x)),
-          y: Math.max(0, Math.min(100, y)),
-        }
-
-        createPinAtPosition(itemId, position)
-      }
-    },
-  })
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      dropCleanupRef.current?.()
+    }
+  }, [])
 
   // Handle escape key for canceling pin placement, move, or dragging
   useEffect(() => {
@@ -541,6 +536,46 @@ export function MapViewer({
     },
     [map._id, createItemPinMutation],
   )
+
+  // Listen for drop events via PDND monitor — coordinate-based detection
+  // Listen for drop events on the map drop zone
+  useEffect(() => {
+    return monitorForElements({
+      onDrop: ({ source, location }) => {
+        const dropTargets = location.current.dropTargets
+        const topTarget = dropTargets[0]
+        if (!topTarget) return
+
+        const targetData = topTarget.data as unknown as Record<string, unknown>
+        if (targetData.type !== MAP_DROP_ZONE_TYPE) return
+        if (targetData.mapId !== map._id) return
+
+        const draggedItem = source.data as unknown as SidebarDragData
+        const itemId = draggedItem._id
+
+        // Check if already pinned
+        if (map.pins.some((pin) => pin.itemId === itemId)) {
+          toast.error('Item is already pinned on this map')
+          return
+        }
+
+        // Calculate position from drop location relative to image
+        const { clientX, clientY } = location.current.input
+        if (imageRef.current) {
+          const rect = imageRef.current.getBoundingClientRect()
+          const x = ((clientX - rect.left) / rect.width) * 100
+          const y = ((clientY - rect.top) / rect.height) * 100
+
+          const position = {
+            x: Math.max(0, Math.min(100, x)),
+            y: Math.max(0, Math.min(100, y)),
+          }
+
+          createPinAtPosition(itemId, position)
+        }
+      },
+    })
+  }, [map._id, map.pins, createPinAtPosition])
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
@@ -719,7 +754,13 @@ export function MapViewer({
             </Button>
           </div>
 
-          <div className="flex-1 relative min-h-0">
+          <div ref={mapContainerRef} className="flex-1 relative min-h-0">
+            {/* Visual ring indicator when sidebar drag is over the map */}
+            <div className="absolute inset-0 z-[998] ring-2 ring-primary ring-offset-2 pointer-events-none hidden [[data-drop-over]>&]:block" />
+            {/* Drag-drop mode banner */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg hidden [[data-drop-over]>&]:block">
+              <p className="text-sm font-medium">Release to place pin here</p>
+            </div>
             {map.imageUrl ? (
               <TransformWrapper
                 ref={transformWrapperRef}
@@ -740,11 +781,7 @@ export function MapViewer({
                   contentClass="!w-full !h-full flex items-center justify-center"
                 >
                   <div
-                    ref={setDropRef}
-                    className={cn(
-                      'relative',
-                      isDropOver && 'ring-2 ring-primary ring-offset-2',
-                    )}
+                    className="relative"
                     onClick={
                       pendingPinItem || pendingPinMove
                         ? handleMapClick
@@ -836,13 +873,6 @@ export function MapViewer({
               <p className="text-sm font-medium">
                 Click on map or drag to move pin. Press Escape to cancel.
               </p>
-            </div>
-          )}
-
-          {/* Drag-drop mode banner */}
-          {isDropOver && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-              <p className="text-sm font-medium">Release to place pin here</p>
             </div>
           )}
 

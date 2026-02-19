@@ -40,14 +40,12 @@ function SidebarItemComponent({
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const activeDragItem = useSidebarUIStore((s) => s.activeDragItem)
   const { sortOptions } = useSortOptions()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
-  const isDraggingActive = !!activeDragItem
 
   const children = isFolder
     ? parentItemsMap.get(item._id as Id<'folders'>)
@@ -82,7 +80,10 @@ function SidebarItemComponent({
   }, [setRenamingId])
 
   const itemButton = (
-    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+    <DraggableSidebarItem
+      item={item}
+      ancestorIds={ancestorIds}
+    >
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
@@ -91,8 +92,6 @@ function SidebarItemComponent({
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
-          isDragging={activeDragItem?._id === item._id}
-          isDraggingActive={isDraggingActive}
           onSelect={handleSelect}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={handleMoreOptions}

@@ -1,8 +1,11 @@
-import { useDroppable } from '@dnd-kit/core'
+import { useEffect, useRef } from 'react'
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
 import { cn } from '~/lib/shadcn/utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableRootProps {
   children: React.ReactNode
@@ -10,14 +13,32 @@ interface DroppableRootProps {
 }
 
 export function DroppableRoot({ children, className }: DroppableRootProps) {
-  const rootTargetData = { type: SIDEBAR_ROOT_TYPE }
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: SIDEBAR_ROOT_TYPE,
-    data: rootTargetData,
-  })
+  const ref = useRef<HTMLDivElement>(null)
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = isOver && canDrop
+  const rootTargetData = { type: SIDEBAR_ROOT_TYPE }
+
+  const rootTargetDataRef = useRef(rootTargetData)
+  rootTargetDataRef.current = rootTargetData
+
+  // Highlight only when root itself is the topmost drop target
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
+  )
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    return dropTargetForElements({
+      element: el,
+      getData: () =>
+        rootTargetDataRef.current as unknown as Record<string, unknown>,
+      canDrop: ({ source }) => {
+        const dragData = source.data as unknown as SidebarDragData
+        return validateDrop(dragData, rootTargetDataRef.current).valid
+      },
+    })
+  }, [])
 
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
   const {
@@ -30,10 +51,10 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       className={cn(
         className,
-        isValidDrop && 'bg-muted',
+        isDropTarget && 'bg-muted',
         isDraggingFiles && canAcceptFileDrops && 'bg-muted/50',
       )}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}

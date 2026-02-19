@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import {
   checkNameConflict,
@@ -25,7 +25,7 @@ export function SidebarItemMutationsProvider({
 }: {
   children: React.ReactNode
 }) {
-  const { itemsMap } = useAllSidebarItems()
+  const { itemsMap, parentItemsMap } = useAllSidebarItems()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const queryClient = useQueryClient()
@@ -58,7 +58,7 @@ export function SidebarItemMutationsProvider({
       if (!campaignId) return
       queryClient.setQueryData<Array<AnySidebarItem>>(
         [
-          convexQuery,
+          'convexQuery',
           api.sidebarItems.queries.getAllSidebarItems,
           { campaignId },
         ],
@@ -70,10 +70,9 @@ export function SidebarItemMutationsProvider({
 
   const getSiblings = useCallback(
     (parentId: Id<'folders'> | undefined) => {
-      const allItems = Array.from(itemsMap.values())
-      return allItems.filter((i) => i.parentId === parentId)
+      return parentItemsMap.get(parentId) ?? []
     },
-    [itemsMap],
+    [parentItemsMap],
   )
 
   const validateName = useCallback(
@@ -92,9 +91,8 @@ export function SidebarItemMutationsProvider({
 
   const canMoveToParent = useCallback(
     (itemId: SidebarItemId, newParentId: Id<'folders'> | undefined) => {
-      const allItems = Array.from(itemsMap.values())
       return validateNoCircularParent(itemId, newParentId, (id) =>
-        allItems.find((i) => i._id === id),
+        itemsMap.get(id),
       ).valid
     },
     [itemsMap],
