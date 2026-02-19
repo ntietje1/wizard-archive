@@ -112,10 +112,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   }
 
   const cardContent = (
-    <div
-      ref={ref}
-      className="w-full h-[140px]"
-    >
+    <div ref={ref} className="w-full h-[140px]">
       <Card
         className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md"
         onClick={handleCardActivate}

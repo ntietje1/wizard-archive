@@ -255,7 +255,6 @@ export function MapViewer({
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
 
-  // Persist zoom and position state per map
   const [savedTransform, setSavedTransform] =
     usePersistedState<MapTransformState>(
       `map-transform-${map._id}`,
@@ -265,7 +264,6 @@ export function MapViewer({
     null,
   )
 
-  // Cleanup debounce timeout on unmount
   useEffect(() => {
     return () => {
       if (transformDebounceRef.current) {
@@ -281,18 +279,15 @@ export function MapViewer({
   const [pendingPinItem, setPendingPinItem] = useState<{
     itemId: SidebarItemId
   } | null>(null)
-  // Track pending pin move
   const [pendingPinMove, setPendingPinMove] = useState<{
     pinId: Id<'mapPins'>
   } | null>(null)
 
-  // Track mouse position for drag-drop pin placement
   const lastMousePositionRef = useRef<{
     clientX: number
     clientY: number
   } | null>(null)
 
-  // Track dragging pin state
   const [draggingPin, setDraggingPin] = useState<{
     pin: MapPinWithItem
     startX: number
@@ -300,12 +295,10 @@ export function MapViewer({
   } | null>(null)
   const [draggedPinPosition, setDraggedPinPosition] =
     useState<PinPosition | null>(null)
-  // Track if a drag just ended to prevent click firing
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
   const { editorMode } = useEditorMode()
 
-  // In viewer mode, filter out ghost pins — players shouldn't see them at all
   const pins =
     editorMode === 'viewer'
       ? map.pins.filter((pin) => pin.item !== undefined)
@@ -319,7 +312,6 @@ export function MapViewer({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateItemPin),
   })
 
-  // Update CSS variable for pin counter-scaling and persist transform state
   const handleTransformChange = useCallback(
     (
       _: unknown,
@@ -332,7 +324,6 @@ export function MapViewer({
         )
       }
 
-      // Debounce saving transform state to localStorage
       if (transformDebounceRef.current) {
         clearTimeout(transformDebounceRef.current)
       }
@@ -346,13 +337,10 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-  // Map drop zone — uses a callback ref to register immediately when element
-  // mounts (avoids timing issues with ClientOnly deferred rendering).
   const dropCleanupRef = useRef<(() => void) | null>(null)
 
   const mapContainerRef = useCallback(
     (el: HTMLDivElement | null) => {
-      // Clean up previous registration
       dropCleanupRef.current?.()
       dropCleanupRef.current = null
 
@@ -379,14 +367,12 @@ export function MapViewer({
     [map],
   )
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       dropCleanupRef.current?.()
     }
   }, [])
 
-  // Handle escape key for canceling pin placement, move, or dragging
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -409,7 +395,6 @@ export function MapViewer({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [pendingPinItem, pendingPinMove, draggingPin])
 
-  // Listen for pin placement requests from context menu
   useEffect(() => {
     const handlePinPlacementRequest = (
       event: CustomEvent<{ itemId: SidebarItemId }>,
@@ -429,7 +414,6 @@ export function MapViewer({
     }
   }, [])
 
-  // Listen for pin move requests from context menu
   useEffect(() => {
     const handlePinMoveRequest = (
       event: CustomEvent<{ pinId: Id<'mapPins'> }>,
@@ -449,7 +433,6 @@ export function MapViewer({
     }
   }, [])
 
-  // Handle pin dragging
   useEffect(() => {
     if (!draggingPin) return
 
@@ -468,7 +451,6 @@ export function MapViewer({
 
     const handleMouseUp = async () => {
       const pinId = draggingPin.pin._id
-      // Mark that this pin just finished dragging to prevent click
       justFinishedDraggingRef.current = pinId
       setTimeout(() => {
         if (justFinishedDraggingRef.current === pinId) {
@@ -536,8 +518,6 @@ export function MapViewer({
     [map._id, createItemPinMutation],
   )
 
-  // Listen for drop events via PDND monitor — coordinate-based detection
-  // Listen for drop events on the map drop zone
   useEffect(() => {
     return monitorForElements({
       onDrop: ({ source, location }) => {
@@ -552,13 +532,11 @@ export function MapViewer({
         const draggedItem = source.data as SidebarDragData
         const itemId = draggedItem._id
 
-        // Check if already pinned
         if (map.pins.some((pin) => pin.itemId === itemId)) {
           toast.error('Item is already pinned on this map')
           return
         }
 
-        // Calculate position from drop location relative to image
         const { clientX, clientY } = location.current.input
         if (imageRef.current) {
           const rect = imageRef.current.getBoundingClientRect()

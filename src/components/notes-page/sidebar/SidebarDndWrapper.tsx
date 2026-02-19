@@ -41,8 +41,6 @@ function rejectionReasonMessage(reason: DropRejectionReason): string {
   }
 }
 
-// ── Drag Overlay (isolated component — re-renders don't affect SidebarDndWrapper) ──
-
 interface OverlayContentState {
   dragData: SidebarDragData
   dropTarget: SidebarDropData | null
@@ -61,7 +59,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const lastDropTargetKeyRef = useRef<string | null>(null)
 
-  // Access Zustand setter outside React render cycle — stable reference, no re-renders
   const setSidebarDragTargetId = useSidebarUIStore(
     (s) => s.setSidebarDragTargetId,
   )
@@ -72,7 +69,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         const dragData = source.data as SidebarDragData
         const input = location.current.input
 
-        // Show and position immediately via ref
         if (overlayRef.current) {
           overlayRef.current.style.display = ''
           overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
@@ -82,13 +78,11 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         setContent({ dragData, dropTarget: null })
       },
       onDrag: ({ location }) => {
-        // Position via ref — no re-render
         const input = location.current.input
         if (overlayRef.current) {
           overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
         }
 
-        // Only update drop target when it actually changes (compare by ID, not reference)
         const topTarget = location.current.dropTargets[0]
         const dropTarget = topTarget
           ? (topTarget.data as SidebarDropData)
@@ -102,8 +96,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
             return { ...prev, dropTarget }
           })
 
-          // Update sidebar highlight — folders get their ID, root gets its type,
-          // everything else (map, empty editor) clears the highlight
           let targetId: string | null = null
           if (dropTarget) {
             if (isSidebarItem(dropTarget)) targetId = dropTarget._id
@@ -114,7 +106,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         }
       },
       onDrop: () => {
-        // Hide via ref — no re-render
         if (overlayRef.current) {
           overlayRef.current.style.display = 'none'
         }
@@ -204,8 +195,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   )
 }
 
-// ── Drop Handler (no state — never re-renders during drag) ──
-
 export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
   const { campaignWithMembership } = useCampaign()
   const campaign = campaignWithMembership.data?.campaign
@@ -216,7 +205,6 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
-  // Drop handler monitor — no state, no re-renders during drag
   useEffect(() => {
     return monitorForElements({
       onDrop: ({ source, location }) => {
@@ -227,12 +215,10 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         const draggedItem = source.data as SidebarDragData
         const targetData = topTarget.data as SidebarDropData
 
-        // Map drop zones are handled by the map viewer's own monitor
         if (isMapDropZone(targetData)) {
           return
         }
 
-        // If dropping on empty editor, open the item instead of moving it
         if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {
           navigateToItem(draggedItem as AnySidebarItem, true)
           return
@@ -250,10 +236,8 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         if (!wouldMoveChangePosition(draggedItem, targetData)) return
 
         try {
-          // move() handles circular + name validation internally
           move(draggedItem as AnySidebarItem, targetId)
 
-          // Open the target folder so the moved item is visible
           if (targetId && campaignId) {
             setFolderState(campaignId, targetId, true)
           }

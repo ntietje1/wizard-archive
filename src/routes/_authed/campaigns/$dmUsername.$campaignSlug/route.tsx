@@ -39,25 +39,25 @@ function RouteComponent() {
     <CampaignProvider>
       <CampaignNotFoundWrapper>
         <SessionProvider>
-        <AllSidebarItemsProvider>
-        <SidebarItemMutationsProvider>
-        <EditorNavigationProvider>
-          <SidebarDndWrapper>
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex flex-1 min-h-0">
-                <SidebarLayoutProvider>
-                  <NavigationSidebar />
-                  <SidebarLayout>
-                    <Outlet />
-                  </SidebarLayout>
-                </SidebarLayoutProvider>
-              </div>
-              <ViewAsBanner />
-            </div>
-          </SidebarDndWrapper>
-        </EditorNavigationProvider>
-        </SidebarItemMutationsProvider>
-        </AllSidebarItemsProvider>
+          <AllSidebarItemsProvider>
+            <SidebarItemMutationsProvider>
+              <EditorNavigationProvider>
+                <SidebarDndWrapper>
+                  <div className="flex flex-col flex-1 min-h-0">
+                    <div className="flex flex-1 min-h-0">
+                      <SidebarLayoutProvider>
+                        <NavigationSidebar />
+                        <SidebarLayout>
+                          <Outlet />
+                        </SidebarLayout>
+                      </SidebarLayoutProvider>
+                    </div>
+                    <ViewAsBanner />
+                  </div>
+                </SidebarDndWrapper>
+              </EditorNavigationProvider>
+            </SidebarItemMutationsProvider>
+          </AllSidebarItemsProvider>
         </SessionProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>

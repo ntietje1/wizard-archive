@@ -2,7 +2,11 @@ import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../campaigns/campaigns'
-import { findUniqueFolderSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
+import {
+  findUniqueFolderSlug,
+  findUniqueSlug,
+  resolveSlugBasis,
+} from '../common/slug'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
   validateParentChange,
@@ -158,15 +162,18 @@ export const createFolder = mutation({
       }
     }
 
-    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
-      const conflict = await ctx.db
-        .query('folders')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', args.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null
-    })
+    const uniqueSlug = await findUniqueSlug(
+      resolveSlugBasis(args.name),
+      async (slug) => {
+        const conflict = await ctx.db
+          .query('folders')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', args.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null
+      },
+    )
 
     await validateSidebarItemName({
       ctx,

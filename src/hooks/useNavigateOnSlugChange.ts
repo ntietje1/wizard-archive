@@ -35,7 +35,6 @@ export function useNavigateOnSlugChange() {
       newSlug,
       updatedItem,
     }: NavigateOnSlugChangeParams) => {
-      // Only navigate if this is the current item and slug changed
       if (
         !newSlug ||
         !previousSlug ||
@@ -46,13 +45,11 @@ export function useNavigateOnSlugChange() {
         return
       }
 
-      // If we have the full updated item, use navigateToItem for optimistic cache update
       if (updatedItem) {
         navigateToItem(updatedItem, true)
         return
       }
 
-      // Otherwise, just navigate by slug based on type
       switch (itemType) {
         case SIDEBAR_ITEM_TYPES.notes:
           navigateToNote(newSlug, true)

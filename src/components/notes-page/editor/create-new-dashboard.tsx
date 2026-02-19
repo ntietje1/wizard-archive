@@ -5,14 +5,7 @@ import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
-import {
-  File,
-  FileText,
-  Folder,
-  Loader2,
-  MapPin,
-  Plus,
-} from '~/lib/icons'
+import { File, FileText, Folder, Loader2, MapPin, Plus } from '~/lib/icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'

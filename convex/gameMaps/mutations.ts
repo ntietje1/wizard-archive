@@ -7,7 +7,11 @@ import {
   validateParentChange,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { findUniqueGameMapSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
+import {
+  findUniqueGameMapSlug,
+  findUniqueSlug,
+  resolveSlugBasis,
+} from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
@@ -59,15 +63,18 @@ export const createMap = mutation({
       name: args.name,
     })
 
-    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
-      const conflict = await ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', args.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null
-    })
+    const uniqueSlug = await findUniqueSlug(
+      resolveSlugBasis(args.name),
+      async (slug) => {
+        const conflict = await ctx.db
+          .query('gameMaps')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', args.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null
+      },
+    )
 
     const mapId = await ctx.db.insert('gameMaps', {
       campaignId: args.campaignId,

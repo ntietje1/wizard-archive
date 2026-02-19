@@ -57,10 +57,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   }
 
   const cardContent = (
-    <div
-      ref={ref}
-      className="w-full h-[140px]"
-    >
+    <div ref={ref} className="w-full h-[140px]">
       <Card
         className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md"
         onClick={handleCardActivate}

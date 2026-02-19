@@ -8,7 +8,11 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { findUniqueFileSlug, findUniqueSlug, resolveSlugBasis } from '../common/slug'
+import {
+  findUniqueFileSlug,
+  findUniqueSlug,
+  resolveSlugBasis,
+} from '../common/slug'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   requireEditPermission,
@@ -108,15 +112,18 @@ export const createFile = mutation({
       name: args.name,
     })
 
-    const uniqueSlug = await findUniqueSlug(resolveSlugBasis(args.name), async (slug) => {
-      const conflict = await ctx.db
-        .query('files')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', args.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null
-    })
+    const uniqueSlug = await findUniqueSlug(
+      resolveSlugBasis(args.name),
+      async (slug) => {
+        const conflict = await ctx.db
+          .query('files')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', args.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null
+      },
+    )
 
     const fileId = await ctx.db.insert('files', {
       campaignId: args.campaignId,

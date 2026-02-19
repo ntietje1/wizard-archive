@@ -156,7 +156,9 @@ export function EditableName({
 
   return (
     <Tooltip>
-      <TooltipTrigger render={<div className="truncate min-w-0 flex-shrink-0 relative" />}>
+      <TooltipTrigger
+        render={<div className="truncate min-w-0 flex-shrink-0 relative" />}
+      >
         {innerContent}
       </TooltipTrigger>
       <TooltipContent side="bottom">

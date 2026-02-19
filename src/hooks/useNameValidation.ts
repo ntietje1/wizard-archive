@@ -30,7 +30,6 @@ export function useNameValidation({
     }, 300),
   )
 
-  // Debounce name for validation
   useEffect(() => {
     const debouncedFn = debouncedSetNameRef.current
     debouncedFn(name)
@@ -39,21 +38,17 @@ export function useNameValidation({
     }
   }, [name])
 
-  // Determine if we should validate
   const trimmedName = name.trim()
   const trimmedDebouncedName = debouncedName.trim()
   const trimmedInitialName = initialName.trim()
 
-  // Check if current typed name differs from debounced name (pending new validation)
   const isPendingDebounce = trimmedName !== trimmedDebouncedName
 
-  // Wiki-link validation (sync, immediate feedback)
   const wikiLinkValidation = useMemo(() => {
     if (!isActive || !trimmedName) return { valid: true, error: undefined }
     return validateWikiLinkCompatibleName(trimmedName)
   }, [isActive, trimmedName])
 
-  // Collection-based uniqueness validation (sync, after debounce)
   const uniquenessValidation = useMemo(() => {
     if (!isActive || !campaignId) return { valid: true }
     if (!trimmedDebouncedName) return { valid: true }
@@ -69,12 +64,10 @@ export function useNameValidation({
     validateName,
   ])
 
-  // Only consider uniqueness result valid if the debounced name matches current name
   const isResultValid = !isPendingDebounce
   const isUnique = isResultValid && uniquenessValidation.valid
   const isNotUnique = isResultValid && !uniquenessValidation.valid
 
-  // Combined validation error
   const validationError = useMemo(() => {
     if (!wikiLinkValidation.valid) return wikiLinkValidation.error
     if (isNotUnique) return uniquenessValidation.error
@@ -82,12 +75,10 @@ export function useNameValidation({
   }, [wikiLinkValidation, isNotUnique, uniquenessValidation.error])
   const hasError = !wikiLinkValidation.valid || isNotUnique
 
-  // Sync validation function for form validators (kept as async for interface compat)
   const checkNameUnique = useCallback(
     async (nameToCheck: string): Promise<string | undefined> => {
       const trimmed = nameToCheck.trim()
 
-      // Check wiki-link compatibility
       const wikiLinkResult = validateWikiLinkCompatibleName(trimmed)
       if (!wikiLinkResult.valid) {
         return wikiLinkResult.error
@@ -98,7 +89,6 @@ export function useNameValidation({
         return undefined
       }
 
-      // Check uniqueness from collection
       const result = validateName(trimmed, parentId, excludeId)
       return result.valid ? undefined : result.error
     },

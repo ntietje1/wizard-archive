@@ -56,10 +56,7 @@ function FlatSidebarItemComponent({
   }, [setRenamingId])
 
   return (
-    <DraggableSidebarItem
-      item={item}
-      ancestorIds={ancestorIds}
-    >
+    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}

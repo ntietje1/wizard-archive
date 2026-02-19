@@ -23,7 +23,6 @@ export function DroppableFolderZone({
   const ref = useRef<HTMLDivElement>(null)
   const { getAncestorSidebarItems } = useAllSidebarItems()
 
-  // Memoize ancestor computation — only recompute when folder ID or ancestor function changes
   const ancestorIds = useMemo(
     () => getAncestorSidebarItems(folder._id).map((item) => item._id),
     [folder._id, getAncestorSidebarItems],
@@ -31,14 +30,12 @@ export function DroppableFolderZone({
 
   const dropData = { ...folder, ancestorIds }
 
-  // Highlight when this folder is the drag target
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
 
   useDroppable({ ref, data: dropData })
 
-  // Handle native file drag-and-drop
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)

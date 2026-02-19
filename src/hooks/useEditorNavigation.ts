@@ -93,7 +93,10 @@ export const useEditorNavigation = () => {
   )
 
   const navigateToItem = useCallback(
-    async (item: { type: SidebarItemType; slug: string }, replace?: boolean) => {
+    async (
+      item: { type: SidebarItemType; slug: string },
+      replace?: boolean,
+    ) => {
       setLastSelectedItem({ type: item.type, slug: item.slug })
 
       switch (item.type) {

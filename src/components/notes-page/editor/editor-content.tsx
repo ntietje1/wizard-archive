@@ -48,10 +48,9 @@ function EmptyEditorContent() {
 
     return dropTargetForElements({
       element: el,
-      getData: () =>
-        ({
-          type: EMPTY_EDITOR_DROP_TYPE,
-        }),
+      getData: () => ({
+        type: EMPTY_EDITOR_DROP_TYPE,
+      }),
       onDragEnter: () => {
         el.classList.add('bg-muted')
       },

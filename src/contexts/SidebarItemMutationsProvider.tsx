@@ -30,7 +30,6 @@ export function SidebarItemMutationsProvider({
   const campaignId = campaignWithMembership.data?.campaign._id
   const queryClient = useQueryClient()
 
-  // Convex mutations
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
   const createFolderMutation = useConvexMutation(
     api.folders.mutations.createFolder,
@@ -174,7 +173,6 @@ export function SidebarItemMutationsProvider({
         name: newName,
       }).then(
         (res) => {
-          // Update slug in cache with server response
           if (res?.slug) {
             optimisticUpdate((prev) =>
               prev.map((i) =>

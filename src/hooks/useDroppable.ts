@@ -27,7 +27,6 @@ export function useDroppable<T extends SidebarDropData>({
         return validateDrop(dragData, dataRef.current).valid
       },
     })
-    // Re-register only when the element ref changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref])
 }

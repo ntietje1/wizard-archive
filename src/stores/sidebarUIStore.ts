@@ -174,14 +174,16 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 const EMPTY_FOLDER_STATES: Record<string, boolean> = {}
 
 export function useCampaignSidebarState(campaignId: string | undefined) {
-  return useSidebarUIStore(useShallow(s => {
-    const cs = campaignId ? s.campaignStates[campaignId] : undefined
-    return {
-      folderStates: cs?.folderStates ?? EMPTY_FOLDER_STATES,
-      closeAllFoldersMode: cs?.closeAllFoldersMode ?? false,
-      bookmarksOnlyMode: cs?.bookmarksOnlyMode ?? false,
-    }
-  }))
+  return useSidebarUIStore(
+    useShallow((s) => {
+      const cs = campaignId ? s.campaignStates[campaignId] : undefined
+      return {
+        folderStates: cs?.folderStates ?? EMPTY_FOLDER_STATES,
+        closeAllFoldersMode: cs?.closeAllFoldersMode ?? false,
+        bookmarksOnlyMode: cs?.bookmarksOnlyMode ?? false,
+      }
+    }),
+  )
 }
 
 export function useCampaignSidebarActions(campaignId: string | undefined) {
@@ -199,7 +201,9 @@ export function useCampaignSidebarActions(campaignId: string | undefined) {
     }
     return {
       setFolderState: (folderId: string, isOpen: boolean) =>
-        useSidebarUIStore.getState().setFolderState(campaignId, folderId, isOpen),
+        useSidebarUIStore
+          .getState()
+          .setFolderState(campaignId, folderId, isOpen),
       toggleFolderState: (folderId: string) =>
         useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
       clearAllFolderStates: () =>

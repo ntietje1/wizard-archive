@@ -1,7 +1,10 @@
 import { Button } from '~/components/shadcn/ui/button'
 import { Bookmark, BookmarkCheck } from '~/lib/icons'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useCampaignSidebarState, useCampaignSidebarActions } from '~/stores/sidebarUIStore'
+import {
+  useCampaignSidebarState,
+  useCampaignSidebarActions,
+} from '~/stores/sidebarUIStore'
 
 export function BookmarksFilterButton() {
   const { campaignWithMembership } = useCampaign()

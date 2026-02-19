@@ -23,8 +23,6 @@ export function DroppableSidebarItem({
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
-  // Highlight when this folder IS the target, OR an ancestor is the target,
-  // OR root is the target. Boolean selector — only re-renders when value changes.
   const isDropTarget = useSidebarUIStore((s) => {
     const id = s.sidebarDragTargetId
     if (id === null) return false
@@ -37,7 +35,6 @@ export function DroppableSidebarItem({
 
   useDroppable({ ref, data: dropData })
 
-  // Handle file drag-and-drop
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? item._id : undefined)

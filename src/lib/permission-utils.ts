@@ -1,7 +1,4 @@
-import {
-  ATLEAST_PERMISSION_LEVEL,
-  PERMISSION_LEVEL,
-} from 'convex/shares/types'
+import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from 'convex/shares/types'
 import type { PermissionLevel } from 'convex/shares/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
@@ -24,20 +21,15 @@ export function resolvePermissionLevel(
   memberId: Id<'campaignMembers'>,
   allItemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): PermissionLevel {
-  // Check item's own explicit per-member share
-  const memberShare = item.shares.find(
-    (s) => s.campaignMemberId === memberId,
-  )
+  const memberShare = item.shares.find((s) => s.campaignMemberId === memberId)
   if (memberShare) {
     return memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW
   }
 
-  // Check item's own allPermissionLevel
   if (item.allPermissionLevel !== undefined) {
     return item.allPermissionLevel
   }
 
-  // Walk up parent folder hierarchy for inherited permission
   let currentParentId = item.parentId
   const seen = new Set<string>()
 
@@ -48,14 +40,12 @@ export function resolvePermissionLevel(
     const parent = allItemsMap.get(currentParentId)
     if (!parent) break
 
-    // Only folders with inheritShares propagate permissions
     const folder = parent as Folder
     if (!folder.inheritShares) {
       currentParentId = folder.parentId
       continue
     }
 
-    // Check folder's per-member share
     const folderShare = folder.shares.find(
       (s) => s.campaignMemberId === memberId,
     )
@@ -63,7 +53,6 @@ export function resolvePermissionLevel(
       return folderShare.permissionLevel ?? PERMISSION_LEVEL.VIEW
     }
 
-    // Check folder's allPermissionLevel
     if (folder.allPermissionLevel !== undefined) {
       return folder.allPermissionLevel
     }

@@ -54,8 +54,6 @@ export const Route = createFileRoute(
 })
 
 function EditorLayout() {
-  // Sync URL selection into the external store so useIsSelectedItem
-  // works without per-item useMatch subscriptions
   useSelectedItemSync()
 
   return (

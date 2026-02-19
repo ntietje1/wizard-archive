@@ -94,7 +94,6 @@ function FolderCardInner({
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
-  // Highlight when this folder card is the drag target
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
@@ -104,7 +103,6 @@ function FolderCardInner({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  // Include parentId in ancestorIds for circular drop prevention
   const ancestorIds = parentId ? [parentId] : []
   const dropData = { ...folder, ancestorIds }
 
@@ -117,7 +115,6 @@ function FolderCardInner({
 
   useDroppable({ ref, data: dropData })
 
-  // Handle native file drag-and-drop
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)

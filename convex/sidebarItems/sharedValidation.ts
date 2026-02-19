@@ -81,12 +81,10 @@ export function validateNoCircularParent(
   newParentId: string | undefined,
   getParent: (id: string) => { parentId?: string } | undefined,
 ): ValidationResult {
-  // Moving to root is always valid
   if (!newParentId) {
     return { valid: true }
   }
 
-  // Can't set parent to self
   if (newParentId === itemId) {
     return {
       valid: false,
@@ -94,13 +92,11 @@ export function validateNoCircularParent(
     }
   }
 
-  // Walk up the parent chain from newParentId
   const seen = new Set<string>()
   let currentId: string | undefined = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
-      // Cycle in existing data (shouldn't happen)
       break
     }
     seen.add(currentId)

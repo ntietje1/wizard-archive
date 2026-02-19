@@ -16,7 +16,6 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   const rootTargetData = { type: SIDEBAR_ROOT_TYPE } as const
 
-  // Highlight only when root itself is the topmost drop target
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
   )

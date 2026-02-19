@@ -14,13 +14,10 @@ export function useRenameItem() {
 
       const current = getSelectedTypeAndSlug()
       const isCurrentItem =
-        current &&
-        item.type === current.type &&
-        item.slug === current.slug
+        current && item.type === current.type && item.slug === current.slug
 
       const { promise } = collectionRename(item, newName)
 
-      // If this is the currently viewed item, await the server slug and navigate
       if (isCurrentItem) {
         const res = await promise
         if (res?.slug && res.slug !== item.slug) {

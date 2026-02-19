@@ -40,9 +40,7 @@ export function EditorContextMenuProvider({
   const sidebarItemWithContent = useQuery(
     convexQuery(
       api.sidebarItems.queries.getSidebarItem,
-      item
-        ? { id: item._id, campaignId: item.campaignId }
-        : 'skip',
+      item ? { id: item._id, campaignId: item.campaignId } : 'skip',
     ),
   )
 
