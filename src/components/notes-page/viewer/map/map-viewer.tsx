@@ -538,18 +538,21 @@ export function MapViewer({
         }
 
         const { clientX, clientY } = location.current.input
-        if (imageRef.current) {
-          const rect = imageRef.current.getBoundingClientRect()
-          const x = ((clientX - rect.left) / rect.width) * 100
-          const y = ((clientY - rect.top) / rect.height) * 100
-
-          const position = {
-            x: Math.max(0, Math.min(100, x)),
-            y: Math.max(0, Math.min(100, y)),
-          }
-
-          createPinAtPosition(itemId, position)
+        if (!imageRef.current) {
+          toast.error('No image loaded — cannot place pin')
+          return
         }
+
+        const rect = imageRef.current.getBoundingClientRect()
+        const x = ((clientX - rect.left) / rect.width) * 100
+        const y = ((clientY - rect.top) / rect.height) * 100
+
+        const position = {
+          x: Math.max(0, Math.min(100, x)),
+          y: Math.max(0, Math.min(100, y)),
+        }
+
+        createPinAtPosition(itemId, position)
       },
     })
   }, [map._id, map.pins, createPinAtPosition])

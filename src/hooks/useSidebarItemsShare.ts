@@ -24,8 +24,8 @@ interface SidebarItemShareInfo {
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
   inheritedAllPermissionLevel?: PermissionLevel
   inheritedFromFolderName?: string
-  memberInheritedPermissions: Map<string, PermissionLevel>
-  memberInheritedFromFolderNames: Map<string, string>
+  memberInheritedPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
+  memberInheritedFromFolderNames: Map<Id<'campaignMembers'>, string>
 }
 
 /**
@@ -94,13 +94,13 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         )
       }
 
-      const memberInheritedPermissions = new Map<string, PermissionLevel>(
+      const memberInheritedPermissions = new Map(
         Object.entries(query.data.memberInheritedPermissions),
-      )
+      ) as Map<Id<'campaignMembers'>, PermissionLevel>
 
-      const memberInheritedFromFolderNames = new Map<string, string>(
+      const memberInheritedFromFolderNames = new Map(
         Object.entries(query.data.memberInheritedFromFolderNames),
-      )
+      ) as Map<Id<'campaignMembers'>, string>
 
       map.set(singleItem._id, {
         itemId: singleItem._id,
@@ -174,9 +174,8 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
           info?.allPermissionLevel ?? info?.inheritedAllPermissionLevel
         const hasAllPermission =
           resolvedPerm !== undefined && resolvedPerm !== 'none'
-        const inheritedMemberPerm = info?.memberInheritedPermissions.get(
-          memberId as string,
-        )
+        const inheritedMemberPerm =
+          info?.memberInheritedPermissions.get(memberId)
         const hasInheritedMemberPerm =
           inheritedMemberPerm !== undefined && inheritedMemberPerm !== 'none'
         if (hasIndividualShare || hasAllPermission || hasInheritedMemberPerm) {
@@ -315,7 +314,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         return info.allPermissionLevel
       }
       // Fall back to pre-computed inherited permission for this member
-      return info.memberInheritedPermissions.get(memberId as string) ?? 'none'
+      return info.memberInheritedPermissions.get(memberId) ?? 'none'
     },
     [items, itemShareInfoMap],
   )
@@ -469,7 +468,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       // If item has explicit allPermissionLevel, that takes effect
       if (info.allPermissionLevel !== undefined) return info.allPermissionLevel
       // Otherwise, fall back to the per-member inherited level from ancestors
-      return info.memberInheritedPermissions.get(memberId as string) ?? 'none'
+      return info.memberInheritedPermissions.get(memberId) ?? 'none'
     },
     [items, itemShareInfoMap],
   )
@@ -480,7 +479,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       if (items.length === 0) return undefined
       const info = itemShareInfoMap.get(items[0]._id)
       if (!info) return undefined
-      return info.memberInheritedFromFolderNames.get(memberId as string)
+      return info.memberInheritedFromFolderNames.get(memberId)
     },
     [items, itemShareInfoMap],
   )

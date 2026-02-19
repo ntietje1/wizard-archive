@@ -40,7 +40,7 @@ export async function checkUniqueNameUnderParent(
 export async function validateNoCircularParent(
   ctx: Ctx,
   itemId: SidebarItemId,
-  newParentId: SidebarItemId | undefined,
+  newParentId: Id<'folders'> | undefined,
 ): Promise<{ valid: boolean; error?: string }> {
   if (!newParentId) {
     return { valid: true }
@@ -53,8 +53,8 @@ export async function validateNoCircularParent(
     }
   }
 
-  const seen = new Set<string>()
-  let currentId: SidebarItemId | undefined = newParentId
+  const seen = new Set<Id<'folders'>>()
+  let currentId: Id<'folders'> | undefined = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
@@ -70,7 +70,7 @@ export async function validateNoCircularParent(
     }
 
     const current = await ctx.db.get(currentId)
-    currentId = current?.parentId as SidebarItemId | undefined
+    currentId = current?.parentId as Id<'folders'> | undefined
   }
 
   return { valid: true }
@@ -113,7 +113,7 @@ export async function validateSidebarItemName(
 export interface ValidateParentChangeOptions {
   ctx: Ctx
   item: AnySidebarItem
-  newParentId: SidebarItemId | undefined
+  newParentId: Id<'folders'> | undefined
 }
 
 /**

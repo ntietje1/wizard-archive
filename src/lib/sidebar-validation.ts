@@ -21,7 +21,7 @@ export function validateNoCircularParent(
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): ValidationResult {
   return validateNoCircularParentShared(itemId, newParentId, (id) =>
-    itemsMap.get(id as SidebarItemId),
+    itemsMap.get(id),
   )
 }
 

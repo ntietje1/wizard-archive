@@ -148,6 +148,9 @@ export function SidebarItemMutationsProvider({
           })
           return { id: fileId, slug, type: args.type }
         }
+        default: {
+          throw new Error(`Unsupported sidebar item type`)
+        }
       }
     },
     [

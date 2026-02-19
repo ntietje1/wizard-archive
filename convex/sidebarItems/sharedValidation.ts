@@ -1,3 +1,6 @@
+import type { Id } from '../_generated/dataModel'
+import type { SidebarItemId } from './baseTypes'
+
 export interface ValidationResult {
   valid: boolean
   error?: string
@@ -49,8 +52,8 @@ export function validateWikiLinkCompatibleName(
  */
 export function checkNameConflict(
   name: string | undefined,
-  siblings: Array<{ _id: string; name?: string }>,
-  excludeId?: string,
+  siblings: Array<{ _id: SidebarItemId; name?: string }>,
+  excludeId?: SidebarItemId,
 ): ValidationResult {
   if (!name || name.trim() === '') {
     return { valid: true }
@@ -77,9 +80,9 @@ export function checkNameConflict(
  * @param getParent - Callback to look up a parent item by ID
  */
 export function validateNoCircularParent(
-  itemId: string,
-  newParentId: string | undefined,
-  getParent: (id: string) => { parentId?: string } | undefined,
+  itemId: SidebarItemId,
+  newParentId: Id<'folders'> | undefined,
+  getParent: (id: Id<'folders'>) => { parentId?: Id<'folders'> } | undefined,
 ): ValidationResult {
   if (!newParentId) {
     return { valid: true }
@@ -92,8 +95,8 @@ export function validateNoCircularParent(
     }
   }
 
-  const seen = new Set<string>()
-  let currentId: string | undefined = newParentId
+  const seen = new Set<Id<'folders'>>()
+  let currentId: Id<'folders'> | undefined = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
