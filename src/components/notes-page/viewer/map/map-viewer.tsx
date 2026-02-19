@@ -157,6 +157,7 @@ function MapPin({
 
   return (
     <div
+      data-pin-id={pin._id}
       className={cn(
         'absolute pointer-events-auto cursor-pointer',
         isHovered && !isDragging && 'z-20',
@@ -293,8 +294,7 @@ export function MapViewer({
     startX: number
     startY: number
   } | null>(null)
-  const [draggedPinPosition, setDraggedPinPosition] =
-    useState<PinPosition | null>(null)
+  const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
   const { editorMode } = useEditorMode()
@@ -386,7 +386,7 @@ export function MapViewer({
         }
         if (draggingPin) {
           setDraggingPin(null)
-          setDraggedPinPosition(null)
+          draggedPinPositionRef.current = null
         }
       }
     }
@@ -436,6 +436,10 @@ export function MapViewer({
   useEffect(() => {
     if (!draggingPin) return
 
+    const pinEl = pinsContainerRef.current?.querySelector(
+      `[data-pin-id="${draggingPin.pin._id}"]`,
+    ) as HTMLElement | null
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!imageRef.current) return
 
@@ -443,10 +447,15 @@ export function MapViewer({
       const x = ((e.clientX - rect.left) / rect.width) * 100
       const y = ((e.clientY - rect.top) / rect.height) * 100
 
-      setDraggedPinPosition({
+      const newPos = {
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
-      })
+      }
+      draggedPinPositionRef.current = newPos
+      if (pinEl) {
+        pinEl.style.left = `${newPos.x}%`
+        pinEl.style.top = `${newPos.y}%`
+      }
     }
 
     const handleMouseUp = async () => {
@@ -458,12 +467,12 @@ export function MapViewer({
         }
       }, 100)
 
-      if (draggedPinPosition) {
+      if (draggedPinPositionRef.current) {
         try {
           await updateItemPinMutation.mutateAsync({
             mapPinId: pinId,
-            x: draggedPinPosition.x,
-            y: draggedPinPosition.y,
+            x: draggedPinPositionRef.current.x,
+            y: draggedPinPositionRef.current.y,
           })
           toast.success('Pin moved')
         } catch (error) {
@@ -472,7 +481,7 @@ export function MapViewer({
         }
       }
       setDraggingPin(null)
-      setDraggedPinPosition(null)
+      draggedPinPositionRef.current = null
     }
 
     document.addEventListener('mousemove', handleMouseMove)
@@ -482,7 +491,7 @@ export function MapViewer({
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [draggingPin, draggedPinPosition, updateItemPinMutation])
+  }, [draggingPin, updateItemPinMutation])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {
@@ -655,7 +664,7 @@ export function MapViewer({
         startX: e.clientX,
         startY: e.clientY,
       })
-      setDraggedPinPosition({ x: pin.x, y: pin.y })
+      draggedPinPositionRef.current = { x: pin.x, y: pin.y }
     },
     [pendingPinMove],
   )
@@ -769,6 +778,7 @@ export function MapViewer({
                     }
                     onMouseMove={handleMouseMove}
                     onContextMenu={(e) => {
+                      e.preventDefault()
                       e.stopPropagation()
                       if (pendingPinItem) {
                         const position = getPercentageFromClick(e)
@@ -806,19 +816,11 @@ export function MapViewer({
                       {pins.map((pin) => {
                         const isDraggingThis = draggingPin?.pin._id === pin._id
                         const isInMoveMode = pendingPinMove?.pinId === pin._id
-                        const displayPosition =
-                          isDraggingThis && draggedPinPosition
-                            ? draggedPinPosition
-                            : { x: pin.x, y: pin.y }
 
                         return (
                           <MapPin
                             key={pin._id}
-                            pin={{
-                              ...pin,
-                              x: displayPosition.x,
-                              y: displayPosition.y,
-                            }}
+                            pin={pin}
                             isHovered={hoveredPinId === pin._id}
                             isDragging={isDraggingThis}
                             isInMoveMode={isInMoveMode}
