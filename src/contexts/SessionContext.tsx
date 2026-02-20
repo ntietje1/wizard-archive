@@ -1,12 +1,8 @@
-import { createContext, useContext } from 'react'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/hooks/useCampaign'
-
-type SessionContextValue = ReturnType<typeof useSessionInternal>
-
-const SessionContext = createContext<SessionContextValue | null>(null)
+import { SessionContext } from '~/hooks/useSession'
 
 function useSessionInternal() {
   const { campaignWithMembership } = useCampaign()
@@ -61,12 +57,4 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       {children}
     </SessionContext.Provider>
   )
-}
-
-export const useSession = () => {
-  const context = useContext(SessionContext)
-  if (!context) {
-    throw new Error('useSession must be used within a SessionProvider')
-  }
-  return context
 }

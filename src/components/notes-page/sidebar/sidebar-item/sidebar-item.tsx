@@ -12,7 +12,7 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useRenameItem } from '~/hooks/useRenameItem'
-import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
+import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import {
@@ -47,9 +47,7 @@ function SidebarItemComponent({
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
 
-  const children = isFolder
-    ? parentItemsMap.get(item._id as Id<'folders'>)
-    : undefined
+  const children = isFolder ? parentItemsMap.get(item._id) : undefined
 
   const sortedChildren = useMemo(() => {
     return sortItemsByOptions(sortOptions, children) ?? []

@@ -1,22 +1,7 @@
-import { createContext, useContext, useRef } from 'react'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import { useRef } from 'react'
+import type { EditorNavigationValue } from '~/hooks/useEditorNavigationContext'
+import { EditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-
-export interface EditorNavigationValue {
-  navigateToItem: (
-    item: { type: SidebarItemType; slug: string },
-    replace?: boolean,
-  ) => Promise<void>
-  navigateToNote: (slug: string, replace?: boolean) => Promise<void>
-  navigateToMap: (slug: string, replace?: boolean) => Promise<void>
-  navigateToFolder: (slug: string, replace?: boolean) => Promise<void>
-  navigateToFile: (slug: string, replace?: boolean) => Promise<void>
-  clearEditorContent: () => Promise<void>
-}
-
-const EditorNavigationContext = createContext<EditorNavigationValue | null>(
-  null,
-)
 
 /**
  * Provider that instantiates useEditorNavigation once and exposes stable
@@ -55,14 +40,4 @@ export function EditorNavigationProvider({
       {children}
     </EditorNavigationContext.Provider>
   )
-}
-
-export function useEditorNavigationContext(): EditorNavigationValue {
-  const ctx = useContext(EditorNavigationContext)
-  if (!ctx) {
-    throw new Error(
-      'useEditorNavigationContext must be used within an EditorNavigationProvider',
-    )
-  }
-  return ctx
 }

@@ -22,7 +22,7 @@ import {
   wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
+import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
@@ -207,7 +207,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     return monitorForElements({
-      onDrop: ({ source, location }) => {
+      onDrop: async ({ source, location }) => {
         const dropTargets = location.current.dropTargets
         const topTarget = dropTargets[0]
         if (!topTarget) return
@@ -236,7 +236,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         if (!wouldMoveChangePosition(draggedItem, targetData)) return
 
         try {
-          move(draggedItem as AnySidebarItem, targetId)
+          await move(draggedItem as AnySidebarItem, targetId)
 
           if (targetId && campaignId) {
             setFolderState(campaignId, targetId, true)

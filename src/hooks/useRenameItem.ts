@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
-import { useEditorNavigationContext } from '~/contexts/EditorNavigationProvider'
 import { getSelectedTypeAndSlug } from './useSelectedItem'
-import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 
 export function useRenameItem() {
   const { rename: collectionRename } = useSidebarItemMutations()
