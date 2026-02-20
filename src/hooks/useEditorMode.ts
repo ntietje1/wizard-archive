@@ -4,7 +4,10 @@ import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorMode } from 'convex/editors/types'
-import { useEditorModeStore } from '~/stores/editorModeStore'
+import {
+  useCampaignEditorState,
+  useEditorModeStore,
+} from '~/stores/editorModeStore'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
@@ -17,9 +20,11 @@ export interface EditorModeContextType {
 }
 
 export function useEditorMode(): EditorModeContextType {
-  const rawEditorMode = useEditorModeStore((s) => s.editorMode)
-  const viewAsPlayerId = useEditorModeStore((s) => s.viewAsPlayerId)
-  const { isDm } = useCampaign()
+  const { isDm, campaignSlug, dmUsername } = useCampaign()
+  const campaignKey = `${dmUsername}/${campaignSlug}`
+
+  const { editorMode: rawEditorMode, viewAsPlayerId } =
+    useCampaignEditorState(campaignKey)
   const { item: currentItem } = useCurrentItem()
 
   const canEdit = hasAtLeastPermissionLevel(
@@ -33,16 +38,16 @@ export function useEditorMode(): EditorModeContextType {
 
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
-      if (canEdit) storeSetEditorMode(mode)
+      if (canEdit) storeSetEditorMode(campaignKey, mode)
     },
-    [canEdit, storeSetEditorMode],
+    [canEdit, campaignKey, storeSetEditorMode],
   )
 
   const setViewAsPlayerId = useCallback(
     (playerId: Id<'campaignMembers'> | undefined) => {
-      if (isDm) storeSetViewAsPlayerId(playerId)
+      if (isDm) storeSetViewAsPlayerId(campaignKey, playerId)
     },
-    [isDm, storeSetViewAsPlayerId],
+    [isDm, campaignKey, storeSetViewAsPlayerId],
   )
 
   return {

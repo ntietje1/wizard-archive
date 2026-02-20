@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash-es'
-import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'
 
 interface UseNameValidationOptions {
@@ -70,7 +70,8 @@ export function useNameValidation({
 
   const validationError = useMemo(() => {
     if (!wikiLinkValidation.valid) return wikiLinkValidation.error
-    if (isNotUnique) return uniquenessValidation.error
+    if (isNotUnique)
+      return uniquenessValidation.error ?? 'Name is already in use'
     return undefined
   }, [wikiLinkValidation, isNotUnique, uniquenessValidation.error])
   const hasError = !wikiLinkValidation.valid || isNotUnique
