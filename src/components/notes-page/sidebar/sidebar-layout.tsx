@@ -9,6 +9,7 @@ import {
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useSidebarLayout'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
+import { useCampaign } from '~/hooks/useCampaign'
 import { Button } from '~/components/shadcn/ui/button'
 import { Plus } from '~/lib/icons'
 
@@ -17,6 +18,7 @@ const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
   const { clearEditorContent } = useEditorNavigationContext()
+  const { isDm } = useCampaign()
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -37,16 +39,20 @@ const SidebarContent = memo(function SidebarContent() {
           >
             <FileSidebar />
           </ResizablePanel>
-          <div className="shrink-0 p-2 border-t border-b">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={clearEditorContent}
-            >
-              <Plus className="h-4 w-4" />
-              New
-            </Button>
-          </div>
+          {isDm ? (
+            <div className="shrink-0 p-2 border-t border-b">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={clearEditorContent}
+              >
+                <Plus className="h-4 w-4" />
+                New
+              </Button>
+            </div>
+          ) : (
+            <div className="shrink-0 border-t" />
+          )}
           <SessionPanel />
         </ResizablePanelGroup>
       </EditorContextMenu>

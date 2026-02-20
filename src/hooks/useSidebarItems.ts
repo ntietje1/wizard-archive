@@ -11,12 +11,8 @@ import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { isFolder } from '~/lib/sidebar-item-utils'
-import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
-import {
-  hasAtLeastPermissionLevel,
-  resolvePermissionLevel,
-} from '~/lib/permission-utils'
+import { hasAtLeastPermissionLevel } from '~/lib/permission-utils'
 
 export interface AllSidebarItemsValue {
   data: Array<AnySidebarItem>
@@ -149,25 +145,19 @@ export const sortItemsByOptions = (
 }
 
 /**
- * Returns sidebar items filtered by "view as player" permissions.
- * When viewAsPlayerId is set, filters to items the player can VIEW.
- * When unset (DM mode), returns all items.
+ * Returns sidebar items filtered to only those the user can VIEW.
+ * Each item's `myPermissionLevel` is set by the backend, so we just filter on it.
  */
 export const useFilteredSidebarItems = () => {
-  const { viewAsPlayerId } = useEditorMode()
+  const { isDm } = useCampaign()
   const allItems = useAllSidebarItems()
 
   const filteredData = useMemo(() => {
-    if (!viewAsPlayerId) return allItems.data
-    return allItems.data.filter((item) => {
-      const level = resolvePermissionLevel(
-        item,
-        viewAsPlayerId,
-        allItems.itemsMap,
-      )
-      return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)
-    })
-  }, [allItems.data, allItems.itemsMap, viewAsPlayerId])
+    if (isDm) return allItems.data
+    return allItems.data.filter((item) =>
+      hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.VIEW),
+    )
+  }, [allItems.data, isDm])
 
   const filteredItemsMap = useMemo(() => {
     const map = new Map<SidebarItemId, AnySidebarItem>()

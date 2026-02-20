@@ -33,8 +33,26 @@ export const createNote = async (
   await requireCampaignMembership(
     ctx,
     { campaignId: input.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
   )
+
+  if (input.parentId) {
+    const parentItem = await getSidebarItemById(
+      ctx,
+      input.campaignId,
+      input.parentId,
+    )
+    if (!parentItem) {
+      throw new Error('Parent not found')
+    }
+    await requireFullAccessPermission(ctx, parentItem)
+  } else {
+    await requireCampaignMembership(
+      ctx,
+      { campaignId: input.campaignId },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+    )
+  }
 
   const uniqueSlug = await findUniqueSlug(
     resolveSlugBasis(input.name),
@@ -48,17 +66,6 @@ export const createNote = async (
       return conflict !== null
     },
   )
-
-  if (input.parentId) {
-    const parentItem = await getSidebarItemById(
-      ctx,
-      input.campaignId,
-      input.parentId,
-    )
-    if (!parentItem) {
-      throw new Error('Parent not found')
-    }
-  }
 
   await validateSidebarItemName({
     ctx,
@@ -135,6 +142,7 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
   if (!rawNote) return null
@@ -142,7 +150,7 @@ export const getNote = async (
   const note = await enhanceSidebarItem(ctx, rawNote)
   const hasPermission = await hasViewPermission(ctx, note)
   if (!hasPermission) return null
-  return enhanceNoteWithContent(ctx, note)
+  return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
 }
 
 export async function deleteNote(

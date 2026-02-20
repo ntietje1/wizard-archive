@@ -8,10 +8,12 @@ import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-utils'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
@@ -40,6 +42,7 @@ export function EditorContent() {
 }
 
 function EmptyEditorContent() {
+  const { isDm } = useCampaign()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -83,16 +86,25 @@ function EmptyEditorContent() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <CreateNewDashboard />
+      {isDm ? (
+        <CreateNewDashboard />
+      ) : (
+        <p className="text-muted-foreground">
+          Select an item from the sidebar to view it.
+        </p>
+      )}
     </div>
   )
 }
 
 function NotSharedContent() {
   const { isDm } = useCampaign()
-  const { item, editorSearch } = useCurrentItem()
+  const { editorSearch } = useCurrentItem()
+  const { viewAsPlayerId } = useEditorMode()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const { data: allItems } = useAllSidebarItems()
+  const campaignMembersQuery = useCampaignMembers()
   const { createItem } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -100,6 +112,28 @@ function NotSharedContent() {
 
   const typeAndSlug = getTypeAndSlug(editorSearch)
   const requestedType = typeAndSlug?.type
+
+  // Check if the item exists in the full sidebar list (DM sees all items)
+  const itemExists =
+    typeAndSlug &&
+    allItems.some(
+      (i) => i.type === typeAndSlug.type && i.slug === typeAndSlug.slug,
+    )
+
+  // Resolve the viewed player's display name
+  const viewAsPlayerName = (() => {
+    if (!viewAsPlayerId) return undefined
+    const member = campaignMembersQuery.data?.find(
+      (m) => m._id === viewAsPlayerId,
+    )
+    if (!member) return undefined
+    return (
+      member.userProfile.name ||
+      (member.userProfile.username
+        ? `@${member.userProfile.username}`
+        : undefined)
+    )
+  })()
 
   const handleCreate = async () => {
     if (!campaignId || !requestedType || isPending) return
@@ -120,15 +154,22 @@ function NotSharedContent() {
 
   const itemTypeLabel = requestedType ? getItemTypeLabel(requestedType) : 'page'
 
+  const getMessage = () => {
+    if (itemExists) {
+      const target = viewAsPlayerName ?? 'you'
+      return `This ${itemTypeLabel.toLowerCase()} isn't shared with ${target}.`
+    }
+    if (isDm) {
+      return `This ${itemTypeLabel.toLowerCase()} doesn't exist.`
+    }
+    return `This ${itemTypeLabel.toLowerCase()} doesn't exist or isn't shared with you.`
+  }
+
   return (
     <div className="flex-1 min-h-0 flex items-center justify-center">
       <div className="text-center text-muted-foreground">
-        <p>
-          {isDm
-            ? `This ${itemTypeLabel.toLowerCase()} doesn't exist.`
-            : `This ${itemTypeLabel.toLowerCase()} doesn't exist or isn't shared with you.`}
-        </p>
-        {!item && requestedType && (
+        <p>{getMessage()}</p>
+        {!itemExists && isDm && requestedType && (
           <p className="mt-2">
             <button
               onClick={handleCreate}

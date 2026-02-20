@@ -1,9 +1,7 @@
 import { useMatch } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useRef } from 'react'
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
 
 import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -29,20 +27,14 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
             campaignId,
             type: typeAndSlug.type,
             slug: typeAndSlug.slug,
+            viewAsPlayerId,
           }
         : 'skip',
     ),
+    placeholderData: typeAndSlug ? keepPreviousData : undefined,
   })
 
-  const lastItemRef = useRef<AnySidebarItemWithContent | null>(null)
-
-  const item = sidebarItemQuery.data ?? lastItemRef.current
-
-  if (sidebarItemQuery.data) {
-    lastItemRef.current = sidebarItemQuery.data
-  } else if (!typeAndSlug) {
-    lastItemRef.current = null
-  }
+  const item = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
 
   return {
     item,

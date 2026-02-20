@@ -148,7 +148,7 @@ export const createFolder = mutation({
     await requireCampaignMembership(
       ctx,
       { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
     )
 
     if (args.parentId) {
@@ -160,6 +160,13 @@ export const createFolder = mutation({
       if (!parentItem) {
         throw new Error('Parent not found')
       }
+      await requireFullAccessPermission(ctx, parentItem)
+    } else {
+      await requireCampaignMembership(
+        ctx,
+        { campaignId: args.campaignId },
+        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+      )
     }
 
     const uniqueSlug = await findUniqueSlug(

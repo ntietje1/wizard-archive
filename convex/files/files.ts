@@ -12,6 +12,7 @@ import type { FileWithContent } from './types'
 export const getFile = async (
   ctx: Ctx,
   fileId: Id<'files'>,
+  _viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
   if (!rawFile) return null

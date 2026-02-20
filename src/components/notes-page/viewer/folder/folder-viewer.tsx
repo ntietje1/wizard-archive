@@ -1,11 +1,13 @@
+import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
-import { CreateNewDashboard } from '~/components/notes-page/editor/create-new-dashboard'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { useFilteredSidebarItems } from '~/hooks/useSidebarItems'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
+import { CreateNewDashboard } from '~/components/notes-page/editor/create-new-dashboard'
+import { useFilteredSidebarItems } from '~/hooks/useSidebarItems'
+import { hasAtLeastPermissionLevel } from '~/lib/permission-utils'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
@@ -15,6 +17,11 @@ export function FolderViewer({
 }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap } = useFilteredSidebarItems()
   const children = parentItemsMap.get(folder._id) ?? []
+
+  const hasFullAccess = hasAtLeastPermissionLevel(
+    folder.myPermissionLevel,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
 
   const folderPath = [
     ...folder.ancestors.map((a) => a.name || defaultItemName(a)),
@@ -33,7 +40,13 @@ export function FolderViewer({
           className="flex flex-col h-full w-full min-h-0"
           highlightClassName="bg-muted/50"
         >
-          <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
+          {hasFullAccess ? (
+            <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
+          ) : (
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <p className="text-muted-foreground">This folder is empty.</p>
+            </div>
+          )}
         </DroppableFolderZone>
       </EditorContextMenu>
     )
@@ -62,7 +75,7 @@ export function FolderViewer({
                   />
                 )
               })}
-              <NewItemCard parentId={folder._id} />
+              {hasFullAccess && <NewItemCard parentId={folder._id} />}
             </ContentGrid>
           </div>
         </ScrollArea>

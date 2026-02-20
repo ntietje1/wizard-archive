@@ -19,6 +19,7 @@ import type { PermissionLevel, SidebarItemShare } from './types'
 export async function getSidebarItemPermissionLevel(
   ctx: Ctx,
   item: AnySidebarItem | AnySidebarItemFromDb,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<PermissionLevel> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: item.campaignId,
@@ -28,16 +29,21 @@ export async function getSidebarItemPermissionLevel(
     return PERMISSION_LEVEL.NONE
   }
 
-  if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+  if (
+    !viewAsPlayerId &&
+    campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM
+  ) {
     return PERMISSION_LEVEL.FULL_ACCESS
   }
+
+  const checkId = viewAsPlayerId ?? campaignWithMembership.member._id
 
   // Check for an explicit per-player share
   const share = await getSidebarItemShareForMember(
     ctx,
     item.campaignId,
     item._id,
-    campaignWithMembership.member._id,
+    checkId,
   )
   if (share) {
     return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
@@ -55,7 +61,7 @@ export async function getSidebarItemPermissionLevel(
     ctx,
     item.campaignId,
     parentId,
-    campaignWithMembership.member._id,
+    checkId,
   )
 }
 
