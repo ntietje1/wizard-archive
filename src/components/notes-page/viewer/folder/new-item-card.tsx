@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from '~/lib/icons'
 import { Card } from '~/components/shadcn/ui/card'
@@ -9,10 +11,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '~/components/shadcn/ui/context-menu'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useMapActions } from '~/hooks/useMapActions'
-import { useFileActions } from '~/hooks/useFileActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -27,12 +26,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
 
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
-  const { createMap } = useMapActions()
-  const { createFile } = useFileActions()
-  const { navigateToNote, navigateToFolder, navigateToMap, navigateToFile } =
-    useEditorNavigation()
+  const { createItem } = useSidebarItemMutations()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 
   const openMenuAt = useCallback((clientX: number, clientY: number) => {
@@ -58,65 +53,24 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     [openMenuAt],
   )
 
-  const handleCreateNote = useCallback(async () => {
-    if (!campaignId) return
-    try {
-      const { noteId, slug } = await createNote.mutateAsync({
-        campaignId,
-        parentId,
-      })
-      await openParentFolders(noteId)
-      navigateToNote(slug)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create note')
-    }
-  }, [campaignId, parentId, createNote, openParentFolders, navigateToNote])
-
-  const handleCreateFolder = useCallback(async () => {
-    if (!campaignId) return
-    try {
-      const { folderId, slug } = await createFolder.mutateAsync({
-        campaignId,
-        parentId,
-      })
-      await openParentFolders(folderId)
-      navigateToFolder(slug)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create folder')
-    }
-  }, [campaignId, parentId, createFolder, openParentFolders, navigateToFolder])
-
-  const handleCreateMap = useCallback(async () => {
-    if (!campaignId) return
-    try {
-      const { mapId, slug } = await createMap.mutateAsync({
-        campaignId,
-        parentId,
-      })
-      await openParentFolders(mapId)
-      navigateToMap(slug)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create map')
-    }
-  }, [campaignId, parentId, createMap, openParentFolders, navigateToMap])
-
-  const handleCreateFile = useCallback(async () => {
-    if (!campaignId) return
-    try {
-      const { fileId, slug } = await createFile.mutateAsync({
-        campaignId,
-        parentId,
-      })
-      await openParentFolders(fileId)
-      navigateToFile(slug)
-    } catch (error) {
-      console.error(error)
-      toast.error('Failed to create file')
-    }
-  }, [campaignId, parentId, createFile, openParentFolders, navigateToFile])
+  const handleCreate = useCallback(
+    async (type: SidebarItemType) => {
+      if (!campaignId) return
+      try {
+        const result = await createItem({
+          type,
+          campaignId,
+          parentId,
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+        toast.error(`Failed to create item`)
+      }
+    },
+    [campaignId, parentId, createItem, openParentFolders, navigateToItem],
+  )
 
   return (
     <ContextMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -145,19 +99,27 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onSelect={handleCreateNote}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
+        >
           <FilePlus className="h-4 w-4 mr-2" />
           New Note
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateFolder}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
+        >
           <FolderPlus className="h-4 w-4 mr-2" />
           New Folder
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateMap}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
+        >
           <MapPin className="h-4 w-4 mr-2" />
           New Map
         </ContextMenuItem>
-        <ContextMenuItem onSelect={handleCreateFile}>
+        <ContextMenuItem
+          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
+        >
           <File className="h-4 w-4 mr-2" />
           New File
         </ContextMenuItem>

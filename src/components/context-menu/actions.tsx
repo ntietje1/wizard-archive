@@ -16,13 +16,11 @@ import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { File } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
+import { getSelectedTypeAndSlug } from '~/hooks/useSelectedItem'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
-import { useNoteActions } from '~/hooks/useNoteActions'
-import { useFolderActions } from '~/hooks/useFolderActions'
-import { useMapActions } from '~/hooks/useMapActions'
-import { useFileActions } from '~/hooks/useFileActions'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
@@ -32,7 +30,6 @@ import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/side
 import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
 import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
-import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useSession } from '~/hooks/useSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
 
@@ -43,24 +40,14 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const {
-    navigateToItem,
-    navigateToNote,
-    navigateToFolder,
-    navigateToMap,
-    navigateToFile,
-    clearEditorContent,
-  } = useEditorNavigation()
-  const { setRenamingId } = useFileSidebar()
+  const { navigateToItem, navigateToMap, clearEditorContent } =
+    useEditorNavigationContext()
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
-  const { createMap } = useMapActions()
-  const { createFile } = useFileActions()
+  const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const convex = useConvex()
-  const { item: currentItem } = useCurrentItem()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
 
@@ -116,7 +103,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     showInSidebar: useCallback(
       async (ctx: MenuContext) => {
         if (!ctx.item) return
-        await openParentFolders(ctx.item._id)
+        openParentFolders(ctx.item._id)
       },
       [openParentFolders],
     ),
@@ -124,87 +111,93 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     createNote: useCallback(
       async (ctx: MenuContext) => {
         if (!campaignId) return
-
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
-        const parentId = ctx.item?._id
-        const { noteId, slug } = await createNote.mutateAsync({
-          campaignId,
-          parentId,
-        })
-        await openParentFolders(noteId)
-        navigateToNote(slug)
+        try {
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.notes,
+            campaignId,
+            parentId: ctx.item?._id,
+          })
+          openParentFolders(result.id)
+          navigateToItem(result)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create note')
+        }
       },
-      [campaignId, createNote, openParentFolders, navigateToNote],
+      [campaignId, createItem, openParentFolders, navigateToItem],
     ),
 
     createFolder: useCallback(
       async (ctx: MenuContext) => {
         if (!campaignId) return
-
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
-        const parentId = ctx.item?._id
-        const result = await createFolder.mutateAsync({
-          campaignId,
-          parentId,
-        })
-        await openParentFolders(result.folderId)
-        navigateToFolder(result.slug)
+        try {
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.folders,
+            campaignId,
+            parentId: ctx.item?._id,
+          })
+          openParentFolders(result.id)
+          navigateToItem(result)
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to create folder')
+        }
       },
-      [campaignId, createFolder, openParentFolders, navigateToFolder],
+      [campaignId, createItem, openParentFolders, navigateToItem],
     ),
 
     createMap: useCallback(
       async (ctx: MenuContext) => {
         if (!campaignId) return
-
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
-        const parentId = ctx.item?._id
         try {
-          const { mapId, slug } = await createMap.mutateAsync({
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
-            parentId,
+            parentId: ctx.item?._id,
           })
-          await openParentFolders(mapId)
-          navigateToMap(slug)
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create map')
         }
       },
-      [campaignId, createMap, openParentFolders, navigateToMap],
+      [campaignId, createItem, openParentFolders, navigateToItem],
     ),
 
     createFile: useCallback(
       async (ctx: MenuContext) => {
         if (!campaignId) return
-
         if (ctx.item && !isFolder(ctx.item)) {
           console.error('Invalid parent type')
           return
         }
-        const parentId = ctx.item?._id
         try {
-          const { fileId, slug } = await createFile.mutateAsync({
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
-            parentId,
+            parentId: ctx.item?._id,
           })
-          await openParentFolders(fileId)
-          navigateToFile(slug)
+          openParentFolders(result.id)
+          navigateToItem(result)
         } catch (error) {
           console.error(error)
           toast.error('Failed to create file')
         }
       },
-      [campaignId, createFile, openParentFolders, navigateToFile],
+      [campaignId, createItem, openParentFolders, navigateToItem],
     ),
 
     createCanvas: () => {
@@ -623,7 +616,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             note={deleteNoteDialog}
             isDeleting={true}
             onConfirm={() => {
-              if (currentItem?._id === deleteNoteDialog._id) {
+              const current = getSelectedTypeAndSlug()
+              if (
+                current &&
+                deleteNoteDialog.type === current.type &&
+                deleteNoteDialog.slug === current.slug
+              ) {
                 clearEditorContent()
               }
             }}
@@ -637,7 +635,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             folder={deleteFolderDialog}
             isDeleting={true}
             onConfirm={() => {
-              if (currentItem?._id === deleteFolderDialog._id) {
+              const current = getSelectedTypeAndSlug()
+              if (
+                current &&
+                deleteFolderDialog.type === current.type &&
+                deleteFolderDialog.slug === current.slug
+              ) {
                 clearEditorContent()
               }
             }}
@@ -651,7 +654,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             map={deleteMapDialog}
             isDeleting={true}
             onConfirm={() => {
-              if (currentItem?._id === deleteMapDialog._id) {
+              const current = getSelectedTypeAndSlug()
+              if (
+                current &&
+                deleteMapDialog.type === current.type &&
+                deleteMapDialog.slug === current.slug
+              ) {
                 clearEditorContent()
               }
             }}
@@ -665,7 +673,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             file={deleteFileDialog}
             isDeleting={true}
             onConfirm={() => {
-              if (currentItem?._id === deleteFileDialog._id) {
+              const current = getSelectedTypeAndSlug()
+              if (
+                current &&
+                deleteFileDialog.type === current.type &&
+                deleteFileDialog.slug === current.slug
+              ) {
                 clearEditorContent()
               }
             }}
@@ -712,7 +725,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       editFileDialog,
       editSidebarItemDialog,
       campaignId,
-      currentItem,
       clearEditorContent,
       deleteFileDialog,
       closeDialog,

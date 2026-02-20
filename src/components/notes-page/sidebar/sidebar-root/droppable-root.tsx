@@ -1,8 +1,10 @@
-import { useDroppable } from '@dnd-kit/core'
+import { useRef } from 'react'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableRootProps {
   children: React.ReactNode
@@ -10,14 +12,15 @@ interface DroppableRootProps {
 }
 
 export function DroppableRoot({ children, className }: DroppableRootProps) {
-  const rootTargetData = { type: SIDEBAR_ROOT_TYPE }
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: SIDEBAR_ROOT_TYPE,
-    data: rootTargetData,
-  })
+  const ref = useRef<HTMLDivElement>(null)
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = isOver && canDrop
+  const rootTargetData = { type: SIDEBAR_ROOT_TYPE } as const
+
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
+  )
+
+  useDroppable({ ref, data: rootTargetData })
 
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
   const {
@@ -30,10 +33,10 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       className={cn(
         className,
-        isValidDrop && 'bg-muted',
+        isDropTarget && 'bg-muted',
         isDraggingFiles && canAcceptFileDrops && 'bg-muted/50',
       )}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}

@@ -1,13 +1,12 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Eye, X } from 'lucide-react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-import { useEditorModeActions, useEditorModeState } from '~/hooks/useEditorMode'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { Button } from '~/components/shadcn/ui/button'
 
 export function ViewAsBanner() {
-  const { viewAsPlayerId } = useEditorModeState()
-  const { setViewAsPlayerId } = useEditorModeActions()
+  const { viewAsPlayerId, setViewAsPlayerId } = useEditorMode()
   const campaignMembersQuery = useCampaignMembers()
 
   const playerMember = campaignMembersQuery.data?.find(

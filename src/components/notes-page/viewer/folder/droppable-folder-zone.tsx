@@ -1,10 +1,10 @@
-import { useDroppable } from '@dnd-kit/core'
+import { useMemo, useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import type { SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
+import { useDroppable } from '~/hooks/useDroppable'
+import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface DroppableFolderZoneProps {
@@ -18,39 +18,41 @@ export function DroppableFolderZone({
   folder,
   children,
   className,
-  highlightClassName = 'bg-muted',
+  highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
-  const { activeDragItem } = useFileSidebar()
+  const ref = useRef<HTMLDivElement>(null)
   const { getAncestorSidebarItems } = useAllSidebarItems()
-  const ancestorItems = getAncestorSidebarItems(folder._id)
-  const ancestorIds = ancestorItems.map((item) => item._id)
 
-  const dropData: SidebarDropData = { ...folder, ancestorIds }
+  const ancestorIds = useMemo(
+    () => getAncestorSidebarItems(folder._id).map((item) => item._id),
+    [folder._id, getAncestorSidebarItems],
+  )
 
-  const { setNodeRef, isOver, active, over } = useDroppable({
-    id: `folder-zone-${folder._id}`,
-    data: dropData,
-    disabled: activeDragItem?._id === folder._id,
-  })
+  const dropData = { ...folder, ancestorIds }
 
-  const canDrop = canDropItem(active, over)
-  const isValidDrop = canDrop && isOver
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === folder._id,
+  )
 
-  // Handle native file drag-and-drop
+  useDroppable({ ref, data: dropData })
+
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const { fileDragHoveredId, isDraggingFiles } = useFileSidebar()
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
 
-  const shouldHighlight = isValidDrop || isFileValidDrop
-
   return (
     <div
-      ref={setNodeRef}
-      className={cn(className, shouldHighlight && highlightClassName)}
+      ref={ref}
+      className={cn(
+        className,
+        isDropTarget && highlightClassName,
+        isFileValidDrop && highlightClassName,
+      )}
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}

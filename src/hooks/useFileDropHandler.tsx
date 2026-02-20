@@ -8,14 +8,13 @@ import {
   isTextFile,
   validateFileForUpload,
 } from 'convex/storage/validation'
-import { useFileActions } from './useFileActions'
-import { useNoteActions } from './useNoteActions'
-import { useFolderActions } from './useFolderActions'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { useOpenParentFolders } from './useOpenParentFolders'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/lib/folder-reader'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
 import {
   FileProgressContent,
@@ -44,11 +43,9 @@ const TOAST_STYLE = { width: '100%', maxWidth: '100%' } as const
 export function useFileDropHandler() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
-  const { createFile } = useFileActions()
-  const { createNote } = useNoteActions()
-  const { createFolder } = useFolderActions()
+  const { createItem } = useSidebarItemMutations()
   const { openParentFolders } = useOpenParentFolders()
-  const { navigateToFile, navigateToNote } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
 
   const generateUploadUrl = useMutation({
     mutationFn: useConvexMutation(api.storage.mutations.generateUploadUrl),
@@ -99,7 +96,8 @@ export function useFileDropHandler() {
       try {
         if (isTextFile(file.type, file.name)) {
           const blocks = await convertTextToBlocks(file)
-          const { noteId, slug } = await createNote.mutateAsync({
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.notes,
             campaignId: targetCampaignId,
             name: fileName,
             parentId,
@@ -112,8 +110,8 @@ export function useFileDropHandler() {
               <ToastContent title={fileName} message="Note created" />,
               { duration: 3000, style: TOAST_STYLE },
             )
-            await openParentFolders(noteId)
-            navigateToNote(slug, true)
+            await openParentFolders(result.id)
+            navigateToItem(result, true)
           }
         } else if (isMediaFile(file.type)) {
           const uploadUrl = await generateUploadUrl.mutateAsync({})
@@ -143,7 +141,8 @@ export function useFileDropHandler() {
             originalFileName: fileName,
           })
           await commitUpload.mutateAsync({ storageId })
-          const { fileId, slug } = await createFile.mutateAsync({
+          const result = await createItem({
+            type: SIDEBAR_ITEM_TYPES.files,
             campaignId: targetCampaignId,
             name: fileName,
             storageId,
@@ -156,8 +155,8 @@ export function useFileDropHandler() {
               <ToastContent title={fileName} message="File created" />,
               { duration: 3000, style: TOAST_STYLE },
             )
-            await openParentFolders(fileId)
-            navigateToFile(slug)
+            await openParentFolders(result.id)
+            navigateToItem(result)
           }
         } else {
           if (silent) {
@@ -181,14 +180,12 @@ export function useFileDropHandler() {
       }
     },
     [
-      createNote,
+      createItem,
       generateUploadUrl,
       trackUpload,
       commitUpload,
-      createFile,
       openParentFolders,
-      navigateToFile,
-      navigateToNote,
+      navigateToItem,
     ],
   )
 
@@ -199,11 +196,13 @@ export function useFileDropHandler() {
       parentId: Id<'folders'> | undefined,
       progress: UploadProgress,
     ): Promise<Id<'folders'>> => {
-      const { folderId } = await createFolder.mutateAsync({
+      const result = await createItem({
+        type: SIDEBAR_ITEM_TYPES.folders,
         campaignId: targetCampaignId,
         name: folder.name,
         parentId,
       })
+      const folderId = result.id as Id<'folders'>
 
       progress.processedFolders++
       toast.loading(<FolderProgressContent progress={progress} />, {
@@ -247,7 +246,7 @@ export function useFileDropHandler() {
 
       return folderId
     },
-    [createFolder, uploadSingleFile],
+    [createItem, uploadSingleFile],
   )
 
   const handleDrop = useCallback(

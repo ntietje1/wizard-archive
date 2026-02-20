@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation } from '@tanstack/react-query'
-import { useDndMonitor, useDroppable } from '@dnd-kit/core'
+import {
+  dropTargetForElements,
+  monitorForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
@@ -18,7 +21,7 @@ import type { EditorContextMenuRef } from '~/components/context-menu/components/
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useEditorModeState } from '~/hooks/useEditorMode'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
@@ -27,7 +30,6 @@ import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import usePersistedState from '~/hooks/usePersistedState'
-import { useMapActions } from '~/hooks/useMapActions'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 
@@ -35,8 +37,6 @@ interface PinPosition {
   x: number
   y: number
 }
-
-const MAP_DROP_ZONE_ID = 'map-drop-zone'
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
@@ -157,6 +157,7 @@ function MapPin({
 
   return (
     <div
+      data-pin-id={pin._id}
       className={cn(
         'absolute pointer-events-auto cursor-pointer',
         isHovered && !isDragging && 'z-20',
@@ -255,7 +256,6 @@ export function MapViewer({
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
 
-  // Persist zoom and position state per map
   const [savedTransform, setSavedTransform] =
     usePersistedState<MapTransformState>(
       `map-transform-${map._id}`,
@@ -265,7 +265,6 @@ export function MapViewer({
     null,
   )
 
-  // Cleanup debounce timeout on unmount
   useEffect(() => {
     return () => {
       if (transformDebounceRef.current) {
@@ -281,31 +280,25 @@ export function MapViewer({
   const [pendingPinItem, setPendingPinItem] = useState<{
     itemId: SidebarItemId
   } | null>(null)
-  // Track pending pin move
   const [pendingPinMove, setPendingPinMove] = useState<{
     pinId: Id<'mapPins'>
   } | null>(null)
 
-  // Track mouse position for drag-drop pin placement
   const lastMousePositionRef = useRef<{
     clientX: number
     clientY: number
   } | null>(null)
 
-  // Track dragging pin state
   const [draggingPin, setDraggingPin] = useState<{
     pin: MapPinWithItem
     startX: number
     startY: number
   } | null>(null)
-  const [draggedPinPosition, setDraggedPinPosition] =
-    useState<PinPosition | null>(null)
-  // Track if a drag just ended to prevent click firing
+  const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const { editorMode } = useEditorModeState()
+  const { editorMode } = useEditorMode()
 
-  // In viewer mode, filter out ghost pins — players shouldn't see them at all
   const pins =
     editorMode === 'viewer'
       ? map.pins.filter((pin) => pin.item !== undefined)
@@ -319,7 +312,6 @@ export function MapViewer({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateItemPin),
   })
 
-  // Update CSS variable for pin counter-scaling and persist transform state
   const handleTransformChange = useCallback(
     (
       _: unknown,
@@ -332,7 +324,6 @@ export function MapViewer({
         )
       }
 
-      // Debounce saving transform state to localStorage
       if (transformDebounceRef.current) {
         clearTimeout(transformDebounceRef.current)
       }
@@ -346,54 +337,42 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-  // Setup drop zone for sidebar items
-  const { setNodeRef: setDropRef, isOver: isDropOver } = useDroppable({
-    id: MAP_DROP_ZONE_ID,
-    data: {
-      type: MAP_DROP_ZONE_TYPE,
-      mapId: map._id,
-      mapName: map.name || defaultItemName(map),
+  const dropCleanupRef = useRef<(() => void) | null>(null)
+
+  const mapContainerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      dropCleanupRef.current?.()
+      dropCleanupRef.current = null
+
+      if (!el) return
+
+      dropCleanupRef.current = dropTargetForElements({
+        element: el,
+        getData: () => ({
+          type: MAP_DROP_ZONE_TYPE,
+          mapId: map._id,
+          mapName: map.name || defaultItemName(map),
+        }),
+        onDragEnter: () => {
+          el.setAttribute('data-drop-over', '')
+        },
+        onDragLeave: () => {
+          el.removeAttribute('data-drop-over')
+        },
+        onDrop: () => {
+          el.removeAttribute('data-drop-over')
+        },
+      })
     },
-  })
+    [map],
+  )
 
-  // Listen for drag end events from dnd-kit
-  useDndMonitor({
-    onDragEnd: (event) => {
-      const { active, over } = event
-      if (!over || over.id !== MAP_DROP_ZONE_ID) return
-      if (!active.data.current) return
+  useEffect(() => {
+    return () => {
+      dropCleanupRef.current?.()
+    }
+  }, [])
 
-      const draggedItem = active.data.current as SidebarDragData
-      const itemId = draggedItem._id
-
-      // Check if already pinned
-      if (map.pins.some((pin) => pin.itemId === itemId)) {
-        toast.error('Item is already pinned on this map')
-        // TODO: add highlight of pin here
-        return
-      }
-
-      // Calculate position from last mouse position
-      if (lastMousePositionRef.current && imageRef.current) {
-        const rect = imageRef.current.getBoundingClientRect()
-        const x =
-          ((lastMousePositionRef.current.clientX - rect.left) / rect.width) *
-          100
-        const y =
-          ((lastMousePositionRef.current.clientY - rect.top) / rect.height) *
-          100
-
-        const position = {
-          x: Math.max(0, Math.min(100, x)),
-          y: Math.max(0, Math.min(100, y)),
-        }
-
-        createPinAtPosition(itemId, position)
-      }
-    },
-  })
-
-  // Handle escape key for canceling pin placement, move, or dragging
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -406,8 +385,15 @@ export function MapViewer({
           toast.info('Pin move cancelled')
         }
         if (draggingPin) {
+          const pinEl = pinsContainerRef.current?.querySelector(
+            `[data-pin-id="${draggingPin.pin._id}"]`,
+          ) as HTMLElement | null
+          if (pinEl) {
+            pinEl.style.left = `${draggingPin.pin.x}%`
+            pinEl.style.top = `${draggingPin.pin.y}%`
+          }
           setDraggingPin(null)
-          setDraggedPinPosition(null)
+          draggedPinPositionRef.current = null
         }
       }
     }
@@ -416,7 +402,6 @@ export function MapViewer({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [pendingPinItem, pendingPinMove, draggingPin])
 
-  // Listen for pin placement requests from context menu
   useEffect(() => {
     const handlePinPlacementRequest = (
       event: CustomEvent<{ itemId: SidebarItemId }>,
@@ -436,7 +421,6 @@ export function MapViewer({
     }
   }, [])
 
-  // Listen for pin move requests from context menu
   useEffect(() => {
     const handlePinMoveRequest = (
       event: CustomEvent<{ pinId: Id<'mapPins'> }>,
@@ -456,9 +440,12 @@ export function MapViewer({
     }
   }, [])
 
-  // Handle pin dragging
   useEffect(() => {
     if (!draggingPin) return
+
+    const pinEl = pinsContainerRef.current?.querySelector(
+      `[data-pin-id="${draggingPin.pin._id}"]`,
+    ) as HTMLElement | null
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!imageRef.current) return
@@ -467,15 +454,19 @@ export function MapViewer({
       const x = ((e.clientX - rect.left) / rect.width) * 100
       const y = ((e.clientY - rect.top) / rect.height) * 100
 
-      setDraggedPinPosition({
+      const newPos = {
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
-      })
+      }
+      draggedPinPositionRef.current = newPos
+      if (pinEl) {
+        pinEl.style.left = `${newPos.x}%`
+        pinEl.style.top = `${newPos.y}%`
+      }
     }
 
     const handleMouseUp = async () => {
       const pinId = draggingPin.pin._id
-      // Mark that this pin just finished dragging to prevent click
       justFinishedDraggingRef.current = pinId
       setTimeout(() => {
         if (justFinishedDraggingRef.current === pinId) {
@@ -483,12 +474,12 @@ export function MapViewer({
         }
       }, 100)
 
-      if (draggedPinPosition) {
+      if (draggedPinPositionRef.current) {
         try {
           await updateItemPinMutation.mutateAsync({
             mapPinId: pinId,
-            x: draggedPinPosition.x,
-            y: draggedPinPosition.y,
+            x: draggedPinPositionRef.current.x,
+            y: draggedPinPositionRef.current.y,
           })
           toast.success('Pin moved')
         } catch (error) {
@@ -497,7 +488,7 @@ export function MapViewer({
         }
       }
       setDraggingPin(null)
-      setDraggedPinPosition(null)
+      draggedPinPositionRef.current = null
     }
 
     document.addEventListener('mousemove', handleMouseMove)
@@ -507,7 +498,7 @@ export function MapViewer({
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [draggingPin, draggedPinPosition, updateItemPinMutation])
+  }, [draggingPin, updateItemPinMutation])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {
@@ -542,6 +533,45 @@ export function MapViewer({
     },
     [map._id, createItemPinMutation],
   )
+
+  useEffect(() => {
+    return monitorForElements({
+      onDrop: ({ source, location }) => {
+        const dropTargets = location.current.dropTargets
+        const topTarget = dropTargets[0]
+        if (!topTarget) return
+
+        const targetData = topTarget.data
+        if (targetData.type !== MAP_DROP_ZONE_TYPE) return
+        if (targetData.mapId !== map._id) return
+
+        const draggedItem = source.data as SidebarDragData
+        const itemId = draggedItem._id
+
+        if (map.pins.some((pin) => pin.itemId === itemId)) {
+          toast.error('Item is already pinned on this map')
+          return
+        }
+
+        const { clientX, clientY } = location.current.input
+        if (!imageRef.current) {
+          toast.error('No image loaded — cannot place pin')
+          return
+        }
+
+        const rect = imageRef.current.getBoundingClientRect()
+        const x = ((clientX - rect.left) / rect.width) * 100
+        const y = ((clientY - rect.top) / rect.height) * 100
+
+        const position = {
+          x: Math.max(0, Math.min(100, x)),
+          y: Math.max(0, Math.min(100, y)),
+        }
+
+        createPinAtPosition(itemId, position)
+      },
+    })
+  }, [map._id, map.pins, createPinAtPosition])
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
@@ -641,7 +671,7 @@ export function MapViewer({
         startX: e.clientX,
         startY: e.clientY,
       })
-      setDraggedPinPosition({ x: pin.x, y: pin.y })
+      draggedPinPositionRef.current = { x: pin.x, y: pin.y }
     },
     [pendingPinMove],
   )
@@ -720,7 +750,13 @@ export function MapViewer({
             </Button>
           </div>
 
-          <div className="flex-1 relative min-h-0">
+          <div ref={mapContainerRef} className="flex-1 relative min-h-0">
+            {/* Visual ring indicator when sidebar drag is over the map */}
+            <div className="absolute inset-0 z-[998] ring-2 ring-primary ring-offset-2 pointer-events-none hidden [[data-drop-over]>&]:block" />
+            {/* Drag-drop mode banner */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg hidden [[data-drop-over]>&]:block">
+              <p className="text-sm font-medium">Release to place pin here</p>
+            </div>
             {map.imageUrl ? (
               <TransformWrapper
                 ref={transformWrapperRef}
@@ -741,11 +777,7 @@ export function MapViewer({
                   contentClass="!w-full !h-full flex items-center justify-center"
                 >
                   <div
-                    ref={setDropRef}
-                    className={cn(
-                      'relative',
-                      isDropOver && 'ring-2 ring-primary ring-offset-2',
-                    )}
+                    className="relative"
                     onClick={
                       pendingPinItem || pendingPinMove
                         ? handleMapClick
@@ -753,6 +785,7 @@ export function MapViewer({
                     }
                     onMouseMove={handleMouseMove}
                     onContextMenu={(e) => {
+                      e.preventDefault()
                       e.stopPropagation()
                       if (pendingPinItem) {
                         const position = getPercentageFromClick(e)
@@ -790,19 +823,11 @@ export function MapViewer({
                       {pins.map((pin) => {
                         const isDraggingThis = draggingPin?.pin._id === pin._id
                         const isInMoveMode = pendingPinMove?.pinId === pin._id
-                        const displayPosition =
-                          isDraggingThis && draggedPinPosition
-                            ? draggedPinPosition
-                            : { x: pin.x, y: pin.y }
 
                         return (
                           <MapPin
                             key={pin._id}
-                            pin={{
-                              ...pin,
-                              x: displayPosition.x,
-                              y: displayPosition.y,
-                            }}
+                            pin={pin}
                             isHovered={hoveredPinId === pin._id}
                             isDragging={isDraggingThis}
                             isInMoveMode={isInMoveMode}
@@ -840,13 +865,6 @@ export function MapViewer({
             </div>
           )}
 
-          {/* Drag-drop mode banner */}
-          {isDropOver && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg">
-              <p className="text-sm font-medium">Release to place pin here</p>
-            </div>
-          )}
-
           {/* Pin dragging mode banner */}
           {draggingPin && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
@@ -876,7 +894,9 @@ export function MapViewer({
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const { updateMap } = useMapActions()
+  const updateMap = useMutation({
+    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
+  })
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

@@ -1,33 +1,51 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
-import { FilePlus } from '~/lib/icons'
-import { useNoteActions } from '~/hooks/useNoteActions'
+import { FilePlus, Loader2 } from '~/lib/icons'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createNote } = useNoteActions()
+  const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const [isPending, setIsPending] = useState(false)
 
   const handleNewNote = async () => {
-    if (!campaignId) return
+    if (!campaignId || isPending) return
+    setIsPending(true)
     try {
-      const { noteId, slug } = await createNote.mutateAsync({ campaignId })
-      await openParentFolders(noteId)
-      navigateToNote(slug)
+      const result = await createItem({
+        type: SIDEBAR_ITEM_TYPES.notes,
+        campaignId,
+      })
+      openParentFolders(result.id)
+      navigateToItem(result)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create note')
+    } finally {
+      setIsPending(false)
     }
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={handleNewNote}>
-      <FilePlus className="h-4 w-4" />
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleNewNote}
+      disabled={isPending}
+    >
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <FilePlus className="h-4 w-4" />
+      )}
     </Button>
   )
 }

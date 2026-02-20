@@ -1,12 +1,10 @@
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { useDraggable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -14,6 +12,7 @@ import { FileText, MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useDraggable } from '~/hooks/useDraggable'
 
 function NoteCardSkeleton() {
   return (
@@ -33,25 +32,22 @@ function NoteCardSkeleton() {
 }
 
 function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
+  const ref = useRef<HTMLDivElement>(null)
   const { navigateToNote } = useEditorNavigation()
-  const { activeDragItem } = useFileSidebar()
   const canDrag = hasAtLeastPermissionLevel(
     note.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
-  const isDisabled = activeDragItem !== null || !canDrag
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const dragData: SidebarDragData = note
-
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
-    id: `card-${note._id}`,
-    data: dragData,
-    disabled: isDisabled,
+  const { isDraggingRef } = useDraggable({
+    ref,
+    data: note,
+    canDrag,
   })
 
   const handleCardActivate = () => {
-    if (!isDragging) {
+    if (!isDraggingRef.current) {
       if (onClick) {
         onClick()
       } else if (note.slug) {
@@ -61,12 +57,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   }
 
   const cardContent = (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className={`w-full h-[140px] ${isDragging ? 'opacity-50' : ''}`}
-    >
+    <div ref={ref} className="w-full h-[140px]">
       <Card
         className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md"
         onClick={handleCardActivate}

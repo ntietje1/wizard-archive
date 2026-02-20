@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { SidebarLayoutContext } from '~/hooks/useFileSidebar'
 import { useEditorSettings } from '~/hooks/useSidebarWidth'
+import { SidebarLayoutContext } from '~/hooks/useSidebarLayout'
 
 export function SidebarLayoutProvider({
   children,

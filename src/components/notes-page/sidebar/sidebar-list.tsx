@@ -1,20 +1,22 @@
 import { useMemo } from 'react'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import { sortItemsByOptions, useAllSidebarItems } from '~/hooks/useSidebarItems'
+import {
+  sortItemsByOptions,
+  useFilteredSidebarItems,
+} from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export function SidebarList() {
-  const { status, parentItemsMap } = useAllSidebarItems()
+  const { parentItemsMap, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
 
   const rootItems: Array<AnySidebarItem> = useMemo(() => {
-    const items = parentItemsMap.get(undefined) ?? []
-    return sortItemsByOptions(sortOptions, items) ?? []
+    return sortItemsByOptions(sortOptions, parentItemsMap.get(undefined)) ?? []
   }, [parentItemsMap, sortOptions])
 
-  if (status === 'pending') {
+  if (status !== 'success') {
     return null
   }
 

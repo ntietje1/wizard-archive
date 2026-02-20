@@ -55,9 +55,9 @@ export const useFileUpload = () => {
           if (xhr.status === 200) {
             try {
               const response = JSON.parse(xhr.responseText) as {
-                storageId: string
+                storageId: Id<'_storage'>
               }
-              const storageId = response.storageId as unknown as Id<'_storage'>
+              const storageId = response.storageId
               try {
                 await trackUploadMutation.mutateAsync({
                   storageId,

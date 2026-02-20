@@ -1,12 +1,9 @@
-import { useDraggable } from '@dnd-kit/core'
-import { useMemo } from 'react'
+import { useRef } from 'react'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { cn } from '~/lib/shadcn/utils'
-
-const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
+import { useDraggable } from '~/hooks/useDraggable'
 
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
@@ -19,30 +16,21 @@ export function DraggableSidebarItem({
   ancestorIds = [],
   children,
 }: DraggableSidebarItemProps) {
-  const safeAncestorIds = ancestorIds ?? EMPTY_ANCESTORS
+  const ref = useRef<HTMLDivElement>(null)
+
   const canDrag = hasAtLeastPermissionLevel(
     item.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const dragData = useMemo(
-    () => ({ ...item, ancestorIds: safeAncestorIds }),
-    [item, safeAncestorIds],
-  )
-
-  const { attributes, listeners, setNodeRef } = useDraggable({
-    id: item._id,
-    data: dragData,
-    disabled: !canDrag,
+  useDraggable({
+    ref,
+    data: { ...item, ancestorIds },
+    canDrag,
   })
 
   return (
-    <div
-      className={cn('w-full min-w-0')}
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-    >
+    <div className="w-full min-w-0" ref={ref}>
       {children}
     </div>
   )

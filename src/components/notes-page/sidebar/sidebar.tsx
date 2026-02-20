@@ -3,12 +3,15 @@ import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function FileSidebar() {
   const { status } = useAllSidebarItems()
-  const { bookmarksOnlyMode } = useFileSidebar()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
 
   if (bookmarksOnlyMode) {
     return (

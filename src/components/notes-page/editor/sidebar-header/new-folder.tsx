@@ -1,27 +1,36 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
-import { FolderPlus } from '~/lib/icons'
-import { useFolderActions } from '~/hooks/useFolderActions'
+import { FolderPlus, Loader2 } from '~/lib/icons'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewFolderButton() {
-  const { createFolder } = useFolderActions()
+  const { createItem } = useSidebarItemMutations()
   const { campaignWithMembership } = useCampaign()
-  const { navigateToFolder } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const [isPending, setIsPending] = useState(false)
 
   const handleNewFolder = async () => {
-    if (!campaignId) return
+    if (!campaignId || isPending) return
+    setIsPending(true)
     try {
-      const { folderId, slug } = await createFolder.mutateAsync({ campaignId })
-      await openParentFolders(folderId)
-      navigateToFolder(slug)
+      const result = await createItem({
+        type: SIDEBAR_ITEM_TYPES.folders,
+        campaignId,
+      })
+      openParentFolders(result.id)
+      navigateToItem(result)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')
+    } finally {
+      setIsPending(false)
     }
   }
 
@@ -30,10 +39,14 @@ export function NewFolderButton() {
       variant="ghost"
       size="icon"
       onClick={handleNewFolder}
-      disabled={createFolder.isPending}
+      disabled={isPending}
       aria-label="Create new folder"
     >
-      <FolderPlus className="h-4 w-4" />
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <FolderPlus className="h-4 w-4" />
+      )}
     </Button>
   )
 }

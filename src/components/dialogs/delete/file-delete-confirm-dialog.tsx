@@ -1,10 +1,8 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { File } from 'convex/files/types'
+import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 
 interface FileDeleteConfirmDialogProps {
   file: File
@@ -19,25 +17,20 @@ export function FileDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FileDeleteConfirmDialogProps) {
-  const deleteFileMutation = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.deleteFile),
-  })
+  const { deleteItem } = useSidebarItemMutations()
 
   const handleConfirm = useCallback(async () => {
-    await deleteFileMutation
-      .mutateAsync({ fileId: file._id })
-      .then(() => {
-        toast.success('File deleted')
-      })
-      .catch((error: Error) => {
-        console.error(error)
-        toast.error('Failed to delete file')
-      })
-      .finally(() => {
-        onConfirm?.()
-        onClose()
-      })
-  }, [deleteFileMutation, file._id, onConfirm, onClose])
+    try {
+      await deleteItem(file)
+      toast.success('File deleted')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to delete file')
+    } finally {
+      onConfirm?.()
+      onClose()
+    }
+  }, [deleteItem, file, onConfirm, onClose])
 
   return (
     <ConfirmationDialog
@@ -48,7 +41,6 @@ export function FileDeleteConfirmDialog({
       description={`Are you sure you want to delete "${file.name || 'this file'}"? This action cannot be undone.`}
       confirmLabel="Delete File"
       confirmVariant="destructive"
-      isLoading={deleteFileMutation.isPending}
     />
   )
 }

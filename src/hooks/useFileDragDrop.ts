@@ -1,24 +1,29 @@
 import { useCallback, useRef, useState } from 'react'
 import { useCampaign } from './useCampaign'
 import { useFileDropHandler } from './useFileDropHandler'
-import { useFileSidebar } from './useFileSidebar'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult } from '~/lib/folder-reader'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { processDataTransferItems } from '~/lib/folder-reader'
 
 export function useFileDragDrop(parentId?: Id<'folders'>) {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
   const { handleDrop: handleDropFiles } = useFileDropHandler()
-  const { setFileDragHoveredId, setIsDraggingFiles: setGlobalIsDraggingFiles } =
-    useFileSidebar()
+  const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
+  const setGlobalIsDraggingFiles = useSidebarUIStore(
+    (s) => s.setIsDraggingFiles,
+  )
 
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const dragDepthRef = useRef(0)
 
   const isFileDrag = useCallback((e: React.DragEvent): boolean => {
-    const types = Array.from(e.dataTransfer.types)
-    return types.includes('Files') && !types.includes('application/x-dndkit')
+    const types = e.dataTransfer.types
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true
+    }
+    return false
   }, [])
 
   const handleDragEnter = useCallback(

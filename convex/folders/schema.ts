@@ -1,22 +1,11 @@
 import { v } from 'convex/values'
 import { customBlockValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { noteValidator } from '../notes/schema'
-import { mapValidator } from '../gameMaps/baseSchema'
-import { fileValidator } from '../files/schema'
 import { folderValidator, folderValidatorFields } from './baseSchema'
-
-const folderChildValidator = v.union(
-  noteValidator,
-  folderValidator,
-  mapValidator,
-  fileValidator,
-)
 
 export const folderWithContentValidator = v.object({
   ...folderValidatorFields,
   ancestors: v.array(folderValidator),
-  children: v.array(folderChildValidator),
 })
 
 export const downloadableItemValidator = v.union(

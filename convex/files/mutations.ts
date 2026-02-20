@@ -8,7 +8,11 @@ import {
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { findUniqueFileSlug, findUniqueSlug } from '../common/slug'
+import {
+  findUniqueFileSlug,
+  findUniqueSlug,
+  resolveSlugBasis,
+} from '../common/slug'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   requireEditPermission,
@@ -73,6 +77,8 @@ export const createFile = mutation({
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
+    iconName: v.optional(v.string()),
+    color: v.optional(v.string()),
   },
   returns: v.object({
     fileId: v.id('files'),
@@ -106,23 +112,25 @@ export const createFile = mutation({
       name: args.name,
     })
 
-    const slugBasis =
-      args.name && args.name.trim() !== '' ? args.name : crypto.randomUUID()
-
-    const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-      const conflict = await ctx.db
-        .query('files')
-        .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', args.campaignId).eq('slug', slug),
-        )
-        .unique()
-      return conflict !== null
-    })
+    const uniqueSlug = await findUniqueSlug(
+      resolveSlugBasis(args.name),
+      async (slug) => {
+        const conflict = await ctx.db
+          .query('files')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', args.campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null
+      },
+    )
 
     const fileId = await ctx.db.insert('files', {
       campaignId: args.campaignId,
       name: args.name,
       slug: uniqueSlug,
+      iconName: args.iconName,
+      color: args.color,
       storageId: args.storageId,
       parentId: args.parentId,
       updatedAt: Date.now(),

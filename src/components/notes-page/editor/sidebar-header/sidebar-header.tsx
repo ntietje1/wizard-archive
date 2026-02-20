@@ -4,10 +4,13 @@ import { NewNoteButton } from './new-note'
 import { SortMenu } from './sort-menu'
 import { BookmarksFilterButton } from './bookmarks-filter-button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
 
 export function SidebarHeader() {
-  const { bookmarksOnlyMode } = useFileSidebar()
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+  const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
 
   return (
     <div className="flex items-center justify-center px-8 h-10 border-b bg-background">

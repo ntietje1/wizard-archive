@@ -16,7 +16,7 @@ import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useEditorModeActions, useEditorModeState } from '~/hooks/useEditorMode'
+import { useEditorMode } from '~/hooks/useEditorMode'
 import { cn } from '~/lib/shadcn/utils'
 
 const label = 'View as player'
@@ -29,8 +29,7 @@ export const ViewAsPlayerButton = () => {
     campaignMembersQuery.data?.filter(
       (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
     ) ?? []
-  const { viewAsPlayerId } = useEditorModeState()
-  const { setViewAsPlayerId } = useEditorModeActions()
+  const { viewAsPlayerId, setViewAsPlayerId } = useEditorMode()
   const [isOpen, setIsOpen] = useState(false)
 
   const isPending = campaignMembersQuery.isPending

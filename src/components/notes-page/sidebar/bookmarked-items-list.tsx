@@ -3,23 +3,29 @@ import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import type { Id } from 'convex/_generated/dataModel'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
-import { sortItemsByOptions, useAllSidebarItems } from '~/hooks/useSidebarItems'
+import {
+  sortItemsByOptions,
+  useFilteredSidebarItems,
+} from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 export function BookmarkedItemsList() {
-  const allItems = useAllSidebarItems()
+  const { data: filteredItems, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
-  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
+  const renamingId = useSidebarUIStore((s) => s.renamingId)
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
 
   const bookmarkedItems = useMemo(() => {
-    const filtered = allItems.data?.filter((item) => item.isBookmarked) ?? []
-    return sortItemsByOptions(sortOptions, filtered)
-  }, [allItems.data, sortOptions])
+    const bookmarked = filteredItems.filter(
+      (item) => item.isBookmarked === true,
+    )
+    return sortItemsByOptions(sortOptions, bookmarked) ?? []
+  }, [filteredItems, sortOptions])
 
-  if (allItems.status === 'pending') {
+  if (status !== 'success') {
     return <BookmarkedItemsLoading />
   }
 
@@ -35,7 +41,6 @@ export function BookmarkedItemsList() {
               isExpanded={false}
               renamingId={renamingId}
               setRenamingId={setRenamingId}
-              activeDragItem={activeDragItem}
             />
           ))}
 

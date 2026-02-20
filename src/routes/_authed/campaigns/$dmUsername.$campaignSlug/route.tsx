@@ -4,10 +4,13 @@ import { api } from 'convex/_generated/api'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
-import { FileSidebarProvider } from '~/contexts/FileSidebarContext'
+import { AllSidebarItemsProvider } from '~/contexts/AllSidebarItemsProvider'
+import { SidebarItemMutationsProvider } from '~/contexts/SidebarItemMutationsProvider'
 import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
-import { EditorModeProvider } from '~/contexts/EditorModeContext'
+import { SessionProvider } from '~/contexts/SessionContext'
+import { EditorNavigationProvider } from '~/contexts/EditorNavigationProvider'
+import { SidebarDndWrapper } from '~/components/notes-page/sidebar/SidebarDndWrapper'
 import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
 
 export const Route = createFileRoute(
@@ -20,7 +23,6 @@ export const Route = createFileRoute(
         slug: params.campaignSlug,
       }),
     )
-
     if (campaignWithMembership?.campaign._id) {
       await context.queryClient.ensureQueryData(
         convexQuery(api.editors.queries.getCurrentEditor, {
@@ -36,21 +38,27 @@ function RouteComponent() {
   return (
     <CampaignProvider>
       <CampaignNotFoundWrapper>
-        <FileSidebarProvider>
-          <EditorModeProvider>
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex flex-1 min-h-0">
-                <SidebarLayoutProvider>
-                  <NavigationSidebar />
-                  <SidebarLayout>
-                    <Outlet />
-                  </SidebarLayout>
-                </SidebarLayoutProvider>
-              </div>
-              <ViewAsBanner />
-            </div>
-          </EditorModeProvider>
-        </FileSidebarProvider>
+        <SessionProvider>
+          <AllSidebarItemsProvider>
+            <SidebarItemMutationsProvider>
+              <EditorNavigationProvider>
+                <SidebarDndWrapper>
+                  <div className="flex flex-col flex-1 min-h-0">
+                    <div className="flex flex-1 min-h-0">
+                      <SidebarLayoutProvider>
+                        <NavigationSidebar />
+                        <SidebarLayout>
+                          <Outlet />
+                        </SidebarLayout>
+                      </SidebarLayoutProvider>
+                    </div>
+                    <ViewAsBanner />
+                  </div>
+                </SidebarDndWrapper>
+              </EditorNavigationProvider>
+            </SidebarItemMutationsProvider>
+          </AllSidebarItemsProvider>
+        </SessionProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>
   )

@@ -5,31 +5,32 @@ import {
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type {
   SidebarItem,
-  SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/baseTypes'
-import {} from 'convex/sidebarItems/sidebarItems'
-import type { Active, Over } from '@dnd-kit/core'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 
 export interface SidebarDragData extends SidebarItem<SidebarItemType> {
+  [key: string | symbol]: unknown
   ancestorIds?: Array<Id<'folders'>>
 }
 
 export interface MapDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
   mapId: Id<'gameMaps'>
   mapName: string
 }
 
 export interface SidebarRootDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof SIDEBAR_ROOT_TYPE
 }
 
 export interface EmptyEditorDropZoneData {
+  [key: string | symbol]: unknown
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
 
@@ -135,31 +136,6 @@ export function validateDrop(
   }
 }
 
-export function canDropItem(active: Active | null, over: Over | null): boolean {
-  if (!active || !over) return false
-
-  const draggedItem = active.data.current as SidebarDragData | undefined
-  const targetData = over.data.current as SidebarDropData | undefined
-
-  if (!draggedItem || !targetData) return false
-
-  return validateDrop(draggedItem, targetData).valid
-}
-
-export function getDropValidation(
-  active: Active | null,
-  over: Over | null,
-): DropValidationResult {
-  if (!active || !over) return { valid: false, reason: 'not_folder' }
-
-  const draggedItem = active.data.current as SidebarDragData | undefined
-  const targetData = over.data.current as SidebarDropData | undefined
-
-  if (!draggedItem || !targetData) return { valid: false, reason: 'not_folder' }
-
-  return validateDrop(draggedItem, targetData)
-}
-
 /**
  * Checks if dropping an item would actually change its position.
  * Returns false if the item is already in the target location.
@@ -215,66 +191,5 @@ export function canDropFilesOnTarget(
   } else {
     console.error('Invalid target data type:', targetData)
     return false
-  }
-}
-
-interface MoveMutations {
-  moveNote: (params: {
-    noteId: Id<'notes'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveMap: (params: {
-    mapId: Id<'gameMaps'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveFolder: (params: {
-    folderId: Id<'folders'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-  moveFile: (params: {
-    fileId: Id<'files'>
-    parentId?: Id<'folders'>
-  }) => Promise<any>
-}
-
-export async function executeMove(
-  itemType: SidebarItemType,
-  itemId: SidebarItemId,
-  targetId: Id<'folders'> | undefined,
-  mutations: MoveMutations,
-  callbacks?: {
-    openFolder?: (folderId: Id<'folders'>) => void
-  },
-): Promise<void> {
-  switch (itemType) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      await mutations.moveNote({
-        noteId: itemId as Id<'notes'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      await mutations.moveMap({
-        mapId: itemId as Id<'gameMaps'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.folders:
-      await mutations.moveFolder({
-        folderId: itemId as Id<'folders'>,
-        parentId: targetId,
-      })
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      await mutations.moveFile({
-        fileId: itemId as Id<'files'>,
-        parentId: targetId,
-      })
-      break
-    default:
-      throw new Error(`Invalid item type: ${itemType}`)
-  }
-  if (targetId && callbacks?.openFolder) {
-    callbacks.openFolder(targetId)
   }
 }

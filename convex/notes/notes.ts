@@ -3,7 +3,11 @@ import { requireCampaignMembership } from '../campaigns/campaigns'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import { validateSidebarItemName } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { findUniqueNoteSlug, findUniqueSlug } from '../common/slug'
+import {
+  findUniqueNoteSlug,
+  findUniqueSlug,
+  resolveSlugBasis,
+} from '../common/slug'
 import { deleteBlocksByNote } from '../blocks/blocks'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
@@ -32,18 +36,18 @@ export const createNote = async (
     { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
   )
 
-  const slugBasis =
-    input.name && input.name.trim() !== '' ? input.name : crypto.randomUUID() // use a uuid if the name is blank
-
-  const uniqueSlug = await findUniqueSlug(slugBasis, async (slug) => {
-    const conflict = await ctx.db
-      .query('notes')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', input.campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null
-  })
+  const uniqueSlug = await findUniqueSlug(
+    resolveSlugBasis(input.name),
+    async (slug) => {
+      const conflict = await ctx.db
+        .query('notes')
+        .withIndex('by_campaign_slug', (q) =>
+          q.eq('campaignId', input.campaignId).eq('slug', slug),
+        )
+        .unique()
+      return conflict !== null
+    },
+  )
 
   if (input.parentId) {
     const parentItem = await getSidebarItemById(
@@ -131,15 +135,14 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
   if (!rawNote) return null
 
   const note = await enhanceSidebarItem(ctx, rawNote)
-  const hasPermission = await hasViewPermission(ctx, note, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, note)
   if (!hasPermission) return null
-  return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
+  return enhanceNoteWithContent(ctx, note)
 }
 
 export async function deleteNote(

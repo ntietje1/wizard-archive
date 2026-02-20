@@ -1,15 +1,23 @@
 import { useCallback } from 'react'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useCampaign } from '~/hooks/useCampaign'
+import {
+  useCampaignSidebarActions,
+  useCampaignSidebarState,
+} from '~/stores/sidebarUIStore'
 
 export function useFolderState(folderId: string) {
+  const { campaignWithMembership } = useCampaign()
+  const campaignId = campaignWithMembership.data?.campaign._id
+
+  const { folderStates, closeAllFoldersMode } =
+    useCampaignSidebarState(campaignId)
+
   const {
-    folderStates,
     setFolderState,
     toggleFolderState,
-    closeAllFoldersMode,
     exitCloseAllMode,
     clearAllFolderStates,
-  } = useFileSidebar()
+  } = useCampaignSidebarActions(campaignId)
 
   const isExpanded = !closeAllFoldersMode && (folderStates[folderId] ?? false)
 

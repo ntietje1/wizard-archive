@@ -7,12 +7,12 @@ import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useRenameItem } from '~/hooks/useRenameItem'
+import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import {
@@ -35,28 +35,23 @@ function SidebarItemComponent({
 }: SidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { navigateToItem } = useEditorNavigation()
-  const { item: currentItem } = useCurrentItem()
+  const { navigateToItem } = useEditorNavigationContext()
+  const isSelected = useIsSelectedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
-  const { renamingId, setRenamingId, activeDragItem } = useFileSidebar()
+  const renamingId = useSidebarUIStore((s) => s.renamingId)
+  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { sortOptions } = useSortOptions()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
   const defaultName = defaultItemName(item)
   const displayName = item.name || defaultName
-  const isSelected = currentItem?._id === item._id
-  const isDraggingActive = !!activeDragItem
 
-  // Get children from the map
-  const children = useMemo(() => {
-    if (!isFolder) return []
-    return parentItemsMap.get(item._id) ?? []
-  }, [parentItemsMap, item._id, isFolder])
-  const sortedChildren = useMemo(
-    () => sortItemsByOptions(sortOptions, children) ?? [],
-    [sortOptions, children],
-  )
+  const children = isFolder ? parentItemsMap.get(item._id) : undefined
+
+  const sortedChildren = useMemo(() => {
+    return sortItemsByOptions(sortOptions, children) ?? []
+  }, [sortOptions, children])
 
   // Build ancestor IDs for children
   const currentAncestors = useMemo(() => {
@@ -92,8 +87,6 @@ function SidebarItemComponent({
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
-          isDragging={activeDragItem?._id === item._id}
-          isDraggingActive={isDraggingActive}
           onSelect={handleSelect}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={handleMoreOptions}

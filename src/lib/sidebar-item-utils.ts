@@ -4,10 +4,10 @@ import {
 } from 'convex/sidebarItems/baseTypes'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import type {
-  AnySidebarItem,
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'

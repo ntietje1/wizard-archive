@@ -9,23 +9,16 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
   permissionLevelValidator,
   sidebarItemIdValidator,
-  sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
+import { getBlockSharesForBlock } from './blockShares'
 import {
-  getBlockSharesForBlock,
-  getBlockSharesForMember,
-  isBlockSharedWithMember,
-} from './blockShares'
-import { getSharesForSession } from './shares'
-import {
-  getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
   resolveInheritedPermissionWithSource,
 } from './itemShares'
 import { PERMISSION_LEVEL } from './types'
+import type { Id } from '../_generated/dataModel'
 import type { CampaignMember } from '../campaigns/types'
 import type { BlockShare, PermissionLevel, SidebarItemShare } from './types'
 
@@ -65,8 +58,14 @@ export const getSidebarItemWithShares = query({
     playerMembers: v.array(campaignMemberValidator),
     inheritedAllPermissionLevel: v.optional(permissionLevelValidator),
     inheritedFromFolderName: v.optional(v.string()),
-    memberInheritedPermissions: v.record(v.string(), permissionLevelValidator),
-    memberInheritedFromFolderNames: v.record(v.string(), v.string()),
+    memberInheritedPermissions: v.record(
+      v.id('campaignMembers'),
+      permissionLevelValidator,
+    ),
+    memberInheritedFromFolderNames: v.record(
+      v.id('campaignMembers'),
+      v.string(),
+    ),
   }),
   handler: async (
     ctx,
@@ -78,8 +77,8 @@ export const getSidebarItemWithShares = query({
     playerMembers: Array<CampaignMember>
     inheritedAllPermissionLevel?: PermissionLevel
     inheritedFromFolderName?: string
-    memberInheritedPermissions: Record<string, PermissionLevel>
-    memberInheritedFromFolderNames: Record<string, string>
+    memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
+    memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
   }> => {
     await requireCampaignMembership(
       ctx,

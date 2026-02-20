@@ -12,15 +12,14 @@ import type { GameMapFromDb, GameMapWithContent } from './types'
 export const getMap = async (
   ctx: Ctx,
   mapId: Id<'gameMaps'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
   if (!rawMap) return null
 
   const map = await enhanceSidebarItem(ctx, rawMap)
-  const hasPermission = await hasViewPermission(ctx, map, viewAsPlayerId)
+  const hasPermission = await hasViewPermission(ctx, map)
   if (!hasPermission) return null
-  return enhanceGameMapWithContent(ctx, map, viewAsPlayerId)
+  return enhanceGameMapWithContent(ctx, map)
 }
 
 export const deleteMap = async (

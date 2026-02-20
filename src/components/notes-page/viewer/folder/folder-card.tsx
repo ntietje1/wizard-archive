@@ -1,12 +1,11 @@
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { useDndContext, useDraggable, useDroppable } from '@dnd-kit/core'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
-import { canDropFilesOnTarget, canDropItem } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -14,8 +13,10 @@ import { MoreVertical } from '~/lib/icons'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
+import { useDraggable } from '~/hooks/useDraggable'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useFileDragDrop } from '~/hooks/useFileDragDrop'
-import { useFileSidebar } from '~/hooks/useFileSidebar'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
   return (
@@ -87,67 +88,51 @@ function FolderCardInner({
   onClick,
   parentId,
 }: ItemCardProps<Folder>) {
-  const { active, over } = useDndContext()
+  const ref = useRef<HTMLDivElement>(null)
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { activeDragItem, fileDragHoveredId, isDraggingFiles } =
-    useFileSidebar()
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === folder._id,
+  )
+
   const canDrag = hasAtLeastPermissionLevel(
     folder.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  // Include parentId in ancestorIds for circular drop prevention
   const ancestorIds = parentId ? [parentId] : []
-  const dropData: SidebarDropData = { ...folder, ancestorIds }
-  const dragData: SidebarDragData = { ...folder, ancestorIds }
+  const dropData = { ...folder, ancestorIds }
 
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `card-drop-${folder._id}`,
-    data: dropData,
-    disabled: activeDragItem?._id === folder._id,
+  const { isDraggingRef } = useDraggable({
+    ref,
+    data: { ...folder, ancestorIds },
+    canDrag,
+    dragOpacity: '0.2',
   })
 
-  const canDrop = canDropItem(active, over)
-  const isValidDropTarget = canDrop && isOver
+  useDroppable({ ref, data: dropData })
 
-  // Handle native file drag-and-drop
   const canAcceptFileDrops = canDropFilesOnTarget(dropData)
   const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
 
-  const shouldHighlight = isValidDropTarget || isFileValidDrop
-
-  const {
-    setNodeRef: setDragRef,
-    listeners,
-    attributes,
-    isDragging,
-  } = useDraggable({
-    id: `card-${folder._id}`,
-    data: dragData,
-    disabled: !canDrag,
-  })
-
   const handleCardActivate = () => {
-    if (!isDragging && onClick) {
+    if (isDraggingRef.current) return
+    if (onClick) {
       onClick()
     } else {
       navigateToFolder(folder.slug)
     }
   }
-
   const cardContent = (
     <div
-      ref={(el) => {
-        setDropRef(el)
-        setDragRef(el)
-      }}
-      {...listeners}
-      {...attributes}
-      className={`h-[140px] ${isDragging ? 'opacity-20' : ''}`}
+      ref={ref}
+      className="h-[140px]"
       onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
       onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
@@ -155,7 +140,7 @@ function FolderCardInner({
     >
       <div
         className={`folder-wrapper group transition-all relative ${
-          shouldHighlight ? 'valid-drop-target' : ''
+          isDropTarget || isFileValidDrop ? 'valid-drop-target' : ''
         }`}
         onClick={handleCardActivate}
         onKeyDown={(e) => {

@@ -10,11 +10,9 @@ export interface SidebarItemHandlers {
 }
 
 export interface SidebarItemState {
-  isDragging: boolean
   isSelected: boolean
   isRenaming: boolean
   isExpanded?: boolean
-  isDraggingActive?: boolean
 }
 
 export interface SidebarItemButtonProps
