@@ -385,6 +385,13 @@ export function MapViewer({
           toast.info('Pin move cancelled')
         }
         if (draggingPin) {
+          const pinEl = pinsContainerRef.current?.querySelector(
+            `[data-pin-id="${draggingPin.pin._id}"]`,
+          ) as HTMLElement | null
+          if (pinEl) {
+            pinEl.style.left = `${draggingPin.pin.x}%`
+            pinEl.style.top = `${draggingPin.pin.y}%`
+          }
           setDraggingPin(null)
           draggedPinPositionRef.current = null
         }
