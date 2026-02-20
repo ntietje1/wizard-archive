@@ -379,29 +379,43 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
     }, []),
 
-    downloadNote: useCallback((ctx: MenuContext) => {
-      if (!ctx.item || !isNote(ctx.item)) return
+    downloadNote: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item || !isNote(ctx.item)) return
 
-      try {
-        const markdown = convertBlocksToMarkdown(ctx.item.content)
-        const baseName = ctx.item.name ?? defaultItemName(ctx.item)
-        const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
+        try {
+          const fullItem = await convex.query(
+            api.sidebarItems.queries.getSidebarItem,
+            { id: ctx.item._id, campaignId: ctx.item.campaignId },
+          )
+          if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+            toast.error('Failed to load note content')
+            return
+          }
 
-        const blob = new Blob([markdown], { type: 'text/markdown' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(link.href)
+          const markdown = convertBlocksToMarkdown(fullItem.content)
+          const baseName = ctx.item.name ?? defaultItemName(ctx.item)
+          const fileName = baseName.endsWith('.md')
+            ? baseName
+            : `${baseName}.md`
 
-        toast.success('Download started')
-      } catch (error) {
-        console.error('Failed to download note:', error)
-        toast.error('Failed to download note')
-      }
-    }, []),
+          const blob = new Blob([markdown], { type: 'text/markdown' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(link.href)
+
+          toast.success('Download started')
+        } catch (error) {
+          console.error('Failed to download note:', error)
+          toast.error('Failed to download note')
+        }
+      },
+      [convex],
+    ),
 
     downloadMap: useCallback((ctx: MenuContext) => {
       if (!ctx.item || !isGameMap(ctx.item)) return

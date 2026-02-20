@@ -1,7 +1,4 @@
 import React, { useMemo } from 'react'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import { useQuery } from '@tanstack/react-query'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
 import { buildMenu } from '../menu-builder'
@@ -12,7 +9,6 @@ import type { ViewContext } from '../types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSession } from '~/hooks/useSession'
 import { useMapView } from '~/hooks/useMapView'
-import { useSidebarItemShares } from '~/hooks/useSidebarItemShares'
 import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 
 interface ProviderProps {
@@ -34,21 +30,13 @@ export function EditorContextMenuProvider({
   const { campaignWithMembership } = useCampaign()
   const { currentSession } = useSession()
   const { activeMap, activePin } = useMapView()
-  const shareState = useSidebarItemShares(item?._id)
   const { editor, blockId } = useBlockNoteContextMenu()
-
-  const sidebarItemWithContent = useQuery(
-    convexQuery(
-      api.sidebarItems.queries.getSidebarItem,
-      item ? { id: item._id, campaignId: item.campaignId } : 'skip',
-    ),
-  )
 
   const permissionLevel = item?.myPermissionLevel
 
   const menuContext = useMemo(
     () => ({
-      item: sidebarItemWithContent.data ?? undefined,
+      item,
       viewContext,
       currentUserId: campaignWithMembership.data?.member.userId,
       memberRole: campaignWithMembership.data?.member.role,
@@ -56,12 +44,11 @@ export function EditorContextMenuProvider({
       activeMap: activeMap ?? undefined,
       activePin: activePin ?? undefined,
       hasActiveSession: !!currentSession.data,
-      shareState,
       editor: editor ?? undefined,
       blockId,
     }),
     [
-      sidebarItemWithContent.data,
+      item,
       viewContext,
       campaignWithMembership.data?.member.userId,
       campaignWithMembership.data?.member.role,
@@ -69,7 +56,6 @@ export function EditorContextMenuProvider({
       activeMap,
       activePin,
       currentSession.data,
-      shareState,
       editor,
       blockId,
     ],

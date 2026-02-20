@@ -1,18 +1,9 @@
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types'
-import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { CampaignMemberRole } from 'convex/campaigns/types'
 import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { PermissionLevel } from 'convex/shares/types'
-
-export interface ShareState {
-  allPermissionLevel?: PermissionLevel
-  inheritedAllPermissionLevel?: PermissionLevel
-  sharedMemberIds: Set<Id<'campaignMembers'>>
-  playerMembers: Array<CampaignMember>
-  isLoading: boolean
-}
 
 export type ViewContext =
   | 'sidebar'
@@ -27,7 +18,7 @@ export type ViewContext =
 
 export interface MenuContext {
   // Core data
-  item: AnySidebarItemWithContent | undefined
+  item: AnySidebarItem | undefined
   viewContext: ViewContext
 
   // User/permissions
@@ -41,9 +32,6 @@ export interface MenuContext {
 
   // Session state
   hasActiveSession?: boolean
-
-  // Share state (for sidebar items)
-  shareState?: ShareState
 
   // BlockNote editor context (for editor-related menus)
   editor?: CustomBlockNoteEditor
