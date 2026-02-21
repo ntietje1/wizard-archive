@@ -34,6 +34,7 @@ import { getSidebarItemIcon } from '~/lib/category-icons'
 import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import usePersistedState from '~/hooks/usePersistedState'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
@@ -275,11 +276,19 @@ export function MapViewer({
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  useEffect(() => {
+    setImageLoaded(false)
+  }, [map.imageUrl])
 
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap: allItemsMap } = useAllSidebarItems()
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap }
+  const permOpts = useMemo(
+    () => ({ isDm, viewAsPlayerId, allItemsMap }),
+    [isDm, viewAsPlayerId, allItemsMap],
+  )
 
   // Users with edit access see all pins (hidden ones are dimmed); view-only users only see visible pins
   const canEditMap = effectiveHasAtLeastPermission(
@@ -290,9 +299,7 @@ export function MapViewer({
 
   const pins = useMemo(
     () =>
-      canEditMap
-        ? map.pins
-        : map.pins.filter((pin) => pin.visible === true),
+      canEditMap ? map.pins : map.pins.filter((pin) => pin.visible === true),
     [map.pins, canEditMap],
   )
 
@@ -769,7 +776,16 @@ export function MapViewer({
   return (
     <ClientOnly fallback={<MapViewerSkeleton />}>
       <MapViewProvider map={map} pins={pins}>
-        <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
+        <div
+          className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col"
+          onMouseDown={() => {
+            // Blur any focused element (e.g. breadcrumb input) since
+            // TransformWrapper intercepts events and prevents default blur
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur()
+            }
+          }}
+        >
           {/* Zoom controls */}
           <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
             <Button
@@ -808,6 +824,12 @@ export function MapViewer({
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg hidden [[data-drop-over]>&]:block">
               <p className="text-sm font-medium">Release to place pin here</p>
             </div>
+            {/* Loading spinner while map image is loading */}
+            {map.imageUrl && !imageLoaded && (
+              <div className="absolute inset-0 z-[999] flex items-center justify-center">
+                <LoadingSpinner size="lg" />
+              </div>
+            )}
             {map.imageUrl ? (
               <TransformWrapper
                 ref={transformWrapperRef}
@@ -855,6 +877,7 @@ export function MapViewer({
                       alt={map.name || 'Map'}
                       className="select-none pointer-events-auto"
                       draggable={false}
+                      onLoad={() => setImageLoaded(true)}
                       style={{
                         cursor:
                           pendingPinItem || pendingPinMove
@@ -866,31 +889,35 @@ export function MapViewer({
                       }}
                     />
 
-                    {/* Pins container */}
-                    <div
-                      ref={pinsContainerRef}
-                      className="absolute inset-0 pointer-events-none"
-                    >
-                      {pins.map((pin) => {
-                        const isDraggingThis = draggingPin?.pin._id === pin._id
-                        const isInMoveMode = pendingPinMove?.pinId === pin._id
+                    {/* Pins container — only render after the image has loaded so
+                        percentage-based positions resolve correctly */}
+                    {imageLoaded && (
+                      <div
+                        ref={pinsContainerRef}
+                        className="absolute inset-0 pointer-events-none"
+                      >
+                        {pins.map((pin) => {
+                          const isDraggingThis =
+                            draggingPin?.pin._id === pin._id
+                          const isInMoveMode = pendingPinMove?.pinId === pin._id
 
-                        return (
-                          <MapPin
-                            key={pin._id}
-                            pin={pin}
-                            isGhost={isPinGhost(pin)}
-                            isHovered={hoveredPinId === pin._id}
-                            isDragging={isDraggingThis}
-                            isInMoveMode={isInMoveMode}
-                            onHover={setHoveredPinId}
-                            onClick={handlePinClick}
-                            onContextMenu={handlePinContextMenu}
-                            onDragStart={handlePinDragStart}
-                          />
-                        )
-                      })}
-                    </div>
+                          return (
+                            <MapPin
+                              key={pin._id}
+                              pin={pin}
+                              isGhost={isPinGhost(pin)}
+                              isHovered={hoveredPinId === pin._id}
+                              isDragging={isDraggingThis}
+                              isInMoveMode={isInMoveMode}
+                              onHover={setHoveredPinId}
+                              onClick={handlePinClick}
+                              onContextMenu={handlePinContextMenu}
+                              onDragStart={handlePinDragStart}
+                            />
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </TransformComponent>
               </TransformWrapper>

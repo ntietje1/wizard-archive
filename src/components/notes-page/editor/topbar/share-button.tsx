@@ -12,7 +12,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
 
 export function ShareButton() {
-  const { item } = useCurrentItem()
+  const { item, isLoading: isItemLoading } = useCurrentItem()
   const { isDm, campaignWithMembership } = useCampaign()
   const [open, setOpen] = useState(false)
 
@@ -37,6 +37,16 @@ export function ShareButton() {
 
   if (!isDm) {
     return null
+  }
+
+  if (isItemLoading || (item && isPending)) {
+    return (
+      <Button variant="outline" size="sm" disabled className="gap-1.5">
+        <Lock className="h-3.5 w-3.5 animate-pulse" />
+        <span className="text-xs animate-pulse">Loading</span>
+        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+      </Button>
+    )
   }
 
   if (!item) {

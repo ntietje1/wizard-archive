@@ -10,12 +10,13 @@ import { CreateNewDashboard } from '~/components/notes-page/editor/create-new-da
 import { useFilteredSidebarItems } from '~/hooks/useSidebarItems'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 
 export function FolderViewer({
   item: folder,
 }: EditorViewerProps<FolderWithContent>) {
-  const { parentItemsMap } = useFilteredSidebarItems()
+  const { parentItemsMap, status } = useFilteredSidebarItems()
   const children = parentItemsMap.get(folder._id) ?? []
 
   const hasFullAccess = hasAtLeastPermissionLevel(
@@ -27,6 +28,14 @@ export function FolderViewer({
     ...folder.ancestors.map((a) => a.name || defaultItemName(a)),
     folder.name || defaultItemName(folder),
   ].join(' / ')
+
+  if (status === 'pending') {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
 
   if (children.length === 0) {
     return (

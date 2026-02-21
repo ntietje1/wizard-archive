@@ -20,7 +20,6 @@ export const Route = createFileRoute(
       }),
     )
     const typeAndSlug = getTypeAndSlug(search)
-
     if (campaignWithMembership?.campaign._id) {
       await Promise.all([
         context.queryClient.ensureQueryData(

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
@@ -253,7 +254,9 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
   return (
     <>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
-      <DragOverlay campaignName={campaign?.name} />
+      <ClientOnly fallback={null}>
+        <DragOverlay campaignName={campaign?.name} />
+      </ClientOnly>
     </>
   )
 }

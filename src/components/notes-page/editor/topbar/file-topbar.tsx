@@ -28,11 +28,7 @@ export function FileTopbar() {
 
   const canRename =
     item &&
-    effectiveHasAtLeastPermission(
-      item,
-      PERMISSION_LEVEL.FULL_ACCESS,
-      permOpts,
-    )
+    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.FULL_ACCESS, permOpts)
 
   const handleRename = async (newName: string) => {
     if (!item) return
@@ -45,10 +41,6 @@ export function FileTopbar() {
     viewAsPlayerId &&
     !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem
-
-  if (isLoading) {
-    return <TopbarLoading />
-  }
 
   const middleContent = (
     <ItemButtonWrapper>
@@ -65,6 +57,7 @@ export function FileTopbar() {
             isNotSharedWithPlayer && 'opacity-50',
           )}
         >
+          {isLoading && <Skeleton className="h-5 w-32 my-0.5" />}
           {item && (
             <EditableBreadcrumb
               initialName={item.name || ''}
@@ -95,19 +88,5 @@ export function FileTopbar() {
         {middleContent}
       </div>
     </EditorContextMenu>
-  )
-}
-
-function TopbarLoading() {
-  return (
-    <div className="p-2 h-12 shrink-0">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-32" />
-        <div className="flex items-center space-x-2">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-        </div>
-      </div>
-    </div>
   )
 }

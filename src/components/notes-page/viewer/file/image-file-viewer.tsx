@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 import { Button } from '~/components/shadcn/ui/button'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 interface ImageFileViewerProps {
   imageUrl: string
@@ -14,7 +15,13 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageError, setImageError] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
   const isValid = isValidFileUrl(imageUrl)
+
+  useEffect(() => {
+    setImageLoaded(false)
+    setImageError(false)
+  }, [imageUrl])
 
   const handleZoomIn = useCallback(() => {
     transformWrapperRef.current?.zoomIn()
@@ -78,6 +85,11 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
       </div>
 
       <div className="flex-1 relative min-h-0">
+        {!imageLoaded && !imageError && (
+          <div className="absolute inset-0 z-[999] flex items-center justify-center">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
         <TransformWrapper
           ref={transformWrapperRef}
           initialScale={1}
@@ -109,6 +121,7 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
                     cursor: 'default',
                     display: 'block',
                   }}
+                  onLoad={() => setImageLoaded(true)}
                   onError={handleImageError}
                 />
               )}

@@ -29,15 +29,25 @@ export function useCurrentItem() {
           }
         : 'skip',
     ),
+    staleTime: Infinity,
     placeholderData: typeAndSlug ? keepPreviousData : undefined,
   })
 
-  const item = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
+  const rawItem = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
+
+  // When keepPreviousData is active, we may have stale data from a different
+  // item while the new query loads. Detect this and treat it as loading.
+  const isStale =
+    rawItem &&
+    typeAndSlug &&
+    (rawItem.type !== typeAndSlug.type || rawItem.slug !== typeAndSlug.slug)
+
+  const item = isStale ? null : rawItem
 
   return {
     item,
     itemType: item?.type,
-    isLoading: typeAndSlug !== null && !item && sidebarItemQuery.isPending,
+    isLoading: typeAndSlug !== null && !item && sidebarItemQuery.isFetching,
     editorSearch,
     hasRequestedItem: typeAndSlug !== null,
   }

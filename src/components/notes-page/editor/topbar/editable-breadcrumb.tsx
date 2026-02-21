@@ -98,6 +98,7 @@ export function EditableName({
     setName(initialName)
     onChange?.(initialName)
     setIsEditing(false)
+    inputRef.current?.blur()
   }, [initialName, onChange])
 
   const innerContent = (
@@ -131,6 +132,7 @@ export function EditableName({
           'absolute inset-0 min-w-0 flex-shrink-0 w-full',
           disabled ? 'cursor-default' : 'cursor-text',
           isEditing ? 'underline' : !disabled && 'hover:underline',
+          !isEditing && 'caret-transparent',
           isSubmitting && 'opacity-50',
         )}
       />

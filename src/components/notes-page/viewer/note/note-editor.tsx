@@ -21,6 +21,7 @@ import type {
   CustomBlockNoteEditor,
 } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { openBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/contexts/BlockNoteContextMenuContext'
 import { isNote } from '~/lib/sidebar-item-utils'
@@ -129,8 +130,8 @@ const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
 
   if (!sync.editor) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Loading…
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     )
   }

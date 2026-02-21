@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
@@ -39,6 +39,8 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
       api.sidebarItems.queries.getAllSidebarItems,
       campaignId ? { campaignId } : 'skip',
     ),
+    placeholderData: keepPreviousData,
+    staleTime: Infinity,
   })
 
   const data: Array<AnySidebarItem> = useMemo(
