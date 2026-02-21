@@ -264,7 +264,6 @@ export const getSidebarItemBySlug = async (
   campaignId: Id<'campaigns'>,
   type: SidebarItemType,
   slug: string,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -315,14 +314,13 @@ export const getSidebarItemBySlug = async (
     return null
   }
 
-  return await getSidebarItemById(ctx, campaignId, item._id, viewAsPlayerId)
+  return await getSidebarItemById(ctx, campaignId, item._id)
 }
 
 export const getSidebarItemById = async (
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   id: SidebarItemId,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(
     ctx,
@@ -339,16 +337,16 @@ export const getSidebarItemById = async (
 
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.folders:
-      result = await getFolder(ctx, id as Id<'folders'>, viewAsPlayerId)
+      result = await getFolder(ctx, id as Id<'folders'>)
       break
     case SIDEBAR_ITEM_TYPES.notes:
-      result = await getNote(ctx, id as Id<'notes'>, viewAsPlayerId)
+      result = await getNote(ctx, id as Id<'notes'>)
       break
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      result = await getMap(ctx, id as Id<'gameMaps'>, viewAsPlayerId)
+      result = await getMap(ctx, id as Id<'gameMaps'>)
       break
     case SIDEBAR_ITEM_TYPES.files:
-      result = await getFile(ctx, id as Id<'files'>, viewAsPlayerId)
+      result = await getFile(ctx, id as Id<'files'>)
       break
     default:
       throw new Error(`Unknown item type`)
@@ -358,11 +356,7 @@ export const getSidebarItemById = async (
     return null
   }
 
-  const myPermissionLevel = await getSidebarItemPermissionLevel(
-    ctx,
-    result,
-    viewAsPlayerId,
-  )
+  const myPermissionLevel = await getSidebarItemPermissionLevel(ctx, result)
   if (!hasAtLeastPermissionLevel(myPermissionLevel, PERMISSION_LEVEL.VIEW)) {
     return null
   }

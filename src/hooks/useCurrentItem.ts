@@ -3,11 +3,10 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 
-import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/hooks/useCampaign'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
-export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
+export function useCurrentItem() {
   const { campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
 
@@ -27,7 +26,6 @@ export function useCurrentItem(viewAsPlayerId?: Id<'campaignMembers'>) {
             campaignId,
             type: typeAndSlug.type,
             slug: typeAndSlug.slug,
-            viewAsPlayerId,
           }
         : 'skip',
     ),

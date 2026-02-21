@@ -56,7 +56,6 @@ export const getSidebarItemBySlug = query({
     campaignId: v.id('campaigns'),
     type: sidebarItemTypeValidator,
     slug: v.string(),
-    viewAsPlayerId: v.optional(v.id('campaignMembers')),
   },
   returns: v.union(anySidebarItemWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
@@ -65,7 +64,6 @@ export const getSidebarItemBySlug = query({
       args.campaignId,
       args.type,
       args.slug,
-      args.viewAsPlayerId,
     )
   },
 })

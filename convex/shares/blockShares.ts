@@ -10,43 +10,37 @@ import {
   removeBlockIfNotNeeded,
   updateBlock,
 } from '../blocks/blocks'
-import { PERMISSION_STATUS, SHARE_STATUS } from './types'
+import { PERMISSION_LEVEL, SHARE_STATUS } from './types'
 import type { Ctx } from '../common/types'
 import type { Block } from '../blocks/types'
-import type { BlockShare, PermissionStatus, ShareStatus } from './types'
+import type { BlockShare, PermissionLevel, ShareStatus } from './types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
 
-export async function getBlockPermissionStatus(
+export async function getBlockPermissionLevel(
   ctx: Ctx,
   block: Block,
-  viewAsPlayerId?: Id<'campaignMembers'>,
-): Promise<PermissionStatus> {
+): Promise<PermissionLevel> {
   const { campaignWithMembership } = await getCampaignMembership(ctx, {
     campaignId: block.campaignId,
   })
 
   if (!campaignWithMembership) {
-    return PERMISSION_STATUS.NO_ACCESS
+    return PERMISSION_LEVEL.NONE
   }
 
-  let checkId = campaignWithMembership.member._id
+  const checkId = campaignWithMembership.member._id
 
-  // DMs can choose to view as a specific player
   if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
-    if (!viewAsPlayerId) {
-      return PERMISSION_STATUS.EDIT // DMs see all blocks
-    } else {
-      checkId = viewAsPlayerId // Check permissions for specific player
-    }
+    return PERMISSION_LEVEL.EDIT
   }
 
   const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   switch (shareStatus) {
     case SHARE_STATUS.ALL_SHARED:
-      return PERMISSION_STATUS.VIEW
+      return PERMISSION_LEVEL.VIEW
     case SHARE_STATUS.INDIVIDUALLY_SHARED: {
       const isShared = await isBlockSharedWithMember(
         ctx,
@@ -54,24 +48,19 @@ export async function getBlockPermissionStatus(
         block._id,
         checkId,
       )
-      return isShared ? PERMISSION_STATUS.VIEW : PERMISSION_STATUS.NO_ACCESS
+      return isShared ? PERMISSION_LEVEL.VIEW : PERMISSION_LEVEL.NONE
     }
     case SHARE_STATUS.NOT_SHARED:
-      return PERMISSION_STATUS.NO_ACCESS
+      return PERMISSION_LEVEL.NONE
   }
 }
 
 export async function enforceBlockSharePermissionsOrNull(
   ctx: Ctx,
   block: Block,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<Block | null> {
-  const permissionStatus = await getBlockPermissionStatus(
-    ctx,
-    block,
-    viewAsPlayerId,
-  )
-  if (permissionStatus === PERMISSION_STATUS.NO_ACCESS) {
+  const permissionLevel = await getBlockPermissionLevel(ctx, block)
+  if (permissionLevel === PERMISSION_LEVEL.NONE) {
     return null
   }
 

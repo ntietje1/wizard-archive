@@ -1,3 +1,4 @@
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type { PermissionLevel } from 'convex/shares/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -58,4 +59,45 @@ export function resolvePermissionLevel(
   }
 
   return { level: PERMISSION_LEVEL.NONE }
+}
+
+/**
+ * Check whether a specific campaign member has at least the required
+ * permission level on an item, using client-side share/hierarchy data.
+ */
+export function memberHasAtLeastPermission(
+  item: AnySidebarItem,
+  memberId: Id<'campaignMembers'>,
+  allItemsMap: Map<SidebarItemId, AnySidebarItem>,
+  requiredLevel: PermissionLevel,
+): boolean {
+  const { level } = resolvePermissionLevel(item, memberId, allItemsMap)
+  return hasAtLeastPermissionLevel(level, requiredLevel)
+}
+
+/**
+ * Unified permission check that handles DM / view-as / player branching.
+ * - DM without view-as: always has permission
+ * - DM with view-as: checks viewed player's resolved permission
+ * - Regular player: checks their own myPermissionLevel from the backend
+ */
+export function effectiveHasAtLeastPermission(
+  item: AnySidebarItem,
+  requiredLevel: PermissionLevel,
+  opts: {
+    isDm: boolean | undefined
+    viewAsPlayerId: Id<'campaignMembers'> | null | undefined
+    allItemsMap: Map<SidebarItemId, AnySidebarItem>
+  },
+): boolean {
+  if (opts.isDm && !opts.viewAsPlayerId) return true
+  if (opts.isDm && opts.viewAsPlayerId) {
+    return memberHasAtLeastPermission(
+      item,
+      opts.viewAsPlayerId,
+      opts.allItemsMap,
+      requiredLevel,
+    )
+  }
+  return hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)
 }

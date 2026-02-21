@@ -15,7 +15,6 @@ import type { Folder, FolderWithContent } from './types'
 export const getFolder = async (
   ctx: Ctx,
   folderId: Id<'folders'>,
-  _viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<FolderWithContent | null> => {
   const rawFolder = await ctx.db.get(folderId)
   if (!rawFolder) return null

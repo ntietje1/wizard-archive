@@ -1,16 +1,19 @@
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { getSidebarItemAncestors } from '../folders/folders'
 import {
+  getBlockPermissionLevel,
+  getBlockSharesForBlock,
+} from '../shares/blockShares'
+import {
   getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
-  hasEditPermission,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import type { Id } from '../_generated/dataModel'
+import { SHARE_STATUS } from '../shares/types'
 import type { QueryCtx } from '../_generated/server'
-import type { Note, NoteFromDb, NoteWithContent } from './types'
+import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from './types'
 
 export const enhanceNote = async (
   ctx: QueryCtx,
@@ -44,24 +47,34 @@ export const enhanceNote = async (
 export const enhanceNoteWithContent = async (
   ctx: QueryCtx,
   note: Note,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent> => {
-  const canEdit = await hasEditPermission(ctx, note)
-
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, note.campaignId, note.parentId),
-    getTopLevelBlocksByNote(
-      ctx,
-      note._id,
-      note.campaignId,
-      viewAsPlayerId,
-      canEdit,
-    ),
+    getTopLevelBlocksByNote(ctx, note._id, note.campaignId),
   ])
+
+  const blockMeta: Record<string, BlockMeta> = {}
+  await Promise.all(
+    topLevelBlocks.map(async (block) => {
+      const [myPermissionLevel, blockShares] = await Promise.all([
+        getBlockPermissionLevel(ctx, block),
+        block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
+          ? getBlockSharesForBlock(ctx, note.campaignId, block._id)
+          : Promise.resolve([]),
+      ])
+      blockMeta[block.blockId] = {
+        myPermissionLevel,
+        shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+        sharedWith: blockShares.map((s) => s.campaignMemberId),
+      }
+    }),
+  )
+
   const content = topLevelBlocks.map((block) => block.content)
   return {
     ...note,
     content,
+    blockMeta,
     ancestors,
   }
 }

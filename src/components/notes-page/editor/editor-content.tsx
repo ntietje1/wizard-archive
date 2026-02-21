@@ -18,9 +18,7 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function EditorContent() {
-  const { viewAsPlayerId } = useEditorMode()
-  const { item, editorSearch, isLoading, hasRequestedItem } =
-    useCurrentItem(viewAsPlayerId)
+  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
 
   if (isLoading) {
     return (

@@ -142,7 +142,6 @@ export const updateNote = async (
 export const getNote = async (
   ctx: Ctx,
   noteId: Id<'notes'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
   if (!rawNote) return null
@@ -150,7 +149,7 @@ export const getNote = async (
   const note = await enhanceSidebarItem(ctx, rawNote)
   const hasPermission = await hasViewPermission(ctx, note)
   if (!hasPermission) return null
-  return enhanceNoteWithContent(ctx, note, viewAsPlayerId)
+  return enhanceNoteWithContent(ctx, note)
 }
 
 export async function deleteNote(

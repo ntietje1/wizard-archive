@@ -24,7 +24,7 @@ import type { SidebarDragData } from '~/lib/dnd-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
-import { resolvePermissionLevel } from '~/lib/permission-utils'
+import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useMapView } from '~/hooks/useMapView'
@@ -279,34 +279,33 @@ export function MapViewer({
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap: allItemsMap } = useAllSidebarItems()
-  const isViewingAsPlayer = isDm && viewAsPlayerId !== undefined
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap }
 
-  // DMs see all pins (hidden ones are dimmed); players and "view as player" only see visible pins
+  // Users with edit access see all pins (hidden ones are dimmed); view-only users only see visible pins
+  const canEditMap = effectiveHasAtLeastPermission(
+    map,
+    PERMISSION_LEVEL.EDIT,
+    permOpts,
+  )
+
   const pins = useMemo(
     () =>
-      isDm && !isViewingAsPlayer
+      canEditMap
         ? map.pins
         : map.pins.filter((pin) => pin.visible === true),
-    [map.pins, isDm, isViewingAsPlayer],
+    [map.pins, canEditMap],
   )
 
   const isPinGhost = useCallback(
     (pin: MapPinWithItem): boolean => {
       if (!pin.item) return true
-      if (isViewingAsPlayer) {
-        const { level: playerLevel } = resolvePermissionLevel(
-          pin.item,
-          viewAsPlayerId,
-          allItemsMap,
-        )
-        return !hasAtLeastPermissionLevel(playerLevel, PERMISSION_LEVEL.VIEW)
-      }
-      return !hasAtLeastPermissionLevel(
-        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+      return !effectiveHasAtLeastPermission(
+        pin.item,
         PERMISSION_LEVEL.VIEW,
+        permOpts,
       )
     },
-    [isViewingAsPlayer, viewAsPlayerId, allItemsMap],
+    [permOpts],
   )
 
   const [savedTransform, setSavedTransform] =

@@ -1,9 +1,9 @@
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
+import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
@@ -13,21 +13,25 @@ import { cn } from '~/lib/shadcn/utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, isLoading, hasRequestedItem } = useCurrentItem()
-  const { item: viewAsItem } = useCurrentItem(viewAsPlayerId)
+  const { itemsMap } = useAllSidebarItems()
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { campaignWithMembership } = useCampaign()
+  const { isDm, campaignWithMembership } = useCampaign()
   const campaignId = campaignWithMembership.data?.campaign._id
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
+
   const canRename =
     item &&
-    hasAtLeastPermissionLevel(
-      item.myPermissionLevel,
+    effectiveHasAtLeastPermission(
+      item,
       PERMISSION_LEVEL.FULL_ACCESS,
+      permOpts,
     )
 
   const handleRename = async (newName: string) => {
@@ -36,7 +40,10 @@ export function FileTopbar() {
   }
 
   const defaultName = defaultItemName(item)
-  const isNotSharedWithPlayer = item && !viewAsItem
+  const isNotSharedWithPlayer =
+    item &&
+    viewAsPlayerId &&
+    !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem
 
   if (isLoading) {

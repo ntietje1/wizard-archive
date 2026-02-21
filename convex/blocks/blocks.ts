@@ -1,5 +1,4 @@
 import { getNote } from '../notes/notes'
-import { enforceBlockSharePermissionsOrNull } from '../shares/blockShares'
 import { requireEditPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SHARE_STATUS } from '../shares/types'
@@ -51,8 +50,6 @@ export async function getTopLevelBlocksByNote(
   ctx: Ctx,
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
-  viewAsPlayerId?: Id<'campaignMembers'>,
-  skipBlockFiltering?: boolean,
 ): Promise<Array<Block>> {
   const blocks = await ctx.db
     .query('blocks')
@@ -61,21 +58,8 @@ export async function getTopLevelBlocksByNote(
     )
     .collect()
 
-  const topLevelBlocks = blocks.filter((block) => block.isTopLevel)
-
-  // Players with edit or full_access see all blocks (no block-share filtering)
-  if (skipBlockFiltering) {
-    return topLevelBlocks.sort((a, b) => (a.position || 0) - (b.position || 0))
-  }
-
-  const permittedBlocks = await Promise.all(
-    topLevelBlocks.map((block) =>
-      enforceBlockSharePermissionsOrNull(ctx, block, viewAsPlayerId),
-    ),
-  )
-
-  return permittedBlocks
-    .filter((block): block is Block => block !== null)
+  return blocks
+    .filter((block) => block.isTopLevel)
     .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 

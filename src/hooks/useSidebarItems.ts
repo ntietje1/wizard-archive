@@ -4,16 +4,15 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
+import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/hooks/useCampaign'
-import { resolvePermissionLevel } from '~/lib/permission-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 
 export interface AllSidebarItemsValue {
@@ -156,19 +155,9 @@ export const useFilteredSidebarItems = () => {
   const allItems = useAllSidebarItems()
 
   const filteredData = useMemo(() => {
-    if (isDm && !viewAsPlayerId) return allItems.data
-    if (isDm && viewAsPlayerId) {
-      return allItems.data.filter((item) => {
-        const { level: playerLevel } = resolvePermissionLevel(
-          item,
-          viewAsPlayerId,
-          allItems.itemsMap,
-        )
-        return hasAtLeastPermissionLevel(playerLevel, PERMISSION_LEVEL.VIEW)
-      })
-    }
+    const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
     return allItems.data.filter((item) =>
-      hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.VIEW),
+      effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
     )
   }, [allItems.data, allItems.itemsMap, isDm, viewAsPlayerId])
 

@@ -62,12 +62,3 @@ export const SHARE_STATUS = {
 
 export type ShareStatus = (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
 
-// Block-specific permission status (sidebar items use PermissionLevel instead)
-export const PERMISSION_STATUS = {
-  NO_ACCESS: 'no_access',
-  VIEW: 'view',
-  EDIT: 'edit',
-} as const
-
-export type PermissionStatus =
-  (typeof PERMISSION_STATUS)[keyof typeof PERMISSION_STATUS]
