@@ -4,6 +4,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types'
@@ -12,10 +13,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/hooks/useCampaign'
-import {
-  hasAtLeastPermissionLevel,
-  resolvePermissionLevel,
-} from '~/lib/permission-utils'
+import { resolvePermissionLevel } from '~/lib/permission-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 
 export interface AllSidebarItemsValue {
@@ -161,7 +159,7 @@ export const useFilteredSidebarItems = () => {
     if (isDm && !viewAsPlayerId) return allItems.data
     if (isDm && viewAsPlayerId) {
       return allItems.data.filter((item) => {
-        const playerLevel = resolvePermissionLevel(
+        const { level: playerLevel } = resolvePermissionLevel(
           item,
           viewAsPlayerId,
           allItems.itemsMap,

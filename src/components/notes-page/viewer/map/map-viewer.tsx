@@ -294,7 +294,7 @@ export function MapViewer({
     (pin: MapPinWithItem): boolean => {
       if (!pin.item) return true
       if (isViewingAsPlayer) {
-        const playerLevel = resolvePermissionLevel(
+        const { level: playerLevel } = resolvePermissionLevel(
           pin.item,
           viewAsPlayerId,
           allItemsMap,
