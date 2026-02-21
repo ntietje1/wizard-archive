@@ -7,7 +7,6 @@ import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type {
   GameMap,
@@ -52,7 +51,6 @@ export const enhanceGameMap = async (
 const enhanceMapPin = async (
   ctx: QueryCtx,
   pin: MapPin,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
   const item = await ctx.db.get(pin.itemId)
   if (item) {
@@ -60,18 +58,6 @@ const enhanceMapPin = async (
       ctx,
       item as AnySidebarItemFromDb,
     )
-    // If viewing as a player, override myPermissionLevel to reflect their access
-    if (viewAsPlayerId) {
-      const playerPermission = await getSidebarItemPermissionLevel(
-        ctx,
-        enhancedItem,
-        viewAsPlayerId,
-      )
-      return {
-        ...pin,
-        item: { ...enhancedItem, myPermissionLevel: playerPermission },
-      }
-    }
     return {
       ...pin,
       item: enhancedItem,
@@ -83,7 +69,6 @@ const enhanceMapPin = async (
 export const enhanceGameMapWithContent = async (
   ctx: QueryCtx,
   gameMap: GameMap,
-  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent> => {
   const ancestors = await getSidebarItemAncestors(
     ctx,
@@ -97,9 +82,7 @@ export const enhanceGameMapWithContent = async (
     .collect()
 
   const pins = (
-    await Promise.all(
-      rawPins.map((pin) => enhanceMapPin(ctx, pin, viewAsPlayerId)),
-    )
+    await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, pin)))
   ).filter((pin): pin is MapPinWithItem => pin !== null)
 
   return {

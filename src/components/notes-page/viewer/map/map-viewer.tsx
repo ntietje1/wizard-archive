@@ -23,6 +23,8 @@ import type { EditorContextMenuRef } from '~/components/context-menu/components/
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { resolvePermissionLevel } from '~/lib/permission-utils'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useMapView } from '~/hooks/useMapView'
@@ -137,6 +139,7 @@ function MapImageContextMenuWrapper({
 
 interface MapPinProps {
   pin: MapPinWithItem
+  isGhost: boolean
   isHovered: boolean
   isDragging: boolean
   isInMoveMode: boolean
@@ -148,6 +151,7 @@ interface MapPinProps {
 
 function MapPin({
   pin,
+  isGhost,
   isHovered,
   isDragging,
   isInMoveMode,
@@ -156,13 +160,7 @@ function MapPin({
   onContextMenu,
   onDragStart,
 }: MapPinProps) {
-  const hasViewAccess = pin.item
-    ? hasAtLeastPermissionLevel(
-        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-        PERMISSION_LEVEL.VIEW,
-      )
-    : false
-  const ghost = !pin.item || !hasViewAccess
+  const ghost = isGhost
   const visibleItem = ghost ? undefined : pin.item
   const Icon = getSidebarItemIcon(visibleItem)
   const color = ghost
@@ -280,6 +278,7 @@ export function MapViewer({
 
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
+  const { itemsMap: allItemsMap } = useAllSidebarItems()
   const isViewingAsPlayer = isDm && viewAsPlayerId !== undefined
 
   // DMs see all pins (hidden ones are dimmed); players and "view as player" only see visible pins
@@ -289,6 +288,25 @@ export function MapViewer({
         ? map.pins
         : map.pins.filter((pin) => pin.visible === true),
     [map.pins, isDm, isViewingAsPlayer],
+  )
+
+  const isPinGhost = useCallback(
+    (pin: MapPinWithItem): boolean => {
+      if (!pin.item) return true
+      if (isViewingAsPlayer) {
+        const playerLevel = resolvePermissionLevel(
+          pin.item,
+          viewAsPlayerId,
+          allItemsMap,
+        )
+        return !hasAtLeastPermissionLevel(playerLevel, PERMISSION_LEVEL.VIEW)
+      }
+      return !hasAtLeastPermissionLevel(
+        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+        PERMISSION_LEVEL.VIEW,
+      )
+    },
+    [isViewingAsPlayer, viewAsPlayerId, allItemsMap],
   )
 
   const [savedTransform, setSavedTransform] =
@@ -862,6 +880,7 @@ export function MapViewer({
                           <MapPin
                             key={pin._id}
                             pin={pin}
+                            isGhost={isPinGhost(pin)}
                             isHovered={hoveredPinId === pin._id}
                             isDragging={isDraggingThis}
                             isInMoveMode={isInMoveMode}

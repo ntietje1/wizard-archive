@@ -20,7 +20,7 @@ export const getMap = async (
   const map = await enhanceSidebarItem(ctx, rawMap)
   const hasPermission = await hasViewPermission(ctx, map)
   if (!hasPermission) return null
-  return enhanceGameMapWithContent(ctx, map, viewAsPlayerId)
+  return enhanceGameMapWithContent(ctx, map)
 }
 
 export const deleteMap = async (
