@@ -291,6 +291,25 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       [convex],
     ),
 
+    togglePinVisibility: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.activePin) return
+
+        const newVisible = ctx.activePin.visible !== true
+        try {
+          await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
+            mapPinId: ctx.activePin._id,
+            visible: newVisible,
+          })
+          toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
+        } catch (error) {
+          console.error('Failed to toggle pin visibility:', error)
+          toast.error('Failed to toggle pin visibility')
+        }
+      },
+      [convex],
+    ),
+
     moveMapPin: useCallback((ctx: MenuContext) => {
       if (!ctx.activePin) return
 

@@ -34,6 +34,7 @@ export type MapPin = {
   itemId: SidebarItemId
   x: number
   y: number
+  visible?: boolean
   updatedAt: number
 }
 

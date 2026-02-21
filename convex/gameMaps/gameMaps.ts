@@ -12,7 +12,7 @@ import type { GameMapFromDb, GameMapWithContent } from './types'
 export const getMap = async (
   ctx: Ctx,
   mapId: Id<'gameMaps'>,
-  _viewAsPlayerId?: Id<'campaignMembers'>,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
   if (!rawMap) return null

@@ -29,6 +29,7 @@ export const mapPinTableFields = {
   itemId: sidebarItemIdValidator,
   x: v.number(),
   y: v.number(),
+  visible: v.optional(v.boolean()),
   updatedAt: v.number(),
 }
 
