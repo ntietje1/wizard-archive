@@ -244,6 +244,7 @@ export const createItemPin = mutation({
       itemId: args.itemId,
       x: args.x,
       y: args.y,
+      visible: false,
       updatedAt: Date.now(),
     })
   },
@@ -273,6 +274,35 @@ export const updateItemPin = mutation({
     await ctx.db.patch(args.mapPinId, {
       x: args.x,
       y: args.y,
+      updatedAt: Date.now(),
+    })
+
+    return args.mapPinId
+  },
+})
+
+export const updatePinVisibility = mutation({
+  args: {
+    mapPinId: v.id('mapPins'),
+    visible: v.boolean(),
+  },
+  returns: v.id('mapPins'),
+  handler: async (ctx, args): Promise<Id<'mapPins'>> => {
+    const pin = await ctx.db.get(args.mapPinId)
+    if (!pin) {
+      throw new Error('Pin not found')
+    }
+
+    const rawMap = await ctx.db.get(pin.mapId)
+    if (!rawMap) {
+      throw new Error('Map not found')
+    }
+
+    const map = await enhanceSidebarItem(ctx, rawMap)
+    await requireEditPermission(ctx, map)
+
+    await ctx.db.patch(args.mapPinId, {
+      visible: args.visible,
       updatedAt: Date.now(),
     })
 

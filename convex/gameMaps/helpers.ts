@@ -2,7 +2,6 @@ import { getSidebarItemAncestors } from '../folders/folders'
 import {
   getSidebarItemPermissionLevel,
   getSidebarItemSharesForItem,
-  hasViewPermission,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
 import { requireCampaignMembership } from '../campaigns/campaigns'
@@ -53,6 +52,7 @@ export const enhanceGameMap = async (
 const enhanceMapPin = async (
   ctx: QueryCtx,
   pin: MapPin,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<MapPinWithItem | null> => {
   const item = await ctx.db.get(pin.itemId)
   if (item) {
@@ -60,6 +60,18 @@ const enhanceMapPin = async (
       ctx,
       item as AnySidebarItemFromDb,
     )
+    // If viewing as a player, override myPermissionLevel to reflect their access
+    if (viewAsPlayerId) {
+      const playerPermission = await getSidebarItemPermissionLevel(
+        ctx,
+        enhancedItem,
+        viewAsPlayerId,
+      )
+      return {
+        ...pin,
+        item: { ...enhancedItem, myPermissionLevel: playerPermission },
+      }
+    }
     return {
       ...pin,
       item: enhancedItem,
@@ -68,22 +80,10 @@ const enhanceMapPin = async (
   return null
 }
 
-const enforceMapPinPermissions = async (
-  ctx: QueryCtx,
-  pin: MapPinWithItem | null,
-): Promise<MapPinWithItem | null> => {
-  if (!pin || !pin.item) return null
-  const canSee = await hasViewPermission(ctx, pin.item)
-  if (!canSee) {
-    const { item: _, ...pinWithoutItem } = pin
-    return pinWithoutItem
-  }
-  return pin
-}
-
 export const enhanceGameMapWithContent = async (
   ctx: QueryCtx,
   gameMap: GameMap,
+  viewAsPlayerId?: Id<'campaignMembers'>,
 ): Promise<GameMapWithContent> => {
   const ancestors = await getSidebarItemAncestors(
     ctx,
@@ -96,12 +96,9 @@ export const enhanceGameMapWithContent = async (
     .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
     .collect()
 
-  const enhancedPins = await Promise.all(
-    rawPins.map((pin) => enhanceMapPin(ctx, pin)),
-  )
   const pins = (
     await Promise.all(
-      enhancedPins.map((pin) => enforceMapPinPermissions(ctx, pin)),
+      rawPins.map((pin) => enhanceMapPin(ctx, pin, viewAsPlayerId)),
     )
   ).filter((pin): pin is MapPinWithItem => pin !== null)
 

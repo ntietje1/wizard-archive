@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation } from '@tanstack/react-query'
 import {
@@ -12,6 +12,8 @@ import { Image, Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/baseTypes'
+import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
@@ -19,9 +21,10 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
 import type { SidebarDragData } from '~/lib/dnd-utils'
+import { useEditorMode } from '~/hooks/useEditorMode'
+import { useCampaign } from '~/hooks/useCampaign'
 import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
-import { useEditorMode } from '~/hooks/useEditorMode'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
@@ -86,11 +89,18 @@ function MapPinContextMenuWrapper({
 
   if (!pin) return null
 
+  const canViewItem = pin.item
+    ? hasAtLeastPermissionLevel(
+        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+        PERMISSION_LEVEL.VIEW,
+      )
+    : false
+
   return (
     <EditorContextMenu
       ref={contextMenuRef}
       viewContext="map-view"
-      item={pin.item}
+      item={canViewItem ? pin.item : undefined}
       className="absolute inset-0 pointer-events-none"
       onClose={handleMenuClose}
       onDialogOpen={handleDialogOpen}
@@ -146,12 +156,23 @@ function MapPin({
   onContextMenu,
   onDragStart,
 }: MapPinProps) {
-  const ghost = !pin.item
-  const Icon = getSidebarItemIcon(pin.item)
+  const hasViewAccess = pin.item
+    ? hasAtLeastPermissionLevel(
+        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+        PERMISSION_LEVEL.VIEW,
+      )
+    : false
+  const ghost = !pin.item || !hasViewAccess
+  const visibleItem = ghost ? undefined : pin.item
+  const Icon = getSidebarItemIcon(visibleItem)
   const color = ghost
     ? '#9ca3af'
-    : validateHexColorOrDefault(pin.item?.color, DEFAULT_ITEM_COLOR)
-  const itemName = ghost ? '???' : pin.item?.name || defaultItemName(pin.item)
+    : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
+  const isHidden = pin.visible !== true
+  const baseName = ghost
+    ? '???'
+    : visibleItem?.name || defaultItemName(visibleItem)
+  const itemName = isHidden ? `${baseName} (hidden)` : baseName
 
   const hoverScale = isHovered && !isDragging ? 1.2 : 1
 
@@ -162,6 +183,7 @@ function MapPin({
         'absolute pointer-events-auto cursor-pointer',
         isHovered && !isDragging && 'z-20',
         isDragging && 'z-30 opacity-70',
+        isHidden && !isDragging && 'opacity-60',
       )}
       style={{
         left: `${pin.x}%`,
@@ -256,6 +278,19 @@ export function MapViewer({
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
 
+  const { isDm } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
+  const isViewingAsPlayer = isDm && viewAsPlayerId !== undefined
+
+  // DMs see all pins (hidden ones are dimmed); players and "view as player" only see visible pins
+  const pins = useMemo(
+    () =>
+      isDm && !isViewingAsPlayer
+        ? map.pins
+        : map.pins.filter((pin) => pin.visible === true),
+    [map.pins, isDm, isViewingAsPlayer],
+  )
+
   const [savedTransform, setSavedTransform] =
     usePersistedState<MapTransformState>(
       `map-transform-${map._id}`,
@@ -296,13 +331,6 @@ export function MapViewer({
   } | null>(null)
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
-
-  const { editorMode } = useEditorMode()
-
-  const pins =
-    editorMode === 'viewer'
-      ? map.pins.filter((pin) => pin.item !== undefined)
-      : map.pins
 
   const createItemPinMutation = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.createItemPin),
@@ -633,7 +661,13 @@ export function MapViewer({
       if (justFinishedDraggingRef.current === pin._id) {
         return
       }
-      if (!pin.item) {
+      const canView = pin.item
+        ? hasAtLeastPermissionLevel(
+            pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+            PERMISSION_LEVEL.VIEW,
+          )
+        : false
+      if (!pin.item || !canView) {
         toast.error('You do not have permission to view this item')
         return
       }

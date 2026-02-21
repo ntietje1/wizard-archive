@@ -3,6 +3,7 @@ import {
   Bookmark,
   Download,
   Eye,
+  EyeOff,
   File,
   FileEdit,
   FilePlus,
@@ -61,6 +62,7 @@ export type ActionHandlers = {
 
   removeMapPin: (ctx: MenuContext) => void
   moveMapPin: (ctx: MenuContext) => void
+  togglePinVisibility: (ctx: MenuContext) => void
 
   startSession: (ctx: MenuContext) => void
   endSession: (ctx: MenuContext) => void
@@ -324,6 +326,16 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         !p.isPinnedOnActiveMap(ctx) &&
         p.isNotActiveMap(ctx),
       action: actions.pinToMap,
+    },
+    {
+      id: 'toggle-pin-visibility',
+      label: (ctx) =>
+        ctx.activePin?.visible === true ? 'Hide Pin' : 'Show Pin',
+      icon: EyeOff,
+      group: 'pin-actions',
+      priority: 49,
+      shouldShow: (ctx) => p.isDm(ctx) && p.hasPinContext(ctx),
+      action: actions.togglePinVisibility,
     },
     {
       id: 'move-map-pin',
