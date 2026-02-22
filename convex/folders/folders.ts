@@ -1,10 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { deleteNote } from '../notes/notes'
+import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  hasViewPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
+import { hasViewPermission } from '../shares/itemShares'
 import { enhanceFolderWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -78,9 +76,26 @@ export async function deleteFolder(
       await ctx.db.delete(pin._id)
     }
 
+    await deleteItemSharesAndBookmarks(ctx, folder.campaignId, childMap._id)
     await ctx.db.delete(childMap._id)
   }
 
+  const childFiles = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childFile of childFiles) {
+    if (childFile.storageId) {
+      await ctx.storage.delete(childFile.storageId)
+    }
+    await deleteItemSharesAndBookmarks(ctx, folder.campaignId, childFile._id)
+    await ctx.db.delete(childFile._id)
+  }
+
+  await deleteItemSharesAndBookmarks(ctx, folder.campaignId, folderId)
   await ctx.db.delete(folderId)
 
   return folderId

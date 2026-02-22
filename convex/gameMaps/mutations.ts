@@ -13,6 +13,7 @@ import {
 } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
+import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   requireEditPermission,
@@ -218,6 +219,7 @@ export const deleteMap = campaignMutation({
       await ctx.db.delete(pin._id)
     }
 
+    await deleteItemSharesAndBookmarks(ctx, args.campaignId, args.mapId)
     await ctx.db.delete(args.mapId)
     return args.mapId
   },

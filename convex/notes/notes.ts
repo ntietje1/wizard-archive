@@ -1,4 +1,5 @@
 import { deleteBlocksByNote } from '../blocks/blocks'
+import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
   hasViewPermission,
@@ -35,6 +36,7 @@ export async function deleteNote(
   await requireFullAccessPermission(ctx, note)
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
+  await deleteItemSharesAndBookmarks(ctx, note.campaignId, noteId)
   await ctx.db.delete(noteId)
 
   return noteId

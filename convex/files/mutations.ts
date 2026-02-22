@@ -12,6 +12,7 @@ import {
   findUniqueSlug,
   resolveSlugBasis,
 } from '../common/slug'
+import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { requireFullAccessPermission } from '../shares/itemShares'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -209,6 +210,7 @@ export const deleteFile = campaignMutation({
       await ctx.storage.delete(rawFile.storageId)
     }
 
+    await deleteItemSharesAndBookmarks(ctx, args.campaignId, args.fileId)
     await ctx.db.delete(args.fileId)
     return args.fileId
   },
