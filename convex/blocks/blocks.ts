@@ -37,7 +37,10 @@ export async function getTopLevelBlocksByNote(
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId).eq('isTopLevel', true),
+      q
+        .eq('campaignId', campaignId)
+        .eq('noteId', noteId)
+        .eq('isTopLevel', true),
     )
     .collect()
 
@@ -72,7 +75,10 @@ export async function saveTopLevelBlocksForNote(
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId).eq('isTopLevel', true),
+      q
+        .eq('campaignId', campaignId)
+        .eq('noteId', noteId)
+        .eq('isTopLevel', true),
     )
     .collect()
 

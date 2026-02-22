@@ -20,19 +20,27 @@ export const getAllSidebarItems = async (
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db
       .query('folders')
-      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId),
+      )
       .collect(),
     ctx.db
       .query('notes')
-      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId),
+      )
       .collect(),
     ctx.db
       .query('gameMaps')
-      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId),
+      )
       .collect(),
     ctx.db
       .query('files')
-      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId),
+      )
       .collect(),
   ])
 
@@ -43,7 +51,9 @@ export const getAllSidebarItems = async (
     ...(files as Array<AnySidebarItemFromDb>),
   ]
 
-  return await Promise.all(allItems.map((item) => enhanceSidebarItem(ctx, item)))
+  return await Promise.all(
+    allItems.map((item) => enhanceSidebarItem(ctx, item)),
+  )
 }
 
 export const getSidebarItemsByParent = async (
@@ -85,7 +95,9 @@ export const getSidebarItemsByParent = async (
     ...(files as Array<AnySidebarItemFromDb>),
   ]
 
-  return await Promise.all(allItems.map((item) => enhanceSidebarItem(ctx, item)))
+  return await Promise.all(
+    allItems.map((item) => enhanceSidebarItem(ctx, item)),
+  )
 }
 
 export const getSidebarItemById = async (

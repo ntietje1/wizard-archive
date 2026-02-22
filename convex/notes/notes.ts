@@ -22,7 +22,12 @@ export async function deleteNote(
   noteId: Id<'notes'>,
 ): Promise<Id<'notes'>> {
   const rawNote = await ctx.db.get(noteId)
-  const note = await requireItemAccess(ctx, ctx.campaign._id, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
+  const note = await requireItemAccess(
+    ctx,
+    ctx.campaign._id,
+    rawNote,
+    PERMISSION_LEVEL.FULL_ACCESS,
+  )
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
   await deleteItemSharesAndBookmarks(ctx, note.campaignId, noteId)

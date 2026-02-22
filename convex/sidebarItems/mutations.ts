@@ -38,12 +38,7 @@ export const updateSidebarItem = campaignMutation({
 
     if (args.name !== undefined) {
       patch.name = args.name
-      patch.slug = await validateRename(
-        ctx,
-        args.campaignId,
-        item,
-        args.name,
-      )
+      patch.slug = await validateRename(ctx, args.campaignId, item, args.name)
     }
     if (args.iconName !== undefined) {
       patch.iconName = args.iconName ?? undefined
