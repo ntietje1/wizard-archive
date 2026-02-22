@@ -4,30 +4,17 @@ import {
   getSidebarItemSharesForItem,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import type { QueryCtx } from '../_generated/server'
+import type { CampaignQueryCtx } from '../functions'
 import type { File, FileFromDb, FileWithContent } from './types'
 
 export const enhanceFile = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   file: FileFromDb,
 ): Promise<File> => {
-  const { campaignWithMembership } = await requireCampaignMembership(
-    ctx,
-    { campaignId: file.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
   const [downloadUrl, bookmark, shares, storageMetadata, myPermissionLevel] =
     await Promise.all([
       file.storageId ? ctx.storage.getUrl(file.storageId) : null,
-      getBookmark(
-        ctx,
-        file.campaignId,
-        campaignWithMembership.member._id,
-        file._id,
-      ),
+      getBookmark(ctx, file.campaignId, ctx.membership._id, file._id),
       getSidebarItemSharesForItem(ctx, file.campaignId, file._id),
       file.storageId ? ctx.db.system.get(file.storageId) : null,
       getSidebarItemPermissionLevel(ctx, file),
@@ -44,14 +31,10 @@ export const enhanceFile = async (
 }
 
 export const enhanceFileWithContent = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   file: File,
 ): Promise<FileWithContent> => {
-  const ancestors = await getSidebarItemAncestors(
-    ctx,
-    file.campaignId,
-    file.parentId,
-  )
+  const ancestors = await getSidebarItemAncestors(ctx, file.parentId)
   return {
     ...file,
     ancestors,

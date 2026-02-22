@@ -172,6 +172,7 @@ export function SidebarItemMutationsProvider({
       )
 
       const promise = updateSidebarItemMutation({
+        campaignId: item.campaignId,
         itemId: item._id,
         name: newName,
       }).then(
@@ -222,18 +223,25 @@ export function SidebarItemMutationsProvider({
         switch (item.type) {
           case SIDEBAR_ITEM_TYPES.notes:
             return moveNoteMutation({
+              campaignId: item.campaignId,
               noteId: item._id,
               parentId: newParentId,
             })
           case SIDEBAR_ITEM_TYPES.folders:
             return moveFolderMutation({
+              campaignId: item.campaignId,
               folderId: item._id,
               parentId: newParentId,
             })
           case SIDEBAR_ITEM_TYPES.gameMaps:
-            return moveMapMutation({ mapId: item._id, parentId: newParentId })
+            return moveMapMutation({
+              campaignId: item.campaignId,
+              mapId: item._id,
+              parentId: newParentId,
+            })
           case SIDEBAR_ITEM_TYPES.files:
             return moveFileMutation({
+              campaignId: item.campaignId,
               fileId: item._id,
               parentId: newParentId,
             })
@@ -268,16 +276,28 @@ export function SidebarItemMutationsProvider({
       try {
         switch (item.type) {
           case SIDEBAR_ITEM_TYPES.notes:
-            await deleteNoteMutation({ noteId: item._id })
+            await deleteNoteMutation({
+              campaignId: item.campaignId,
+              noteId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.folders:
-            await deleteFolderMutation({ folderId: item._id })
+            await deleteFolderMutation({
+              campaignId: item.campaignId,
+              folderId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.gameMaps:
-            await deleteMapMutation({ mapId: item._id })
+            await deleteMapMutation({
+              campaignId: item.campaignId,
+              mapId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.files:
-            await deleteFileMutation({ fileId: item._id })
+            await deleteFileMutation({
+              campaignId: item.campaignId,
+              fileId: item._id,
+            })
             break
         }
       } catch {

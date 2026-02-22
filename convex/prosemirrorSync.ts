@@ -8,9 +8,9 @@ import {
 } from './shares/itemShares'
 import { editorSchema } from './notes/editorSpecs'
 import { enhanceSidebarItem } from './sidebarItems/helpers'
+import { buildCampaignMutationCtx, buildCampaignQueryCtx } from './functions'
 import type { Id } from './_generated/dataModel'
-import type { Ctx } from './common/types'
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { CustomBlock } from './notes/editorSpecs'
 
 export const prosemirrorSync = new ProsemirrorSync(components.prosemirrorSync)
@@ -30,20 +30,22 @@ export const EMPTY_PM_DOC = {
   ],
 }
 
-async function checkReadAccess(ctx: Ctx, documentId: string) {
+async function checkReadAccess(ctx: QueryCtx, documentId: string) {
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
-  const note = await enhanceSidebarItem(ctx, noteFromDb)
-  await requireViewPermission(ctx, note)
+  const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
+  const note = await enhanceSidebarItem(campaignCtx, noteFromDb)
+  await requireViewPermission(campaignCtx, note)
 }
 
-async function checkWriteAccess(ctx: Ctx, documentId: string) {
+async function checkWriteAccess(ctx: QueryCtx, documentId: string) {
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
-  const note = await enhanceSidebarItem(ctx, noteFromDb)
-  await requireEditPermission(ctx, note)
+  const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
+  const note = await enhanceSidebarItem(campaignCtx, noteFromDb)
+  await requireEditPermission(campaignCtx, note)
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -71,8 +73,14 @@ const sync = prosemirrorSync.syncApi({
     snapshot: string,
   ) => {
     const noteId = documentId as Id<'notes'>
+    const noteFromDb = await ctx.db.get(noteId)
+    if (!noteFromDb) throw new Error('Note not found')
+    const campaignCtx = await buildCampaignMutationCtx(
+      ctx,
+      noteFromDb.campaignId,
+    )
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(ctx, noteId, blocks)
+    await saveTopLevelBlocksForNote(campaignCtx, noteId, blocks)
   },
 })
 

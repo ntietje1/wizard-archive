@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
+import { campaignQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
 import { getFile as getFileFn } from './files'
 import type { FileWithContent } from './types'
 
-export const getFile = query({
+export const getFile = campaignQuery({
   args: {
     fileId: v.id('files'),
   },

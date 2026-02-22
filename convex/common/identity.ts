@@ -1,5 +1,5 @@
 import type { UserProfile } from '../users/types'
-import type { Ctx } from './types'
+import type { QueryCtx } from '../_generated/server'
 import type { UserIdentity } from 'convex/server'
 
 export type UserIdentityWithProfile = {
@@ -8,7 +8,7 @@ export type UserIdentityWithProfile = {
 }
 
 export async function getUserIdentity(
-  ctx: Ctx,
+  ctx: QueryCtx,
 ): Promise<UserIdentityWithProfile | null> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) return null
@@ -26,7 +26,7 @@ export async function getUserIdentity(
 }
 
 export async function requireUserIdentity(
-  ctx: Ctx,
+  ctx: QueryCtx,
 ): Promise<UserIdentityWithProfile> {
   const result = await getUserIdentity(ctx)
   if (!result) throw new Error('Not authenticated')

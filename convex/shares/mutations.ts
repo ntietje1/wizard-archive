@@ -1,7 +1,5 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import { dmMutation } from '../functions'
 import {
   blockNoteIdValidator,
   blockShareStatusValidator,
@@ -27,9 +25,8 @@ import type { Id } from '../_generated/dataModel'
  * Share a sidebar item with a specific member.
  * Creates or updates an individual share record.
  */
-export const shareSidebarItem = mutation({
+export const shareSidebarItem = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
@@ -37,12 +34,6 @@ export const shareSidebarItem = mutation({
   },
   returns: v.id('sidebarItemShares'),
   handler: async (ctx, args): Promise<Id<'sidebarItemShares'>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
@@ -63,20 +54,13 @@ export const shareSidebarItem = mutation({
  * Unshare a sidebar item from a specific member.
  * Deletes the individual share record.
  */
-export const unshareSidebarItem = mutation({
+export const unshareSidebarItem = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
@@ -97,9 +81,8 @@ export const unshareSidebarItem = mutation({
  * Update the permission level for a specific member's share on a sidebar item.
  * If level is 'none', removes the share. If no share exists for other levels, creates one.
  */
-export const updateSidebarItemSharePermission = mutation({
+export const updateSidebarItemSharePermission = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
@@ -107,12 +90,6 @@ export const updateSidebarItemSharePermission = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
@@ -138,20 +115,13 @@ export const updateSidebarItemSharePermission = mutation({
  * Sets allPermissionLevel on the item directly.
  * Individual share overrides are preserved independently.
  */
-export const setAllPlayersPermission = mutation({
+export const setAllPlayersPermission = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     permissionLevel: v.optional(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item || item.campaignId !== args.campaignId) {
       throw new Error('Sidebar item not found')
@@ -169,20 +139,13 @@ export const setAllPlayersPermission = mutation({
  * Toggle whether a folder passes its share settings to newly created child items.
  * When enabled, new items inherit the folder's allPermissionLevel and individual shares.
  */
-export const setFolderInheritShares = mutation({
+export const setFolderInheritShares = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
     inheritShares: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const folder = await ctx.db.get(args.folderId)
     if (!folder || folder.campaignId !== args.campaignId) {
       throw new Error('Folder not found')
@@ -203,21 +166,14 @@ const blockItemValidator = v.object({
   content: customBlockValidator,
 })
 
-export const setBlocksShareStatus = mutation({
+export const setBlocksShareStatus = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     status: blockShareStatusValidator,
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const note = await ctx.db.get(args.noteId)
     if (!note || note.campaignId !== args.campaignId) {
       throw new Error('Note not found')
@@ -237,21 +193,14 @@ export const setBlocksShareStatus = mutation({
   },
 })
 
-export const shareBlocks = mutation({
+export const shareBlocks = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const note = await ctx.db.get(args.noteId)
     if (!note || note.campaignId !== args.campaignId) {
       throw new Error('Note not found')
@@ -271,21 +220,14 @@ export const shareBlocks = mutation({
   },
 })
 
-export const unshareBlocks = mutation({
+export const unshareBlocks = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     for (const blockNoteId of args.blockNoteIds) {
       await unshareBlockFromMemberHelper(
         ctx,

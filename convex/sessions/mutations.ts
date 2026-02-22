@@ -1,59 +1,66 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import {
-  endCurrentSession as endCurrentSessionHandler,
-  getCurrentSession,
-  getSession,
-  startSession as startSessionHandler,
-} from './sessions'
+import { dmMutation } from '../functions'
+import { getCurrentSession, getSession } from './sessions'
 import type { Doc, Id } from '../_generated/dataModel'
 
-export const startSession = mutation({
+export const startSession = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-    return await startSessionHandler(ctx, args.campaignId, args.name)
+    const campaign = await ctx.db.get(args.campaignId)
+    if (!campaign) {
+      throw new Error('Campaign not found')
+    }
+
+    // End current session if one exists
+    if (campaign.currentSessionId) {
+      const existingSession = await ctx.db.get(campaign.currentSessionId)
+      if (existingSession) {
+        await ctx.db.patch(campaign.currentSessionId, {
+          endedAt: Date.now(),
+          updatedAt: Date.now(),
+        })
+      }
+    }
+
+    const sessionId = await ctx.db.insert('sessions', {
+      campaignId: args.campaignId,
+      name: args.name,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+
+    await ctx.db.patch(args.campaignId, { currentSessionId: sessionId })
+    return sessionId
   },
 })
 
-export const endCurrentSession = mutation({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const endCurrentSession = dmMutation({
+  args: {},
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-    return await endCurrentSessionHandler(ctx, args.campaignId)
+    const currentSession = await getCurrentSession(ctx, args.campaignId)
+    if (!currentSession) {
+      throw new Error('No active session')
+    }
+
+    await ctx.db.patch(currentSession._id, {
+      endedAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+    await ctx.db.patch(args.campaignId, { currentSessionId: undefined })
+    return currentSession._id
   },
 })
 
-export const setCurrentSession = mutation({
+export const setCurrentSession = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sessionId: v.id('sessions'),
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const newSession = await getSession(ctx, args.sessionId)
     if (!newSession || newSession.campaignId !== args.campaignId) {
       throw new Error('Session not found')
@@ -70,7 +77,7 @@ export const setCurrentSession = mutation({
   },
 })
 
-export const updateSession = mutation({
+export const updateSession = dmMutation({
   args: {
     sessionId: v.id('sessions'),
     name: v.optional(v.string()),
@@ -78,24 +85,17 @@ export const updateSession = mutation({
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const session = await ctx.db.get(args.sessionId)
-    if (!session) {
+    if (!session || session.campaignId !== args.campaignId) {
       throw new Error('Session not found')
     }
 
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: session.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
-    const updates: Partial<Doc<'sessions'>> = {
-      updatedAt: Date.now(),
-    }
+    const updates: Partial<Doc<'sessions'>> = {}
     if (args.name !== undefined) {
       updates.name = args.name
     }
 
-    if (Object.keys(updates).length > 1) {
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = Date.now()
       await ctx.db.patch(args.sessionId, updates)
     }
 

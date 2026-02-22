@@ -4,10 +4,8 @@ import {
   getSidebarItemSharesForItem,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import type { QueryCtx } from '../_generated/server'
+import type { CampaignQueryCtx } from '../functions'
 import type {
   GameMap,
   GameMapFromDb,
@@ -18,23 +16,12 @@ import type {
 import type { AnySidebarItemFromDb } from '../sidebarItems/types'
 
 export const enhanceGameMap = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   gameMap: GameMapFromDb,
 ): Promise<GameMap> => {
-  const { campaignWithMembership } = await requireCampaignMembership(
-    ctx,
-    { campaignId: gameMap.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
   const [imageUrl, bookmark, shares, myPermissionLevel] = await Promise.all([
     gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
-    getBookmark(
-      ctx,
-      gameMap.campaignId,
-      campaignWithMembership.member._id,
-      gameMap._id,
-    ),
+    getBookmark(ctx, gameMap.campaignId, ctx.membership._id, gameMap._id),
     getSidebarItemSharesForItem(ctx, gameMap.campaignId, gameMap._id),
     getSidebarItemPermissionLevel(ctx, gameMap),
   ])
@@ -49,7 +36,7 @@ export const enhanceGameMap = async (
 }
 
 const enhanceMapPin = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   pin: MapPin,
 ): Promise<MapPinWithItem | null> => {
   const item = await ctx.db.get(pin.itemId)
@@ -67,14 +54,10 @@ const enhanceMapPin = async (
 }
 
 export const enhanceGameMapWithContent = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   gameMap: GameMap,
 ): Promise<GameMapWithContent> => {
-  const ancestors = await getSidebarItemAncestors(
-    ctx,
-    gameMap.campaignId,
-    gameMap.parentId,
-  )
+  const ancestors = await getSidebarItemAncestors(ctx, gameMap.parentId)
 
   const rawPins: Array<MapPin> = await ctx.db
     .query('mapPins')

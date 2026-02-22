@@ -239,7 +239,10 @@ export function WikiLinkAutocomplete({
     convexQuery(
       api.notes.queries.getNote,
       context?.mode === 'heading' && context.resolvedItem?._id
-        ? { noteId: context.resolvedItem._id as Id<'notes'> }
+        ? {
+            campaignId: context.resolvedItem.campaignId,
+            noteId: context.resolvedItem._id as Id<'notes'>,
+          }
         : 'skip',
     ),
   )

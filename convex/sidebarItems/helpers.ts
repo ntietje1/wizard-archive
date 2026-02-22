@@ -4,10 +4,10 @@ import { enhanceGameMap } from '../gameMaps/helpers'
 import { enhanceNote } from '../notes/helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from './types'
-import type { QueryCtx } from '../_generated/server'
+import type { CampaignQueryCtx } from '../functions'
 
 export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   item: T,
 ): Promise<EnhancedSidebarItem<T>> {
   switch (item.type) {

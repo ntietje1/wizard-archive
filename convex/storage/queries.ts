@@ -1,18 +1,16 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
+import { authQuery } from '../functions'
 
-export const getDownloadUrl = query({
+export const getDownloadUrl = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args): Promise<string | null> => {
-    const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db
       .query('fileStorage')
       .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
+        q.eq('userId', ctx.user.profile._id).eq('storageId', args.storageId),
       )
       .unique()
     if (!fileStorage) {
@@ -22,7 +20,7 @@ export const getDownloadUrl = query({
   },
 })
 
-export const getStorageMetadata = query({
+export const getStorageMetadata = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
@@ -35,11 +33,10 @@ export const getStorageMetadata = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db
       .query('fileStorage')
       .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
+        q.eq('userId', ctx.user.profile._id).eq('storageId', args.storageId),
       )
       .unique()
     if (!fileStorage) {

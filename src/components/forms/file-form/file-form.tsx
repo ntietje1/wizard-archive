@@ -57,7 +57,10 @@ export function FileForm({
   const { navigateToFile } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const file = useQuery(
-    convexQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip'),
+    convexQuery(
+      api.files.queries.getFile,
+      fileId && campaignId ? { campaignId, fileId } : 'skip',
+    ),
   )
 
   const createMutation = useMutation({
@@ -160,6 +163,7 @@ export function FileForm({
         try {
           const previousSlug = file.data?.slug
           const response = await updateMutation.mutateAsync({
+            campaignId: campaignId!,
             fileId,
             name: finalName,
             storageId: finalStorageId,

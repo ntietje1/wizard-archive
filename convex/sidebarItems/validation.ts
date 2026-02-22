@@ -7,7 +7,7 @@ import {
 } from './sharedValidation'
 import type { FolderFromDb } from '../folders/types'
 import type { SidebarItemId } from './baseTypes'
-import type { Ctx } from '../common/types'
+import type { CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type { AnySidebarItem } from './types'
 
@@ -20,7 +20,7 @@ export { validateWikiLinkCompatibleName } from './sharedValidation'
  * Fetches all siblings and delegates to shared checkNameConflict.
  */
 export async function checkUniqueNameUnderParent(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
   name: string | undefined,
@@ -39,7 +39,7 @@ export async function checkUniqueNameUnderParent(
  * Server version uses async ctx.db.get lookups.
  */
 export async function validateNoCircularParent(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   itemId: SidebarItemId,
   newParentId: Id<'folders'> | undefined,
 ): Promise<{ valid: boolean; error?: string }> {
@@ -78,7 +78,7 @@ export async function validateNoCircularParent(
 }
 
 export interface ValidateSidebarItemNameOptions {
-  ctx: Ctx
+  ctx: CampaignQueryCtx
   campaignId: Id<'campaigns'>
   parentId: Id<'folders'> | undefined
   name: string | undefined
@@ -112,7 +112,7 @@ export async function validateSidebarItemName(
 }
 
 export interface ValidateParentChangeOptions {
-  ctx: Ctx
+  ctx: CampaignQueryCtx
   item: AnySidebarItem
   newParentId: Id<'folders'> | undefined
 }

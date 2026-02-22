@@ -3,29 +3,16 @@ import {
   getSidebarItemSharesForItem,
 } from '../shares/itemShares'
 import { getBookmark } from '../bookmarks/bookmarks'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemAncestors } from './folders'
-import type { QueryCtx } from '../_generated/server'
+import type { CampaignQueryCtx } from '../functions'
 import type { Folder, FolderFromDb, FolderWithContent } from './types'
 
 export const enhanceFolder = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   folder: FolderFromDb,
 ): Promise<Folder> => {
-  const { campaignWithMembership } = await requireCampaignMembership(
-    ctx,
-    { campaignId: folder.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
   const [bookmark, shares, myPermissionLevel] = await Promise.all([
-    getBookmark(
-      ctx,
-      folder.campaignId,
-      campaignWithMembership.member._id,
-      folder._id,
-    ),
+    getBookmark(ctx, folder.campaignId, ctx.membership._id, folder._id),
     getSidebarItemSharesForItem(ctx, folder.campaignId, folder._id),
     getSidebarItemPermissionLevel(ctx, folder),
   ])
@@ -39,14 +26,10 @@ export const enhanceFolder = async (
 }
 
 export const enhanceFolderWithContent = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   folder: Folder,
 ): Promise<FolderWithContent> => {
-  const ancestors = await getSidebarItemAncestors(
-    ctx,
-    folder.campaignId,
-    folder.parentId,
-  )
+  const ancestors = await getSidebarItemAncestors(ctx, folder.parentId)
   return {
     ...folder,
     ancestors,

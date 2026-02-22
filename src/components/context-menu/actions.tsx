@@ -279,7 +279,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         if (!ctx.activePin) return
 
         try {
+          if (!campaignId) return
           await convex.mutation(api.gameMaps.mutations.removeItemPin, {
+            campaignId,
             mapPinId: ctx.activePin._id,
           })
           toast.success('Pin removed')
@@ -297,7 +299,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         const newVisible = ctx.activePin.visible !== true
         try {
+          if (!campaignId) return
           await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
+            campaignId,
             mapPinId: ctx.activePin._id,
             visible: newVisible,
           })
@@ -466,9 +470,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const toastId = toast.loading('Preparing download...')
 
         try {
+          if (!campaignId) return
           const { folderName, items } = await convex.query(
             api.folders.queries.getFolderContentsForDownload,
-            { folderId: ctx.item._id },
+            { campaignId, folderId: ctx.item._id },
           )
 
           if (items.length === 0) {

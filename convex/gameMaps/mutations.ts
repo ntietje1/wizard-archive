@@ -1,6 +1,5 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import { campaignMutation } from '../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
@@ -19,12 +18,10 @@ import {
   requireEditPermission,
   requireFullAccessPermission,
 } from '../shares/itemShares'
-import { deleteMap as deleteMapFn } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 
-export const createMap = mutation({
+export const createMap = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
@@ -39,12 +36,6 @@ export const createMap = mutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
@@ -56,11 +47,9 @@ export const createMap = mutation({
       }
       await requireFullAccessPermission(ctx, parentItem)
     } else {
-      await requireCampaignMembership(
-        ctx,
-        { campaignId: args.campaignId },
-        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-      )
+      if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+        throw new Error('Only the DM can create items at the root level')
+      }
     }
 
     await validateSidebarItemName({
@@ -99,7 +88,7 @@ export const createMap = mutation({
   },
 })
 
-export const updateMap = mutation({
+export const updateMap = campaignMutation({
   args: {
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
@@ -116,7 +105,7 @@ export const updateMap = mutation({
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 
@@ -131,7 +120,7 @@ export const updateMap = mutation({
       updates.name = args.name
       await validateSidebarItemName({
         ctx,
-        campaignId: map.campaignId,
+        campaignId: args.campaignId,
         parentId: map.parentId,
         name: args.name,
         excludeId: map._id,
@@ -139,7 +128,7 @@ export const updateMap = mutation({
 
       updates.slug = await findUniqueGameMapSlug(
         ctx,
-        map.campaignId,
+        args.campaignId,
         args.name,
         args.mapId,
       )
@@ -158,7 +147,7 @@ export const updateMap = mutation({
   },
 })
 
-export const moveMap = mutation({
+export const moveMap = campaignMutation({
   args: {
     mapId: v.id('gameMaps'),
     parentId: v.optional(v.id('folders')),
@@ -166,14 +155,13 @@ export const moveMap = mutation({
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 
     const map = await enhanceSidebarItem(ctx, rawMap)
     await requireFullAccessPermission(ctx, map)
 
-    // Validate no circular parent reference
     await validateParentChange({
       ctx,
       item: map,
@@ -183,7 +171,7 @@ export const moveMap = mutation({
     if (args.parentId) {
       const parentItem = await getSidebarItemById(
         ctx,
-        map.campaignId,
+        args.campaignId,
         args.parentId,
       )
       if (!parentItem) {
@@ -191,10 +179,9 @@ export const moveMap = mutation({
       }
     }
 
-    // Validate name doesn't conflict in new location
     await validateSidebarItemName({
       ctx,
-      campaignId: map.campaignId,
+      campaignId: args.campaignId,
       parentId: args.parentId,
       name: map.name,
       excludeId: map._id,
@@ -208,17 +195,35 @@ export const moveMap = mutation({
   },
 })
 
-export const deleteMap = mutation({
+export const deleteMap = campaignMutation({
   args: {
     mapId: v.id('gameMaps'),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    return await deleteMapFn(ctx, args.mapId)
+    const rawMap = await ctx.db.get(args.mapId)
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
+      throw new Error('Map not found')
+    }
+
+    const map = await enhanceSidebarItem(ctx, rawMap)
+    await requireFullAccessPermission(ctx, map)
+
+    const pins = await ctx.db
+      .query('mapPins')
+      .withIndex('by_map_item', (q) => q.eq('mapId', args.mapId))
+      .collect()
+
+    for (const pin of pins) {
+      await ctx.db.delete(pin._id)
+    }
+
+    await ctx.db.delete(args.mapId)
+    return args.mapId
   },
 })
 
-export const createItemPin = mutation({
+export const createItemPin = campaignMutation({
   args: {
     mapId: v.id('gameMaps'),
     x: v.number(),
@@ -228,7 +233,7 @@ export const createItemPin = mutation({
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 
@@ -250,7 +255,7 @@ export const createItemPin = mutation({
   },
 })
 
-export const updateItemPin = mutation({
+export const updateItemPin = campaignMutation({
   args: {
     mapPinId: v.id('mapPins'),
     x: v.number(),
@@ -264,7 +269,7 @@ export const updateItemPin = mutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 
@@ -281,7 +286,7 @@ export const updateItemPin = mutation({
   },
 })
 
-export const updatePinVisibility = mutation({
+export const updatePinVisibility = campaignMutation({
   args: {
     mapPinId: v.id('mapPins'),
     visible: v.boolean(),
@@ -294,7 +299,7 @@ export const updatePinVisibility = mutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 
@@ -310,7 +315,7 @@ export const updatePinVisibility = mutation({
   },
 })
 
-export const removeItemPin = mutation({
+export const removeItemPin = campaignMutation({
   args: {
     mapPinId: v.id('mapPins'),
   },
@@ -322,7 +327,7 @@ export const removeItemPin = mutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
+    if (!rawMap || rawMap.campaignId !== args.campaignId) {
       throw new Error('Map not found')
     }
 

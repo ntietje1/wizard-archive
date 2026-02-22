@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
+import { campaignMutation } from '../functions'
 import { findUniqueSidebarItemSlug } from '../common/slug'
 import { requireFullAccessPermission } from '../shares/itemShares'
 import { sidebarItemIdValidator } from './schema/baseValidators'
@@ -9,7 +9,7 @@ import { enhanceSidebarItem } from './helpers'
 import type { Id } from '../_generated/dataModel'
 import type { AnySidebarItemFromDb } from './types'
 
-export const updateSidebarItem = mutation({
+export const updateSidebarItem = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
     name: v.optional(v.string()),
@@ -21,7 +21,7 @@ export const updateSidebarItem = mutation({
   }),
   handler: async (ctx, args): Promise<{ slug: string }> => {
     const rawItem = await ctx.db.get(args.itemId)
-    if (!rawItem) {
+    if (!rawItem || rawItem.campaignId !== args.campaignId) {
       throw new Error('Item not found')
     }
 
@@ -41,7 +41,7 @@ export const updateSidebarItem = mutation({
     if (args.name !== undefined) {
       await validateSidebarItemName({
         ctx,
-        campaignId: item.campaignId,
+        campaignId: args.campaignId,
         parentId: item.parentId,
         name: args.name,
         excludeId: args.itemId,
@@ -49,7 +49,7 @@ export const updateSidebarItem = mutation({
       patch.name = args.name
       patch.slug = await findUniqueSidebarItemSlug(
         ctx,
-        item.campaignId,
+        args.campaignId,
         item.type,
         args.name,
         args.itemId,

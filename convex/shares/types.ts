@@ -61,4 +61,3 @@ export const SHARE_STATUS = {
 } as const
 
 export type ShareStatus = (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
-

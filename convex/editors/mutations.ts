@@ -1,12 +1,10 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
+import { campaignMutation } from '../functions'
 import { SORT_DIRECTIONS, SORT_ORDERS } from './types'
 import type { Id } from '../_generated/dataModel'
 
-export const setCurrentEditor = mutation({
+export const setCurrentEditor = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sortOrder: v.optional(
       v.union(
         v.literal(SORT_ORDERS.Alphabetical),
@@ -25,18 +23,16 @@ export const setCurrentEditor = mutation({
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
-    const { profile } = await requireUserIdentity(ctx)
-
     const editor = await ctx.db
       .query('editor')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', args.campaignId).eq('userId', profile._id),
+        q.eq('campaignId', args.campaignId).eq('userId', ctx.user.profile._id),
       )
       .unique()
 
     if (!editor) {
       return await ctx.db.insert('editor', {
-        userId: profile._id,
+        userId: ctx.user.profile._id,
         campaignId: args.campaignId,
         sortOrder: args.sortOrder ?? SORT_ORDERS.DateCreated,
         sortDirection: args.sortDirection ?? SORT_DIRECTIONS.Ascending,

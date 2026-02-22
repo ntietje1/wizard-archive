@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
+import { campaignQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
 import { getMap as getMapFn } from './gameMaps'
 import type { GameMapWithContent } from './types'
 
-export const getMap = query({
+export const getMap = campaignQuery({
   args: {
     mapId: v.id('gameMaps'),
   },

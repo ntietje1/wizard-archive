@@ -1,22 +1,20 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
 import {
   defaultItemName,
   getSidebarItemsByParent,
 } from '../sidebarItems/sidebarItems'
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { hasEditPermission, requireEditPermission } from '../shares/itemShares'
+import { requireEditPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { dmQuery } from '../functions'
 import { downloadableItemValidator } from './schema'
+import type { CampaignQueryCtx } from '../functions'
 import type { DownloadableItem } from './types'
 import type { Id } from '../_generated/dataModel'
-import type { QueryCtx } from '../_generated/server'
 
 async function collectItemsRecursively(
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
   currentPath: string,
@@ -85,7 +83,7 @@ async function collectItemsRecursively(
   return items
 }
 
-export const getFolderContentsForDownload = query({
+export const getFolderContentsForDownload = dmQuery({
   args: {
     folderId: v.id('folders'),
   },
@@ -98,15 +96,9 @@ export const getFolderContentsForDownload = query({
     args,
   ): Promise<{ folderName: string; items: Array<DownloadableItem> }> => {
     const folderFromDb = await ctx.db.get(args.folderId)
-    if (!folderFromDb) {
+    if (!folderFromDb || folderFromDb.campaignId !== args.campaignId) {
       throw new Error('Folder not found')
     }
-
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: folderFromDb.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
 
     const folder = await enhanceSidebarItem(ctx, folderFromDb)
     await requireEditPermission(ctx, folder)
@@ -114,7 +106,7 @@ export const getFolderContentsForDownload = query({
     const folderName = folder.name ?? defaultItemName(folder)
     const items = await collectItemsRecursively(
       ctx,
-      folder.campaignId,
+      args.campaignId,
       args.folderId,
       '',
     )
@@ -123,20 +115,11 @@ export const getFolderContentsForDownload = query({
   },
 })
 
-export const getRootContentsForDownload = query({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const getRootContentsForDownload = dmQuery({
   returns: v.object({
     items: v.array(downloadableItemValidator),
   }),
   handler: async (ctx, args) => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const items = await collectItemsRecursively(
       ctx,
       args.campaignId,

@@ -27,12 +27,11 @@ export const CAMPAIGN_MEMBER_STATUS = {
 export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
-export type Campaign = {
+export type CampaignFromDb = {
   _id: Id<'campaigns'>
   _creationTime: number
 
   dmUserId: Id<'userProfiles'>
-  dmUserProfile: UserProfile
   name: string
   description?: string
   updatedAt: number
@@ -40,6 +39,10 @@ export type Campaign = {
   slug: string
   status: CampaignStatus
   currentSessionId?: Id<'sessions'>
+}
+
+export type Campaign = CampaignFromDb & {
+  dmUserProfile: UserProfile
 }
 
 export type CampaignMember = {

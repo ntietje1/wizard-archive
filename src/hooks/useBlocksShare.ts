@@ -37,8 +37,8 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const query = useQuery(
     convexQuery(
       api.blocks.queries.getBlocksWithShares,
-      isNote(item) && blockIds.length > 0
-        ? { noteId: item._id, blockIds }
+      isNote(item) && blockIds.length > 0 && campaign
+        ? { campaignId: campaign._id, noteId: item._id, blockIds }
         : 'skip',
     ),
   )

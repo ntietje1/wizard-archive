@@ -529,6 +529,7 @@ export function MapViewer({
       if (draggedPinPositionRef.current) {
         try {
           await updateItemPinMutation.mutateAsync({
+            campaignId: map.campaignId,
             mapPinId: pinId,
             x: draggedPinPositionRef.current.x,
             y: draggedPinPositionRef.current.y,
@@ -572,6 +573,7 @@ export function MapViewer({
     async (itemId: SidebarItemId, position: PinPosition) => {
       try {
         await createItemPinMutation.mutateAsync({
+          campaignId: map.campaignId,
           mapId: map._id,
           x: position.x,
           y: position.y,
@@ -641,6 +643,7 @@ export function MapViewer({
 
       try {
         await updateItemPinMutation.mutateAsync({
+          campaignId: map.campaignId,
           mapPinId: pendingPinMove.pinId,
           x: position.x,
           y: position.y,
@@ -922,7 +925,7 @@ export function MapViewer({
                 </TransformComponent>
               </TransformWrapper>
             ) : (
-              <MapImageUpload mapId={map._id} />
+              <MapImageUpload mapId={map._id} campaignId={map.campaignId} />
             )}
           </div>
 
@@ -972,7 +975,13 @@ export function MapViewer({
   )
 }
 
-function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
+function MapImageUpload({
+  mapId,
+  campaignId,
+}: {
+  mapId: Id<'gameMaps'>
+  campaignId: Id<'campaigns'>
+}) {
   const updateMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
   })
@@ -991,7 +1000,11 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     },
     onUploadComplete: async (storageId) => {
       try {
-        await updateMap.mutateAsync({ mapId, imageStorageId: storageId })
+        await updateMap.mutateAsync({
+          campaignId,
+          mapId,
+          imageStorageId: storageId,
+        })
         toast.success('Map image uploaded')
       } catch (error) {
         console.error('Failed to set map image:', error)

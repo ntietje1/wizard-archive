@@ -1,12 +1,8 @@
-import {
-  getCampaignMembership,
-  requireCampaignMembership,
-} from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
 import { defaultItemName } from '../sidebarItems/sidebarItems'
 import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from './types'
-import type { Ctx } from '../common/types'
+import type { CampaignQueryCtx } from '../functions'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type {
@@ -17,22 +13,14 @@ import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
 import type { PermissionLevel, SidebarItemShare } from './types'
 
 export async function getSidebarItemPermissionLevel(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem | AnySidebarItemFromDb,
 ): Promise<PermissionLevel> {
-  const { campaignWithMembership } = await getCampaignMembership(ctx, {
-    campaignId: item.campaignId,
-  })
-
-  if (!campaignWithMembership) {
-    return PERMISSION_LEVEL.NONE
-  }
-
-  if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+  if (ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.FULL_ACCESS
   }
 
-  const checkId = campaignWithMembership.member._id
+  const checkId = ctx.membership._id
 
   // Check for an explicit per-player share
   const share = await getSidebarItemShareForMember(
@@ -62,7 +50,7 @@ export async function getSidebarItemPermissionLevel(
 }
 
 async function resolveInheritedPermission(
-  ctx: Ctx,
+  ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
   playerId: Id<'campaignMembers'>,
@@ -130,7 +118,7 @@ export function hasAtLeastPermissionLevel(
 }
 
 export async function hasViewPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<boolean> {
   const level = await getSidebarItemPermissionLevel(ctx, item)
@@ -138,7 +126,7 @@ export async function hasViewPermission(
 }
 
 export async function requireViewPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<void> {
   if (!(await hasViewPermission(ctx, item))) {
@@ -147,7 +135,7 @@ export async function requireViewPermission(
 }
 
 export async function hasEditPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<boolean> {
   const level = await getSidebarItemPermissionLevel(ctx, item)
@@ -155,7 +143,7 @@ export async function hasEditPermission(
 }
 
 export async function requireEditPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<void> {
   if (!(await hasEditPermission(ctx, item))) {
@@ -164,7 +152,7 @@ export async function requireEditPermission(
 }
 
 export async function hasFullAccessPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<boolean> {
   const level = await getSidebarItemPermissionLevel(ctx, item)
@@ -172,7 +160,7 @@ export async function hasFullAccessPermission(
 }
 
 export async function requireFullAccessPermission(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   item: AnySidebarItem,
 ): Promise<void> {
   if (!(await hasFullAccessPermission(ctx, item))) {
@@ -188,12 +176,6 @@ export async function shareSidebarItemWithMember(
   campaignMemberId: Id<'campaignMembers'>,
   permissionLevel?: PermissionLevel,
 ): Promise<Id<'sidebarItemShares'>> {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
   // Check if share already exists
   const existingShare = await ctx.db
     .query('sidebarItemShares')
@@ -235,12 +217,6 @@ export async function unshareSidebarItemFromMember(
   sidebarItemId: SidebarItemId,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
   const share = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>

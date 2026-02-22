@@ -56,7 +56,10 @@ export function MapForm({
   const { navigateToMap } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const map = useQuery(
-    convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
+    convexQuery(
+      api.gameMaps.queries.getMap,
+      mapId && campaignId ? { campaignId, mapId } : 'skip',
+    ),
   )
 
   const createMutation = useMutation({
@@ -156,6 +159,7 @@ export function MapForm({
         try {
           const previousSlug = map.data?.slug
           const response = await updateMutation.mutateAsync({
+            campaignId: campaignId!,
             mapId,
             name: values.name,
             imageStorageId: finalImageStorageId,

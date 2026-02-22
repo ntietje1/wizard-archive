@@ -1,9 +1,6 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import {
-  getCampaignMembers,
-  requireCampaignMembership,
-} from '../campaigns/campaigns'
+import { dmQuery } from '../functions'
+import { getCampaignMembers } from '../campaigns/campaigns'
 import { campaignMemberValidator } from '../campaigns/schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {
@@ -22,18 +19,12 @@ import type { Id } from '../_generated/dataModel'
 import type { CampaignMember } from '../campaigns/types'
 import type { BlockShare, PermissionLevel, SidebarItemShare } from './types'
 
-export const getSidebarItemShares = query({
+export const getSidebarItemShares = dmQuery({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.array(sidebarItemShareValidator),
   handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
     return await getSidebarItemSharesForItem(
       ctx,
       args.campaignId,
@@ -46,9 +37,8 @@ export const getSidebarItemShares = query({
  * Get share info for a sidebar item along with player members.
  * Returns allPermissionLevel and individual shares.
  */
-export const getSidebarItemWithShares = query({
+export const getSidebarItemWithShares = dmQuery({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.object({
@@ -80,12 +70,6 @@ export const getSidebarItemWithShares = query({
     memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
     memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
   }> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
-
     const item = await ctx.db.get(args.sidebarItemId)
     if (!item) {
       throw new Error('Sidebar item not found')
@@ -148,18 +132,12 @@ export const getSidebarItemWithShares = query({
   },
 })
 
-export const getBlockShares = query({
+export const getBlockShares = dmQuery({
   args: {
-    campaignId: v.id('campaigns'),
     blockId: v.id('blocks'),
   },
   returns: v.array(blockShareValidator),
   handler: async (ctx, args): Promise<Array<BlockShare>> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-    )
     return await getBlockSharesForBlock(ctx, args.campaignId, args.blockId)
   },
 })

@@ -94,6 +94,7 @@ export function SidebarItemEditDialog({
       try {
         const previousSlug = item.slug
         const response = await updateMutation.mutateAsync({
+          campaignId: item.campaignId,
           itemId: item._id,
           name: value.name || undefined,
           iconName: value.iconName,
@@ -178,7 +179,7 @@ export function SidebarItemEditDialog({
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
-                  placeholder="Enter map name"
+                  placeholder={`Enter ${typeName.toLowerCase()} name`}
                   autoFocus
                   aria-invalid={field.state.meta.errors.length > 0}
                 />

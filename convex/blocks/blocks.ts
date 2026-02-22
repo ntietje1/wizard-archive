@@ -1,21 +1,19 @@
-import { getNote } from '../notes/notes'
 import { requireEditPermission } from '../shares/itemShares'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SHARE_STATUS } from '../shares/types'
 import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
-import type { MutationCtx } from '../_generated/server'
-import type { Ctx } from '../common/types'
+import type { CampaignMutationCtx } from '../functions'
+import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { CustomBlock } from '../notes/editorSpecs'
-import type { Note } from '../notes/types'
 
 export const findBlockByBlockNoteId = async (
-  ctx: Ctx,
+  ctx: QueryCtx,
   noteId: Id<'notes'>,
   blockId: string,
 ): Promise<Block | null> => {
-  const note: Note | null = await getNote(ctx, noteId)
+  const note = await ctx.db.get(noteId)
   if (!note) {
     throw new Error('Note not found')
   }
@@ -30,24 +28,11 @@ export const findBlockByBlockNoteId = async (
     )
     .unique()
 
-  return block || null
-}
-
-export async function getBlocksByNote(
-  ctx: Ctx,
-  noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
-): Promise<Array<Block>> {
-  return await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId),
-    )
-    .collect()
+  return block
 }
 
 export async function getTopLevelBlocksByNote(
-  ctx: Ctx,
+  ctx: QueryCtx,
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
 ): Promise<Array<Block>> {
@@ -63,22 +48,17 @@ export async function getTopLevelBlocksByNote(
     .sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
-export async function getBlocksByCampaign(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-): Promise<Array<Block>> {
-  return await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_block', (q) => q.eq('campaignId', campaignId))
-    .collect()
-}
-
 export async function deleteBlocksByNote(
   ctx: MutationCtx,
   noteId: Id<'notes'>,
   campaignId: Id<'campaigns'>,
 ): Promise<void> {
-  const blocks = await getBlocksByNote(ctx, noteId, campaignId)
+  const blocks = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_block', (q) =>
+      q.eq('campaignId', campaignId).eq('noteId', noteId),
+    )
+    .collect()
 
   for (const block of blocks) {
     await ctx.db.delete(block._id)
@@ -86,10 +66,10 @@ export async function deleteBlocksByNote(
 }
 
 export async function saveTopLevelBlocksForNote(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
   content: Array<CustomBlock>,
-) {
+): Promise<void> {
   const now = Date.now()
 
   const rawNote = await ctx.db.get(noteId)

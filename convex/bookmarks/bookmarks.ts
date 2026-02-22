@@ -1,10 +1,10 @@
 import type { SidebarItemId } from '../sidebarItems/baseTypes'
 import type { Id } from '../_generated/dataModel'
-import type { Ctx } from '../common/types'
+import type { QueryCtx } from '../_generated/server'
 import type { Bookmark } from './types'
 
 export async function getBookmark(
-  ctx: Ctx,
+  ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
   campaignMemberId: Id<'campaignMembers'>,
   sidebarItemId: SidebarItemId,

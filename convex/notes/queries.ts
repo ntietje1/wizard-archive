@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
+import { campaignQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
 import { getNote as getNoteFn } from './notes'
 import type { NoteWithContent } from './types'
 
-export const getNote = query({
+export const getNote = campaignQuery({
   args: {
     noteId: v.id('notes'),
   },

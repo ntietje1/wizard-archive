@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
+import { authMutation } from '../functions'
 import { FILE_STORAGE_STATUS } from './types'
 import { validateFileUpload } from './validation'
 import type { Id } from '../_generated/dataModel'
@@ -12,17 +12,16 @@ export const generateUploadUrl = mutation({
   },
 })
 
-export const trackUpload = mutation({
+export const trackUpload = authMutation({
   args: {
     storageId: v.id('_storage'),
     originalFileName: v.optional(v.string()),
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    const { profile } = await requireUserIdentity(ctx)
     return await ctx.db.insert('fileStorage', {
       status: FILE_STORAGE_STATUS.Uncommitted,
-      userId: profile._id,
+      userId: ctx.user.profile._id,
       updatedAt: Date.now(),
       storageId: args.storageId,
       originalFileName: args.originalFileName,
@@ -30,17 +29,16 @@ export const trackUpload = mutation({
   },
 })
 
-export const commitUpload = mutation({
+export const commitUpload = authMutation({
   args: {
     storageId: v.id('_storage'),
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    const { profile } = await requireUserIdentity(ctx)
     const fileStorage = await ctx.db
       .query('fileStorage')
       .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
+        q.eq('userId', ctx.user.profile._id).eq('storageId', args.storageId),
       )
       .unique()
     if (!fileStorage) {

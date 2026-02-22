@@ -1,7 +1,3 @@
-import {
-  getCampaignMembership,
-  requireCampaignMembership,
-} from '../campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
 import {
@@ -11,7 +7,7 @@ import {
   updateBlock,
 } from '../blocks/blocks'
 import { PERMISSION_LEVEL, SHARE_STATUS } from './types'
-import type { Ctx } from '../common/types'
+import type { CampaignQueryCtx } from '../functions'
 import type { Block } from '../blocks/types'
 import type { BlockShare, PermissionLevel, ShareStatus } from './types'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
@@ -19,20 +15,12 @@ import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
 
 export async function getBlockPermissionLevel(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   block: Block,
 ): Promise<PermissionLevel> {
-  const { campaignWithMembership } = await getCampaignMembership(ctx, {
-    campaignId: block.campaignId,
-  })
+  const checkId = ctx.membership._id
 
-  if (!campaignWithMembership) {
-    return PERMISSION_LEVEL.NONE
-  }
-
-  const checkId = campaignWithMembership.member._id
-
-  if (campaignWithMembership.member.role === CAMPAIGN_MEMBER_ROLE.DM) {
+  if (ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.EDIT
   }
 
@@ -56,7 +44,7 @@ export async function getBlockPermissionLevel(
 }
 
 export async function enforceBlockSharePermissionsOrNull(
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   block: Block,
 ): Promise<Block | null> {
   const permissionLevel = await getBlockPermissionLevel(ctx, block)
@@ -190,12 +178,6 @@ export async function shareBlockWithMember(
   blockId: Id<'blocks'>,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Id<'blockShares'>> {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
   // Verify block exists
   const block = await ctx.db.get(blockId)
   if (!block || block.campaignId !== campaignId) {
@@ -234,12 +216,6 @@ export async function unshareBlockFromMember(
   blockId: Id<'blocks'>,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
-
   const share = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>

@@ -1,27 +1,18 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
+import { campaignMutation } from '../functions'
 import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
 
-export const toggleBookmark = mutation({
+export const toggleBookmark = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
   },
   returns: v.object({ isBookmarked: v.boolean() }),
   handler: async (ctx, args): Promise<{ isBookmarked: boolean }> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-
-    const campaignMemberId = campaignWithMembership.member._id
+    const campaignMemberId = ctx.membership._id
 
     // Check if bookmark already exists
     const existingBookmark = await ctx.db

@@ -1,15 +1,12 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
+import { authQuery } from '../functions'
 import { editorValidator } from './schema'
 import type { Editor } from './types'
 
-export const getCurrentEditor = query({
+export const getCurrentEditor = authQuery({
   args: { campaignId: v.optional(v.id('campaigns')) },
   returns: v.union(v.null(), editorValidator),
   handler: async (ctx, args): Promise<Editor | null> => {
-    const { profile } = await requireUserIdentity(ctx)
-
     if (!args.campaignId) {
       return null
     }
@@ -17,7 +14,7 @@ export const getCurrentEditor = query({
     const editor = await ctx.db
       .query('editor')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', args.campaignId!).eq('userId', profile._id),
+        q.eq('campaignId', args.campaignId!).eq('userId', ctx.user.profile._id),
       )
       .unique()
 

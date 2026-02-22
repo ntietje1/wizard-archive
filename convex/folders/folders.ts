@@ -1,5 +1,4 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { requireCampaignMembership } from '../campaigns/campaigns'
 import { deleteNote } from '../notes/notes'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import {
@@ -7,13 +6,12 @@ import {
   requireFullAccessPermission,
 } from '../shares/itemShares'
 import { enhanceFolderWithContent } from './helpers'
-import type { Ctx } from '../common/types'
-import type { MutationCtx } from '../_generated/server'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type { Folder, FolderWithContent } from './types'
 
 export const getFolder = async (
-  ctx: Ctx,
+  ctx: CampaignQueryCtx,
   folderId: Id<'folders'>,
 ): Promise<FolderWithContent | null> => {
   const rawFolder = await ctx.db.get(folderId)
@@ -26,7 +24,7 @@ export const getFolder = async (
 }
 
 export async function deleteFolder(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   folderId: Id<'folders'>,
 ): Promise<Id<'folders'>> {
   const rawFolder = await ctx.db.get(folderId)
@@ -34,14 +32,12 @@ export async function deleteFolder(
     throw new Error('Folder not found')
   }
 
-  await requireCampaignMembership(
-    ctx,
-    { campaignId: rawFolder.campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-  )
+  // folders specifically require DM level to delete rather than full access
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throw new Error('Only the DM can delete folders')
+  }
 
   const folder = await enhanceSidebarItem(ctx, rawFolder)
-  await requireFullAccessPermission(ctx, folder)
 
   const childFolders = await ctx.db
     .query('folders')
@@ -91,16 +87,9 @@ export async function deleteFolder(
 }
 
 export async function getSidebarItemAncestors(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   initialParentId: Id<'folders'> | undefined,
 ): Promise<Array<Folder>> {
-  await requireCampaignMembership(
-    ctx,
-    { campaignId },
-    { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-  )
-
   const ancestors: Array<Folder> = []
   let currentParentId = initialParentId
 

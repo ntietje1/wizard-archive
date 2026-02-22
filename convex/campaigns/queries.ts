@@ -1,12 +1,12 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { getUserProfileByUsernameHandler } from '../users/users'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
+import { getUserIdentity } from '../common/identity'
+import { authQuery, campaignQuery } from '../functions'
+import { CAMPAIGN_MEMBER_STATUS } from './types'
 import {
   getCampaign,
-  getCampaignMember,
-  requireCampaignMembership,
+  getCampaignBySlug as getCampaignBySlugHelper,
+  getCampaignMembers,
 } from './campaigns'
 import {
   campaignMemberValidator,
@@ -14,10 +14,10 @@ import {
 } from './schema'
 import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
 
-export const getUserCampaigns = query({
+export const getUserCampaigns = authQuery({
   returns: v.array(campaignWithMembershipValidator),
   handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
-    const { profile } = await requireUserIdentity(ctx)
+    const profile = ctx.user.profile
 
     const campaignMemberships = await ctx.db
       .query('campaignMembers')
@@ -31,7 +31,7 @@ export const getUserCampaigns = query({
 
     const campaigns = await Promise.all(
       campaignMemberships.map((membership) =>
-        getCampaign(ctx, { campaignId: membership.campaignId }),
+        getCampaign(ctx, membership.campaignId),
       ),
     )
 
@@ -74,24 +74,11 @@ export const getPublicCampaignBySlug = query({
     campaignMember?: CampaignMember | null
   }> => {
     const identityWithProfile = await getUserIdentity(ctx)
-    const dmUserProfile = await getUserProfileByUsernameHandler(
+    const campaign = await getCampaignBySlugHelper(
       ctx,
       args.dmUsername,
+      args.slug,
     )
-    if (!dmUserProfile) {
-      throw new Error('DM user not found')
-    }
-
-    const campaign = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile._id),
-      )
-      .unique()
-
-    if (!campaign) {
-      throw new Error('Campaign not found')
-    }
 
     let campaignMember: CampaignMember | undefined = undefined
     if (identityWithProfile) {
@@ -113,45 +100,51 @@ export const getPublicCampaignBySlug = query({
     }
 
     return {
-      campaign: {
-        ...campaign,
-        dmUserProfile,
-      },
+      campaign,
       campaignMember,
     }
   },
 })
 
-export const getCampaignBySlug = query({
+export const getCampaignBySlug = authQuery({
   args: {
     dmUsername: v.string(),
     slug: v.string(),
   },
+  returns: campaignWithMembershipValidator,
   handler: async (ctx, args): Promise<CampaignWithMembership> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
+    const campaign = await getCampaignBySlugHelper(
       ctx,
-      {
-        dmUsername: args.dmUsername,
-        campaignSlug: args.slug,
-      },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
+      args.dmUsername,
+      args.slug,
     )
-    return campaignWithMembership
+    const members = await ctx.db
+      .query('campaignMembers')
+      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
+      .collect()
+    const member = members.find(
+      (m) =>
+        m.userId === ctx.user.profile._id &&
+        m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+    )
+    if (!member) throw new Error('Not a campaign member')
+    return {
+      campaign,
+      member: { ...member, userProfile: ctx.user.profile },
+    }
   },
 })
 
-export const checkCampaignSlugExists = query({
+export const checkCampaignSlugExists = authQuery({
   args: {
     slug: v.string(),
     excludeCampaignId: v.optional(v.id('campaigns')),
   },
   handler: async (ctx, args): Promise<boolean> => {
-    const { profile } = await requireUserIdentity(ctx)
-
     const existingCampaign = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', profile._id),
+        q.eq('slug', args.slug).eq('dmUserId', ctx.user.profile._id),
       )
       .unique()
 
@@ -170,30 +163,9 @@ export const checkCampaignSlugExists = query({
   },
 })
 
-export const getPlayersByCampaign = query({
-  args: { campaignId: v.id('campaigns') },
+export const getPlayersByCampaign = campaignQuery({
   returns: v.array(campaignMemberValidator),
-  handler: async (ctx, args): Promise<Array<CampaignMember>> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-    const { campaign } = campaignWithMembership
-
-    const members = await ctx.db
-      .query('campaignMembers')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-      .collect()
-
-    const membersWithProfiles = await Promise.all(
-      members.map(async (member) => {
-        return getCampaignMember(ctx, member._id)
-      }),
-    ).then((filteredMembers) =>
-      filteredMembers.filter((member) => member !== null),
-    )
-
-    return membersWithProfiles
+  handler: async (ctx, _args): Promise<Array<CampaignMember>> => {
+    return getCampaignMembers(ctx, ctx.campaign._id)
   },
 })
