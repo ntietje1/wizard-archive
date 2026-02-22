@@ -1,5 +1,9 @@
 import { v } from 'convex/values'
 import { findUniqueSlug } from '../common/slug'
+import { deleteFile } from '../files/files'
+import { deleteFolder } from '../folders/folders'
+import { deleteMap } from '../gameMaps/gameMaps'
+import { deleteNote } from '../notes/notes'
 import { authMutation, dmMutation } from '../functions'
 import { getCampaignBySlug } from './campaigns'
 import { campaignMemberStatusValidator } from './schema'
@@ -141,19 +145,17 @@ export const deleteCampaign = dmMutation({
   args: {},
   returns: v.id('campaigns'),
   handler: async (ctx, args): Promise<Id<'campaigns'>> => {
-    // Delete blocks
-    const blocks = await ctx.db
-      .query('blocks')
-      .withIndex('by_campaign_note_block', (q) =>
-        q.eq('campaignId', args.campaignId),
+    const folders = await ctx.db
+      .query('folders')
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
       )
       .collect()
 
-    for (const block of blocks) {
-      await ctx.db.delete(block._id)
+    for (const folder of folders) {
+      await deleteFolder(ctx, folder._id)
     }
 
-    // Delete notes
     const notes = await ctx.db
       .query('notes')
       .withIndex('by_campaign_parent_name', (q) =>
@@ -162,22 +164,9 @@ export const deleteCampaign = dmMutation({
       .collect()
 
     for (const note of notes) {
-      await ctx.db.delete(note._id)
+      await deleteNote(ctx, note._id)
     }
 
-    // Delete folders
-    const folders = await ctx.db
-      .query('folders')
-      .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    for (const folder of folders) {
-      await ctx.db.delete(folder._id)
-    }
-
-    // Delete maps and pins
     const maps = await ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_parent_name', (q) =>
@@ -186,17 +175,9 @@ export const deleteCampaign = dmMutation({
       .collect()
 
     for (const map of maps) {
-      const pins = await ctx.db
-        .query('mapPins')
-        .withIndex('by_map_item', (q) => q.eq('mapId', map._id))
-        .collect()
-      for (const pin of pins) {
-        await ctx.db.delete(pin._id)
-      }
-      await ctx.db.delete(map._id)
+      await deleteMap(ctx, map._id, args.campaignId)
     }
 
-    // Delete files
     const files = await ctx.db
       .query('files')
       .withIndex('by_campaign_parent_name', (q) =>
@@ -205,19 +186,7 @@ export const deleteCampaign = dmMutation({
       .collect()
 
     for (const file of files) {
-      await ctx.db.delete(file._id)
-    }
-
-    // Delete sidebar item shares
-    const sidebarItemShares = await ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_item_member', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
-      .collect()
-
-    for (const share of sidebarItemShares) {
-      await ctx.db.delete(share._id)
+      await deleteFile(ctx, file._id, args.campaignId)
     }
 
     // Delete block shares

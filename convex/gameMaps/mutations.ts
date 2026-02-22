@@ -10,8 +10,8 @@ import {
 import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
-import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { PERMISSION_LEVEL } from '../shares/types'
+import { deleteMap as deleteMapHelper } from './gameMaps'
 import type { Doc, Id } from '../_generated/dataModel'
 
 export const createMap = campaignMutation({
@@ -85,7 +85,12 @@ export const updateMap = campaignMutation({
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     const rawMap = await ctx.db.get(args.mapId)
-    const map = await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
+    const map = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawMap,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
@@ -93,12 +98,7 @@ export const updateMap = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(
-        ctx,
-        args.campaignId,
-        map,
-        args.name,
-      )
+      updates.slug = await validateRename(ctx, args.campaignId, map, args.name)
     }
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId
@@ -122,7 +122,12 @@ export const moveMap = campaignMutation({
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    const map = await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
+    const map = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawMap,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     await validateMove(ctx, map, args.parentId)
 
@@ -141,19 +146,14 @@ export const deleteMap = campaignMutation({
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
+    await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawMap,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
-    const pins = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map_item', (q) => q.eq('mapId', args.mapId))
-      .collect()
-
-    for (const pin of pins) {
-      await ctx.db.delete(pin._id)
-    }
-
-    await deleteItemSharesAndBookmarks(ctx, args.campaignId, args.mapId)
-    await ctx.db.delete(args.mapId)
+    await deleteMapHelper(ctx, args.mapId, args.campaignId)
     return args.mapId
   },
 })

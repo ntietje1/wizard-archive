@@ -1,4 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { deleteFile } from '../files/files'
+import { deleteMap } from '../gameMaps/gameMaps'
 import { deleteNote } from '../notes/notes'
 import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
@@ -65,17 +67,7 @@ export async function deleteFolder(
     .collect()
 
   for (const childMap of childMaps) {
-    const pins = await ctx.db
-      .query('mapPins')
-      .withIndex('by_map_item', (q) => q.eq('mapId', childMap._id))
-      .collect()
-
-    for (const pin of pins) {
-      await ctx.db.delete(pin._id)
-    }
-
-    await deleteItemSharesAndBookmarks(ctx, folder.campaignId, childMap._id)
-    await ctx.db.delete(childMap._id)
+    await deleteMap(ctx, childMap._id, folder.campaignId)
   }
 
   const childFiles = await ctx.db
@@ -86,11 +78,7 @@ export async function deleteFolder(
     .collect()
 
   for (const childFile of childFiles) {
-    if (childFile.storageId) {
-      await ctx.storage.delete(childFile.storageId)
-    }
-    await deleteItemSharesAndBookmarks(ctx, folder.campaignId, childFile._id)
-    await ctx.db.delete(childFile._id)
+    await deleteFile(ctx, childFile._id, folder.campaignId)
   }
 
   await deleteItemSharesAndBookmarks(ctx, folder.campaignId, folderId)

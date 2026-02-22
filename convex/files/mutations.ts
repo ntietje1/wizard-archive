@@ -10,7 +10,7 @@ import {
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { PERMISSION_LEVEL } from '../shares/types'
 import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
-import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
+import { deleteFile as deleteFileHelper } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
 export const moveFile = campaignMutation({
@@ -21,7 +21,12 @@ export const moveFile = campaignMutation({
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
     const rawFile = await ctx.db.get(args.fileId)
-    const file = await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
+    const file = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawFile,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     await validateMove(ctx, file, args.parentId)
 
@@ -104,7 +109,12 @@ export const updateFile = campaignMutation({
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
     const rawFile = await ctx.db.get(args.fileId)
-    const file = await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
+    const file = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawFile,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     const updates: Partial<Doc<'files'>> = {
       updatedAt: Date.now(),
@@ -112,12 +122,7 @@ export const updateFile = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(
-        ctx,
-        args.campaignId,
-        file,
-        args.name,
-      )
+      updates.slug = await validateRename(ctx, args.campaignId, file, args.name)
     }
     if (args.storageId !== undefined) {
       updates.storageId = args.storageId
@@ -140,14 +145,14 @@ export const deleteFile = campaignMutation({
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
     const rawFile = await ctx.db.get(args.fileId)
-    await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
+    await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawFile,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
-    if (rawFile?.storageId) {
-      await ctx.storage.delete(rawFile.storageId)
-    }
-
-    await deleteItemSharesAndBookmarks(ctx, args.campaignId, args.fileId)
-    await ctx.db.delete(args.fileId)
+    await deleteFileHelper(ctx, args.fileId, args.campaignId)
     return args.fileId
   },
 })
