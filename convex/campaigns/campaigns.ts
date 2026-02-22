@@ -1,24 +1,40 @@
 import { getUserProfileByUsernameHandler } from '../users/users'
+import { CAMPAIGN_MEMBER_STATUS } from './types'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type { UserProfile } from '../users/types'
 import type { Campaign, CampaignFromDb, CampaignMember } from './types'
 
+async function countAcceptedPlayers(
+  ctx: QueryCtx,
+  campaignId: Id<'campaigns'>,
+): Promise<number> {
+  const members = await ctx.db
+    .query('campaignMembers')
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+    .collect()
+  return members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted)
+    .length
+}
+
 export async function enhanceCampaign(
   ctx: QueryCtx,
   campaign: CampaignFromDb,
 ): Promise<Campaign> {
-  const dmUserProfile = await ctx.db.get(campaign.dmUserId)
+  const [dmUserProfile, playerCount] = await Promise.all([
+    ctx.db.get(campaign.dmUserId),
+    countAcceptedPlayers(ctx, campaign._id),
+  ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
-  return { ...campaign, dmUserProfile }
+  return { ...campaign, dmUserProfile, playerCount }
 }
 
 export async function getCampaign(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
-): Promise<Campaign> {
+): Promise<Campaign | null> {
   const campaign = await ctx.db.get(campaignId)
-  if (!campaign) throw new Error('Campaign not found')
+  if (!campaign) return null
   return enhanceCampaign(ctx, campaign)
 }
 
@@ -28,7 +44,7 @@ export async function getCampaignBySlug(
   slug: string,
 ): Promise<Campaign> {
   const dmUserProfile = await getUserProfileByUsernameHandler(ctx, dmUsername)
-  if (!dmUserProfile) throw new Error('Campaign not found')
+  if (!dmUserProfile) throw new Error('DM user not found')
   const campaign = await ctx.db
     .query('campaigns')
     .withIndex('by_slug_dm', (q) =>
@@ -36,7 +52,8 @@ export async function getCampaignBySlug(
     )
     .unique()
   if (!campaign) throw new Error('Campaign not found')
-  return { ...campaign, dmUserProfile }
+  const playerCount = await countAcceptedPlayers(ctx, campaign._id)
+  return { ...campaign, dmUserProfile, playerCount }
 }
 
 export async function getCampaignMember(
@@ -63,7 +80,7 @@ export async function getCampaignMembers(
 ): Promise<Array<CampaignMember>> {
   const members = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await Promise.all(

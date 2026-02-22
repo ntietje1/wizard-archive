@@ -23,7 +23,6 @@ const campaignTableFields = {
   name: v.string(),
   description: v.optional(v.string()),
   updatedAt: v.number(),
-  playerCount: v.number(),
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
@@ -46,7 +45,7 @@ export const campaignTables = {
   campaignMembers: defineTable({
     ...campaignMemberTableFields,
   })
-    .index('by_campaign', ['campaignId'])
+    .index('by_campaign_user', ['campaignId', 'userId'])
     .index('by_user', ['userId']),
 }
 
@@ -54,6 +53,7 @@ const campaignValidatorFields = {
   _id: v.id('campaigns'),
   _creationTime: v.number(),
   dmUserProfile: userProfileValidator,
+  playerCount: v.number(),
   ...campaignTableFields,
 } as const
 

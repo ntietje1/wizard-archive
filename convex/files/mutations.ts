@@ -205,6 +205,10 @@ export const deleteFile = campaignMutation({
     const file = await enhanceSidebarItem(ctx, rawFile)
     await requireFullAccessPermission(ctx, file)
 
+    if (rawFile.storageId) {
+      await ctx.storage.delete(rawFile.storageId)
+    }
+
     await ctx.db.delete(args.fileId)
     return args.fileId
   },

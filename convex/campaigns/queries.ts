@@ -29,35 +29,18 @@ export const getUserCampaigns = authQuery({
         ),
       )
 
-    const campaigns = await Promise.all(
-      campaignMemberships.map((membership) =>
-        getCampaign(ctx, membership.campaignId),
-      ),
-    )
-
-    const campaignsWithNotes = await Promise.all(
-      campaigns.map((campaign) => {
-        const membership = campaignMemberships.find(
-          (m) => m.campaignId === campaign._id,
-        )
-
-        if (!membership) {
-          return null
-        }
-
+    const results = await Promise.all(
+      campaignMemberships.map(async (membership) => {
+        const campaign = await getCampaign(ctx, membership.campaignId)
+        if (!campaign) return null
         return {
           campaign,
-          member: {
-            ...membership,
-            userProfile: profile,
-          },
+          member: { ...membership, userProfile: profile },
         }
       }),
-    ).then((filteredCampaigns) =>
-      filteredCampaigns.filter((campaign) => campaign !== null),
     )
 
-    return campaignsWithNotes
+    return results.filter((r) => r !== null)
   },
 })
 
@@ -82,14 +65,14 @@ export const getPublicCampaignBySlug = query({
 
     let campaignMember: CampaignMember | undefined = undefined
     if (identityWithProfile) {
-      const members = await ctx.db
+      const member = await ctx.db
         .query('campaignMembers')
-        .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-        .collect()
-
-      const member = members.find(
-        (m) => m.userId === identityWithProfile.profile._id,
-      )
+        .withIndex('by_campaign_user', (q) =>
+          q
+            .eq('campaignId', campaign._id)
+            .eq('userId', identityWithProfile.profile._id),
+        )
+        .unique()
 
       if (member) {
         campaignMember = {
@@ -118,16 +101,14 @@ export const getCampaignBySlug = authQuery({
       args.dmUsername,
       args.slug,
     )
-    const members = await ctx.db
+    const member = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-      .collect()
-    const member = members.find(
-      (m) =>
-        m.userId === ctx.user.profile._id &&
-        m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
-    )
-    if (!member) throw new Error('Not a campaign member')
+      .withIndex('by_campaign_user', (q) =>
+        q.eq('campaignId', campaign._id).eq('userId', ctx.user.profile._id),
+      )
+      .unique()
+    if (!member || member.status !== CAMPAIGN_MEMBER_STATUS.Accepted)
+      throw new Error('Not a campaign member')
     return {
       campaign,
       member: { ...member, userProfile: ctx.user.profile },
@@ -140,6 +121,7 @@ export const checkCampaignSlugExists = authQuery({
     slug: v.string(),
     excludeCampaignId: v.optional(v.id('campaigns')),
   },
+  returns: v.boolean(),
   handler: async (ctx, args): Promise<boolean> => {
     const existingCampaign = await ctx.db
       .query('campaigns')

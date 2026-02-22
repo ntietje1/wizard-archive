@@ -37,7 +37,6 @@ export const createCampaign = authMutation({
       name: args.name,
       description: args.description,
       updatedAt: now,
-      playerCount: 0,
       dmUserId: profile._id,
       slug: uniqueSlug,
       status: CAMPAIGN_STATUS.Active,
@@ -65,14 +64,15 @@ export const joinCampaign = authMutation({
     const profile = ctx.user.profile
     const campaign = await getCampaignBySlug(ctx, args.dmUsername, args.slug)
 
-    const campaignMembers = await ctx.db
+    const existingMember = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-      .collect()
+      .withIndex('by_campaign_user', (q) =>
+        q.eq('campaignId', campaign._id).eq('userId', profile._id),
+      )
+      .unique()
 
-    if (campaignMembers.some((member) => member.userId === profile._id)) {
-      return campaignMembers.find((member) => member.userId === profile._id)!
-        .status
+    if (existingMember) {
+      return existingMember.status
     }
 
     const now = Date.now()
@@ -247,7 +247,7 @@ export const deleteCampaign = dmMutation({
     // Delete campaign members
     const campaignMembers = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', args.campaignId))
+      .withIndex('by_campaign_user', (q) => q.eq('campaignId', args.campaignId))
       .collect()
 
     for (const member of campaignMembers) {
@@ -268,7 +268,7 @@ export const updateCampaignMemberStatus = dmMutation({
   returns: v.id('campaignMembers'),
   handler: async (ctx, args): Promise<Id<'campaignMembers'>> => {
     const member = await ctx.db.get(args.memberId)
-    if (!member || member.campaignId !== args.campaignId) {
+    if (!member || member.campaignId !== ctx.campaign._id) {
       throw new Error('Member not found')
     }
 
@@ -278,24 +278,6 @@ export const updateCampaignMemberStatus = dmMutation({
 
     const now = Date.now()
     await ctx.db.patch(member._id, { status: args.status, updatedAt: now })
-
-    if (
-      args.status === CAMPAIGN_MEMBER_STATUS.Accepted &&
-      member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
-    ) {
-      await ctx.db.patch(args.campaignId, {
-        playerCount: Math.max(0, ctx.campaign.playerCount + 1),
-        updatedAt: now,
-      })
-    } else if (
-      args.status === CAMPAIGN_MEMBER_STATUS.Removed &&
-      member.status === CAMPAIGN_MEMBER_STATUS.Accepted
-    ) {
-      await ctx.db.patch(args.campaignId, {
-        playerCount: Math.max(0, ctx.campaign.playerCount - 1),
-        updatedAt: now,
-      })
-    }
 
     return member._id
   },

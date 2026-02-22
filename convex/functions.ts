@@ -47,19 +47,21 @@ async function checkMembership(
   options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
 ): Promise<{ campaign: Campaign; membership: CampaignMember }> {
   const campaign = await getCampaign(ctx, campaignId)
-  const members = await ctx.db
+  if (!campaign) throw new Error('Campaign not found')
+  const member = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
-    .collect()
+    .withIndex('by_campaign_user', (q) =>
+      q.eq('campaignId', campaignId).eq('userId', ctx.user.profile._id),
+    )
+    .unique()
   const allowedRoles =
     options?.allowedRoles ?? Object.values(CAMPAIGN_MEMBER_ROLE)
-  const member = members.find(
-    (m) =>
-      m.userId === ctx.user.profile._id &&
-      m.status === CAMPAIGN_MEMBER_STATUS.Accepted &&
-      allowedRoles.includes(m.role),
+  if (
+    !member ||
+    member.status !== CAMPAIGN_MEMBER_STATUS.Accepted ||
+    !allowedRoles.includes(member.role)
   )
-  if (!member) throw new Error('Not a campaign member')
+    throw new Error('Not a campaign member')
   return {
     campaign,
     membership: { ...member, userProfile: ctx.user.profile },

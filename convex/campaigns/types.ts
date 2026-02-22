@@ -35,7 +35,6 @@ export type CampaignFromDb = {
   name: string
   description?: string
   updatedAt: number
-  playerCount: number
   slug: string
   status: CampaignStatus
   currentSessionId?: Id<'sessions'>
@@ -43,6 +42,7 @@ export type CampaignFromDb = {
 
 export type Campaign = CampaignFromDb & {
   dmUserProfile: UserProfile
+  playerCount: number
 }
 
 export type CampaignMember = {
