@@ -1,9 +1,5 @@
 import { getSidebarItemAncestors } from '../folders/folders'
-import {
-  getSidebarItemPermissionLevel,
-  getSidebarItemSharesForItem,
-} from '../shares/itemShares'
-import { getBookmark } from '../bookmarks/bookmarks'
+import { enhanceBase } from '../sidebarItems/enhanceBase'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import type { CampaignQueryCtx } from '../functions'
 import type {
@@ -19,19 +15,14 @@ export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,
   gameMap: GameMapFromDb,
 ): Promise<GameMap> => {
-  const [imageUrl, bookmark, shares, myPermissionLevel] = await Promise.all([
+  const [base, imageUrl] = await Promise.all([
+    enhanceBase(ctx, gameMap),
     gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
-    getBookmark(ctx, gameMap.campaignId, ctx.membership._id, gameMap._id),
-    getSidebarItemSharesForItem(ctx, gameMap.campaignId, gameMap._id),
-    getSidebarItemPermissionLevel(ctx, gameMap),
   ])
 
   return {
-    ...gameMap,
+    ...base,
     imageUrl,
-    isBookmarked: !!bookmark,
-    shares,
-    myPermissionLevel,
   }
 }
 

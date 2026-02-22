@@ -4,11 +4,7 @@ import {
   getBlockPermissionLevel,
   getBlockSharesForBlock,
 } from '../shares/blockShares'
-import {
-  getSidebarItemPermissionLevel,
-  getSidebarItemSharesForItem,
-} from '../shares/itemShares'
-import { getBookmark } from '../bookmarks/bookmarks'
+import { enhanceBase } from '../sidebarItems/enhanceBase'
 import { SHARE_STATUS } from '../shares/types'
 import type { CampaignQueryCtx } from '../functions'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from './types'
@@ -17,18 +13,7 @@ export const enhanceNote = async (
   ctx: CampaignQueryCtx,
   note: NoteFromDb,
 ): Promise<Note> => {
-  const [bookmark, shares, myPermissionLevel] = await Promise.all([
-    getBookmark(ctx, note.campaignId, ctx.membership._id, note._id),
-    getSidebarItemSharesForItem(ctx, note.campaignId, note._id),
-    getSidebarItemPermissionLevel(ctx, note),
-  ])
-
-  return {
-    ...note,
-    isBookmarked: !!bookmark,
-    shares,
-    myPermissionLevel,
-  }
+  return enhanceBase(ctx, note)
 }
 
 export const enhanceNoteWithContent = async (
