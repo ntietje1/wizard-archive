@@ -7,17 +7,19 @@ import {
   hasAtLeastPermissionLevel,
 } from '../shares/itemShares'
 import { PERMISSION_LEVEL } from '../shares/types'
-import { findUniqueSidebarItemSlug } from '../common/slug'
+import { findUniqueSlug, resolveSlugBasis, shortenId } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { enhanceSidebarItem } from './helpers'
 import {
   checkNameConflict,
   validateWikiLinkCompatibleName,
 } from './sharedValidation'
+import { SIDEBAR_ITEM_TYPES } from './baseTypes'
+import type { SidebarItemId, SidebarItemType } from './baseTypes'
 import type { PermissionLevel } from '../shares/types'
 import type { FolderFromDb } from '../folders/types'
-import type { SidebarItemId } from './baseTypes'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
+import type { MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type {
   AnySidebarItem,
@@ -239,6 +241,66 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
     throw new Error('You do not have sufficient permission for this item')
   }
   return item
+}
+
+async function checkSlugConflict(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  type: SidebarItemType,
+  slug: string,
+  excludeId?: SidebarItemId,
+): Promise<boolean> {
+  let query
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      query = ctx.db.query('notes')
+      break
+    case SIDEBAR_ITEM_TYPES.folders:
+      query = ctx.db.query('folders')
+      break
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      query = ctx.db.query('gameMaps')
+      break
+    case SIDEBAR_ITEM_TYPES.files:
+      query = ctx.db.query('files')
+      break
+    default:
+      throw new Error(`Invalid sidebar item type: ${type satisfies never}`)
+  }
+  return query
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+    .then((conflict) =>
+      excludeId
+        ? conflict !== null && conflict._id !== excludeId
+        : conflict !== null,
+    )
+}
+
+export async function findUniqueSidebarItemSlug(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  type: SidebarItemType,
+  name: string | undefined,
+  itemId: SidebarItemId,
+): Promise<string> {
+  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
+  return findUniqueSlug(slugBasis, (slug) =>
+    checkSlugConflict(ctx, campaignId, type, slug, itemId),
+  )
+}
+
+export async function findNewSidebarItemSlug(
+  ctx: MutationCtx,
+  campaignId: Id<'campaigns'>,
+  type: SidebarItemType,
+  name: string | undefined,
+): Promise<string> {
+  return findUniqueSlug(resolveSlugBasis(name), (slug) =>
+    checkSlugConflict(ctx, campaignId, type, slug),
+  )
 }
 
 /**

@@ -1,13 +1,13 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import {
+  findNewSidebarItemSlug,
   requireItemAccess,
   validateCreateParent,
   validateMove,
   validateRename,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { PERMISSION_LEVEL } from '../shares/types'
@@ -39,17 +39,11 @@ export const createMap = campaignMutation({
       name: args.name,
     })
 
-    const uniqueSlug = await findUniqueSlug(
-      resolveSlugBasis(args.name),
-      async (slug) => {
-        const conflict = await ctx.db
-          .query('gameMaps')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null
-      },
+    const uniqueSlug = await findNewSidebarItemSlug(
+      ctx,
+      args.campaignId,
+      SIDEBAR_ITEM_TYPES.gameMaps,
+      args.name,
     )
 
     const mapId = await ctx.db.insert('gameMaps', {

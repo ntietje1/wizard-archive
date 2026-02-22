@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import {
+  findNewSidebarItemSlug,
   requireItemAccess,
   validateCreateParent,
   validateMove,
@@ -9,7 +10,6 @@ import {
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { PERMISSION_LEVEL } from '../shares/types'
-import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { deleteFile as deleteFileHelper } from './files'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -63,17 +63,11 @@ export const createFile = campaignMutation({
       name: args.name,
     })
 
-    const uniqueSlug = await findUniqueSlug(
-      resolveSlugBasis(args.name),
-      async (slug) => {
-        const conflict = await ctx.db
-          .query('files')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null
-      },
+    const uniqueSlug = await findNewSidebarItemSlug(
+      ctx,
+      args.campaignId,
+      SIDEBAR_ITEM_TYPES.files,
+      args.name,
     )
 
     const fileId = await ctx.db.insert('files', {

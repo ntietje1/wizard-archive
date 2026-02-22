@@ -3,6 +3,7 @@ import { campaignMutation } from '../functions'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
 import {
+  findNewSidebarItemSlug,
   requireItemAccess,
   validateCreateParent,
   validateMove,
@@ -11,7 +12,6 @@ import {
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { PERMISSION_LEVEL } from '../shares/types'
-import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
 import { deleteNote as deleteNoteFn } from './notes'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -32,7 +32,12 @@ export const updateNote = campaignMutation({
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     const rawNote = await ctx.db.get(args.noteId)
-    const note = await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
+    const note = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawNote,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     const updates: Partial<Doc<'notes'>> = {
       updatedAt: Date.now(),
@@ -40,12 +45,7 @@ export const updateNote = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(
-        ctx,
-        args.campaignId,
-        note,
-        args.name,
-      )
+      updates.slug = await validateRename(ctx, args.campaignId, note, args.name)
     }
 
     if (args.iconName !== undefined) {
@@ -69,7 +69,12 @@ export const moveNote = campaignMutation({
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
     const rawNote = await ctx.db.get(args.noteId)
-    const note = await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
+    const note = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawNote,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     await validateMove(ctx, note, args.parentId)
 
@@ -109,17 +114,11 @@ export const createNote = campaignMutation({
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     await validateCreateParent(ctx, args.campaignId, args.parentId)
 
-    const uniqueSlug = await findUniqueSlug(
-      resolveSlugBasis(args.name),
-      async (slug) => {
-        const conflict = await ctx.db
-          .query('notes')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null
-      },
+    const uniqueSlug = await findNewSidebarItemSlug(
+      ctx,
+      args.campaignId,
+      SIDEBAR_ITEM_TYPES.notes,
+      args.name,
     )
 
     await validateSidebarItemName({
@@ -141,7 +140,12 @@ export const createNote = campaignMutation({
     })
 
     if (args.content) {
-      await saveTopLevelBlocksForNote(ctx, noteId, args.campaignId, args.content)
+      await saveTopLevelBlocksForNote(
+        ctx,
+        noteId,
+        args.campaignId,
+        args.content,
+      )
     }
     await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
     return { noteId, slug: uniqueSlug }
@@ -156,8 +160,18 @@ export const updateNoteContent = campaignMutation({
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
     const rawNote = await ctx.db.get(args.noteId)
-    await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.EDIT)
-    await saveTopLevelBlocksForNote(ctx, args.noteId, args.campaignId, args.content)
+    await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawNote,
+      PERMISSION_LEVEL.EDIT,
+    )
+    await saveTopLevelBlocksForNote(
+      ctx,
+      args.noteId,
+      args.campaignId,
+      args.content,
+    )
     return args.noteId
   },
 })

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
-import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import {
+  findNewSidebarItemSlug,
   requireItemAccess,
   validateCreateParent,
   validateMove,
@@ -27,7 +27,12 @@ export const updateFolder = campaignMutation({
     args,
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     const rawFolder = await ctx.db.get(args.folderId)
-    const folder = await requireItemAccess(ctx, args.campaignId, rawFolder, PERMISSION_LEVEL.FULL_ACCESS)
+    const folder = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawFolder,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     const updates: Partial<Doc<'folders'>> = {
       updatedAt: Date.now(),
@@ -56,7 +61,12 @@ export const moveFolder = campaignMutation({
   returns: v.id('folders'),
   handler: async (ctx, args): Promise<Id<'folders'>> => {
     const rawFolder = await ctx.db.get(args.folderId)
-    const folder = await requireItemAccess(ctx, args.campaignId, rawFolder, PERMISSION_LEVEL.FULL_ACCESS)
+    const folder = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      rawFolder,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
     await validateMove(ctx, folder, args.parentId)
 
@@ -94,17 +104,11 @@ export const createFolder = campaignMutation({
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     await validateCreateParent(ctx, args.campaignId, args.parentId)
 
-    const uniqueSlug = await findUniqueSlug(
-      resolveSlugBasis(args.name),
-      async (slug) => {
-        const conflict = await ctx.db
-          .query('folders')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null
-      },
+    const uniqueSlug = await findNewSidebarItemSlug(
+      ctx,
+      args.campaignId,
+      SIDEBAR_ITEM_TYPES.folders,
+      args.name,
     )
 
     await validateSidebarItemName({

@@ -159,7 +159,7 @@ export const deleteCampaign = dmMutation({
     const notes = await ctx.db
       .query('notes')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId),
+        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
       )
       .collect()
 
@@ -170,7 +170,7 @@ export const deleteCampaign = dmMutation({
     const maps = await ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId),
+        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
       )
       .collect()
 
@@ -181,7 +181,7 @@ export const deleteCampaign = dmMutation({
     const files = await ctx.db
       .query('files')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId),
+        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
       )
       .collect()
 

@@ -35,12 +35,12 @@ export async function deleteFolder(
     throw new Error('Only the DM can delete folders')
   }
 
-  const folder = await enhanceSidebarItem(ctx, rawFolder)
+  const { campaignId } = rawFolder
 
   const childFolders = await ctx.db
     .query('folders')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
 
@@ -51,7 +51,7 @@ export async function deleteFolder(
   const childNotes = await ctx.db
     .query('notes')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
 
@@ -62,26 +62,26 @@ export async function deleteFolder(
   const childMaps = await ctx.db
     .query('gameMaps')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
 
   for (const childMap of childMaps) {
-    await deleteMap(ctx, childMap._id, folder.campaignId)
+    await deleteMap(ctx, childMap._id, campaignId)
   }
 
   const childFiles = await ctx.db
     .query('files')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', folder.campaignId).eq('parentId', folderId),
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
 
   for (const childFile of childFiles) {
-    await deleteFile(ctx, childFile._id, folder.campaignId)
+    await deleteFile(ctx, childFile._id, campaignId)
   }
 
-  await deleteItemSharesAndBookmarks(ctx, folder.campaignId, folderId)
+  await deleteItemSharesAndBookmarks(ctx, campaignId, folderId)
   await ctx.db.delete(folderId)
 
   return folderId
