@@ -1,5 +1,5 @@
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { hasViewPermission } from '../shares/itemShares'
+import { checkItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceGameMapWithContent } from './helpers'
 import type { CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -10,10 +10,7 @@ export const getMap = async (
   mapId: Id<'gameMaps'>,
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
-  if (!rawMap) return null
-
-  const map = await enhanceSidebarItem(ctx, rawMap)
-  const hasPermission = await hasViewPermission(ctx, map)
-  if (!hasPermission) return null
+  const map = await checkItemAccess(ctx, rawMap, PERMISSION_LEVEL.VIEW)
+  if (!map) return null
   return enhanceGameMapWithContent(ctx, map)
 }

@@ -1,24 +1,17 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  validateParentChange,
+  requireItemAccess,
+  validateCreateParent,
+  validateMove,
+  validateRename,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  requireEditPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
-import {
-  findUniqueNoteSlug,
-  findUniqueSlug,
-  resolveSlugBasis,
-} from '../common/slug'
+import { PERMISSION_LEVEL } from '../shares/types'
+import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
 import { deleteNote as deleteNoteFn } from './notes'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -39,33 +32,19 @@ export const updateNote = campaignMutation({
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     const rawNote = await ctx.db.get(args.noteId)
-    if (!rawNote || rawNote.campaignId !== args.campaignId) {
-      throw new Error('Note not found')
-    }
+    const note = await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireFullAccessPermission(ctx, note)
-
-    const now = Date.now()
     const updates: Partial<Doc<'notes'>> = {
-      updatedAt: now,
+      updatedAt: Date.now(),
     }
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName({
-        ctx,
-        campaignId: args.campaignId,
-        parentId: note.parentId,
-        name: args.name,
-        excludeId: note._id,
-      })
-
-      updates.slug = await findUniqueNoteSlug(
+      updates.slug = await validateRename(
         ctx,
         args.campaignId,
+        note,
         args.name,
-        args.noteId,
       )
     }
 
@@ -90,36 +69,9 @@ export const moveNote = campaignMutation({
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
     const rawNote = await ctx.db.get(args.noteId)
-    if (!rawNote || rawNote.campaignId !== args.campaignId) {
-      throw new Error('Note not found')
-    }
+    const note = await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireFullAccessPermission(ctx, note)
-
-    await validateParentChange({
-      ctx,
-      item: note,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-    await validateSidebarItemName({
-      ctx,
-      campaignId: args.campaignId,
-      parentId: args.parentId,
-      name: note.name,
-      excludeId: note._id,
-    })
+    await validateMove(ctx, note, args.parentId)
 
     await ctx.db.patch(args.noteId, {
       parentId: args.parentId,
@@ -155,21 +107,7 @@ export const createNote = campaignMutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      await requireFullAccessPermission(ctx, parentItem)
-    } else {
-      if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-        throw new Error('Only the DM can create items at the root level')
-      }
-    }
+    await validateCreateParent(ctx, args.campaignId, args.parentId)
 
     const uniqueSlug = await findUniqueSlug(
       resolveSlugBasis(args.name),
@@ -203,7 +141,7 @@ export const createNote = campaignMutation({
     })
 
     if (args.content) {
-      await saveTopLevelBlocksForNote(ctx, noteId, args.content)
+      await saveTopLevelBlocksForNote(ctx, noteId, args.campaignId, args.content)
     }
     await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
     return { noteId, slug: uniqueSlug }
@@ -218,13 +156,8 @@ export const updateNoteContent = campaignMutation({
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
     const rawNote = await ctx.db.get(args.noteId)
-    if (!rawNote || rawNote.campaignId !== args.campaignId) {
-      throw new Error('Note not found')
-    }
-
-    const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireEditPermission(ctx, note)
-    await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
+    await requireItemAccess(ctx, args.campaignId, rawNote, PERMISSION_LEVEL.EDIT)
+    await saveTopLevelBlocksForNote(ctx, args.noteId, args.campaignId, args.content)
     return args.noteId
   },
 })

@@ -2,12 +2,9 @@ import { BlockNoteEditor, nodeToBlock } from '@blocknote/core'
 import { ProsemirrorSync } from '@convex-dev/prosemirror-sync'
 import { components } from './_generated/api'
 import { saveTopLevelBlocksForNote } from './blocks/blocks'
-import {
-  requireEditPermission,
-  requireViewPermission,
-} from './shares/itemShares'
+import { requireItemAccess } from './sidebarItems/validation'
+import { PERMISSION_LEVEL } from './shares/types'
 import { editorSchema } from './notes/editorSpecs'
-import { enhanceSidebarItem } from './sidebarItems/helpers'
 import { buildCampaignMutationCtx, buildCampaignQueryCtx } from './functions'
 import type { Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -35,8 +32,12 @@ async function checkReadAccess(ctx: QueryCtx, documentId: string) {
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
   const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
-  const note = await enhanceSidebarItem(campaignCtx, noteFromDb)
-  await requireViewPermission(campaignCtx, note)
+  await requireItemAccess(
+    campaignCtx,
+    noteFromDb.campaignId,
+    noteFromDb,
+    PERMISSION_LEVEL.VIEW,
+  )
 }
 
 async function checkWriteAccess(ctx: QueryCtx, documentId: string) {
@@ -44,8 +45,12 @@ async function checkWriteAccess(ctx: QueryCtx, documentId: string) {
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
   const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
-  const note = await enhanceSidebarItem(campaignCtx, noteFromDb)
-  await requireEditPermission(campaignCtx, note)
+  await requireItemAccess(
+    campaignCtx,
+    noteFromDb.campaignId,
+    noteFromDb,
+    PERMISSION_LEVEL.EDIT,
+  )
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -80,7 +85,7 @@ const sync = prosemirrorSync.syncApi({
       noteFromDb.campaignId,
     )
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(campaignCtx, noteId, blocks)
+    await saveTopLevelBlocksForNote(campaignCtx, noteId, noteFromDb.campaignId, blocks)
   },
 })
 

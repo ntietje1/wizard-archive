@@ -1,6 +1,5 @@
 import { v } from 'convex/values'
 import { mutation } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
 import { findUniqueSlug } from '../common/slug'
 import { getUserProfileByUserIdHandler } from './users'
 import type { Doc, Id } from '../_generated/dataModel'

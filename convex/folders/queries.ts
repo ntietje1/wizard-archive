@@ -5,8 +5,8 @@ import {
 } from '../sidebarItems/sidebarItems'
 import { getTopLevelBlocksByNote } from '../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { requireEditPermission } from '../shares/itemShares'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
+import { requireItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { dmQuery } from '../functions'
 import { downloadableItemValidator } from './schema'
 import type { CampaignQueryCtx } from '../functions'
@@ -96,12 +96,12 @@ export const getFolderContentsForDownload = dmQuery({
     args,
   ): Promise<{ folderName: string; items: Array<DownloadableItem> }> => {
     const folderFromDb = await ctx.db.get(args.folderId)
-    if (!folderFromDb || folderFromDb.campaignId !== args.campaignId) {
-      throw new Error('Folder not found')
-    }
-
-    const folder = await enhanceSidebarItem(ctx, folderFromDb)
-    await requireEditPermission(ctx, folder)
+    const folder = await requireItemAccess(
+      ctx,
+      args.campaignId,
+      folderFromDb,
+      PERMISSION_LEVEL.EDIT,
+    )
 
     const folderName = folder.name ?? defaultItemName(folder)
     const items = await collectItemsRecursively(

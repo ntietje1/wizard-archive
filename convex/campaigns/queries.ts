@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
-import { getUserIdentity } from '../common/identity'
+import { getUserIdentity } from '../users/users'
 import { authQuery, campaignQuery } from '../functions'
 import { CAMPAIGN_MEMBER_STATUS } from './types'
 import {

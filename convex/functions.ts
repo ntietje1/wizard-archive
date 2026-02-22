@@ -4,9 +4,8 @@ import { getCampaign } from './campaigns/campaigns'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import type { UserIdentity } from 'convex/server'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
-import type { UserProfile } from './users/types'
+import type { AuthUser } from './users/types'
 import type {
   Campaign,
   CampaignMember,
@@ -14,8 +13,6 @@ import type {
 } from './campaigns/types'
 
 // --- Context types ---
-
-type AuthUser = { identity: UserIdentity; profile: UserProfile }
 
 export type AuthQueryCtx = QueryCtx & { user: AuthUser }
 export type AuthMutationCtx = MutationCtx & { user: AuthUser }

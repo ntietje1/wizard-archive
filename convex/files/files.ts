@@ -1,5 +1,5 @@
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { hasViewPermission } from '../shares/itemShares'
+import { checkItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceFileWithContent } from './helpers'
 import type { CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -10,10 +10,7 @@ export const getFile = async (
   fileId: Id<'files'>,
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
-  if (!rawFile) return null
-
-  const file = await enhanceSidebarItem(ctx, rawFile)
-  const hasPermission = await hasViewPermission(ctx, file)
-  if (!hasPermission) return null
+  const file = await checkItemAccess(ctx, rawFile, PERMISSION_LEVEL.VIEW)
+  if (!file) return null
   return enhanceFileWithContent(ctx, file)
 }

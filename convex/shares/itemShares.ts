@@ -1,7 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
 import { defaultItemName } from '../sidebarItems/sidebarItems'
-import { ATLEAST_PERMISSION_LEVEL, PERMISSION_LEVEL } from './types'
+import { PERMISSION_LEVEL, PERMISSION_RANK } from './types'
 import type { CampaignQueryCtx } from '../functions'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
@@ -114,58 +114,7 @@ export function hasAtLeastPermissionLevel(
   level: PermissionLevel,
   requiredLevel: PermissionLevel,
 ): boolean {
-  return ATLEAST_PERMISSION_LEVEL[requiredLevel].includes(level)
-}
-
-export async function hasViewPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item)
-  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)
-}
-
-export async function requireViewPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<void> {
-  if (!(await hasViewPermission(ctx, item))) {
-    throw new Error('You do not have permission to view this item')
-  }
-}
-
-export async function hasEditPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item)
-  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.EDIT)
-}
-
-export async function requireEditPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<void> {
-  if (!(await hasEditPermission(ctx, item))) {
-    throw new Error('You do not have permission to edit this item')
-  }
-}
-
-export async function hasFullAccessPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<boolean> {
-  const level = await getSidebarItemPermissionLevel(ctx, item)
-  return hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)
-}
-
-export async function requireFullAccessPermission(
-  ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
-): Promise<void> {
-  if (!(await hasFullAccessPermission(ctx, item))) {
-    throw new Error('You do not have full access permission for this item')
-  }
+  return PERMISSION_RANK[level] >= PERMISSION_RANK[requiredLevel]
 }
 
 export async function shareSidebarItemWithMember(

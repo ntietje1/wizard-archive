@@ -110,48 +110,34 @@ export const getSidebarItemByName = campaignQuery({
   },
   returns: v.union(anySidebarItemValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItem | null> => {
-    let item: AnySidebarItemFromDb | null = null
+    const [note, folder, map, file] = await Promise.all([
+      ctx.db
+        .query('notes')
+        .withIndex('by_campaign_name', (q) =>
+          q.eq('campaignId', args.campaignId).eq('name', args.name),
+        )
+        .first(),
+      ctx.db
+        .query('folders')
+        .withIndex('by_campaign_name', (q) =>
+          q.eq('campaignId', args.campaignId).eq('name', args.name),
+        )
+        .first(),
+      ctx.db
+        .query('gameMaps')
+        .withIndex('by_campaign_name', (q) =>
+          q.eq('campaignId', args.campaignId).eq('name', args.name),
+        )
+        .first(),
+      ctx.db
+        .query('files')
+        .withIndex('by_campaign_name', (q) =>
+          q.eq('campaignId', args.campaignId).eq('name', args.name),
+        )
+        .first(),
+    ])
 
-    const note = await ctx.db
-      .query('notes')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('name', args.name),
-      )
-      .first()
-    if (note) {
-      item = note
-    }
-
-    const folder = await ctx.db
-      .query('folders')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('name', args.name),
-      )
-      .first()
-    if (folder) {
-      item = folder
-    }
-
-    const map = await ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('name', args.name),
-      )
-      .first()
-    if (map) {
-      item = map
-    }
-
-    const file = await ctx.db
-      .query('files')
-      .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('name', args.name),
-      )
-      .first()
-    if (file) {
-      item = file
-    }
-
+    const item = note ?? folder ?? map ?? file
     if (!item) {
       return null
     }

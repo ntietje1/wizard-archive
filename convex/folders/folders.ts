@@ -2,7 +2,8 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { deleteNote } from '../notes/notes'
 import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { hasViewPermission } from '../shares/itemShares'
+import { checkItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceFolderWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -13,11 +14,8 @@ export const getFolder = async (
   folderId: Id<'folders'>,
 ): Promise<FolderWithContent | null> => {
   const rawFolder = await ctx.db.get(folderId)
-  if (!rawFolder) return null
-
-  const folder = await enhanceSidebarItem(ctx, rawFolder)
-  const hasPermission = await hasViewPermission(ctx, folder)
-  if (!hasPermission) return null
+  const folder = await checkItemAccess(ctx, rawFolder, PERMISSION_LEVEL.VIEW)
+  if (!folder) return null
   return enhanceFolderWithContent(ctx, folder)
 }
 

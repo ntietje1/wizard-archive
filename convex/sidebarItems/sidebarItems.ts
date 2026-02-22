@@ -2,11 +2,6 @@ import { getNote } from '../notes/notes'
 import { getMap } from '../gameMaps/gameMaps'
 import { getFolder } from '../folders/folders'
 import { getFile } from '../files/files'
-import {
-  getSidebarItemPermissionLevel,
-  hasAtLeastPermissionLevel,
-} from '../shares/itemShares'
-import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceSidebarItem } from './helpers'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type {
@@ -22,36 +17,33 @@ export const getAllSidebarItems = async (
   ctx: CampaignQueryCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Array<AnySidebarItem>> => {
-  const allItems: Array<AnySidebarItemFromDb> = []
+  const [folders, notes, maps, files] = await Promise.all([
+    ctx.db
+      .query('folders')
+      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+    ctx.db
+      .query('notes')
+      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+    ctx.db
+      .query('gameMaps')
+      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+    ctx.db
+      .query('files')
+      .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+  ])
 
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
-    .collect()
-  allItems.push(...(folders as Array<AnySidebarItemFromDb>))
+  const allItems: Array<AnySidebarItemFromDb> = [
+    ...(folders as Array<AnySidebarItemFromDb>),
+    ...(notes as Array<AnySidebarItemFromDb>),
+    ...(maps as Array<AnySidebarItemFromDb>),
+    ...(files as Array<AnySidebarItemFromDb>),
+  ]
 
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
-    .collect()
-  allItems.push(...(notes as Array<AnySidebarItemFromDb>))
-
-  const maps = await ctx.db
-    .query('gameMaps')
-    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
-    .collect()
-  allItems.push(...(maps as Array<AnySidebarItemFromDb>))
-
-  const files = await ctx.db
-    .query('files')
-    .withIndex('by_campaign_parent_name', (q) => q.eq('campaignId', campaignId))
-    .collect()
-  allItems.push(...(files as Array<AnySidebarItemFromDb>))
-
-  const enhanced = await Promise.all(
-    allItems.map((item) => enhanceSidebarItem(ctx, item)),
-  )
-  return enhanced
+  return await Promise.all(allItems.map((item) => enhanceSidebarItem(ctx, item)))
 }
 
 export const getSidebarItemsByParent = async (
@@ -59,44 +51,41 @@ export const getSidebarItemsByParent = async (
   campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
 ): Promise<Array<AnySidebarItem>> => {
-  const allItems: Array<AnySidebarItemFromDb> = []
+  const [folders, notes, maps, files] = await Promise.all([
+    ctx.db
+      .query('folders')
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId).eq('parentId', parentId),
+      )
+      .collect(),
+    ctx.db
+      .query('notes')
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId).eq('parentId', parentId),
+      )
+      .collect(),
+    ctx.db
+      .query('gameMaps')
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId).eq('parentId', parentId),
+      )
+      .collect(),
+    ctx.db
+      .query('files')
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId).eq('parentId', parentId),
+      )
+      .collect(),
+  ])
 
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', parentId),
-    )
-    .collect()
-  allItems.push(...(folders as Array<AnySidebarItemFromDb>))
+  const allItems: Array<AnySidebarItemFromDb> = [
+    ...(folders as Array<AnySidebarItemFromDb>),
+    ...(notes as Array<AnySidebarItemFromDb>),
+    ...(maps as Array<AnySidebarItemFromDb>),
+    ...(files as Array<AnySidebarItemFromDb>),
+  ]
 
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', parentId),
-    )
-    .collect()
-  allItems.push(...(notes as Array<AnySidebarItemFromDb>))
-
-  const maps = await ctx.db
-    .query('gameMaps')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', parentId),
-    )
-    .collect()
-  allItems.push(...(maps as Array<AnySidebarItemFromDb>))
-
-  const files = await ctx.db
-    .query('files')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', parentId),
-    )
-    .collect()
-  allItems.push(...(files as Array<AnySidebarItemFromDb>))
-
-  const enhanced = await Promise.all(
-    allItems.map((item) => enhanceSidebarItem(ctx, item)),
-  )
-  return enhanced
+  return await Promise.all(allItems.map((item) => enhanceSidebarItem(ctx, item)))
 }
 
 export const getSidebarItemById = async (
@@ -128,16 +117,7 @@ export const getSidebarItemById = async (
       throw new Error(`Unknown item type`)
   }
 
-  if (!result) {
-    return null
-  }
-
-  const myPermissionLevel = await getSidebarItemPermissionLevel(ctx, result)
-  if (!hasAtLeastPermissionLevel(myPermissionLevel, PERMISSION_LEVEL.VIEW)) {
-    return null
-  }
-
-  return { ...result, myPermissionLevel }
+  return result
 }
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

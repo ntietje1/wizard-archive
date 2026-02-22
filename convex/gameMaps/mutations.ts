@@ -1,24 +1,17 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  validateParentChange,
+  requireItemAccess,
+  validateCreateParent,
+  validateMove,
+  validateRename,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
-import {
-  findUniqueGameMapSlug,
-  findUniqueSlug,
-  resolveSlugBasis,
-} from '../common/slug'
+import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  requireEditPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
+import { PERMISSION_LEVEL } from '../shares/types'
 import type { Doc, Id } from '../_generated/dataModel'
 
 export const createMap = campaignMutation({
@@ -37,21 +30,7 @@ export const createMap = campaignMutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      await requireFullAccessPermission(ctx, parentItem)
-    } else {
-      if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-        throw new Error('Only the DM can create items at the root level')
-      }
-    }
+    await validateCreateParent(ctx, args.campaignId, args.parentId)
 
     await validateSidebarItemName({
       ctx,
@@ -106,12 +85,7 @@ export const updateMap = campaignMutation({
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireFullAccessPermission(ctx, map)
+    const map = await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
 
     const updates: Partial<Doc<'gameMaps'>> = {
       updatedAt: Date.now(),
@@ -119,19 +93,11 @@ export const updateMap = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName({
-        ctx,
-        campaignId: args.campaignId,
-        parentId: map.parentId,
-        name: args.name,
-        excludeId: map._id,
-      })
-
-      updates.slug = await findUniqueGameMapSlug(
+      updates.slug = await validateRename(
         ctx,
         args.campaignId,
+        map,
         args.name,
-        args.mapId,
       )
     }
     if (args.imageStorageId !== undefined) {
@@ -156,37 +122,9 @@ export const moveMap = campaignMutation({
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
+    const map = await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireFullAccessPermission(ctx, map)
-
-    await validateParentChange({
-      ctx,
-      item: map,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-
-    await validateSidebarItemName({
-      ctx,
-      campaignId: args.campaignId,
-      parentId: args.parentId,
-      name: map.name,
-      excludeId: map._id,
-    })
+    await validateMove(ctx, map, args.parentId)
 
     await ctx.db.patch(args.mapId, {
       parentId: args.parentId,
@@ -203,12 +141,7 @@ export const deleteMap = campaignMutation({
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireFullAccessPermission(ctx, map)
+    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
 
     const pins = await ctx.db
       .query('mapPins')
@@ -235,12 +168,7 @@ export const createItemPin = campaignMutation({
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
 
     const item = await ctx.db.get(args.itemId)
     if (!item) {
@@ -271,12 +199,7 @@ export const updateItemPin = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.patch(args.mapPinId, {
       x: args.x,
@@ -301,12 +224,7 @@ export const updatePinVisibility = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.patch(args.mapPinId, {
       visible: args.visible,
@@ -329,12 +247,7 @@ export const removeItemPin = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap || rawMap.campaignId !== args.campaignId) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
+    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.delete(args.mapPinId)
     return args.mapPinId

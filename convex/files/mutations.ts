@@ -1,20 +1,16 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
 import {
-  validateParentChange,
+  requireItemAccess,
+  validateCreateParent,
+  validateMove,
+  validateRename,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import {
-  findUniqueFileSlug,
-  findUniqueSlug,
-  resolveSlugBasis,
-} from '../common/slug'
+import { PERMISSION_LEVEL } from '../shares/types'
+import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireFullAccessPermission } from '../shares/itemShares'
 import type { Doc, Id } from '../_generated/dataModel'
 
 export const moveFile = campaignMutation({
@@ -25,37 +21,9 @@ export const moveFile = campaignMutation({
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
     const rawFile = await ctx.db.get(args.fileId)
-    if (!rawFile || rawFile.campaignId !== args.campaignId) {
-      throw new Error('File not found')
-    }
+    const file = await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const file = await enhanceSidebarItem(ctx, rawFile)
-    await requireFullAccessPermission(ctx, file)
-
-    await validateParentChange({
-      ctx,
-      item: file,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-
-    await validateSidebarItemName({
-      ctx,
-      campaignId: args.campaignId,
-      parentId: args.parentId,
-      name: file.name,
-      excludeId: file._id,
-    })
+    await validateMove(ctx, file, args.parentId)
 
     await ctx.db.patch(args.fileId, {
       parentId: args.parentId,
@@ -81,21 +49,7 @@ export const createFile = campaignMutation({
     ctx,
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      await requireFullAccessPermission(ctx, parentItem)
-    } else {
-      if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-        throw new Error('Only the DM can create items at the root level')
-      }
-    }
+    await validateCreateParent(ctx, args.campaignId, args.parentId)
 
     await validateSidebarItemName({
       ctx,
@@ -150,12 +104,7 @@ export const updateFile = campaignMutation({
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
     const rawFile = await ctx.db.get(args.fileId)
-    if (!rawFile || rawFile.campaignId !== args.campaignId) {
-      throw new Error('File not found')
-    }
-
-    const file = await enhanceSidebarItem(ctx, rawFile)
-    await requireFullAccessPermission(ctx, file)
+    const file = await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
 
     const updates: Partial<Doc<'files'>> = {
       updatedAt: Date.now(),
@@ -163,19 +112,11 @@ export const updateFile = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName({
-        ctx,
-        campaignId: args.campaignId,
-        parentId: file.parentId,
-        name: args.name,
-        excludeId: file._id,
-      })
-
-      updates.slug = await findUniqueFileSlug(
+      updates.slug = await validateRename(
         ctx,
         args.campaignId,
+        file,
         args.name,
-        args.fileId,
       )
     }
     if (args.storageId !== undefined) {
@@ -199,14 +140,9 @@ export const deleteFile = campaignMutation({
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
     const rawFile = await ctx.db.get(args.fileId)
-    if (!rawFile || rawFile.campaignId !== args.campaignId) {
-      throw new Error('File not found')
-    }
+    await requireItemAccess(ctx, args.campaignId, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const file = await enhanceSidebarItem(ctx, rawFile)
-    await requireFullAccessPermission(ctx, file)
-
-    if (rawFile.storageId) {
+    if (rawFile?.storageId) {
       await ctx.storage.delete(rawFile.storageId)
     }
 

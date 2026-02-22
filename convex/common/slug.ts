@@ -51,84 +51,6 @@ export async function findUniqueSlug(
   return uniqueSlug
 }
 
-// Type-specific slug update helpers
-export async function findUniqueNoteSlug(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  name: string | undefined,
-  itemId: Id<'notes'>,
-): Promise<string> {
-  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
-
-  return findUniqueSlug(slugBasis, async (slug) => {
-    const conflict = await ctx.db
-      .query('notes')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null && conflict._id !== itemId
-  })
-}
-
-export async function findUniqueFolderSlug(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  name: string | undefined,
-  itemId: Id<'folders'>,
-): Promise<string> {
-  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
-
-  return findUniqueSlug(slugBasis, async (slug) => {
-    const conflict = await ctx.db
-      .query('folders')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null && conflict._id !== itemId
-  })
-}
-
-export async function findUniqueGameMapSlug(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  name: string | undefined,
-  itemId: Id<'gameMaps'>,
-): Promise<string> {
-  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
-
-  return findUniqueSlug(slugBasis, async (slug) => {
-    const conflict = await ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null && conflict._id !== itemId
-  })
-}
-
-export async function findUniqueFileSlug(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
-  name: string | undefined,
-  itemId: Id<'files'>,
-): Promise<string> {
-  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
-
-  return findUniqueSlug(slugBasis, async (slug) => {
-    const conflict = await ctx.db
-      .query('files')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .unique()
-    return conflict !== null && conflict._id !== itemId
-  })
-}
-
-// Generic sidebar item slug helper
 export async function findUniqueSidebarItemSlug(
   ctx: MutationCtx,
   campaignId: Id<'campaigns'>,
@@ -136,25 +58,49 @@ export async function findUniqueSidebarItemSlug(
   name: string | undefined,
   itemId: SidebarItemId,
 ): Promise<string> {
+  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
+
   switch (type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return findUniqueNoteSlug(ctx, campaignId, name, itemId as Id<'notes'>)
+      return findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('notes')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== itemId
+      })
     case SIDEBAR_ITEM_TYPES.folders:
-      return findUniqueFolderSlug(
-        ctx,
-        campaignId,
-        name,
-        itemId as Id<'folders'>,
-      )
+      return findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('folders')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== itemId
+      })
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return findUniqueGameMapSlug(
-        ctx,
-        campaignId,
-        name,
-        itemId as Id<'gameMaps'>,
-      )
+      return findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('gameMaps')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== itemId
+      })
     case SIDEBAR_ITEM_TYPES.files:
-      return findUniqueFileSlug(ctx, campaignId, name, itemId as Id<'files'>)
+      return findUniqueSlug(slugBasis, async (slug) => {
+        const conflict = await ctx.db
+          .query('files')
+          .withIndex('by_campaign_slug', (q) =>
+            q.eq('campaignId', campaignId).eq('slug', slug),
+          )
+          .unique()
+        return conflict !== null && conflict._id !== itemId
+      })
     default:
       throw new Error(`Unknown sidebar item type: ${type}`)
   }

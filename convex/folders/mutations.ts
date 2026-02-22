@@ -1,19 +1,15 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { findUniqueSlug, resolveSlugBasis } from '../common/slug'
 import {
-  findUniqueFolderSlug,
-  findUniqueSlug,
-  resolveSlugBasis,
-} from '../common/slug'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
-import {
-  validateParentChange,
+  requireItemAccess,
+  validateCreateParent,
+  validateMove,
+  validateRename,
   validateSidebarItemName,
 } from '../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import { requireFullAccessPermission } from '../shares/itemShares'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { deleteFolder as deleteFolderFn } from './folders'
 import type { Doc, Id } from '../_generated/dataModel'
 
@@ -31,33 +27,19 @@ export const updateFolder = campaignMutation({
     args,
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     const rawFolder = await ctx.db.get(args.folderId)
-    if (!rawFolder || rawFolder.campaignId !== args.campaignId) {
-      throw new Error('Folder not found')
-    }
+    const folder = await requireItemAccess(ctx, args.campaignId, rawFolder, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const folder = await enhanceSidebarItem(ctx, rawFolder)
-    await requireFullAccessPermission(ctx, folder)
-
-    const now = Date.now()
     const updates: Partial<Doc<'folders'>> = {
-      updatedAt: now,
+      updatedAt: Date.now(),
     }
 
     if (args.name !== undefined) {
       updates.name = args.name
-      await validateSidebarItemName({
-        ctx,
-        campaignId: args.campaignId,
-        parentId: folder.parentId,
-        name: args.name,
-        excludeId: folder._id,
-      })
-
-      updates.slug = await findUniqueFolderSlug(
+      updates.slug = await validateRename(
         ctx,
         args.campaignId,
+        folder,
         args.name,
-        args.folderId,
       )
     }
 
@@ -74,37 +56,9 @@ export const moveFolder = campaignMutation({
   returns: v.id('folders'),
   handler: async (ctx, args): Promise<Id<'folders'>> => {
     const rawFolder = await ctx.db.get(args.folderId)
-    if (!rawFolder || rawFolder.campaignId !== args.campaignId) {
-      throw new Error('Folder not found')
-    }
+    const folder = await requireItemAccess(ctx, args.campaignId, rawFolder, PERMISSION_LEVEL.FULL_ACCESS)
 
-    const folder = await enhanceSidebarItem(ctx, rawFolder)
-    await requireFullAccessPermission(ctx, folder)
-
-    await validateParentChange({
-      ctx,
-      item: folder,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-
-    await validateSidebarItemName({
-      ctx,
-      campaignId: args.campaignId,
-      parentId: args.parentId,
-      name: folder.name,
-      excludeId: folder._id,
-    })
+    await validateMove(ctx, folder, args.parentId)
 
     await ctx.db.patch(args.folderId, {
       parentId: args.parentId,
@@ -138,21 +92,7 @@ export const createFolder = campaignMutation({
     ctx,
     args,
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      await requireFullAccessPermission(ctx, parentItem)
-    } else {
-      if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-        throw new Error('Only the DM can create items at the root level')
-      }
-    }
+    await validateCreateParent(ctx, args.campaignId, args.parentId)
 
     const uniqueSlug = await findUniqueSlug(
       resolveSlugBasis(args.name),

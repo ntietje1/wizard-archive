@@ -1,5 +1,3 @@
-import { requireEditPermission } from '../shares/itemShares'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { SHARE_STATUS } from '../shares/types'
 import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
@@ -38,14 +36,12 @@ export async function getTopLevelBlocksByNote(
 ): Promise<Array<Block>> {
   const blocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId),
+    .withIndex('by_campaign_note_topLevel', (q) =>
+      q.eq('campaignId', campaignId).eq('noteId', noteId).eq('isTopLevel', true),
     )
     .collect()
 
-  return blocks
-    .filter((block) => block.isTopLevel)
-    .sort((a, b) => (a.position || 0) - (b.position || 0))
+  return blocks.sort((a, b) => (a.position || 0) - (b.position || 0))
 }
 
 export async function deleteBlocksByNote(
@@ -68,25 +64,17 @@ export async function deleteBlocksByNote(
 export async function saveTopLevelBlocksForNote(
   ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
+  campaignId: Id<'campaigns'>,
   content: Array<CustomBlock>,
 ): Promise<void> {
   const now = Date.now()
 
-  const rawNote = await ctx.db.get(noteId)
-  if (!rawNote) {
-    throw new Error('Note not found')
-  }
-
-  const note = await enhanceSidebarItem(ctx, rawNote)
-  await requireEditPermission(ctx, note)
-
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+    .withIndex('by_campaign_note_topLevel', (q) =>
+      q.eq('campaignId', campaignId).eq('noteId', noteId).eq('isTopLevel', true),
     )
     .collect()
-    .then((blocks) => blocks.filter((block) => block.isTopLevel))
 
   const existingBlocksMap = new Map(
     existingTopLevelBlocks.map((block) => [block.blockId, block]),
@@ -107,7 +95,7 @@ export async function saveTopLevelBlocksForNote(
     } else {
       await insertBlock(ctx, {
         noteId,
-        campaignId: note.campaignId,
+        campaignId,
         blockId: block.id,
         isTopLevel: true,
         position: positions.get(block.id),
@@ -121,7 +109,7 @@ export async function saveTopLevelBlocksForNote(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
   for (const block of remainingBlocks) {
-    await removeBlockIfNotNeeded(ctx, note.campaignId, block._id)
+    await removeBlockIfNotNeeded(ctx, campaignId, block._id)
   }
 }
 

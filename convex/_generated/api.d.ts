@@ -18,7 +18,6 @@ import type * as campaigns_campaigns from "../campaigns/campaigns.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_types from "../campaigns/types.js";
-import type * as common_identity from "../common/identity.js";
 import type * as common_slug from "../common/slug.js";
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
@@ -104,7 +103,6 @@ declare const fullApi: ApiFromModules<{
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/types": typeof campaigns_types;
-  "common/identity": typeof common_identity;
   "common/slug": typeof common_slug;
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;

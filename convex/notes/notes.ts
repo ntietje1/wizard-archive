@@ -1,10 +1,7 @@
 import { deleteBlocksByNote } from '../blocks/blocks'
 import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  hasViewPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
+import { checkItemAccess, requireItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { enhanceNoteWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { NoteWithContent } from './types'
@@ -15,11 +12,8 @@ export const getNote = async (
   noteId: Id<'notes'>,
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)
-  if (!rawNote) return null
-
-  const note = await enhanceSidebarItem(ctx, rawNote)
-  const hasPermission = await hasViewPermission(ctx, note)
-  if (!hasPermission) return null
+  const note = await checkItemAccess(ctx, rawNote, PERMISSION_LEVEL.VIEW)
+  if (!note) return null
   return enhanceNoteWithContent(ctx, note)
 }
 
@@ -28,12 +22,7 @@ export async function deleteNote(
   noteId: Id<'notes'>,
 ): Promise<Id<'notes'>> {
   const rawNote = await ctx.db.get(noteId)
-  if (!rawNote) {
-    throw new Error('Note not found')
-  }
-
-  const note = await enhanceSidebarItem(ctx, rawNote)
-  await requireFullAccessPermission(ctx, note)
+  const note = await requireItemAccess(ctx, ctx.campaign._id, rawNote, PERMISSION_LEVEL.FULL_ACCESS)
 
   await deleteBlocksByNote(ctx, noteId, note.campaignId)
   await deleteItemSharesAndBookmarks(ctx, note.campaignId, noteId)
