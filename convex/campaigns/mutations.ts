@@ -95,6 +95,7 @@ export const joinCampaign = authMutation({
 
 export const updateCampaign = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     slug: v.optional(v.string()),
@@ -142,13 +143,17 @@ export const updateCampaign = dmMutation({
 })
 
 export const deleteCampaign = dmMutation({
-  args: {},
+  args: {
+    campaignId: v.id('campaigns'),
+  },
   returns: v.id('campaigns'),
-  handler: async (ctx, args): Promise<Id<'campaigns'>> => {
+  handler: async (ctx): Promise<Id<'campaigns'>> => {
+    const campaignId = ctx.campaign._id
+
     const folders = await ctx.db
       .query('folders')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
+        q.eq('campaignId', campaignId).eq('parentId', undefined),
       )
       .collect()
 
@@ -159,7 +164,7 @@ export const deleteCampaign = dmMutation({
     const notes = await ctx.db
       .query('notes')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
+        q.eq('campaignId', campaignId).eq('parentId', undefined),
       )
       .collect()
 
@@ -170,30 +175,30 @@ export const deleteCampaign = dmMutation({
     const maps = await ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
+        q.eq('campaignId', campaignId).eq('parentId', undefined),
       )
       .collect()
 
     for (const map of maps) {
-      await deleteMap(ctx, map._id, args.campaignId)
+      await deleteMap(ctx, map._id)
     }
 
     const files = await ctx.db
       .query('files')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', args.campaignId).eq('parentId', undefined),
+        q.eq('campaignId', campaignId).eq('parentId', undefined),
       )
       .collect()
 
     for (const file of files) {
-      await deleteFile(ctx, file._id, args.campaignId)
+      await deleteFile(ctx, file._id)
     }
 
     // Delete block shares
     const blockShares = await ctx.db
       .query('blockShares')
       .withIndex('by_campaign_block_member', (q) =>
-        q.eq('campaignId', args.campaignId),
+        q.eq('campaignId', campaignId),
       )
       .collect()
 
@@ -204,9 +209,7 @@ export const deleteCampaign = dmMutation({
     // Delete sessions
     const sessions = await ctx.db
       .query('sessions')
-      .withIndex('by_campaign_startedAt', (q) =>
-        q.eq('campaignId', args.campaignId),
-      )
+      .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignId))
       .collect()
 
     for (const session of sessions) {
@@ -216,21 +219,22 @@ export const deleteCampaign = dmMutation({
     // Delete campaign members
     const campaignMembers = await ctx.db
       .query('campaignMembers')
-      .withIndex('by_campaign_user', (q) => q.eq('campaignId', args.campaignId))
+      .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
       .collect()
 
     for (const member of campaignMembers) {
       await ctx.db.delete(member._id)
     }
 
-    await ctx.db.delete(args.campaignId)
+    await ctx.db.delete(campaignId)
 
-    return args.campaignId
+    return campaignId
   },
 })
 
 export const updateCampaignMemberStatus = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     memberId: v.id('campaignMembers'),
     status: campaignMemberStatusValidator,
   },

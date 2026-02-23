@@ -2,7 +2,7 @@ import { SHARE_STATUS } from '../shares/types'
 import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
-import type { CampaignMutationCtx } from '../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { CustomBlock } from '../notes/editorSpecs'
 
@@ -30,10 +30,11 @@ export const findBlockByBlockNoteId = async (
 }
 
 export async function getTopLevelBlocksByNote(
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
 ): Promise<Array<Block>> {
+  const campaignId = ctx.campaign._id
+
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
@@ -48,10 +49,11 @@ export async function getTopLevelBlocksByNote(
 }
 
 export async function deleteBlocksByNote(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
@@ -67,9 +69,9 @@ export async function deleteBlocksByNote(
 export async function saveTopLevelBlocksForNote(
   ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
-  campaignId: Id<'campaigns'>,
   content: Array<CustomBlock>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
   const now = Date.now()
 
   const existingTopLevelBlocks = await ctx.db
@@ -115,7 +117,7 @@ export async function saveTopLevelBlocksForNote(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
   for (const block of remainingBlocks) {
-    await removeBlockIfNotNeeded(ctx, campaignId, block._id)
+    await removeBlockIfNotNeeded(ctx, block._id)
   }
 }
 
@@ -164,10 +166,11 @@ export async function updateBlock(
  * - It is not a top-level block
  */
 export async function removeBlockIfNotNeeded(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   blockId: Id<'blocks'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const block = await ctx.db.get(blockId)
   if (
     !block ||

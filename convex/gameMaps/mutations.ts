@@ -16,6 +16,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 
 export const createMap = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
@@ -30,24 +31,24 @@ export const createMap = campaignMutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    await validateCreateParent(ctx, args.campaignId, args.parentId)
+    const campaignId = ctx.campaign._id
+
+    await validateCreateParent(ctx, args.parentId)
 
     await validateSidebarItemName({
       ctx,
-      campaignId: args.campaignId,
       parentId: args.parentId,
       name: args.name,
     })
 
     const uniqueSlug = await findNewSidebarItemSlug(
       ctx,
-      args.campaignId,
       SIDEBAR_ITEM_TYPES.gameMaps,
       args.name,
     )
 
     const mapId = await ctx.db.insert('gameMaps', {
-      campaignId: args.campaignId,
+      campaignId,
       name: args.name,
       slug: uniqueSlug,
       iconName: args.iconName,
@@ -64,6 +65,7 @@ export const createMap = campaignMutation({
 
 export const updateMap = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.id('_storage')),
@@ -81,7 +83,6 @@ export const updateMap = campaignMutation({
     const rawMap = await ctx.db.get(args.mapId)
     const map = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawMap,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -92,7 +93,7 @@ export const updateMap = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(ctx, args.campaignId, map, args.name)
+      updates.slug = await validateRename(ctx, map, args.name)
     }
     if (args.imageStorageId !== undefined) {
       updates.imageStorageId = args.imageStorageId
@@ -110,6 +111,7 @@ export const updateMap = campaignMutation({
 
 export const moveMap = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     parentId: v.optional(v.id('folders')),
   },
@@ -118,7 +120,6 @@ export const moveMap = campaignMutation({
     const rawMap = await ctx.db.get(args.mapId)
     const map = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawMap,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -135,25 +136,22 @@ export const moveMap = campaignMutation({
 
 export const deleteMap = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    await requireItemAccess(
-      ctx,
-      args.campaignId,
-      rawMap,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
+    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
 
-    await deleteMapHelper(ctx, args.mapId, args.campaignId)
+    await deleteMapHelper(ctx, args.mapId)
     return args.mapId
   },
 })
 
 export const createItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
@@ -162,7 +160,7 @@ export const createItemPin = campaignMutation({
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
     const rawMap = await ctx.db.get(args.mapId)
-    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
+    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
 
     const item = await ctx.db.get(args.itemId)
     if (!item) {
@@ -181,6 +179,7 @@ export const createItemPin = campaignMutation({
 
 export const updateItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
@@ -193,7 +192,7 @@ export const updateItemPin = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
+    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.patch(args.mapPinId, {
       x: args.x,
@@ -207,6 +206,7 @@ export const updateItemPin = campaignMutation({
 
 export const updatePinVisibility = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     visible: v.boolean(),
   },
@@ -218,7 +218,7 @@ export const updatePinVisibility = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
+    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.patch(args.mapPinId, {
       visible: args.visible,
@@ -231,6 +231,7 @@ export const updatePinVisibility = campaignMutation({
 
 export const removeItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
   },
   returns: v.id('mapPins'),
@@ -241,7 +242,7 @@ export const removeItemPin = campaignMutation({
     }
 
     const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, args.campaignId, rawMap, PERMISSION_LEVEL.EDIT)
+    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
 
     await ctx.db.delete(args.mapPinId)
     return args.mapPinId

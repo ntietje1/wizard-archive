@@ -18,6 +18,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 
 export const updateNote = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     name: v.optional(v.string()),
     iconName: v.optional(v.string()),
@@ -34,7 +35,6 @@ export const updateNote = campaignMutation({
     const rawNote = await ctx.db.get(args.noteId)
     const note = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawNote,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -45,7 +45,7 @@ export const updateNote = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(ctx, args.campaignId, note, args.name)
+      updates.slug = await validateRename(ctx, note, args.name)
     }
 
     if (args.iconName !== undefined) {
@@ -63,6 +63,7 @@ export const updateNote = campaignMutation({
 
 export const moveNote = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     parentId: v.optional(v.id('folders')),
   },
@@ -71,7 +72,6 @@ export const moveNote = campaignMutation({
     const rawNote = await ctx.db.get(args.noteId)
     const note = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawNote,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -88,6 +88,7 @@ export const moveNote = campaignMutation({
 
 export const deleteNote = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
   },
   returns: v.id('notes'),
@@ -98,6 +99,7 @@ export const deleteNote = campaignMutation({
 
 export const createNote = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
@@ -112,18 +114,18 @@ export const createNote = campaignMutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    await validateCreateParent(ctx, args.campaignId, args.parentId)
+    const campaignId = ctx.campaign._id
+
+    await validateCreateParent(ctx, args.parentId)
 
     const uniqueSlug = await findNewSidebarItemSlug(
       ctx,
-      args.campaignId,
       SIDEBAR_ITEM_TYPES.notes,
       args.name,
     )
 
     await validateSidebarItemName({
       ctx,
-      campaignId: args.campaignId,
       parentId: args.parentId,
       name: args.name,
     })
@@ -135,17 +137,12 @@ export const createNote = campaignMutation({
       iconName: args.iconName,
       color: args.color,
       updatedAt: Date.now(),
-      campaignId: args.campaignId,
+      campaignId,
       type: SIDEBAR_ITEM_TYPES.notes,
     })
 
     if (args.content) {
-      await saveTopLevelBlocksForNote(
-        ctx,
-        noteId,
-        args.campaignId,
-        args.content,
-      )
+      await saveTopLevelBlocksForNote(ctx, noteId, args.content)
     }
     await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
     return { noteId, slug: uniqueSlug }
@@ -154,24 +151,15 @@ export const createNote = campaignMutation({
 
 export const updateNoteContent = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     content: v.array(customBlockValidator),
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
     const rawNote = await ctx.db.get(args.noteId)
-    await requireItemAccess(
-      ctx,
-      args.campaignId,
-      rawNote,
-      PERMISSION_LEVEL.EDIT,
-    )
-    await saveTopLevelBlocksForNote(
-      ctx,
-      args.noteId,
-      args.campaignId,
-      args.content,
-    )
+    await requireItemAccess(ctx, rawNote, PERMISSION_LEVEL.EDIT)
+    await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
     return args.noteId
   },
 })

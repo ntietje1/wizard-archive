@@ -2,10 +2,11 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { deleteFile } from '../files/files'
 import { deleteMap } from '../gameMaps/gameMaps'
 import { deleteNote } from '../notes/notes'
-import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { enhanceSidebarItem } from '../sidebarItems/helpers'
 import { checkItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../shares/types'
+import { deleteSidebarItemShares } from '../shares/itemShares'
+import { deleteItemBookmarks } from '../bookmarks/bookmarks'
 import { enhanceFolderWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -35,7 +36,7 @@ export async function deleteFolder(
     throw new Error('Only the DM can delete folders')
   }
 
-  const { campaignId } = rawFolder
+  const campaignId = ctx.campaign._id
 
   const childFolders = await ctx.db
     .query('folders')
@@ -67,7 +68,7 @@ export async function deleteFolder(
     .collect()
 
   for (const childMap of childMaps) {
-    await deleteMap(ctx, childMap._id, campaignId)
+    await deleteMap(ctx, childMap._id)
   }
 
   const childFiles = await ctx.db
@@ -78,10 +79,11 @@ export async function deleteFolder(
     .collect()
 
   for (const childFile of childFiles) {
-    await deleteFile(ctx, childFile._id, campaignId)
+    await deleteFile(ctx, childFile._id)
   }
 
-  await deleteItemSharesAndBookmarks(ctx, campaignId, folderId)
+  await deleteSidebarItemShares(ctx, folderId)
+  await deleteItemBookmarks(ctx, folderId)
   await ctx.db.delete(folderId)
 
   return folderId

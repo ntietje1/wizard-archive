@@ -10,6 +10,7 @@ import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
+import { requireItemAccess } from '../sidebarItems/validation'
 import {
   setBlockShareStatusHelper,
   shareBlockWithMemberHelper,
@@ -19,6 +20,7 @@ import {
   shareSidebarItemWithMember,
   unshareSidebarItemFromMember,
 } from './itemShares'
+import { PERMISSION_LEVEL } from './types'
 import type { Id } from '../_generated/dataModel'
 
 /**
@@ -27,6 +29,7 @@ import type { Id } from '../_generated/dataModel'
  */
 export const shareSidebarItem = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
@@ -35,13 +38,10 @@ export const shareSidebarItem = dmMutation({
   returns: v.id('sidebarItemShares'),
   handler: async (ctx, args): Promise<Id<'sidebarItemShares'>> => {
     const item = await ctx.db.get(args.sidebarItemId)
-    if (!item || item.campaignId !== args.campaignId) {
-      throw new Error('Sidebar item not found')
-    }
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.FULL_ACCESS)
 
     return await shareSidebarItemWithMember(
       ctx,
-      args.campaignId,
       args.sidebarItemId,
       args.sidebarItemType,
       args.campaignMemberId,
@@ -56,19 +56,17 @@ export const shareSidebarItem = dmMutation({
  */
 export const unshareSidebarItem = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const item = await ctx.db.get(args.sidebarItemId)
-    if (!item || item.campaignId !== args.campaignId) {
-      throw new Error('Sidebar item not found')
-    }
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.FULL_ACCESS)
 
     await unshareSidebarItemFromMember(
       ctx,
-      args.campaignId,
       args.sidebarItemId,
       args.campaignMemberId,
     )
@@ -83,6 +81,7 @@ export const unshareSidebarItem = dmMutation({
  */
 export const updateSidebarItemSharePermission = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
@@ -91,15 +90,10 @@ export const updateSidebarItemSharePermission = dmMutation({
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const item = await ctx.db.get(args.sidebarItemId)
-    if (!item || item.campaignId !== args.campaignId) {
-      throw new Error('Sidebar item not found')
-    }
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.FULL_ACCESS)
 
-    // Create or update the share with the specified permission level
-    // (including 'none' — removing the share is handled by unshareSidebarItem/clearMemberPermission)
     await shareSidebarItemWithMember(
       ctx,
-      args.campaignId,
       args.sidebarItemId,
       args.sidebarItemType,
       args.campaignMemberId,
@@ -117,15 +111,14 @@ export const updateSidebarItemSharePermission = dmMutation({
  */
 export const setAllPlayersPermission = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     permissionLevel: v.optional(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const item = await ctx.db.get(args.sidebarItemId)
-    if (!item || item.campaignId !== args.campaignId) {
-      throw new Error('Sidebar item not found')
-    }
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.FULL_ACCESS)
 
     await ctx.db.patch(args.sidebarItemId, {
       allPermissionLevel: args.permissionLevel,
@@ -141,15 +134,14 @@ export const setAllPlayersPermission = dmMutation({
  */
 export const setFolderInheritShares = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
     inheritShares: v.boolean(),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const folder = await ctx.db.get(args.folderId)
-    if (!folder || folder.campaignId !== args.campaignId) {
-      throw new Error('Folder not found')
-    }
+    await requireItemAccess(ctx, folder, PERMISSION_LEVEL.FULL_ACCESS)
 
     await ctx.db.patch(args.folderId, {
       inheritShares: args.inheritShares,
@@ -168,6 +160,7 @@ const blockItemValidator = v.object({
 
 export const setBlocksShareStatus = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     status: blockShareStatusValidator,
@@ -175,18 +168,10 @@ export const setBlocksShareStatus = dmMutation({
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const note = await ctx.db.get(args.noteId)
-    if (!note || note.campaignId !== args.campaignId) {
-      throw new Error('Note not found')
-    }
+    await requireItemAccess(ctx, note, PERMISSION_LEVEL.FULL_ACCESS)
 
     for (const blockItem of args.blocks) {
-      await setBlockShareStatusHelper(
-        ctx,
-        args.campaignId,
-        args.noteId,
-        blockItem,
-        args.status,
-      )
+      await setBlockShareStatusHelper(ctx, args.noteId, blockItem, args.status)
     }
 
     return null
@@ -195,6 +180,7 @@ export const setBlocksShareStatus = dmMutation({
 
 export const shareBlocks = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     campaignMemberId: v.id('campaignMembers'),
@@ -202,14 +188,11 @@ export const shareBlocks = dmMutation({
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const note = await ctx.db.get(args.noteId)
-    if (!note || note.campaignId !== args.campaignId) {
-      throw new Error('Note not found')
-    }
+    await requireItemAccess(ctx, note, PERMISSION_LEVEL.FULL_ACCESS)
 
     for (const blockItem of args.blocks) {
       await shareBlockWithMemberHelper(
         ctx,
-        args.campaignId,
         args.noteId,
         blockItem,
         args.campaignMemberId,
@@ -222,16 +205,19 @@ export const shareBlocks = dmMutation({
 
 export const unshareBlocks = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
+    const note = await ctx.db.get(args.noteId)
+    await requireItemAccess(ctx, note, PERMISSION_LEVEL.FULL_ACCESS)
+
     for (const blockNoteId of args.blockNoteIds) {
       await unshareBlockFromMemberHelper(
         ctx,
-        args.campaignId,
         args.noteId,
         blockNoteId,
         args.campaignMemberId,

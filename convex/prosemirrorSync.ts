@@ -37,7 +37,7 @@ async function checkAccess(
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
   const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
-  await requireItemAccess(campaignCtx, noteFromDb.campaignId, noteFromDb, level)
+  await requireItemAccess(campaignCtx, noteFromDb, level)
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -75,7 +75,6 @@ const sync = prosemirrorSync.syncApi({
     await saveTopLevelBlocksForNote(
       campaignCtx,
       noteId,
-      noteFromDb.campaignId,
       blocks,
     )
   },

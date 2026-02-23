@@ -1,9 +1,9 @@
 import { checkItemAccess } from '../sidebarItems/validation'
-import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { PERMISSION_LEVEL } from '../shares/types'
+import { deleteSidebarItemShares } from '../shares/itemShares'
+import { deleteItemBookmarks } from '../bookmarks/bookmarks'
 import { enhanceFileWithContent } from './helpers'
-import type { CampaignQueryCtx } from '../functions'
-import type { MutationCtx } from '../_generated/server'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type { FileWithContent } from './types'
 
@@ -18,9 +18,8 @@ export const getFile = async (
 }
 
 export async function deleteFile(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   fileId: Id<'files'>,
-  campaignId: Id<'campaigns'>,
 ): Promise<void> {
   const file = await ctx.db.get(fileId)
   if (!file) return
@@ -29,6 +28,7 @@ export async function deleteFile(
     await ctx.storage.delete(file.storageId)
   }
 
-  await deleteItemSharesAndBookmarks(ctx, campaignId, fileId)
+  await deleteSidebarItemShares(ctx, fileId)
+  await deleteItemBookmarks(ctx, fileId)
   await ctx.db.delete(fileId)
 }

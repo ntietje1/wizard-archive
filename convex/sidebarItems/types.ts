@@ -7,8 +7,6 @@ import type { Note, NoteFromDb, NoteWithContent } from '../notes/types'
 import type { Folder, FolderFromDb, FolderWithContent } from '../folders/types'
 import type { File, FileFromDb, FileWithContent } from '../files/types'
 
-export type { SidebarItemId, SidebarItemType } from './baseTypes'
-
 export type AnySidebarItemFromDb =
   | NoteFromDb
   | FolderFromDb

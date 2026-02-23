@@ -1,12 +1,12 @@
+import type { CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type { QueryCtx } from '../_generated/server'
 import type { Session } from './types'
 
 export const getCurrentSession = async (
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
 ): Promise<Session | null> => {
-  const campaign = await ctx.db.get(campaignId)
+  const campaign = await ctx.db.get(ctx.campaign._id)
   if (!campaign?.currentSessionId) {
     return null
   }

@@ -15,6 +15,9 @@ import {
 import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
 
 export const getUserCampaigns = authQuery({
+  args: {
+    campaignId: v.id('campaigns'),
+  },
   returns: v.array(campaignWithMembershipValidator),
   handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
     const profile = ctx.user.profile
@@ -146,6 +149,7 @@ export const checkCampaignSlugExists = authQuery({
 })
 
 export const getPlayersByCampaign = campaignQuery({
+  args: { campaignId: v.id('campaigns') },
   returns: v.array(campaignMemberValidator),
   handler: async (ctx, _args): Promise<Array<CampaignMember>> => {
     return getCampaignMembers(ctx, ctx.campaign._id)

@@ -15,8 +15,9 @@ import type { CampaignQueryCtx } from '../functions'
 
 export const getAllSidebarItems = async (
   ctx: CampaignQueryCtx,
-  campaignId: Id<'campaigns'>,
 ): Promise<Array<AnySidebarItem>> => {
+  const campaignId = ctx.campaign._id
+
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db
       .query('folders')
@@ -58,9 +59,10 @@ export const getAllSidebarItems = async (
 
 export const getSidebarItemsByParent = async (
   ctx: CampaignQueryCtx,
-  campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
 ): Promise<Array<AnySidebarItem>> => {
+  const campaignId = ctx.campaign._id
+
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db
       .query('folders')
@@ -102,9 +104,10 @@ export const getSidebarItemsByParent = async (
 
 export const getSidebarItemById = async (
   ctx: CampaignQueryCtx,
-  campaignId: Id<'campaigns'>,
   id: SidebarItemId,
 ): Promise<AnySidebarItemWithContent | null> => {
+  const campaignId = ctx.campaign._id
+
   const item = await ctx.db.get(id)
   if (!item || item.campaignId !== campaignId) {
     return null

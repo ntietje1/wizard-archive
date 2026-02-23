@@ -6,6 +6,7 @@ import type { GameMapWithContent } from './types'
 
 export const getMap = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
   },
   returns: v.union(mapWithContentValidator, v.null()),

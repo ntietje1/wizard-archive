@@ -2,8 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/sessions'
 import { defaultItemName } from '../sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL, PERMISSION_RANK } from './types'
-import type { CampaignQueryCtx } from '../functions'
-import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type {
   AnySidebarItem,
@@ -23,12 +22,7 @@ export async function getSidebarItemPermissionLevel(
   const checkId = ctx.membership._id
 
   // Check for an explicit per-player share
-  const share = await getSidebarItemShareForMember(
-    ctx,
-    item.campaignId,
-    item._id,
-    checkId,
-  )
+  const share = await getSidebarItemShareForMember(ctx, item._id, checkId)
   if (share) {
     return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
   }
@@ -41,23 +35,16 @@ export async function getSidebarItemPermissionLevel(
 
   // Walk up folder hierarchy for inherited permission
   const parentId = item.parentId
-  return await resolveInheritedPermission(
-    ctx,
-    item.campaignId,
-    parentId,
-    checkId,
-  )
+  return await resolveInheritedPermission(ctx, parentId, checkId)
 }
 
 async function resolveInheritedPermission(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   parentId: Id<'folders'> | undefined,
   playerId: Id<'campaignMembers'>,
 ): Promise<PermissionLevel> {
   const { level } = await resolveInheritedPermissionWithSource(
     ctx,
-    campaignId,
     parentId,
     playerId,
   )
@@ -65,8 +52,7 @@ async function resolveInheritedPermission(
 }
 
 export async function resolveInheritedPermissionWithSource(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   parentId: Id<'folders'> | undefined,
   memberId?: Id<'campaignMembers'>,
 ): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
@@ -85,7 +71,6 @@ export async function resolveInheritedPermissionWithSource(
     if (memberId) {
       const share = await getSidebarItemShareForMember(
         ctx,
-        campaignId,
         currentParentId,
         memberId,
       )
@@ -118,13 +103,14 @@ export function hasAtLeastPermissionLevel(
 }
 
 export async function shareSidebarItemWithMember(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   sidebarItemId: SidebarItemId,
   sidebarItemType: SidebarItemType,
   campaignMemberId: Id<'campaignMembers'>,
   permissionLevel?: PermissionLevel,
 ): Promise<Id<'sidebarItemShares'>> {
+  const campaignId = ctx.campaign._id
+
   // Check if share already exists
   const existingShare = await ctx.db
     .query('sidebarItemShares')
@@ -148,7 +134,7 @@ export async function shareSidebarItemWithMember(
   }
 
   // Get current session if any
-  const currentSession = await getCurrentSession(ctx, campaignId)
+  const currentSession = await getCurrentSession(ctx)
 
   return await ctx.db.insert('sidebarItemShares', {
     campaignId,
@@ -161,11 +147,12 @@ export async function shareSidebarItemWithMember(
 }
 
 export async function unshareSidebarItemFromMember(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   sidebarItemId: SidebarItemId,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const share = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
@@ -182,34 +169,33 @@ export async function unshareSidebarItemFromMember(
 }
 
 export async function getSidebarItemSharesForItem(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   sidebarItemId: SidebarItemId,
 ): Promise<Array<SidebarItemShare>> {
   return await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', campaignId).eq('sidebarItemId', sidebarItemId),
+      q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', sidebarItemId),
     )
     .collect()
 }
 
 export async function getSidebarItemSharesForMember(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Array<SidebarItemShare>> {
   return await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_member', (q) =>
-      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
+      q
+        .eq('campaignId', ctx.campaign._id)
+        .eq('campaignMemberId', campaignMemberId),
     )
     .collect()
 }
 
 export async function getSidebarItemShareForMember(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   sidebarItemId: SidebarItemId,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<SidebarItemShare | null> {
@@ -217,7 +203,7 @@ export async function getSidebarItemShareForMember(
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
       q
-        .eq('campaignId', campaignId)
+        .eq('campaignId', ctx.campaign._id)
         .eq('sidebarItemId', sidebarItemId)
         .eq('campaignMemberId', campaignMemberId),
     )
@@ -225,16 +211,30 @@ export async function getSidebarItemShareForMember(
 }
 
 export async function isSidebarItemSharedWithMember(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   sidebarItemId: SidebarItemId,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<boolean> {
   const share = await getSidebarItemShareForMember(
     ctx,
-    campaignId,
     sidebarItemId,
     campaignMemberId,
   )
   return share !== null
+}
+
+export async function deleteSidebarItemShares(
+  ctx: CampaignMutationCtx,
+  sidebarItemId: SidebarItemId,
+): Promise<void> {
+  const campaignId = ctx.campaign._id
+
+  const shares = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q.eq('campaignId', campaignId).eq('sidebarItemId', sidebarItemId),
+    )
+    .collect()
+
+  await Promise.all(shares.map((share) => ctx.db.delete(share._id)))
 }

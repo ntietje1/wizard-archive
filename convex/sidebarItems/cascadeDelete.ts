@@ -1,13 +1,12 @@
-import type { MutationCtx } from '../_generated/server'
-import type { Id } from '../_generated/dataModel'
-
-type SidebarItemId = Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'>
+import type { SidebarItemId } from './baseTypes'
+import type { CampaignMutationCtx } from '../functions'
 
 export async function deleteItemSharesAndBookmarks(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   sidebarItemId: SidebarItemId,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const shares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>

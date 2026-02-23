@@ -22,7 +22,7 @@ export const enhanceNoteWithContent = async (
 ): Promise<NoteWithContent> => {
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, note.parentId),
-    getTopLevelBlocksByNote(ctx, note._id, note.campaignId),
+    getTopLevelBlocksByNote(ctx, note._id),
   ])
 
   const blockMeta: Record<string, BlockMeta> = {}
@@ -31,7 +31,7 @@ export const enhanceNoteWithContent = async (
       const [myPermissionLevel, blockShares] = await Promise.all([
         getBlockPermissionLevel(ctx, block),
         block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-          ? getBlockSharesForBlock(ctx, note.campaignId, block._id)
+          ? getBlockSharesForBlock(ctx, block._id)
           : Promise.resolve([]),
       ])
       blockMeta[block.blockId] = {

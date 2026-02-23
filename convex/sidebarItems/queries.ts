@@ -20,29 +20,32 @@ import type {
 import type { SidebarItemType } from './baseTypes'
 
 export const getAllSidebarItems = campaignQuery({
+  args: { campaignId: v.id('campaigns') },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsFn(ctx, args.campaignId)
+  handler: async (ctx): Promise<Array<AnySidebarItem>> => {
+    return await getAllSidebarItemsFn(ctx)
   },
 })
 
 export const getSidebarItemsByParent = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getSidebarItemsByParentFn(ctx, args.campaignId, args.parentId)
+    return await getSidebarItemsByParentFn(ctx, args.parentId)
   },
 })
 
 export const getSidebarItem = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     id: sidebarItemIdValidator,
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    const result = await getSidebarItemByIdFn(ctx, args.campaignId, args.id)
+    const result = await getSidebarItemByIdFn(ctx, args.id)
     if (!result) {
       throw new Error('Sidebar item not found')
     }
@@ -52,11 +55,13 @@ export const getSidebarItem = campaignQuery({
 
 export const getSidebarItemBySlug = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     type: sidebarItemTypeValidator,
     slug: v.string(),
   },
   returns: v.union(anySidebarItemWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
+    const campaignId = ctx.campaign._id
     let item: AnySidebarItemFromDb | null = null
 
     switch (args.type as SidebarItemType) {
@@ -64,7 +69,7 @@ export const getSidebarItemBySlug = campaignQuery({
         item = await ctx.db
           .query('folders')
           .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+            q.eq('campaignId', campaignId).eq('slug', args.slug),
           )
           .unique()
         break
@@ -72,7 +77,7 @@ export const getSidebarItemBySlug = campaignQuery({
         item = await ctx.db
           .query('notes')
           .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+            q.eq('campaignId', campaignId).eq('slug', args.slug),
           )
           .unique()
         break
@@ -80,7 +85,7 @@ export const getSidebarItemBySlug = campaignQuery({
         item = await ctx.db
           .query('gameMaps')
           .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+            q.eq('campaignId', campaignId).eq('slug', args.slug),
           )
           .unique()
         break
@@ -88,7 +93,7 @@ export const getSidebarItemBySlug = campaignQuery({
         item = await ctx.db
           .query('files')
           .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', args.slug),
+            q.eq('campaignId', campaignId).eq('slug', args.slug),
           )
           .unique()
         break
@@ -100,39 +105,42 @@ export const getSidebarItemBySlug = campaignQuery({
       return null
     }
 
-    return await getSidebarItemByIdFn(ctx, args.campaignId, item._id)
+    return await getSidebarItemByIdFn(ctx, item._id)
   },
 })
 
 export const getSidebarItemByName = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.string(),
   },
   returns: v.union(anySidebarItemValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItem | null> => {
+    const campaignId = ctx.campaign._id
+
     const [note, folder, map, file] = await Promise.all([
       ctx.db
         .query('notes')
         .withIndex('by_campaign_name', (q) =>
-          q.eq('campaignId', args.campaignId).eq('name', args.name),
+          q.eq('campaignId', campaignId).eq('name', args.name),
         )
         .first(),
       ctx.db
         .query('folders')
         .withIndex('by_campaign_name', (q) =>
-          q.eq('campaignId', args.campaignId).eq('name', args.name),
+          q.eq('campaignId', campaignId).eq('name', args.name),
         )
         .first(),
       ctx.db
         .query('gameMaps')
         .withIndex('by_campaign_name', (q) =>
-          q.eq('campaignId', args.campaignId).eq('name', args.name),
+          q.eq('campaignId', campaignId).eq('name', args.name),
         )
         .first(),
       ctx.db
         .query('files')
         .withIndex('by_campaign_name', (q) =>
-          q.eq('campaignId', args.campaignId).eq('name', args.name),
+          q.eq('campaignId', campaignId).eq('name', args.name),
         )
         .first(),
     ])
@@ -142,6 +150,6 @@ export const getSidebarItemByName = campaignQuery({
       return null
     }
 
-    return await getSidebarItemByIdFn(ctx, args.campaignId, item._id)
+    return await getSidebarItemByIdFn(ctx, item._id)
   },
 })

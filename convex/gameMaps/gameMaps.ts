@@ -1,9 +1,9 @@
 import { checkItemAccess } from '../sidebarItems/validation'
-import { deleteItemSharesAndBookmarks } from '../sidebarItems/cascadeDelete'
 import { PERMISSION_LEVEL } from '../shares/types'
+import { deleteItemBookmarks } from '../bookmarks/bookmarks'
+import { deleteSidebarItemShares } from '../shares/itemShares'
 import { enhanceGameMapWithContent } from './helpers'
-import type { CampaignQueryCtx } from '../functions'
-import type { MutationCtx } from '../_generated/server'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type { GameMapWithContent } from './types'
 
@@ -18,9 +18,8 @@ export const getMap = async (
 }
 
 export async function deleteMap(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   mapId: Id<'gameMaps'>,
-  campaignId: Id<'campaigns'>,
 ): Promise<void> {
   const pins = await ctx.db
     .query('mapPins')
@@ -31,6 +30,7 @@ export async function deleteMap(
     await ctx.db.delete(pin._id)
   }
 
-  await deleteItemSharesAndBookmarks(ctx, campaignId, mapId)
+  await deleteSidebarItemShares(ctx, mapId)
+  await deleteItemBookmarks(ctx, mapId)
   await ctx.db.delete(mapId)
 }

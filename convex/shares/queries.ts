@@ -8,6 +8,7 @@ import {
   sidebarItemIdValidator,
 } from '../sidebarItems/schema/baseValidators'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { requireItemAccess } from '../sidebarItems/validation'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import { getBlockSharesForBlock } from './blockShares'
 import {
@@ -21,15 +22,14 @@ import type { BlockShare, PermissionLevel, SidebarItemShare } from './types'
 
 export const getSidebarItemShares = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.array(sidebarItemShareValidator),
   handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
-    return await getSidebarItemSharesForItem(
-      ctx,
-      args.campaignId,
-      args.sidebarItemId,
-    )
+    const item = await ctx.db.get(args.sidebarItemId)
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
+    return await getSidebarItemSharesForItem(ctx, args.sidebarItemId)
   },
 })
 
@@ -39,6 +39,7 @@ export const getSidebarItemShares = dmQuery({
  */
 export const getSidebarItemWithShares = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
   },
   returns: v.object({
@@ -70,7 +71,10 @@ export const getSidebarItemWithShares = dmQuery({
     memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
     memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
   }> => {
+    const campaignId = ctx.campaign._id
+
     const item = await ctx.db.get(args.sidebarItemId)
+    await requireItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
     if (!item) {
       throw new Error('Sidebar item not found')
     }
@@ -81,27 +85,19 @@ export const getSidebarItemWithShares = dmQuery({
     }
 
     // Get player members
-    const allMembers = await getCampaignMembers(ctx, args.campaignId)
+    const allMembers = await getCampaignMembers(ctx, campaignId)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
 
     // Always fetch individual shares
-    const shares = await getSidebarItemSharesForItem(
-      ctx,
-      args.campaignId,
-      args.sidebarItemId,
-    )
+    const shares = await getSidebarItemSharesForItem(ctx, args.sidebarItemId)
 
     // Resolve inherited all-players permission level with source folder name
     const {
       level: inheritedAllPermissionLevel,
       folderName: inheritedFromFolderName,
-    } = await resolveInheritedPermissionWithSource(
-      ctx,
-      args.campaignId,
-      item.parentId,
-    )
+    } = await resolveInheritedPermissionWithSource(ctx, item.parentId)
 
     // Resolve per-member inherited permissions with source folder names
     const memberInheritedPermissions: Record<string, PermissionLevel> = {}
@@ -109,7 +105,6 @@ export const getSidebarItemWithShares = dmQuery({
     for (const member of playerMembers) {
       const { level, folderName } = await resolveInheritedPermissionWithSource(
         ctx,
-        args.campaignId,
         item.parentId,
         member._id,
       )
@@ -134,10 +129,11 @@ export const getSidebarItemWithShares = dmQuery({
 
 export const getBlockShares = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     blockId: v.id('blocks'),
   },
   returns: v.array(blockShareValidator),
   handler: async (ctx, args): Promise<Array<BlockShare>> => {
-    return await getBlockSharesForBlock(ctx, args.campaignId, args.blockId)
+    return await getBlockSharesForBlock(ctx, args.blockId)
   },
 })

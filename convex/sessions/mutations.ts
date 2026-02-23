@@ -5,6 +5,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 
 export const startSession = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
   },
   returns: v.id('sessions'),
@@ -33,10 +34,10 @@ export const startSession = dmMutation({
 })
 
 export const endCurrentSession = dmMutation({
-  args: {},
+  args: { campaignId: v.id('campaigns') },
   returns: v.id('sessions'),
-  handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    const currentSession = await getCurrentSession(ctx, ctx.campaign._id)
+  handler: async (ctx): Promise<Id<'sessions'>> => {
+    const currentSession = await getCurrentSession(ctx)
     if (!currentSession) {
       throw new Error('No active session')
     }
@@ -45,42 +46,46 @@ export const endCurrentSession = dmMutation({
       endedAt: Date.now(),
       updatedAt: Date.now(),
     })
-    await ctx.db.patch(args.campaignId, { currentSessionId: undefined })
+    await ctx.db.patch(ctx.campaign._id, { currentSessionId: undefined })
     return currentSession._id
   },
 })
 
 export const setCurrentSession = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sessionId: v.id('sessions'),
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
+    const campaignId = ctx.campaign._id
+
     const newSession = await getSession(ctx, args.sessionId)
-    if (!newSession || newSession.campaignId !== args.campaignId) {
+    if (!newSession || newSession.campaignId !== campaignId) {
       throw new Error('Session not found')
     }
 
-    const currentSession = await getCurrentSession(ctx, args.campaignId)
+    const currentSession = await getCurrentSession(ctx)
     if (currentSession && currentSession._id !== args.sessionId) {
       await ctx.db.patch(currentSession._id, { endedAt: Date.now() })
     }
 
     await ctx.db.patch(args.sessionId, { endedAt: undefined })
-    await ctx.db.patch(args.campaignId, { currentSessionId: args.sessionId })
+    await ctx.db.patch(campaignId, { currentSessionId: args.sessionId })
     return args.sessionId
   },
 })
 
 export const updateSession = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sessionId: v.id('sessions'),
     name: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     const session = await ctx.db.get(args.sessionId)
-    if (!session || session.campaignId !== args.campaignId) {
+    if (!session || session.campaignId !== ctx.campaign._id) {
       throw new Error('Session not found')
     }
 

@@ -5,6 +5,7 @@ import type { Id } from '../_generated/dataModel'
 
 export const setCurrentEditor = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sortOrder: v.optional(
       v.union(
         v.literal(SORT_ORDERS.Alphabetical),
@@ -23,17 +24,19 @@ export const setCurrentEditor = campaignMutation({
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
+    const campaignId = ctx.campaign._id
+
     const editor = await ctx.db
       .query('editor')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', args.campaignId).eq('userId', ctx.user.profile._id),
+        q.eq('campaignId', campaignId).eq('userId', ctx.user.profile._id),
       )
       .unique()
 
     if (!editor) {
       return await ctx.db.insert('editor', {
         userId: ctx.user.profile._id,
-        campaignId: args.campaignId,
+        campaignId,
         sortOrder: args.sortOrder ?? SORT_ORDERS.DateCreated,
         sortDirection: args.sortDirection ?? SORT_DIRECTIONS.Ascending,
         sidebarWidth: args.sidebarWidth,

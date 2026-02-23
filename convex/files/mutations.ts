@@ -15,6 +15,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 
 export const moveFile = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     fileId: v.id('files'),
     parentId: v.optional(v.id('folders')),
   },
@@ -23,7 +24,6 @@ export const moveFile = campaignMutation({
     const rawFile = await ctx.db.get(args.fileId)
     const file = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawFile,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -40,6 +40,7 @@ export const moveFile = campaignMutation({
 
 export const createFile = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
@@ -54,24 +55,24 @@ export const createFile = campaignMutation({
     ctx,
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
-    await validateCreateParent(ctx, args.campaignId, args.parentId)
+    const campaignId = ctx.campaign._id
+
+    await validateCreateParent(ctx, args.parentId)
 
     await validateSidebarItemName({
       ctx,
-      campaignId: args.campaignId,
       parentId: args.parentId,
       name: args.name,
     })
 
     const uniqueSlug = await findNewSidebarItemSlug(
       ctx,
-      args.campaignId,
       SIDEBAR_ITEM_TYPES.files,
       args.name,
     )
 
     const fileId = await ctx.db.insert('files', {
-      campaignId: args.campaignId,
+      campaignId,
       name: args.name,
       slug: uniqueSlug,
       iconName: args.iconName,
@@ -88,6 +89,7 @@ export const createFile = campaignMutation({
 
 export const updateFile = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     fileId: v.id('files'),
     name: v.optional(v.string()),
     storageId: v.optional(v.id('_storage')),
@@ -105,7 +107,6 @@ export const updateFile = campaignMutation({
     const rawFile = await ctx.db.get(args.fileId)
     const file = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawFile,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -116,7 +117,7 @@ export const updateFile = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(ctx, args.campaignId, file, args.name)
+      updates.slug = await validateRename(ctx, file, args.name)
     }
     if (args.storageId !== undefined) {
       updates.storageId = args.storageId
@@ -134,19 +135,15 @@ export const updateFile = campaignMutation({
 
 export const deleteFile = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     fileId: v.id('files'),
   },
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
     const rawFile = await ctx.db.get(args.fileId)
-    await requireItemAccess(
-      ctx,
-      args.campaignId,
-      rawFile,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
+    await requireItemAccess(ctx, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
 
-    await deleteFileHelper(ctx, args.fileId, args.campaignId)
+    await deleteFileHelper(ctx, args.fileId)
     return args.fileId
   },
 })

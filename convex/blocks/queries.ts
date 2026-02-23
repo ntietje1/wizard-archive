@@ -19,12 +19,13 @@ import type { CampaignMember } from '../campaigns/types'
 
 export const getBlockById = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     blockId: v.id('blocks'),
   },
   returns: v.union(blockValidator, v.null()),
   handler: async (ctx, args): Promise<Block | null> => {
     const block = await ctx.db.get(args.blockId)
-    if (!block || block.campaignId !== args.campaignId) return null
+    if (!block || block.campaignId !== ctx.campaign._id) return null
 
     return block
   },
@@ -32,6 +33,7 @@ export const getBlockById = campaignQuery({
 
 export const getBlockWithShares = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockId: blockNoteIdValidator,
   },
@@ -54,7 +56,7 @@ export const getBlockWithShares = dmQuery({
     playerMembers: Array<CampaignMember>
   } | null> => {
     const note = await ctx.db.get(args.noteId)
-    if (!note || note.campaignId !== args.campaignId) {
+    if (!note || note.campaignId !== ctx.campaign._id) {
       throw new Error('Note not found')
     }
 
@@ -66,14 +68,14 @@ export const getBlockWithShares = dmQuery({
     const shareStatus: ShareStatus =
       block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
-    const allMembers = await getCampaignMembers(ctx, args.campaignId)
+    const allMembers = await getCampaignMembers(ctx, ctx.campaign._id)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
 
     let shares: Array<BlockShare> = []
     if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-      shares = await getBlockSharesForBlock(ctx, args.campaignId, block._id)
+      shares = await getBlockSharesForBlock(ctx, block._id)
     }
 
     return {
@@ -101,6 +103,7 @@ export type BlockShareInfo = {
 
 export const getBlocksWithShares = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockIds: v.array(blockNoteIdValidator),
   },
@@ -116,11 +119,11 @@ export const getBlocksWithShares = dmQuery({
     playerMembers: Array<CampaignMember>
   }> => {
     const note = await ctx.db.get(args.noteId)
-    if (!note || note.campaignId !== args.campaignId) {
+    if (!note || note.campaignId !== ctx.campaign._id) {
       throw new Error('Note not found')
     }
 
-    const allMembers = await getCampaignMembers(ctx, args.campaignId)
+    const allMembers = await getCampaignMembers(ctx, ctx.campaign._id)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
@@ -145,11 +148,7 @@ export const getBlocksWithShares = dmQuery({
 
       let sharedMemberIds: Array<Id<'campaignMembers'>> = []
       if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-        const shares = await getBlockSharesForBlock(
-          ctx,
-          args.campaignId,
-          block._id,
-        )
+        const shares = await getBlockSharesForBlock(ctx, block._id)
         sharedMemberIds = shares.map((s) => s.campaignMemberId)
       }
 

@@ -11,6 +11,7 @@ import type {
   CampaignMember,
   CampaignMemberRole,
 } from './campaigns/types'
+import type { SidebarItemId } from './sidebarItems/baseTypes'
 
 // --- Context types ---
 
@@ -87,27 +88,46 @@ export async function buildCampaignMutationCtx(
   return { ...authCtx, campaign, membership }
 }
 
-// --- Config types --- TODO: potentially make args and returns required
+// --- Config types ---
+
+type WithCampaignId = {
+  campaignId: Validator<Id<'campaigns'>, 'required', string>
+}
+
+type WithSidebarItemId = WithCampaignId & {
+  sidebarItemId: Validator<SidebarItemId, 'required', string>
+}
 
 type AuthConfig<TArgs extends PropertyValidators, TReturn> = {
-  args?: TArgs
-  returns?: Validator<unknown, 'required', string>
+  args: TArgs
+  returns: Validator<unknown, 'required', string>
   handler: (ctx: AuthQueryCtx, args: ObjectType<TArgs>) => Promise<TReturn>
 }
 
 type AuthMutationConfig<TArgs extends PropertyValidators, TReturn> = {
-  args?: TArgs
-  returns?: Validator<unknown, 'required', string>
+  args: TArgs
+  returns: Validator<unknown, 'required', string>
   handler: (ctx: AuthMutationCtx, args: ObjectType<TArgs>) => Promise<TReturn>
 }
 
-type CampaignConfig<TCtx, TArgs extends PropertyValidators, TReturn> = {
-  args?: TArgs
-  returns?: Validator<unknown, 'required', string>
-  handler: (
-    ctx: TCtx,
-    args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
-  ) => Promise<TReturn>
+type CampaignConfig<
+  TCtx,
+  TArgs extends PropertyValidators & WithCampaignId,
+  TReturn,
+> = {
+  args: TArgs
+  returns: Validator<unknown, 'required', string>
+  handler: (ctx: TCtx, args: ObjectType<TArgs>) => Promise<TReturn>
+}
+
+type SidebarConfig<
+  TCtx,
+  TArgs extends PropertyValidators & WithSidebarItemId,
+  TReturn,
+> = {
+  args: TArgs
+  returns: Validator<unknown, 'required', string>
+  handler: (ctx: TCtx, args: ObjectType<TArgs>) => Promise<TReturn>
 }
 
 // --- Wrappers ---
@@ -116,8 +136,8 @@ export function authQuery<TArgs extends PropertyValidators, TReturn>(
   config: AuthConfig<TArgs, TReturn>,
 ) {
   return queryGeneric({
-    ...(config.args ? { args: config.args } : {}),
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (ctx: QueryCtx, args: ObjectType<TArgs>) => {
       const user = await authenticate(ctx)
       return config.handler({ ...ctx, user }, args)
@@ -129,8 +149,8 @@ export function authMutation<TArgs extends PropertyValidators, TReturn>(
   config: AuthMutationConfig<TArgs, TReturn>,
 ) {
   return mutationGeneric({
-    ...(config.args ? { args: config.args } : {}),
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (ctx: MutationCtx, args: ObjectType<TArgs>) => {
       const user = await authenticate(ctx)
       return config.handler({ ...ctx, user }, args)
@@ -138,12 +158,13 @@ export function authMutation<TArgs extends PropertyValidators, TReturn>(
   })
 }
 
-export function campaignQuery<TArgs extends PropertyValidators, TReturn>(
-  config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>,
-) {
+export function campaignQuery<
+  TArgs extends PropertyValidators & WithCampaignId,
+  TReturn,
+>(config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>) {
   return queryGeneric({
-    args: { ...config.args, campaignId: v.id('campaigns') },
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (
       ctx: QueryCtx,
       args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
@@ -159,12 +180,13 @@ export function campaignQuery<TArgs extends PropertyValidators, TReturn>(
   })
 }
 
-export function campaignMutation<TArgs extends PropertyValidators, TReturn>(
-  config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>,
-) {
+export function campaignMutation<
+  TArgs extends PropertyValidators & WithCampaignId,
+  TReturn,
+>(config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>) {
   return mutationGeneric({
-    args: { ...config.args, campaignId: v.id('campaigns') },
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (
       ctx: MutationCtx,
       args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
@@ -180,12 +202,13 @@ export function campaignMutation<TArgs extends PropertyValidators, TReturn>(
   })
 }
 
-export function dmQuery<TArgs extends PropertyValidators, TReturn>(
-  config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>,
-) {
+export function dmQuery<
+  TArgs extends PropertyValidators & WithCampaignId,
+  TReturn,
+>(config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>) {
   return queryGeneric({
-    args: { ...config.args, campaignId: v.id('campaigns') },
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (
       ctx: QueryCtx,
       args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
@@ -202,12 +225,13 @@ export function dmQuery<TArgs extends PropertyValidators, TReturn>(
   })
 }
 
-export function dmMutation<TArgs extends PropertyValidators, TReturn>(
-  config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>,
-) {
+export function dmMutation<
+  TArgs extends PropertyValidators & WithCampaignId,
+  TReturn,
+>(config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>) {
   return mutationGeneric({
-    args: { ...config.args, campaignId: v.id('campaigns') },
-    ...(config.returns ? { returns: config.returns } : {}),
+    args: config.args,
+    returns: config.returns,
     handler: async (
       ctx: MutationCtx,
       args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
@@ -218,6 +242,56 @@ export function dmMutation<TArgs extends PropertyValidators, TReturn>(
         authCtx,
         args.campaignId,
         { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
+      )
+      return config.handler({ ...authCtx, campaign, membership }, args)
+    },
+  })
+}
+
+export function sidebarQuery<
+  TArgs extends PropertyValidators & WithSidebarItemId,
+  TReturn,
+>(config: SidebarConfig<CampaignQueryCtx, TArgs, TReturn>) {
+  return queryGeneric({
+    args: config.args,
+    returns: config.returns,
+    handler: async (
+      ctx: QueryCtx,
+      args: ObjectType<TArgs> & {
+        campaignId: Id<'campaigns'>
+        sidebarItemId: SidebarItemId
+      },
+    ) => {
+      const user = await authenticate(ctx)
+      const authCtx = { ...ctx, user } as AuthQueryCtx
+      const { campaign, membership } = await checkMembership(
+        authCtx,
+        args.campaignId,
+      )
+      return config.handler({ ...authCtx, campaign, membership }, args)
+    },
+  })
+}
+
+export function sidebarMutation<
+  TArgs extends PropertyValidators & WithSidebarItemId,
+  TReturn,
+>(config: SidebarConfig<CampaignMutationCtx, TArgs, TReturn>) {
+  return mutationGeneric({
+    args: config.args,
+    returns: config.returns,
+    handler: async (
+      ctx: MutationCtx,
+      args: ObjectType<TArgs> & {
+        campaignId: Id<'campaigns'>
+        sidebarItemId: SidebarItemId
+      },
+    ) => {
+      const user = await authenticate(ctx)
+      const authCtx = { ...ctx, user } as AuthMutationCtx
+      const { campaign, membership } = await checkMembership(
+        authCtx,
+        args.campaignId,
       )
       return config.handler({ ...authCtx, campaign, membership }, args)
     },

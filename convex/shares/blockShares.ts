@@ -7,10 +7,9 @@ import {
   updateBlock,
 } from '../blocks/blocks'
 import { PERMISSION_LEVEL, SHARE_STATUS } from './types'
-import type { CampaignQueryCtx } from '../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Block } from '../blocks/types'
 import type { BlockShare, PermissionLevel, ShareStatus } from './types'
-import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
 
@@ -32,7 +31,6 @@ export async function getBlockPermissionLevel(
     case SHARE_STATUS.INDIVIDUALLY_SHARED: {
       const isShared = await isBlockSharedWithMember(
         ctx,
-        block.campaignId,
         block._id,
         checkId,
       )
@@ -56,12 +54,13 @@ export async function enforceBlockSharePermissionsOrNull(
 }
 
 export async function setBlockShareStatusHelper(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
   blockItem: BlockItem,
   status: ShareStatus,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const existingBlock = await findBlockByBlockNoteId(
     ctx,
     noteId,
@@ -102,17 +101,18 @@ export async function setBlockShareStatusHelper(
       await ctx.db.delete(share._id)
     }
 
-    await removeBlockIfNotNeeded(ctx, campaignId, blockId)
+    await removeBlockIfNotNeeded(ctx, blockId)
   }
 }
 
 export async function shareBlockWithMemberHelper(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
   blockItem: BlockItem,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const existingBlock = await findBlockByBlockNoteId(
     ctx,
     noteId,
@@ -140,20 +140,21 @@ export async function shareBlockWithMemberHelper(
     })
   }
 
-  await shareBlockWithMember(ctx, campaignId, blockId, campaignMemberId)
+  await shareBlockWithMember(ctx, blockId, campaignMemberId)
 }
 
 export async function unshareBlockFromMemberHelper(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   noteId: Id<'notes'>,
   blockNoteId: string,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const block = await findBlockByBlockNoteId(ctx, noteId, blockNoteId)
   if (!block || block.campaignId !== campaignId) return
 
-  await unshareBlockFromMember(ctx, campaignId, block._id, campaignMemberId)
+  await unshareBlockFromMember(ctx, block._id, campaignMemberId)
 
   // Check if any shares remain
   const remainingShares = await ctx.db
@@ -168,16 +169,17 @@ export async function unshareBlockFromMemberHelper(
     await ctx.db.patch(block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
     })
-    await removeBlockIfNotNeeded(ctx, campaignId, block._id)
+    await removeBlockIfNotNeeded(ctx, block._id)
   }
 }
 
 export async function shareBlockWithMember(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   blockId: Id<'blocks'>,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Id<'blockShares'>> {
+  const campaignId = ctx.campaign._id
+
   // Verify block exists
   const block = await ctx.db.get(blockId)
   if (!block || block.campaignId !== campaignId) {
@@ -200,7 +202,7 @@ export async function shareBlockWithMember(
   }
 
   // Get current session if any
-  const currentSession = await getCurrentSession(ctx, campaignId)
+  const currentSession = await getCurrentSession(ctx)
 
   return await ctx.db.insert('blockShares', {
     campaignId,
@@ -211,11 +213,12 @@ export async function shareBlockWithMember(
 }
 
 export async function unshareBlockFromMember(
-  ctx: MutationCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignMutationCtx,
   blockId: Id<'blocks'>,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<void> {
+  const campaignId = ctx.campaign._id
+
   const share = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
@@ -232,34 +235,31 @@ export async function unshareBlockFromMember(
 }
 
 export async function getBlockSharesForBlock(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   blockId: Id<'blocks'>,
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', campaignId).eq('blockId', blockId),
+      q.eq('campaignId', ctx.campaign._id).eq('blockId', blockId),
     )
     .collect()
 }
 
 export async function getBlockSharesForMember(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_member', (q) =>
-      q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
+      q.eq('campaignId', ctx.campaign._id).eq('campaignMemberId', campaignMemberId),
     )
     .collect()
 }
 
 export async function isBlockSharedWithMember(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
   blockId: Id<'blocks'>,
   campaignMemberId: Id<'campaignMembers'>,
 ): Promise<boolean> {
@@ -267,7 +267,7 @@ export async function isBlockSharedWithMember(
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
       q
-        .eq('campaignId', campaignId)
+        .eq('campaignId', ctx.campaign._id)
         .eq('blockId', blockId)
         .eq('campaignMemberId', campaignMemberId),
     )

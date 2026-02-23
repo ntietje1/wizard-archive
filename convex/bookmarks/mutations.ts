@@ -7,11 +7,13 @@ import {
 
 export const toggleBookmark = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
   },
   returns: v.object({ isBookmarked: v.boolean() }),
   handler: async (ctx, args): Promise<{ isBookmarked: boolean }> => {
+    const campaignId = ctx.campaign._id
     const campaignMemberId = ctx.membership._id
 
     // Check if bookmark already exists
@@ -19,7 +21,7 @@ export const toggleBookmark = campaignMutation({
       .query('bookmarks')
       .withIndex('by_campaign_member_item', (q) =>
         q
-          .eq('campaignId', args.campaignId)
+          .eq('campaignId', campaignId)
           .eq('campaignMemberId', campaignMemberId)
           .eq('sidebarItemId', args.sidebarItemId),
       )
@@ -32,7 +34,7 @@ export const toggleBookmark = campaignMutation({
     } else {
       // Add bookmark
       await ctx.db.insert('bookmarks', {
-        campaignId: args.campaignId,
+        campaignId,
         sidebarItemId: args.sidebarItemId,
         sidebarItemType: args.sidebarItemType,
         campaignMemberId,

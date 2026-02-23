@@ -15,6 +15,7 @@ import type { Doc, Id } from '../_generated/dataModel'
 
 export const updateFolder = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
     name: v.optional(v.string()),
   },
@@ -29,7 +30,6 @@ export const updateFolder = campaignMutation({
     const rawFolder = await ctx.db.get(args.folderId)
     const folder = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawFolder,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -40,12 +40,7 @@ export const updateFolder = campaignMutation({
 
     if (args.name !== undefined) {
       updates.name = args.name
-      updates.slug = await validateRename(
-        ctx,
-        args.campaignId,
-        folder,
-        args.name,
-      )
+      updates.slug = await validateRename(ctx, folder, args.name)
     }
 
     await ctx.db.patch(args.folderId, updates)
@@ -55,6 +50,7 @@ export const updateFolder = campaignMutation({
 
 export const moveFolder = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
     parentId: v.optional(v.id('folders')),
   },
@@ -63,7 +59,6 @@ export const moveFolder = campaignMutation({
     const rawFolder = await ctx.db.get(args.folderId)
     const folder = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawFolder,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -79,6 +74,7 @@ export const moveFolder = campaignMutation({
 
 export const deleteFolder = dmMutation({
   args: {
+    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
   },
   returns: v.id('folders'),
@@ -89,6 +85,7 @@ export const deleteFolder = dmMutation({
 
 export const createFolder = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
@@ -102,18 +99,18 @@ export const createFolder = campaignMutation({
     ctx,
     args,
   ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
-    await validateCreateParent(ctx, args.campaignId, args.parentId)
+    const campaignId = ctx.campaign._id
+
+    await validateCreateParent(ctx, args.parentId)
 
     const uniqueSlug = await findNewSidebarItemSlug(
       ctx,
-      args.campaignId,
       SIDEBAR_ITEM_TYPES.folders,
       args.name,
     )
 
     await validateSidebarItemName({
       ctx,
-      campaignId: args.campaignId,
       parentId: args.parentId,
       name: args.name,
     })
@@ -125,7 +122,7 @@ export const createFolder = campaignMutation({
       color: args.color,
       parentId: args.parentId,
       updatedAt: Date.now(),
-      campaignId: args.campaignId,
+      campaignId,
       type: SIDEBAR_ITEM_TYPES.folders,
     })
 

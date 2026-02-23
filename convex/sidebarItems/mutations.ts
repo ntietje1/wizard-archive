@@ -1,14 +1,15 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
+import { PERMISSION_LEVEL } from '../shares/types'
 import { sidebarItemIdValidator } from './schema/baseValidators'
 import { requireItemAccess, validateRename } from './validation'
-import { PERMISSION_LEVEL } from '../shares/types'
 import { SIDEBAR_ITEM_TYPES } from './baseTypes'
 import type { Id } from '../_generated/dataModel'
 import type { AnySidebarItemFromDb } from './types'
 
 export const updateSidebarItem = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
@@ -21,7 +22,6 @@ export const updateSidebarItem = campaignMutation({
     const rawItem = await ctx.db.get(args.itemId)
     const item = await requireItemAccess(
       ctx,
-      args.campaignId,
       rawItem as AnySidebarItemFromDb | null,
       PERMISSION_LEVEL.FULL_ACCESS,
     )
@@ -38,7 +38,7 @@ export const updateSidebarItem = campaignMutation({
 
     if (args.name !== undefined) {
       patch.name = args.name
-      patch.slug = await validateRename(ctx, args.campaignId, item, args.name)
+      patch.slug = await validateRename(ctx, item, args.name)
     }
     if (args.iconName !== undefined) {
       patch.iconName = args.iconName ?? undefined

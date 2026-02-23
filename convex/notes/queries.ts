@@ -6,6 +6,7 @@ import type { NoteWithContent } from './types'
 
 export const getNote = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
   },
   returns: v.union(noteWithContentValidator, v.null()),

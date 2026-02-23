@@ -11,8 +11,8 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
   item: T,
 ) {
   const [bookmark, shares, myPermissionLevel] = await Promise.all([
-    getBookmark(ctx, item.campaignId, ctx.membership._id, item._id),
-    getSidebarItemSharesForItem(ctx, item.campaignId, item._id),
+    getBookmark(ctx, item._id),
+    getSidebarItemSharesForItem(ctx, item._id),
     getSidebarItemPermissionLevel(ctx, item),
   ])
   return { ...item, isBookmarked: !!bookmark, shares, myPermissionLevel }

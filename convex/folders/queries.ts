@@ -15,11 +15,10 @@ import type { Id } from '../_generated/dataModel'
 
 async function collectItemsRecursively(
   ctx: CampaignQueryCtx,
-  campaignId: Id<'campaigns'>,
   parentId: Id<'folders'> | undefined,
   currentPath: string,
 ): Promise<Array<DownloadableItem>> {
-  const children = await getSidebarItemsByParent(ctx, campaignId, parentId)
+  const children = await getSidebarItemsByParent(ctx, parentId)
   const items: Array<DownloadableItem> = []
 
   for (const child of children) {
@@ -38,11 +37,7 @@ async function collectItemsRecursively(
     } else if (child.type === SIDEBAR_ITEM_TYPES.notes) {
       const baseName = child.name ?? defaultItemName(child)
       const noteName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
-      const topLevelBlocks = await getTopLevelBlocksByNote(
-        ctx,
-        child._id,
-        campaignId,
-      )
+      const topLevelBlocks = await getTopLevelBlocksByNote(ctx, child._id)
       const content = topLevelBlocks.map((block) => block.content)
       items.push({
         type: SIDEBAR_ITEM_TYPES.notes,
@@ -70,7 +65,6 @@ async function collectItemsRecursively(
         : folderName
       const nestedItems = await collectItemsRecursively(
         ctx,
-        campaignId,
         child._id,
         nestedPath,
       )
@@ -85,6 +79,7 @@ async function collectItemsRecursively(
 
 export const getFolderContentsForDownload = dmQuery({
   args: {
+    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
   },
   returns: v.object({
@@ -98,34 +93,24 @@ export const getFolderContentsForDownload = dmQuery({
     const folderFromDb = await ctx.db.get(args.folderId)
     const folder = await requireItemAccess(
       ctx,
-      args.campaignId,
       folderFromDb,
       PERMISSION_LEVEL.EDIT,
     )
 
     const folderName = folder.name ?? defaultItemName(folder)
-    const items = await collectItemsRecursively(
-      ctx,
-      args.campaignId,
-      args.folderId,
-      '',
-    )
+    const items = await collectItemsRecursively(ctx, args.folderId, '')
 
     return { folderName, items }
   },
 })
 
 export const getRootContentsForDownload = dmQuery({
+  args: { campaignId: v.id('campaigns') },
   returns: v.object({
     items: v.array(downloadableItemValidator),
   }),
-  handler: async (ctx, args) => {
-    const items = await collectItemsRecursively(
-      ctx,
-      args.campaignId,
-      undefined,
-      '',
-    )
+  handler: async (ctx) => {
+    const items = await collectItemsRecursively(ctx, undefined, '')
 
     return { items }
   },

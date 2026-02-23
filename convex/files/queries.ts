@@ -6,6 +6,7 @@ import type { FileWithContent } from './types'
 
 export const getFile = campaignQuery({
   args: {
+    campaignId: v.id('campaigns'),
     fileId: v.id('files'),
   },
   returns: v.union(fileWithContentValidator, v.null()),
