@@ -1,9 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import {
-  sidebarItemIdValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
+import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { toggleItemBookmark } from './functions/toggleItemBookmark'
 
 export const toggleBookmark = campaignMutation({

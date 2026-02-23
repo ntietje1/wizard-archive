@@ -72,11 +72,7 @@ const sync = prosemirrorSync.syncApi({
       noteFromDb.campaignId,
     )
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(
-      campaignCtx,
-      noteId,
-      blocks,
-    )
+    await saveTopLevelBlocksForNote(campaignCtx, noteId, blocks)
   },
 })
 

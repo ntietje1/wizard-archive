@@ -29,11 +29,7 @@ export async function getBlockPermissionLevel(
     case SHARE_STATUS.ALL_SHARED:
       return PERMISSION_LEVEL.VIEW
     case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-      const isShared = await isBlockSharedWithMember(
-        ctx,
-        block._id,
-        checkId,
-      )
+      const isShared = await isBlockSharedWithMember(ctx, block._id, checkId)
       return isShared ? PERMISSION_LEVEL.VIEW : PERMISSION_LEVEL.NONE
     }
     case SHARE_STATUS.NOT_SHARED:
@@ -253,7 +249,9 @@ export async function getBlockSharesForMember(
   return await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_member', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('campaignMemberId', campaignMemberId),
+      q
+        .eq('campaignId', ctx.campaign._id)
+        .eq('campaignMemberId', campaignMemberId),
     )
     .collect()
 }
