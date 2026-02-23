@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCampaignMembers } from '../campaigns/campaigns'
-import { campaignQuery, dmQuery } from '../functions'
+import { dmQuery } from '../functions'
 import { getBlockSharesForBlock } from '../shares/blockShares'
 import { blockShareValidator } from '../shares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
@@ -16,20 +16,6 @@ import type { Id } from '../_generated/dataModel'
 import type { Block } from './types'
 import type { BlockShare, ShareStatus } from '../shares/types'
 import type { CampaignMember } from '../campaigns/types'
-
-export const getBlockById = campaignQuery({
-  args: {
-    campaignId: v.id('campaigns'),
-    blockId: v.id('blocks'),
-  },
-  returns: v.union(blockValidator, v.null()),
-  handler: async (ctx, args): Promise<Block | null> => {
-    const block = await ctx.db.get(args.blockId)
-    if (!block || block.campaignId !== ctx.campaign._id) return null
-
-    return block
-  },
-})
 
 export const getBlockWithShares = dmQuery({
   args: {

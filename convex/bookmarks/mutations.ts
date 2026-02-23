@@ -4,6 +4,8 @@ import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
+import { PERMISSION_LEVEL } from '../shares/types'
+import { checkItemAccess } from '../sidebarItems/validation'
 
 export const toggleBookmark = campaignMutation({
   args: {
@@ -15,6 +17,9 @@ export const toggleBookmark = campaignMutation({
   handler: async (ctx, args): Promise<{ isBookmarked: boolean }> => {
     const campaignId = ctx.campaign._id
     const campaignMemberId = ctx.membership._id
+
+    const item = await ctx.db.get(args.sidebarItemId)
+    await checkItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
 
     // Check if bookmark already exists
     const existingBookmark = await ctx.db

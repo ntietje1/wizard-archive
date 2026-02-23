@@ -1,4 +1,4 @@
-import type { SidebarItemType } from '../sidebarItems/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
 import type { Id } from '../_generated/dataModel'
 
 export const PERMISSION_LEVEL = {
@@ -22,7 +22,7 @@ export type SidebarItemShare = {
   _id: Id<'sidebarItemShares'>
   _creationTime: number
   campaignId: Id<'campaigns'>
-  sidebarItemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'>
+  sidebarItemId: SidebarItemId
   sidebarItemType: SidebarItemType
   campaignMemberId: Id<'campaignMembers'>
   sessionId?: Id<'sessions'>

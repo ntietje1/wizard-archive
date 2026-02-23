@@ -3,11 +3,10 @@ import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
-import type { MutationCtx, QueryCtx } from '../_generated/server'
 import type { CustomBlock } from '../notes/editorSpecs'
 
 export const findBlockByBlockNoteId = async (
-  ctx: QueryCtx,
+  ctx: CampaignQueryCtx,
   noteId: Id<'notes'>,
   blockId: string,
 ): Promise<Block | null> => {
@@ -122,7 +121,7 @@ export async function saveTopLevelBlocksForNote(
 }
 
 export async function insertBlock(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   params: {
     noteId: Id<'notes'>
     campaignId: Id<'campaigns'>
@@ -147,7 +146,7 @@ export async function insertBlock(
 }
 
 export async function updateBlock(
-  ctx: MutationCtx,
+  ctx: CampaignMutationCtx,
   blockDbId: Id<'blocks'>,
   updates: {
     position?: number
