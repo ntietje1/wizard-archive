@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { dmQuery } from '../functions'
-import { getCampaignMembers } from '../campaigns/campaigns'
+import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
 import { campaignMemberValidator } from '../campaigns/schema'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import {

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getCampaignMembers } from '../campaigns/campaigns'
+import { getCampaignMembers } from '../campaigns/functions/getCampaignMembers'
 import { dmQuery } from '../functions'
 import { getBlockSharesForBlock } from '../shares/blockShares'
 import { blockShareValidator } from '../shares/schema'

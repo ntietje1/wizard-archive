@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutationGeneric, queryGeneric } from 'convex/server'
-import { getCampaign } from './campaigns/campaigns'
+import { getCampaign } from './campaigns/functions/getCampaign'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'

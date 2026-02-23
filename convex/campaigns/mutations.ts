@@ -5,7 +5,7 @@ import { deleteFolder } from '../folders/folders'
 import { deleteMap } from '../gameMaps/gameMaps'
 import { deleteNote } from '../notes/notes'
 import { authMutation, dmMutation } from '../functions'
-import { getCampaignBySlug } from './campaigns'
+import { getCampaignBySlug } from './functions/getCampaign'
 import { campaignMemberStatusValidator } from './schema'
 import {
   CAMPAIGN_MEMBER_ROLE,

@@ -3,11 +3,11 @@ import { query } from '../_generated/server'
 import { getUserIdentity } from '../users/users'
 import { authQuery, campaignQuery } from '../functions'
 import { CAMPAIGN_MEMBER_STATUS } from './types'
+import { getCampaignMembers } from './functions/getCampaignMembers'
 import {
   getCampaign,
   getCampaignBySlug as getCampaignBySlugHelper,
-  getCampaignMembers,
-} from './campaigns'
+} from './functions/getCampaign'
 import {
   campaignMemberValidator,
   campaignWithMembershipValidator,

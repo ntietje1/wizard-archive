@@ -16,7 +16,8 @@ import type * as bookmarks_functions_getItemBookmark from "../bookmarks/function
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
-import type * as campaigns_campaigns from "../campaigns/campaigns.js";
+import type * as campaigns_functions_getCampaign from "../campaigns/functions/getCampaign.js";
+import type * as campaigns_functions_getCampaignMembers from "../campaigns/functions/getCampaignMembers.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_types from "../campaigns/types.js";
@@ -103,7 +104,8 @@ declare const fullApi: ApiFromModules<{
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
   "bookmarks/types": typeof bookmarks_types;
-  "campaigns/campaigns": typeof campaigns_campaigns;
+  "campaigns/functions/getCampaign": typeof campaigns_functions_getCampaign;
+  "campaigns/functions/getCampaignMembers": typeof campaigns_functions_getCampaignMembers;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/types": typeof campaigns_types;
