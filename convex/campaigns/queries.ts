@@ -44,7 +44,7 @@ export const checkCampaignSlugExists = authQuery({
 export const getPlayersByCampaign = campaignQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.array(campaignMemberValidator),
-  handler: async (ctx, _args): Promise<Array<CampaignMember>> => {
-    return getCampaignMembers(ctx, ctx.campaign._id)
+  handler: async (ctx): Promise<Array<CampaignMember>> => {
+    return getCampaignMembers(ctx)
   },
 })

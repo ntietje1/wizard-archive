@@ -71,8 +71,6 @@ export const getSidebarItemWithShares = dmQuery({
     memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
     memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
   }> => {
-    const campaignId = ctx.campaign._id
-
     const item = await ctx.db.get(args.sidebarItemId)
     await requireItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
     if (!item) {
@@ -85,7 +83,7 @@ export const getSidebarItemWithShares = dmQuery({
     }
 
     // Get player members
-    const allMembers = await getCampaignMembers(ctx, campaignId)
+    const allMembers = await getCampaignMembers(ctx)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )

@@ -54,7 +54,7 @@ export const getBlockWithShares = dmQuery({
     const shareStatus: ShareStatus =
       block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
-    const allMembers = await getCampaignMembers(ctx, ctx.campaign._id)
+    const allMembers = await getCampaignMembers(ctx)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
@@ -109,7 +109,7 @@ export const getBlocksWithShares = dmQuery({
       throw new Error('Note not found')
     }
 
-    const allMembers = await getCampaignMembers(ctx, ctx.campaign._id)
+    const allMembers = await getCampaignMembers(ctx)
     const playerMembers = allMembers.filter(
       (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
     )
