@@ -1,11 +1,9 @@
 import type { Id } from '../_generated/dataModel'
+import type { CommonValidatorFields } from '../common/types'
 
-export type Session = {
-  _id: Id<'sessions'>
-  _creationTime: number
+export type Session = CommonValidatorFields<'sessions'> & {
   campaignId: Id<'campaigns'>
   name?: string
   startedAt: number
   endedAt?: number
-  updatedAt: number
 }

@@ -29,8 +29,9 @@ export async function joinCampaign(
     campaignId: campaign._id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Pending,
-    _updatedAt: now,
+    _updatedTime: now,
     _updatedBy: profile._id,
+    _createdBy: profile._id,
   })
 
   return CAMPAIGN_MEMBER_STATUS.Pending

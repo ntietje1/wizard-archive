@@ -11,6 +11,9 @@ export async function toggleItemBookmark(
   const campaignMemberId = ctx.membership._id
 
   const item = await ctx.db.get(sidebarItemId)
+  if (!item) {
+    throw new Error('Sidebar item not found')
+  }
   await checkItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
 
   // Check if bookmark already exists
@@ -34,8 +37,9 @@ export async function toggleItemBookmark(
       campaignId,
       sidebarItemId: sidebarItemId,
       campaignMemberId,
-      _updatedAt: Date.now(),
+      _updatedTime: Date.now(),
       _updatedBy: ctx.user.profile._id,
+      _createdBy: ctx.user.profile._id,
     })
     return { isBookmarked: true }
   }

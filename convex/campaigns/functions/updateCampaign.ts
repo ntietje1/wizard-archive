@@ -14,7 +14,7 @@ export async function updateCampaign(
   const now = Date.now()
 
   const campaignUpdates: Partial<Doc<'campaigns'>> = {
-    _updatedAt: now,
+    _updatedTime: now,
     _updatedBy: ctx.user.profile._id,
   }
 

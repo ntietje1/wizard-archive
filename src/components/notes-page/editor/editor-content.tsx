@@ -96,10 +96,9 @@ function EmptyEditorContent() {
 }
 
 function NotSharedContent() {
-  const { isDm } = useCampaign()
+  const { isDm, campaignId } = useCampaign()
   const { editorSearch } = useCurrentItem()
   const { viewAsPlayerId } = useEditorMode()
-  const { campaignId } = useCampaign()
   const { data: allItems } = useAllSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
   const { createItem } = useSidebarItemMutations()

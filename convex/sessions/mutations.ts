@@ -1,7 +1,10 @@
 import { v } from 'convex/values'
 import { dmMutation } from '../functions'
-import { getCurrentSession, getSession } from './sessions'
-import type { Doc, Id } from '../_generated/dataModel'
+import { startSession as startSessionFn } from './functions/startSession'
+import { endCurrentSession as endCurrentSessionFn } from './functions/endCurrentSession'
+import { setCurrentSession as setCurrentSessionFn } from './functions/setCurrentSession'
+import { updateSession as updateSessionFn } from './functions/updateSession'
+import type { Id } from '../_generated/dataModel'
 
 export const startSession = dmMutation({
   args: {
@@ -10,26 +13,7 @@ export const startSession = dmMutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    // End current session if one exists
-    if (ctx.campaign.currentSessionId) {
-      const existingSession = await ctx.db.get(ctx.campaign.currentSessionId)
-      if (existingSession) {
-        await ctx.db.patch(ctx.campaign.currentSessionId, {
-          endedAt: Date.now(),
-          updatedAt: Date.now(),
-        })
-      }
-    }
-
-    const sessionId = await ctx.db.insert('sessions', {
-      campaignId: ctx.campaign._id,
-      name: args.name,
-      startedAt: Date.now(),
-      updatedAt: Date.now(),
-    })
-
-    await ctx.db.patch(ctx.campaign._id, { currentSessionId: sessionId })
-    return sessionId
+    return startSessionFn(ctx, args.name)
   },
 })
 
@@ -37,17 +21,7 @@ export const endCurrentSession = dmMutation({
   args: { campaignId: v.id('campaigns') },
   returns: v.id('sessions'),
   handler: async (ctx): Promise<Id<'sessions'>> => {
-    const currentSession = await getCurrentSession(ctx)
-    if (!currentSession) {
-      throw new Error('No active session')
-    }
-
-    await ctx.db.patch(currentSession._id, {
-      endedAt: Date.now(),
-      updatedAt: Date.now(),
-    })
-    await ctx.db.patch(ctx.campaign._id, { currentSessionId: undefined })
-    return currentSession._id
+    return endCurrentSessionFn(ctx)
   },
 })
 
@@ -58,21 +32,7 @@ export const setCurrentSession = dmMutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    const campaignId = ctx.campaign._id
-
-    const newSession = await getSession(ctx, args.sessionId)
-    if (!newSession || newSession.campaignId !== campaignId) {
-      throw new Error('Session not found')
-    }
-
-    const currentSession = await getCurrentSession(ctx)
-    if (currentSession && currentSession._id !== args.sessionId) {
-      await ctx.db.patch(currentSession._id, { endedAt: Date.now() })
-    }
-
-    await ctx.db.patch(args.sessionId, { endedAt: undefined })
-    await ctx.db.patch(campaignId, { currentSessionId: args.sessionId })
-    return args.sessionId
+    return setCurrentSessionFn(ctx, args.sessionId)
   },
 })
 
@@ -84,21 +44,6 @@ export const updateSession = dmMutation({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const session = await ctx.db.get(args.sessionId)
-    if (!session || session.campaignId !== ctx.campaign._id) {
-      throw new Error('Session not found')
-    }
-
-    const updates: Partial<Doc<'sessions'>> = {}
-    if (args.name !== undefined) {
-      updates.name = args.name
-    }
-
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = Date.now()
-      await ctx.db.patch(args.sessionId, updates)
-    }
-
-    return null
+    return updateSessionFn(ctx, args.sessionId, args.name)
   },
 })

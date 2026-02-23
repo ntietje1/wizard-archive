@@ -1,5 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getCurrentSession } from '../sessions/sessions'
+import { getCurrentSession } from '../sessions/functions/getCurrentSession'
 import { defaultItemName } from '../sidebarItems/sidebarItems'
 import { PERMISSION_LEVEL, PERMISSION_RANK } from './types'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'

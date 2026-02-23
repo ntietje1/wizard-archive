@@ -22,7 +22,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const value: CampaignContextType = {
     dmUsername,
     campaignSlug,
-    campaign: campaign,
+    campaign,
     isDm: campaign.data
       ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
       : undefined,

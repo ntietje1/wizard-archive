@@ -1,8 +1,10 @@
 import { v } from 'convex/values'
 
 export const commonTableFields = {
-  _updatedAt: v.number(),
+  _updatedTime: v.number(),
   _updatedBy: v.id('userProfiles'),
+  _createdBy: v.id('userProfiles'),
+
   // TODO: add deleteStatus (deleted, archived, undefined)
 }
 

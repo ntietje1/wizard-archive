@@ -14,7 +14,6 @@ export async function createCampaign(
   description?: string,
 ): Promise<Id<'campaigns'>> {
   const profile = ctx.user.profile
-
   const now = Date.now()
 
   const uniqueSlug = await findUniqueSlug(slug, async (s) => {
@@ -33,8 +32,9 @@ export async function createCampaign(
     dmUserId: profile._id,
     slug: uniqueSlug,
     status: CAMPAIGN_STATUS.Active,
-    _updatedAt: now,
+    _updatedTime: now,
     _updatedBy: profile._id,
+    _createdBy: profile._id,
   })
 
   await ctx.db.insert('campaignMembers', {
@@ -42,8 +42,9 @@ export async function createCampaign(
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
-    _updatedAt: now,
+    _updatedTime: now,
     _updatedBy: profile._id,
+    _createdBy: profile._id,
   })
 
   return campaignId

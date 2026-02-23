@@ -1,4 +1,5 @@
 import type { Id } from '../_generated/dataModel'
+import type { CommonValidatorFields } from '../common/types'
 
 export const SORT_ORDERS = {
   Alphabetical: 'Alphabetical',
@@ -28,14 +29,11 @@ export const EDITOR_MODE = {
 
 export type EditorMode = (typeof EDITOR_MODE)[keyof typeof EDITOR_MODE]
 
-export type Editor = {
-  _id: Id<'editor'>
-  _creationTime: number
-
+export type Editor = CommonValidatorFields<'editor'> & {
   campaignId: Id<'campaigns'>
   userId: Id<'userProfiles'>
   sortOrder: SortOrder
   sortDirection: SortDirection
   sidebarWidth?: number
   isSidebarExpanded?: boolean
-} // TODO: add editor mode here
+}
