@@ -4,8 +4,7 @@ import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 
 export function useLastEditorItem() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const [lastSelectedItem, setLastSelectedItem] = usePersistedState<{
     type: SidebarItemType

@@ -78,13 +78,14 @@ function RouteComponent() {
   }, [isUserLoaded, isSignedIn])
 
   const campaignQuery = useQuery(
-    convexQuery(api.campaigns.queries.getPublicCampaignBySlug, {
+    convexQuery(api.campaigns.queries.getCampaignBySlug, {
       dmUsername,
       slug: campaignSlug,
     }),
   )
 
-  const { campaign, campaignMember } = campaignQuery.data ?? {}
+  const campaign = campaignQuery.data
+  const campaignMember = campaign?.myMembership
 
   const joinCampaign = useMutation({
     mutationFn: useConvexMutation(api.campaigns.mutations.joinCampaign),

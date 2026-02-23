@@ -99,8 +99,7 @@ function NotSharedContent() {
   const { isDm } = useCampaign()
   const { editorSearch } = useCurrentItem()
   const { viewAsPlayerId } = useEditorMode()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { data: allItems } = useAllSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
   const { createItem } = useSidebarItemMutations()

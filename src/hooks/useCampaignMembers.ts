@@ -4,8 +4,7 @@ import { api } from 'convex/_generated/api'
 import { useCampaign } from './useCampaign'
 
 export function useCampaignMembers() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const campaignMembersQuery = useQuery(
     convexQuery(

@@ -31,8 +31,7 @@ export const AllSidebarItemsContext =
  * Renders a single React Query observer for `getAllSidebarItems`.
  */
 export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const query = useQuery({
     ...convexQuery(

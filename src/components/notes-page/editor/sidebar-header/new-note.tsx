@@ -10,10 +10,9 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
   const { createItem } = useSidebarItemMutations()
-  const { campaignWithMembership } = useCampaign()
+  const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const campaignId = campaignWithMembership.data?.campaign._id
   const [isPending, setIsPending] = useState(false)
 
   const handleNewNote = async () => {

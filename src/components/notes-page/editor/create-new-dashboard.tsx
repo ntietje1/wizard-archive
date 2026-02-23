@@ -63,8 +63,7 @@ export function CreateNewDashboard({
   parentId,
   folderPath,
 }: CreateNewDashboardProps) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { createItem } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()

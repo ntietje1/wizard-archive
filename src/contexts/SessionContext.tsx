@@ -5,8 +5,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { SessionContext } from '~/hooks/useSession'
 
 function useSessionInternal() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const currentSession = useQuery(
     convexQuery(

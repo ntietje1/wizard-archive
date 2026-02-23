@@ -1,4 +1,5 @@
 import type { Id } from '../_generated/dataModel'
+import type { CommonValidatorFields } from '../common/types'
 import type { UserProfile } from '../users/types'
 
 export const CAMPAIGN_STATUS = {
@@ -27,14 +28,10 @@ export const CAMPAIGN_MEMBER_STATUS = {
 export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
-export type CampaignFromDb = {
-  _id: Id<'campaigns'>
-  _creationTime: number
-
+export type CampaignFromDb = CommonValidatorFields<'campaigns'> & {
   dmUserId: Id<'userProfiles'>
   name: string
   description?: string
-  updatedAt: number
   slug: string
   status: CampaignStatus
   currentSessionId?: Id<'sessions'>
@@ -42,22 +39,17 @@ export type CampaignFromDb = {
 
 export type Campaign = CampaignFromDb & {
   dmUserProfile: UserProfile
+  myMembership?: CampaignMember
   playerCount: number
 }
 
-export type CampaignMember = {
-  _id: Id<'campaignMembers'>
-  _creationTime: number
-
-  userProfile: UserProfile
+export type CampaignMemberFromDb = CommonValidatorFields<'campaignMembers'> & {
   userId: Id<'userProfiles'>
   campaignId: Id<'campaigns'>
   role: CampaignMemberRole
   status: CampaignMemberStatus
-  updatedAt: number
 }
 
-export type CampaignWithMembership = {
-  campaign: Campaign
-  member: CampaignMember
+export type CampaignMember = CampaignMemberFromDb & {
+  userProfile: UserProfile
 }

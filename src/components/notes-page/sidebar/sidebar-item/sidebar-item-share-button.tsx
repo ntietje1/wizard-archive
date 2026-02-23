@@ -12,7 +12,7 @@ import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
 import { useCampaign } from '~/hooks/useCampaign'
 
 function SharePopoverContent({ item }: { item: AnySidebarItem }) {
-  const { campaignWithMembership } = useCampaign()
+  const { campaign } = useCampaign()
   const items = useMemo(() => [item], [item])
 
   const {
@@ -30,7 +30,7 @@ function SharePopoverContent({ item }: { item: AnySidebarItem }) {
     setInheritShares,
   } = useSidebarItemsShare(items)
 
-  const dmUserProfile = campaignWithMembership.data?.campaign.dmUserProfile
+  const dmUserProfile = campaign.data?.dmUserProfile
 
   return (
     <SharePermissionMenu

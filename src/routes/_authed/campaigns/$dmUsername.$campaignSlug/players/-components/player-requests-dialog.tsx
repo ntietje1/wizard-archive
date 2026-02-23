@@ -109,8 +109,7 @@ export function PlayerRequestsDialog({
   onClose,
   players,
 }: PlayerRequestsDialogProps) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const updateStatus = useMutation({
     mutationFn: useConvexMutation(
       api.campaigns.mutations.updateCampaignMemberStatus,

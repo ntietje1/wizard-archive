@@ -12,12 +12,12 @@ const defaultSortOptions: SortOptions = {
 }
 
 export const useSortOptions = () => {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
   const currentEditor = useQuery({
     ...convexQuery(
       api.editors.queries.getCurrentEditor,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
+      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
     ),
     staleTime: Infinity,
   })
@@ -47,14 +47,14 @@ export const useSortOptions = () => {
   const setSortOptionsAction = useCallback(
     async (options: SortOptions) => {
       setSortOptions(options)
-      if (!campaign?._id) return
+      if (!campaignData?._id) return
       await setCurrentEditor.mutateAsync({
-        campaignId: campaign._id,
+        campaignId: campaignData._id,
         sortOrder: options.order,
         sortDirection: options.direction,
       })
     },
-    [campaign?._id, setCurrentEditor],
+    [campaignData?._id, setCurrentEditor],
   )
 
   return {

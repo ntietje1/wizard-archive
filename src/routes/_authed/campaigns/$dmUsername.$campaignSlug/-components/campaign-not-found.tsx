@@ -27,11 +27,11 @@ export function CampaignNotFoundWrapper({
 }: {
   children: React.ReactNode
 }) {
-  const { campaignWithMembership } = useCampaign()
+  const { campaign } = useCampaign()
 
   // use server data even if client errored
-  const hasData = !!campaignWithMembership.data
-  const isError = campaignWithMembership.status === 'error'
+  const hasData = !!campaign.data
+  const isError = campaign.status === 'error'
   const showError = !hasData && isError
 
   if (showError) {

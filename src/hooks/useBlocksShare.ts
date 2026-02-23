@@ -30,15 +30,15 @@ export type AggregateShareStatus =
 
 export function useBlocksShare(blocks: Array<CustomBlock>) {
   const { item } = useCurrentItem()
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
   const blockIds = useMemo(() => blocks.map((b) => b.id), [blocks])
 
   const query = useQuery(
     convexQuery(
       api.blocks.queries.getBlocksWithShares,
-      isNote(item) && blockIds.length > 0 && campaign
-        ? { campaignId: campaign._id, noteId: item._id, blockIds }
+      isNote(item) && blockIds.length > 0 && campaignData
+        ? { campaignId: campaignData._id, noteId: item._id, blockIds }
         : 'skip',
     ),
   )
@@ -134,7 +134,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const toggleShareStatus = async () => {
     if (
-      !campaign?._id ||
+      !campaignData?._id ||
       !isNote(item) ||
       isMutating ||
       topLevelBlocks.length === 0
@@ -149,7 +149,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
           : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
-        campaignId: campaign._id,
+        campaignId: campaignData._id,
         noteId: item._id,
         blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id, content: b })),
         status: newStatus,
@@ -162,7 +162,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
     if (
-      !campaign?._id ||
+      !campaignData?._id ||
       !isNote(item) ||
       isMutating ||
       topLevelBlocks.length === 0
@@ -171,7 +171,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     try {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           noteId: item._id,
           blockNoteIds: topLevelBlocks.map((b) => b.id),
           campaignMemberId: memberId,
@@ -189,7 +189,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         if (blocksToShare.length === 0) return
 
         await shareBlocks.mutateAsync({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           noteId: item._id,
           blocks: blocksToShare.map((b) => ({ blockNoteId: b.id, content: b })),
           campaignMemberId: memberId,

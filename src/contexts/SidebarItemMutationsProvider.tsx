@@ -26,8 +26,7 @@ export function SidebarItemMutationsProvider({
   children: React.ReactNode
 }) {
   const { itemsMap, parentItemsMap } = useAllSidebarItems()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const queryClient = useQueryClient()
 
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)

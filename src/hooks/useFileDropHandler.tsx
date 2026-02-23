@@ -41,8 +41,7 @@ export interface UploadProgress {
 const TOAST_STYLE = { width: '100%', maxWidth: '100%' } as const
 
 export function useFileDropHandler() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { createItem } = useSidebarItemMutations()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()

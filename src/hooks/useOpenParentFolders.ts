@@ -5,8 +5,7 @@ import { useCampaignSidebarActions } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function useOpenParentFolders() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { setFolderState } = useCampaignSidebarActions(campaignId)
   const { getAncestorSidebarItems } = useAllSidebarItems()
 

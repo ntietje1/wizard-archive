@@ -11,7 +11,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     from: '/_authed/campaigns/$dmUsername/$campaignSlug',
   })
 
-  const campaignWithMembership = useQuery({
+  const campaign = useQuery({
     ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
       dmUsername,
       slug: campaignSlug,
@@ -22,10 +22,11 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const value: CampaignContextType = {
     dmUsername,
     campaignSlug,
-    campaignWithMembership,
-    isDm: campaignWithMembership.data
-      ? campaignWithMembership.data.member.role === CAMPAIGN_MEMBER_ROLE.DM
+    campaign: campaign,
+    isDm: campaign.data
+      ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
       : undefined,
+    campaignId: campaign?.data?._id,
   }
 
   return (

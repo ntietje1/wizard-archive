@@ -13,34 +13,34 @@ export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
 )({
   beforeLoad: async ({ context, params, search }) => {
-    const campaignWithMembership = await context.queryClient.ensureQueryData(
+    const campaign = await context.queryClient.ensureQueryData(
       convexQuery(api.campaigns.queries.getCampaignBySlug, {
         dmUsername: params.dmUsername,
         slug: params.campaignSlug,
       }),
     )
     const typeAndSlug = getTypeAndSlug(search)
-    if (campaignWithMembership?.campaign._id) {
+    if (campaign?._id) {
       await Promise.all([
         context.queryClient.ensureQueryData(
           convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
-            campaignId: campaignWithMembership.campaign._id,
+            campaignId: campaign._id,
           }),
         ),
         context.queryClient.ensureQueryData(
           convexQuery(api.editors.queries.getCurrentEditor, {
-            campaignId: campaignWithMembership.campaign._id,
+            campaignId: campaign._id,
           }),
         ),
         context.queryClient.ensureQueryData(
           convexQuery(api.campaigns.queries.getPlayersByCampaign, {
-            campaignId: campaignWithMembership.campaign._id,
+            campaignId: campaign._id,
           }),
         ),
         typeAndSlug &&
           context.queryClient.ensureQueryData(
             convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
-              campaignId: campaignWithMembership.campaign._id,
+              campaignId: campaign._id,
               type: typeAndSlug.type,
               slug: typeAndSlug.slug,
             }),

@@ -9,8 +9,7 @@ import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function FileSidebar() {
   const { status } = useAllSidebarItems()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
 
   if (bookmarksOnlyMode) {

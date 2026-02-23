@@ -7,8 +7,7 @@ import {
 } from '~/stores/sidebarUIStore'
 
 export function BookmarksFilterButton() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
   const { toggleBookmarksOnlyMode } = useCampaignSidebarActions(campaignId)
 

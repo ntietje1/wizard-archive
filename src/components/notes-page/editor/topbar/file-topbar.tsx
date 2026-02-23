@@ -22,8 +22,7 @@ export function FileTopbar() {
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { isDm, campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { isDm, campaignId } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 
   const canRename =

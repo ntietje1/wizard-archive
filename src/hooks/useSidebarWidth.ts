@@ -8,13 +8,13 @@ const DEFAULT_SIDEBAR_WIDTH = 280
 const DEFAULT_SIDEBAR_EXPANDED = true
 
 export const useEditorSettings = () => {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
 
   const editorQuery = useQuery({
     ...convexQuery(
       api.editors.queries.getCurrentEditor,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
+      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
     ),
     staleTime: 5000,
   })
@@ -48,7 +48,7 @@ export const useEditorSettings = () => {
     (width: number) => {
       setLocalWidth(width)
 
-      if (!campaign?._id) return
+      if (!campaignData?._id) return
 
       if (widthDebounceRef.current) {
         clearTimeout(widthDebounceRef.current)
@@ -56,32 +56,32 @@ export const useEditorSettings = () => {
 
       widthDebounceRef.current = setTimeout(() => {
         setCurrentEditor.mutate({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           sidebarWidth: width,
         })
       }, 300)
     },
-    [campaign?._id, setCurrentEditor],
+    [campaignData?._id, setCurrentEditor],
   )
 
   const setIsSidebarExpanded = useCallback(
     (expanded: boolean) => {
       setLocalExpanded(expanded)
 
-      if (!campaign?._id) return
+      if (!campaignData?._id) return
 
       // No debounce for expanded state - it's a toggle, not continuous
       setCurrentEditor.mutate({
-        campaignId: campaign._id,
+        campaignId: campaignData._id,
         isSidebarExpanded: expanded,
       })
     },
-    [campaign?._id, setCurrentEditor],
+    [campaignData?._id, setCurrentEditor],
   )
 
   // Use isSuccess to ensure we have actual data (not just that a fetch was attempted)
   // Also require campaign to exist, otherwise query is skipped
-  const isLoaded = !!campaign?._id && editorQuery.isSuccess
+  const isLoaded = !!campaignData?._id && editorQuery.isSuccess
 
   return {
     sidebarWidth: localWidth,

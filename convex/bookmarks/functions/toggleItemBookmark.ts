@@ -1,10 +1,7 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../shares/types'
 import type { CampaignMutationCtx } from '../../functions'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../../sidebarItems/baseTypes'
+import type { SidebarItemId } from '../../sidebarItems/baseTypes'
 
 export async function toggleItemBookmark(
   ctx: CampaignMutationCtx,
@@ -37,6 +34,8 @@ export async function toggleItemBookmark(
       campaignId,
       sidebarItemId: sidebarItemId,
       campaignMemberId,
+      _updatedAt: Date.now(),
+      _updatedBy: ctx.user.profile._id,
     })
     return { isBookmarked: true }
   }

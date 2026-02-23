@@ -7,8 +7,7 @@ import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { processDataTransferItems } from '~/lib/folder-reader'
 
 export function useFileDragDrop(parentId?: Id<'folders'>) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
   const setGlobalIsDraggingFiles = useSidebarUIStore(

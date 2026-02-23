@@ -1,10 +1,18 @@
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
-import { getUserProfileByUsernameHandler } from '../../users/users'
-import type { Campaign, CampaignFromDb } from '../types'
+import {
+  getUserIdentity,
+  getUserProfileByUsernameHandler,
+} from '../../users/users'
+import type {
+  Campaign,
+  CampaignFromDb,
+  CampaignMember,
+  CampaignMemberFromDb,
+} from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 
-export async function countAcceptedPlayers(
+async function countAcceptedPlayers(
   ctx: QueryCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<number> {
@@ -16,7 +24,7 @@ export async function countAcceptedPlayers(
     .length
 }
 
-export async function enhanceCampaign(
+async function enhanceCampaign(
   ctx: QueryCtx,
   campaign: CampaignFromDb,
 ): Promise<Campaign> {
@@ -25,7 +33,26 @@ export async function enhanceCampaign(
     countAcceptedPlayers(ctx, campaign._id),
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
-  return { ...campaign, dmUserProfile, playerCount }
+  const identityWithProfile = await getUserIdentity(ctx)
+  let myMembership: CampaignMember | undefined = undefined
+  if (identityWithProfile) {
+    const member: CampaignMemberFromDb | null = await ctx.db
+      .query('campaignMembers')
+      .withIndex('by_campaign_user', (q) =>
+        q
+          .eq('campaignId', campaign._id)
+          .eq('userId', identityWithProfile.profile._id),
+      )
+      .unique()
+
+    if (member) {
+      myMembership = {
+        ...member,
+        userProfile: identityWithProfile.profile,
+      }
+    }
+  }
+  return { ...campaign, dmUserProfile, playerCount, myMembership }
 }
 
 export async function getCampaign(

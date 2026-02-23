@@ -21,28 +21,28 @@ export const Route = createFileRoute(
 })
 
 function CampaignSettingsPage() {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const campaignStatus = campaignWithMembership.status
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
+  const campaignStatus = campaign.status
   const convex = useConvex()
 
   const form = useForm({
     defaultValues: {
-      name: campaign?.name ?? '',
-      description: campaign?.description ?? '',
-      slug: campaign?.slug ?? '',
+      name: campaignData?.name ?? '',
+      description: campaignData?.description ?? '',
+      slug: campaignData?.slug ?? '',
     },
     onSubmit: async () => {
       // TODO: wire to mutation endpoints when available
     },
   })
 
-  if (campaignStatus === 'pending' || !campaign) {
+  if (campaignStatus === 'pending' || !campaignData) {
     return <LoadingPage />
   }
 
   const isDM =
-    campaignWithMembership.data?.member.role === CAMPAIGN_MEMBER_ROLE.DM
+    campaignData?.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
 
   if (!isDM) {
     return (
@@ -136,7 +136,7 @@ function CampaignSettingsPage() {
                   return validateCampaignSlugAsync(
                     convex,
                     normalized,
-                    campaign._id,
+                    campaignData._id,
                   )
                 },
                 onChangeAsyncDebounceMs: 300,

@@ -197,9 +197,8 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
 }
 
 export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const campaignId = campaign?._id
+  const { campaign, campaignId } = useCampaign()
+  const campaignData = campaign.data
 
   const { navigateToItem } = useEditorNavigationContext()
   const { move } = useSidebarItemMutations()
@@ -255,7 +254,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
     <>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
       <ClientOnly fallback={null}>
-        <DragOverlay campaignName={campaign?.name} />
+        <DragOverlay campaignName={campaignData?.name} />
       </ClientOnly>
     </>
   )
