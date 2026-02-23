@@ -1,7 +1,7 @@
 import { checkItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../shares/types'
 import { deleteSidebarItemShares } from '../shares/itemShares'
-import { deleteItemBookmarks } from '../bookmarks/bookmarks'
+import { deleteItemBookmarks } from '../bookmarks/functions/deleteItemBookmarks'
 import { enhanceFileWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'

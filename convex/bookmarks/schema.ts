@@ -1,14 +1,10 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import {
-  sidebarItemIdValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
+import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 
 const bookmarkTableFields = {
   campaignId: v.id('campaigns'),
   sidebarItemId: sidebarItemIdValidator,
-  sidebarItemType: sidebarItemTypeValidator,
   campaignMemberId: v.id('campaignMembers'),
 }
 

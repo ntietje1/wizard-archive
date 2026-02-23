@@ -626,7 +626,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           .mutateAsync({
             campaignId,
             sidebarItemId: ctx.item._id,
-            sidebarItemType: ctx.item.type,
           })
           .catch((error) => {
             console.error('Failed to toggle bookmark:', error)

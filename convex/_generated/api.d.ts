@@ -11,7 +11,9 @@
 import type * as blocks_blocks from "../blocks/blocks.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
-import type * as bookmarks_bookmarks from "../bookmarks/bookmarks.js";
+import type * as bookmarks_functions_deleteItemBookmarks from "../bookmarks/functions/deleteItemBookmarks.js";
+import type * as bookmarks_functions_getItemBookmark from "../bookmarks/functions/getItemBookmark.js";
+import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
 import type * as campaigns_campaigns from "../campaigns/campaigns.js";
@@ -96,7 +98,9 @@ declare const fullApi: ApiFromModules<{
   "blocks/blocks": typeof blocks_blocks;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
-  "bookmarks/bookmarks": typeof bookmarks_bookmarks;
+  "bookmarks/functions/deleteItemBookmarks": typeof bookmarks_functions_deleteItemBookmarks;
+  "bookmarks/functions/getItemBookmark": typeof bookmarks_functions_getItemBookmark;
+  "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
   "bookmarks/types": typeof bookmarks_types;
   "campaigns/campaigns": typeof campaigns_campaigns;

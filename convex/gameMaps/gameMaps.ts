@@ -1,6 +1,6 @@
 import { checkItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../shares/types'
-import { deleteItemBookmarks } from '../bookmarks/bookmarks'
+import { deleteItemBookmarks } from '../bookmarks/functions/deleteItemBookmarks'
 import { deleteSidebarItemShares } from '../shares/itemShares'
 import { enhanceGameMapWithContent } from './helpers'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
