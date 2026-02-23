@@ -12,7 +12,6 @@ export type UserProfile = {
   firstName?: string
   lastName?: string
   imageUrl?: string
-  updatedAt: number
 }
 
 export type AuthUser = { identity: UserIdentity; profile: UserProfile }

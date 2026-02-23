@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { convexValidatorFields } from '../common/schema'
 
 const userProfileTableFields = {
   clerkUserId: v.string(),
@@ -9,9 +10,9 @@ const userProfileTableFields = {
   firstName: v.optional(v.string()),
   lastName: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
-  updatedAt: v.number(),
 }
 
+// does not include commonTableFields because profile needs to exist before tracking these
 export const userTables = {
   userProfiles: defineTable({
     ...userProfileTableFields,
@@ -20,9 +21,9 @@ export const userTables = {
     .index('by_username', ['username']),
 }
 
+// only includes convex built-in fields and not commonTableFields
 const userProfileValidatorFields = {
-  _id: v.id('userProfiles'),
-  _creationTime: v.number(),
+  ...convexValidatorFields('userProfiles'),
   ...userProfileTableFields,
 } as const
 

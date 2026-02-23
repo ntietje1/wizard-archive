@@ -1,13 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-
-export type FileStorage = {
-  _id: Id<'fileStorage'>
-  _creationTime: number
-  userId: Id<'userProfiles'>
-  storageId: Id<'_storage'>
-  status: FileStorageStatus
-  originalFileName?: string
-}
+import type { CommonValidatorFields } from '../common/types'
 
 export const FILE_STORAGE_STATUS = {
   Uncommitted: 'uncommitted',
@@ -16,3 +8,10 @@ export const FILE_STORAGE_STATUS = {
 
 export type FileStorageStatus =
   (typeof FILE_STORAGE_STATUS)[keyof typeof FILE_STORAGE_STATUS]
+
+export type FileStorage = CommonValidatorFields<'fileStorage'> & {
+  userId: Id<'userProfiles'>
+  storageId: Id<'_storage'>
+  status: FileStorageStatus
+  originalFileName?: string
+}

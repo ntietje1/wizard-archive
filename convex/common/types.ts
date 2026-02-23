@@ -6,7 +6,10 @@ export type CommonTableFields = {
   _createdBy: Id<'userProfiles'>
 }
 
-export type CommonValidatorFields<T extends TableNames> = CommonTableFields & {
+export type ConvexValidatorFields<T extends TableNames> = {
   _id: Id<T>
   _creationTime: number
 }
+
+export type CommonValidatorFields<T extends TableNames> = CommonTableFields &
+  ConvexValidatorFields<T>

@@ -88,14 +88,19 @@ import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValid
 import type * as sidebarItems_sidebarItems from "../sidebarItems/sidebarItems.js";
 import type * as sidebarItems_types from "../sidebarItems/types.js";
 import type * as sidebarItems_validation from "../sidebarItems/validation.js";
+import type * as storage_functions_commitUpload from "../storage/functions/commitUpload.js";
+import type * as storage_functions_getDownloadUrl from "../storage/functions/getDownloadUrl.js";
+import type * as storage_functions_getStorageMetadata from "../storage/functions/getStorageMetadata.js";
+import type * as storage_functions_trackUpload from "../storage/functions/trackUpload.js";
 import type * as storage_mutations from "../storage/mutations.js";
 import type * as storage_queries from "../storage/queries.js";
 import type * as storage_types from "../storage/types.js";
 import type * as storage_validation from "../storage/validation.js";
+import type * as users_functions_ensureUserProfile from "../users/functions/ensureUserProfile.js";
+import type * as users_functions_getUserProfile from "../users/functions/getUserProfile.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_types from "../users/types.js";
-import type * as users_users from "../users/users.js";
 
 import type {
   ApiFromModules,
@@ -192,14 +197,19 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/sidebarItems": typeof sidebarItems_sidebarItems;
   "sidebarItems/types": typeof sidebarItems_types;
   "sidebarItems/validation": typeof sidebarItems_validation;
+  "storage/functions/commitUpload": typeof storage_functions_commitUpload;
+  "storage/functions/getDownloadUrl": typeof storage_functions_getDownloadUrl;
+  "storage/functions/getStorageMetadata": typeof storage_functions_getStorageMetadata;
+  "storage/functions/trackUpload": typeof storage_functions_trackUpload;
   "storage/mutations": typeof storage_mutations;
   "storage/queries": typeof storage_queries;
   "storage/types": typeof storage_types;
   "storage/validation": typeof storage_validation;
+  "users/functions/ensureUserProfile": typeof users_functions_ensureUserProfile;
+  "users/functions/getUserProfile": typeof users_functions_getUserProfile;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/types": typeof users_types;
-  "users/users": typeof users_users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

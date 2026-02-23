@@ -1,15 +1,14 @@
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { QueryCtx } from '../../_generated/server'
 import type { UserProfile } from '../../users/types'
 import type { CampaignMember } from '../types'
 
 export async function getCampaignMembers(
-  ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
+  ctx: CampaignQueryCtx,
 ): Promise<Array<CampaignMember>> {
   const members = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', ctx.campaign._id))
     .collect()
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await Promise.all(
@@ -21,7 +20,7 @@ export async function getCampaignMembers(
   return members.map((member) => {
     const profile = profilesByUserId.get(member.userId)
     if (!profile) {
-      throw new Error('User profile not found')
+      throw new Error(`User profile not found for userId: ${member.userId}`)
     }
     return {
       ...member,

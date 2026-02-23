@@ -1,8 +1,9 @@
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import {
-  getUserIdentity,
-  getUserProfileByUsernameHandler,
-} from '../../users/users'
+  getUserProfileByUserId,
+  getUserProfileByUsername,
+} from '../../users/functions/getUserProfile'
+import type { AuthQueryCtx } from '../../functions'
 import type {
   Campaign,
   CampaignFromDb,
@@ -33,22 +34,22 @@ async function enhanceCampaign(
     countAcceptedPlayers(ctx, campaign._id),
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
-  const identityWithProfile = await getUserIdentity(ctx)
+  const identity = await ctx.auth.getUserIdentity()
   let myMembership: CampaignMember | undefined = undefined
-  if (identityWithProfile) {
+  if (identity) {
+    const profile = await getUserProfileByUserId(ctx, identity.subject)
+    if (!profile) throw new Error('User Profile not found')
     const member: CampaignMemberFromDb | null = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) =>
-        q
-          .eq('campaignId', campaign._id)
-          .eq('userId', identityWithProfile.profile._id),
+        q.eq('campaignId', campaign._id).eq('userId', profile._id),
       )
       .unique()
 
     if (member) {
       myMembership = {
         ...member,
-        userProfile: identityWithProfile.profile,
+        userProfile: profile,
       }
     }
   }
@@ -56,7 +57,7 @@ async function enhanceCampaign(
 }
 
 export async function getCampaign(
-  ctx: QueryCtx,
+  ctx: AuthQueryCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get(campaignId)
@@ -64,12 +65,13 @@ export async function getCampaign(
   return enhanceCampaign(ctx, campaign)
 }
 
+// is public for the join campaign screen
 export async function getCampaignBySlug(
   ctx: QueryCtx,
   dmUsername: string,
   slug: string,
 ): Promise<Campaign> {
-  const dmUserProfile = await getUserProfileByUsernameHandler(ctx, dmUsername)
+  const dmUserProfile = await getUserProfileByUsername(ctx, dmUsername)
   if (!dmUserProfile) throw new Error('DM user not found')
   const campaign = await ctx.db
     .query('campaigns')
