@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 export interface EditorNavigationValue {
   navigateToItem: (

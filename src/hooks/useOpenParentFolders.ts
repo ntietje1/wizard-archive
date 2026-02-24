@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignSidebarActions } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'

@@ -1,11 +1,11 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { ConfirmationDialog } from '../confirmation-dialog'
-import type { File } from 'convex/files/types'
+import type { SidebarFile } from 'convex/files/types'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 
 interface FileDeleteConfirmDialogProps {
-  file: File
+  file: SidebarFile
   isDeleting: boolean
   onConfirm?: () => void
   onClose: () => void

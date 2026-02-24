@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { PermissionLevel } from 'convex/shares/types'
@@ -14,8 +14,8 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
 import type { DownloadableItem, Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
-import type { File } from 'convex/files/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { SidebarFile } from 'convex/files/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { getSelectedTypeAndSlug } from '~/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
@@ -55,7 +55,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     null,
   )
   const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
-  const [deleteFileDialog, setDeleteFileDialog] = useState<File | null>(null)
+  const [deleteFileDialog, setDeleteFileDialog] = useState<SidebarFile | null>(
+    null,
+  )
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
     null,
   )

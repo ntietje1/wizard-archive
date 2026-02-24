@@ -3,12 +3,12 @@ import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
-import type { File } from 'convex/files/types'
+import type { SidebarFile } from 'convex/files/types'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -76,7 +76,7 @@ function FileCardSkeleton() {
   )
 }
 
-function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
+function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToFile } = useEditorNavigation()
   const canDrag = hasAtLeastPermissionLevel(
@@ -174,7 +174,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   )
 }
 
-export function FileCard(props: ItemCardProps<File>) {
+export function FileCard(props: ItemCardProps<SidebarFile>) {
   if (props.isLoading) {
     return <FileCardSkeleton />
   }

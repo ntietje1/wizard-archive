@@ -1,4 +1,4 @@
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { ItemCard } from './item-card'

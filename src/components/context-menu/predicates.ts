@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { Predicate, ViewContext } from './types'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 export const always: Predicate = () => true
 export const never: Predicate = () => false

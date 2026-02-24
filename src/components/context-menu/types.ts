@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
 import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'

@@ -1,8 +1,8 @@
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type { PermissionLevel } from 'convex/shares/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 

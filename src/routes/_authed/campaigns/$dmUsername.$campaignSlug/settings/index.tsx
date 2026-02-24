@@ -41,8 +41,7 @@ function CampaignSettingsPage() {
     return <LoadingPage />
   }
 
-  const isDM =
-    campaignData?.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
+  const isDM = campaignData.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
 
   if (!isDM) {
     return (

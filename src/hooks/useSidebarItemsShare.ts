@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import type { PermissionLevel } from 'convex/shares/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/hooks/useBlocksShare'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -192,7 +192,12 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   // Toggle allPermissionLevel between 'none' and 'view'
   const toggleShareStatus = useCallback(async () => {
-    if (!campaignData?._id || isMutating || items.length === 0 || !hasCompleteData)
+    if (
+      !campaignData?._id ||
+      isMutating ||
+      items.length === 0 ||
+      !hasCompleteData
+    )
       return
 
     try {

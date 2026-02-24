@@ -3,9 +3,9 @@ import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
+} from 'convex/sidebarItems/types/baseTypes'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 

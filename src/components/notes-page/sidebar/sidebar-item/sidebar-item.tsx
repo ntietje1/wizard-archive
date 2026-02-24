@@ -1,11 +1,11 @@
 import { memo, useCallback, useMemo } from 'react'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
@@ -66,7 +66,6 @@ function SidebarItemComponent({
 
   const handleFinishRename = useCallback(
     async (name: string) => {
-      if (!item) return
       await rename(item, name)
       setRenamingId(null)
     },

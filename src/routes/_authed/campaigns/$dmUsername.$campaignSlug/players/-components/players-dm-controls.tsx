@@ -19,12 +19,7 @@ export default function PlayersDmControls({
   onOpenRequests,
   onCopyJoinUrl,
 }: PlayersDmControlsProps) {
-  const {
-    dmUsername,
-    campaignSlug,
-    campaign,
-    isDm,
-  } = useCampaign()
+  const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
   const campaignData = campaign.data
   const campaignMember = campaignData?.myMembership
   const players = useQuery(

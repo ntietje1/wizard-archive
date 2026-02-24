@@ -1,8 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useMemo } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useLastEditorItem } from './useLastEditorItem'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
 

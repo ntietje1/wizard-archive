@@ -6,8 +6,8 @@ import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
@@ -136,8 +136,8 @@ export const sortItemsByOptions = (
           : b._creationTime - a._creationTime
       case SORT_ORDERS.DateModified:
         return options.direction === SORT_DIRECTIONS.Ascending
-          ? a.updatedAt - b.updatedAt
-          : b.updatedAt - a.updatedAt
+          ? a._updatedTime - b._updatedTime
+          : b._updatedTime - a._updatedTime
       default:
         return 0
     }

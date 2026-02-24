@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom'
 import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
-} from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   DropRejectionReason,
   SidebarDragData,

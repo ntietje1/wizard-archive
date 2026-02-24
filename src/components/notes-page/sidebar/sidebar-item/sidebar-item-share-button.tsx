@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Share2 } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
 import {

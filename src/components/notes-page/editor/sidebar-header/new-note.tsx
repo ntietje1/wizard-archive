@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
 import { FilePlus, Loader2 } from '~/lib/icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'

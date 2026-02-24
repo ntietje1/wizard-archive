@@ -7,9 +7,9 @@ import {
   validateNoCircularParent,
   validateWikiLinkCompatibleName,
 } from 'convex/sidebarItems/sharedValidation'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   CreateItemArgs,

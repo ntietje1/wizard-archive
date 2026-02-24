@@ -8,7 +8,7 @@ import {
   isTextFile,
   validateFileForUpload,
 } from 'convex/storage/validation'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useOpenParentFolders } from './useOpenParentFolders'
 import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'

@@ -20,12 +20,7 @@ import { PlayerDeleteConfirmDialog } from '~/components/dialogs/delete/player-de
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
 
 export default function PlayersContent() {
-  const {
-    dmUsername,
-    campaignSlug,
-    campaign,
-    isDm,
-  } = useCampaign()
+  const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
   const campaignData = campaign.data
 
   const players = useQuery(
@@ -42,10 +37,7 @@ export default function PlayersContent() {
   const deletingPlayer = players.data?.find((p) => p._id === deletingMemberId)
 
   const handleCopyJoinUrl = async () => {
-    if (
-      campaign.status === 'pending' ||
-      players.status === 'pending'
-    ) {
+    if (campaign.status === 'pending' || players.status === 'pending') {
       return toast.info('Please try again in a moment')
     }
     if (!dmUsername || !campaignSlug) {
@@ -64,10 +56,7 @@ export default function PlayersContent() {
     return <div>Error loading players</div>
   }
 
-  if (
-    campaign.status === 'pending' ||
-    players.status === 'pending'
-  ) {
+  if (campaign.status === 'pending' || players.status === 'pending') {
     return (
       <div className="h-full w-full">
         <PlayersDmControls

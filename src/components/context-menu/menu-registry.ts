@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   Bookmark,
   Download,

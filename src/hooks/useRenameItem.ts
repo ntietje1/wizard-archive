@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { getSelectedTypeAndSlug } from './useSelectedItem'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 

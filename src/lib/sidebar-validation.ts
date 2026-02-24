@@ -5,8 +5,8 @@ import {
 } from 'convex/sidebarItems/sharedValidation'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 export type { ValidationResult }
 export { validateWikiLinkCompatibleName, checkNameConflict }

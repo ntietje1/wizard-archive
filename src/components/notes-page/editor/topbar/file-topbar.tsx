@@ -1,5 +1,5 @@
 import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
