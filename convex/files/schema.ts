@@ -1,14 +1,15 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
 import {
-  sidebarItemBaseFields,
-  sidebarItemTableFields,
+  commonSidebarItemTableFields,
+  commonSidebarItemValidatorFields,
 } from '../sidebarItems/schema/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { folderValidator } from '../folders/baseSchema'
 
 const fileTableFields = {
-  ...sidebarItemTableFields,
+  ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
   storageId: v.optional(v.id('_storage')),
 }
@@ -23,9 +24,8 @@ export const filesTables = {
 }
 
 const fileValidatorFields = {
-  _id: v.id('files'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
+  ...commonValidatorFields('files'),
+  ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
   storageId: v.optional(v.id('_storage')),
   downloadUrl: v.union(v.string(), v.null()),

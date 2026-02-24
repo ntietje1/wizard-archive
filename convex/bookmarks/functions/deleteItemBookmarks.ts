@@ -1,9 +1,9 @@
 import type { CampaignMutationCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/baseTypes'
+import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export async function deleteItemBookmarks(
   ctx: CampaignMutationCtx,
-  sidebarItemId: SidebarItemId,
+  { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 

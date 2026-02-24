@@ -5,8 +5,10 @@ import type { CampaignMemberStatus } from '../types'
 
 export async function updateCampaignMemberStatus(
   ctx: CampaignMutationCtx,
-  memberId: Id<'campaignMembers'>,
-  status: CampaignMemberStatus,
+  {
+    memberId,
+    status,
+  }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get(memberId)
   if (!member || member.campaignId !== ctx.campaign._id) {

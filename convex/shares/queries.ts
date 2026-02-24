@@ -7,7 +7,7 @@ import {
   permissionLevelValidator,
   sidebarItemIdValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../sidebarItems/validation'
 import { blockShareValidator, sidebarItemShareValidator } from './schema'
 import { getBlockSharesForBlock } from './blockShares'
@@ -28,8 +28,13 @@ export const getSidebarItemShares = dmQuery({
   returns: v.array(sidebarItemShareValidator),
   handler: async (ctx, args): Promise<Array<SidebarItemShare>> => {
     const item = await ctx.db.get(args.sidebarItemId)
-    await requireItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
-    return await getSidebarItemSharesForItem(ctx, args.sidebarItemId)
+    await requireItemAccess(ctx, {
+      rawItem: item,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return await getSidebarItemSharesForItem(ctx, {
+      sidebarItemId: args.sidebarItemId,
+    })
   },
 })
 
@@ -71,11 +76,11 @@ export const getSidebarItemWithShares = dmQuery({
     memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
     memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
   }> => {
-    const item = await ctx.db.get(args.sidebarItemId)
-    await requireItemAccess(ctx, item, PERMISSION_LEVEL.VIEW)
-    if (!item) {
-      throw new Error('Sidebar item not found')
-    }
+    const itemFromDb = await ctx.db.get(args.sidebarItemId)
+    const item = await requireItemAccess(ctx, {
+      rawItem: itemFromDb,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
 
     let inheritShares: boolean | undefined = undefined
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
@@ -89,28 +94,33 @@ export const getSidebarItemWithShares = dmQuery({
     )
 
     // Always fetch individual shares
-    const shares = await getSidebarItemSharesForItem(ctx, args.sidebarItemId)
+    const shares = await getSidebarItemSharesForItem(ctx, {
+      sidebarItemId: args.sidebarItemId,
+    })
 
     // Resolve inherited all-players permission level with source folder name
     const {
       level: inheritedAllPermissionLevel,
       folderName: inheritedFromFolderName,
-    } = await resolveInheritedPermissionWithSource(ctx, item.parentId)
+    } = await resolveInheritedPermissionWithSource(ctx, {
+      parentId: item.parentId,
+    })
 
     // Resolve per-member inherited permissions with source folder names
     const memberInheritedPermissions: Record<string, PermissionLevel> = {}
     const memberInheritedFromFolderNames: Record<string, string> = {}
-    for (const member of playerMembers) {
-      const { level, folderName } = await resolveInheritedPermissionWithSource(
-        ctx,
-        item.parentId,
-        member._id,
-      )
-      memberInheritedPermissions[member._id] = level ?? PERMISSION_LEVEL.NONE
-      if (folderName) {
-        memberInheritedFromFolderNames[member._id] = folderName
-      }
-    }
+    await Promise.all(
+      playerMembers.map(async (member) => {
+        const { level, folderName } = await resolveInheritedPermissionWithSource(
+          ctx,
+          { parentId: item.parentId, memberId: member._id },
+        )
+        memberInheritedPermissions[member._id] = level ?? PERMISSION_LEVEL.NONE
+        if (folderName) {
+          memberInheritedFromFolderNames[member._id] = folderName
+        }
+      }),
+    )
 
     return {
       allPermissionLevel: item.allPermissionLevel,
@@ -132,6 +142,6 @@ export const getBlockShares = dmQuery({
   },
   returns: v.array(blockShareValidator),
   handler: async (ctx, args): Promise<Array<BlockShare>> => {
-    return await getBlockSharesForBlock(ctx, args.blockId)
+    return await getBlockSharesForBlock(ctx, { blockId: args.blockId })
   },
 })

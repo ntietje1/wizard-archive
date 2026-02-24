@@ -4,7 +4,7 @@ import type { Editor } from '../types'
 
 export async function getCurrentEditor(
   ctx: AuthQueryCtx,
-  campaignId?: Id<'campaigns'>,
+  { campaignId }: { campaignId?: Id<'campaigns'> } = {},
 ): Promise<Editor | null> {
   if (!campaignId) {
     return null

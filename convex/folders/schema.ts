@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { customBlockValidator } from '../blocks/schema'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { folderValidator, folderValidatorFields } from './baseSchema'
 
 export const folderWithContentValidator = v.object({

@@ -17,7 +17,11 @@ export const createCampaign = authMutation({
   },
   returns: v.id('campaigns'),
   handler: async (ctx, args): Promise<Id<'campaigns'>> => {
-    return createCampaignFn(ctx, args.name, args.slug, args.description)
+    return createCampaignFn(ctx, {
+      name: args.name,
+      slug: args.slug,
+      description: args.description,
+    })
   },
 })
 
@@ -28,7 +32,10 @@ export const joinCampaign = authMutation({
   },
   returns: campaignMemberStatusValidator,
   handler: async (ctx, args): Promise<CampaignMemberStatus> => {
-    return joinCampaignFn(ctx, args.dmUsername, args.slug)
+    return joinCampaignFn(ctx, {
+      dmUsername: args.dmUsername,
+      slug: args.slug,
+    })
   },
 })
 
@@ -41,7 +48,11 @@ export const updateCampaign = dmMutation({
   },
   returns: v.id('campaigns'),
   handler: async (ctx, args): Promise<Id<'campaigns'>> => {
-    return updateCampaignFn(ctx, args.name, args.description, args.slug)
+    return updateCampaignFn(ctx, {
+      name: args.name,
+      description: args.description,
+      slug: args.slug,
+    })
   },
 })
 
@@ -63,6 +74,9 @@ export const updateCampaignMemberStatus = dmMutation({
   },
   returns: v.id('campaignMembers'),
   handler: async (ctx, args): Promise<Id<'campaignMembers'>> => {
-    return updateCampaignMemberStatusFn(ctx, args.memberId, args.status)
+    return updateCampaignMemberStatusFn(ctx, {
+      memberId: args.memberId,
+      status: args.status,
+    })
   },
 })

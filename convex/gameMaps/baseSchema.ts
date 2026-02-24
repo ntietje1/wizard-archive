@@ -1,22 +1,22 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
 import {
-  sidebarItemBaseFields,
-  sidebarItemTableFields,
+  commonSidebarItemTableFields,
+  commonSidebarItemValidatorFields,
 } from '../sidebarItems/schema/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 
 export const mapTableFields = {
-  ...sidebarItemTableFields,
+  ...commonSidebarItemTableFields,
   imageStorageId: v.optional(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
 }
 
 const mapValidatorFields = {
-  _id: v.id('gameMaps'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
+  ...commonValidatorFields('gameMaps'),
+  ...commonSidebarItemValidatorFields,
   imageStorageId: v.optional(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   imageUrl: v.union(v.string(), v.null()),
@@ -30,12 +30,11 @@ export const mapPinTableFields = {
   x: v.number(),
   y: v.number(),
   visible: v.optional(v.boolean()),
-  updatedAt: v.number(),
+  ...commonTableFields,
 }
 
 const mapPinValidatorFields = {
-  _id: v.id('mapPins'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('mapPins'),
   ...mapPinTableFields,
 } as const
 

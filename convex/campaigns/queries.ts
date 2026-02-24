@@ -22,7 +22,10 @@ export const getCampaignBySlug = authQuery({
   },
   returns: campaignValidator,
   handler: async (ctx, args): Promise<Campaign> => {
-    return getCampaignBySlugFn(ctx, args.dmUsername, args.slug)
+    return await getCampaignBySlugFn(ctx, {
+      dmUsername: args.dmUsername,
+      slug: args.slug,
+    })
   },
 })
 
@@ -33,11 +36,10 @@ export const checkCampaignSlugExists = authQuery({
   },
   returns: v.boolean(),
   handler: async (ctx, args): Promise<boolean> => {
-    return await checkCampaignSlugExistsFn(
-      ctx,
-      args.slug,
-      args.excludeCampaignId,
-    )
+    return await checkCampaignSlugExistsFn(ctx, {
+      slug: args.slug,
+      excludeCampaignId: args.excludeCampaignId,
+    })
   },
 })
 
@@ -45,6 +47,6 @@ export const getPlayersByCampaign = campaignQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.array(campaignMemberValidator),
   handler: async (ctx): Promise<Array<CampaignMember>> => {
-    return getCampaignMembers(ctx)
+    return await getCampaignMembers(ctx)
   },
 })

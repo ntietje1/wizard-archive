@@ -20,7 +20,7 @@ export async function getUserCampaigns(
 
   const results = await Promise.all(
     campaignMemberships.map(async (membership) => {
-      return await getCampaign(ctx, membership.campaignId)
+      return await getCampaign(ctx, { campaignId: membership.campaignId })
     }),
   )
 

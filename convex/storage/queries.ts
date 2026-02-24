@@ -9,7 +9,7 @@ export const getDownloadUrl = authQuery({
   },
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args): Promise<string | null> => {
-    return getDownloadUrlFn(ctx, args.storageId)
+    return await getDownloadUrlFn(ctx, { storageId: args.storageId })
   },
 })
 
@@ -26,6 +26,6 @@ export const getStorageMetadata = authQuery({
     }),
   ),
   handler: async (ctx, args) => {
-    return getStorageMetadataFn(ctx, args.storageId)
+    return await getStorageMetadataFn(ctx, { storageId: args.storageId })
   },
 })

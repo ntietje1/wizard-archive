@@ -11,7 +11,7 @@ import type {
   CampaignMember,
   CampaignMemberRole,
 } from './campaigns/types'
-import type { SidebarItemId } from './sidebarItems/baseTypes'
+import type { SidebarItemId } from './sidebarItems/types/baseTypes'
 
 // --- Context types ---
 
@@ -44,7 +44,7 @@ async function checkMembership(
   campaignId: Id<'campaigns'>,
   options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
 ): Promise<{ campaign: Campaign; membership: CampaignMember }> {
-  const campaign = await getCampaign(ctx, campaignId)
+  const campaign = await getCampaign(ctx, { campaignId })
   if (!campaign) throw new Error('Campaign not found')
   const member = await ctx.db
     .query('campaignMembers')

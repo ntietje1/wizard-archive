@@ -3,7 +3,7 @@ import type { CampaignMutationCtx } from '../../functions'
 
 export async function startSession(
   ctx: CampaignMutationCtx,
-  name?: string,
+  { name }: { name?: string } = {},
 ): Promise<Id<'sessions'>> {
   const now = Date.now()
 

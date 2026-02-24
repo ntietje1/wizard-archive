@@ -7,8 +7,7 @@ import type { CustomBlock } from '../notes/editorSpecs'
 
 export const findBlockByBlockNoteId = async (
   ctx: CampaignQueryCtx,
-  noteId: Id<'notes'>,
-  blockId: string,
+  { noteId, blockId }: { noteId: Id<'notes'>; blockId: string },
 ): Promise<Block | null> => {
   const note = await ctx.db.get(noteId)
   if (!note) {
@@ -30,7 +29,7 @@ export const findBlockByBlockNoteId = async (
 
 export async function getTopLevelBlocksByNote(
   ctx: CampaignQueryCtx,
-  noteId: Id<'notes'>,
+  { noteId }: { noteId: Id<'notes'> },
 ): Promise<Array<Block>> {
   const campaignId = ctx.campaign._id
 
@@ -49,7 +48,7 @@ export async function getTopLevelBlocksByNote(
 
 export async function deleteBlocksByNote(
   ctx: CampaignMutationCtx,
-  noteId: Id<'notes'>,
+  { noteId }: { noteId: Id<'notes'> },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
@@ -67,8 +66,7 @@ export async function deleteBlocksByNote(
 
 export async function saveTopLevelBlocksForNote(
   ctx: CampaignMutationCtx,
-  noteId: Id<'notes'>,
-  content: Array<CustomBlock>,
+  { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
   const now = Date.now()
@@ -93,11 +91,14 @@ export async function saveTopLevelBlocksForNote(
   for (const block of content) {
     const existingBlock = existingBlocksMap.get(block.id)
     if (existingBlock) {
-      await updateBlock(ctx, existingBlock._id, {
-        position: positions.get(block.id),
-        content: block,
-        isTopLevel: existingBlock.isTopLevel,
-        updatedAt: now,
+      await updateBlock(ctx, {
+        blockDbId: existingBlock._id,
+        updates: {
+          position: positions.get(block.id),
+          content: block,
+          isTopLevel: existingBlock.isTopLevel,
+          updatedAt: now,
+        },
       })
     } else {
       await insertBlock(ctx, {
@@ -116,7 +117,7 @@ export async function saveTopLevelBlocksForNote(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
   for (const block of remainingBlocks) {
-    await removeBlockIfNotNeeded(ctx, block._id)
+    await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
 }
 
@@ -147,13 +148,18 @@ export async function insertBlock(
 
 export async function updateBlock(
   ctx: CampaignMutationCtx,
-  blockDbId: Id<'blocks'>,
-  updates: {
-    position?: number
-    content?: CustomBlock
-    isTopLevel?: boolean
-    shareStatus?: ShareStatus
-    updatedAt?: number
+  {
+    blockDbId,
+    updates,
+  }: {
+    blockDbId: Id<'blocks'>
+    updates: {
+      position?: number
+      content?: CustomBlock
+      isTopLevel?: boolean
+      shareStatus?: ShareStatus
+      updatedAt?: number
+    }
   },
 ): Promise<void> {
   await ctx.db.patch(blockDbId, updates)
@@ -166,7 +172,7 @@ export async function updateBlock(
  */
 export async function removeBlockIfNotNeeded(
   ctx: CampaignMutationCtx,
-  blockId: Id<'blocks'>,
+  { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 

@@ -15,7 +15,7 @@ import type { CustomBlock } from '../notes/editorSpecs'
 
 export async function getBlockPermissionLevel(
   ctx: CampaignQueryCtx,
-  block: Block,
+  { block }: { block: Block },
 ): Promise<PermissionLevel> {
   const checkId = ctx.membership._id
 
@@ -29,7 +29,10 @@ export async function getBlockPermissionLevel(
     case SHARE_STATUS.ALL_SHARED:
       return PERMISSION_LEVEL.VIEW
     case SHARE_STATUS.INDIVIDUALLY_SHARED: {
-      const isShared = await isBlockSharedWithMember(ctx, block._id, checkId)
+      const isShared: boolean = await isBlockSharedWithMember(ctx, {
+        blockId: block._id,
+        campaignMemberId: checkId,
+      })
       return isShared ? PERMISSION_LEVEL.VIEW : PERMISSION_LEVEL.NONE
     }
     case SHARE_STATUS.NOT_SHARED:
@@ -39,9 +42,11 @@ export async function getBlockPermissionLevel(
 
 export async function enforceBlockSharePermissionsOrNull(
   ctx: CampaignQueryCtx,
-  block: Block,
+  { block }: { block: Block },
 ): Promise<Block | null> {
-  const permissionLevel = await getBlockPermissionLevel(ctx, block)
+  const permissionLevel: PermissionLevel = await getBlockPermissionLevel(ctx, {
+    block,
+  })
   if (permissionLevel === PERMISSION_LEVEL.NONE) {
     return null
   }
@@ -51,25 +56,29 @@ export async function enforceBlockSharePermissionsOrNull(
 
 export async function setBlockShareStatusHelper(
   ctx: CampaignMutationCtx,
-  noteId: Id<'notes'>,
-  blockItem: BlockItem,
-  status: ShareStatus,
+  {
+    noteId,
+    blockItem,
+    status,
+  }: { noteId: Id<'notes'>; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
-  const existingBlock = await findBlockByBlockNoteId(
-    ctx,
+  const existingBlock = await findBlockByBlockNoteId(ctx, {
     noteId,
-    blockItem.blockNoteId,
-  )
+    blockId: blockItem.blockNoteId,
+  })
 
   let blockId: Id<'blocks'>
   if (existingBlock) {
-    await updateBlock(ctx, existingBlock._id, {
-      content: blockItem.content,
-      shareStatus: status,
-      isTopLevel: true,
-      updatedAt: Date.now(),
+    await updateBlock(ctx, {
+      blockDbId: existingBlock._id,
+      updates: {
+        content: blockItem.content,
+        shareStatus: status,
+        isTopLevel: true,
+        updatedAt: Date.now(),
+      },
     })
     blockId = existingBlock._id
   } else {
@@ -97,31 +106,39 @@ export async function setBlockShareStatusHelper(
       await ctx.db.delete(share._id)
     }
 
-    await removeBlockIfNotNeeded(ctx, blockId)
+    await removeBlockIfNotNeeded(ctx, { blockId })
   }
 }
 
 export async function shareBlockWithMemberHelper(
   ctx: CampaignMutationCtx,
-  noteId: Id<'notes'>,
-  blockItem: BlockItem,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    noteId,
+    blockItem,
+    campaignMemberId,
+  }: {
+    noteId: Id<'notes'>
+    blockItem: BlockItem
+    campaignMemberId: Id<'campaignMembers'>
+  },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
-  const existingBlock = await findBlockByBlockNoteId(
-    ctx,
+  const existingBlock = await findBlockByBlockNoteId(ctx, {
     noteId,
-    blockItem.blockNoteId,
-  )
+    blockId: blockItem.blockNoteId,
+  })
 
   let blockId: Id<'blocks'>
   if (existingBlock) {
-    await updateBlock(ctx, existingBlock._id, {
-      content: blockItem.content,
-      isTopLevel: true,
-      shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-      updatedAt: Date.now(),
+    await updateBlock(ctx, {
+      blockDbId: existingBlock._id,
+      updates: {
+        content: blockItem.content,
+        isTopLevel: true,
+        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+        updatedAt: Date.now(),
+      },
     })
     blockId = existingBlock._id
   } else {
@@ -136,21 +153,30 @@ export async function shareBlockWithMemberHelper(
     })
   }
 
-  await shareBlockWithMember(ctx, blockId, campaignMemberId)
+  await shareBlockWithMember(ctx, { blockId, campaignMemberId })
 }
 
 export async function unshareBlockFromMemberHelper(
   ctx: CampaignMutationCtx,
-  noteId: Id<'notes'>,
-  blockNoteId: string,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    noteId,
+    blockNoteId,
+    campaignMemberId,
+  }: {
+    noteId: Id<'notes'>
+    blockNoteId: string
+    campaignMemberId: Id<'campaignMembers'>
+  },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
-  const block = await findBlockByBlockNoteId(ctx, noteId, blockNoteId)
+  const block = await findBlockByBlockNoteId(ctx, {
+    noteId,
+    blockId: blockNoteId,
+  })
   if (!block || block.campaignId !== campaignId) return
 
-  await unshareBlockFromMember(ctx, block._id, campaignMemberId)
+  await unshareBlockFromMember(ctx, { blockId: block._id, campaignMemberId })
 
   // Check if any shares remain
   const remainingShares = await ctx.db
@@ -165,14 +191,16 @@ export async function unshareBlockFromMemberHelper(
     await ctx.db.patch(block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
     })
-    await removeBlockIfNotNeeded(ctx, block._id)
+    await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
 }
 
 export async function shareBlockWithMember(
   ctx: CampaignMutationCtx,
-  blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    blockId,
+    campaignMemberId,
+  }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<Id<'blockShares'>> {
   const campaignId = ctx.campaign._id
 
@@ -210,8 +238,10 @@ export async function shareBlockWithMember(
 
 export async function unshareBlockFromMember(
   ctx: CampaignMutationCtx,
-  blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    blockId,
+    campaignMemberId,
+  }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
@@ -232,7 +262,7 @@ export async function unshareBlockFromMember(
 
 export async function getBlockSharesForBlock(
   ctx: CampaignQueryCtx,
-  blockId: Id<'blocks'>,
+  { blockId }: { blockId: Id<'blocks'> },
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
@@ -244,7 +274,7 @@ export async function getBlockSharesForBlock(
 
 export async function getBlockSharesForMember(
   ctx: CampaignQueryCtx,
-  campaignMemberId: Id<'campaignMembers'>,
+  { campaignMemberId }: { campaignMemberId: Id<'campaignMembers'> },
 ): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
@@ -258,8 +288,10 @@ export async function getBlockSharesForMember(
 
 export async function isBlockSharedWithMember(
   ctx: CampaignQueryCtx,
-  blockId: Id<'blocks'>,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    blockId,
+    campaignMemberId,
+  }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<boolean> {
   const share = await ctx.db
     .query('blockShares')

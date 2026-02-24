@@ -4,7 +4,7 @@ import type { Session } from '../types'
 
 export async function getSession(
   ctx: QueryCtx,
-  sessionId: Id<'sessions'>,
+  { sessionId }: { sessionId: Id<'sessions'> },
 ): Promise<Session | null> {
   return await ctx.db.get(sessionId)
 }

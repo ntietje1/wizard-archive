@@ -3,7 +3,7 @@ import type { UserProfile } from '../types'
 
 export async function getUserProfileByUserId(
   ctx: QueryCtx,
-  userId: string,
+  { userId }: { userId: string },
 ): Promise<UserProfile | null> {
   const profile = await ctx.db
     .query('userProfiles')
@@ -14,7 +14,7 @@ export async function getUserProfileByUserId(
 
 export async function getUserProfileByUsername(
   ctx: QueryCtx,
-  username: string,
+  { username }: { username: string },
 ): Promise<UserProfile | null> {
   const profile = await ctx.db
     .query('userProfiles')

@@ -5,7 +5,7 @@ import type { AuthMutationCtx } from '../../functions'
 
 export async function commitUpload(
   ctx: AuthMutationCtx,
-  storageId: Id<'_storage'>,
+  { storageId }: { storageId: Id<'_storage'> },
 ): Promise<Id<'fileStorage'>> {
   const fileStorage = await ctx.db
     .query('fileStorage')

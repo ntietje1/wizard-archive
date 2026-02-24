@@ -1,20 +1,12 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { saveTopLevelBlocksForNote } from '../blocks/blocks'
 import { customBlockValidator } from '../blocks/schema'
-import {
-  findNewSidebarItemSlug,
-  requireItemAccess,
-  validateCreateParent,
-  validateMove,
-  validateRename,
-  validateSidebarItemName,
-} from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { PERMISSION_LEVEL } from '../shares/types'
-import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
-import { deleteNote as deleteNoteFn } from './notes'
-import type { Doc, Id } from '../_generated/dataModel'
+import { createNote as createNoteFn } from './functions/createNote'
+import { updateNote as updateNoteFn } from './functions/updateNote'
+import { moveNote as moveNoteFn } from './functions/moveNote'
+import { deleteNote as deleteNoteFn } from './functions/deleteNote'
+import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
+import type { Id } from '../_generated/dataModel'
 
 export const updateNote = campaignMutation({
   args: {
@@ -32,32 +24,12 @@ export const updateNote = campaignMutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    const rawNote = await ctx.db.get(args.noteId)
-    const note = await requireItemAccess(
-      ctx,
-      rawNote,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    const updates: Partial<Doc<'notes'>> = {
-      updatedAt: Date.now(),
-    }
-
-    if (args.name !== undefined) {
-      updates.name = args.name
-      updates.slug = await validateRename(ctx, note, args.name)
-    }
-
-    if (args.iconName !== undefined) {
-      updates.iconName = args.iconName
-    }
-
-    if (args.color !== undefined) {
-      updates.color = args.color === null ? undefined : args.color
-    }
-
-    await ctx.db.patch(args.noteId, updates)
-    return { noteId: args.noteId, slug: updates.slug ?? note.slug }
+    return await updateNoteFn(ctx, {
+      noteId: args.noteId,
+      name: args.name,
+      iconName: args.iconName,
+      color: args.color,
+    })
   },
 })
 
@@ -69,20 +41,10 @@ export const moveNote = campaignMutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const rawNote = await ctx.db.get(args.noteId)
-    const note = await requireItemAccess(
-      ctx,
-      rawNote,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    await validateMove(ctx, note, args.parentId)
-
-    await ctx.db.patch(args.noteId, {
+    return await moveNoteFn(ctx, {
+      noteId: args.noteId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
     })
-    return args.noteId
   },
 })
 
@@ -93,7 +55,7 @@ export const deleteNote = campaignMutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    return await deleteNoteFn(ctx, args.noteId)
+    return await deleteNoteFn(ctx, { noteId: args.noteId })
   },
 })
 
@@ -114,38 +76,13 @@ export const createNote = campaignMutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    const campaignId = ctx.campaign._id
-
-    await validateCreateParent(ctx, args.parentId)
-
-    const uniqueSlug = await findNewSidebarItemSlug(
-      ctx,
-      SIDEBAR_ITEM_TYPES.notes,
-      args.name,
-    )
-
-    await validateSidebarItemName({
-      ctx,
-      parentId: args.parentId,
+    return await createNoteFn(ctx, {
       name: args.name,
-    })
-
-    const noteId = await ctx.db.insert('notes', {
-      name: args.name,
-      slug: uniqueSlug,
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      updatedAt: Date.now(),
-      campaignId,
-      type: SIDEBAR_ITEM_TYPES.notes,
+      content: args.content,
     })
-
-    if (args.content) {
-      await saveTopLevelBlocksForNote(ctx, noteId, args.content)
-    }
-    await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
-    return { noteId, slug: uniqueSlug }
   },
 })
 
@@ -157,9 +94,9 @@ export const updateNoteContent = campaignMutation({
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const rawNote = await ctx.db.get(args.noteId)
-    await requireItemAccess(ctx, rawNote, PERMISSION_LEVEL.EDIT)
-    await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
-    return args.noteId
+    return await updateNoteContentFn(ctx, {
+      noteId: args.noteId,
+      content: args.content,
+    })
   },
 })

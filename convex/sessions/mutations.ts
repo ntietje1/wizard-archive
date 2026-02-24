@@ -13,7 +13,7 @@ export const startSession = dmMutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    return startSessionFn(ctx, args.name)
+    return startSessionFn(ctx, { name: args.name })
   },
 })
 
@@ -32,7 +32,7 @@ export const setCurrentSession = dmMutation({
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    return setCurrentSessionFn(ctx, args.sessionId)
+    return setCurrentSessionFn(ctx, { sessionId: args.sessionId })
   },
 })
 
@@ -44,6 +44,9 @@ export const updateSession = dmMutation({
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    return updateSessionFn(ctx, args.sessionId, args.name)
+    return updateSessionFn(ctx, {
+      sessionId: args.sessionId,
+      name: args.name,
+    })
   },
 })

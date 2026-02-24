@@ -3,8 +3,10 @@ import type { AuthQueryCtx } from '../../functions'
 
 export async function checkCampaignSlugExists(
   ctx: AuthQueryCtx,
-  slug: string,
-  excludeCampaignId: Id<'campaigns'> | undefined,
+  {
+    slug,
+    excludeCampaignId,
+  }: { slug: string; excludeCampaignId: Id<'campaigns'> | undefined },
 ): Promise<boolean> {
   const existingCampaign = await ctx.db
     .query('campaigns')

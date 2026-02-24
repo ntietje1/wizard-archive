@@ -4,8 +4,10 @@ import type { AuthMutationCtx } from '../../functions'
 
 export async function trackUpload(
   ctx: AuthMutationCtx,
-  storageId: Id<'_storage'>,
-  originalFileName?: string,
+  {
+    storageId,
+    originalFileName,
+  }: { storageId: Id<'_storage'>; originalFileName?: string },
 ): Promise<Id<'fileStorage'>> {
   const now = Date.now()
 

@@ -10,6 +10,6 @@ export const toggleBookmark = campaignMutation({
   },
   returns: v.object({ isBookmarked: v.boolean() }),
   handler: async (ctx, args): Promise<{ isBookmarked: boolean }> => {
-    return await toggleItemBookmark(ctx, args.sidebarItemId)
+    return await toggleItemBookmark(ctx, { sidebarItemId: args.sidebarItemId })
   },
 })

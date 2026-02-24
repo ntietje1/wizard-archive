@@ -1,37 +1,37 @@
-import { getTopLevelBlocksByNote } from '../blocks/blocks'
-import { getSidebarItemAncestors } from '../folders/folders'
+import { getTopLevelBlocksByNote } from '../../blocks/blocks'
+import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import {
   getBlockPermissionLevel,
   getBlockSharesForBlock,
-} from '../shares/blockShares'
-import { enhanceBase } from '../sidebarItems/enhanceBase'
-import { SHARE_STATUS } from '../shares/types'
-import type { CampaignQueryCtx } from '../functions'
-import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from './types'
+} from '../../shares/blockShares'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { SHARE_STATUS } from '../../shares/types'
+import type { CampaignQueryCtx } from '../../functions'
+import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 
 export const enhanceNote = async (
   ctx: CampaignQueryCtx,
-  note: NoteFromDb,
+  { note }: { note: NoteFromDb },
 ): Promise<Note> => {
-  return enhanceBase(ctx, note)
+  return enhanceBase(ctx, { item: note })
 }
 
 export const enhanceNoteWithContent = async (
   ctx: CampaignQueryCtx,
-  note: Note,
+  { note }: { note: Note },
 ): Promise<NoteWithContent> => {
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
-    getSidebarItemAncestors(ctx, note.parentId),
-    getTopLevelBlocksByNote(ctx, note._id),
+    getSidebarItemAncestors(ctx, { initialParentId: note.parentId }),
+    getTopLevelBlocksByNote(ctx, { noteId: note._id }),
   ])
 
   const blockMeta: Record<string, BlockMeta> = {}
   await Promise.all(
     topLevelBlocks.map(async (block) => {
       const [myPermissionLevel, blockShares] = await Promise.all([
-        getBlockPermissionLevel(ctx, block),
+        getBlockPermissionLevel(ctx, { block }),
         block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-          ? getBlockSharesForBlock(ctx, block._id)
+          ? getBlockSharesForBlock(ctx, { blockId: block._id })
           : Promise.resolve([]),
       ])
       blockMeta[block.blockId] = {

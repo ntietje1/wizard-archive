@@ -1,12 +1,13 @@
 import type { Id } from '../_generated/dataModel'
+import type { CommonValidatorFields } from '../common/types'
 import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemId,
   SidebarItemWithContent,
-} from '../sidebarItems/baseTypes'
-import type { AnySidebarItem } from '../sidebarItems/types'
+} from '../sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from '../sidebarItems/types/types'
 
 export type GameMapFromDb = SidebarItemFromDb<
   typeof SIDEBAR_ITEM_TYPES.gameMaps
@@ -27,15 +28,12 @@ export type GameMapWithContent = SidebarItemWithContent<
   pins: Array<MapPinWithItem>
 }
 
-export type MapPin = {
-  _id: Id<'mapPins'>
-  _creationTime: number
+export type MapPin = CommonValidatorFields<'mapPins'> & {
   mapId: Id<'gameMaps'>
   itemId: SidebarItemId
   x: number
   y: number
   visible?: boolean
-  updatedAt: number
 }
 
 export type MapPinWithItem = MapPin & {

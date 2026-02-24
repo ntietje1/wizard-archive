@@ -4,8 +4,13 @@ import type { BlockShare, SidebarItemShare } from './types'
 
 export async function getSharesForSession(
   ctx: QueryCtx,
-  campaignId: Id<'campaigns'>,
-  sessionId: Id<'sessions'>,
+  {
+    campaignId,
+    sessionId,
+  }: {
+    campaignId: Id<'campaigns'>
+    sessionId: Id<'sessions'>
+  },
 ): Promise<{
   sidebarItemShares: Array<SidebarItemShare>
   blockShares: Array<BlockShare>

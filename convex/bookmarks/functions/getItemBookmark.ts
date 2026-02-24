@@ -1,10 +1,10 @@
 import type { CampaignQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/baseTypes'
+import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { Bookmark } from '../types'
 
 export async function getItemBookmark(
   ctx: CampaignQueryCtx,
-  sidebarItemId: SidebarItemId,
+  { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Bookmark | null> {
   return await ctx.db
     .query('bookmarks')

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
-import { getMap as getMapFn } from './gameMaps'
+import { getMap as getMapFn } from './functions/getMap'
 import type { GameMapWithContent } from './types'
 
 export const getMap = campaignQuery({
@@ -11,6 +11,6 @@ export const getMap = campaignQuery({
   },
   returns: v.union(mapWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<GameMapWithContent | null> => {
-    return getMapFn(ctx, args.mapId)
+    return getMapFn(ctx, { mapId: args.mapId })
   },
 })

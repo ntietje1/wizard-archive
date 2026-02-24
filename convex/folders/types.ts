@@ -5,7 +5,7 @@ import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/baseTypes'
+} from '../sidebarItems/types/baseTypes'
 
 export type FolderFromDb = SidebarItemFromDb<
   typeof SIDEBAR_ITEM_TYPES.folders

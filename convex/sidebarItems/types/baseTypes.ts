@@ -1,6 +1,7 @@
-import type { Folder } from '../folders/types'
-import type { Id } from '../_generated/dataModel'
-import type { PermissionLevel, SidebarItemShare } from '../shares/types'
+import type { Folder } from '../../folders/types'
+import type { Id } from '../../_generated/dataModel'
+import type { CommonTableFields } from '../../common/types'
+import type { PermissionLevel, SidebarItemShare } from '../../shares/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
@@ -29,11 +30,9 @@ export const SIDEBAR_ITEM_OR_ROOT_TYPES = {
 export type SidebarItemOrRootType =
   (typeof SIDEBAR_ITEM_OR_ROOT_TYPES)[keyof typeof SIDEBAR_ITEM_OR_ROOT_TYPES]
 
-export type SidebarItemId =
-  | Id<'notes'>
-  | Id<'folders'>
-  | Id<'gameMaps'>
-  | Id<'files'>
+export type SidebarItemId = {
+  [K in keyof typeof SIDEBAR_ITEM_TYPES]: Id<K>
+}[keyof typeof SIDEBAR_ITEM_TYPES]
 
 export type SidebarItemFromDb<T extends SidebarItemType> = {
   _id: Id<SidebarItemTypeToTableName<T>>
@@ -45,10 +44,9 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   slug: string
   campaignId: Id<'campaigns'>
   parentId?: Id<'folders'>
-  updatedAt: number
   type: T
   allPermissionLevel?: PermissionLevel
-}
+} & CommonTableFields
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {
   shares: Array<SidebarItemShare>

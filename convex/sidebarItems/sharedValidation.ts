@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemId } from './baseTypes'
+import type { SidebarItemId } from './types/baseTypes'
 
 export interface ValidationResult {
   valid: boolean

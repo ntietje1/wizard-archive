@@ -1,11 +1,12 @@
 import { v } from 'convex/values'
 import { sidebarItemShareValidator } from '../../shares/schema'
+import { commonTableFields } from '../../common/schema'
 import {
   permissionLevelValidator,
   sidebarItemTypeValidator,
 } from './baseValidators'
 
-export const sidebarItemTableFields = {
+export const commonSidebarItemTableFields = {
   name: v.optional(v.string()),
   slug: v.string(),
   campaignId: v.id('campaigns'),
@@ -13,12 +14,12 @@ export const sidebarItemTableFields = {
   color: v.optional(v.string()),
   type: sidebarItemTypeValidator,
   parentId: v.optional(v.id('folders')),
-  updatedAt: v.number(),
   allPermissionLevel: v.optional(permissionLevelValidator),
+  ...commonTableFields,
 }
 
-export const sidebarItemBaseFields = {
-  ...sidebarItemTableFields,
+export const commonSidebarItemValidatorFields = {
+  ...commonSidebarItemTableFields,
   shares: v.optional(v.array(sidebarItemShareValidator)),
   isBookmarked: v.optional(v.boolean()),
   myPermissionLevel: v.optional(permissionLevelValidator),

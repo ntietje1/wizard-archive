@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
-import { getFile as getFileFn } from './files'
+import { getFile as getFileFn } from './functions/getFile'
 import type { FileWithContent } from './types'
 
 export const getFile = campaignQuery({
@@ -11,6 +11,6 @@ export const getFile = campaignQuery({
   },
   returns: v.union(fileWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<FileWithContent | null> => {
-    return getFileFn(ctx, args.fileId)
+    return getFileFn(ctx, { fileId: args.fileId })
   },
 })

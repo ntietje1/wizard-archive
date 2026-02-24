@@ -10,6 +10,6 @@ export const getUserProfile = query({
   handler: async (ctx): Promise<UserProfile | null> => {
     const userIdentity = await ctx.auth.getUserIdentity()
     if (!userIdentity) return null
-    return await getUserProfileByUserId(ctx, userIdentity.subject)
+    return await getUserProfileByUserId(ctx, { userId: userIdentity.subject })
   },
 })

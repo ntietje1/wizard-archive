@@ -3,8 +3,7 @@ import type { CampaignMutationCtx } from '../../functions'
 
 export async function updateSession(
   ctx: CampaignMutationCtx,
-  sessionId: Id<'sessions'>,
-  name?: string,
+  { sessionId, name }: { sessionId: Id<'sessions'>; name?: string },
 ): Promise<null> {
   const session = await ctx.db.get(sessionId)
   if (!session || session.campaignId !== ctx.campaign._id) {

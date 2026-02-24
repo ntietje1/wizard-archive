@@ -4,9 +4,15 @@ import type { CampaignMutationCtx } from '../../functions'
 
 export async function updateCampaign(
   ctx: CampaignMutationCtx,
-  name?: string,
-  description?: string,
-  slug?: string,
+  {
+    name,
+    description,
+    slug,
+  }: {
+    name?: string
+    description?: string
+    slug?: string
+  },
 ): Promise<Id<'campaigns'>> {
   const profile = ctx.user.profile
   const campaign = ctx.campaign

@@ -5,10 +5,17 @@ import type { SortDirection, SortOrder } from '../types'
 
 export async function setCurrentEditor(
   ctx: CampaignMutationCtx,
-  sortOrder?: SortOrder,
-  sortDirection?: SortDirection,
-  sidebarWidth?: number,
-  isSidebarExpanded?: boolean,
+  {
+    sortOrder,
+    sortDirection,
+    sidebarWidth,
+    isSidebarExpanded,
+  }: {
+    sortOrder?: SortOrder
+    sortDirection?: SortDirection
+    sidebarWidth?: number
+    isSidebarExpanded?: boolean
+  },
 ): Promise<Id<'editor'>> {
   const campaignId = ctx.campaign._id
   const now = Date.now()

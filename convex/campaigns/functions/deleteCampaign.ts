@@ -1,7 +1,7 @@
-import { deleteFile } from '../../files/files'
-import { deleteFolder } from '../../folders/folders'
-import { deleteMap } from '../../gameMaps/gameMaps'
-import { deleteNote } from '../../notes/notes'
+import { deleteFile } from '../../files/functions/deleteFile'
+import { deleteFolder } from '../../folders/functions/deleteFolder'
+import { deleteMap } from '../../gameMaps/functions/deleteMap'
+import { deleteNote } from '../../notes/functions/deleteNote'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 
@@ -18,7 +18,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const folder of folders) {
-    await deleteFolder(ctx, folder._id)
+    await deleteFolder(ctx, { folderId: folder._id })
   }
 
   const notes = await ctx.db
@@ -29,7 +29,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const note of notes) {
-    await deleteNote(ctx, note._id)
+    await deleteNote(ctx, { noteId: note._id })
   }
 
   const maps = await ctx.db
@@ -40,7 +40,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const map of maps) {
-    await deleteMap(ctx, map._id)
+    await deleteMap(ctx, { mapId: map._id })
   }
 
   const files = await ctx.db
@@ -51,7 +51,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const file of files) {
-    await deleteFile(ctx, file._id)
+    await deleteFile(ctx, { fileId: file._id })
   }
 
   // Delete block shares

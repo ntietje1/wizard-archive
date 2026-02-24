@@ -14,12 +14,11 @@ export const setCurrentEditor = campaignMutation({
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
-    return setCurrentEditorFn(
-      ctx,
-      args.sortOrder,
-      args.sortDirection,
-      args.sidebarWidth,
-      args.isSidebarExpanded,
-    )
+    return setCurrentEditorFn(ctx, {
+      sortOrder: args.sortOrder,
+      sortDirection: args.sortDirection,
+      sidebarWidth: args.sidebarWidth,
+      isSidebarExpanded: args.isSidebarExpanded,
+    })
   },
 })

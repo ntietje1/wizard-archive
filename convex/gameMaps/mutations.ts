@@ -1,18 +1,15 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import {
-  findNewSidebarItemSlug,
-  requireItemAccess,
-  validateCreateParent,
-  validateMove,
-  validateRename,
-  validateSidebarItemName,
-} from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
-import { PERMISSION_LEVEL } from '../shares/types'
-import { deleteMap as deleteMapHelper } from './gameMaps'
-import type { Doc, Id } from '../_generated/dataModel'
+import { createMap as createMapFn } from './functions/createMap'
+import { updateMap as updateMapFn } from './functions/updateMap'
+import { moveMap as moveMapFn } from './functions/moveMap'
+import { deleteMap as deleteMapFn } from './functions/deleteMap'
+import { createItemPin as createItemPinFn } from './functions/createItemPin'
+import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
+import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
+import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
+import type { Id } from '../_generated/dataModel'
 
 export const createMap = campaignMutation({
   args: {
@@ -31,35 +28,13 @@ export const createMap = campaignMutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    const campaignId = ctx.campaign._id
-
-    await validateCreateParent(ctx, args.parentId)
-
-    await validateSidebarItemName({
-      ctx,
-      parentId: args.parentId,
+    return await createMapFn(ctx, {
       name: args.name,
-    })
-
-    const uniqueSlug = await findNewSidebarItemSlug(
-      ctx,
-      SIDEBAR_ITEM_TYPES.gameMaps,
-      args.name,
-    )
-
-    const mapId = await ctx.db.insert('gameMaps', {
-      campaignId,
-      name: args.name,
-      slug: uniqueSlug,
-      iconName: args.iconName,
-      color: args.color,
       imageStorageId: args.imageStorageId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
-      type: SIDEBAR_ITEM_TYPES.gameMaps,
+      iconName: args.iconName,
+      color: args.color,
     })
-
-    return { mapId, slug: uniqueSlug }
   },
 })
 
@@ -80,32 +55,13 @@ export const updateMap = campaignMutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    const map = await requireItemAccess(
-      ctx,
-      rawMap,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    const updates: Partial<Doc<'gameMaps'>> = {
-      updatedAt: Date.now(),
-    }
-
-    if (args.name !== undefined) {
-      updates.name = args.name
-      updates.slug = await validateRename(ctx, map, args.name)
-    }
-    if (args.imageStorageId !== undefined) {
-      updates.imageStorageId = args.imageStorageId
-    }
-    if (args.iconName !== undefined) {
-      updates.iconName = args.iconName
-    }
-    if (args.color !== undefined) {
-      updates.color = args.color
-    }
-    await ctx.db.patch(args.mapId, updates)
-    return { mapId: args.mapId, slug: updates.slug || map.slug }
+    return await updateMapFn(ctx, {
+      mapId: args.mapId,
+      name: args.name,
+      imageStorageId: args.imageStorageId,
+      iconName: args.iconName,
+      color: args.color,
+    })
   },
 })
 
@@ -117,20 +73,10 @@ export const moveMap = campaignMutation({
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    const map = await requireItemAccess(
-      ctx,
-      rawMap,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    await validateMove(ctx, map, args.parentId)
-
-    await ctx.db.patch(args.mapId, {
+    return await moveMapFn(ctx, {
+      mapId: args.mapId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
     })
-    return args.mapId
   },
 })
 
@@ -141,11 +87,7 @@ export const deleteMap = campaignMutation({
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.FULL_ACCESS)
-
-    await deleteMapHelper(ctx, args.mapId)
-    return args.mapId
+    return await deleteMapFn(ctx, { mapId: args.mapId })
   },
 })
 
@@ -159,20 +101,11 @@ export const createItemPin = campaignMutation({
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
-
-    const item = await ctx.db.get(args.itemId)
-    if (!item) {
-      throw new Error('Item not found')
-    }
-    return await ctx.db.insert('mapPins', {
+    return await createItemPinFn(ctx, {
       mapId: args.mapId,
-      itemId: args.itemId,
       x: args.x,
       y: args.y,
-      visible: false,
-      updatedAt: Date.now(),
+      itemId: args.itemId,
     })
   },
 })
@@ -186,21 +119,11 @@ export const updateItemPin = campaignMutation({
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
-
-    await ctx.db.patch(args.mapPinId, {
+    return await updateItemPinFn(ctx, {
+      mapPinId: args.mapPinId,
       x: args.x,
       y: args.y,
-      updatedAt: Date.now(),
     })
-
-    return args.mapPinId
   },
 })
 
@@ -212,20 +135,10 @@ export const updatePinVisibility = campaignMutation({
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
-
-    await ctx.db.patch(args.mapPinId, {
+    return await updatePinVisibilityFn(ctx, {
+      mapPinId: args.mapPinId,
       visible: args.visible,
-      updatedAt: Date.now(),
     })
-
-    return args.mapPinId
   },
 })
 
@@ -236,15 +149,6 @@ export const removeItemPin = campaignMutation({
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    await requireItemAccess(ctx, rawMap, PERMISSION_LEVEL.EDIT)
-
-    await ctx.db.delete(args.mapPinId)
-    return args.mapPinId
+    return await removeItemPinFn(ctx, { mapPinId: args.mapPinId })
   },
 })

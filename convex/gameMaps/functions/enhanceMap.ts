@@ -1,22 +1,23 @@
-import { getSidebarItemAncestors } from '../folders/folders'
-import { enhanceBase } from '../sidebarItems/enhanceBase'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import type { CampaignQueryCtx } from '../functions'
+import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
+import {
+  enhanceBase,
+  enhanceSidebarItem,
+} from '../../sidebarItems/functions/enhanceSidebarItem'
+import type { CampaignQueryCtx } from '../../functions'
 import type {
   GameMap,
   GameMapFromDb,
   GameMapWithContent,
   MapPin,
   MapPinWithItem,
-} from './types'
-import type { AnySidebarItemFromDb } from '../sidebarItems/types'
+} from '../types'
 
 export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,
-  gameMap: GameMapFromDb,
+  { gameMap }: { gameMap: GameMapFromDb },
 ): Promise<GameMap> => {
   const [base, imageUrl] = await Promise.all([
-    enhanceBase(ctx, gameMap),
+    enhanceBase(ctx, { item: gameMap }),
     gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
   ])
 
@@ -28,14 +29,11 @@ export const enhanceGameMap = async (
 
 const enhanceMapPin = async (
   ctx: CampaignQueryCtx,
-  pin: MapPin,
+  { pin }: { pin: MapPin },
 ): Promise<MapPinWithItem | null> => {
   const item = await ctx.db.get(pin.itemId)
   if (item) {
-    const enhancedItem = await enhanceSidebarItem(
-      ctx,
-      item as AnySidebarItemFromDb,
-    )
+    const enhancedItem = await enhanceSidebarItem(ctx, { item })
     return {
       ...pin,
       item: enhancedItem,
@@ -46,9 +44,11 @@ const enhanceMapPin = async (
 
 export const enhanceGameMapWithContent = async (
   ctx: CampaignQueryCtx,
-  gameMap: GameMap,
+  { gameMap }: { gameMap: GameMap },
 ): Promise<GameMapWithContent> => {
-  const ancestors = await getSidebarItemAncestors(ctx, gameMap.parentId)
+  const ancestors = await getSidebarItemAncestors(ctx, {
+    initialParentId: gameMap.parentId,
+  })
 
   const rawPins: Array<MapPin> = await ctx.db
     .query('mapPins')
@@ -56,8 +56,8 @@ export const enhanceGameMapWithContent = async (
     .collect()
 
   const pins = (
-    await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, pin)))
-  ).filter((pin): pin is MapPinWithItem => pin !== null)
+    await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, { pin })))
+  ).filter((pin) => pin !== null)
 
   return {
     ...gameMap,

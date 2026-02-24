@@ -30,14 +30,16 @@ export const EMPTY_PM_DOC = {
 
 async function checkAccess(
   ctx: QueryCtx,
-  documentId: string,
-  level: PermissionLevel,
+  { documentId, level }: { documentId: string; level: PermissionLevel },
 ) {
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
   const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
-  await requireItemAccess(campaignCtx, noteFromDb, level)
+  await requireItemAccess(campaignCtx, {
+    rawItem: noteFromDb,
+    requiredLevel: level,
+  })
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -57,8 +59,10 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
 }
 
 const sync = prosemirrorSync.syncApi({
-  checkRead: (ctx, id) => checkAccess(ctx, id, PERMISSION_LEVEL.VIEW),
-  checkWrite: (ctx, id) => checkAccess(ctx, id, PERMISSION_LEVEL.EDIT),
+  checkRead: (ctx, id) =>
+    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.VIEW }),
+  checkWrite: (ctx, id) =>
+    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.EDIT }),
   onSnapshot: async (
     ctx: MutationCtx,
     documentId: string,
@@ -72,7 +76,7 @@ const sync = prosemirrorSync.syncApi({
       noteFromDb.campaignId,
     )
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(campaignCtx, noteId, blocks)
+    await saveTopLevelBlocksForNote(campaignCtx, { noteId, content: blocks })
   },
 })
 

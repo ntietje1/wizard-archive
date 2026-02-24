@@ -7,5 +7,5 @@ export async function getCurrentSession(
 ): Promise<Session | null> {
   const currentSessionId = ctx.campaign.currentSessionId
   if (!currentSessionId) return null
-  return getSession(ctx, currentSessionId)
+  return getSession(ctx, { sessionId: currentSessionId })
 }

@@ -3,7 +3,7 @@ import type { AuthQueryCtx } from '../../functions'
 
 export async function getDownloadUrl(
   ctx: AuthQueryCtx,
-  storageId: Id<'_storage'>,
+  { storageId }: { storageId: Id<'_storage'> },
 ): Promise<string | null> {
   const fileStorage = await ctx.db
     .query('fileStorage')

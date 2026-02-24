@@ -5,11 +5,10 @@ import type { AuthMutationCtx } from '../../functions'
 
 export async function joinCampaign(
   ctx: AuthMutationCtx,
-  dmUsername: string,
-  slug: string,
+  { dmUsername, slug }: { dmUsername: string; slug: string },
 ): Promise<CampaignMemberStatus> {
   const profile = ctx.user.profile
-  const campaign = await getCampaignBySlug(ctx, dmUsername, slug)
+  const campaign = await getCampaignBySlug(ctx, { dmUsername, slug })
 
   const existingMember = await ctx.db
     .query('campaignMembers')

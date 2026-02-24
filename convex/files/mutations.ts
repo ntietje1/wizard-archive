@@ -1,17 +1,10 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import {
-  findNewSidebarItemSlug,
-  requireItemAccess,
-  validateCreateParent,
-  validateMove,
-  validateRename,
-  validateSidebarItemName,
-} from '../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-import { PERMISSION_LEVEL } from '../shares/types'
-import { deleteFile as deleteFileHelper } from './files'
-import type { Doc, Id } from '../_generated/dataModel'
+import { createFile as createFileFn } from './functions/createFile'
+import { updateFile as updateFileFn } from './functions/updateFile'
+import { moveFile as moveFileFn } from './functions/moveFile'
+import { deleteFile as deleteFileFn } from './functions/deleteFile'
+import type { Id } from '../_generated/dataModel'
 
 export const moveFile = campaignMutation({
   args: {
@@ -21,20 +14,10 @@ export const moveFile = campaignMutation({
   },
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
-    const rawFile = await ctx.db.get(args.fileId)
-    const file = await requireItemAccess(
-      ctx,
-      rawFile,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    await validateMove(ctx, file, args.parentId)
-
-    await ctx.db.patch(args.fileId, {
+    return await moveFileFn(ctx, {
+      fileId: args.fileId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
     })
-    return args.fileId
   },
 })
 
@@ -55,35 +38,13 @@ export const createFile = campaignMutation({
     ctx,
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
-    const campaignId = ctx.campaign._id
-
-    await validateCreateParent(ctx, args.parentId)
-
-    await validateSidebarItemName({
-      ctx,
-      parentId: args.parentId,
+    return await createFileFn(ctx, {
       name: args.name,
-    })
-
-    const uniqueSlug = await findNewSidebarItemSlug(
-      ctx,
-      SIDEBAR_ITEM_TYPES.files,
-      args.name,
-    )
-
-    const fileId = await ctx.db.insert('files', {
-      campaignId,
-      name: args.name,
-      slug: uniqueSlug,
-      iconName: args.iconName,
-      color: args.color,
       storageId: args.storageId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
-      type: SIDEBAR_ITEM_TYPES.files,
+      iconName: args.iconName,
+      color: args.color,
     })
-
-    return { fileId, slug: uniqueSlug }
   },
 })
 
@@ -104,32 +65,13 @@ export const updateFile = campaignMutation({
     ctx,
     args,
   ): Promise<{ fileId: Id<'files'>; slug: string }> => {
-    const rawFile = await ctx.db.get(args.fileId)
-    const file = await requireItemAccess(
-      ctx,
-      rawFile,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
-
-    const updates: Partial<Doc<'files'>> = {
-      updatedAt: Date.now(),
-    }
-
-    if (args.name !== undefined) {
-      updates.name = args.name
-      updates.slug = await validateRename(ctx, file, args.name)
-    }
-    if (args.storageId !== undefined) {
-      updates.storageId = args.storageId
-    }
-    if (args.iconName !== undefined) {
-      updates.iconName = args.iconName
-    }
-    if (args.color !== undefined) {
-      updates.color = args.color
-    }
-    await ctx.db.patch(args.fileId, updates)
-    return { fileId: args.fileId, slug: updates.slug || file.slug }
+    return await updateFileFn(ctx, {
+      fileId: args.fileId,
+      name: args.name,
+      storageId: args.storageId,
+      iconName: args.iconName,
+      color: args.color,
+    })
   },
 })
 
@@ -140,10 +82,6 @@ export const deleteFile = campaignMutation({
   },
   returns: v.id('files'),
   handler: async (ctx, args): Promise<Id<'files'>> => {
-    const rawFile = await ctx.db.get(args.fileId)
-    await requireItemAccess(ctx, rawFile, PERMISSION_LEVEL.FULL_ACCESS)
-
-    await deleteFileHelper(ctx, args.fileId)
-    return args.fileId
+    return await deleteFileFn(ctx, { fileId: args.fileId })
   },
 })

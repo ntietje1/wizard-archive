@@ -19,7 +19,10 @@ export const trackUpload = authMutation({
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    return trackUploadFn(ctx, args.storageId, args.originalFileName)
+    return trackUploadFn(ctx, {
+      storageId: args.storageId,
+      originalFileName: args.originalFileName,
+    })
   },
 })
 
@@ -29,6 +32,6 @@ export const commitUpload = authMutation({
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    return commitUploadFn(ctx, args.storageId)
+    return commitUploadFn(ctx, { storageId: args.storageId })
   },
 })

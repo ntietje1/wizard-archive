@@ -9,9 +9,15 @@ import type { AuthMutationCtx } from '../../functions'
 
 export async function createCampaign(
   ctx: AuthMutationCtx,
-  name: string,
-  slug: string,
-  description?: string,
+  {
+    name,
+    slug,
+    description,
+  }: {
+    name: string
+    slug: string
+    description?: string
+  },
 ): Promise<Id<'campaigns'>> {
   const profile = ctx.user.profile
   const now = Date.now()

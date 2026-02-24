@@ -11,7 +11,9 @@ export async function ensureUserProfile(
     throw new Error('User not authenticated')
   }
 
-  const existingProfile = await getUserProfileByUserId(ctx, identity.subject)
+  const existingProfile = await getUserProfileByUserId(ctx, {
+    userId: identity.subject,
+  })
 
   if (existingProfile) {
     // Update existing profile

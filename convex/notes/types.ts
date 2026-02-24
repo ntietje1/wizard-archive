@@ -4,7 +4,7 @@ import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/baseTypes'
+} from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel, ShareStatus } from '../shares/types'
 import type { Id } from '../_generated/dataModel'
 

@@ -1,19 +1,22 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/functions/getCurrentSession'
-import { defaultItemName } from '../sidebarItems/sidebarItems'
+import { defaultItemName } from '../sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL, PERMISSION_RANK } from './types'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type {
   AnySidebarItem,
   AnySidebarItemFromDb,
-} from '../sidebarItems/types'
-import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
+} from '../sidebarItems/types/types'
+import type {
+  SidebarItemId,
+  SidebarItemType,
+} from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel, SidebarItemShare } from './types'
 
 export async function getSidebarItemPermissionLevel(
   ctx: CampaignQueryCtx,
-  item: AnySidebarItem | AnySidebarItemFromDb,
+  { item }: { item: AnySidebarItem | AnySidebarItemFromDb },
 ): Promise<PermissionLevel> {
   if (ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.FULL_ACCESS
@@ -22,7 +25,13 @@ export async function getSidebarItemPermissionLevel(
   const checkId = ctx.membership._id
 
   // Check for an explicit per-player share
-  const share = await getSidebarItemShareForMember(ctx, item._id, checkId)
+  const share: SidebarItemShare | null = await getSidebarItemShareForMember(
+    ctx,
+    {
+      sidebarItemId: item._id,
+      campaignMemberId: checkId,
+    },
+  )
   if (share) {
     return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
   }
@@ -35,26 +44,38 @@ export async function getSidebarItemPermissionLevel(
 
   // Walk up folder hierarchy for inherited permission
   const parentId = item.parentId
-  return await resolveInheritedPermission(ctx, parentId, checkId)
+  return await resolveInheritedPermission(ctx, {
+    parentId,
+    playerId: checkId,
+  })
 }
 
 async function resolveInheritedPermission(
   ctx: CampaignQueryCtx,
-  parentId: Id<'folders'> | undefined,
-  playerId: Id<'campaignMembers'>,
-): Promise<PermissionLevel> {
-  const { level } = await resolveInheritedPermissionWithSource(
-    ctx,
+  {
     parentId,
     playerId,
-  )
+  }: {
+    parentId: Id<'folders'> | undefined
+    playerId: Id<'campaignMembers'>
+  },
+): Promise<PermissionLevel> {
+  const { level } = await resolveInheritedPermissionWithSource(ctx, {
+    parentId,
+    memberId: playerId,
+  })
   return level ?? PERMISSION_LEVEL.NONE
 }
 
 export async function resolveInheritedPermissionWithSource(
   ctx: CampaignQueryCtx,
-  parentId: Id<'folders'> | undefined,
-  memberId?: Id<'campaignMembers'>,
+  {
+    parentId,
+    memberId,
+  }: {
+    parentId: Id<'folders'> | undefined
+    memberId?: Id<'campaignMembers'>
+  },
 ): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
   let currentParentId = parentId
   while (currentParentId) {
@@ -69,11 +90,10 @@ export async function resolveInheritedPermissionWithSource(
 
     // Check individual member share if memberId provided
     if (memberId) {
-      const share = await getSidebarItemShareForMember(
-        ctx,
-        currentParentId,
-        memberId,
-      )
+      const share = await getSidebarItemShareForMember(ctx, {
+        sidebarItemId: currentParentId,
+        campaignMemberId: memberId,
+      })
       if (share) {
         return {
           level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
@@ -104,10 +124,17 @@ export function hasAtLeastPermissionLevel(
 
 export async function shareSidebarItemWithMember(
   ctx: CampaignMutationCtx,
-  sidebarItemId: SidebarItemId,
-  sidebarItemType: SidebarItemType,
-  campaignMemberId: Id<'campaignMembers'>,
-  permissionLevel?: PermissionLevel,
+  {
+    sidebarItemId,
+    sidebarItemType,
+    campaignMemberId,
+    permissionLevel,
+  }: {
+    sidebarItemId: SidebarItemId
+    sidebarItemType: SidebarItemType
+    campaignMemberId: Id<'campaignMembers'>
+    permissionLevel?: PermissionLevel
+  },
 ): Promise<Id<'sidebarItemShares'>> {
   const campaignId = ctx.campaign._id
 
@@ -148,8 +175,13 @@ export async function shareSidebarItemWithMember(
 
 export async function unshareSidebarItemFromMember(
   ctx: CampaignMutationCtx,
-  sidebarItemId: SidebarItemId,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    sidebarItemId,
+    campaignMemberId,
+  }: {
+    sidebarItemId: SidebarItemId
+    campaignMemberId: Id<'campaignMembers'>
+  },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 
@@ -170,7 +202,7 @@ export async function unshareSidebarItemFromMember(
 
 export async function getSidebarItemSharesForItem(
   ctx: CampaignQueryCtx,
-  sidebarItemId: SidebarItemId,
+  { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Array<SidebarItemShare>> {
   return await ctx.db
     .query('sidebarItemShares')
@@ -182,7 +214,7 @@ export async function getSidebarItemSharesForItem(
 
 export async function getSidebarItemSharesForMember(
   ctx: CampaignQueryCtx,
-  campaignMemberId: Id<'campaignMembers'>,
+  { campaignMemberId }: { campaignMemberId: Id<'campaignMembers'> },
 ): Promise<Array<SidebarItemShare>> {
   return await ctx.db
     .query('sidebarItemShares')
@@ -196,8 +228,13 @@ export async function getSidebarItemSharesForMember(
 
 export async function getSidebarItemShareForMember(
   ctx: CampaignQueryCtx,
-  sidebarItemId: SidebarItemId,
-  campaignMemberId: Id<'campaignMembers'>,
+  {
+    sidebarItemId,
+    campaignMemberId,
+  }: {
+    sidebarItemId: SidebarItemId
+    campaignMemberId: Id<'campaignMembers'>
+  },
 ): Promise<SidebarItemShare | null> {
   return await ctx.db
     .query('sidebarItemShares')
@@ -212,20 +249,24 @@ export async function getSidebarItemShareForMember(
 
 export async function isSidebarItemSharedWithMember(
   ctx: CampaignQueryCtx,
-  sidebarItemId: SidebarItemId,
-  campaignMemberId: Id<'campaignMembers'>,
-): Promise<boolean> {
-  const share = await getSidebarItemShareForMember(
-    ctx,
+  {
     sidebarItemId,
     campaignMemberId,
-  )
+  }: {
+    sidebarItemId: SidebarItemId
+    campaignMemberId: Id<'campaignMembers'>
+  },
+): Promise<boolean> {
+  const share = await getSidebarItemShareForMember(ctx, {
+    sidebarItemId,
+    campaignMemberId,
+  })
   return share !== null
 }
 
 export async function deleteSidebarItemShares(
   ctx: CampaignMutationCtx,
-  sidebarItemId: SidebarItemId,
+  { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
 

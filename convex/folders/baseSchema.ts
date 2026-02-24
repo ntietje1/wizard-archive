@@ -1,30 +1,28 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import {
-  sidebarItemBaseFields,
-  sidebarItemTableFields,
+  commonSidebarItemTableFields,
+  commonSidebarItemValidatorFields,
 } from '../sidebarItems/schema/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 
 const folderTableFields = {
-  ...sidebarItemTableFields,
+  ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
   inheritShares: v.optional(v.boolean()),
 }
 
 export const foldersTables = {
-  folders: defineTable({
-    ...folderTableFields,
-  })
+  folders: defineTable(folderTableFields)
     .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
     .index('by_campaign_name', ['campaignId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug']),
 }
 
 const folderValidatorFields = {
-  _id: v.id('folders'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
+  ...commonValidatorFields('folders'),
+  ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
   inheritShares: v.optional(v.boolean()),
 } as const

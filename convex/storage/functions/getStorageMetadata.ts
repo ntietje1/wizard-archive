@@ -3,7 +3,7 @@ import type { AuthQueryCtx } from '../../functions'
 
 export async function getStorageMetadata(
   ctx: AuthQueryCtx,
-  storageId: Id<'_storage'>,
+  { storageId }: { storageId: Id<'_storage'> },
 ): Promise<{
   contentType: string | null
   size: number

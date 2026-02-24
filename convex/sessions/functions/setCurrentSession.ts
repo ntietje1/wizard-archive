@@ -5,12 +5,12 @@ import type { CampaignMutationCtx } from '../../functions'
 
 export async function setCurrentSession(
   ctx: CampaignMutationCtx,
-  sessionId: Id<'sessions'>,
+  { sessionId }: { sessionId: Id<'sessions'> },
 ): Promise<Id<'sessions'>> {
   const campaignId = ctx.campaign._id
   const now = Date.now()
 
-  const newSession = await getSession(ctx, sessionId)
+  const newSession = await getSession(ctx, { sessionId })
   if (!newSession || newSession.campaignId !== campaignId) {
     throw new Error('Session not found')
   }

@@ -1,0 +1,78 @@
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { deleteFile } from '../../files/functions/deleteFile'
+import { deleteMap } from '../../gameMaps/functions/deleteMap'
+import { deleteNote } from '../../notes/functions/deleteNote'
+import { deleteSidebarItemShares } from '../../shares/itemShares'
+import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
+import { requireItemAccess } from '../../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../../shares/types'
+import type { CampaignMutationCtx } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
+
+export async function deleteFolder(
+  ctx: CampaignMutationCtx,
+  { folderId }: { folderId: Id<'folders'> },
+): Promise<Id<'folders'>> {
+  const folderFromDb = await ctx.db.get(folderId)
+  const folder = await requireItemAccess(ctx, {
+    rawItem: folderFromDb,
+    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+  })
+
+  // folders specifically require DM level to delete rather than full access
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throw new Error('Only the DM can delete folders')
+  }
+
+  const campaignId = ctx.campaign._id
+
+  const childFolders = await ctx.db
+    .query('folders')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childFolder of childFolders) {
+    await deleteFolder(ctx, { folderId: childFolder._id })
+  }
+
+  const childNotes = await ctx.db
+    .query('notes')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childNote of childNotes) {
+    await deleteNote(ctx, { noteId: childNote._id })
+  }
+
+  const childMaps = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childMap of childMaps) {
+    await deleteMap(ctx, { mapId: childMap._id })
+  }
+
+  const childFiles = await ctx.db
+    .query('files')
+    .withIndex('by_campaign_parent_name', (q) =>
+      q.eq('campaignId', campaignId).eq('parentId', folderId),
+    )
+    .collect()
+
+  for (const childFile of childFiles) {
+    await deleteFile(ctx, { fileId: childFile._id })
+  }
+
+  await deleteSidebarItemShares(ctx, { sidebarItemId: folderId })
+  await deleteItemBookmarks(ctx, { sidebarItemId: folderId })
+  await ctx.db.delete(folderId)
+
+  return folder._id
+}
