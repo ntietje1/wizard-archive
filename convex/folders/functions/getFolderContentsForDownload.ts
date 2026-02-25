@@ -2,10 +2,29 @@ import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebar
 import { getTopLevelBlocksByNote } from '../../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import {
+  getSidebarItemPermissionLevel,
+  hasAtLeastPermissionLevel,
+} from '../../shares/itemShares'
+import { enforceBlockSharePermissionsOrNull } from '../../shares/blockShares'
 import { PERMISSION_LEVEL } from '../../shares/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { DownloadableItem } from '../types'
+import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
+
+export type DownloadItem =
+  | {
+      type: typeof SIDEBAR_ITEM_TYPES.files | typeof SIDEBAR_ITEM_TYPES.gameMaps
+      name: string
+      path: string
+      downloadUrl: string | null
+    }
+  | {
+      type: typeof SIDEBAR_ITEM_TYPES.notes
+      name: string
+      path: string
+      content: Array<CustomBlock>
+    }
 
 async function collectItemsRecursively(
   ctx: CampaignQueryCtx,
@@ -13,11 +32,14 @@ async function collectItemsRecursively(
     parentId,
     currentPath,
   }: { parentId: Id<'folders'> | undefined; currentPath: string },
-): Promise<Array<DownloadableItem>> {
+): Promise<Array<DownloadItem>> {
   const children = await getSidebarItemsByParent(ctx, { parentId })
-  const items: Array<DownloadableItem> = []
+  const items: Array<DownloadItem> = []
 
   for (const child of children) {
+    const level = await getSidebarItemPermissionLevel(ctx, { item: child })
+    if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)) continue
+
     if (child.type === SIDEBAR_ITEM_TYPES.files) {
       const fileName = child.name
       const downloadUrl = child.storageId
@@ -25,7 +47,6 @@ async function collectItemsRecursively(
         : null
       items.push({
         type: SIDEBAR_ITEM_TYPES.files,
-        id: child._id,
         name: fileName,
         path: currentPath ? `${currentPath}/${fileName}` : fileName,
         downloadUrl,
@@ -36,10 +57,16 @@ async function collectItemsRecursively(
       const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
         noteId: child._id,
       })
-      const content = topLevelBlocks.map((block) => block.content)
+      const visibleBlocks = await Promise.all(
+        topLevelBlocks.map((block) =>
+          enforceBlockSharePermissionsOrNull(ctx, { block }),
+        ),
+      )
+      const content = visibleBlocks
+        .filter((block) => block !== null)
+        .map((block) => block.content)
       items.push({
         type: SIDEBAR_ITEM_TYPES.notes,
-        id: child._id,
         name: noteName,
         path: currentPath ? `${currentPath}/${noteName}` : noteName,
         content,
@@ -51,7 +78,6 @@ async function collectItemsRecursively(
         : null
       items.push({
         type: SIDEBAR_ITEM_TYPES.gameMaps,
-        id: child._id,
         name: mapName,
         path: currentPath ? `${currentPath}/${mapName}` : mapName,
         downloadUrl,
@@ -77,11 +103,11 @@ async function collectItemsRecursively(
 export async function getFolderContentsForDownload(
   ctx: CampaignQueryCtx,
   folderId: Id<'folders'>,
-): Promise<{ folderName: string; items: Array<DownloadableItem> }> {
+): Promise<{ folderName: string; items: Array<DownloadItem> }> {
   const folderFromDb = await ctx.db.get(folderId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
-    requiredLevel: PERMISSION_LEVEL.EDIT,
+    requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
   const folderName = folder.name
@@ -95,7 +121,7 @@ export async function getFolderContentsForDownload(
 
 export async function getRootContentsForDownload(
   ctx: CampaignQueryCtx,
-): Promise<{ items: Array<DownloadableItem> }> {
+): Promise<{ items: Array<DownloadItem> }> {
   const items = await collectItemsRecursively(ctx, {
     parentId: undefined,
     currentPath: '',

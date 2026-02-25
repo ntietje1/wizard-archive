@@ -87,6 +87,14 @@ export const hasFullAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === 'full_access'
 }
 
+export const hasViewAccess: Predicate = (ctx) => {
+  return (
+    ctx.permissionLevel === 'view' ||
+    ctx.permissionLevel === 'edit' ||
+    ctx.permissionLevel === 'full_access'
+  )
+}
+
 export const hasEditAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === 'edit' || ctx.permissionLevel === 'full_access'
 }

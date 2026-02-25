@@ -11,7 +11,7 @@ import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
-import type { DownloadableItem, Folder } from 'convex/folders/types'
+import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -444,7 +444,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             return
           }
 
-          const markdown = convertBlocksToMarkdown(fullItem.content)
+          const visibleContent = fullItem.content.filter((block) => {
+            const meta = fullItem.blockMeta[block.id]
+            if (!meta) return true
+            return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
+          })
+          const markdown = convertBlocksToMarkdown(visibleContent)
           const baseName = ctx.item.name
           const fileName = baseName.endsWith('.md')
             ? baseName
@@ -517,12 +522,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
           const zip = new JSZip()
 
-          const downloadPromises = items.map(async (item: DownloadableItem) => {
+          const downloadPromises = items.map(async (item) => {
             try {
-              if (
-                item.type === SIDEBAR_ITEM_TYPES.files ||
-                item.type === SIDEBAR_ITEM_TYPES.gameMaps
-              ) {
+              if (item.type === SIDEBAR_ITEM_TYPES.files || item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
                 if (!item.downloadUrl) {
                   console.warn(`No download URL for: ${item.path}`)
                   return
@@ -537,9 +539,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
                 const markdown = convertBlocksToMarkdown(item.content)
                 zip.file(item.path, markdown)
-              } else {
-                console.warn(`Unknown item type`, item)
-                return
               }
             } catch (error) {
               console.warn(`Failed to process: ${item.path}`, error)
@@ -593,12 +592,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         const zip = new JSZip()
 
-        const downloadPromises = items.map(async (item: DownloadableItem) => {
+        const downloadPromises = items.map(async (item) => {
           try {
-            if (
-              item.type === SIDEBAR_ITEM_TYPES.files ||
-              item.type === SIDEBAR_ITEM_TYPES.gameMaps
-            ) {
+            if (item.type === SIDEBAR_ITEM_TYPES.files || item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
               if (!item.downloadUrl) {
                 console.warn(`No download URL for: ${item.path}`)
                 return
@@ -613,9 +609,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
               const markdown = convertBlocksToMarkdown(item.content)
               zip.file(item.path, markdown)
-            } else {
-              console.warn(`Unknown item type`, item)
-              return
             }
           } catch (error) {
             console.warn(`Failed to process: ${item.path}`, error)

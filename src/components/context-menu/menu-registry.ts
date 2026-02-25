@@ -387,7 +387,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.hasEditAccess(ctx) && // TODO: change download note to only get visible lines
+        p.hasViewAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
         !p.hasMapContext(ctx),
@@ -395,7 +395,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     },
     {
       id: 'download-map',
-      label: 'Download',
+      label: 'Download Map Image',
       icon: Download,
       group: 'download',
       priority: 80,
@@ -412,7 +412,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 81,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasViewAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) &&
         !p.hasMapContext(ctx),
@@ -424,7 +424,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FolderDown,
       group: 'download',
       priority: 82,
-      shouldShow: (ctx) => p.isDm(ctx) && p.atRoot(ctx),
+      shouldShow: (ctx) => p.atRoot(ctx),
       action: actions.downloadAll,
     },
 
