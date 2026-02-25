@@ -10,7 +10,7 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 const folderTableFields = {
   ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
-  inheritShares: v.optional(v.boolean()),
+  inheritShares: v.boolean(),
 }
 
 export const foldersTables = {
@@ -24,7 +24,7 @@ const folderValidatorFields = {
   ...commonValidatorFields('folders'),
   ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
-  inheritShares: v.optional(v.boolean()),
+  inheritShares: v.boolean(),
 } as const
 
 export const folderValidator = v.object(folderValidatorFields)

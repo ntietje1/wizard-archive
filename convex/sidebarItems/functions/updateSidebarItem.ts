@@ -1,6 +1,5 @@
 import { PERMISSION_LEVEL } from '../../shares/types'
 import { requireItemAccess, validateSidebarItemRename } from '../validation'
-import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { CampaignMutationCtx } from '../../functions'
 
@@ -24,30 +23,35 @@ export async function updateSidebarItem(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const patch: {
-    name?: string
-    slug?: string
-    iconName?: string | undefined
-    color?: string | undefined
-    _updatedTime: number
-    _updatedBy: Id<'userProfiles'>
-  } = {
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
-  }
+  let newSlug: string | undefined
+  const updates: Partial<{
+    name: string
+    slug: string
+    iconName: string | null
+    color: string | null
+  }> = {}
 
   if (name !== undefined) {
-    patch.name = name
-    patch.slug = await validateSidebarItemRename(ctx, { item, newName: name })
+    updates.name = name
+    newSlug = await validateSidebarItemRename(ctx, { item, newName: name })
+    updates.slug = newSlug
   }
   if (iconName !== undefined) {
-    patch.iconName = iconName ?? undefined
+    updates.iconName = iconName
   }
   if (color !== undefined) {
-    patch.color = color ?? undefined
+    updates.color = color
   }
 
-  await ctx.db.patch(itemId, patch)
+  if (Object.keys(updates).length === 0) {
+    return { slug: item.slug }
+  }
 
-  return { slug: patch.slug ?? item.slug }
+  await ctx.db.patch(itemId, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
+
+  return { slug: newSlug ?? item.slug }
 }

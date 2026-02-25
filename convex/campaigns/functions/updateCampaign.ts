@@ -1,4 +1,5 @@
 import { findUniqueSlug } from '../../common/slug'
+import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 
@@ -17,18 +18,13 @@ export async function updateCampaign(
   const profile = ctx.user.profile
   const campaign = ctx.campaign
 
-  const now = Date.now()
-
-  const campaignUpdates: Partial<Doc<'campaigns'>> = {
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
-  }
+  const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
   if (name !== undefined) {
-    campaignUpdates.name = name
+    updates.name = name
   }
   if (description !== undefined) {
-    campaignUpdates.description = description
+    updates.description = description
   }
 
   if (slug !== undefined && slug !== campaign.slug) {
@@ -41,10 +37,18 @@ export async function updateCampaign(
         .unique()
       return conflict !== null && conflict._id !== campaign._id
     })
-    campaignUpdates.slug = uniqueSlug
+    updates.slug = uniqueSlug
   }
 
-  await ctx.db.patch(campaign._id, campaignUpdates)
+  if (Object.keys(updates).length === 0) {
+    return campaign._id
+  }
+
+  await ctx.db.patch(campaign._id, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
 
   return campaign._id
 }

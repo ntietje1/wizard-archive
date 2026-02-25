@@ -13,7 +13,7 @@ export const updateNote = campaignMutation({
     campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.string()),
+    iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({

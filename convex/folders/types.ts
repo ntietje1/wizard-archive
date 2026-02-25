@@ -10,17 +10,17 @@ import type {
 export type FolderFromDb = SidebarItemFromDb<
   typeof SIDEBAR_ITEM_TYPES.folders
 > & {
-  inheritShares?: boolean
+  inheritShares: boolean
 }
 
 export type Folder = SidebarItem<typeof SIDEBAR_ITEM_TYPES.folders> & {
-  inheritShares?: boolean
+  inheritShares: boolean
 }
 
 export type FolderWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.folders
 > & {
-  inheritShares?: boolean
+  inheritShares: boolean
 }
 
 type DownloadableFile = {

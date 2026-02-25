@@ -123,7 +123,7 @@ export const getSidebarItemWithShares = dmQuery({
     )
 
     return {
-      allPermissionLevel: item.allPermissionLevel,
+      allPermissionLevel: item.allPermissionLevel ?? undefined,
       inheritShares,
       shares,
       playerMembers,

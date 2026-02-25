@@ -82,7 +82,7 @@ export function checkNameConflict(
 export function validateNoCircularParent(
   itemId: SidebarItemId,
   newParentId: Id<'folders'> | undefined,
-  getParent: (id: Id<'folders'>) => { parentId?: Id<'folders'> } | undefined,
+  getParent: (id: Id<'folders'>) => { parentId?: Id<'folders'> | null } | undefined,
 ): ValidationResult {
   if (!newParentId) {
     return { valid: true }
@@ -112,7 +112,7 @@ export function validateNoCircularParent(
     }
 
     const current = getParent(currentId)
-    currentId = current?.parentId
+    currentId = current?.parentId ?? undefined
   }
 
   return { valid: true }

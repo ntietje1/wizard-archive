@@ -93,7 +93,7 @@ function SidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={isFolder}
           campaignId={item.campaignId}
-          parentId={item.parentId}
+          parentId={item.parentId ?? undefined}
           excludeId={item._id}
           shareButton={<SidebarShareButton item={item} />}
         />

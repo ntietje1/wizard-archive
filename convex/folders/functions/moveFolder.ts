@@ -19,7 +19,7 @@ export async function moveFolder(
   await validateSidebarMove(ctx, { item: folder, newParentId: parentId })
 
   await ctx.db.patch(folderId, {
-    parentId,
+    parentId: parentId ?? null,
     _updatedTime: Date.now(),
     _updatedBy: ctx.user.profile._id,
   })

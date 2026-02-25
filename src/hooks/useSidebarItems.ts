@@ -62,7 +62,7 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
       const effectiveParentId =
         item.parentId && !sidebarItemIdMap.has(item.parentId)
           ? undefined
-          : item.parentId
+          : (item.parentId ?? undefined)
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {
@@ -174,7 +174,7 @@ export const useFilteredSidebarItems = () => {
       const effectiveParentId =
         item.parentId && !filteredItemsMap.has(item.parentId)
           ? undefined
-          : item.parentId
+          : (item.parentId ?? undefined)
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {

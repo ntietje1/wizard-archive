@@ -38,12 +38,13 @@ export async function createMap(
 
   const mapId = await ctx.db.insert('gameMaps', {
     campaignId,
-    name,
+    name: name ?? 'Untitled Map',
     slug: uniqueSlug,
-    iconName,
-    color,
-    imageStorageId,
-    parentId,
+    iconName: iconName ?? null,
+    color: color ?? null,
+    imageStorageId: imageStorageId ?? null,
+    parentId: parentId ?? null,
+    allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     _updatedTime: now,
     _updatedBy: profileId,

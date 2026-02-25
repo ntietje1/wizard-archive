@@ -72,7 +72,7 @@ export function MapForm({
 
   const imageUpload = useFileWithPreview({
     isOpen: true,
-    fileStorageId: map.data?.imageStorageId,
+    fileStorageId: map.data?.imageStorageId ?? undefined,
     uploadOnSelect: true,
     fileTypeValidator: (file: File) => {
       if (!file.type.startsWith('image/')) {
@@ -126,7 +126,7 @@ export function MapForm({
     initialName: map.data?.name ?? '',
     isActive: !!mapId,
     campaignId,
-    parentId: map.data?.parentId,
+    parentId: map.data?.parentId ?? undefined,
     excludeId: mapId,
   })
 

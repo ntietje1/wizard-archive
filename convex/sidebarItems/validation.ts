@@ -38,7 +38,7 @@ export async function checkUniqueNameUnderParent(
     name,
     excludeId,
   }: {
-    parentId: Id<'folders'> | undefined
+    parentId: Id<'folders'> | null | undefined
     name: string | undefined
     excludeId?: SidebarItemId
   },
@@ -62,7 +62,7 @@ export async function validateNoCircularParent(
     newParentId,
   }: {
     itemId: SidebarItemId
-    newParentId: Id<'folders'> | undefined
+    newParentId: Id<'folders'> | null | undefined
   },
 ): Promise<{ valid: boolean; error?: string }> {
   if (!newParentId) {
@@ -77,7 +77,7 @@ export async function validateNoCircularParent(
   }
 
   const seen = new Set<Id<'folders'>>()
-  let currentId: Id<'folders'> | undefined = newParentId
+  let currentId: Id<'folders'> | null = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
@@ -93,7 +93,7 @@ export async function validateNoCircularParent(
     }
 
     const current: FolderFromDb | null = await ctx.db.get(currentId)
-    currentId = current?.parentId
+    currentId = current?.parentId ?? null
   }
 
   return { valid: true }
@@ -110,7 +110,7 @@ export async function validateSidebarItemName(
     name,
     excludeId,
   }: {
-    parentId: Id<'folders'> | undefined
+    parentId: Id<'folders'> | null | undefined
     name: string | undefined
     excludeId?: SidebarItemId
   },
@@ -142,7 +142,7 @@ export async function validateSidebarParentChange(
     newParentId,
   }: {
     item: AnySidebarItem
-    newParentId: Id<'folders'> | undefined
+    newParentId: Id<'folders'> | null | undefined
   },
 ): Promise<void> {
   const result = await validateNoCircularParent(ctx, {
@@ -168,7 +168,7 @@ export async function validateSidebarParentChange(
  */
 export async function validateSidebarCreateParent(
   ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'folders'> | undefined },
+  { parentId }: { parentId: Id<'folders'> | null | undefined },
 ): Promise<void> {
   if (parentId) {
     const parentItem = await getSidebarItemById(ctx, { id: parentId })
@@ -198,7 +198,7 @@ export async function validateSidebarMove(
     newParentId,
   }: {
     item: AnySidebarItem
-    newParentId: Id<'folders'> | undefined
+    newParentId: Id<'folders'> | null | undefined
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })

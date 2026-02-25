@@ -22,11 +22,11 @@ export const campaignMemberStatusValidator = v.union(
 
 const campaignTableFields = {
   name: v.string(),
-  description: v.optional(v.string()),
+  description: v.string(),
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
-  currentSessionId: v.optional(v.id('sessions')),
+  currentSessionId: v.union(v.id('sessions'), v.null()),
 }
 
 const campaignMemberTableFields = {

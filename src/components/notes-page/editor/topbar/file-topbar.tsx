@@ -65,7 +65,7 @@ export function FileTopbar() {
               ancestors={item.ancestors}
               onNavigateToItem={navigateToItem}
               campaignId={item.campaignId}
-              parentId={item.parentId}
+              parentId={item.parentId ?? undefined}
               excludeId={item._id}
               disabled={!canRename || (isNotSharedWithPlayer ?? false)}
               showNotSharedTooltip={!!isNotSharedWithPlayer}

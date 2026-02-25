@@ -19,7 +19,7 @@ export async function moveNote(
   await validateSidebarMove(ctx, { item: note, newParentId: parentId })
 
   await ctx.db.patch(noteId, {
-    parentId,
+    parentId: parentId ?? null,
     _updatedTime: Date.now(),
     _updatedBy: ctx.user.profile._id,
   })

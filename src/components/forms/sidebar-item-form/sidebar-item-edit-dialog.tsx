@@ -128,7 +128,7 @@ export function SidebarItemEditDialog({
     initialName: item.name ?? '',
     isActive: isOpen,
     campaignId: item.campaignId,
-    parentId: item.parentId,
+    parentId: item.parentId ?? undefined,
     excludeId: item._id,
   })
 

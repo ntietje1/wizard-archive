@@ -20,7 +20,7 @@ export function resolvePermissionLevel(
     return { level: memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW }
   }
 
-  if (item.allPermissionLevel !== undefined) {
+  if (item.allPermissionLevel !== null && item.allPermissionLevel !== undefined) {
     return { level: item.allPermissionLevel }
   }
 
@@ -51,7 +51,7 @@ export function resolvePermissionLevel(
       }
     }
 
-    if (folder.allPermissionLevel !== undefined) {
+    if (folder.allPermissionLevel !== null && folder.allPermissionLevel !== undefined) {
       return { level: folder.allPermissionLevel, source: folder.name }
     }
 

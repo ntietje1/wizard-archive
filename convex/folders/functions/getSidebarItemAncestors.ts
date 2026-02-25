@@ -5,10 +5,10 @@ import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
   ctx: CampaignQueryCtx,
-  { initialParentId }: { initialParentId: Id<'folders'> | undefined },
+  { initialParentId }: { initialParentId: Id<'folders'> | null },
 ): Promise<Array<Folder>> {
   const ancestors: Array<Folder> = []
-  let currentParentId = initialParentId
+  let currentParentId: Id<'folders'> | null = initialParentId
 
   const visited = new Set<Id<'folders'>>()
   while (currentParentId) {

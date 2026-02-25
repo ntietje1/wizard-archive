@@ -40,11 +40,12 @@ export async function createNote(
   const profileId = ctx.user.profile._id
 
   const noteId = await ctx.db.insert('notes', {
-    name,
+    name: name ?? 'Untitled Note',
     slug: uniqueSlug,
-    parentId,
-    iconName,
-    color,
+    parentId: parentId ?? null,
+    iconName: iconName ?? null,
+    color: color ?? null,
+    allPermissionLevel: null,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
     _updatedTime: now,

@@ -7,14 +7,14 @@ import {
 } from './baseValidators'
 
 export const commonSidebarItemTableFields = {
-  name: v.optional(v.string()),
+  name: v.string(),
   slug: v.string(),
   campaignId: v.id('campaigns'),
-  iconName: v.optional(v.string()),
-  color: v.optional(v.string()),
+  iconName: v.union(v.string(), v.null()),
+  color: v.union(v.string(), v.null()),
   type: sidebarItemTypeValidator,
-  parentId: v.optional(v.id('folders')),
-  allPermissionLevel: v.optional(permissionLevelValidator),
+  parentId: v.union(v.id('folders'), v.null()),
+  allPermissionLevel: v.union(permissionLevelValidator, v.null()),
   ...commonTableFields,
 }
 

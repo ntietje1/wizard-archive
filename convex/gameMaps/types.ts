@@ -12,18 +12,18 @@ import type { AnySidebarItem } from '../sidebarItems/types/types'
 export type GameMapFromDb = SidebarItemFromDb<
   typeof SIDEBAR_ITEM_TYPES.gameMaps
 > & {
-  imageStorageId?: Id<'_storage'>
+  imageStorageId: Id<'_storage'> | null
 }
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
-  imageStorageId?: Id<'_storage'>
+  imageStorageId: Id<'_storage'> | null
   imageUrl: string | null
 }
 
 export type GameMapWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.gameMaps
 > & {
-  imageStorageId?: Id<'_storage'>
+  imageStorageId: Id<'_storage'> | null
   imageUrl: string | null
   pins: Array<MapPinWithItem>
 }
@@ -33,7 +33,7 @@ export type MapPin = CommonValidatorFields<'mapPins'> & {
   itemId: SidebarItemId
   x: number
   y: number
-  visible?: boolean
+  visible: boolean
 }
 
 export type MapPinWithItem = MapPin & {

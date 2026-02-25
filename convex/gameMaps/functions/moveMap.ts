@@ -19,7 +19,7 @@ export async function moveMap(
   await validateSidebarMove(ctx, { item: map, newParentId: parentId })
 
   await ctx.db.patch(mapId, {
-    parentId,
+    parentId: parentId ?? null,
     _updatedTime: Date.now(),
     _updatedBy: ctx.user.profile._id,
   })

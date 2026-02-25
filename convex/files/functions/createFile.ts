@@ -38,12 +38,13 @@ export async function createFile(
 
   const fileId = await ctx.db.insert('files', {
     campaignId,
-    name,
+    name: name ?? 'Untitled File',
     slug: uniqueSlug,
-    iconName,
-    color,
-    storageId,
-    parentId,
+    iconName: iconName ?? null,
+    color: color ?? null,
+    storageId: storageId ?? null,
+    parentId: parentId ?? null,
+    allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     _updatedTime: now,
     _updatedBy: profileId,

@@ -13,7 +13,7 @@ export async function deleteCampaign(
   const folders = await ctx.db
     .query('folders')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', undefined),
+      q.eq('campaignId', campaignId).eq('parentId', null),
     )
     .collect()
 
@@ -24,7 +24,7 @@ export async function deleteCampaign(
   const notes = await ctx.db
     .query('notes')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', undefined),
+      q.eq('campaignId', campaignId).eq('parentId', null),
     )
     .collect()
 
@@ -35,7 +35,7 @@ export async function deleteCampaign(
   const maps = await ctx.db
     .query('gameMaps')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', undefined),
+      q.eq('campaignId', campaignId).eq('parentId', null),
     )
     .collect()
 
@@ -46,7 +46,7 @@ export async function deleteCampaign(
   const files = await ctx.db
     .query('files')
     .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', undefined),
+      q.eq('campaignId', campaignId).eq('parentId', null),
     )
     .collect()
 

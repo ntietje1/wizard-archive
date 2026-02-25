@@ -72,7 +72,7 @@ function FlatSidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={false}
           campaignId={item.campaignId}
-          parentId={item.parentId}
+          parentId={item.parentId ?? undefined}
           excludeId={item._id}
         />
       </EditorContextMenu>

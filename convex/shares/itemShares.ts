@@ -38,7 +38,7 @@ export async function getSidebarItemPermissionLevel(
 
   // Check item's own explicit allPermissionLevel
   const allPerm = item.allPermissionLevel
-  if (allPerm !== undefined) {
+  if (allPerm !== null) {
     return allPerm
   }
 
@@ -56,7 +56,7 @@ async function resolveInheritedPermission(
     parentId,
     playerId,
   }: {
-    parentId: Id<'folders'> | undefined
+    parentId: Id<'folders'> | null | undefined
     playerId: Id<'campaignMembers'>
   },
 ): Promise<PermissionLevel> {
@@ -73,11 +73,11 @@ export async function resolveInheritedPermissionWithSource(
     parentId,
     memberId,
   }: {
-    parentId: Id<'folders'> | undefined
+    parentId: Id<'folders'> | null | undefined
     memberId?: Id<'campaignMembers'>
   },
 ): Promise<{ level: PermissionLevel | undefined; folderName?: string }> {
-  let currentParentId = parentId
+  let currentParentId = parentId ?? null
   while (currentParentId) {
     const folder = await ctx.db.get(currentParentId)
     if (!folder) break
@@ -103,14 +103,14 @@ export async function resolveInheritedPermissionWithSource(
     }
 
     // Check allPermissionLevel
-    if (folder.allPermissionLevel !== undefined) {
+    if (folder.allPermissionLevel !== null && folder.allPermissionLevel !== undefined) {
       return {
         level: folder.allPermissionLevel,
         folderName: folder.name || defaultItemName(folder),
       }
     }
 
-    currentParentId = folder.parentId
+    currentParentId = folder.parentId ?? null
   }
   return { level: undefined }
 }

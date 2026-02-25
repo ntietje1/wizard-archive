@@ -3,6 +3,7 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../shares/types'
+import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
@@ -16,19 +17,26 @@ export async function updateFolder(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const updates: Partial<Doc<'folders'>> = {
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
-  }
+  let newSlug: string | undefined
+  const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
 
   if (name !== undefined) {
     updates.name = name
-    updates.slug = await validateSidebarItemRename(ctx, {
+    newSlug = await validateSidebarItemRename(ctx, {
       item: folder,
       newName: name,
     })
+    updates.slug = newSlug
   }
 
-  await ctx.db.patch(folderId, updates)
-  return { folderId: folder._id, slug: updates.slug ?? folder.slug }
+  if (Object.keys(updates).length === 0) {
+    return { folderId: folder._id, slug: folder.slug }
+  }
+
+  await ctx.db.patch(folderId, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
+  return { folderId: folder._id, slug: newSlug ?? folder.slug }
 }

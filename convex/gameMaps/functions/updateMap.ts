@@ -3,6 +3,7 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../shares/types'
+import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
@@ -17,9 +18,9 @@ export async function updateMap(
   }: {
     mapId: Id<'gameMaps'>
     name?: string
-    imageStorageId?: Id<'_storage'>
-    iconName?: string
-    color?: string
+    imageStorageId?: Id<'_storage'> | null
+    iconName?: string | null
+    color?: string | null
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
   const mapFromDb = await ctx.db.get(mapId)
@@ -28,17 +29,16 @@ export async function updateMap(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const updates: Partial<Doc<'gameMaps'>> = {
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
-  }
+  let newSlug: string | undefined
+  const updates: Partial<WithoutSystemFields<Doc<'gameMaps'>>> = {}
 
   if (name !== undefined) {
     updates.name = name
-    updates.slug = await validateSidebarItemRename(ctx, {
+    newSlug = await validateSidebarItemRename(ctx, {
       item: map,
       newName: name,
     })
+    updates.slug = newSlug
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
@@ -49,6 +49,15 @@ export async function updateMap(
   if (color !== undefined) {
     updates.color = color
   }
-  await ctx.db.patch(mapId, updates)
-  return { mapId: map._id, slug: updates.slug ?? map.slug }
+
+  if (Object.keys(updates).length === 0) {
+    return { mapId: map._id, slug: map.slug }
+  }
+
+  await ctx.db.patch(mapId, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
+  return { mapId: map._id, slug: newSlug ?? map.slug }
 }

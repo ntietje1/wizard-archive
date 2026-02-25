@@ -73,7 +73,7 @@ export function FileForm({
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
-    fileStorageId: file.data?.storageId,
+    fileStorageId: file.data?.storageId ?? undefined,
     uploadOnSelect: true,
     fileTypeValidator: validateFileForUpload,
   })
@@ -122,7 +122,7 @@ export function FileForm({
     initialName: file.data?.name ?? '',
     isActive: !!fileId && !!file.data,
     campaignId,
-    parentId: file.data?.parentId,
+    parentId: file.data?.parentId ?? undefined,
     excludeId: fileId,
   })
 

@@ -38,14 +38,14 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   _id: Id<SidebarItemTypeToTableName<T>>
   _creationTime: number
 
-  name?: string
-  iconName?: string
-  color?: string
+  name: string
+  iconName: string | null
+  color: string | null
   slug: string
   campaignId: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   type: T
-  allPermissionLevel?: PermissionLevel
+  allPermissionLevel: PermissionLevel | null
 } & CommonTableFields
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {

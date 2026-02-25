@@ -31,10 +31,10 @@ export type CampaignMemberStatus =
 export type CampaignFromDb = CommonValidatorFields<'campaigns'> & {
   dmUserId: Id<'userProfiles'>
   name: string
-  description?: string
+  description: string
   slug: string
   status: CampaignStatus
-  currentSessionId?: Id<'sessions'>
+  currentSessionId: Id<'sessions'> | null
 }
 
 export type Campaign = CampaignFromDb & {

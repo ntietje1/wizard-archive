@@ -18,9 +18,9 @@ export async function updateFile(
   }: {
     fileId: Id<'files'>
     name?: string
-    storageId?: Id<'_storage'>
-    iconName?: string
-    color?: string
+    storageId?: Id<'_storage'> | null
+    iconName?: string | null
+    color?: string | null
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
   const fileFromDb = await ctx.db.get(fileId)
@@ -29,17 +29,16 @@ export async function updateFile(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
-  }
+  let newSlug: string | undefined
+  const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {}
 
   if (name !== undefined) {
     updates.name = name
-    updates.slug = await validateSidebarItemRename(ctx, {
+    newSlug = await validateSidebarItemRename(ctx, {
       item: file,
       newName: name,
     })
+    updates.slug = newSlug
   }
   if (storageId !== undefined) {
     updates.storageId = storageId
@@ -50,6 +49,15 @@ export async function updateFile(
   if (color !== undefined) {
     updates.color = color
   }
-  await ctx.db.patch(fileId, updates)
-  return { fileId: file._id, slug: updates.slug ?? file.slug }
+
+  if (Object.keys(updates).length === 0) {
+    return { fileId: file._id, slug: file.slug }
+  }
+
+  await ctx.db.patch(fileId, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
+  return { fileId: file._id, slug: newSlug ?? file.slug }
 }

@@ -43,9 +43,9 @@ export const updateMap = campaignMutation({
     campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
-    imageStorageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    imageStorageId: v.optional(v.union(v.id('_storage'), v.null())),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),

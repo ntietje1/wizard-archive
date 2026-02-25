@@ -34,10 +34,11 @@ export async function createCampaign(
 
   const campaignId = await ctx.db.insert('campaigns', {
     name,
-    description,
+    description: description ?? '',
     dmUserId: profile._id,
     slug: uniqueSlug,
     status: CAMPAIGN_STATUS.Active,
+    currentSessionId: null,
     _updatedTime: now,
     _updatedBy: profile._id,
     _createdBy: profile._id,

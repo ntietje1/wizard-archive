@@ -3,6 +3,7 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../shares/types'
+import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
@@ -16,7 +17,7 @@ export async function updateNote(
   }: {
     noteId: Id<'notes'>
     name?: string
-    iconName?: string
+    iconName?: string | null
     color?: string | null
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
@@ -26,17 +27,16 @@ export async function updateNote(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const updates: Partial<Doc<'notes'>> = {
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
-  }
+  let newSlug: string | undefined
+  const updates: Partial<WithoutSystemFields<Doc<'notes'>>> = {}
 
   if (name !== undefined) {
     updates.name = name
-    updates.slug = await validateSidebarItemRename(ctx, {
+    newSlug = await validateSidebarItemRename(ctx, {
       item: note,
       newName: name,
     })
+    updates.slug = newSlug
   }
 
   if (iconName !== undefined) {
@@ -44,9 +44,17 @@ export async function updateNote(
   }
 
   if (color !== undefined) {
-    updates.color = color === null ? undefined : color
+    updates.color = color
   }
 
-  await ctx.db.patch(note._id, updates)
-  return { noteId: note._id, slug: updates.slug ?? note.slug }
+  if (Object.keys(updates).length === 0) {
+    return { noteId: note._id, slug: note.slug }
+  }
+
+  await ctx.db.patch(note._id, {
+    ...updates,
+    _updatedTime: Date.now(),
+    _updatedBy: ctx.user.profile._id,
+  })
+  return { noteId: note._id, slug: newSlug ?? note.slug }
 }

@@ -38,13 +38,13 @@ export function getAncestorIds(
 
   const ancestors: Array<Id<'folders'>> = []
   const seen = new Set<Id<'folders'>>()
-  let currentId = item.parentId
+  let currentId = item.parentId ?? undefined
 
   while (currentId && !seen.has(currentId)) {
     seen.add(currentId)
     ancestors.push(currentId)
     const current = itemsMap.get(currentId)
-    currentId = current?.parentId
+    currentId = current?.parentId ?? undefined
   }
 
   return ancestors

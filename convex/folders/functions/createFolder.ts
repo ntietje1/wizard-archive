@@ -35,11 +35,13 @@ export async function createFolder(
   const profileId = ctx.user.profile._id
 
   const folderId = await ctx.db.insert('folders', {
-    name,
+    name: name ?? 'Untitled Folder',
     slug: uniqueSlug,
-    iconName,
-    color,
-    parentId,
+    iconName: iconName ?? null,
+    color: color ?? null,
+    parentId: parentId ?? null,
+    allPermissionLevel: null,
+    inheritShares: false,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.folders,
     _updatedTime: now,

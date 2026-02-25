@@ -11,7 +11,7 @@ import { folderValidator } from '../folders/baseSchema'
 const fileTableFields = {
   ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
-  storageId: v.optional(v.id('_storage')),
+  storageId: v.union(v.id('_storage'), v.null()),
 }
 
 export const filesTables = {
@@ -27,7 +27,7 @@ const fileValidatorFields = {
   ...commonValidatorFields('files'),
   ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
-  storageId: v.optional(v.id('_storage')),
+  storageId: v.union(v.id('_storage'), v.null()),
   downloadUrl: v.union(v.string(), v.null()),
   contentType: v.union(v.string(), v.null()),
 } as const

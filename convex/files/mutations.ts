@@ -53,9 +53,9 @@ export const updateFile = campaignMutation({
     campaignId: v.id('campaigns'),
     fileId: v.id('files'),
     name: v.optional(v.string()),
-    storageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    storageId: v.optional(v.union(v.id('_storage'), v.null())),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     fileId: v.id('files'),

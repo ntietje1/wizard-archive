@@ -100,7 +100,7 @@ export function SidebarItemMutationsProvider({
 
   const createItem = useCallback(
     async (args: CreateItemArgs): Promise<CreateItemResult> => {
-      const nameResult = validateName(args.name, args.parentId)
+      const nameResult = validateName(args.name, args.parentId ?? undefined)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       switch (args.type) {
@@ -163,7 +163,7 @@ export function SidebarItemMutationsProvider({
 
   const rename = useCallback(
     (item: AnySidebarItem, newName: string) => {
-      const result = validateName(newName, item.parentId, item._id)
+      const result = validateName(newName, item.parentId ?? undefined, item._id)
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
@@ -207,14 +207,14 @@ export function SidebarItemMutationsProvider({
         throw new Error('Cannot move item: circular reference detected')
       }
 
-      const nameResult = validateName(item.name, newParentId, item._id)
+      const nameResult = validateName(item.name ?? undefined, newParentId, item._id)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       const previousParentId = item.parentId
 
       optimisticUpdate((prev) =>
         prev.map((i) =>
-          i._id === item._id ? { ...i, parentId: newParentId } : i,
+          i._id === item._id ? { ...i, parentId: newParentId ?? null } : i,
         ),
       )
 
