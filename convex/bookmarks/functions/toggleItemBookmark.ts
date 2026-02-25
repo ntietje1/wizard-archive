@@ -40,9 +40,9 @@ export async function toggleItemBookmark(
       campaignId,
       sidebarItemId: sidebarItemId,
       campaignMemberId,
-      _updatedTime: Date.now(),
-      _updatedBy: ctx.user.profile._id,
-      _createdBy: ctx.user.profile._id,
+      updatedTime: Date.now(),
+      updatedBy: ctx.user.profile._id,
+      createdBy: ctx.user.profile._id,
     })
     return { isBookmarked: true }
   }

@@ -24,7 +24,7 @@ export const moveFile = campaignMutation({
 export const createFile = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: v.optional(v.string()),
+    name: v.string(),
     storageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),

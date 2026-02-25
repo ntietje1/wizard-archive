@@ -19,21 +19,21 @@ export async function setCurrentSession(
   if (currentSession && currentSession._id !== sessionId) {
     await ctx.db.patch(currentSession._id, {
       endedAt: now,
-      _updatedTime: now,
-      _updatedBy: ctx.user.profile._id,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
     })
   }
 
   await ctx.db.patch(sessionId, {
     endedAt: undefined,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
 
   await ctx.db.patch(campaignId, {
     currentSessionId: sessionId,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
   return sessionId
 }

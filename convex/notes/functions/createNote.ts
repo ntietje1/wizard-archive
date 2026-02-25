@@ -19,7 +19,7 @@ export async function createNote(
     color,
     content,
   }: {
-    name?: string
+    name: string
     parentId?: Id<'folders'>
     iconName?: string
     color?: string
@@ -27,9 +27,13 @@ export async function createNote(
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
   const campaignId = ctx.campaign._id
+  name = name.trim()
 
   await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, { parentId, name })
+  await validateSidebarItemName(ctx, {
+    parentId,
+    name,
+  })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.notes,
@@ -40,7 +44,7 @@ export async function createNote(
   const profileId = ctx.user.profile._id
 
   const noteId = await ctx.db.insert('notes', {
-    name: name ?? 'Untitled Note',
+    name,
     slug: uniqueSlug,
     parentId: parentId ?? null,
     iconName: iconName ?? null,
@@ -48,9 +52,9 @@ export async function createNote(
     allPermissionLevel: null,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
-    _updatedTime: now,
-    _updatedBy: profileId,
-    _createdBy: profileId,
+    updatedTime: now,
+    updatedBy: profileId,
+    createdBy: profileId,
   })
 
   if (content) {

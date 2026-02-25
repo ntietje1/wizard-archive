@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
@@ -286,7 +285,7 @@ export function WikiLinkAutocomplete({
 
     const all = itemsToShow.map((item) => ({
       key: item._id,
-      title: item.name || defaultItemName(item),
+      title: item.name,
       subtext: buildBreadcrumbs(item, itemsMap),
       badge: getItemTypeLabel(item.type),
       item,

@@ -62,7 +62,7 @@ export const deleteNote = campaignMutation({
 export const createNote = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: v.optional(v.string()),
+    name: v.string(),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),

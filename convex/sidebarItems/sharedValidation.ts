@@ -6,41 +6,39 @@ export interface ValidationResult {
   error?: string
 }
 
-/**
- * Validates that a name is compatible with wiki-link syntax.
- * Names cannot contain [ ] # | as these are wiki-link delimiters/modifiers.
- */
-export function validateWikiLinkCompatibleName(
-  name: string | undefined,
-): ValidationResult {
-  if (!name) return { valid: true }
+const FORBIDDEN_CHARS = /[/\\:*?"<>[\]#|]/
+const FORBIDDEN_CHARS_DISPLAY = '/ \\ : * ? " < > [ ] # |'
 
-  if (name.includes('[')) {
+/**
+ * Validates that a name is a valid filesystem-safe item name.
+ * Rules:
+ * 1. Required & non-empty (after trim)
+ * 2. Max 255 characters (after trim)
+ * 3. No forbidden characters: / \ : * ? " < > [ ] # |
+ * 4. No leading/trailing dots
+ */
+export function validateItemName(name: string): ValidationResult {
+  const trimmed = name.trim()
+
+  if (!trimmed) {
+    return { valid: false, error: 'Name is required' }
+  }
+
+  if (trimmed.length > 255) {
+    return { valid: false, error: 'Name must be 255 characters or fewer' }
+  }
+
+  if (FORBIDDEN_CHARS.test(trimmed)) {
     return {
       valid: false,
-      error: 'Name cannot contain "[" as it conflicts with wiki-link syntax',
+      error: `Name cannot contain any of: ${FORBIDDEN_CHARS_DISPLAY}`,
     }
   }
-  if (name.includes(']')) {
-    return {
-      valid: false,
-      error: 'Name cannot contain "]" as it conflicts with wiki-link syntax',
-    }
+
+  if (trimmed.startsWith('.') || trimmed.endsWith('.')) {
+    return { valid: false, error: 'Name cannot start or end with a dot' }
   }
-  if (name.includes('#')) {
-    return {
-      valid: false,
-      error:
-        'Name cannot contain "#" as it conflicts with wiki-link heading syntax',
-    }
-  }
-  if (name.includes('|')) {
-    return {
-      valid: false,
-      error:
-        'Name cannot contain "|" as it conflicts with wiki-link display name syntax',
-    }
-  }
+
   return { valid: true }
 }
 
@@ -51,17 +49,15 @@ export function validateWikiLinkCompatibleName(
  * @param excludeId - Optional ID to exclude from conflict check (for updates)
  */
 export function checkNameConflict(
-  name: string | undefined,
-  siblings: Array<{ _id: SidebarItemId; name?: string }>,
+  name: string,
+  siblings: Array<{ _id: SidebarItemId; name: string }>,
   excludeId?: SidebarItemId,
 ): ValidationResult {
-  if (!name || name.trim() === '') {
-    return { valid: true }
-  }
-
+  const normalizedName = name.trim().toLowerCase()
   const conflict = siblings.find(
     (item) =>
-      item.name?.toLowerCase() === name.toLowerCase() && item._id !== excludeId,
+      item.name.trim().toLowerCase() === normalizedName &&
+      item._id !== excludeId,
   )
 
   if (conflict) {
@@ -82,7 +78,9 @@ export function checkNameConflict(
 export function validateNoCircularParent(
   itemId: SidebarItemId,
   newParentId: Id<'folders'> | undefined,
-  getParent: (id: Id<'folders'>) => { parentId?: Id<'folders'> | null } | undefined,
+  getParent: (
+    id: Id<'folders'>,
+  ) => { parentId?: Id<'folders'> | null } | undefined,
 ): ValidationResult {
   if (!newParentId) {
     return { valid: true }

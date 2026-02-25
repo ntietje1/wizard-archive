@@ -29,8 +29,8 @@ export async function updateItemPin(
   await ctx.db.patch(mapPinId, {
     x,
     y,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
 
   return mapPinId

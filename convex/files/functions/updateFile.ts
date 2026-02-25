@@ -33,10 +33,11 @@ export async function updateFile(
   const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {}
 
   if (name !== undefined) {
-    updates.name = name
+    const trimmedName = name.trim()
+    updates.name = trimmedName
     newSlug = await validateSidebarItemRename(ctx, {
       item: file,
-      newName: name,
+      newName: trimmedName,
     })
     updates.slug = newSlug
   }
@@ -56,8 +57,8 @@ export async function updateFile(
 
   await ctx.db.patch(fileId, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return { fileId: file._id, slug: newSlug ?? file.slug }
 }

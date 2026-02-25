@@ -3,7 +3,6 @@ import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -85,7 +84,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
         {/* Top Section: Title + Menu Button */}
         <div className="flex items-center justify-between mb-1 min-w-0">
           <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-            {map.name || defaultItemName(map)}
+            {map.name}
           </CardTitle>
           <Button
             variant="ghost"
@@ -107,7 +106,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           ) : imageUrl ? (
             <img
               src={imageUrl}
-              alt={map.name || defaultItemName(map)}
+              alt={map.name}
               className="w-full h-full object-cover"
             />
           ) : (

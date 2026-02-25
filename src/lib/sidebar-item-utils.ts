@@ -2,7 +2,6 @@ import {
   DEFAULT_ITEM_COLOR,
   SIDEBAR_ITEM_TYPES,
 } from 'convex/sidebarItems/types/baseTypes'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import type {
   SidebarItemId,
   SidebarItemType,
@@ -72,7 +71,8 @@ export function isGameMap(
 }
 
 /**
- * Type guard to check if a sidebar item is a File.
+/**
+ * Type guard to check if a sidebar item is a SidebarFile.
  */
 export function isFile(
   item: AnySidebarItem | null | undefined,
@@ -132,7 +132,7 @@ export function buildBreadcrumbs(
 
   while (currentId && itemsMap.has(currentId)) {
     const parent = itemsMap.get(currentId)!
-    path.unshift(parent.name || defaultItemName(parent))
+    path.unshift(parent.name)
     currentId = parent.parentId
   }
   if (path.length > 0) {

@@ -4,7 +4,6 @@ import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { PermissionLevel } from 'convex/shares/types'
@@ -44,7 +43,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     useEditorNavigationContext()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
@@ -121,6 +120,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId,
             parentId: ctx.item?._id,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -129,7 +129,13 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to create note')
         }
       },
-      [campaignId, createItem, openParentFolders, navigateToItem],
+      [
+        campaignId,
+        createItem,
+        getDefaultName,
+        openParentFolders,
+        navigateToItem,
+      ],
     ),
 
     createFolder: useCallback(
@@ -144,6 +150,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.folders,
             campaignId,
             parentId: ctx.item?._id,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -152,7 +159,13 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to create folder')
         }
       },
-      [campaignId, createItem, openParentFolders, navigateToItem],
+      [
+        campaignId,
+        createItem,
+        getDefaultName,
+        openParentFolders,
+        navigateToItem,
+      ],
     ),
 
     createMap: useCallback(
@@ -167,6 +180,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
             parentId: ctx.item?._id,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -175,7 +189,13 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to create map')
         }
       },
-      [campaignId, createItem, openParentFolders, navigateToItem],
+      [
+        campaignId,
+        createItem,
+        getDefaultName,
+        openParentFolders,
+        navigateToItem,
+      ],
     ),
 
     createFile: useCallback(
@@ -190,6 +210,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
             parentId: ctx.item?._id,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -198,7 +219,13 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to create file')
         }
       },
-      [campaignId, createItem, openParentFolders, navigateToItem],
+      [
+        campaignId,
+        createItem,
+        getDefaultName,
+        openParentFolders,
+        navigateToItem,
+      ],
     ),
 
     createCanvas: () => {
@@ -389,7 +416,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
 
       try {
-        const fileName = ctx.item.name ?? defaultItemName(ctx.item)
+        const fileName = ctx.item.name
         const link = document.createElement('a')
         link.href = ctx.item.downloadUrl ?? ''
         link.download = fileName
@@ -418,7 +445,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           }
 
           const markdown = convertBlocksToMarkdown(fullItem.content)
-          const baseName = ctx.item.name ?? defaultItemName(ctx.item)
+          const baseName = ctx.item.name
           const fileName = baseName.endsWith('.md')
             ? baseName
             : `${baseName}.md`
@@ -450,7 +477,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
 
       try {
-        const mapName = ctx.item.name ?? defaultItemName(ctx.item)
+        const mapName = ctx.item.name
         const link = document.createElement('a')
         link.href = ctx.item.imageUrl
         link.download = mapName

@@ -1,7 +1,7 @@
 import {
   checkNameConflict,
+  validateItemName,
   validateNoCircularParent as validateNoCircularParentShared,
-  validateWikiLinkCompatibleName,
 } from 'convex/sidebarItems/sharedValidation'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
@@ -9,7 +9,7 @@ import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 export type { ValidationResult }
-export { validateWikiLinkCompatibleName, checkNameConflict }
+export { validateItemName, checkNameConflict }
 
 /**
  * Checks if setting a new parent would create a circular reference.
@@ -51,7 +51,7 @@ export function getAncestorIds(
 }
 
 export interface SidebarItemValidationOptions {
-  name?: string
+  name: string
   parentId?: Id<'folders'>
   itemId?: SidebarItemId
   siblings?: Array<AnySidebarItem>
@@ -68,9 +68,9 @@ export function validateSidebarItemName(
 ): ValidationResult {
   const { name, siblings, itemId } = options
 
-  const wikiLinkResult = validateWikiLinkCompatibleName(name)
-  if (!wikiLinkResult.valid) {
-    return wikiLinkResult
+  const nameResult = validateItemName(name)
+  if (!nameResult.valid) {
+    return nameResult
   }
 
   if (siblings) {

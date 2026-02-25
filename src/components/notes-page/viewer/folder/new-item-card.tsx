@@ -25,7 +25,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const triggerRef = useRef<HTMLDivElement>(null)
 
   const { campaignId } = useCampaign()
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 
@@ -60,6 +60,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
           type,
           campaignId,
           parentId,
+          name: getDefaultName(type, parentId),
         })
         openParentFolders(result.id)
         navigateToItem(result)
@@ -68,7 +69,14 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         toast.error(`Failed to create item`)
       }
     },
-    [campaignId, parentId, createItem, openParentFolders, navigateToItem],
+    [
+      campaignId,
+      parentId,
+      createItem,
+      openParentFolders,
+      navigateToItem,
+      getDefaultName,
+    ],
   )
 
   return (

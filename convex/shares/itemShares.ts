@@ -1,6 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getCurrentSession } from '../sessions/functions/getCurrentSession'
-import { defaultItemName } from '../sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL, PERMISSION_RANK } from './types'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
@@ -97,16 +96,19 @@ export async function resolveInheritedPermissionWithSource(
       if (share) {
         return {
           level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-          folderName: folder.name || defaultItemName(folder),
+          folderName: folder.name,
         }
       }
     }
 
     // Check allPermissionLevel
-    if (folder.allPermissionLevel !== null && folder.allPermissionLevel !== undefined) {
+    if (
+      folder.allPermissionLevel !== null &&
+      folder.allPermissionLevel !== undefined
+    ) {
       return {
         level: folder.allPermissionLevel,
-        folderName: folder.name || defaultItemName(folder),
+        folderName: folder.name,
       }
     }
 

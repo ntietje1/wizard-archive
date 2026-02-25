@@ -1,4 +1,3 @@
-import { defaultItemName } from '../../sidebarItems/functions/defaultItemName'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
 import { getTopLevelBlocksByNote } from '../../blocks/blocks'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -20,7 +19,7 @@ async function collectItemsRecursively(
 
   for (const child of children) {
     if (child.type === SIDEBAR_ITEM_TYPES.files) {
-      const fileName = child.name ?? defaultItemName(child)
+      const fileName = child.name
       const downloadUrl = child.storageId
         ? await ctx.storage.getUrl(child.storageId)
         : null
@@ -32,7 +31,7 @@ async function collectItemsRecursively(
         downloadUrl,
       })
     } else if (child.type === SIDEBAR_ITEM_TYPES.notes) {
-      const baseName = child.name ?? defaultItemName(child)
+      const baseName = child.name
       const noteName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
       const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
         noteId: child._id,
@@ -46,7 +45,7 @@ async function collectItemsRecursively(
         content,
       })
     } else if (child.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-      const mapName = child.name ?? defaultItemName(child)
+      const mapName = child.name
       const downloadUrl = child.imageStorageId
         ? await ctx.storage.getUrl(child.imageStorageId)
         : null
@@ -58,7 +57,7 @@ async function collectItemsRecursively(
         downloadUrl,
       })
     } else if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-      const folderName = child.name ?? defaultItemName(child)
+      const folderName = child.name
       const nestedPath = currentPath
         ? `${currentPath}/${folderName}`
         : folderName
@@ -85,7 +84,7 @@ export async function getFolderContentsForDownload(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  const folderName = folder.name ?? defaultItemName(folder)
+  const folderName = folder.name
   const items = await collectItemsRecursively(ctx, {
     parentId: folderId,
     currentPath: '',

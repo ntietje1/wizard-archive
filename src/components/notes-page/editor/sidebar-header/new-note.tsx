@@ -9,7 +9,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -22,6 +22,7 @@ export function NewNoteButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes),
       })
       openParentFolders(result.id)
       navigateToItem(result)

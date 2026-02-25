@@ -16,7 +16,7 @@ export async function createMap(
     iconName,
     color,
   }: {
-    name?: string
+    name: string
     imageStorageId?: Id<'_storage'>
     parentId?: Id<'folders'>
     iconName?: string
@@ -24,9 +24,13 @@ export async function createMap(
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
   const campaignId = ctx.campaign._id
+  name = name.trim()
 
   await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, { parentId, name })
+  await validateSidebarItemName(ctx, {
+    parentId,
+    name,
+  })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.gameMaps,
@@ -38,7 +42,7 @@ export async function createMap(
 
   const mapId = await ctx.db.insert('gameMaps', {
     campaignId,
-    name: name ?? 'Untitled Map',
+    name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
@@ -46,9 +50,9 @@ export async function createMap(
     parentId: parentId ?? null,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,
-    _updatedTime: now,
-    _updatedBy: profileId,
-    _createdBy: profileId,
+    updatedTime: now,
+    updatedBy: profileId,
+    createdBy: profileId,
   })
 
   return { mapId, slug: uniqueSlug }

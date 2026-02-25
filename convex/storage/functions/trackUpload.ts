@@ -16,8 +16,8 @@ export async function trackUpload(
     userId: ctx.user.profile._id,
     storageId,
     originalFileName,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
-    _createdBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+    createdBy: ctx.user.profile._id,
   })
 }

@@ -14,13 +14,13 @@ export async function endCurrentSession(
 
   await ctx.db.patch(currentSession._id, {
     endedAt: now,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
   await ctx.db.patch(ctx.campaign._id, {
     currentSessionId: undefined,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
   return currentSession._id
 }

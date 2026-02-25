@@ -1,5 +1,4 @@
 import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
@@ -34,7 +33,6 @@ export function FileTopbar() {
     await rename(item, newName)
   }
 
-  const defaultName = defaultItemName(item)
   const isNotSharedWithPlayer =
     item &&
     viewAsPlayerId &&
@@ -59,8 +57,8 @@ export function FileTopbar() {
           {isLoading && <Skeleton className="h-5 w-32 my-0.5" />}
           {item && (
             <EditableBreadcrumb
-              initialName={item.name || ''}
-              defaultName={defaultName}
+              initialName={item.name}
+              defaultName=""
               onRename={handleRename}
               ancestors={item.ancestors}
               onNavigateToItem={navigateToItem}
@@ -74,7 +72,7 @@ export function FileTopbar() {
           {isEmptyEditor && (
             <EditableBreadcrumb
               initialName=""
-              defaultName={defaultName}
+              defaultName="Untitled Item"
               onRename={handleRename}
               onChange={setPendingItemName}
               ancestors={[]}

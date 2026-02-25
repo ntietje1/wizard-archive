@@ -16,7 +16,7 @@ export async function createFile(
     iconName,
     color,
   }: {
-    name?: string
+    name: string
     storageId?: Id<'_storage'>
     parentId?: Id<'folders'>
     iconName?: string
@@ -24,9 +24,13 @@ export async function createFile(
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
   const campaignId = ctx.campaign._id
+  name = name.trim()
 
   await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, { parentId, name })
+  await validateSidebarItemName(ctx, {
+    parentId,
+    name,
+  })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.files,
@@ -38,7 +42,7 @@ export async function createFile(
 
   const fileId = await ctx.db.insert('files', {
     campaignId,
-    name: name ?? 'Untitled File',
+    name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
@@ -46,9 +50,9 @@ export async function createFile(
     parentId: parentId ?? null,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
-    _updatedTime: now,
-    _updatedBy: profileId,
-    _createdBy: profileId,
+    updatedTime: now,
+    updatedBy: profileId,
+    createdBy: profileId,
   })
 
   return { fileId, slug: uniqueSlug }

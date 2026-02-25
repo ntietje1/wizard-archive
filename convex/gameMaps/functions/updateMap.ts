@@ -33,10 +33,11 @@ export async function updateMap(
   const updates: Partial<WithoutSystemFields<Doc<'gameMaps'>>> = {}
 
   if (name !== undefined) {
-    updates.name = name
+    const trimmedName = name.trim()
+    updates.name = trimmedName
     newSlug = await validateSidebarItemRename(ctx, {
       item: map,
-      newName: name,
+      newName: trimmedName,
     })
     updates.slug = newSlug
   }
@@ -56,8 +57,8 @@ export async function updateMap(
 
   await ctx.db.patch(mapId, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return { mapId: map._id, slug: newSlug ?? map.slug }
 }

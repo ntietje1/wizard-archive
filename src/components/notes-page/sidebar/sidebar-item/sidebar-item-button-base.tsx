@@ -10,7 +10,6 @@ import { cn } from '~/lib/shadcn/utils'
 function SidebarItemButtonBaseComponent({
   icon: Icon,
   name,
-  defaultName,
   isExpanded = false,
   isSelected = false,
   isRenaming = false,
@@ -76,7 +75,6 @@ function SidebarItemButtonBaseComponent({
         {onFinishRename ? (
           <EditableName
             initialName={name}
-            defaultName={defaultName}
             isRenaming={isRenaming}
             onFinishRename={onFinishRename}
             onCancelRename={onCancelRename}
@@ -85,7 +83,7 @@ function SidebarItemButtonBaseComponent({
             excludeId={excludeId}
           />
         ) : (
-          <span className="truncate ml-1">{name || defaultName}</span>
+          <span className="truncate ml-1">{name}</span>
         )}
       </button>
 

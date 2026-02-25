@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
@@ -201,11 +200,6 @@ export function EditableBreadcrumb({
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
         {ancestors.map((ancestor) => {
-          const ancestorName =
-            ancestor.name && ancestor.name.length > 0
-              ? ancestor.name
-              : defaultItemName(ancestor)
-
           return (
             <div
               key={ancestor._id}
@@ -220,10 +214,10 @@ export function EditableBreadcrumb({
                     ? 'cursor-default'
                     : 'cursor-pointer hover:text-gray-900 hover:bg-muted',
                 )}
-                title={ancestorName}
+                title={ancestor.name}
                 type="button"
               >
-                {ancestorName}
+                {ancestor.name}
               </button>
               <span
                 className={cn(

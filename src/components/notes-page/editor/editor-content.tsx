@@ -101,7 +101,7 @@ function NotSharedContent() {
   const { viewAsPlayerId } = useEditorMode()
   const { data: allItems } = useAllSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const [isPending, setIsPending] = useState(false)
@@ -136,7 +136,11 @@ function NotSharedContent() {
 
     setIsPending(true)
     try {
-      const result = await createItem({ type: requestedType, campaignId })
+      const result = await createItem({
+        type: requestedType,
+        campaignId,
+        name: getDefaultName(requestedType),
+      })
       openParentFolders(result.id)
       navigateToItem(result)
     } catch (error) {

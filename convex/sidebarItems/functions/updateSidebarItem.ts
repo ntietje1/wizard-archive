@@ -32,8 +32,9 @@ export async function updateSidebarItem(
   }> = {}
 
   if (name !== undefined) {
-    updates.name = name
-    newSlug = await validateSidebarItemRename(ctx, { item, newName: name })
+    const trimmedName = name.trim()
+    updates.name = trimmedName
+    newSlug = await validateSidebarItemRename(ctx, { item, newName: trimmedName })
     updates.slug = newSlug
   }
   if (iconName !== undefined) {
@@ -49,8 +50,8 @@ export async function updateSidebarItem(
 
   await ctx.db.patch(itemId, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
 
   return { slug: newSlug ?? item.slug }

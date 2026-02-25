@@ -20,8 +20,8 @@ export async function moveMap(
 
   await ctx.db.patch(mapId, {
     parentId: parentId ?? null,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return map._id
 }

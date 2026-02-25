@@ -20,8 +20,8 @@ export async function moveNote(
 
   await ctx.db.patch(noteId, {
     parentId: parentId ?? null,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return note._id
 }

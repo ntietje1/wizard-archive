@@ -64,12 +64,11 @@ export function CreateNewDashboard({
   folderPath,
 }: CreateNewDashboardProps) {
   const { campaignId } = useCampaign()
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
-  const name = pendingItemName.trim() || undefined
 
   const isDisabled = creatingType !== null
 
@@ -79,6 +78,7 @@ export function CreateNewDashboard({
     setCreatingType(type)
 
     try {
+      const name = pendingItemName.trim() || getDefaultName(type, parentId)
       const result = await createItem({ type, campaignId, parentId, name })
       openParentFolders(result.id)
       await navigateToItem(result)

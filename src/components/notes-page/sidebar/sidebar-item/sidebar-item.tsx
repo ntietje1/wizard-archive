@@ -1,5 +1,4 @@
 import { memo, useCallback, useMemo } from 'react'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
@@ -44,8 +43,6 @@ function SidebarItemComponent({
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
-  const defaultName = defaultItemName(item)
-  const displayName = item.name || defaultName
 
   const children = isFolder ? parentItemsMap.get(item._id) : undefined
 
@@ -81,8 +78,7 @@ function SidebarItemComponent({
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
-          name={displayName}
-          defaultName={defaultName}
+          name={item.name}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}

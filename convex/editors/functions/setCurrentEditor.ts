@@ -35,9 +35,9 @@ export async function setCurrentEditor(
       sortDirection: sortDirection ?? SORT_DIRECTIONS.Ascending,
       sidebarWidth,
       isSidebarExpanded,
-      _updatedTime: now,
-      _updatedBy: ctx.user.profile._id,
-      _createdBy: ctx.user.profile._id,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+      createdBy: ctx.user.profile._id,
     })
   }
 
@@ -46,8 +46,8 @@ export async function setCurrentEditor(
     ...(sortDirection !== undefined && { sortDirection }),
     ...(sidebarWidth !== undefined && { sidebarWidth }),
     ...(isSidebarExpanded !== undefined && { isSidebarExpanded }),
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
 
   return editor._id

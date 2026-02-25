@@ -17,8 +17,8 @@ export async function updateSession(
 
   if (Object.keys(updates).length > 0) {
     const now = Date.now()
-    updates._updatedTime = now
-    updates._updatedBy = ctx.user.profile._id
+    updates.updatedTime = now
+    updates.updatedBy = ctx.user.profile._id
     await ctx.db.patch(sessionId, updates)
   }
 

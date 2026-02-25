@@ -38,8 +38,8 @@ export async function createItemPin(
     x,
     y,
     visible: false,
-    _updatedTime: now,
-    _updatedBy: profileId,
-    _createdBy: profileId,
+    updatedTime: now,
+    updatedBy: profileId,
+    createdBy: profileId,
   })
 }

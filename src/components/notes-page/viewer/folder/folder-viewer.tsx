@@ -1,4 +1,3 @@
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
 import { ItemCard } from './item-card'
@@ -24,10 +23,9 @@ export function FolderViewer({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const folderPath = [
-    ...folder.ancestors.map((a) => a.name || defaultItemName(a)),
-    folder.name || defaultItemName(folder),
-  ].join(' / ')
+  const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(
+    ' / ',
+  )
 
   if (status === 'pending') {
     return (

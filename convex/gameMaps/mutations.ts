@@ -14,7 +14,7 @@ import type { Id } from '../_generated/dataModel'
 export const createMap = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: v.optional(v.string()),
+    name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),

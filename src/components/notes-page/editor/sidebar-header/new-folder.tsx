@@ -9,7 +9,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewFolderButton() {
-  const { createItem } = useSidebarItemMutations()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -22,6 +22,7 @@ export function NewFolderButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.folders,
         campaignId,
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.folders),
       })
       openParentFolders(result.id)
       navigateToItem(result)

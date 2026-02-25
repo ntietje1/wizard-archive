@@ -15,16 +15,20 @@ export async function createFolder(
     iconName,
     color,
   }: {
-    name?: string
+    name: string
     parentId?: Id<'folders'>
     iconName?: string
     color?: string
   },
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
   const campaignId = ctx.campaign._id
+  name = name.trim()
 
   await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, { parentId, name })
+  await validateSidebarItemName(ctx, {
+    parentId,
+    name,
+  })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.folders,
@@ -35,7 +39,7 @@ export async function createFolder(
   const profileId = ctx.user.profile._id
 
   const folderId = await ctx.db.insert('folders', {
-    name: name ?? 'Untitled Folder',
+    name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
@@ -44,9 +48,9 @@ export async function createFolder(
     inheritShares: false,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.folders,
-    _updatedTime: now,
-    _updatedBy: profileId,
-    _createdBy: profileId,
+    updatedTime: now,
+    updatedBy: profileId,
+    createdBy: profileId,
   })
 
   return { folderId, slug: uniqueSlug }

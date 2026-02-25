@@ -3,15 +3,12 @@ import {
   hasAtLeastPermissionLevel,
 } from '../shares/itemShares'
 import { PERMISSION_LEVEL } from '../shares/types'
-import { findUniqueSlug, resolveSlugBasis, shortenId } from '../common/slug'
+import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
-import {
-  checkNameConflict,
-  validateWikiLinkCompatibleName,
-} from './sharedValidation'
+import { checkNameConflict, validateItemName } from './sharedValidation'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { SidebarItemId, SidebarItemType } from './types/baseTypes'
 import type { PermissionLevel } from '../shares/types'
@@ -25,7 +22,7 @@ import type {
 } from './types/types'
 
 export type { ValidationResult } from './sharedValidation'
-export { validateWikiLinkCompatibleName } from './sharedValidation'
+export { validateItemName } from './sharedValidation'
 
 /**
  * Checks if a name is unique under a parent (case-insensitive).
@@ -39,14 +36,10 @@ export async function checkUniqueNameUnderParent(
     excludeId,
   }: {
     parentId: Id<'folders'> | null | undefined
-    name: string | undefined
+    name: string
     excludeId?: SidebarItemId
   },
 ): Promise<{ valid: boolean; error?: string }> {
-  if (!name || name.trim() === '') {
-    return { valid: true }
-  }
-
   const siblings = await getSidebarItemsByParent(ctx, { parentId })
   return checkNameConflict(name, siblings, excludeId)
 }
@@ -100,8 +93,9 @@ export async function validateNoCircularParent(
 }
 
 /**
- * Validates a sidebar item name (wiki-link + uniqueness).
+ * Validates a sidebar item name (format + uniqueness).
  * Throws an error if validation fails.
+ * Returns siblings so callers can reuse them (e.g. for default name generation).
  */
 export async function validateSidebarItemName(
   ctx: CampaignQueryCtx,
@@ -111,23 +105,22 @@ export async function validateSidebarItemName(
     excludeId,
   }: {
     parentId: Id<'folders'> | null | undefined
-    name: string | undefined
+    name: string
     excludeId?: SidebarItemId
   },
-): Promise<void> {
-  const wikiLinkResult = validateWikiLinkCompatibleName(name)
-  if (!wikiLinkResult.valid) {
-    throw new Error(wikiLinkResult.error)
+): Promise<{ siblings: Array<AnySidebarItem> }> {
+  const nameResult = validateItemName(name)
+  if (!nameResult.valid) {
+    throw new Error(nameResult.error)
   }
 
-  const uniqueResult = await checkUniqueNameUnderParent(ctx, {
-    parentId,
-    name,
-    excludeId,
-  })
+  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
     throw new Error(uniqueResult.error)
   }
+
+  return { siblings }
 }
 
 /**
@@ -309,12 +302,11 @@ export async function findUniqueSidebarItemSlug(
     itemId,
   }: {
     type: SidebarItemType
-    name: string | undefined
+    name: string
     itemId: SidebarItemId
   },
 ): Promise<string> {
-  const slugBasis = name && name.trim() !== '' ? name : shortenId(itemId)
-  return findUniqueSlug(slugBasis, (slug) =>
+  return findUniqueSlug(name, (slug) =>
     checkSlugConflict(ctx, { type, slug, excludeId: itemId }),
   )
 }
@@ -326,12 +318,10 @@ export async function findNewSidebarItemSlug(
     name,
   }: {
     type: SidebarItemType
-    name: string | undefined
+    name: string
   },
 ): Promise<string> {
-  return findUniqueSlug(resolveSlugBasis(name), (slug) =>
-    checkSlugConflict(ctx, { type, slug }),
-  )
+  return findUniqueSlug(name, (slug) => checkSlugConflict(ctx, { type, slug }))
 }
 
 /**
@@ -349,15 +339,16 @@ export async function validateSidebarItemRename(
     newName: string
   },
 ): Promise<string> {
+  const trimmedName = newName.trim()
   await validateSidebarItemName(ctx, {
     parentId: item.parentId,
-    name: newName,
+    name: trimmedName,
     excludeId: item._id,
   })
 
   return findUniqueSidebarItemSlug(ctx, {
     type: item.type,
-    name: newName,
+    name: trimmedName,
     itemId: item._id,
   })
 }

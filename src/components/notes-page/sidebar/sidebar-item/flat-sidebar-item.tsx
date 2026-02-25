@@ -1,5 +1,4 @@
 import { memo, useCallback } from 'react'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -35,8 +34,6 @@ function FlatSidebarItemComponent({
   const { toggleExpanded } = useFolderState(item._id)
 
   const icon = getSidebarItemIcon(item)
-  const defaultName = defaultItemName(item)
-  const displayName = item.name || defaultName
 
   const handleSelect = useCallback(
     () => navigateToItem(item),
@@ -60,8 +57,7 @@ function FlatSidebarItemComponent({
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
-          name={displayName}
-          defaultName={defaultName}
+          name={item.name}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}

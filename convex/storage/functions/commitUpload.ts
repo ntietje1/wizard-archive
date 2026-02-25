@@ -36,8 +36,8 @@ export async function commitUpload(
 
   await ctx.db.patch(fileStorage._id, {
     status: FILE_STORAGE_STATUS.Committed,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
   return fileStorage._id
 }

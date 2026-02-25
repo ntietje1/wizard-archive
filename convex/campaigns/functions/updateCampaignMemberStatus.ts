@@ -22,8 +22,8 @@ export async function updateCampaignMemberStatus(
   const now = Date.now()
   await ctx.db.patch(member._id, {
     status,
-    _updatedTime: now,
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
   })
 
   return member._id

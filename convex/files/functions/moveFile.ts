@@ -20,8 +20,8 @@ export async function moveFile(
 
   await ctx.db.patch(fileId, {
     parentId: parentId ?? null,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return file._id
 }

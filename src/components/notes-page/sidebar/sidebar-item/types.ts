@@ -20,7 +20,6 @@ export interface SidebarItemButtonProps
     SidebarItemState {
   icon: LucideIcon
   name: string
-  defaultName: string
   showChevron: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void

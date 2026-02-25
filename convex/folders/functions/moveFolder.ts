@@ -20,8 +20,8 @@ export async function moveFolder(
 
   await ctx.db.patch(folderId, {
     parentId: parentId ?? null,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return folder._id
 }

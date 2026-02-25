@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
@@ -132,7 +131,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
       }
     } else if (isSidebarItem(dropTarget)) {
       return {
-        name: dropTarget.name || defaultItemName(dropTarget as AnySidebarItem),
+        name: dropTarget.name,
         isValid: validation.valid,
         rejectionReason,
         action: 'move' as const,
@@ -159,10 +158,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   const DraggedItemIcon = content
     ? getSidebarItemIcon(content.dragData as AnySidebarItem)
     : null
-  const DraggedItemName = content
-    ? content.dragData.name ||
-      defaultItemName(content.dragData as AnySidebarItem)
-    : ''
+  const DraggedItemName = content ? content.dragData.name : ''
 
   return createPortal(
     <div

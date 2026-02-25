@@ -31,10 +31,11 @@ export async function updateNote(
   const updates: Partial<WithoutSystemFields<Doc<'notes'>>> = {}
 
   if (name !== undefined) {
-    updates.name = name
+    const trimmedName = name.trim()
+    updates.name = trimmedName
     newSlug = await validateSidebarItemRename(ctx, {
       item: note,
-      newName: name,
+      newName: trimmedName,
     })
     updates.slug = newSlug
   }
@@ -53,8 +54,8 @@ export async function updateNote(
 
   await ctx.db.patch(note._id, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return { noteId: note._id, slug: newSlug ?? note.slug }
 }

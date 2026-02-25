@@ -4,11 +4,15 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import {
   checkNameConflict,
+  validateItemName,
   validateNoCircularParent,
-  validateWikiLinkCompatibleName,
 } from 'convex/sidebarItems/sharedValidation'
+import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type {
+  SidebarItemId,
+  SidebarItemType,
+} from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
@@ -75,14 +79,14 @@ export function SidebarItemMutationsProvider({
 
   const validateName = useCallback(
     (
-      name: string | undefined,
+      name: string,
       parentId: Id<'folders'> | undefined,
       excludeId?: SidebarItemId,
     ) => {
-      const wikiResult = validateWikiLinkCompatibleName(name)
-      if (!wikiResult.valid) return wikiResult
-      if (!name || name.trim() === '') return { valid: true as const }
-      return checkNameConflict(name, getSiblings(parentId), excludeId)
+      const trimmed = name.trim()
+      const nameResult = validateItemName(trimmed)
+      if (!nameResult.valid) return nameResult
+      return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
     },
     [getSiblings],
   )
@@ -96,18 +100,28 @@ export function SidebarItemMutationsProvider({
     [itemsMap],
   )
 
+  const getDefaultName = useCallback(
+    (type: SidebarItemType, parentId?: Id<'folders'>) => {
+      return findUniqueDefaultName(type, getSiblings(parentId))
+    },
+    [getSiblings],
+  )
+
   // --- Mutations ---
 
   const createItem = useCallback(
     async (args: CreateItemArgs): Promise<CreateItemResult> => {
-      const nameResult = validateName(args.name, args.parentId ?? undefined)
+      const resolvedName = args.name.trim()
+      if (!resolvedName) throw new Error('Name is required')
+
+      const nameResult = validateName(resolvedName, args.parentId ?? undefined)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       switch (args.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
           const { noteId, slug } = await createNoteMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: resolvedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -118,7 +132,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.folders: {
           const { folderId, slug } = await createFolderMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: resolvedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -128,7 +142,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.gameMaps: {
           const { mapId, slug } = await createMapMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: resolvedName,
             parentId: args.parentId,
             imageStorageId: args.imageStorageId,
             iconName: args.iconName,
@@ -139,7 +153,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.files: {
           const { fileId, slug } = await createFileMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: resolvedName,
             parentId: args.parentId,
             storageId: args.storageId,
             iconName: args.iconName,
@@ -163,17 +177,18 @@ export function SidebarItemMutationsProvider({
 
   const rename = useCallback(
     (item: AnySidebarItem, newName: string) => {
-      const result = validateName(newName, item.parentId ?? undefined, item._id)
+      const trimmedName = newName.trim()
+      const result = validateName(trimmedName, item.parentId ?? undefined, item._id)
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
-        prev.map((i) => (i._id === item._id ? { ...i, name: newName } : i)),
+        prev.map((i) => (i._id === item._id ? { ...i, name: trimmedName } : i)),
       )
 
       const promise = updateSidebarItemMutation({
         campaignId: item.campaignId,
         itemId: item._id,
-        name: newName,
+        name: trimmedName,
       }).then(
         (res) => {
           if (res?.slug) {
@@ -207,7 +222,7 @@ export function SidebarItemMutationsProvider({
         throw new Error('Cannot move item: circular reference detected')
       }
 
-      const nameResult = validateName(item.name ?? undefined, newParentId, item._id)
+      const nameResult = validateName(item.name, newParentId, item._id)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       const previousParentId = item.parentId
@@ -316,6 +331,7 @@ export function SidebarItemMutationsProvider({
   const value: SidebarItemMutationsValue = useMemo(
     () => ({
       createItem,
+      getDefaultName,
       rename,
       move,
       deleteItem,
@@ -325,6 +341,7 @@ export function SidebarItemMutationsProvider({
     }),
     [
       createItem,
+      getDefaultName,
       rename,
       move,
       deleteItem,

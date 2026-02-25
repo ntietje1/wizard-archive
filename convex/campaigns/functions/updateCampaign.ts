@@ -20,14 +20,15 @@ export async function updateCampaign(
 
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
-  if (name !== undefined) {
-    updates.name = name
+  if (name !== undefined && name.trim().length > 0) {
+    updates.name = name.trim()
   }
   if (description !== undefined) {
-    updates.description = description
+    updates.description = description.trim()
   }
 
-  if (slug !== undefined && slug !== campaign.slug) {
+  if (slug !== undefined && slug.trim() !== campaign.slug) {
+    slug = slug.trim()
     const uniqueSlug = await findUniqueSlug(slug, async (s) => {
       const conflict = await ctx.db
         .query('campaigns')
@@ -46,8 +47,8 @@ export async function updateCampaign(
 
   await ctx.db.patch(campaign._id, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
 
   return campaign._id

@@ -10,7 +10,6 @@ import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Image, Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/functions/defaultItemName'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/shares/types'
 import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
@@ -168,9 +167,7 @@ function MapPin({
     ? '#9ca3af'
     : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
   const isHidden = pin.visible !== true
-  const baseName = ghost
-    ? '???'
-    : visibleItem?.name || defaultItemName(visibleItem)
+  const baseName = ghost ? '???' : (visibleItem?.name ?? '')
   const itemName = isHidden ? `${baseName} (hidden)` : baseName
 
   const hoverScale = isHovered && !isDragging ? 1.2 : 1
@@ -403,7 +400,7 @@ export function MapViewer({
         getData: () => ({
           type: MAP_DROP_ZONE_TYPE,
           mapId: map._id,
-          mapName: map.name || defaultItemName(map),
+          mapName: map.name,
         }),
         onDragEnter: () => {
           el.setAttribute('data-drop-over', '')
@@ -551,7 +548,7 @@ export function MapViewer({
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [draggingPin, updateItemPinMutation])
+  }, [draggingPin, updateItemPinMutation, map.campaignId])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {

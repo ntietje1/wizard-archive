@@ -1,10 +1,3 @@
-/**
- * Returns a slug basis from a name, falling back to a random UUID if empty.
- */
-export function resolveSlugBasis(name?: string): string {
-  return name && name.trim() !== '' ? name.trim() : crypto.randomUUID()
-}
-
 export function slugify(input: string): string {
   const lower = input.toLowerCase().trim()
   // Replace whitespace/underscores with hyphen
@@ -19,10 +12,6 @@ export function slugify(input: string): string {
 
 export function appendSuffix(base: string, n: number): string {
   return n <= 1 ? base : `${base}-${n}`
-}
-
-export function shortenId(id: string, length: number = 8): string {
-  return id.slice(0, length)
 }
 
 export async function findUniqueSlug(

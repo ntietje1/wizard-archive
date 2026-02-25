@@ -124,8 +124,8 @@ export const sortItemsByOptions = (
   const sortFn = (a: AnySidebarItem, b: AnySidebarItem) => {
     switch (options.order) {
       case SORT_ORDERS.Alphabetical: {
-        const nameA = a.name || ''
-        const nameB = b.name || ''
+        const nameA = a.name
+        const nameB = b.name
         return options.direction === SORT_DIRECTIONS.Ascending
           ? nameA.localeCompare(nameB)
           : nameB.localeCompare(nameA)
@@ -136,8 +136,8 @@ export const sortItemsByOptions = (
           : b._creationTime - a._creationTime
       case SORT_ORDERS.DateModified:
         return options.direction === SORT_DIRECTIONS.Ascending
-          ? a._updatedTime - b._updatedTime
-          : b._updatedTime - a._updatedTime
+          ? a.updatedTime - b.updatedTime
+          : b.updatedTime - a.updatedTime
       default:
         return 0
     }

@@ -21,10 +21,11 @@ export async function updateFolder(
   const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
 
   if (name !== undefined) {
-    updates.name = name
+    const trimmedName = name.trim()
+    updates.name = trimmedName
     newSlug = await validateSidebarItemRename(ctx, {
       item: folder,
-      newName: name,
+      newName: trimmedName,
     })
     updates.slug = newSlug
   }
@@ -35,8 +36,8 @@ export async function updateFolder(
 
   await ctx.db.patch(folderId, {
     ...updates,
-    _updatedTime: Date.now(),
-    _updatedBy: ctx.user.profile._id,
+    updatedTime: Date.now(),
+    updatedBy: ctx.user.profile._id,
   })
   return { folderId: folder._id, slug: newSlug ?? folder.slug }
 }
