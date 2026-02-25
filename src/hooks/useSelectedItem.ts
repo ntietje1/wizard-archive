@@ -30,7 +30,7 @@ export function useSelectedItemSync() {
     } else {
       setSelected(null, null)
     }
-  }, [typeAndSlug?.type, typeAndSlug?.slug])
+  }, [typeAndSlug])
 
   return typeAndSlug
 }

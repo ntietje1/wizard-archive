@@ -78,7 +78,7 @@ export function useNameValidation({
   const hasError = !nameValidation.valid || isNotUnique
 
   const checkNameUnique = useCallback(
-    async (nameToCheck: string): Promise<string | undefined> => {
+    (nameToCheck: string): string | undefined => {
       const trimmed = nameToCheck.trim()
 
       const nameResult = validateItemName(trimmed)

@@ -44,7 +44,7 @@ export function PlayerDeleteConfirmDialog({
         onConfirm?.()
         onClose()
       })
-  }, [updateMemberStatus, player._id, onConfirm, onClose])
+  }, [updateMemberStatus, player._id, player.campaignId, onConfirm, onClose])
 
   const playerName = player.userProfile.name ?? 'this player'
 

@@ -19,8 +19,8 @@ export function useFileDragDrop(parentId?: Id<'folders'>) {
 
   const isFileDrag = useCallback((e: React.DragEvent): boolean => {
     const types = e.dataTransfer.types
-    for (let i = 0; i < types.length; i++) {
-      if (types[i] === 'Files') return true
+    for (const type of types) {
+      if (type === 'Files') return true
     }
     return false
   }, [])

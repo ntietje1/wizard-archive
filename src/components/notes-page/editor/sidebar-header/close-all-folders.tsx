@@ -2,8 +2,8 @@ import { Button } from '~/components/shadcn/ui/button'
 import { FolderDot, FolderOpenDot } from '~/lib/icons'
 import { useCampaign } from '~/hooks/useCampaign'
 import {
-  useCampaignSidebarState,
   useCampaignSidebarActions,
+  useCampaignSidebarState,
 } from '~/stores/sidebarUIStore'
 
 export function CloseAllFoldersButton() {

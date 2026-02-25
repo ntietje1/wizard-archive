@@ -101,7 +101,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     showInSidebar: useCallback(
-      async (ctx: MenuContext) => {
+      (ctx: MenuContext) => {
         if (!ctx.item) return
         openParentFolders(ctx.item._id)
       },
@@ -318,7 +318,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to remove pin')
         }
       },
-      [convex],
+      [convex, campaignId],
     ),
 
     togglePinVisibility: useCallback(
@@ -339,7 +339,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to toggle pin visibility')
         }
       },
-      [convex],
+      [convex, campaignId],
     ),
 
     moveMapPin: useCallback((ctx: MenuContext) => {
@@ -576,7 +576,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to download folder')
         }
       },
-      [convex],
+      [convex, campaignId],
     ),
 
     downloadAll: useCallback(async () => {

@@ -582,7 +582,7 @@ export function MapViewer({
         toast.error('Failed to place pin')
       }
     },
-    [map._id, createItemPinMutation],
+    [map._id, map.campaignId, createItemPinMutation],
   )
 
   useEffect(() => {
@@ -652,7 +652,7 @@ export function MapViewer({
         toast.error('Failed to move pin')
       }
     },
-    [pendingPinMove, updateItemPinMutation],
+    [pendingPinMove, map.campaignId, updateItemPinMutation],
   )
 
   const handleMapClick = useCallback(
