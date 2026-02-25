@@ -2,7 +2,7 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type {
   SidebarItem,
   SidebarItemType,

@@ -1,10 +1,13 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { shareSidebarItemWithMember } from '../itemShares'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { shareSidebarItemWithMember } from './sidebarItemShareMutations'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { PermissionLevel } from '../types'
-import type { SidebarItemId, SidebarItemType } from '../../sidebarItems/types/baseTypes'
+import type { PermissionLevel } from '../../permissions/types'
+import type {
+  SidebarItemId,
+  SidebarItemType,
+} from '../../sidebarItems/types/baseTypes'
 
 export const shareSidebarItem = async (
   ctx: CampaignMutationCtx,
@@ -17,7 +20,7 @@ export const shareSidebarItem = async (
     sidebarItemId: SidebarItemId
     sidebarItemType: SidebarItemType
     campaignMemberId: Id<'campaignMembers'>
-    permissionLevel?: PermissionLevel
+    permissionLevel: PermissionLevel | null
   },
 ): Promise<Id<'sidebarItemShares'>> => {
   const item = await ctx.db.get(sidebarItemId)

@@ -1,4 +1,4 @@
-import { saveTopLevelBlocksForNote } from '../../blocks/blocks'
+import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
   findNewSidebarItemSlug,
   validateSidebarCreateParent,

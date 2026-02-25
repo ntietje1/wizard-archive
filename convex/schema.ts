@@ -6,7 +6,8 @@ import { campaignTables } from './campaigns/schema'
 import { editorTables } from './editors/schema'
 import { userTables } from './users/schema'
 import { sessionTables } from './sessions/schema'
-import { shareTables } from './shares/schema'
+import { blockShareTables } from './blockShares/schema'
+import { sidebarShareTables } from './sidebarShares/schema'
 import { fileStorageTables } from './storage/schema'
 import { gameMapsTables } from './gameMaps/baseSchema'
 import { filesTables } from './files/schema'
@@ -21,7 +22,8 @@ export default defineSchema({
   ...userTables,
   ...gameMapsTables,
   ...sessionTables,
-  ...shareTables,
+  ...blockShareTables,
+  ...sidebarShareTables,
   ...fileStorageTables,
   ...filesTables,
   ...bookmarkTables,

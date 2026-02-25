@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
-import type { PermissionLevel } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { dmQuery } from '../functions'
-import { blockShareValidator } from '../shares/schema'
+import { blockShareValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
 import {
   blockNoteIdValidator,

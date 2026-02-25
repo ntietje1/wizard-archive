@@ -1,5 +1,5 @@
 import { requireItemAccess, validateSidebarMove } from '../validation'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'

@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import type { PermissionLevel } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
@@ -22,8 +22,8 @@ interface SidebarItemShareInfo {
   allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
-  inheritedAllPermissionLevel?: PermissionLevel
-  inheritedFromFolderName?: string
+  inheritedAllPermissionLevel: PermissionLevel | null
+  inheritedFromFolderName: string | null
   memberInheritedPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Map<Id<'campaignMembers'>, string>
 }
@@ -42,7 +42,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   const query = useQuery(
     convexQuery(
-      api.shares.queries.getSidebarItemWithShares,
+      api.sidebarShares.queries.getSidebarItemWithShares,
       campaignData?._id && singleItem && isDm
         ? {
             campaignId: campaignData._id,
@@ -53,21 +53,27 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   )
 
   const shareSidebarItem = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.shareSidebarItem),
+    mutationFn: useConvexMutation(api.sidebarShares.mutations.shareSidebarItem),
   })
   const unshareSidebarItem = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.unshareSidebarItem),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.unshareSidebarItem,
+    ),
   })
   const updateSharePermission = useMutation({
     mutationFn: useConvexMutation(
-      api.shares.mutations.updateSidebarItemSharePermission,
+      api.sidebarShares.mutations.updateSidebarItemSharePermission,
     ),
   })
   const setAllPlayersPermissionMutation = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setAllPlayersPermission),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.setAllPlayersPermission,
+    ),
   })
   const setFolderInheritSharesMutation = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setFolderInheritShares),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.setFolderInheritShares,
+    ),
   })
   const isMutating =
     shareSidebarItem.isPending ||
@@ -315,7 +321,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         return info.memberPermissions.get(memberId) ?? 'view'
       }
       // Fall back to allPermissionLevel
-      if (info.allPermissionLevel !== undefined) {
+      if (info.allPermissionLevel !== null) {
         return info.allPermissionLevel
       }
       // Fall back to pre-computed inherited permission for this member
@@ -333,19 +339,18 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }, [items, itemShareInfoMap])
 
   // Get the inherited permission level from ancestor folder (if any)
-  const inheritedAllPermissionLevel: PermissionLevel | undefined =
-    useMemo(() => {
-      if (items.length === 0) return undefined
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return undefined
-      return info.inheritedAllPermissionLevel
-    }, [items, itemShareInfoMap])
+  const inheritedAllPermissionLevel: PermissionLevel | null = useMemo(() => {
+    if (items.length === 0) return null
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return null
+    return info.inheritedAllPermissionLevel
+  }, [items, itemShareInfoMap])
 
   // Get the name of the folder providing inherited all-players permission
-  const inheritedFromFolderName: string | undefined = useMemo(() => {
-    if (items.length === 0) return undefined
+  const inheritedFromFolderName: string | null = useMemo(() => {
+    if (items.length === 0) return null
     const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return undefined
+    if (!info) return null
     return info.inheritedFromFolderName
   }, [items, itemShareInfoMap])
 
@@ -471,7 +476,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       const info = itemShareInfoMap.get(items[0]._id)
       if (!info) return 'none'
       // If item has explicit allPermissionLevel, that takes effect
-      if (info.allPermissionLevel !== undefined) return info.allPermissionLevel
+      if (info.allPermissionLevel !== null) return info.allPermissionLevel
       // Otherwise, fall back to the per-member inherited level from ancestors
       return info.memberInheritedPermissions.get(memberId) ?? 'none'
     },

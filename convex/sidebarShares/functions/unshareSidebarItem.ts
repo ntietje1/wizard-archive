@@ -1,6 +1,6 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { unshareSidebarItemFromMember } from '../itemShares'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { unshareSidebarItemFromMember } from './sidebarItemShareMutations'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'

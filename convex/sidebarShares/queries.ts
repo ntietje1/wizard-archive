@@ -5,8 +5,7 @@ import {
   permissionLevelValidator,
   sidebarItemIdValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { blockShareValidator, sidebarItemShareValidator } from './schema'
-import { getBlockSharesForBlock } from './blockShares'
+import { sidebarItemShareValidator } from './schema'
 import { getSidebarItemShares as getSidebarItemSharesFn } from './functions/getSidebarItemShares'
 import { getSidebarItemWithShares as getSidebarItemWithSharesFn } from './functions/getSidebarItemWithShares'
 
@@ -34,11 +33,11 @@ export const getSidebarItemWithShares = dmQuery({
   },
   returns: v.object({
     allPermissionLevel: v.union(permissionLevelValidator, v.null()),
-    inheritShares: v.optional(v.boolean()),
+    inheritShares: v.union(v.boolean(), v.null()),
     shares: v.array(sidebarItemShareValidator),
     playerMembers: v.array(campaignMemberValidator),
-    inheritedAllPermissionLevel: v.optional(permissionLevelValidator),
-    inheritedFromFolderName: v.optional(v.string()),
+    inheritedAllPermissionLevel: v.union(permissionLevelValidator, v.null()),
+    inheritedFromFolderName: v.union(v.string(), v.null()),
     memberInheritedPermissions: v.record(
       v.id('campaignMembers'),
       permissionLevelValidator,
@@ -52,16 +51,5 @@ export const getSidebarItemWithShares = dmQuery({
     return await getSidebarItemWithSharesFn(ctx, {
       sidebarItemId: args.sidebarItemId,
     })
-  },
-})
-
-export const getBlockShares = dmQuery({
-  args: {
-    campaignId: v.id('campaigns'),
-    blockId: v.id('blocks'),
-  },
-  returns: v.array(blockShareValidator),
-  handler: async (ctx, args) => {
-    return await getBlockSharesForBlock(ctx, { blockId: args.blockId })
   },
 })

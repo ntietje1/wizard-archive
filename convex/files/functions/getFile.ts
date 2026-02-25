@@ -1,5 +1,5 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import { enhanceFileWithContent } from './enhanceFile'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'

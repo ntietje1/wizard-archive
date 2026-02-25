@@ -1,6 +1,6 @@
-import { deleteSidebarItemShares } from '../../shares/itemShares'
+import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarItemShareMutations'
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'

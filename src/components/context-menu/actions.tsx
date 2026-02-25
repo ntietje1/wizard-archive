@@ -4,9 +4,9 @@ import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
-import type { PermissionLevel } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
@@ -387,11 +387,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         if (!campaignId || !ctx.item) return
 
         try {
-          await convex.mutation(api.shares.mutations.setAllPlayersPermission, {
-            campaignId,
-            sidebarItemId: ctx.item._id,
-            permissionLevel: level,
-          })
+          await convex.mutation(
+            api.sidebarShares.mutations.setAllPlayersPermission,
+            {
+              campaignId,
+              sidebarItemId: ctx.item._id,
+              permissionLevel: level,
+            },
+          )
           if (level === null) {
             toast.success('Reset to default access')
           } else if (level === PERMISSION_LEVEL.NONE) {

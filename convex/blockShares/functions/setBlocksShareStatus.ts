@@ -1,19 +1,20 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { unshareBlockFromMemberHelper } from '../blockShares'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { setBlockShareStatusHelper } from './blockShareMutations'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { ShareStatus } from '../types'
 
-export const unshareBlocks = async (
+export const setBlocksShareStatus = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blockNoteIds,
-    campaignMemberId,
+    blocks,
+    status,
   }: {
     noteId: Id<'notes'>
-    blockNoteIds: Array<string>
-    campaignMemberId: Id<'campaignMembers'>
+    blocks: Array<{ blockNoteId: string; content: any }>
+    status: ShareStatus
   },
 ): Promise<null> => {
   const note = await ctx.db.get(noteId)
@@ -22,11 +23,11 @@ export const unshareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  for (const blockNoteId of blockNoteIds) {
-    await unshareBlockFromMemberHelper(ctx, {
+  for (const blockItem of blocks) {
+    await setBlockShareStatusHelper(ctx, {
       noteId,
-      blockNoteId,
-      campaignMemberId,
+      blockItem,
+      status,
     })
   }
 

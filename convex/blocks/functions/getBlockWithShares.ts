@@ -1,13 +1,14 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { getBlockSharesForBlock } from '../../shares/blockShares'
-import { PERMISSION_LEVEL, SHARE_STATUS } from '../../shares/types'
+import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
-import { findBlockByBlockNoteId } from '../blocks'
+import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { Block } from '../types'
-import type { BlockShare, ShareStatus } from '../../shares/types'
+import type { BlockShare, ShareStatus } from '../../blockShares/types'
 import type { CampaignMember } from '../../campaigns/types'
 
 export const getBlockWithShares = async (
@@ -39,8 +40,7 @@ export const getBlockWithShares = async (
     return null
   }
 
-  const shareStatus: ShareStatus =
-    block.shareStatus ?? SHARE_STATUS.NOT_SHARED
+  const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   const allMembers = await getCampaignMembers(ctx)
   const playerMembers = allMembers.filter(

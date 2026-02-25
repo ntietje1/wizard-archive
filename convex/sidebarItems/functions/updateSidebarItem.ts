@@ -1,4 +1,4 @@
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess, validateSidebarItemRename } from '../validation'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { CampaignMutationCtx } from '../../functions'

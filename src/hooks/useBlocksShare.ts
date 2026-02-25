@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { SHARE_STATUS } from 'convex/shares/types'
+import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
@@ -44,13 +44,15 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   )
 
   const setBlocksShareStatus = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setBlocksShareStatus),
+    mutationFn: useConvexMutation(
+      api.blockShares.mutations.setBlocksShareStatus,
+    ),
   })
   const shareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.shareBlocks),
+    mutationFn: useConvexMutation(api.blockShares.mutations.shareBlocks),
   })
   const unshareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.unshareBlocks),
+    mutationFn: useConvexMutation(api.blockShares.mutations.unshareBlocks),
   })
 
   const isMutating =

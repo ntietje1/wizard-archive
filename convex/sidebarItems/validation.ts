@@ -1,8 +1,6 @@
-import {
-  getSidebarItemPermissionLevel,
-  hasAtLeastPermissionLevel,
-} from '../shares/itemShares'
-import { PERMISSION_LEVEL } from '../shares/types'
+import { getSidebarItemPermissionLevel } from '../sidebarShares/functions/sidebarItemPermissions'
+import { hasAtLeastPermissionLevel } from '../permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from '../permissions/types'
 import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
@@ -11,7 +9,7 @@ import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { SidebarItemId, SidebarItemType } from './types/baseTypes'
-import type { PermissionLevel } from '../shares/types'
+import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'

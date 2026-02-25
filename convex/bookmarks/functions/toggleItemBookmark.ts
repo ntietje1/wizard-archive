@@ -1,5 +1,5 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 

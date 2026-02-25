@@ -1,5 +1,5 @@
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import type { PermissionLevel } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { UserProfile } from 'convex/users/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -35,7 +35,7 @@ const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.FULL_ACCESS]: 'Full access',
 }
 
-function permissionLabel(level: PermissionLevel | undefined): string {
+function permissionLabel(level: PermissionLevel | null): string {
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
 }
 
@@ -76,8 +76,8 @@ interface SharePermissionMenuProps {
   isMutating: boolean
   shareItems: Array<ShareItemWithPermission>
   allPlayersPermissionLevel: PermissionLevel | null
-  inheritedAllPermissionLevel?: PermissionLevel
-  inheritedFromFolderName?: string
+  inheritedAllPermissionLevel: PermissionLevel | null
+  inheritedFromFolderName: string | null
   isFolder?: boolean
   inheritShares?: boolean
   onSetMemberPermission: (
@@ -126,10 +126,7 @@ export function SharePermissionMenu({
     if (item.hasExplicitShare) {
       return `${name}'s access has been explicitly set`
     }
-    if (
-      item.inheritedFromFolderName &&
-      allPlayersPermissionLevel === null
-    ) {
+    if (item.inheritedFromFolderName && allPlayersPermissionLevel === null) {
       return `${name}'s access is based on ${item.inheritedFromFolderName}`
     }
     return `${name}'s access is based on the All Players permission level`
@@ -152,8 +149,7 @@ export function SharePermissionMenu({
       : permissionLabel(inheritedAllPermissionLevel)
 
   const isInheritingAll =
-    allPlayersPermissionLevel === null &&
-    inheritedAllPermissionLevel !== undefined
+    allPlayersPermissionLevel === null && inheritedAllPermissionLevel !== null
 
   return (
     <div className="flex flex-col gap-0.5 min-w-[300px]">
@@ -365,13 +361,13 @@ function AllPlayersRow({
 }: {
   selectValue: PermissionLevelOrDefault
   selectLabel: string
-  inheritedLevel: PermissionLevel | undefined
+  inheritedLevel: PermissionLevel | null
   disabled: boolean
   expanded: boolean
   label: string
   inheritingMembers: Array<CampaignMember>
   isInheriting: boolean
-  inheritedFromFolderName?: string
+  inheritedFromFolderName: string | null
   onToggleExpand: () => void
   onChange: (value: PermissionLevelOrDefault) => void
 }) {

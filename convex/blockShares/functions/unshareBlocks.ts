@@ -1,18 +1,18 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { shareBlockWithMemberHelper } from '../blockShares'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { unshareBlockFromMemberHelper } from './blockShareMutations'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
-export const shareBlocks = async (
+export const unshareBlocks = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blocks,
+    blockNoteIds,
     campaignMemberId,
   }: {
     noteId: Id<'notes'>
-    blocks: Array<{ blockNoteId: string; content: any }>
+    blockNoteIds: Array<string>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
@@ -22,15 +22,13 @@ export const shareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await Promise.all(
-    blocks.map((blockItem) =>
-      shareBlockWithMemberHelper(ctx, {
-        noteId,
-        blockItem,
-        campaignMemberId,
-      }),
-    ),
-  )
+  for (const blockNoteId of blockNoteIds) {
+    await unshareBlockFromMemberHelper(ctx, {
+      noteId,
+      blockNoteId,
+      campaignMemberId,
+    })
+  }
 
   return null
 }

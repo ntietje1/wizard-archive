@@ -1,4 +1,4 @@
-import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'

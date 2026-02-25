@@ -2,15 +2,14 @@ import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import {
-  getSidebarItemSharesForItem,
-  resolveInheritedPermissionWithSource,
-} from '../itemShares'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
+import { resolveInheritedPermissionWithSource } from './sidebarItemPermissions'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMember } from '../../campaigns/types'
-import type { PermissionLevel, SidebarItemShare } from '../types'
+import type { PermissionLevel } from '../../permissions/types'
+import type { SidebarItemShare } from '../types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const getSidebarItemWithShares = async (
@@ -18,11 +17,11 @@ export const getSidebarItemWithShares = async (
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<{
   allPermissionLevel: PermissionLevel | null
-  inheritShares?: boolean
+  inheritShares: boolean | null
   shares: Array<SidebarItemShare>
   playerMembers: Array<CampaignMember>
-  inheritedAllPermissionLevel?: PermissionLevel
-  inheritedFromFolderName?: string
+  inheritedAllPermissionLevel: PermissionLevel | null
+  inheritedFromFolderName: string | null
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
 }> => {
@@ -32,7 +31,7 @@ export const getSidebarItemWithShares = async (
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
-  let inheritShares: boolean | undefined = undefined
+  let inheritShares: boolean | null = null
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     inheritShares = item.inheritShares
   }
@@ -53,7 +52,8 @@ export const getSidebarItemWithShares = async (
     level: inheritedAllPermissionLevel,
     folderName: inheritedFromFolderName,
   } = await resolveInheritedPermissionWithSource(ctx, {
-    parentId: item.parentId,
+    parentId: item.parentId ?? null,
+    memberId: null,
   })
 
   // Resolve per-member inherited permissions with source folder names
@@ -70,7 +70,7 @@ export const getSidebarItemWithShares = async (
       const { level, folderName } = await resolveInheritedPermissionWithSource(
         ctx,
         {
-          parentId: item.parentId,
+          parentId: item.parentId ?? null,
           memberId: member._id,
         },
       )

@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { sidebarItemShareValidator } from '../../shares/schema'
+import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { commonTableFields } from '../../common/schema'
 import {
   permissionLevelValidator,

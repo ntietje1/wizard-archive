@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { PERMISSION_LEVEL } from '../types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignMutationCtx } from '../../functions'
-import type { PermissionLevel } from '../types'
+import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const setAllPlayersPermission = async (

@@ -1,13 +1,11 @@
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
-import { getTopLevelBlocksByNote } from '../../blocks/blocks'
+import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import {
-  getSidebarItemPermissionLevel,
-  hasAtLeastPermissionLevel,
-} from '../../shares/itemShares'
-import { enforceBlockSharePermissionsOrNull } from '../../shares/blockShares'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
+import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
+import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'

@@ -1,6 +1,6 @@
-import { saveTopLevelBlocksForNote } from '../../blocks/blocks'
+import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'

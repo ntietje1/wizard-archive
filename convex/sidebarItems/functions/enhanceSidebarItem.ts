@@ -4,10 +4,8 @@ import { enhanceGameMap } from '../../gameMaps/functions/enhanceMap'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getItemBookmark } from '../../bookmarks/functions/getItemBookmark'
-import {
-  getSidebarItemPermissionLevel,
-  getSidebarItemSharesForItem,
-} from '../../shares/itemShares'
+import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
+import { getSidebarItemSharesForItem } from '../../sidebarShares/functions/getSidebarItemSharesForItem'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 

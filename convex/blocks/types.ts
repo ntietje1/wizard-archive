@@ -1,4 +1,4 @@
-import type { ShareStatus } from '../shares/types'
+import type { ShareStatus } from '../blockShares/types'
 import type { Id } from '../_generated/dataModel'
 import type { CustomBlock } from '../notes/editorSpecs'
 

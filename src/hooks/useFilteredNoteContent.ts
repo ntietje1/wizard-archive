@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { PERMISSION_LEVEL, SHARE_STATUS } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SHARE_STATUS } from 'convex/blockShares/types'
 
 import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'

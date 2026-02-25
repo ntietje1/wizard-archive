@@ -1,5 +1,5 @@
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'

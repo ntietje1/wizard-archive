@@ -2,7 +2,7 @@ import {
   requireItemAccess,
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
-import { PERMISSION_LEVEL } from '../../shares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'

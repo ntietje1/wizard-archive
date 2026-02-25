@@ -1,7 +1,8 @@
 import type { Folder } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CommonTableFields } from '../../common/types'
-import type { PermissionLevel, SidebarItemShare } from '../../shares/types'
+import type { PermissionLevel } from '../../permissions/types'
+import type { SidebarItemShare } from '../../sidebarShares/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 

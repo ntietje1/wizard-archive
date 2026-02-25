@@ -1,11 +1,9 @@
-import { getTopLevelBlocksByNote } from '../../blocks/blocks'
+import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import {
-  getBlockPermissionLevel,
-  getBlockSharesForBlock,
-} from '../../shares/blockShares'
+import { getBlockPermissionLevel } from '../../blockShares/functions/getBlockPermissionLevel'
+import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
-import { SHARE_STATUS } from '../../shares/types'
+import { SHARE_STATUS } from '../../blockShares/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 
