@@ -42,10 +42,9 @@ export function SidebarItemMutationsProvider({
   const updateSidebarItemMutation = useConvexMutation(
     api.sidebarItems.mutations.updateSidebarItem,
   )
-  const moveNoteMutation = useConvexMutation(api.notes.mutations.moveNote)
-  const moveFolderMutation = useConvexMutation(api.folders.mutations.moveFolder)
-  const moveMapMutation = useConvexMutation(api.gameMaps.mutations.moveMap)
-  const moveFileMutation = useConvexMutation(api.files.mutations.moveFile)
+  const moveSidebarItemMutation = useConvexMutation(
+    api.sidebarItems.mutations.moveSidebarItem,
+  )
   const deleteNoteMutation = useConvexMutation(api.notes.mutations.deleteNote)
   const deleteFolderMutation = useConvexMutation(
     api.folders.mutations.deleteFolder,
@@ -233,34 +232,11 @@ export function SidebarItemMutationsProvider({
         ),
       )
 
-      const moveMutation = (() => {
-        switch (item.type) {
-          case SIDEBAR_ITEM_TYPES.notes:
-            return moveNoteMutation({
-              campaignId: item.campaignId,
-              noteId: item._id,
-              parentId: newParentId,
-            })
-          case SIDEBAR_ITEM_TYPES.folders:
-            return moveFolderMutation({
-              campaignId: item.campaignId,
-              folderId: item._id,
-              parentId: newParentId,
-            })
-          case SIDEBAR_ITEM_TYPES.gameMaps:
-            return moveMapMutation({
-              campaignId: item.campaignId,
-              mapId: item._id,
-              parentId: newParentId,
-            })
-          case SIDEBAR_ITEM_TYPES.files:
-            return moveFileMutation({
-              campaignId: item.campaignId,
-              fileId: item._id,
-              parentId: newParentId,
-            })
-        }
-      })()
+      const moveMutation = moveSidebarItemMutation({
+        campaignId: item.campaignId,
+        itemId: item._id,
+        parentId: newParentId,
+      })
 
       moveMutation.catch(() => {
         optimisticUpdate((prev) =>
@@ -276,10 +252,7 @@ export function SidebarItemMutationsProvider({
       canMoveToParent,
       validateName,
       optimisticUpdate,
-      moveNoteMutation,
-      moveFolderMutation,
-      moveMapMutation,
-      moveFileMutation,
+      moveSidebarItemMutation,
     ],
   )
 

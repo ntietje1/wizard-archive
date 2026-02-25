@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
-import { moveFolder as moveFolderFn } from './functions/moveFolder'
 import { deleteFolder as deleteFolderFn } from './functions/deleteFolder'
 import type { Id } from '../_generated/dataModel'
 
@@ -23,21 +22,6 @@ export const updateFolder = campaignMutation({
     return await updateFolderFn(ctx, {
       folderId: args.folderId,
       name: args.name,
-    })
-  },
-})
-
-export const moveFolder = campaignMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    folderId: v.id('folders'),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.id('folders'),
-  handler: async (ctx, args): Promise<Id<'folders'>> => {
-    return await moveFolderFn(ctx, {
-      folderId: args.folderId,
-      parentId: args.parentId,
     })
   },
 })

@@ -3,7 +3,6 @@ import { campaignMutation } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
-import { moveMap as moveMapFn } from './functions/moveMap'
 import { deleteMap as deleteMapFn } from './functions/deleteMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
 import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
@@ -61,21 +60,6 @@ export const updateMap = campaignMutation({
       imageStorageId: args.imageStorageId,
       iconName: args.iconName,
       color: args.color,
-    })
-  },
-})
-
-export const moveMap = campaignMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    mapId: v.id('gameMaps'),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.id('gameMaps'),
-  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    return await moveMapFn(ctx, {
-      mapId: args.mapId,
-      parentId: args.parentId,
     })
   },
 })

@@ -2,24 +2,8 @@ import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { createFile as createFileFn } from './functions/createFile'
 import { updateFile as updateFileFn } from './functions/updateFile'
-import { moveFile as moveFileFn } from './functions/moveFile'
 import { deleteFile as deleteFileFn } from './functions/deleteFile'
 import type { Id } from '../_generated/dataModel'
-
-export const moveFile = campaignMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    fileId: v.id('files'),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.id('files'),
-  handler: async (ctx, args): Promise<Id<'files'>> => {
-    return await moveFileFn(ctx, {
-      fileId: args.fileId,
-      parentId: args.parentId,
-    })
-  },
-})
 
 export const createFile = campaignMutation({
   args: {

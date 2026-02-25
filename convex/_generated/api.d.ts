@@ -39,7 +39,6 @@ import type * as files_functions_createFile from "../files/functions/createFile.
 import type * as files_functions_deleteFile from "../files/functions/deleteFile.js";
 import type * as files_functions_enhanceFile from "../files/functions/enhanceFile.js";
 import type * as files_functions_getFile from "../files/functions/getFile.js";
-import type * as files_functions_moveFile from "../files/functions/moveFile.js";
 import type * as files_functions_updateFile from "../files/functions/updateFile.js";
 import type * as files_mutations from "../files/mutations.js";
 import type * as files_queries from "../files/queries.js";
@@ -51,7 +50,6 @@ import type * as folders_functions_enhanceFolder from "../folders/functions/enha
 import type * as folders_functions_getFolder from "../folders/functions/getFolder.js";
 import type * as folders_functions_getFolderContentsForDownload from "../folders/functions/getFolderContentsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
-import type * as folders_functions_moveFolder from "../folders/functions/moveFolder.js";
 import type * as folders_functions_updateFolder from "../folders/functions/updateFolder.js";
 import type * as folders_mutations from "../folders/mutations.js";
 import type * as folders_queries from "../folders/queries.js";
@@ -63,7 +61,6 @@ import type * as gameMaps_functions_createMap from "../gameMaps/functions/create
 import type * as gameMaps_functions_deleteMap from "../gameMaps/functions/deleteMap.js";
 import type * as gameMaps_functions_enhanceMap from "../gameMaps/functions/enhanceMap.js";
 import type * as gameMaps_functions_getMap from "../gameMaps/functions/getMap.js";
-import type * as gameMaps_functions_moveMap from "../gameMaps/functions/moveMap.js";
 import type * as gameMaps_functions_removeItemPin from "../gameMaps/functions/removeItemPin.js";
 import type * as gameMaps_functions_updateItemPin from "../gameMaps/functions/updateItemPin.js";
 import type * as gameMaps_functions_updateMap from "../gameMaps/functions/updateMap.js";
@@ -76,7 +73,6 @@ import type * as notes_functions_createNote from "../notes/functions/createNote.
 import type * as notes_functions_deleteNote from "../notes/functions/deleteNote.js";
 import type * as notes_functions_enhanceNote from "../notes/functions/enhanceNote.js";
 import type * as notes_functions_getNote from "../notes/functions/getNote.js";
-import type * as notes_functions_moveNote from "../notes/functions/moveNote.js";
 import type * as notes_functions_updateNote from "../notes/functions/updateNote.js";
 import type * as notes_functions_updateNoteContent from "../notes/functions/updateNoteContent.js";
 import type * as notes_mutations from "../notes/mutations.js";
@@ -106,6 +102,7 @@ import type * as sidebarItems_functions_getSidebarItemById from "../sidebarItems
 import type * as sidebarItems_functions_getSidebarItemByName from "../sidebarItems/functions/getSidebarItemByName.js";
 import type * as sidebarItems_functions_getSidebarItemBySlug from "../sidebarItems/functions/getSidebarItemBySlug.js";
 import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebarItems/functions/getSidebarItemsByParent.js";
+import type * as sidebarItems_functions_moveSidebarItem from "../sidebarItems/functions/moveSidebarItem.js";
 import type * as sidebarItems_functions_updateSidebarItem from "../sidebarItems/functions/updateSidebarItem.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
@@ -176,7 +173,6 @@ declare const fullApi: ApiFromModules<{
   "files/functions/deleteFile": typeof files_functions_deleteFile;
   "files/functions/enhanceFile": typeof files_functions_enhanceFile;
   "files/functions/getFile": typeof files_functions_getFile;
-  "files/functions/moveFile": typeof files_functions_moveFile;
   "files/functions/updateFile": typeof files_functions_updateFile;
   "files/mutations": typeof files_mutations;
   "files/queries": typeof files_queries;
@@ -188,7 +184,6 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/getFolder": typeof folders_functions_getFolder;
   "folders/functions/getFolderContentsForDownload": typeof folders_functions_getFolderContentsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
-  "folders/functions/moveFolder": typeof folders_functions_moveFolder;
   "folders/functions/updateFolder": typeof folders_functions_updateFolder;
   "folders/mutations": typeof folders_mutations;
   "folders/queries": typeof folders_queries;
@@ -200,7 +195,6 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/functions/deleteMap": typeof gameMaps_functions_deleteMap;
   "gameMaps/functions/enhanceMap": typeof gameMaps_functions_enhanceMap;
   "gameMaps/functions/getMap": typeof gameMaps_functions_getMap;
-  "gameMaps/functions/moveMap": typeof gameMaps_functions_moveMap;
   "gameMaps/functions/removeItemPin": typeof gameMaps_functions_removeItemPin;
   "gameMaps/functions/updateItemPin": typeof gameMaps_functions_updateItemPin;
   "gameMaps/functions/updateMap": typeof gameMaps_functions_updateMap;
@@ -213,7 +207,6 @@ declare const fullApi: ApiFromModules<{
   "notes/functions/deleteNote": typeof notes_functions_deleteNote;
   "notes/functions/enhanceNote": typeof notes_functions_enhanceNote;
   "notes/functions/getNote": typeof notes_functions_getNote;
-  "notes/functions/moveNote": typeof notes_functions_moveNote;
   "notes/functions/updateNote": typeof notes_functions_updateNote;
   "notes/functions/updateNoteContent": typeof notes_functions_updateNoteContent;
   "notes/mutations": typeof notes_mutations;
@@ -243,6 +236,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/getSidebarItemByName": typeof sidebarItems_functions_getSidebarItemByName;
   "sidebarItems/functions/getSidebarItemBySlug": typeof sidebarItems_functions_getSidebarItemBySlug;
   "sidebarItems/functions/getSidebarItemsByParent": typeof sidebarItems_functions_getSidebarItemsByParent;
+  "sidebarItems/functions/moveSidebarItem": typeof sidebarItems_functions_moveSidebarItem;
   "sidebarItems/functions/updateSidebarItem": typeof sidebarItems_functions_updateSidebarItem;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;
