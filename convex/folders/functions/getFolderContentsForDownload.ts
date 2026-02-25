@@ -35,9 +35,13 @@ async function collectItemsRecursively(
 ): Promise<Array<DownloadItem>> {
   const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
+  const permissionLevels = await Promise.all(
+    children.map((child) => getSidebarItemPermissionLevel(ctx, { item: child })),
+  )
 
-  for (const child of children) {
-    const level = await getSidebarItemPermissionLevel(ctx, { item: child })
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    const level = permissionLevels[i]
     if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)) continue
 
     if (child.type === SIDEBAR_ITEM_TYPES.files) {
@@ -63,7 +67,7 @@ async function collectItemsRecursively(
         ),
       )
       const content = visibleBlocks
-        .filter((block) => block !== null)
+        .filter((block): block is NonNullable<typeof block> => block !== null)
         .map((block) => block.content)
       items.push({
         type: SIDEBAR_ITEM_TYPES.notes,

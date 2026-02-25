@@ -110,17 +110,15 @@ export function SidebarItemMutationsProvider({
 
   const createItem = useCallback(
     async (args: CreateItemArgs): Promise<CreateItemResult> => {
-      const resolvedName = args.name.trim()
-      if (!resolvedName) throw new Error('Name is required')
-
-      const nameResult = validateName(resolvedName, args.parentId ?? undefined)
+      const trimmedName = args.name.trim()
+      const nameResult = validateName(trimmedName, args.parentId ?? undefined)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       switch (args.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
           const { noteId, slug } = await createNoteMutation({
             campaignId: args.campaignId,
-            name: resolvedName,
+            name: trimmedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -131,7 +129,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.folders: {
           const { folderId, slug } = await createFolderMutation({
             campaignId: args.campaignId,
-            name: resolvedName,
+            name: trimmedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -141,7 +139,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.gameMaps: {
           const { mapId, slug } = await createMapMutation({
             campaignId: args.campaignId,
-            name: resolvedName,
+            name: trimmedName,
             parentId: args.parentId,
             imageStorageId: args.imageStorageId,
             iconName: args.iconName,
@@ -152,7 +150,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.files: {
           const { fileId, slug } = await createFileMutation({
             campaignId: args.campaignId,
-            name: resolvedName,
+            name: trimmedName,
             parentId: args.parentId,
             storageId: args.storageId,
             iconName: args.iconName,
@@ -177,7 +175,11 @@ export function SidebarItemMutationsProvider({
   const rename = useCallback(
     (item: AnySidebarItem, newName: string) => {
       const trimmedName = newName.trim()
-      const result = validateName(trimmedName, item.parentId ?? undefined, item._id)
+      const result = validateName(
+        trimmedName,
+        item.parentId ?? undefined,
+        item._id,
+      )
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
@@ -248,12 +250,7 @@ export function SidebarItemMutationsProvider({
 
       return moveMutation
     },
-    [
-      canMoveToParent,
-      validateName,
-      optimisticUpdate,
-      moveSidebarItemMutation,
-    ],
+    [canMoveToParent, validateName, optimisticUpdate, moveSidebarItemMutation],
   )
 
   const deleteItem = useCallback(

@@ -83,18 +83,14 @@ export const isPlayer: Predicate = (ctx) => {
   return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.Player
 }
 
-export const hasFullAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'full_access'
-}
-
 export const hasViewAccess: Predicate = (ctx) => {
-  return (
-    ctx.permissionLevel === 'view' ||
-    ctx.permissionLevel === 'edit' ||
-    ctx.permissionLevel === 'full_access'
-  )
+  return ctx.permissionLevel === 'view' || hasEditAccess(ctx)
 }
 
 export const hasEditAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'edit' || ctx.permissionLevel === 'full_access'
+  return ctx.permissionLevel === 'edit' || hasFullAccess(ctx)
+}
+
+export const hasFullAccess: Predicate = (ctx) => {
+  return ctx.permissionLevel === 'full_access'
 }

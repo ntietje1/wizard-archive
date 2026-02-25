@@ -522,28 +522,33 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
           const zip = new JSZip()
 
-          const downloadPromises = items.map(async (item) => {
-            try {
-              if (item.type === SIDEBAR_ITEM_TYPES.files || item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-                if (!item.downloadUrl) {
-                  console.warn(`No download URL for: ${item.path}`)
-                  return
+          const downloadPromises: Array<Promise<void>> = items.map(
+            async (item) => {
+              try {
+                if (
+                  item.type === SIDEBAR_ITEM_TYPES.files ||
+                  item.type === SIDEBAR_ITEM_TYPES.gameMaps
+                ) {
+                  if (!item.downloadUrl) {
+                    console.warn(`No download URL for: ${item.path}`)
+                    return
+                  }
+                  const response = await fetch(item.downloadUrl)
+                  if (!response.ok) {
+                    console.warn(`Failed to fetch: ${item.path}`)
+                    return
+                  }
+                  const blob = await response.blob()
+                  zip.file(item.path, blob)
+                } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+                  const markdown = convertBlocksToMarkdown(item.content)
+                  zip.file(item.path, markdown)
                 }
-                const response = await fetch(item.downloadUrl)
-                if (!response.ok) {
-                  console.warn(`Failed to fetch: ${item.path}`)
-                  return
-                }
-                const blob = await response.blob()
-                zip.file(item.path, blob)
-              } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                const markdown = convertBlocksToMarkdown(item.content)
-                zip.file(item.path, markdown)
+              } catch (error) {
+                console.warn(`Failed to process: ${item.path}`, error)
               }
-            } catch (error) {
-              console.warn(`Failed to process: ${item.path}`, error)
-            }
-          })
+            },
+          )
 
           await Promise.all(downloadPromises)
 
@@ -594,7 +599,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         const downloadPromises = items.map(async (item) => {
           try {
-            if (item.type === SIDEBAR_ITEM_TYPES.files || item.type === SIDEBAR_ITEM_TYPES.gameMaps) {
+            if (
+              item.type === SIDEBAR_ITEM_TYPES.files ||
+              item.type === SIDEBAR_ITEM_TYPES.gameMaps
+            ) {
               if (!item.downloadUrl) {
                 console.warn(`No download URL for: ${item.path}`)
                 return
