@@ -36,7 +36,9 @@ async function collectItemsRecursively(
   const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
   const permissionLevels = await Promise.all(
-    children.map((child) => getSidebarItemPermissionLevel(ctx, { item: child })),
+    children.map((child) =>
+      getSidebarItemPermissionLevel(ctx, { item: child }),
+    ),
   )
 
   for (let i = 0; i < children.length; i++) {

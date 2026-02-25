@@ -46,7 +46,8 @@ export function useNameValidation({
 
   const nameValidation = useMemo(() => {
     if (!isActive) return { valid: true, error: undefined }
-    if (trimmedName === trimmedInitialName) return { valid: true, error: undefined }
+    if (trimmedName === trimmedInitialName)
+      return { valid: true, error: undefined }
     return validateItemName(trimmedName)
   }, [isActive, trimmedName, trimmedInitialName])
 

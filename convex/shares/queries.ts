@@ -111,10 +111,11 @@ export const getSidebarItemWithShares = dmQuery({
     const memberInheritedFromFolderNames: Record<string, string> = {}
     await Promise.all(
       playerMembers.map(async (member) => {
-        const { level, folderName } = await resolveInheritedPermissionWithSource(
-          ctx,
-          { parentId: item.parentId, memberId: member._id },
-        )
+        const { level, folderName } =
+          await resolveInheritedPermissionWithSource(ctx, {
+            parentId: item.parentId,
+            memberId: member._id,
+          })
         memberInheritedPermissions[member._id] = level ?? PERMISSION_LEVEL.NONE
         if (folderName) {
           memberInheritedFromFolderNames[member._id] = folderName

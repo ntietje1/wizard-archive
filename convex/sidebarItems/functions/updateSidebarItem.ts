@@ -34,7 +34,10 @@ export async function updateSidebarItem(
   if (name !== undefined) {
     const trimmedName = name.trim()
     updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, { item, newName: trimmedName })
+    newSlug = await validateSidebarItemRename(ctx, {
+      item,
+      newName: trimmedName,
+    })
     updates.slug = newSlug
   }
   if (iconName !== undefined) {
