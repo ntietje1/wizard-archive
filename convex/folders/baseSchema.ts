@@ -25,7 +25,7 @@ const folderValidatorFields = {
   ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
   inheritShares: v.boolean(),
-} as const
+}
 
 export const folderValidator = v.object(folderValidatorFields)
 

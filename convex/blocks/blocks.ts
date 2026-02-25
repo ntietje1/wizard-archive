@@ -1,7 +1,8 @@
 import { SHARE_STATUS } from '../shares/types'
+import type { WithoutSystemFields } from 'convex/server'
 import type { Block } from './types'
 import type { ShareStatus } from '../shares/types'
-import type { Id } from '../_generated/dataModel'
+import type { Doc, Id } from '../_generated/dataModel'
 import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { CustomBlock } from '../notes/editorSpecs'
 
@@ -69,7 +70,6 @@ export async function saveTopLevelBlocksForNote(
   { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<void> {
   const campaignId = ctx.campaign._id
-  const now = Date.now()
 
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')
@@ -93,12 +93,9 @@ export async function saveTopLevelBlocksForNote(
     if (existingBlock) {
       await updateBlock(ctx, {
         blockDbId: existingBlock._id,
-        updates: {
-          position: positions.get(block.id),
-          content: block,
-          isTopLevel: existingBlock.isTopLevel,
-          updatedAt: now,
-        },
+        position: positions.get(block.id),
+        content: block,
+        isTopLevel: existingBlock.isTopLevel,
       })
     } else {
       await insertBlock(ctx, {
@@ -108,7 +105,6 @@ export async function saveTopLevelBlocksForNote(
         isTopLevel: true,
         position: positions.get(block.id),
         content: block,
-        now,
         shareStatus: SHARE_STATUS.NOT_SHARED,
       })
     }
@@ -130,10 +126,10 @@ export async function insertBlock(
     isTopLevel: boolean
     position?: number
     content: CustomBlock
-    now: number
     shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {
+  const now = Date.now()
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
     campaignId: params.campaignId,
@@ -141,28 +137,37 @@ export async function insertBlock(
     position: params.position,
     content: params.content,
     isTopLevel: params.isTopLevel,
-    updatedAt: params.now,
     shareStatus: params.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+    createdBy: ctx.user.profile._id,
   })
 }
 
 export async function updateBlock(
   ctx: CampaignMutationCtx,
-  {
-    blockDbId,
-    updates,
-  }: {
+  params: {
     blockDbId: Id<'blocks'>
-    updates: {
-      position?: number
-      content?: CustomBlock
-      isTopLevel?: boolean
-      shareStatus?: ShareStatus
-      updatedAt?: number
-    }
+    position?: number
+    content?: CustomBlock
+    isTopLevel?: boolean
+    shareStatus?: ShareStatus
   },
 ): Promise<void> {
-  await ctx.db.patch(blockDbId, updates)
+  const { blockDbId, ...fields } = params
+  const updates: Partial<WithoutSystemFields<Doc<'blocks'>>> = {}
+  if (fields.position !== undefined) updates.position = fields.position
+  if (fields.content !== undefined) updates.content = fields.content
+  if (fields.isTopLevel !== undefined) updates.isTopLevel = fields.isTopLevel
+  if (fields.shareStatus !== undefined) updates.shareStatus = fields.shareStatus
+
+  if (Object.keys(updates).length > 0) {
+    await ctx.db.patch(blockDbId, {
+      ...updates,
+      updatedTime: Date.now(),
+      updatedBy: ctx.user.profile._id,
+    })
+  }
 }
 
 /**

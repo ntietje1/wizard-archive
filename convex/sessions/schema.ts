@@ -21,6 +21,6 @@ export const sessionTables = {
 const sessionValidatorFields = {
   ...commonValidatorFields('sessions'),
   ...sessionTableFields,
-} as const
+}
 
 export const sessionValidator = v.object(sessionValidatorFields)

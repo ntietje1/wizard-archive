@@ -25,6 +25,6 @@ export const userTables = {
 const userProfileValidatorFields = {
   ...convexValidatorFields('userProfiles'),
   ...userProfileTableFields,
-} as const
+}
 
 export const userProfileValidator = v.object(userProfileValidatorFields)

@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
 import {
   permissionLevelValidator,
   sidebarItemIdValidator,
@@ -13,6 +14,7 @@ const sidebarItemShareTableFields = {
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.optional(v.id('sessions')),
   permissionLevel: v.optional(permissionLevelValidator),
+  ...commonTableFields,
 }
 
 const blockShareTableFields = {
@@ -20,6 +22,7 @@ const blockShareTableFields = {
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.optional(v.id('sessions')),
+  ...commonTableFields,
 }
 
 export const shareTables = {
@@ -47,16 +50,14 @@ export const shareTables = {
 }
 
 const sidebarItemShareValidatorFields = {
-  _id: v.id('sidebarItemShares'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('sidebarItemShares'),
   ...sidebarItemShareTableFields,
-} as const
+}
 
 const blockShareValidatorFields = {
-  _id: v.id('blockShares'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('blockShares'),
   ...blockShareTableFields,
-} as const
+}
 
 export const sidebarItemShareValidator = v.object(
   sidebarItemShareValidatorFields,

@@ -25,6 +25,6 @@ export const bookmarkTables = {
 const bookmarkValidatorFields = {
   ...commonValidatorFields('bookmarks'),
   ...bookmarkTableFields,
-} as const
+}
 
 export const bookmarkValidator = v.object(bookmarkValidatorFields)

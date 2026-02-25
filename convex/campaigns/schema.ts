@@ -53,7 +53,7 @@ export const campaignTables = {
 const campaignMemberValidatorFields = {
   ...commonValidatorFields('campaignMembers'),
   ...campaignMemberTableFields,
-} as const
+}
 
 export const campaignMemberValidator = v.object({
   ...campaignMemberValidatorFields,
@@ -66,6 +66,6 @@ const campaignValidatorFields = {
   myMembership: v.optional(campaignMemberValidator),
   playerCount: v.number(),
   ...campaignTableFields,
-} as const
+}
 
 export const campaignValidator = v.object(campaignValidatorFields)

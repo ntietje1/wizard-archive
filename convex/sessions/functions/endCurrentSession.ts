@@ -18,7 +18,7 @@ export async function endCurrentSession(
     updatedBy: ctx.user.profile._id,
   })
   await ctx.db.patch(ctx.campaign._id, {
-    currentSessionId: undefined,
+    currentSessionId: null,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })

@@ -75,7 +75,7 @@ interface SharePermissionMenuProps {
   isPending: boolean
   isMutating: boolean
   shareItems: Array<ShareItemWithPermission>
-  allPlayersPermissionLevel: PermissionLevel | undefined
+  allPlayersPermissionLevel: PermissionLevel | null
   inheritedAllPermissionLevel?: PermissionLevel
   inheritedFromFolderName?: string
   isFolder?: boolean
@@ -85,9 +85,7 @@ interface SharePermissionMenuProps {
     level: PermissionLevel,
   ) => Promise<void>
   onClearMemberPermission: (memberId: Id<'campaignMembers'>) => Promise<void>
-  onSetAllPlayersPermission: (
-    level: PermissionLevel | undefined,
-  ) => Promise<void>
+  onSetAllPlayersPermission: (level: PermissionLevel | null) => Promise<void>
   onSetInheritShares?: (enabled: boolean) => Promise<void>
 }
 
@@ -130,7 +128,7 @@ export function SharePermissionMenu({
     }
     if (
       item.inheritedFromFolderName &&
-      allPlayersPermissionLevel === undefined
+      allPlayersPermissionLevel === null
     ) {
       return `${name}'s access is based on ${item.inheritedFromFolderName}`
     }
@@ -149,12 +147,12 @@ export function SharePermissionMenu({
   }
 
   const effectiveAllLabel =
-    allPlayersPermissionLevel !== undefined
+    allPlayersPermissionLevel !== null
       ? permissionLabel(allPlayersPermissionLevel)
       : permissionLabel(inheritedAllPermissionLevel)
 
   const isInheritingAll =
-    allPlayersPermissionLevel === undefined &&
+    allPlayersPermissionLevel === null &&
     inheritedAllPermissionLevel !== undefined
 
   return (
@@ -195,7 +193,7 @@ export function SharePermissionMenu({
         inheritedFromFolderName={inheritedFromFolderName}
         onToggleExpand={() => setShowPlayers((prev) => !prev)}
         onChange={(val) =>
-          onSetAllPlayersPermission(val === 'default' ? undefined : val)
+          onSetAllPlayersPermission(val === 'default' ? null : val)
         }
       />
 

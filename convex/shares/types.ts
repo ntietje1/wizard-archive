@@ -30,6 +30,9 @@ export type SidebarItemShare = {
   campaignMemberId: Id<'campaignMembers'>
   sessionId?: Id<'sessions'>
   permissionLevel?: PermissionLevel
+  updatedTime: number
+  updatedBy: Id<'userProfiles'>
+  createdBy: Id<'userProfiles'>
 }
 
 export type BlockShare = {
@@ -39,6 +42,9 @@ export type BlockShare = {
   blockId: Id<'blocks'>
   campaignMemberId: Id<'campaignMembers'>
   sessionId?: Id<'sessions'>
+  updatedTime: number
+  updatedBy: Id<'userProfiles'>
+  createdBy: Id<'userProfiles'>
 }
 
 // Block-specific share status (sidebar items no longer use this)

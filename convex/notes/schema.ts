@@ -6,6 +6,8 @@ import {
 } from '../sidebarItems/schema/baseFields'
 import { commonValidatorFields } from '../common/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { permissionLevelValidator } from '../sidebarItems/schema/baseValidators'
+import { blockShareStatusValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteTableFields = {
@@ -31,17 +33,8 @@ const noteValidatorFields = {
 export const noteValidator = v.object(noteValidatorFields)
 
 const blockMetaValidator = v.object({
-  myPermissionLevel: v.union(
-    v.literal('none'),
-    v.literal('view'),
-    v.literal('edit'),
-    v.literal('full_access'),
-  ),
-  shareStatus: v.union(
-    v.literal('all_shared'),
-    v.literal('not_shared'),
-    v.literal('individually_shared'),
-  ),
+  myPermissionLevel: permissionLevelValidator,
+  shareStatus: blockShareStatusValidator,
   sharedWith: v.array(v.id('campaignMembers')),
 })
 

@@ -19,7 +19,7 @@ export interface ShareItemWithPermission extends ShareItem {
 
 interface SidebarItemShareInfo {
   itemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'>
-  allPermissionLevel?: PermissionLevel
+  allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
   inheritedAllPermissionLevel?: PermissionLevel
@@ -324,11 +324,11 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     [items, itemShareInfoMap],
   )
 
-  // Get the explicit "all players" permission level (undefined = inheriting)
-  const allPlayersPermissionLevel: PermissionLevel | undefined = useMemo(() => {
-    if (items.length === 0) return undefined
+  // Get the explicit "all players" permission level (null = inheriting)
+  const allPlayersPermissionLevel: PermissionLevel | null = useMemo(() => {
+    if (items.length === 0) return null
     const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return undefined
+    if (!info) return null
     return info.allPermissionLevel
   }, [items, itemShareInfoMap])
 
@@ -408,7 +408,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   // Set all players' permission level
   const setAllPlayersPermission = useCallback(
-    async (level: PermissionLevel | undefined) => {
+    async (level: PermissionLevel | null) => {
       if (!campaignData?._id || isMutating || items.length === 0) return
 
       try {

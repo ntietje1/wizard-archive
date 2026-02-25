@@ -151,13 +151,19 @@ export async function shareSidebarItemWithMember(
     )
     .unique()
 
+  const now = Date.now()
+
   if (existingShare) {
     // Update permission level if provided and different
     if (
       permissionLevel !== undefined &&
       existingShare.permissionLevel !== permissionLevel
     ) {
-      await ctx.db.patch(existingShare._id, { permissionLevel })
+      await ctx.db.patch(existingShare._id, {
+        permissionLevel,
+        updatedTime: now,
+        updatedBy: ctx.user.profile._id,
+      })
     }
     return existingShare._id
   }
@@ -172,6 +178,9 @@ export async function shareSidebarItemWithMember(
     campaignMemberId,
     sessionId: currentSession?._id,
     permissionLevel,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+    createdBy: ctx.user.profile._id,
   })
 }
 

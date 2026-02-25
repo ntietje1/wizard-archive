@@ -8,7 +8,7 @@ import { userTables } from './users/schema'
 import { sessionTables } from './sessions/schema'
 import { shareTables } from './shares/schema'
 import { fileStorageTables } from './storage/schema'
-import { mapTables } from './gameMaps/baseSchema'
+import { gameMapsTables } from './gameMaps/baseSchema'
 import { filesTables } from './files/schema'
 import { bookmarkTables } from './bookmarks/schema'
 
@@ -19,7 +19,7 @@ export default defineSchema({
   ...editorTables,
   ...campaignTables,
   ...userTables,
-  ...mapTables,
+  ...gameMapsTables,
   ...sessionTables,
   ...shareTables,
   ...fileStorageTables,

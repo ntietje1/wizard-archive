@@ -24,6 +24,7 @@ export async function setCurrentSession(
     })
   }
 
+  // Remove endedAt to mark session as active (undefined removes the optional field)
   await ctx.db.patch(sessionId, {
     endedAt: undefined,
     updatedTime: now,

@@ -70,7 +70,7 @@ export type ActionHandlers = {
   // Share actions
   setGeneralAccessLevel: (
     ctx: MenuContext,
-    level: PermissionLevel | undefined,
+    level: PermissionLevel | null,
   ) => void
 
   // Download actions

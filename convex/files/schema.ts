@@ -30,7 +30,7 @@ const fileValidatorFields = {
   storageId: v.union(v.id('_storage'), v.null()),
   downloadUrl: v.union(v.string(), v.null()),
   contentType: v.union(v.string(), v.null()),
-} as const
+}
 
 export const fileValidator = v.object(fileValidatorFields)
 

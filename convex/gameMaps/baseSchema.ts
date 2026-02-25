@@ -20,7 +20,7 @@ const mapValidatorFields = {
   imageStorageId: v.union(v.id('_storage'), v.null()),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   imageUrl: v.union(v.string(), v.null()),
-} as const
+}
 
 export const mapValidator = v.object(mapValidatorFields)
 
@@ -36,11 +36,11 @@ export const mapPinTableFields = {
 const mapPinValidatorFields = {
   ...commonValidatorFields('mapPins'),
   ...mapPinTableFields,
-} as const
+}
 
 export const mapPinValidator = v.object(mapPinValidatorFields)
 
-export const mapTables = {
+export const gameMapsTables = {
   gameMaps: defineTable({
     ...mapTableFields,
   })

@@ -9,6 +9,8 @@
  */
 
 import type * as blocks_blocks from "../blocks/blocks.js";
+import type * as blocks_functions_getBlockWithShares from "../blocks/functions/getBlockWithShares.js";
+import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
 import type * as bookmarks_functions_deleteItemBookmarks from "../bookmarks/functions/deleteItemBookmarks.js";
@@ -90,6 +92,15 @@ import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
 import type * as shares_blockShares from "../shares/blockShares.js";
+import type * as shares_functions_getSidebarItemShares from "../shares/functions/getSidebarItemShares.js";
+import type * as shares_functions_getSidebarItemWithShares from "../shares/functions/getSidebarItemWithShares.js";
+import type * as shares_functions_setAllPlayersPermission from "../shares/functions/setAllPlayersPermission.js";
+import type * as shares_functions_setBlocksShareStatus from "../shares/functions/setBlocksShareStatus.js";
+import type * as shares_functions_setFolderInheritShares from "../shares/functions/setFolderInheritShares.js";
+import type * as shares_functions_shareBlocks from "../shares/functions/shareBlocks.js";
+import type * as shares_functions_shareSidebarItem from "../shares/functions/shareSidebarItem.js";
+import type * as shares_functions_unshareBlocks from "../shares/functions/unshareBlocks.js";
+import type * as shares_functions_unshareSidebarItem from "../shares/functions/unshareSidebarItem.js";
 import type * as shares_itemShares from "../shares/itemShares.js";
 import type * as shares_mutations from "../shares/mutations.js";
 import type * as shares_queries from "../shares/queries.js";
@@ -143,6 +154,8 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   "blocks/blocks": typeof blocks_blocks;
+  "blocks/functions/getBlockWithShares": typeof blocks_functions_getBlockWithShares;
+  "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
   "bookmarks/functions/deleteItemBookmarks": typeof bookmarks_functions_deleteItemBookmarks;
@@ -224,6 +237,15 @@ declare const fullApi: ApiFromModules<{
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
   "shares/blockShares": typeof shares_blockShares;
+  "shares/functions/getSidebarItemShares": typeof shares_functions_getSidebarItemShares;
+  "shares/functions/getSidebarItemWithShares": typeof shares_functions_getSidebarItemWithShares;
+  "shares/functions/setAllPlayersPermission": typeof shares_functions_setAllPlayersPermission;
+  "shares/functions/setBlocksShareStatus": typeof shares_functions_setBlocksShareStatus;
+  "shares/functions/setFolderInheritShares": typeof shares_functions_setFolderInheritShares;
+  "shares/functions/shareBlocks": typeof shares_functions_shareBlocks;
+  "shares/functions/shareSidebarItem": typeof shares_functions_shareSidebarItem;
+  "shares/functions/unshareBlocks": typeof shares_functions_unshareBlocks;
+  "shares/functions/unshareSidebarItem": typeof shares_functions_unshareSidebarItem;
   "shares/itemShares": typeof shares_itemShares;
   "shares/mutations": typeof shares_mutations;
   "shares/queries": typeof shares_queries;

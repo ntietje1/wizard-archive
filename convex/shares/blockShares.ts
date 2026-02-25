@@ -73,12 +73,9 @@ export async function setBlockShareStatusHelper(
   if (existingBlock) {
     await updateBlock(ctx, {
       blockDbId: existingBlock._id,
-      updates: {
-        content: blockItem.content,
-        shareStatus: status,
-        isTopLevel: true,
-        updatedAt: Date.now(),
-      },
+      content: blockItem.content,
+      shareStatus: status,
+      isTopLevel: true,
     })
     blockId = existingBlock._id
   } else {
@@ -89,7 +86,6 @@ export async function setBlockShareStatusHelper(
       shareStatus: status,
       isTopLevel: true,
       noteId,
-      now: Date.now(),
     })
   }
 
@@ -133,12 +129,9 @@ export async function shareBlockWithMemberHelper(
   if (existingBlock) {
     await updateBlock(ctx, {
       blockDbId: existingBlock._id,
-      updates: {
-        content: blockItem.content,
-        isTopLevel: true,
-        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-        updatedAt: Date.now(),
-      },
+      content: blockItem.content,
+      isTopLevel: true,
+      shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
     })
     blockId = existingBlock._id
   } else {
@@ -148,7 +141,6 @@ export async function shareBlockWithMemberHelper(
       content: blockItem.content,
       isTopLevel: true,
       noteId,
-      now: Date.now(),
       shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
     })
   }
@@ -190,6 +182,8 @@ export async function unshareBlockFromMemberHelper(
   if (!remainingShares) {
     await ctx.db.patch(block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
+      updatedTime: Date.now(),
+      updatedBy: ctx.user.profile._id,
     })
     await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
@@ -227,12 +221,16 @@ export async function shareBlockWithMember(
 
   // Get current session if any
   const currentSession = await getCurrentSession(ctx)
+  const now = Date.now()
 
   return await ctx.db.insert('blockShares', {
     campaignId,
     blockId,
     campaignMemberId,
     sessionId: currentSession?._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+    createdBy: ctx.user.profile._id,
   })
 }
 

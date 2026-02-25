@@ -33,6 +33,6 @@ export const editorTables = {
 const editorValidatorFields = {
   ...commonValidatorFields('editor'),
   ...editorTableFields,
-} as const
+}
 
 export const editorValidator = v.object(editorValidatorFields)

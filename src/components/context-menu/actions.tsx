@@ -383,7 +383,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     }, [campaignId, endCurrentSession]),
 
     setGeneralAccessLevel: useCallback(
-      async (ctx: MenuContext, level: PermissionLevel | undefined) => {
+      async (ctx: MenuContext, level: PermissionLevel | null) => {
         if (!campaignId || !ctx.item) return
 
         try {
@@ -392,7 +392,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             sidebarItemId: ctx.item._id,
             permissionLevel: level,
           })
-          if (level === undefined) {
+          if (level === null) {
             toast.success('Reset to default access')
           } else if (level === PERMISSION_LEVEL.NONE) {
             toast.success('Access set to none')
