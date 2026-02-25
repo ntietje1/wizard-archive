@@ -1,71 +1,37 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
-import { FILE_STORAGE_STATUS } from './types'
-import { validateFileUpload } from './validation'
+import { authMutation } from '../functions'
+import { trackUpload as trackUploadFn } from './functions/trackUpload'
+import { commitUpload as commitUploadFn } from './functions/commitUpload'
 import type { Id } from '../_generated/dataModel'
 
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = authMutation({
+  args: {},
   returns: v.string(),
   handler: async (ctx): Promise<string> => {
     return await ctx.storage.generateUploadUrl()
   },
 })
 
-export const trackUpload = mutation({
+export const trackUpload = authMutation({
   args: {
     storageId: v.id('_storage'),
     originalFileName: v.optional(v.string()),
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    const { profile } = await requireUserIdentity(ctx)
-    return await ctx.db.insert('fileStorage', {
-      status: FILE_STORAGE_STATUS.Uncommitted,
-      userId: profile._id,
-      updatedAt: Date.now(),
+    return trackUploadFn(ctx, {
       storageId: args.storageId,
       originalFileName: args.originalFileName,
     })
   },
 })
 
-export const commitUpload = mutation({
+export const commitUpload = authMutation({
   args: {
     storageId: v.id('_storage'),
   },
   returns: v.id('fileStorage'),
   handler: async (ctx, args): Promise<Id<'fileStorage'>> => {
-    const { profile } = await requireUserIdentity(ctx)
-    const fileStorage = await ctx.db
-      .query('fileStorage')
-      .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
-      )
-      .unique()
-    if (!fileStorage) {
-      throw new Error('File storage not found')
-    }
-
-    // Validate file before committing
-    const storageMetadata = await ctx.db.system.get(args.storageId)
-    if (!storageMetadata) {
-      throw new Error('Storage metadata not found')
-    }
-
-    const validation = validateFileUpload(
-      storageMetadata.contentType ?? null,
-      storageMetadata.size,
-      fileStorage.originalFileName,
-    )
-    if (!validation.success) {
-      throw new Error(validation.error)
-    }
-
-    await ctx.db.patch(fileStorage._id, {
-      status: FILE_STORAGE_STATUS.Committed,
-      updatedAt: Date.now(),
-    })
-    return fileStorage._id
+    return commitUploadFn(ctx, { storageId: args.storageId })
   },
 })

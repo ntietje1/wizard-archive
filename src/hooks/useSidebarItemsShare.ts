@@ -3,9 +3,9 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import type { PermissionLevel } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/hooks/useBlocksShare'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -19,11 +19,11 @@ export interface ShareItemWithPermission extends ShareItem {
 
 interface SidebarItemShareInfo {
   itemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'>
-  allPermissionLevel?: PermissionLevel
+  allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
-  inheritedAllPermissionLevel?: PermissionLevel
-  inheritedFromFolderName?: string
+  inheritedAllPermissionLevel: PermissionLevel | null
+  inheritedFromFolderName: string | null
   memberInheritedPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Map<Id<'campaignMembers'>, string>
 }
@@ -34,18 +34,18 @@ interface SidebarItemShareInfo {
  * Currently queries each item individually but aggregates the results.
  */
 export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
-  const { campaignWithMembership, isDm } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign, isDm } = useCampaign()
+  const campaignData = campaign.data
 
   // For now, we only support single item selection
   const singleItem = items.length === 1 ? items[0] : undefined
 
   const query = useQuery(
     convexQuery(
-      api.shares.queries.getSidebarItemWithShares,
-      campaign?._id && singleItem && isDm
+      api.sidebarShares.queries.getSidebarItemWithShares,
+      campaignData?._id && singleItem && isDm
         ? {
-            campaignId: campaign._id,
+            campaignId: campaignData._id,
             sidebarItemId: singleItem._id,
           }
         : 'skip',
@@ -53,21 +53,27 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   )
 
   const shareSidebarItem = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.shareSidebarItem),
+    mutationFn: useConvexMutation(api.sidebarShares.mutations.shareSidebarItem),
   })
   const unshareSidebarItem = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.unshareSidebarItem),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.unshareSidebarItem,
+    ),
   })
   const updateSharePermission = useMutation({
     mutationFn: useConvexMutation(
-      api.shares.mutations.updateSidebarItemSharePermission,
+      api.sidebarShares.mutations.updateSidebarItemSharePermission,
     ),
   })
   const setAllPlayersPermissionMutation = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setAllPlayersPermission),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.setAllPlayersPermission,
+    ),
   })
   const setFolderInheritSharesMutation = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setFolderInheritShares),
+    mutationFn: useConvexMutation(
+      api.sidebarShares.mutations.setFolderInheritShares,
+    ),
   })
   const isMutating =
     shareSidebarItem.isPending ||
@@ -192,7 +198,12 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   // Toggle allPermissionLevel between 'none' and 'view'
   const toggleShareStatus = useCallback(async () => {
-    if (!campaign?._id || isMutating || items.length === 0 || !hasCompleteData)
+    if (
+      !campaignData?._id ||
+      isMutating ||
+      items.length === 0 ||
+      !hasCompleteData
+    )
       return
 
     try {
@@ -203,7 +214,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       await Promise.all(
         items.map((item) =>
           setAllPlayersPermissionMutation.mutateAsync({
-            campaignId: campaign._id,
+            campaignId: campaignData._id,
             sidebarItemId: item._id,
             permissionLevel: newLevel,
           }),
@@ -224,7 +235,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       toast.error('Failed to toggle share')
     }
   }, [
-    campaign?._id,
+    campaignData?._id,
     isMutating,
     items,
     hasCompleteData,
@@ -237,7 +248,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const toggleShareWithMember = useCallback(
     async (memberId: Id<'campaignMembers'>) => {
       if (
-        !campaign?._id ||
+        !campaignData?._id ||
         isMutating ||
         items.length === 0 ||
         !hasCompleteData
@@ -252,7 +263,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
           await Promise.all(
             items.map((item) =>
               unshareSidebarItem.mutateAsync({
-                campaignId: campaign._id,
+                campaignId: campaignData._id,
                 sidebarItemId: item._id,
                 campaignMemberId: memberId,
               }),
@@ -271,7 +282,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
           await Promise.all(
             itemsToShare.map((item) =>
               shareSidebarItem.mutateAsync({
-                campaignId: campaign._id,
+                campaignId: campaignData._id,
                 sidebarItemId: item._id,
                 sidebarItemType: item.type,
                 campaignMemberId: memberId,
@@ -286,7 +297,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       }
     },
     [
-      campaign?._id,
+      campaignData?._id,
       isMutating,
       items,
       hasCompleteData,
@@ -310,7 +321,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         return info.memberPermissions.get(memberId) ?? 'view'
       }
       // Fall back to allPermissionLevel
-      if (info.allPermissionLevel !== undefined) {
+      if (info.allPermissionLevel !== null) {
         return info.allPermissionLevel
       }
       // Fall back to pre-computed inherited permission for this member
@@ -319,28 +330,27 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     [items, itemShareInfoMap],
   )
 
-  // Get the explicit "all players" permission level (undefined = inheriting)
-  const allPlayersPermissionLevel: PermissionLevel | undefined = useMemo(() => {
-    if (items.length === 0) return undefined
+  // Get the explicit "all players" permission level (null = inheriting)
+  const allPlayersPermissionLevel: PermissionLevel | null = useMemo(() => {
+    if (items.length === 0) return null
     const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return undefined
+    if (!info) return null
     return info.allPermissionLevel
   }, [items, itemShareInfoMap])
 
   // Get the inherited permission level from ancestor folder (if any)
-  const inheritedAllPermissionLevel: PermissionLevel | undefined =
-    useMemo(() => {
-      if (items.length === 0) return undefined
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return undefined
-      return info.inheritedAllPermissionLevel
-    }, [items, itemShareInfoMap])
+  const inheritedAllPermissionLevel: PermissionLevel | null = useMemo(() => {
+    if (items.length === 0) return null
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return null
+    return info.inheritedAllPermissionLevel
+  }, [items, itemShareInfoMap])
 
   // Get the name of the folder providing inherited all-players permission
-  const inheritedFromFolderName: string | undefined = useMemo(() => {
-    if (items.length === 0) return undefined
+  const inheritedFromFolderName: string | null = useMemo(() => {
+    if (items.length === 0) return null
     const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return undefined
+    if (!info) return null
     return info.inheritedFromFolderName
   }, [items, itemShareInfoMap])
 
@@ -354,11 +364,11 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   // Toggle inheritShares on a folder
   const setInheritShares = useCallback(
     async (enabled: boolean) => {
-      if (!campaign?._id || isMutating || !singleItem || !isFolder) return
+      if (!campaignData?._id || isMutating || !singleItem || !isFolder) return
 
       try {
         await setFolderInheritSharesMutation.mutateAsync({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           folderId: singleItem._id,
           inheritShares: enabled,
         })
@@ -368,7 +378,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       }
     },
     [
-      campaign?._id,
+      campaignData?._id,
       isMutating,
       singleItem,
       isFolder,
@@ -379,13 +389,13 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   // Set a specific member's permission level
   const setMemberPermission = useCallback(
     async (memberId: Id<'campaignMembers'>, level: PermissionLevel) => {
-      if (!campaign?._id || isMutating || items.length === 0) return
+      if (!campaignData?._id || isMutating || items.length === 0) return
 
       try {
         await Promise.all(
           items.map((item) =>
             updateSharePermission.mutateAsync({
-              campaignId: campaign._id,
+              campaignId: campaignData._id,
               sidebarItemId: item._id,
               sidebarItemType: item.type,
               campaignMemberId: memberId,
@@ -398,19 +408,19 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.error('Failed to update permission')
       }
     },
-    [campaign?._id, isMutating, items, updateSharePermission],
+    [campaignData?._id, isMutating, items, updateSharePermission],
   )
 
   // Set all players' permission level
   const setAllPlayersPermission = useCallback(
-    async (level: PermissionLevel | undefined) => {
-      if (!campaign?._id || isMutating || items.length === 0) return
+    async (level: PermissionLevel | null) => {
+      if (!campaignData?._id || isMutating || items.length === 0) return
 
       try {
         await Promise.all(
           items.map((item) =>
             setAllPlayersPermissionMutation.mutateAsync({
-              campaignId: campaign._id,
+              campaignId: campaignData._id,
               sidebarItemId: item._id,
               permissionLevel: level,
             }),
@@ -421,7 +431,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.error('Failed to update permissions')
       }
     },
-    [campaign?._id, isMutating, items, setAllPlayersPermissionMutation],
+    [campaignData?._id, isMutating, items, setAllPlayersPermissionMutation],
   )
 
   // Check if a specific member has an explicit share override
@@ -438,13 +448,13 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   // Clear a specific member's explicit share override (revert to default)
   const clearMemberPermission = useCallback(
     async (memberId: Id<'campaignMembers'>) => {
-      if (!campaign?._id || isMutating || items.length === 0) return
+      if (!campaignData?._id || isMutating || items.length === 0) return
 
       try {
         await Promise.all(
           items.map((item) =>
             unshareSidebarItem.mutateAsync({
-              campaignId: campaign._id,
+              campaignId: campaignData._id,
               sidebarItemId: item._id,
               campaignMemberId: memberId,
             }),
@@ -455,7 +465,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.error('Failed to clear permission override')
       }
     },
-    [campaign?._id, isMutating, items, unshareSidebarItem],
+    [campaignData?._id, isMutating, items, unshareSidebarItem],
   )
 
   // Get what a player would resolve to if their explicit share is removed.
@@ -466,7 +476,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       const info = itemShareInfoMap.get(items[0]._id)
       if (!info) return 'none'
       // If item has explicit allPermissionLevel, that takes effect
-      if (info.allPermissionLevel !== undefined) return info.allPermissionLevel
+      if (info.allPermissionLevel !== null) return info.allPermissionLevel
       // Otherwise, fall back to the per-member inherited level from ancestors
       return info.memberInheritedPermissions.get(memberId) ?? 'none'
     },

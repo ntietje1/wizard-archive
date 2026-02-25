@@ -1,16 +1,14 @@
 import { BlockNoteEditor, nodeToBlock } from '@blocknote/core'
 import { ProsemirrorSync } from '@convex-dev/prosemirror-sync'
 import { components } from './_generated/api'
-import { saveTopLevelBlocksForNote } from './blocks/blocks'
-import {
-  requireEditPermission,
-  requireViewPermission,
-} from './shares/itemShares'
+import { saveTopLevelBlocksForNote } from './blocks/functions/saveTopLevelBlocksForNote'
+import { requireItemAccess } from './sidebarItems/validation'
+import { PERMISSION_LEVEL } from './permissions/types'
 import { editorSchema } from './notes/editorSpecs'
-import { enhanceSidebarItem } from './sidebarItems/helpers'
+import { buildCampaignMutationCtx, buildCampaignQueryCtx } from './functions'
+import type { PermissionLevel } from './permissions/types'
 import type { Id } from './_generated/dataModel'
-import type { Ctx } from './common/types'
-import type { MutationCtx } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { CustomBlock } from './notes/editorSpecs'
 
 export const prosemirrorSync = new ProsemirrorSync(components.prosemirrorSync)
@@ -30,20 +28,18 @@ export const EMPTY_PM_DOC = {
   ],
 }
 
-async function checkReadAccess(ctx: Ctx, documentId: string) {
+async function checkAccess(
+  ctx: QueryCtx,
+  { documentId, level }: { documentId: string; level: PermissionLevel },
+) {
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
-  const note = await enhanceSidebarItem(ctx, noteFromDb)
-  await requireViewPermission(ctx, note)
-}
-
-async function checkWriteAccess(ctx: Ctx, documentId: string) {
-  const noteId = documentId as Id<'notes'>
-  const noteFromDb = await ctx.db.get(noteId)
-  if (!noteFromDb) throw new Error('Note not found')
-  const note = await enhanceSidebarItem(ctx, noteFromDb)
-  await requireEditPermission(ctx, note)
+  const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
+  await requireItemAccess(campaignCtx, {
+    rawItem: noteFromDb,
+    requiredLevel: level,
+  })
 }
 
 function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
@@ -63,16 +59,24 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
 }
 
 const sync = prosemirrorSync.syncApi({
-  checkRead: checkReadAccess,
-  checkWrite: checkWriteAccess,
+  checkRead: (ctx, id) =>
+    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.VIEW }),
+  checkWrite: (ctx, id) =>
+    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.EDIT }),
   onSnapshot: async (
     ctx: MutationCtx,
     documentId: string,
     snapshot: string,
   ) => {
     const noteId = documentId as Id<'notes'>
+    const noteFromDb = await ctx.db.get(noteId)
+    if (!noteFromDb) throw new Error('Note not found')
+    const campaignCtx = await buildCampaignMutationCtx(
+      ctx,
+      noteFromDb.campaignId,
+    )
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(ctx, noteId, blocks)
+    await saveTopLevelBlocksForNote(campaignCtx, { noteId, content: blocks })
   },
 })
 

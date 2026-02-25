@@ -49,8 +49,8 @@ export function MdLinkClickHandler({
 }) {
   const navigate = useNavigate()
   const { navigateToNote } = useEditorNavigation()
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
   const { editorMode } = useEditorMode()
   const { parentItemsMap } = useAllSidebarItems()
   const editorEl = useEditorDomElement(editor)
@@ -204,7 +204,7 @@ export function MdLinkClickHandler({
         !mdLink.exists &&
         isCtrlClick &&
         mdLink.itemName &&
-        campaign?._id
+        campaignData?._id
       ) {
         e.preventDefault()
         e.stopPropagation()
@@ -220,7 +220,7 @@ export function MdLinkClickHandler({
         }
         try {
           const result = await createNote({
-            campaignId: campaign._id,
+            campaignId: campaignData._id,
             name: mdLink.itemName,
           })
           if (result) navigateToNote(result.slug)
@@ -236,7 +236,7 @@ export function MdLinkClickHandler({
   }, [
     editorEl,
     navigate,
-    campaign?._id,
+    campaignData?._id,
     createNote,
     navigateToNote,
     editorMode,

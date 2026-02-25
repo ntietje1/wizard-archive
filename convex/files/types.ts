@@ -4,14 +4,14 @@ import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/baseTypes'
+} from '../sidebarItems/types/baseTypes'
 
 export type FileFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.files> & {
-  storageId?: Id<'_storage'>
+  storageId: Id<'_storage'> | null
 }
 
-export type File = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
-  storageId?: Id<'_storage'>
+export type SidebarFile = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
+  storageId: Id<'_storage'> | null
   downloadUrl: string | null
   contentType: string | null
 }
@@ -19,7 +19,7 @@ export type File = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
 export type FileWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.files
 > & {
-  storageId?: Id<'_storage'>
+  storageId: Id<'_storage'> | null
   downloadUrl: string | null
   contentType: string | null
 }

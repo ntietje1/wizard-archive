@@ -8,7 +8,7 @@ import React, {
 import { groupConfig } from '../menu-registry'
 import { useEditorContextMenu } from '../hooks/useEditorContextMenu'
 import { EditorContextMenuProvider } from './EditorContextMenuProvider'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { MenuItemDef, ViewContext } from '../types'
 import {
   ContextMenuContent,

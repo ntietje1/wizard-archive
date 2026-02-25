@@ -4,12 +4,16 @@ import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import {
   checkNameConflict,
+  validateItemName,
   validateNoCircularParent,
-  validateWikiLinkCompatibleName,
 } from 'convex/sidebarItems/sharedValidation'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type {
+  SidebarItemId,
+  SidebarItemType,
+} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   CreateItemArgs,
@@ -26,8 +30,7 @@ export function SidebarItemMutationsProvider({
   children: React.ReactNode
 }) {
   const { itemsMap, parentItemsMap } = useAllSidebarItems()
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const queryClient = useQueryClient()
 
   const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
@@ -39,10 +42,9 @@ export function SidebarItemMutationsProvider({
   const updateSidebarItemMutation = useConvexMutation(
     api.sidebarItems.mutations.updateSidebarItem,
   )
-  const moveNoteMutation = useConvexMutation(api.notes.mutations.moveNote)
-  const moveFolderMutation = useConvexMutation(api.folders.mutations.moveFolder)
-  const moveMapMutation = useConvexMutation(api.gameMaps.mutations.moveMap)
-  const moveFileMutation = useConvexMutation(api.files.mutations.moveFile)
+  const moveSidebarItemMutation = useConvexMutation(
+    api.sidebarItems.mutations.moveSidebarItem,
+  )
   const deleteNoteMutation = useConvexMutation(api.notes.mutations.deleteNote)
   const deleteFolderMutation = useConvexMutation(
     api.folders.mutations.deleteFolder,
@@ -76,14 +78,14 @@ export function SidebarItemMutationsProvider({
 
   const validateName = useCallback(
     (
-      name: string | undefined,
+      name: string,
       parentId: Id<'folders'> | undefined,
       excludeId?: SidebarItemId,
     ) => {
-      const wikiResult = validateWikiLinkCompatibleName(name)
-      if (!wikiResult.valid) return wikiResult
-      if (!name || name.trim() === '') return { valid: true as const }
-      return checkNameConflict(name, getSiblings(parentId), excludeId)
+      const trimmed = name.trim()
+      const nameResult = validateItemName(trimmed)
+      if (!nameResult.valid) return nameResult
+      return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
     },
     [getSiblings],
   )
@@ -97,18 +99,26 @@ export function SidebarItemMutationsProvider({
     [itemsMap],
   )
 
+  const getDefaultName = useCallback(
+    (type: SidebarItemType, parentId?: Id<'folders'>) => {
+      return findUniqueDefaultName(type, getSiblings(parentId))
+    },
+    [getSiblings],
+  )
+
   // --- Mutations ---
 
   const createItem = useCallback(
     async (args: CreateItemArgs): Promise<CreateItemResult> => {
-      const nameResult = validateName(args.name, args.parentId)
+      const trimmedName = args.name.trim()
+      const nameResult = validateName(trimmedName, args.parentId ?? undefined)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       switch (args.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
           const { noteId, slug } = await createNoteMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: trimmedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -119,7 +129,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.folders: {
           const { folderId, slug } = await createFolderMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: trimmedName,
             parentId: args.parentId,
             iconName: args.iconName,
             color: args.color,
@@ -129,7 +139,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.gameMaps: {
           const { mapId, slug } = await createMapMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: trimmedName,
             parentId: args.parentId,
             imageStorageId: args.imageStorageId,
             iconName: args.iconName,
@@ -140,7 +150,7 @@ export function SidebarItemMutationsProvider({
         case SIDEBAR_ITEM_TYPES.files: {
           const { fileId, slug } = await createFileMutation({
             campaignId: args.campaignId,
-            name: args.name,
+            name: trimmedName,
             parentId: args.parentId,
             storageId: args.storageId,
             iconName: args.iconName,
@@ -164,16 +174,22 @@ export function SidebarItemMutationsProvider({
 
   const rename = useCallback(
     (item: AnySidebarItem, newName: string) => {
-      const result = validateName(newName, item.parentId, item._id)
+      const trimmedName = newName.trim()
+      const result = validateName(
+        trimmedName,
+        item.parentId ?? undefined,
+        item._id,
+      )
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
-        prev.map((i) => (i._id === item._id ? { ...i, name: newName } : i)),
+        prev.map((i) => (i._id === item._id ? { ...i, name: trimmedName } : i)),
       )
 
       const promise = updateSidebarItemMutation({
+        campaignId: item.campaignId,
         itemId: item._id,
-        name: newName,
+        name: trimmedName,
       }).then(
         (res) => {
           if (res?.slug) {
@@ -214,31 +230,15 @@ export function SidebarItemMutationsProvider({
 
       optimisticUpdate((prev) =>
         prev.map((i) =>
-          i._id === item._id ? { ...i, parentId: newParentId } : i,
+          i._id === item._id ? { ...i, parentId: newParentId ?? null } : i,
         ),
       )
 
-      const moveMutation = (() => {
-        switch (item.type) {
-          case SIDEBAR_ITEM_TYPES.notes:
-            return moveNoteMutation({
-              noteId: item._id,
-              parentId: newParentId,
-            })
-          case SIDEBAR_ITEM_TYPES.folders:
-            return moveFolderMutation({
-              folderId: item._id,
-              parentId: newParentId,
-            })
-          case SIDEBAR_ITEM_TYPES.gameMaps:
-            return moveMapMutation({ mapId: item._id, parentId: newParentId })
-          case SIDEBAR_ITEM_TYPES.files:
-            return moveFileMutation({
-              fileId: item._id,
-              parentId: newParentId,
-            })
-        }
-      })()
+      const moveMutation = moveSidebarItemMutation({
+        campaignId: item.campaignId,
+        itemId: item._id,
+        parentId: newParentId,
+      })
 
       moveMutation.catch(() => {
         optimisticUpdate((prev) =>
@@ -250,15 +250,7 @@ export function SidebarItemMutationsProvider({
 
       return moveMutation
     },
-    [
-      canMoveToParent,
-      validateName,
-      optimisticUpdate,
-      moveNoteMutation,
-      moveFolderMutation,
-      moveMapMutation,
-      moveFileMutation,
-    ],
+    [canMoveToParent, validateName, optimisticUpdate, moveSidebarItemMutation],
   )
 
   const deleteItem = useCallback(
@@ -268,16 +260,28 @@ export function SidebarItemMutationsProvider({
       try {
         switch (item.type) {
           case SIDEBAR_ITEM_TYPES.notes:
-            await deleteNoteMutation({ noteId: item._id })
+            await deleteNoteMutation({
+              campaignId: item.campaignId,
+              noteId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.folders:
-            await deleteFolderMutation({ folderId: item._id })
+            await deleteFolderMutation({
+              campaignId: item.campaignId,
+              folderId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.gameMaps:
-            await deleteMapMutation({ mapId: item._id })
+            await deleteMapMutation({
+              campaignId: item.campaignId,
+              mapId: item._id,
+            })
             break
           case SIDEBAR_ITEM_TYPES.files:
-            await deleteFileMutation({ fileId: item._id })
+            await deleteFileMutation({
+              campaignId: item.campaignId,
+              fileId: item._id,
+            })
             break
         }
       } catch {
@@ -297,6 +301,7 @@ export function SidebarItemMutationsProvider({
   const value: SidebarItemMutationsValue = useMemo(
     () => ({
       createItem,
+      getDefaultName,
       rename,
       move,
       deleteItem,
@@ -306,6 +311,7 @@ export function SidebarItemMutationsProvider({
     }),
     [
       createItem,
+      getDefaultName,
       rename,
       move,
       deleteItem,

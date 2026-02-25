@@ -4,7 +4,7 @@ import { useMenuActions } from '../actions'
 import { buildMenu } from '../menu-builder'
 import { EditorContextMenuContext } from '../hooks/useEditorContextMenu'
 import { PlaceHolderContextMenu } from './EmptyContextMenu'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSession } from '~/hooks/useSession'
@@ -27,7 +27,7 @@ export function EditorContextMenuProvider({
   onDialogClose,
 }: ProviderProps) {
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
-  const { campaignWithMembership } = useCampaign()
+  const { campaign } = useCampaign()
   const { currentSession } = useSession()
   const { activeMap, activePin } = useMapView()
   const { editor, blockId } = useBlockNoteContextMenu()
@@ -38,8 +38,8 @@ export function EditorContextMenuProvider({
     () => ({
       item,
       viewContext,
-      currentUserId: campaignWithMembership.data?.member.userId,
-      memberRole: campaignWithMembership.data?.member.role,
+      currentUserId: campaign.data?.myMembership?.userId,
+      memberRole: campaign.data?.myMembership?.role,
       permissionLevel,
       activeMap: activeMap ?? undefined,
       activePin: activePin ?? undefined,
@@ -50,8 +50,8 @@ export function EditorContextMenuProvider({
     [
       item,
       viewContext,
-      campaignWithMembership.data?.member.userId,
-      campaignWithMembership.data?.member.role,
+      campaign.data?.myMembership?.userId,
+      campaign.data?.myMembership?.role,
       permissionLevel,
       activeMap,
       activePin,

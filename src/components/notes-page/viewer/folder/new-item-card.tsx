@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from '~/lib/icons'
 import { Card } from '~/components/shadcn/ui/card'
@@ -24,9 +24,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
 
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-  const { createItem } = useSidebarItemMutations()
+  const { campaignId } = useCampaign()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 
@@ -61,6 +60,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
           type,
           campaignId,
           parentId,
+          name: getDefaultName(type, parentId),
         })
         openParentFolders(result.id)
         navigateToItem(result)
@@ -69,7 +69,14 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         toast.error(`Failed to create item`)
       }
     },
-    [campaignId, parentId, createItem, openParentFolders, navigateToItem],
+    [
+      campaignId,
+      parentId,
+      createItem,
+      openParentFolders,
+      navigateToItem,
+      getDefaultName,
+    ],
   )
 
   return (

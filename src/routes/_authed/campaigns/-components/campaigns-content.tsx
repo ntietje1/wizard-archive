@@ -5,9 +5,9 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { CampaignDialog } from './campaign-dialog'
 import { CampaignsContentError } from './campaigns-content-error'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
+import type { Campaign } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { Edit, Notebook, Plus, Sword, Trash2, User, Users } from '~/lib/icons'
+import { Edit, Plus, Sword, Trash2, User, Users } from '~/lib/icons'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { EmptyState } from '~/components/content-grid-page/empty-state'
 import { CreateActionCard } from '~/components/content-grid-page/create-action-card'
@@ -27,12 +27,10 @@ export function CampaignsContent() {
   )
 
   const currentlyEditingCampaign = campaigns.data?.find(
-    (campaignWithMembership: CampaignWithMembership) =>
-      campaignWithMembership.campaign._id === editingCampaignId,
+    (campaign: Campaign) => campaign._id === editingCampaignId,
   )
   const currentlyDeletingCampaign = campaigns.data?.find(
-    (campaignWithMembership: CampaignWithMembership) =>
-      campaignWithMembership.campaign._id === deletingCampaignId,
+    (campaign: Campaign) => campaign._id === deletingCampaignId,
   )
 
   if (campaigns.status === 'error') {
@@ -94,10 +92,8 @@ export function CampaignsContent() {
 
         {/* Existing Campaigns */}
         {campaigns.data
-          .sort((a, b) => b.campaign._creationTime - a.campaign._creationTime)
-          .map((campaignWithMembership: CampaignWithMembership) => {
-            const campaign = campaignWithMembership.campaign
-            const campaignMember = campaignWithMembership.member
+          .sort((a, b) => b._creationTime - a._creationTime)
+          .map((campaign: Campaign) => {
             return (
               <ContentCard
                 key={campaign._id}
@@ -111,13 +107,13 @@ export function CampaignsContent() {
                     variant: 'secondary',
                   },
                   {
-                    text: campaignMember.role,
+                    text: campaign.myMembership?.role ?? 'None',
                     icon: User,
                     variant: 'secondary',
                   },
                 ]}
                 actionButtons={
-                  campaignMember.role === 'DM'
+                  campaign.myMembership?.role === 'DM'
                     ? [
                         {
                           icon: Edit,
@@ -165,12 +161,12 @@ export function CampaignsContent() {
         mode="edit"
         isOpen={editingCampaignId !== null}
         onClose={() => setEditingCampaignId(null)}
-        campaignWithMembership={currentlyEditingCampaign ?? undefined}
+        campaign={currentlyEditingCampaign ?? undefined}
       />
 
       {currentlyDeletingCampaign && (
         <CampaignDeleteConfirmDialog
-          campaign={currentlyDeletingCampaign.campaign}
+          campaign={currentlyDeletingCampaign}
           isDeleting={!!deletingCampaignId}
           onClose={() => setDeletingCampaignId(null)}
           onConfirm={handleDeleteSuccess}

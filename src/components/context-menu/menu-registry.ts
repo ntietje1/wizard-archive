@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   Bookmark,
   Download,
@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
-import type { PermissionLevel } from 'convex/shares/types'
+import type { PermissionLevel } from 'convex/permissions/types'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
@@ -70,7 +70,7 @@ export type ActionHandlers = {
   // Share actions
   setGeneralAccessLevel: (
     ctx: MenuContext,
-    level: PermissionLevel | undefined,
+    level: PermissionLevel | null,
   ) => void
 
   // Download actions
@@ -387,7 +387,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.hasEditAccess(ctx) && // TODO: change download note to only get visible lines
+        p.hasViewAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
         !p.hasMapContext(ctx),
@@ -395,7 +395,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     },
     {
       id: 'download-map',
-      label: 'Download',
+      label: 'Download Map Image',
       icon: Download,
       group: 'download',
       priority: 80,
@@ -412,7 +412,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 81,
       shouldShow: (ctx) =>
-        p.isDm(ctx) &&
+        p.hasViewAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) &&
         !p.hasMapContext(ctx),
@@ -424,7 +424,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FolderDown,
       group: 'download',
       priority: 82,
-      shouldShow: (ctx) => p.isDm(ctx) && p.atRoot(ctx),
+      shouldShow: (ctx) => p.atRoot(ctx),
       action: actions.downloadAll,
     },
 

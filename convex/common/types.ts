@@ -1,3 +1,15 @@
-import type { MutationCtx, QueryCtx } from '../_generated/server'
+import type { Id, TableNames } from '../_generated/dataModel'
 
-export type Ctx = MutationCtx | QueryCtx // ActionCtx doesn't have db access
+export type CommonTableFields = {
+  updatedTime: number
+  updatedBy: Id<'userProfiles'>
+  createdBy: Id<'userProfiles'>
+}
+
+export type ConvexValidatorFields<T extends TableNames> = {
+  _id: Id<T>
+  _creationTime: number
+}
+
+export type CommonValidatorFields<T extends TableNames> = CommonTableFields &
+  ConvexValidatorFields<T>

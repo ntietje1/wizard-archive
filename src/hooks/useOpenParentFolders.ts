@@ -1,12 +1,11 @@
 import { useCallback } from 'react'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignSidebarActions } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 export function useOpenParentFolders() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { setFolderState } = useCampaignSidebarActions(campaignId)
   const { getAncestorSidebarItems } = useAllSidebarItems()
 

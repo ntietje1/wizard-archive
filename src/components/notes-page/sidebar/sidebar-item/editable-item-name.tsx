@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
 import { cn } from '~/lib/shadcn/utils'
 
 interface EditableNameProps {
   initialName: string
-  defaultName: string
   isRenaming: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
@@ -19,7 +18,6 @@ interface EditableNameProps {
 
 export function EditableName({
   initialName,
-  defaultName,
   isRenaming,
   onFinishRename,
   onCancelRename,
@@ -27,20 +25,17 @@ export function EditableName({
   parentId,
   excludeId,
 }: EditableNameProps) {
-  const [name, setName] = useState(
-    initialName === defaultName ? '' : initialName,
-  )
+  const [name, setName] = useState(initialName)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setName(initialName === defaultName ? '' : initialName)
-  }, [isRenaming, initialName, defaultName])
+    setName(initialName)
+  }, [isRenaming, initialName])
 
-  const displayInitialName = initialName === defaultName ? '' : initialName
   const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
-    initialName: displayInitialName,
+    initialName,
     isActive: isRenaming,
     campaignId,
     parentId,
@@ -61,13 +56,12 @@ export function EditableName({
 
   if (isRenaming) {
     const trimmedName = name.trim()
-    const resetValue = initialName === defaultName ? '' : initialName
-    const isNameChanged = trimmedName !== displayInitialName.trim()
+    const isNameChanged = trimmedName !== initialName.trim()
 
     const handleBlur = async () => {
       if (isSubmitting) return
       if (!isNameChanged) {
-        setName(resetValue)
+        setName(initialName)
         onCancelRename()
         return
       }
@@ -78,14 +72,14 @@ export function EditableName({
         const error = await checkNameUnique(trimmedName)
         if (error) {
           toast.error(error)
-          setName(resetValue)
+          setName(initialName)
           onCancelRename()
           return
         }
         await onFinishRename(trimmedName)
       } catch {
         toast.error('Failed to rename. Please try again.')
-        setName(resetValue)
+        setName(initialName)
         onCancelRename()
       } finally {
         setIsSubmitting(false)
@@ -93,7 +87,7 @@ export function EditableName({
     }
 
     const handleCancel = () => {
-      setName(resetValue)
+      setName(initialName)
       onCancelRename()
     }
 
@@ -117,7 +111,7 @@ export function EditableName({
             }
           }}
           onClick={(e) => e.stopPropagation()}
-          placeholder={defaultName}
+          placeholder="Enter a name"
           disabled={isSubmitting}
           aria-invalid={hasError}
           className={cn(
@@ -134,5 +128,5 @@ export function EditableName({
     )
   }
 
-  return <span className="truncate ml-1">{initialName || defaultName}</span>
+  return <span className="truncate ml-1">{initialName}</span>
 }

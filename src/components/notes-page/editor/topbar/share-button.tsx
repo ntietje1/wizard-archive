@@ -13,7 +13,7 @@ import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
 
 export function ShareButton() {
   const { item, isLoading: isItemLoading } = useCurrentItem()
-  const { isDm, campaignWithMembership } = useCampaign()
+  const { isDm, campaign } = useCampaign()
   const [open, setOpen] = useState(false)
 
   const items = useMemo(() => (item ? [item] : []), [item])
@@ -59,7 +59,7 @@ export function ShareButton() {
     )
   }
 
-  const dmUserProfile = campaignWithMembership.data?.campaign.dmUserProfile
+  const dmUserProfile = campaign.data?.dmUserProfile
   const isDisabled = !canShare || isMutating
   const isShared = aggregateShareStatus !== 'not_shared'
 

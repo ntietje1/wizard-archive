@@ -1,7 +1,7 @@
 import type { MouseEvent, ReactNode } from 'react'
 import type { LucideIcon } from '~/lib/icons'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 
 export interface SidebarItemHandlers {
   onSelect?: (e: MouseEvent) => void
@@ -20,7 +20,6 @@ export interface SidebarItemButtonProps
     SidebarItemState {
   icon: LucideIcon
   name: string
-  defaultName: string
   showChevron: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void

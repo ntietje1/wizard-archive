@@ -1,199 +1,52 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import { getUserIdentity, requireUserIdentity } from '../common/identity'
-import { getUserProfileByUsernameHandler } from '../users/users'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
-import {
-  getCampaign,
-  getCampaignMember,
-  requireCampaignMembership,
-} from './campaigns'
-import {
-  campaignMemberValidator,
-  campaignWithMembershipValidator,
-} from './schema'
-import type { Campaign, CampaignMember, CampaignWithMembership } from './types'
+import { authQuery, campaignQuery } from '../functions'
+import { getCampaignMembers } from './functions/getCampaignMembers'
+import { campaignMemberValidator, campaignValidator } from './schema'
+import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
+import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
+import { checkCampaignSlugExists as checkCampaignSlugExistsFn } from './functions/checkCampaignSlugExists'
+import type { Campaign, CampaignMember } from './types'
 
-export const getUserCampaigns = query({
-  returns: v.array(campaignWithMembershipValidator),
-  handler: async (ctx): Promise<Array<CampaignWithMembership>> => {
-    const { profile } = await requireUserIdentity(ctx)
-
-    const campaignMemberships = await ctx.db
-      .query('campaignMembers')
-      .withIndex('by_user', (q) => q.eq('userId', profile._id))
-      .collect()
-      .then((memberships) =>
-        memberships.filter(
-          (membership) => membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
-        ),
-      )
-
-    const campaigns = await Promise.all(
-      campaignMemberships.map((membership) =>
-        getCampaign(ctx, { campaignId: membership.campaignId }),
-      ),
-    )
-
-    const campaignsWithNotes = await Promise.all(
-      campaigns.map((campaign) => {
-        const membership = campaignMemberships.find(
-          (m) => m.campaignId === campaign._id,
-        )
-
-        if (!membership) {
-          return null
-        }
-
-        return {
-          campaign,
-          member: {
-            ...membership,
-            userProfile: profile,
-          },
-        }
-      }),
-    ).then((filteredCampaigns) =>
-      filteredCampaigns.filter((campaign) => campaign !== null),
-    )
-
-    return campaignsWithNotes
+export const getUserCampaigns = authQuery({
+  args: {},
+  returns: v.array(campaignValidator),
+  handler: async (ctx): Promise<Array<Campaign>> => {
+    return getUserCampaignsFn(ctx)
   },
 })
 
-export const getPublicCampaignBySlug = query({
+export const getCampaignBySlug = authQuery({
   args: {
     dmUsername: v.string(),
     slug: v.string(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{
-    campaign: Campaign
-    campaignMember?: CampaignMember | null
-  }> => {
-    const identityWithProfile = await getUserIdentity(ctx)
-    const dmUserProfile = await getUserProfileByUsernameHandler(
-      ctx,
-      args.dmUsername,
-    )
-    if (!dmUserProfile) {
-      throw new Error('DM user not found')
-    }
-
-    const campaign = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', dmUserProfile._id),
-      )
-      .unique()
-
-    if (!campaign) {
-      throw new Error('Campaign not found')
-    }
-
-    let campaignMember: CampaignMember | undefined = undefined
-    if (identityWithProfile) {
-      const members = await ctx.db
-        .query('campaignMembers')
-        .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-        .collect()
-
-      const member = members.find(
-        (m) => m.userId === identityWithProfile.profile._id,
-      )
-
-      if (member) {
-        campaignMember = {
-          ...member,
-          userProfile: identityWithProfile.profile,
-        }
-      }
-    }
-
-    return {
-      campaign: {
-        ...campaign,
-        dmUserProfile,
-      },
-      campaignMember,
-    }
+  returns: campaignValidator,
+  handler: async (ctx, args): Promise<Campaign> => {
+    return await getCampaignBySlugFn(ctx, {
+      dmUsername: args.dmUsername,
+      slug: args.slug,
+    })
   },
 })
 
-export const getCampaignBySlug = query({
-  args: {
-    dmUsername: v.string(),
-    slug: v.string(),
-  },
-  handler: async (ctx, args): Promise<CampaignWithMembership> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
-      ctx,
-      {
-        dmUsername: args.dmUsername,
-        campaignSlug: args.slug,
-      },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-    return campaignWithMembership
-  },
-})
-
-export const checkCampaignSlugExists = query({
+export const checkCampaignSlugExists = authQuery({
   args: {
     slug: v.string(),
     excludeCampaignId: v.optional(v.id('campaigns')),
   },
+  returns: v.boolean(),
   handler: async (ctx, args): Promise<boolean> => {
-    const { profile } = await requireUserIdentity(ctx)
-
-    const existingCampaign = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', args.slug).eq('dmUserId', profile._id),
-      )
-      .unique()
-
-    if (!existingCampaign) {
-      return false
-    }
-
-    if (
-      args.excludeCampaignId &&
-      existingCampaign._id === args.excludeCampaignId
-    ) {
-      return false
-    }
-
-    return true
+    return await checkCampaignSlugExistsFn(ctx, {
+      slug: args.slug,
+      excludeCampaignId: args.excludeCampaignId,
+    })
   },
 })
 
-export const getPlayersByCampaign = query({
+export const getPlayersByCampaign = campaignQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.array(campaignMemberValidator),
-  handler: async (ctx, args): Promise<Array<CampaignMember>> => {
-    const { campaignWithMembership } = await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-    const { campaign } = campaignWithMembership
-
-    const members = await ctx.db
-      .query('campaignMembers')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
-      .collect()
-
-    const membersWithProfiles = await Promise.all(
-      members.map(async (member) => {
-        return getCampaignMember(ctx, member._id)
-      }),
-    ).then((filteredMembers) =>
-      filteredMembers.filter((member) => member !== null),
-    )
-
-    return membersWithProfiles
+  handler: async (ctx): Promise<Array<CampaignMember>> => {
+    return await getCampaignMembers(ctx)
   },
 })

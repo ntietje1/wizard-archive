@@ -19,14 +19,13 @@ export default function PlayersDmControls({
   onOpenRequests,
   onCopyJoinUrl,
 }: PlayersDmControlsProps) {
-  const { dmUsername, campaignSlug, campaignWithMembership, isDm } =
-    useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const campaignMember = campaignWithMembership.data?.member
+  const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
+  const campaignData = campaign.data
+  const campaignMember = campaignData?.myMembership
   const players = useQuery(
     convexQuery(
       api.campaigns.queries.getPlayersByCampaign,
-      campaign?._id ? { campaignId: campaign._id } : 'skip',
+      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
     ),
   )
 
@@ -54,7 +53,7 @@ export default function PlayersDmControls({
         <Button
           variant="outline"
           disabled={
-            campaignWithMembership.status === 'pending' ||
+            campaign.status === 'pending' ||
             campaignMember?.role !== CAMPAIGN_MEMBER_ROLE.DM
           }
           onClick={onOpenRequests}

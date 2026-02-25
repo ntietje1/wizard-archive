@@ -1,8 +1,8 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type {
   AnySidebarItem,
   AnySidebarItemWithContent,
-} from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/types/types'
 import { NoteEditor } from '~/components/notes-page/viewer/note/note-editor'
 import { MapViewer } from '~/components/notes-page/viewer/map/map-viewer'
 import { FolderViewer } from '~/components/notes-page/viewer/folder/folder-viewer'

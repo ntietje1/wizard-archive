@@ -1,36 +1,44 @@
-import { getSidebarItemsByParent } from '../sidebarItems/sidebarItems'
-import { hasFullAccessPermission } from '../shares/itemShares'
-import { enhanceSidebarItem } from './helpers'
-import {
-  checkNameConflict,
-  validateWikiLinkCompatibleName,
-} from './sharedValidation'
+import { getSidebarItemPermissionLevel } from '../sidebarShares/functions/sidebarItemPermissions'
+import { hasAtLeastPermissionLevel } from '../permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from '../permissions/types'
+import { findUniqueSlug } from '../common/slug'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
+import { getSidebarItemById } from './functions/getSidebarItemById'
+import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
+import { checkNameConflict, validateItemName } from './sharedValidation'
+import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from './types/baseTypes'
+import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
-import type { SidebarItemId } from './baseTypes'
-import type { Ctx } from '../common/types'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
-import type { AnySidebarItem } from './types'
+import type {
+  AnySidebarItem,
+  AnySidebarItemFromDb,
+  EnhancedSidebarItem,
+} from './types/types'
 
 export type { ValidationResult } from './sharedValidation'
-export { validateWikiLinkCompatibleName } from './sharedValidation'
+export { validateItemName } from './sharedValidation'
 
-// TODO: share as much of this as possible with the frontend validation
 /**
  * Checks if a name is unique under a parent (case-insensitive).
  * Fetches all siblings and delegates to shared checkNameConflict.
  */
 export async function checkUniqueNameUnderParent(
-  ctx: Ctx,
-  campaignId: Id<'campaigns'>,
-  parentId: Id<'folders'> | undefined,
-  name: string | undefined,
-  excludeId?: SidebarItemId,
+  ctx: CampaignQueryCtx,
+  {
+    parentId,
+    name,
+    excludeId,
+  }: {
+    parentId: Id<'folders'> | null | undefined
+    name: string
+    excludeId?: SidebarItemId
+  },
 ): Promise<{ valid: boolean; error?: string }> {
-  if (!name || name.trim() === '') {
-    return { valid: true }
-  }
-
-  const siblings = await getSidebarItemsByParent(ctx, campaignId, parentId)
+  const siblings = await getSidebarItemsByParent(ctx, { parentId })
   return checkNameConflict(name, siblings, excludeId)
 }
 
@@ -39,9 +47,14 @@ export async function checkUniqueNameUnderParent(
  * Server version uses async ctx.db.get lookups.
  */
 export async function validateNoCircularParent(
-  ctx: Ctx,
-  itemId: SidebarItemId,
-  newParentId: Id<'folders'> | undefined,
+  ctx: CampaignQueryCtx,
+  {
+    itemId,
+    newParentId,
+  }: {
+    itemId: SidebarItemId
+    newParentId: Id<'folders'> | null | undefined
+  },
 ): Promise<{ valid: boolean; error?: string }> {
   if (!newParentId) {
     return { valid: true }
@@ -55,7 +68,7 @@ export async function validateNoCircularParent(
   }
 
   const seen = new Set<Id<'folders'>>()
-  let currentId: Id<'folders'> | undefined = newParentId
+  let currentId: Id<'folders'> | null = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {
@@ -71,50 +84,41 @@ export async function validateNoCircularParent(
     }
 
     const current: FolderFromDb | null = await ctx.db.get(currentId)
-    currentId = current?.parentId
+    currentId = current?.parentId ?? null
   }
 
   return { valid: true }
 }
 
-export interface ValidateSidebarItemNameOptions {
-  ctx: Ctx
-  campaignId: Id<'campaigns'>
-  parentId: Id<'folders'> | undefined
-  name: string | undefined
-  excludeId?: SidebarItemId
-}
-
 /**
- * Validates a sidebar item name (wiki-link + uniqueness).
+ * Validates a sidebar item name (format + uniqueness).
  * Throws an error if validation fails.
+ * Returns siblings so callers can reuse them (e.g. for default name generation).
  */
 export async function validateSidebarItemName(
-  options: ValidateSidebarItemNameOptions,
-): Promise<void> {
-  const { ctx, campaignId, parentId, name, excludeId } = options
-
-  const wikiLinkResult = validateWikiLinkCompatibleName(name)
-  if (!wikiLinkResult.valid) {
-    throw new Error(wikiLinkResult.error)
-  }
-
-  const uniqueResult = await checkUniqueNameUnderParent(
-    ctx,
-    campaignId,
+  ctx: CampaignQueryCtx,
+  {
     parentId,
     name,
     excludeId,
-  )
+  }: {
+    parentId: Id<'folders'> | null | undefined
+    name: string
+    excludeId?: SidebarItemId
+  },
+): Promise<{ siblings: Array<AnySidebarItem> }> {
+  const nameResult = validateItemName(name)
+  if (!nameResult.valid) {
+    throw new Error(nameResult.error)
+  }
+
+  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
     throw new Error(uniqueResult.error)
   }
-}
 
-export interface ValidateParentChangeOptions {
-  ctx: Ctx
-  item: AnySidebarItem
-  newParentId: Id<'folders'> | undefined
+  return { siblings }
 }
 
 /**
@@ -122,24 +126,227 @@ export interface ValidateParentChangeOptions {
  * and that the user has full access to the target folder.
  * Throws an error if validation fails.
  */
-export async function validateParentChange(
-  options: ValidateParentChangeOptions,
+export async function validateSidebarParentChange(
+  ctx: CampaignQueryCtx,
+  {
+    item,
+    newParentId,
+  }: {
+    item: AnySidebarItem
+    newParentId: Id<'folders'> | null | undefined
+  },
 ): Promise<void> {
-  const { ctx, item, newParentId } = options
-
-  const result = await validateNoCircularParent(ctx, item._id, newParentId)
+  const result = await validateNoCircularParent(ctx, {
+    itemId: item._id,
+    newParentId,
+  })
   if (!result.valid) {
     throw new Error(result.error)
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get(newParentId)
-    if (!parentFromDb) {
-      throw new Error('Target folder not found')
+    await requireItemAccess(ctx, {
+      rawItem: parentFromDb,
+      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    })
+  }
+}
+
+/**
+ * Validates that the parent exists and the user has full access,
+ * or that the user is a DM for root-level creation.
+ * Throws if validation fails.
+ */
+export async function validateSidebarCreateParent(
+  ctx: CampaignQueryCtx,
+  { parentId }: { parentId: Id<'folders'> | null | undefined },
+): Promise<void> {
+  if (parentId) {
+    const parentItem = await getSidebarItemById(ctx, { id: parentId })
+    if (!parentItem) {
+      throw new Error('Parent not found')
     }
-    const parentItem = await enhanceSidebarItem(ctx, parentFromDb)
-    const hasAccess = await hasFullAccessPermission(ctx, parentItem)
-    if (!hasAccess) {
-      throw new Error('You do not have permission to move items here')
+    const level = await getSidebarItemPermissionLevel(ctx, { item: parentItem })
+    if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)) {
+      throw new Error('You do not have sufficient permission for this item')
+    }
+  } else {
+    if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+      throw new Error('Only the DM can create items at the root level')
     }
   }
+}
+
+/**
+ * Validates all preconditions for moving a sidebar item:
+ * circular refs, target parent access, and name uniqueness.
+ * The caller is responsible for checking permission on the item itself.
+ */
+export async function validateSidebarMove(
+  ctx: CampaignQueryCtx,
+  {
+    item,
+    newParentId,
+  }: {
+    item: AnySidebarItem
+    newParentId: Id<'folders'> | null | undefined
+  },
+): Promise<void> {
+  await validateSidebarParentChange(ctx, { item, newParentId })
+
+  await validateSidebarItemName(ctx, {
+    parentId: newParentId,
+    name: item.name,
+    excludeId: item._id,
+  })
+}
+
+/**
+ * Enhances a sidebar item and checks if the user has the required
+ * permission level. Returns null if the item doesn't exist or
+ * the user lacks permission.
+ */
+export async function checkItemAccess<T extends AnySidebarItemFromDb>(
+  ctx: CampaignQueryCtx,
+  {
+    rawItem,
+    requiredLevel,
+  }: {
+    rawItem: T | null
+    requiredLevel: PermissionLevel
+  },
+): Promise<EnhancedSidebarItem<T> | null> {
+  if (!rawItem) return null
+  const item = await enhanceSidebarItem(ctx, { item: rawItem })
+  const level = await getSidebarItemPermissionLevel(ctx, { item })
+  if (!hasAtLeastPermissionLevel(level, requiredLevel)) {
+    return null
+  }
+  return item
+}
+
+/**
+ * Like checkItemAccess, but throws if the item doesn't exist,
+ * fails the campaign check, or lacks the required permission.
+ */
+export async function requireItemAccess<T extends AnySidebarItemFromDb>(
+  ctx: CampaignQueryCtx,
+  {
+    rawItem,
+    requiredLevel,
+  }: {
+    rawItem: T | null
+    requiredLevel: PermissionLevel
+  },
+): Promise<EnhancedSidebarItem<T>> {
+  if (!rawItem || rawItem.campaignId !== ctx.campaign._id) {
+    throw new Error('Item not found')
+  }
+  const item = await checkItemAccess(ctx, { rawItem, requiredLevel })
+  if (!item) {
+    throw new Error('You do not have sufficient permission for this item')
+  }
+  return item
+}
+
+async function checkSlugConflict(
+  ctx: CampaignMutationCtx,
+  {
+    type,
+    slug,
+    excludeId,
+  }: {
+    type: SidebarItemType
+    slug: string
+    excludeId?: SidebarItemId
+  },
+): Promise<boolean> {
+  const campaignId = ctx.campaign._id
+
+  let query
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      query = ctx.db.query('notes')
+      break
+    case SIDEBAR_ITEM_TYPES.folders:
+      query = ctx.db.query('folders')
+      break
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      query = ctx.db.query('gameMaps')
+      break
+    case SIDEBAR_ITEM_TYPES.files:
+      query = ctx.db.query('files')
+      break
+    default:
+      throw new Error(`Invalid sidebar item type: ${type satisfies never}`)
+  }
+  return query
+    .withIndex('by_campaign_slug', (q) =>
+      q.eq('campaignId', campaignId).eq('slug', slug),
+    )
+    .unique()
+    .then((conflict) =>
+      excludeId
+        ? conflict !== null && conflict._id !== excludeId
+        : conflict !== null,
+    )
+}
+
+export async function findUniqueSidebarItemSlug(
+  ctx: CampaignMutationCtx,
+  {
+    type,
+    name,
+    itemId,
+  }: {
+    type: SidebarItemType
+    name: string
+    itemId: SidebarItemId
+  },
+): Promise<string> {
+  return findUniqueSlug(name, (slug) =>
+    checkSlugConflict(ctx, { type, slug, excludeId: itemId }),
+  )
+}
+
+export async function findNewSidebarItemSlug(
+  ctx: CampaignMutationCtx,
+  {
+    type,
+    name,
+  }: {
+    type: SidebarItemType
+    name: string
+  },
+): Promise<string> {
+  return findUniqueSlug(name, (slug) => checkSlugConflict(ctx, { type, slug }))
+}
+
+/**
+ * Validates a name change and generates a new unique slug.
+ * Combines name validation (wiki-link + uniqueness) with slug generation.
+ * Returns the new slug.
+ */
+export async function validateSidebarItemRename(
+  ctx: CampaignMutationCtx,
+  {
+    item,
+    newName,
+  }: {
+    item: AnySidebarItem
+    newName: string
+  },
+): Promise<string> {
+  const trimmedName = newName.trim()
+  await validateSidebarItemName(ctx, {
+    parentId: item.parentId,
+    name: trimmedName,
+    excludeId: item._id,
+  })
+
+  return findUniqueSidebarItemSlug(ctx, {
+    type: item.type,
+    name: trimmedName,
+    itemId: item._id,
+  })
 }

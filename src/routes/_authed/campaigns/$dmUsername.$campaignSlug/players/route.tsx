@@ -6,17 +6,17 @@ export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/players',
 )({
   beforeLoad: async ({ context, params }) => {
-    const campaignWithMembership = await context.queryClient.ensureQueryData(
+    const campaign = await context.queryClient.ensureQueryData(
       convexQuery(api.campaigns.queries.getCampaignBySlug, {
         dmUsername: params.dmUsername,
         slug: params.campaignSlug,
       }),
     )
 
-    if (campaignWithMembership?.campaign._id) {
+    if (campaign?._id) {
       await context.queryClient.ensureQueryData(
         convexQuery(api.campaigns.queries.getPlayersByCampaign, {
-          campaignId: campaignWithMembership.campaign._id,
+          campaignId: campaign._id,
         }),
       )
     }

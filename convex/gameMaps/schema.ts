@@ -1,37 +1,23 @@
 import { v } from 'convex/values'
 import { folderValidator } from '../folders/baseSchema'
 import { anySidebarItemValidator } from '../sidebarItems/schema/schema'
-import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
-import { sidebarItemBaseFields } from '../sidebarItems/schema/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
-
-// Re-export base schema for backwards compatibility
-export {
-  mapTableFields,
-  mapValidator,
-  mapPinTableFields,
-  mapPinValidator,
-  mapTables,
-} from './baseSchema'
+import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
+import { commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { mapPinTableFields } from './baseSchema'
 
 const mapWithContentValidatorFields = {
-  _id: v.id('gameMaps'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
+  ...commonValidatorFields('gameMaps'),
+  ...commonSidebarItemValidatorFields,
   imageStorageId: v.optional(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   imageUrl: v.union(v.string(), v.null()),
-} as const
+}
 
 const mapPinWithItemValidatorFields = {
-  _id: v.id('mapPins'),
-  _creationTime: v.number(),
-  mapId: v.id('gameMaps'),
-  itemId: sidebarItemIdValidator,
-  x: v.number(),
-  y: v.number(),
+  ...commonValidatorFields('mapPins'),
+  ...mapPinTableFields,
   visible: v.optional(v.boolean()),
-  updatedAt: v.number(),
   item: v.optional(anySidebarItemValidator),
 }
 

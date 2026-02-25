@@ -1,8 +1,8 @@
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import type { PermissionLevel } from 'convex/shares/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { PermissionLevel } from 'convex/permissions/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 
@@ -20,7 +20,10 @@ export function resolvePermissionLevel(
     return { level: memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW }
   }
 
-  if (item.allPermissionLevel !== undefined) {
+  if (
+    item.allPermissionLevel !== null &&
+    item.allPermissionLevel !== undefined
+  ) {
     return { level: item.allPermissionLevel }
   }
 
@@ -51,7 +54,10 @@ export function resolvePermissionLevel(
       }
     }
 
-    if (folder.allPermissionLevel !== undefined) {
+    if (
+      folder.allPermissionLevel !== null &&
+      folder.allPermissionLevel !== undefined
+    ) {
       return { level: folder.allPermissionLevel, source: folder.name }
     }
 

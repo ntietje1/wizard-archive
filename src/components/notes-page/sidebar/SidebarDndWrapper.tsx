@@ -3,12 +3,11 @@ import { createPortal } from 'react-dom'
 import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
-} from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   DropRejectionReason,
   SidebarDragData,
@@ -132,7 +131,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
       }
     } else if (isSidebarItem(dropTarget)) {
       return {
-        name: dropTarget.name || defaultItemName(dropTarget as AnySidebarItem),
+        name: dropTarget.name,
         isValid: validation.valid,
         rejectionReason,
         action: 'move' as const,
@@ -159,10 +158,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   const DraggedItemIcon = content
     ? getSidebarItemIcon(content.dragData as AnySidebarItem)
     : null
-  const DraggedItemName = content
-    ? content.dragData.name ||
-      defaultItemName(content.dragData as AnySidebarItem)
-    : ''
+  const DraggedItemName = content ? content.dragData.name : ''
 
   return createPortal(
     <div
@@ -197,9 +193,8 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
 }
 
 export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const campaignId = campaign?._id
+  const { campaign, campaignId } = useCampaign()
+  const campaignData = campaign.data
 
   const { navigateToItem } = useEditorNavigationContext()
   const { move } = useSidebarItemMutations()
@@ -255,7 +250,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
     <>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
       <ClientOnly fallback={null}>
-        <DragOverlay campaignName={campaign?.name} />
+        <DragOverlay campaignName={campaignData?.name} />
       </ClientOnly>
     </>
   )

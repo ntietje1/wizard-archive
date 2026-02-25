@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { SidebarItem } from './sidebar-item/sidebar-item'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   sortItemsByOptions,
   useFilteredSidebarItems,

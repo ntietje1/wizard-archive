@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { Button } from '~/components/shadcn/ui/button'
 import { FilePlus, Loader2 } from '~/lib/icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
@@ -9,11 +9,10 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createItem } = useSidebarItemMutations()
-  const { campaignWithMembership } = useCampaign()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const campaignId = campaignWithMembership.data?.campaign._id
   const [isPending, setIsPending] = useState(false)
 
   const handleNewNote = async () => {
@@ -23,6 +22,7 @@ export function NewNoteButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes),
       })
       openParentFolders(result.id)
       navigateToItem(result)

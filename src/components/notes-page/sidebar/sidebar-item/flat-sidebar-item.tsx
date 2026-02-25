@@ -1,10 +1,9 @@
 import { memo, useCallback } from 'react'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
@@ -35,8 +34,6 @@ function FlatSidebarItemComponent({
   const { toggleExpanded } = useFolderState(item._id)
 
   const icon = getSidebarItemIcon(item)
-  const defaultName = defaultItemName(item)
-  const displayName = item.name || defaultName
 
   const handleSelect = useCallback(
     () => navigateToItem(item),
@@ -60,8 +57,7 @@ function FlatSidebarItemComponent({
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
-          name={displayName}
-          defaultName={defaultName}
+          name={item.name}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
@@ -72,7 +68,7 @@ function FlatSidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={false}
           campaignId={item.campaignId}
-          parentId={item.parentId}
+          parentId={item.parentId ?? undefined}
           excludeId={item._id}
         />
       </EditorContextMenu>

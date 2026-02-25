@@ -4,12 +4,13 @@ import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { Loader } from 'lucide-react'
 import { FormDialog } from '../base-form/form-dialog'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
-import type { AnySidebarItem, SidebarItemType } from 'convex/sidebarItems/types'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { Label } from '~/components/shadcn/ui/label'
@@ -94,6 +95,7 @@ export function SidebarItemEditDialog({
       try {
         const previousSlug = item.slug
         const response = await updateMutation.mutateAsync({
+          campaignId: item.campaignId,
           itemId: item._id,
           name: value.name || undefined,
           iconName: value.iconName,
@@ -126,7 +128,7 @@ export function SidebarItemEditDialog({
     initialName: item.name ?? '',
     isActive: isOpen,
     campaignId: item.campaignId,
-    parentId: item.parentId,
+    parentId: item.parentId ?? undefined,
     excludeId: item._id,
   })
 
@@ -178,7 +180,7 @@ export function SidebarItemEditDialog({
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
-                  placeholder="Enter map name"
+                  placeholder={`Enter ${typeName.toLowerCase()} name`}
                   autoFocus
                   aria-invalid={field.state.meta.errors.length > 0}
                 />

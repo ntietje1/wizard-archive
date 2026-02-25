@@ -1,7 +1,7 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { HelpCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   Apple,
   Axe,

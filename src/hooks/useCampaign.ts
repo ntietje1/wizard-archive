@@ -1,12 +1,14 @@
 import { createContext, useContext } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
+import type { Campaign } from 'convex/campaigns/types'
+import type { Id } from 'convex/_generated/dataModel'
 
 export type CampaignContextType = {
-  isDm: boolean | undefined
   dmUsername: string
   campaignSlug: string
-  campaignWithMembership: UseQueryResult<CampaignWithMembership, Error>
+  campaign: UseQueryResult<Campaign, Error>
+  isDm: boolean | undefined
+  campaignId: Id<'campaigns'> | undefined
 }
 
 export const CampaignContext = createContext<CampaignContextType | null>(null)

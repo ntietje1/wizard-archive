@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types/baseTypes'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useDroppable } from '~/hooks/useDroppable'

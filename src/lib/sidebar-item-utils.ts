@@ -1,17 +1,16 @@
 import {
   DEFAULT_ITEM_COLOR,
   SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/baseTypes'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+} from 'convex/sidebarItems/types/baseTypes'
 import type {
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
-import type { File } from 'convex/files/types'
+import type { SidebarFile } from 'convex/files/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 
 // Determine type and slug from search params
@@ -72,9 +71,12 @@ export function isGameMap(
 }
 
 /**
- * Type guard to check if a sidebar item is a File.
+/**
+ * Type guard to check if a sidebar item is a SidebarFile.
  */
-export function isFile(item: AnySidebarItem | null | undefined): item is File {
+export function isFile(
+  item: AnySidebarItem | null | undefined,
+): item is SidebarFile {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
 }
 
@@ -121,10 +123,6 @@ export const validateHexColorOrDefault = (
   return isValidHex ? colorValue : defaultColor
 }
 
-/**
- * Build breadcrumb path from parentId chain
- * Traverses up the parent hierarchy to create a path like "Folder / Subfolder"
- */
 export function buildBreadcrumbs(
   item: AnySidebarItem,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
@@ -134,7 +132,7 @@ export function buildBreadcrumbs(
 
   while (currentId && itemsMap.has(currentId)) {
     const parent = itemsMap.get(currentId)!
-    path.unshift(parent.name || defaultItemName(parent))
+    path.unshift(parent.name)
     currentId = parent.parentId
   }
   if (path.length > 0) {

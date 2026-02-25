@@ -1,14 +1,17 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import {
-  sidebarItemBaseFields,
-  sidebarItemTableFields,
+  commonSidebarItemTableFields,
+  commonSidebarItemValidatorFields,
 } from '../sidebarItems/schema/baseFields'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { permissionLevelValidator } from '../sidebarItems/schema/baseValidators'
+import { blockShareStatusValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteTableFields = {
-  ...sidebarItemTableFields,
+  ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.notes),
 }
 
@@ -22,26 +25,16 @@ export const notesTables = {
 }
 
 const noteValidatorFields = {
-  _id: v.id('notes'),
-  _creationTime: v.number(),
-  ...sidebarItemBaseFields,
+  ...commonValidatorFields('notes'),
+  ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.notes),
-} as const
+}
 
 export const noteValidator = v.object(noteValidatorFields)
 
 const blockMetaValidator = v.object({
-  myPermissionLevel: v.union(
-    v.literal('none'),
-    v.literal('view'),
-    v.literal('edit'),
-    v.literal('full_access'),
-  ),
-  shareStatus: v.union(
-    v.literal('all_shared'),
-    v.literal('not_shared'),
-    v.literal('individually_shared'),
-  ),
+  myPermissionLevel: permissionLevelValidator,
+  shareStatus: blockShareStatusValidator,
   sharedWith: v.array(v.id('campaignMembers')),
 })
 

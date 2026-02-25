@@ -1,3 +1,4 @@
+import type { UserIdentity } from 'convex/server'
 import type { Id } from '../_generated/dataModel'
 
 export type UserProfile = {
@@ -11,5 +12,6 @@ export type UserProfile = {
   firstName?: string
   lastName?: string
   imageUrl?: string
-  updatedAt: number
 }
+
+export type AuthUser = { identity: UserIdentity; profile: UserProfile }

@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
 import { userProfileValidator } from '../users/schema'
 
 export const campaignStatusValidator = v.union(
@@ -21,13 +22,11 @@ export const campaignMemberStatusValidator = v.union(
 
 const campaignTableFields = {
   name: v.string(),
-  description: v.optional(v.string()),
-  updatedAt: v.number(),
-  playerCount: v.number(),
+  description: v.string(),
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
-  currentSessionId: v.optional(v.id('sessions')),
+  currentSessionId: v.union(v.id('sessions'), v.null()),
 }
 
 const campaignMemberTableFields = {
@@ -35,42 +34,38 @@ const campaignMemberTableFields = {
   campaignId: v.id('campaigns'),
   role: campaignMemberRoleValidator,
   status: campaignMemberStatusValidator,
-  updatedAt: v.number(),
 }
 
 export const campaignTables = {
   campaigns: defineTable({
+    ...commonTableFields,
     ...campaignTableFields,
   }).index('by_slug_dm', ['slug', 'dmUserId']),
 
   campaignMembers: defineTable({
+    ...commonTableFields,
     ...campaignMemberTableFields,
   })
-    .index('by_campaign', ['campaignId'])
+    .index('by_campaign_user', ['campaignId', 'userId'])
     .index('by_user', ['userId']),
 }
 
-const campaignValidatorFields = {
-  _id: v.id('campaigns'),
-  _creationTime: v.number(),
-  dmUserProfile: userProfileValidator,
-  ...campaignTableFields,
-} as const
-
 const campaignMemberValidatorFields = {
-  _id: v.id('campaignMembers'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('campaignMembers'),
   ...campaignMemberTableFields,
-} as const
-
-export const campaignValidator = v.object(campaignValidatorFields)
+}
 
 export const campaignMemberValidator = v.object({
   ...campaignMemberValidatorFields,
   userProfile: v.optional(userProfileValidator),
 })
 
-export const campaignWithMembershipValidator = v.object({
-  campaign: campaignValidator,
-  member: campaignMemberValidator,
-})
+const campaignValidatorFields = {
+  ...commonValidatorFields('campaigns'),
+  dmUserProfile: userProfileValidator,
+  myMembership: v.optional(campaignMemberValidator),
+  playerCount: v.number(),
+  ...campaignTableFields,
+}
+
+export const campaignValidator = v.object(campaignValidatorFields)

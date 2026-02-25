@@ -3,7 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
@@ -57,7 +57,10 @@ export function FileForm({
   const { navigateToFile } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const file = useQuery(
-    convexQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip'),
+    convexQuery(
+      api.files.queries.getFile,
+      fileId && campaignId ? { campaignId, fileId } : 'skip',
+    ),
   )
 
   const createMutation = useMutation({
@@ -70,7 +73,7 @@ export function FileForm({
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
-    fileStorageId: file.data?.storageId,
+    fileStorageId: file.data?.storageId ?? undefined,
     uploadOnSelect: true,
     fileTypeValidator: validateFileForUpload,
   })
@@ -119,7 +122,7 @@ export function FileForm({
     initialName: file.data?.name ?? '',
     isActive: !!fileId && !!file.data,
     campaignId,
-    parentId: file.data?.parentId,
+    parentId: file.data?.parentId ?? undefined,
     excludeId: fileId,
   })
 
@@ -160,6 +163,7 @@ export function FileForm({
         try {
           const previousSlug = file.data?.slug
           const response = await updateMutation.mutateAsync({
+            campaignId: campaignId!,
             fileId,
             name: finalName,
             storageId: finalStorageId,

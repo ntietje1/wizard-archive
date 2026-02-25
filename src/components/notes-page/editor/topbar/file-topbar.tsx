@@ -1,5 +1,4 @@
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
@@ -22,8 +21,7 @@ export function FileTopbar() {
   const { navigateToItem } = useEditorNavigation()
   const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { isDm, campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { isDm, campaignId } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 
   const canRename =
@@ -35,7 +33,6 @@ export function FileTopbar() {
     await rename(item, newName)
   }
 
-  const defaultName = defaultItemName(item)
   const isNotSharedWithPlayer =
     item &&
     viewAsPlayerId &&
@@ -60,13 +57,13 @@ export function FileTopbar() {
           {isLoading && <Skeleton className="h-5 w-32 my-0.5" />}
           {item && (
             <EditableBreadcrumb
-              initialName={item.name || ''}
-              defaultName={defaultName}
+              initialName={item.name}
+              defaultName=""
               onRename={handleRename}
               ancestors={item.ancestors}
               onNavigateToItem={navigateToItem}
               campaignId={item.campaignId}
-              parentId={item.parentId}
+              parentId={item.parentId ?? undefined}
               excludeId={item._id}
               disabled={!canRename || (isNotSharedWithPlayer ?? false)}
               showNotSharedTooltip={!!isNotSharedWithPlayer}
@@ -75,7 +72,7 @@ export function FileTopbar() {
           {isEmptyEditor && (
             <EditableBreadcrumb
               initialName=""
-              defaultName={defaultName}
+              defaultName="Untitled Item"
               onRename={handleRename}
               onChange={setPendingItemName}
               ancestors={[]}

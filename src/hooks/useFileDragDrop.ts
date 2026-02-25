@@ -7,8 +7,7 @@ import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { processDataTransferItems } from '~/lib/folder-reader'
 
 export function useFileDragDrop(parentId?: Id<'folders'>) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
   const setGlobalIsDraggingFiles = useSidebarUIStore(
@@ -20,8 +19,8 @@ export function useFileDragDrop(parentId?: Id<'folders'>) {
 
   const isFileDrag = useCallback((e: React.DragEvent): boolean => {
     const types = e.dataTransfer.types
-    for (let i = 0; i < types.length; i++) {
-      if (types[i] === 'Files') return true
+    for (const type of types) {
+      if (type === 'Files') return true
     }
     return false
   }, [])

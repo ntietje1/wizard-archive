@@ -10,11 +10,10 @@ import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Image, Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/baseTypes'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -168,9 +167,7 @@ function MapPin({
     ? '#9ca3af'
     : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
   const isHidden = pin.visible !== true
-  const baseName = ghost
-    ? '???'
-    : visibleItem?.name || defaultItemName(visibleItem)
+  const baseName = ghost ? '???' : (visibleItem?.name ?? '')
   const itemName = isHidden ? `${baseName} (hidden)` : baseName
 
   const hoverScale = isHovered && !isDragging ? 1.2 : 1
@@ -403,7 +400,7 @@ export function MapViewer({
         getData: () => ({
           type: MAP_DROP_ZONE_TYPE,
           mapId: map._id,
-          mapName: map.name || defaultItemName(map),
+          mapName: map.name,
         }),
         onDragEnter: () => {
           el.setAttribute('data-drop-over', '')
@@ -529,6 +526,7 @@ export function MapViewer({
       if (draggedPinPositionRef.current) {
         try {
           await updateItemPinMutation.mutateAsync({
+            campaignId: map.campaignId,
             mapPinId: pinId,
             x: draggedPinPositionRef.current.x,
             y: draggedPinPositionRef.current.y,
@@ -550,7 +548,7 @@ export function MapViewer({
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [draggingPin, updateItemPinMutation])
+  }, [draggingPin, updateItemPinMutation, map.campaignId])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {
@@ -572,6 +570,7 @@ export function MapViewer({
     async (itemId: SidebarItemId, position: PinPosition) => {
       try {
         await createItemPinMutation.mutateAsync({
+          campaignId: map.campaignId,
           mapId: map._id,
           x: position.x,
           y: position.y,
@@ -583,7 +582,7 @@ export function MapViewer({
         toast.error('Failed to place pin')
       }
     },
-    [map._id, createItemPinMutation],
+    [map._id, map.campaignId, createItemPinMutation],
   )
 
   useEffect(() => {
@@ -641,6 +640,7 @@ export function MapViewer({
 
       try {
         await updateItemPinMutation.mutateAsync({
+          campaignId: map.campaignId,
           mapPinId: pendingPinMove.pinId,
           x: position.x,
           y: position.y,
@@ -652,7 +652,7 @@ export function MapViewer({
         toast.error('Failed to move pin')
       }
     },
-    [pendingPinMove, updateItemPinMutation],
+    [pendingPinMove, map.campaignId, updateItemPinMutation],
   )
 
   const handleMapClick = useCallback(
@@ -922,7 +922,7 @@ export function MapViewer({
                 </TransformComponent>
               </TransformWrapper>
             ) : (
-              <MapImageUpload mapId={map._id} />
+              <MapImageUpload mapId={map._id} campaignId={map.campaignId} />
             )}
           </div>
 
@@ -972,7 +972,13 @@ export function MapViewer({
   )
 }
 
-function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
+function MapImageUpload({
+  mapId,
+  campaignId,
+}: {
+  mapId: Id<'gameMaps'>
+  campaignId: Id<'campaigns'>
+}) {
   const updateMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
   })
@@ -991,7 +997,11 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     },
     onUploadComplete: async (storageId) => {
       try {
-        await updateMap.mutateAsync({ mapId, imageStorageId: storageId })
+        await updateMap.mutateAsync({
+          campaignId,
+          mapId,
+          imageStorageId: storageId,
+        })
         toast.success('Map image uploaded')
       } catch (error) {
         console.error('Failed to set map image:', error)

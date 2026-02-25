@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 export const blockNoteIdValidator = v.string()
 
@@ -18,8 +19,8 @@ const blockTableFields = {
   content: customBlockValidator,
   isTopLevel: v.boolean(),
   campaignId: v.id('campaigns'),
-  updatedAt: v.number(),
   shareStatus: v.optional(blockShareStatusValidator),
+  ...commonTableFields,
 }
 
 export const blocksTables = {
@@ -27,6 +28,7 @@ export const blocksTables = {
     ...blockTableFields,
   })
     .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId'])
+    .index('by_campaign_note_topLevel', ['campaignId', 'noteId', 'isTopLevel'])
     .index('by_campaign_note_shareStatus', [
       'campaignId',
       'noteId',
@@ -35,9 +37,8 @@ export const blocksTables = {
 }
 
 const blockValidatorFields = {
-  _id: v.id('blocks'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('blocks'),
   ...blockTableFields,
-} as const
+}
 
 export const blockValidator = v.object(blockValidatorFields)

@@ -1,8 +1,7 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
@@ -157,7 +156,7 @@ function FolderCardInner({
         <div className="folder-content px-2">
           <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
             <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-              {folder.name || defaultItemName(folder)}
+              {folder.name}
             </CardTitle>
           </div>
         </div>

@@ -1,31 +1,19 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { requireCampaignMembership } from '../campaigns/campaigns'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
-import {
-  validateParentChange,
-  validateSidebarItemName,
-} from '../sidebarItems/validation'
-import {
-  findUniqueGameMapSlug,
-  findUniqueSlug,
-  resolveSlugBasis,
-} from '../common/slug'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/baseTypes'
+import { campaignMutation } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  requireEditPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
-import { deleteMap as deleteMapFn } from './gameMaps'
-import type { Doc, Id } from '../_generated/dataModel'
+import { createMap as createMapFn } from './functions/createMap'
+import { updateMap as updateMapFn } from './functions/updateMap'
+import { deleteMap as deleteMapFn } from './functions/deleteMap'
+import { createItemPin as createItemPinFn } from './functions/createItemPin'
+import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
+import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
+import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
+import type { Id } from '../_generated/dataModel'
 
-export const createMap = mutation({
+export const createMap = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
-    name: v.optional(v.string()),
+    name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
@@ -39,73 +27,24 @@ export const createMap = mutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    await requireCampaignMembership(
-      ctx,
-      { campaignId: args.campaignId },
-      { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM, CAMPAIGN_MEMBER_ROLE.Player] },
-    )
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        args.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-      await requireFullAccessPermission(ctx, parentItem)
-    } else {
-      await requireCampaignMembership(
-        ctx,
-        { campaignId: args.campaignId },
-        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-      )
-    }
-
-    await validateSidebarItemName({
-      ctx,
-      campaignId: args.campaignId,
-      parentId: args.parentId,
+    return await createMapFn(ctx, {
       name: args.name,
-    })
-
-    const uniqueSlug = await findUniqueSlug(
-      resolveSlugBasis(args.name),
-      async (slug) => {
-        const conflict = await ctx.db
-          .query('gameMaps')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', args.campaignId).eq('slug', slug),
-          )
-          .unique()
-        return conflict !== null
-      },
-    )
-
-    const mapId = await ctx.db.insert('gameMaps', {
-      campaignId: args.campaignId,
-      name: args.name,
-      slug: uniqueSlug,
-      iconName: args.iconName,
-      color: args.color,
       imageStorageId: args.imageStorageId,
       parentId: args.parentId,
-      updatedAt: Date.now(),
-      type: SIDEBAR_ITEM_TYPES.gameMaps,
+      iconName: args.iconName,
+      color: args.color,
     })
-
-    return { mapId, slug: uniqueSlug }
   },
 })
 
-export const updateMap = mutation({
+export const updateMap = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
-    imageStorageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    imageStorageId: v.optional(v.union(v.id('_storage'), v.null())),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     mapId: v.id('gameMaps'),
@@ -115,111 +54,30 @@ export const updateMap = mutation({
     ctx,
     args,
   ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireFullAccessPermission(ctx, map)
-
-    const updates: Partial<Doc<'gameMaps'>> = {
-      updatedAt: Date.now(),
-    }
-
-    if (args.name !== undefined) {
-      updates.name = args.name
-      await validateSidebarItemName({
-        ctx,
-        campaignId: map.campaignId,
-        parentId: map.parentId,
-        name: args.name,
-        excludeId: map._id,
-      })
-
-      updates.slug = await findUniqueGameMapSlug(
-        ctx,
-        map.campaignId,
-        args.name,
-        args.mapId,
-      )
-    }
-    if (args.imageStorageId !== undefined) {
-      updates.imageStorageId = args.imageStorageId
-    }
-    if (args.iconName !== undefined) {
-      updates.iconName = args.iconName
-    }
-    if (args.color !== undefined) {
-      updates.color = args.color
-    }
-    await ctx.db.patch(args.mapId, updates)
-    return { mapId: args.mapId, slug: updates.slug || map.slug }
+    return await updateMapFn(ctx, {
+      mapId: args.mapId,
+      name: args.name,
+      imageStorageId: args.imageStorageId,
+      iconName: args.iconName,
+      color: args.color,
+    })
   },
 })
 
-export const moveMap = mutation({
+export const deleteMap = campaignMutation({
   args: {
-    mapId: v.id('gameMaps'),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.id('gameMaps'),
-  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireFullAccessPermission(ctx, map)
-
-    // Validate no circular parent reference
-    await validateParentChange({
-      ctx,
-      item: map,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        map.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-
-    // Validate name doesn't conflict in new location
-    await validateSidebarItemName({
-      ctx,
-      campaignId: map.campaignId,
-      parentId: args.parentId,
-      name: map.name,
-      excludeId: map._id,
-    })
-
-    await ctx.db.patch(args.mapId, {
-      parentId: args.parentId,
-      updatedAt: Date.now(),
-    })
-    return args.mapId
-  },
-})
-
-export const deleteMap = mutation({
-  args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
   },
   returns: v.id('gameMaps'),
   handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    return await deleteMapFn(ctx, args.mapId)
+    return await deleteMapFn(ctx, { mapId: args.mapId })
   },
 })
 
-export const createItemPin = mutation({
+export const createItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
@@ -227,109 +85,54 @@ export const createItemPin = mutation({
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const rawMap = await ctx.db.get(args.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
-
-    const item = await ctx.db.get(args.itemId)
-    if (!item) {
-      throw new Error('Item not found')
-    }
-    return await ctx.db.insert('mapPins', {
+    return await createItemPinFn(ctx, {
       mapId: args.mapId,
-      itemId: args.itemId,
       x: args.x,
       y: args.y,
-      visible: false,
-      updatedAt: Date.now(),
+      itemId: args.itemId,
     })
   },
 })
 
-export const updateItemPin = mutation({
+export const updateItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
-
-    await ctx.db.patch(args.mapPinId, {
+    return await updateItemPinFn(ctx, {
+      mapPinId: args.mapPinId,
       x: args.x,
       y: args.y,
-      updatedAt: Date.now(),
     })
-
-    return args.mapPinId
   },
 })
 
-export const updatePinVisibility = mutation({
+export const updatePinVisibility = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     visible: v.boolean(),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
-
-    await ctx.db.patch(args.mapPinId, {
+    return await updatePinVisibilityFn(ctx, {
+      mapPinId: args.mapPinId,
       visible: args.visible,
-      updatedAt: Date.now(),
     })
-
-    return args.mapPinId
   },
 })
 
-export const removeItemPin = mutation({
+export const removeItemPin = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    const pin = await ctx.db.get(args.mapPinId)
-    if (!pin) {
-      throw new Error('Pin not found')
-    }
-
-    const rawMap = await ctx.db.get(pin.mapId)
-    if (!rawMap) {
-      throw new Error('Map not found')
-    }
-
-    const map = await enhanceSidebarItem(ctx, rawMap)
-    await requireEditPermission(ctx, map)
-
-    await ctx.db.delete(args.mapPinId)
-    return args.mapPinId
+    return await removeItemPinFn(ctx, { mapPinId: args.mapPinId })
   },
 })

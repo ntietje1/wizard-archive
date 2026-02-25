@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { SIDEBAR_ITEM_TYPES } from '../baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 
 export const sidebarItemIdValidator = v.union(
   v.id('notes'),

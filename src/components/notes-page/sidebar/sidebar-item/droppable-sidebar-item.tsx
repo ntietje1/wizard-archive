@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'

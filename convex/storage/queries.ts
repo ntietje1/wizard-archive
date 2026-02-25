@@ -1,28 +1,19 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import { requireUserIdentity } from '../common/identity'
+import { authQuery } from '../functions'
+import { getDownloadUrl as getDownloadUrlFn } from './functions/getDownloadUrl'
+import { getStorageMetadata as getStorageMetadataFn } from './functions/getStorageMetadata'
 
-export const getDownloadUrl = query({
+export const getDownloadUrl = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args): Promise<string | null> => {
-    const { profile } = await requireUserIdentity(ctx)
-    const fileStorage = await ctx.db
-      .query('fileStorage')
-      .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
-      )
-      .unique()
-    if (!fileStorage) {
-      return null
-    }
-    return await ctx.storage.getUrl(args.storageId)
+    return await getDownloadUrlFn(ctx, { storageId: args.storageId })
   },
 })
 
-export const getStorageMetadata = query({
+export const getStorageMetadata = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
@@ -35,26 +26,6 @@ export const getStorageMetadata = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const { profile } = await requireUserIdentity(ctx)
-    const fileStorage = await ctx.db
-      .query('fileStorage')
-      .withIndex('by_user_storage', (q) =>
-        q.eq('userId', profile._id).eq('storageId', args.storageId),
-      )
-      .unique()
-    if (!fileStorage) {
-      return null
-    }
-
-    const metadata = await ctx.db.system.get(args.storageId)
-    if (!metadata) {
-      return null
-    }
-
-    return {
-      contentType: metadata.contentType ?? null,
-      size: metadata.size,
-      originalFileName: fileStorage.originalFileName ?? null,
-    }
+    return await getStorageMetadataFn(ctx, { storageId: args.storageId })
   },
 })

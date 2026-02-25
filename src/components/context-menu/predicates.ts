@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { Predicate, ViewContext } from './types'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 export const always: Predicate = () => true
 export const never: Predicate = () => false
@@ -83,10 +83,14 @@ export const isPlayer: Predicate = (ctx) => {
   return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.Player
 }
 
-export const hasFullAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'full_access'
+export const hasViewAccess: Predicate = (ctx) => {
+  return ctx.permissionLevel === 'view' || hasEditAccess(ctx)
 }
 
 export const hasEditAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'edit' || ctx.permissionLevel === 'full_access'
+  return ctx.permissionLevel === 'edit' || hasFullAccess(ctx)
+}
+
+export const hasFullAccess: Predicate = (ctx) => {
+  return ctx.permissionLevel === 'full_access'
 }

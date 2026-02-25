@@ -6,8 +6,8 @@ import { useCampaign } from './useCampaign'
 import { useEditorMode } from './useEditorMode'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import {
   TYPE_TO_URL_PARAM,

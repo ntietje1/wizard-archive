@@ -3,7 +3,7 @@ import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
@@ -56,7 +56,10 @@ export function MapForm({
   const { navigateToMap } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
   const map = useQuery(
-    convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
+    convexQuery(
+      api.gameMaps.queries.getMap,
+      mapId && campaignId ? { campaignId, mapId } : 'skip',
+    ),
   )
 
   const createMutation = useMutation({
@@ -69,7 +72,7 @@ export function MapForm({
 
   const imageUpload = useFileWithPreview({
     isOpen: true,
-    fileStorageId: map.data?.imageStorageId,
+    fileStorageId: map.data?.imageStorageId ?? undefined,
     uploadOnSelect: true,
     fileTypeValidator: (file: File) => {
       if (!file.type.startsWith('image/')) {
@@ -123,7 +126,7 @@ export function MapForm({
     initialName: map.data?.name ?? '',
     isActive: !!mapId,
     campaignId,
-    parentId: map.data?.parentId,
+    parentId: map.data?.parentId ?? undefined,
     excludeId: mapId,
   })
 
@@ -156,6 +159,7 @@ export function MapForm({
         try {
           const previousSlug = map.data?.slug
           const response = await updateMutation.mutateAsync({
+            campaignId: campaignId!,
             mapId,
             name: values.name,
             imageStorageId: finalImageStorageId,

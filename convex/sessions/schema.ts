@@ -1,16 +1,17 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 const sessionTableFields = {
   campaignId: v.id('campaigns'),
   name: v.optional(v.string()),
   startedAt: v.number(),
   endedAt: v.optional(v.number()),
-  updatedAt: v.number(),
 }
 
 export const sessionTables = {
   sessions: defineTable({
+    ...commonTableFields,
     ...sessionTableFields,
   })
     .index('by_campaign_startedAt', ['campaignId', 'startedAt'])
@@ -18,9 +19,8 @@ export const sessionTables = {
 }
 
 const sessionValidatorFields = {
-  _id: v.id('sessions'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('sessions'),
   ...sessionTableFields,
-} as const
+}
 
 export const sessionValidator = v.object(sessionValidatorFields)

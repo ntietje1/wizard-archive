@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash-es'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { validateWikiLinkCompatibleName } from '~/lib/sidebar-validation'
+import { validateItemName } from '~/lib/sidebar-validation'
 
 interface UseNameValidationOptions {
   name: string
@@ -44,14 +44,15 @@ export function useNameValidation({
 
   const isPendingDebounce = trimmedName !== trimmedDebouncedName
 
-  const wikiLinkValidation = useMemo(() => {
-    if (!isActive || !trimmedName) return { valid: true, error: undefined }
-    return validateWikiLinkCompatibleName(trimmedName)
-  }, [isActive, trimmedName])
+  const nameValidation = useMemo(() => {
+    if (!isActive) return { valid: true, error: undefined }
+    if (trimmedName === trimmedInitialName)
+      return { valid: true, error: undefined }
+    return validateItemName(trimmedName)
+  }, [isActive, trimmedName, trimmedInitialName])
 
   const uniquenessValidation = useMemo(() => {
     if (!isActive || !campaignId) return { valid: true }
-    if (!trimmedDebouncedName) return { valid: true }
     if (trimmedDebouncedName === trimmedInitialName) return { valid: true }
     return validateName(trimmedDebouncedName, parentId, excludeId)
   }, [
@@ -69,24 +70,24 @@ export function useNameValidation({
   const isNotUnique = isResultValid && !uniquenessValidation.valid
 
   const validationError = useMemo(() => {
-    if (!wikiLinkValidation.valid) return wikiLinkValidation.error
+    if (!nameValidation.valid) return nameValidation.error
     if (isNotUnique)
       return uniquenessValidation.error ?? 'Name is already in use'
     return undefined
-  }, [wikiLinkValidation, isNotUnique, uniquenessValidation.error])
-  const hasError = !wikiLinkValidation.valid || isNotUnique
+  }, [nameValidation, isNotUnique, uniquenessValidation.error])
+  const hasError = !nameValidation.valid || isNotUnique
 
   const checkNameUnique = useCallback(
-    async (nameToCheck: string): Promise<string | undefined> => {
+    (nameToCheck: string): string | undefined => {
       const trimmed = nameToCheck.trim()
 
-      const wikiLinkResult = validateWikiLinkCompatibleName(trimmed)
-      if (!wikiLinkResult.valid) {
-        return wikiLinkResult.error
+      const nameResult = validateItemName(trimmed)
+      if (!nameResult.valid) {
+        return nameResult.error ?? 'Invalid name'
       }
 
       // Skip uniqueness check if not needed
-      if (!campaignId || !trimmed || trimmed === trimmedInitialName) {
+      if (!campaignId || trimmed === trimmedInitialName) {
         return undefined
       }
 

@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { commonTableFields, commonValidatorFields } from '../common/schema'
 import { SORT_DIRECTIONS, SORT_ORDERS } from './types'
 
 export const sortOrderValidator = v.union(
@@ -24,14 +25,14 @@ const editorTableFields = {
 
 export const editorTables = {
   editor: defineTable({
+    ...commonTableFields,
     ...editorTableFields,
   }).index('by_campaign_user', ['campaignId', 'userId']),
 }
 
 const editorValidatorFields = {
-  _id: v.id('editor'),
-  _creationTime: v.number(),
+  ...commonValidatorFields('editor'),
   ...editorTableFields,
-} as const
+}
 
 export const editorValidator = v.object(editorValidatorFields)

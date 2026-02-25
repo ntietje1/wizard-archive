@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
-import type { SidebarItemType } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from '~/lib/icons'
 import { Button } from '~/components/shadcn/ui/button'
@@ -63,14 +63,12 @@ export function CreateNewDashboard({
   parentId,
   folderPath,
 }: CreateNewDashboardProps) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
-  const { createItem } = useSidebarItemMutations()
+  const { campaignId } = useCampaign()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
-  const name = pendingItemName.trim() || undefined
 
   const isDisabled = creatingType !== null
 
@@ -80,6 +78,7 @@ export function CreateNewDashboard({
     setCreatingType(type)
 
     try {
+      const name = pendingItemName.trim() || getDefaultName(type, parentId)
       const result = await createItem({ type, campaignId, parentId, name })
       openParentFolders(result.id)
       await navigateToItem(result)

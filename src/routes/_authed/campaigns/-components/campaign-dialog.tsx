@@ -13,7 +13,7 @@ import {
   validateCampaignSlugAsync,
   validateCampaignSlugSync,
 } from './campaign-form-validators'
-import type { CampaignWithMembership } from 'convex/campaigns/types'
+import type { Campaign } from 'convex/campaigns/types'
 import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -36,14 +36,14 @@ interface CampaignDialogProps {
   mode: 'create' | 'edit'
   isOpen: boolean
   onClose: () => void
-  campaignWithMembership?: CampaignWithMembership // Required for edit mode
+  campaign?: Campaign // Required for edit mode
 }
 
 export function CampaignDialog({
   mode,
   isOpen,
   onClose,
-  campaignWithMembership,
+  campaign,
 }: CampaignDialogProps) {
   const convex = useConvex()
   const userProfile = useQuery(
@@ -55,8 +55,6 @@ export function CampaignDialog({
   const updateCampaign = useMutation({
     mutationFn: useConvexMutation(api.campaigns.mutations.updateCampaign),
   })
-
-  const campaign = campaignWithMembership?.campaign
 
   const form = useForm({
     defaultValues: { ...DEFAULT_CAMPAIGN_FORM_VALUES },

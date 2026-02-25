@@ -1,8 +1,7 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
@@ -75,7 +74,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           <div className="overflow-hidden">
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <CardTitle className="text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-                {note.name || defaultItemName(note)}
+                {note.name}
               </CardTitle>
             </div>
           </div>

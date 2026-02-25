@@ -15,9 +15,7 @@ import { useSession } from '~/hooks/useSession'
 import { useCampaign } from '~/hooks/useCampaign'
 
 export function SessionPanel() {
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
-  const campaignId = campaign?._id
+  const { campaignId } = useCampaign()
 
   const {
     currentSession,

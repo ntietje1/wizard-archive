@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
 import type {
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 interface NavigateOnSlugChangeParams {
   itemId: SidebarItemId

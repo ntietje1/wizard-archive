@@ -1,11 +1,9 @@
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemId, SidebarItemType } from '../sidebarItems/baseTypes'
+import type { CommonValidatorFields } from '../common/types'
+import type { SidebarItemId } from '../sidebarItems/types/baseTypes'
 
-export type Bookmark = {
-  _id: Id<'bookmarks'>
-  _creationTime: number
+export type Bookmark = CommonValidatorFields<'bookmarks'> & {
   campaignId: Id<'campaigns'>
   sidebarItemId: SidebarItemId
-  sidebarItemType: SidebarItemType
   campaignMemberId: Id<'campaignMembers'>
 }

@@ -44,8 +44,8 @@ export function WikiLinkClickHandler({
 }) {
   const navigate = useNavigate()
   const { navigateToNote } = useEditorNavigation()
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
   const { editorMode } = useEditorMode()
   const { parentItemsMap } = useAllSidebarItems()
   const editorEl = useEditorDomElement(editor)
@@ -184,7 +184,7 @@ export function WikiLinkClickHandler({
       }
 
       // Ghost link: ctrl+click creates note
-      if (!link.exists && isCtrlClick && link.itemName && campaign?._id) {
+      if (!link.exists && isCtrlClick && link.itemName && campaignData?._id) {
         e.preventDefault()
         e.stopPropagation()
         hideTooltip()
@@ -199,7 +199,7 @@ export function WikiLinkClickHandler({
         }
         try {
           const result = await createNote({
-            campaignId: campaign._id,
+            campaignId: campaignData._id,
             name: link.itemName,
           })
           if (result) navigateToNote(result.slug)
@@ -215,7 +215,7 @@ export function WikiLinkClickHandler({
   }, [
     editorEl,
     navigate,
-    campaign?._id,
+    campaignData?._id,
     createNote,
     navigateToNote,
     editorMode,

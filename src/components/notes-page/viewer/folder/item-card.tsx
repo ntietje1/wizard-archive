@@ -1,9 +1,9 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'
 import { FileCard } from './file-card'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 
 export interface ItemCardProps<T extends AnySidebarItem> {

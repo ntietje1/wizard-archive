@@ -1,49 +1,45 @@
 import { v } from 'convex/values'
-import { query } from '../_generated/server'
-import {
-  getAllSidebarItems as getAllSidebarItemsFn,
-  getSidebarItemById as getSidebarItemByIdFn,
-  getSidebarItemBySlug as getSidebarItemBySlugFn,
-  getSidebarItemByName as getSidebarItemsByNameFn,
-  getSidebarItemsByParent as getSidebarItemsByParentFn,
-} from '../sidebarItems/sidebarItems'
+import { campaignQuery } from '../functions'
+import { getAllSidebarItems as getAllSidebarItemsFn } from './functions/getAllSidebarItems'
+import { getSidebarItemById as getSidebarItemByIdFn } from './functions/getSidebarItemById'
+import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
+import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
+import { getSidebarItemByName as getSidebarItemByNameFn } from './functions/getSidebarItemByName'
 import { anySidebarItemValidator } from './schema/schema'
-import { anySidebarItemWithContentValidator } from './schema/contentSchema'
 import {
   sidebarItemIdValidator,
   sidebarItemTypeValidator,
 } from './schema/baseValidators'
-import type { AnySidebarItem, AnySidebarItemWithContent } from './types'
+import { anySidebarItemWithContentValidator } from './schema/contentSchema'
+import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 
-export const getAllSidebarItems = query({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const getAllSidebarItems = campaignQuery({
+  args: { campaignId: v.id('campaigns') },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsFn(ctx, args.campaignId)
+  handler: async (ctx): Promise<Array<AnySidebarItem>> => {
+    return await getAllSidebarItemsFn(ctx)
   },
 })
 
-export const getSidebarItemsByParent = query({
+export const getSidebarItemsByParent = campaignQuery({
   args: {
     campaignId: v.id('campaigns'),
     parentId: v.optional(v.id('folders')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getSidebarItemsByParentFn(ctx, args.campaignId, args.parentId)
+    return await getSidebarItemsByParentFn(ctx, { parentId: args.parentId })
   },
 })
 
-export const getSidebarItem = query({
+export const getSidebarItem = campaignQuery({
   args: {
-    id: sidebarItemIdValidator,
     campaignId: v.id('campaigns'),
+    id: sidebarItemIdValidator,
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    const result = await getSidebarItemByIdFn(ctx, args.campaignId, args.id)
+    const result = await getSidebarItemByIdFn(ctx, { id: args.id })
     if (!result) {
       throw new Error('Sidebar item not found')
     }
@@ -51,7 +47,7 @@ export const getSidebarItem = query({
   },
 })
 
-export const getSidebarItemBySlug = query({
+export const getSidebarItemBySlug = campaignQuery({
   args: {
     campaignId: v.id('campaigns'),
     type: sidebarItemTypeValidator,
@@ -59,22 +55,20 @@ export const getSidebarItemBySlug = query({
   },
   returns: v.union(anySidebarItemWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
-    return await getSidebarItemBySlugFn(
-      ctx,
-      args.campaignId,
-      args.type,
-      args.slug,
-    )
+    return await getSidebarItemBySlugFn(ctx, {
+      type: args.type,
+      slug: args.slug,
+    })
   },
 })
 
-export const getSidebarItemByName = query({
+export const getSidebarItemByName = campaignQuery({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
   },
   returns: v.union(anySidebarItemValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItem | null> => {
-    return await getSidebarItemsByNameFn(ctx, args.campaignId, args.name)
+    return await getSidebarItemByNameFn(ctx, { name: args.name })
   },
 })

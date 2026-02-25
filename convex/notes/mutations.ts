@@ -1,30 +1,18 @@
 import { v } from 'convex/values'
-import { mutation } from '../_generated/server'
-import { saveTopLevelBlocksForNote } from '../blocks/blocks'
+import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
-import { getSidebarItemById } from '../sidebarItems/sidebarItems'
-import {
-  validateParentChange,
-  validateSidebarItemName,
-} from '../sidebarItems/validation'
-import { enhanceSidebarItem } from '../sidebarItems/helpers'
-import {
-  requireEditPermission,
-  requireFullAccessPermission,
-} from '../shares/itemShares'
-import { EMPTY_PM_DOC, prosemirrorSync } from '../prosemirrorSync'
-import {
-  createNote as createNoteFn,
-  deleteNote as deleteNoteFn,
-  updateNote as updateNoteFn,
-} from './notes'
+import { createNote as createNoteFn } from './functions/createNote'
+import { updateNote as updateNoteFn } from './functions/updateNote'
+import { deleteNote as deleteNoteFn } from './functions/deleteNote'
+import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
 import type { Id } from '../_generated/dataModel'
 
-export const updateNote = mutation({
+export const updateNote = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.string()),
+    iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
@@ -35,72 +23,31 @@ export const updateNote = mutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    return await updateNoteFn(ctx, args)
+    return await updateNoteFn(ctx, {
+      noteId: args.noteId,
+      name: args.name,
+      iconName: args.iconName,
+      color: args.color,
+    })
   },
 })
 
-export const moveNote = mutation({
+export const deleteNote = campaignMutation({
   args: {
-    noteId: v.id('notes'),
-    parentId: v.optional(v.id('folders')),
-  },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const rawNote = await ctx.db.get(args.noteId)
-    if (!rawNote) {
-      throw new Error('Note not found')
-    }
-
-    const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireFullAccessPermission(ctx, note)
-
-    await validateParentChange({
-      ctx,
-      item: note,
-      newParentId: args.parentId,
-    })
-
-    if (args.parentId) {
-      const parentItem = await getSidebarItemById(
-        ctx,
-        note.campaignId,
-        args.parentId,
-      )
-      if (!parentItem) {
-        throw new Error('Parent not found')
-      }
-    }
-    await validateSidebarItemName({
-      ctx,
-      campaignId: note.campaignId,
-      parentId: args.parentId,
-      name: note.name,
-      excludeId: note._id,
-    })
-
-    await ctx.db.patch(args.noteId, {
-      parentId: args.parentId,
-      updatedAt: Date.now(),
-    })
-    return args.noteId
-  },
-})
-
-export const deleteNote = mutation({
-  args: {
-    noteId: v.id('notes'),
-  },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
-    return await deleteNoteFn(ctx, args.noteId)
-  },
-})
-
-export const createNote = mutation({
-  args: {
-    name: v.optional(v.string()),
-    parentId: v.optional(v.id('folders')),
     campaignId: v.id('campaigns'),
+    noteId: v.id('notes'),
+  },
+  returns: v.id('notes'),
+  handler: async (ctx, args): Promise<Id<'notes'>> => {
+    return await deleteNoteFn(ctx, { noteId: args.noteId })
+  },
+})
+
+export const createNote = campaignMutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    name: v.string(),
+    parentId: v.optional(v.id('folders')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
@@ -113,30 +60,27 @@ export const createNote = mutation({
     ctx,
     args,
   ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
-    const { noteId, slug } = await createNoteFn(ctx, args)
-    if (args.content) {
-      await saveTopLevelBlocksForNote(ctx, noteId, args.content)
-    }
-    await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
-    return { noteId, slug }
+    return await createNoteFn(ctx, {
+      name: args.name,
+      parentId: args.parentId,
+      iconName: args.iconName,
+      color: args.color,
+      content: args.content,
+    })
   },
 })
 
-export const updateNoteContent = mutation({
+export const updateNoteContent = campaignMutation({
   args: {
+    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     content: v.array(customBlockValidator),
   },
   returns: v.id('notes'),
   handler: async (ctx, args): Promise<Id<'notes'>> => {
-    const rawNote = await ctx.db.get(args.noteId)
-    if (!rawNote) {
-      throw new Error('Note not found')
-    }
-
-    const note = await enhanceSidebarItem(ctx, rawNote)
-    await requireEditPermission(ctx, note)
-    await saveTopLevelBlocksForNote(ctx, args.noteId, args.content)
-    return args.noteId
+    return await updateNoteContentFn(ctx, {
+      noteId: args.noteId,
+      content: args.content,
+    })
   },
 })

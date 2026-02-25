@@ -6,8 +6,7 @@ import {
 } from '~/stores/sidebarUIStore'
 
 export function useFolderState(folderId: string) {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const { folderStates, closeAllFoldersMode } =
     useCampaignSidebarState(campaignId)

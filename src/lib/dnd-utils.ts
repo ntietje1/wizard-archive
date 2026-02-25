@@ -1,12 +1,12 @@
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
-} from 'convex/sidebarItems/baseTypes'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
+} from 'convex/sidebarItems/types/baseTypes'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type {
   SidebarItem,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
+} from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const

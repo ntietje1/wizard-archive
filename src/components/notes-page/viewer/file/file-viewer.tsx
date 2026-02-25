@@ -36,7 +36,13 @@ function getFileType(
   }
 }
 
-function FileUpload({ fileId }: { fileId: Id<'files'> }) {
+function FileUpload({
+  fileId,
+  campaignId,
+}: {
+  fileId: Id<'files'>
+  campaignId: Id<'campaigns'>
+}) {
   const updateFile = useMutation({
     mutationFn: useConvexMutation(api.files.mutations.updateFile),
   })
@@ -47,7 +53,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
     fileTypeValidator: validateFileForUpload,
     onUploadComplete: async (storageId) => {
       try {
-        await updateFile.mutateAsync({ fileId, storageId })
+        await updateFile.mutateAsync({ campaignId, fileId, storageId })
         toast.success('File uploaded')
       } catch {
         toast.error('Failed to attach file. Please try again.')
@@ -101,7 +107,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
 
 export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
   if (!file.downloadUrl) {
-    return <FileUpload fileId={file._id} />
+    return <FileUpload fileId={file._id} campaignId={file.campaignId} />
   }
 
   const fileType = getFileType(file.contentType)

@@ -3,12 +3,11 @@ import { ClientOnly } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { defaultItemName } from 'convex/sidebarItems/sidebarItems'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
-import { hasAtLeastPermissionLevel } from 'convex/shares/itemShares'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
-import type { File } from 'convex/files/types'
+import type { SidebarFile } from 'convex/files/types'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -76,7 +75,7 @@ function FileCardSkeleton() {
   )
 }
 
-function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
+function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToFile } = useEditorNavigation()
   const canDrag = hasAtLeastPermissionLevel(
@@ -128,7 +127,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
         {/* Top Section: Title + Menu Button */}
         <div className="flex items-center justify-between min-w-0">
           <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-            {file.name || defaultItemName(file)}
+            {file.name}
           </CardTitle>
           <Button
             variant="ghost"
@@ -174,7 +173,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<File>) {
   )
 }
 
-export function FileCard(props: ItemCardProps<File>) {
+export function FileCard(props: ItemCardProps<SidebarFile>) {
   if (props.isLoading) {
     return <FileCardSkeleton />
   }

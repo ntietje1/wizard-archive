@@ -1,9 +1,19 @@
 import { v } from 'convex/values'
 
-// includes _id and _creationTime for use in validators
-export const commonMetaFields = (tableName: string) => ({
+export const commonTableFields = {
+  updatedTime: v.number(),
+  updatedBy: v.id('userProfiles'),
+  createdBy: v.id('userProfiles'),
+
+  // TODO: add deleteStatus (deleted, archived, undefined)
+}
+
+export const convexValidatorFields = (tableName: string) => ({
   _id: v.id(tableName),
   _creationTime: v.number(),
-  updatedAt: v.number(),
-  createdBy: v.id('campaignMembers'),
+})
+
+export const commonValidatorFields = (tableName: string) => ({
+  ...convexValidatorFields(tableName),
+  ...commonTableFields,
 })

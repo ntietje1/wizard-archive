@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/shallow'
 import type {
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
+} from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarDragData } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 

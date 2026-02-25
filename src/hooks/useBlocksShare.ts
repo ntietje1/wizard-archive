@@ -3,11 +3,11 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { SHARE_STATUS } from 'convex/shares/types'
+import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
-import type { BlockShareInfo } from 'convex/blocks/queries'
+import type { BlockShareInfo } from 'convex/blocks/types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { isNote } from '~/lib/sidebar-item-utils'
@@ -30,27 +30,29 @@ export type AggregateShareStatus =
 
 export function useBlocksShare(blocks: Array<CustomBlock>) {
   const { item } = useCurrentItem()
-  const { campaignWithMembership } = useCampaign()
-  const campaign = campaignWithMembership.data?.campaign
+  const { campaign } = useCampaign()
+  const campaignData = campaign.data
   const blockIds = useMemo(() => blocks.map((b) => b.id), [blocks])
 
   const query = useQuery(
     convexQuery(
       api.blocks.queries.getBlocksWithShares,
-      isNote(item) && blockIds.length > 0
-        ? { noteId: item._id, blockIds }
+      isNote(item) && blockIds.length > 0 && campaignData
+        ? { campaignId: campaignData._id, noteId: item._id, blockIds }
         : 'skip',
     ),
   )
 
   const setBlocksShareStatus = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.setBlocksShareStatus),
+    mutationFn: useConvexMutation(
+      api.blockShares.mutations.setBlocksShareStatus,
+    ),
   })
   const shareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.shareBlocks),
+    mutationFn: useConvexMutation(api.blockShares.mutations.shareBlocks),
   })
   const unshareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.shares.mutations.unshareBlocks),
+    mutationFn: useConvexMutation(api.blockShares.mutations.unshareBlocks),
   })
 
   const isMutating =
@@ -134,7 +136,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const toggleShareStatus = async () => {
     if (
-      !campaign?._id ||
+      !campaignData?._id ||
       !isNote(item) ||
       isMutating ||
       topLevelBlocks.length === 0
@@ -149,7 +151,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
           : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
-        campaignId: campaign._id,
+        campaignId: campaignData._id,
         noteId: item._id,
         blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id, content: b })),
         status: newStatus,
@@ -162,7 +164,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
     if (
-      !campaign?._id ||
+      !campaignData?._id ||
       !isNote(item) ||
       isMutating ||
       topLevelBlocks.length === 0
@@ -171,7 +173,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     try {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           noteId: item._id,
           blockNoteIds: topLevelBlocks.map((b) => b.id),
           campaignMemberId: memberId,
@@ -189,7 +191,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         if (blocksToShare.length === 0) return
 
         await shareBlocks.mutateAsync({
-          campaignId: campaign._id,
+          campaignId: campaignData._id,
           noteId: item._id,
           blocks: blocksToShare.map((b) => ({ blockNoteId: b.id, content: b })),
           campaignMemberId: memberId,

@@ -4,8 +4,9 @@ import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/baseTypes'
-import type { PermissionLevel, ShareStatus } from '../shares/types'
+} from '../sidebarItems/types/baseTypes'
+import type { PermissionLevel } from '../permissions/types'
+import type { ShareStatus } from '../blockShares/types'
 import type { Id } from '../_generated/dataModel'
 
 export type NoteFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.notes>

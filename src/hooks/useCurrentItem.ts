@@ -7,8 +7,7 @@ import { useCampaign } from '~/hooks/useCampaign'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useCurrentItem() {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const editorMatch = useMatch({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',

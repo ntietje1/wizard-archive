@@ -3,11 +3,11 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { PERMISSION_LEVEL } from 'convex/shares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
-import type { SidebarItemId } from 'convex/sidebarItems/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
@@ -31,8 +31,7 @@ export const AllSidebarItemsContext =
  * Renders a single React Query observer for `getAllSidebarItems`.
  */
 export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
-  const { campaignWithMembership } = useCampaign()
-  const campaignId = campaignWithMembership.data?.campaign._id
+  const { campaignId } = useCampaign()
 
   const query = useQuery({
     ...convexQuery(
@@ -63,7 +62,7 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
       const effectiveParentId =
         item.parentId && !sidebarItemIdMap.has(item.parentId)
           ? undefined
-          : item.parentId
+          : (item.parentId ?? undefined)
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {
@@ -125,8 +124,8 @@ export const sortItemsByOptions = (
   const sortFn = (a: AnySidebarItem, b: AnySidebarItem) => {
     switch (options.order) {
       case SORT_ORDERS.Alphabetical: {
-        const nameA = a.name || ''
-        const nameB = b.name || ''
+        const nameA = a.name
+        const nameB = b.name
         return options.direction === SORT_DIRECTIONS.Ascending
           ? nameA.localeCompare(nameB)
           : nameB.localeCompare(nameA)
@@ -137,8 +136,8 @@ export const sortItemsByOptions = (
           : b._creationTime - a._creationTime
       case SORT_ORDERS.DateModified:
         return options.direction === SORT_DIRECTIONS.Ascending
-          ? a.updatedAt - b.updatedAt
-          : b.updatedAt - a.updatedAt
+          ? a.updatedTime - b.updatedTime
+          : b.updatedTime - a.updatedTime
       default:
         return 0
     }
@@ -175,7 +174,7 @@ export const useFilteredSidebarItems = () => {
       const effectiveParentId =
         item.parentId && !filteredItemsMap.has(item.parentId)
           ? undefined
-          : item.parentId
+          : (item.parentId ?? undefined)
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {

@@ -3,15 +3,15 @@ import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItemId,
   SidebarItemType,
-} from 'convex/sidebarItems/baseTypes'
+} from 'convex/sidebarItems/types/baseTypes'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
-import type { AnySidebarItem } from 'convex/sidebarItems/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 
 interface CreateItemBase {
   campaignId: Id<'campaigns'>
-  name?: string
+  name: string
   parentId?: Id<'folders'>
   iconName?: string
   color?: string
@@ -50,6 +50,7 @@ export type CreateItemResult = {
 
 export interface SidebarItemMutationsValue {
   createItem: (args: CreateItemArgs) => Promise<CreateItemResult>
+  getDefaultName: (type: SidebarItemType, parentId?: Id<'folders'>) => string
   rename: (
     item: AnySidebarItem,
     newName: string,
@@ -60,7 +61,7 @@ export interface SidebarItemMutationsValue {
   ) => Promise<unknown>
   deleteItem: (item: AnySidebarItem) => Promise<void>
   validateName: (
-    name: string | undefined,
+    name: string,
     parentId: Id<'folders'> | undefined,
     excludeId?: SidebarItemId,
   ) => ValidationResult
