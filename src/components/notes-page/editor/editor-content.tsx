@@ -13,7 +13,7 @@ import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useFileDropZone } from '~/hooks/useFileDropZone'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -70,8 +70,9 @@ function EmptyEditorContent() {
     })
   }, [])
 
-  const { isDraggingFiles, fileDropProps } = useFileDropZone({
-    targetId: undefined,
+  const { isFileDropTarget } = useExternalDropTarget({
+    ref,
+    parentId: undefined,
     canAcceptFiles: true,
   })
 
@@ -80,9 +81,8 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
-        isDraggingFiles && 'bg-muted/50',
+        isFileDropTarget && 'bg-muted/50',
       )}
-      {...fileDropProps}
     >
       {isDm ? (
         <CreateNewDashboard />

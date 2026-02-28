@@ -12,7 +12,16 @@ export const OPEN_ACTION = 'open' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
+/** Data attached to a dragged sidebar item. Contains only the item itself. */
 export type SidebarDragData = AnySidebarItem & {
+  [key: string | symbol]: unknown
+}
+
+/**
+ * Data attached to a sidebar item registered as a drop target.
+ * Includes ancestorIds for circular-reference validation in validateDrop.
+ */
+export type SidebarItemDropData = AnySidebarItem & {
   [key: string | symbol]: unknown
   ancestorIds?: Array<Id<'folders'>>
 }
@@ -40,7 +49,7 @@ export interface TrashDropZoneData {
 }
 
 export type SidebarDropData =
-  | SidebarDragData
+  | SidebarItemDropData
   | SidebarRootDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData

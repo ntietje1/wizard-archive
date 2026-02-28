@@ -2,18 +2,15 @@ import { useRef } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { Id } from 'convex/_generated/dataModel'
 import { useDraggable } from '~/hooks/useDraggable'
 
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: Array<Id<'folders'>>
   children: React.ReactNode
 }
 
 export function DraggableSidebarItem({
   item,
-  ancestorIds = [],
   children,
 }: DraggableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -25,7 +22,7 @@ export function DraggableSidebarItem({
 
   useDraggable({
     ref,
-    data: { ...item, ancestorIds },
+    data: { ...item },
     canDrag,
   })
 

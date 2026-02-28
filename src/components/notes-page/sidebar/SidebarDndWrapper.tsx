@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { monitorForExternal } from '@atlaskit/pragmatic-drag-and-drop/external/adapter'
+import { containsFiles } from '@atlaskit/pragmatic-drag-and-drop/external/file'
 import { toast } from 'sonner'
 import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type {
   DropRejectionReason,
   SidebarDragData,
@@ -23,9 +26,11 @@ import {
 } from '~/lib/dnd-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
+import { useFileDropHandler } from '~/hooks/useFileDropHandler'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { processDataTransferItems } from '~/lib/folder-reader'
 import { Ban } from '~/lib/icons'
 import { assertNever } from '~/lib/utils'
 
@@ -215,8 +220,38 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
   const { navigateToItem } = useEditorNavigationContext()
   const { moveItem } = useSidebarItemMutations()
+  const { handleDrop: handleDropFiles } = useFileDropHandler()
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
+  const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
+  const setIsDraggingFiles = useSidebarUIStore((s) => s.setIsDraggingFiles)
+
+  // Prevent the browser from opening dragged files in a new tab.
+  // Using capture phase so this fires BEFORE element bubble listeners,
+  // letting registered drop targets override dropEffect to 'copy'.
+  useEffect(() => {
+    const isFileDrag = (e: DragEvent) => {
+      if (!e.dataTransfer) return false
+      for (const type of e.dataTransfer.types) {
+        if (type === 'Files') return true
+      }
+      return false
+    }
+    const handleDragOver = (e: DragEvent) => {
+      if (!isFileDrag(e)) return
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
+    }
+    const handleDrop = (e: DragEvent) => {
+      if (isFileDrag(e)) e.preventDefault()
+    }
+    document.addEventListener('dragover', handleDragOver, true)
+    document.addEventListener('drop', handleDrop, true)
+    return () => {
+      document.removeEventListener('dragover', handleDragOver, true)
+      document.removeEventListener('drop', handleDrop, true)
+    }
+  }, [])
 
   useEffect(() => {
     return monitorForElements({
@@ -278,6 +313,41 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
       },
     })
   }, [moveItem, setFolderState, campaignId, navigateToItem])
+
+  useEffect(() => {
+    return monitorForExternal({
+      canMonitor: ({ source }) => containsFiles({ source }),
+      onDragStart: () => setIsDraggingFiles(true),
+      onDropTargetChange: ({ location }) => {
+        const target = location.current.dropTargets[0]
+        setFileDragHoveredId(
+          target
+            ? ((target.data.parentId as Id<'folders'> | null) ?? null)
+            : null,
+        )
+      },
+      onDrop: async ({ source, location }) => {
+        setIsDraggingFiles(false)
+        setFileDragHoveredId(null)
+        const target = location.current.dropTargets[0]
+        if (!target || !campaignId) return
+        const parentId = target.data.parentId as Id<'folders'> | undefined
+        try {
+          const dropResult = await processDataTransferItems(source.items)
+          if (
+            dropResult.files.length > 0 ||
+            dropResult.rootFolders.length > 0
+          ) {
+            await handleDropFiles(dropResult, { campaignId, parentId })
+          }
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Failed to upload files'
+          toast.error(message)
+        }
+      },
+    })
+  }, [setIsDraggingFiles, setFileDragHoveredId, campaignId, handleDropFiles])
 
   return (
     <>

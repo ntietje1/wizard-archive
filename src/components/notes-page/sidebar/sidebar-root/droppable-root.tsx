@@ -3,7 +3,7 @@ import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types/baseTypes'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDropZone } from '~/hooks/useFileDropZone'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableRootProps {
@@ -19,12 +19,14 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
   )
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   useDroppable({ ref, data: rootTargetData })
 
   const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
-  const { isDraggingFiles, fileDropProps } = useFileDropZone({
-    targetId: undefined,
+  useExternalDropTarget({
+    ref,
+    parentId: undefined,
     canAcceptFiles: canAcceptFileDrops,
   })
 
@@ -36,7 +38,6 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
         isDropTarget && 'bg-muted',
         isDraggingFiles && canAcceptFileDrops && 'bg-muted/50',
       )}
-      {...fileDropProps}
     >
       {children}
     </div>

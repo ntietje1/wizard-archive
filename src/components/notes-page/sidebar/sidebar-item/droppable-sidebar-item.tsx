@@ -1,38 +1,44 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import type { Id } from 'convex/_generated/dataModel'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDropZone } from '~/hooks/useFileDropZone'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableSidebarItemProps {
   item: Folder
-  ancestorIds?: Array<Id<'folders'>>
   children: React.ReactNode
 }
 
 export function DroppableSidebarItem({
   item,
-  ancestorIds = [],
   children,
 }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
+
+  const { getAncestorSidebarItems } = useAllSidebarItems()
+  const ancestorIds = useMemo(
+    () => getAncestorSidebarItems(item._id).map((a) => a._id),
+    [item._id, getAncestorSidebarItems],
+  )
 
   const isDropTarget = useSidebarUIStore((s) => {
     const id = s.sidebarDragTargetId
     if (id === null) return false
     if (id === item._id) return true
-    return ancestorIds.includes(id as Id<'folders'>)
+    return ancestorIds.includes(id as Folder['_id'])
   })
   const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const dropData = { ...item, ancestorIds }
 
   useDroppable({ ref, data: dropData })
 
-  const { isFileDropTarget, isDraggingFiles, fileDropProps } = useFileDropZone({
-    targetId: item._id,
+  const { isFileDropTarget } = useExternalDropTarget({
+    ref,
+    parentId: item._id,
     canAcceptFiles: canDropFilesOnTarget(dropData),
   })
 
@@ -58,7 +64,6 @@ export function DroppableSidebarItem({
     <div
       ref={ref}
       className={`w-full min-w-0 ${highlightClass}`}
-      {...fileDropProps}
     >
       {children}
     </div>

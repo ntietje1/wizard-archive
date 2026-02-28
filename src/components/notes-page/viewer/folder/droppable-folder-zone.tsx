@@ -3,7 +3,7 @@ import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDropZone } from '~/hooks/useFileDropZone'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
@@ -37,8 +37,9 @@ export function DroppableFolderZone({
 
   useDroppable({ ref, data: dropData })
 
-  const { isFileDropTarget, fileDropProps } = useFileDropZone({
-    targetId: folder._id,
+  const { isFileDropTarget } = useExternalDropTarget({
+    ref,
+    parentId: folder._id,
     canAcceptFiles: canDropFilesOnTarget(dropData),
   })
 
@@ -58,7 +59,6 @@ export function DroppableFolderZone({
         isDropTarget && activeHighlight,
         isFileDropTarget && highlightClassName,
       )}
-      {...fileDropProps}
     >
       {children}
     </div>

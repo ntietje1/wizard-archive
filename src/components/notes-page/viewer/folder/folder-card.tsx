@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -14,7 +14,8 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDropZone } from '~/hooks/useFileDropZone'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
@@ -85,7 +86,6 @@ function FolderCardSkeleton() {
 function FolderCardInner({
   item: folder,
   onClick,
-  parentId,
 }: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToFolder } = useEditorNavigation()
@@ -101,20 +101,25 @@ function FolderCardInner({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const ancestorIds = parentId ? [parentId] : []
+  const { getAncestorSidebarItems } = useAllSidebarItems()
+  const ancestorIds = useMemo(
+    () => getAncestorSidebarItems(folder._id).map((a) => a._id),
+    [folder._id, getAncestorSidebarItems],
+  )
   const dropData = { ...folder, ancestorIds }
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { ...folder, ancestorIds },
+    data: { ...folder },
     canDrag,
     dragOpacity: '0.2',
   })
 
   useDroppable({ ref, data: dropData })
 
-  const { isFileDropTarget, fileDropProps } = useFileDropZone({
-    targetId: folder._id,
+  const { isFileDropTarget } = useExternalDropTarget({
+    ref,
+    parentId: folder._id,
     canAcceptFiles: canDropFilesOnTarget(dropData),
   })
 
@@ -127,7 +132,7 @@ function FolderCardInner({
     }
   }
   const cardContent = (
-    <div ref={ref} className="h-[140px]" {...fileDropProps}>
+    <div ref={ref} className="h-[140px]">
       <div
         className={`folder-wrapper group transition-all relative ${(() => {
           if (!isDropTarget && !isFileDropTarget) return ''

@@ -196,7 +196,7 @@ function TrashPopoverItem({
 
   useDraggable({
     ref,
-    data: { ...item, ancestorIds: [] },
+    data: { ...item },
     canDrag: true,
   })
 
