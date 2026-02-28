@@ -7,20 +7,17 @@ import {
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
-  DragDropAction,
   DropRejectionReason,
   SidebarDragData,
   SidebarDropData,
 } from '~/lib/dnd-utils'
-import type { Id } from 'convex/_generated/dataModel'
 import {
   EMPTY_EDITOR_DROP_TYPE,
+  MAP_DROP_ZONE_TYPE,
+  TRASH_DROP_ZONE_TYPE,
   getDragDropAction,
-  isMapDropZone,
-  isSidebarItem,
-  isTrashDropZone,
+  getDropLabel,
   validateDrop,
   wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
@@ -30,17 +27,7 @@ import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { Ban } from '~/lib/icons'
-
-function getActionVerb(action: DragDropAction): string {
-  switch (action) {
-    case 'restore':
-      return 'Restore to'
-    case 'pin':
-      return 'Pin to'
-    default:
-      return 'Move to'
-  }
-}
+import { assertNever } from '~/lib/utils'
 
 function rejectionReasonMessage(reason: DropRejectionReason): string {
   switch (reason) {
@@ -54,6 +41,8 @@ function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot drop here'
     case 'missing_data':
       return 'Missing data'
+    default:
+      return assertNever(reason)
   }
 }
 
@@ -65,9 +54,21 @@ interface OverlayContentState {
 /** Get a stable key for a drop target to avoid unnecessary re-renders */
 function getDropTargetKey(target: SidebarDropData | null): string | null {
   if (!target) return null
-  if (isSidebarItem(target)) return target._id
-  if (isMapDropZone(target)) return `map:${target.mapId}`
-  return target.type
+  switch (target.type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files:
+      return target._id
+    case MAP_DROP_ZONE_TYPE:
+      return `map:${target.mapId}`
+    case TRASH_DROP_ZONE_TYPE:
+    case EMPTY_EDITOR_DROP_TYPE:
+    case SIDEBAR_ROOT_TYPE:
+      return target.type
+    default:
+      return assertNever(target)
+  }
 }
 
 function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
@@ -115,9 +116,19 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
 
           let targetId: string | null = null
           if (dropTarget) {
-            if (isSidebarItem(dropTarget)) targetId = dropTarget._id
-            else if (dropTarget.type === SIDEBAR_ROOT_TYPE)
-              targetId = SIDEBAR_ROOT_TYPE
+            switch (dropTarget.type) {
+              case SIDEBAR_ITEM_TYPES.notes:
+              case SIDEBAR_ITEM_TYPES.folders:
+              case SIDEBAR_ITEM_TYPES.gameMaps:
+              case SIDEBAR_ITEM_TYPES.files:
+                targetId = dropTarget._id
+                break
+              case SIDEBAR_ROOT_TYPE:
+                targetId = SIDEBAR_ROOT_TYPE
+                break
+              default: // non-item types don't need to be handled here
+                break
+            }
           }
           setSidebarDragTargetId(targetId)
 
@@ -152,27 +163,14 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
     }
 
     const rejectionReason = !validation.valid ? validation.reason : undefined
+    const label = getDropLabel(action, dropTarget, campaignName)
 
-    // Determine the target name for overlay text
-    let name: string | null = null
-    if (isTrashDropZone(dropTarget)) {
-      name = 'Trash'
-    } else if (isMapDropZone(dropTarget)) {
-      name = dropTarget.mapName
-    } else if (isSidebarItem(dropTarget)) {
-      name = dropTarget.name
-    } else if (dropTarget.type === SIDEBAR_ROOT_TYPE) {
-      name = campaignName || 'root'
-    }
+    if (!label && validation.valid) return null
 
-    if (!name && validation.valid) return null
-
-    return { name, isValid: validation.valid, rejectionReason, action }
+    return { label, isValid: validation.valid, rejectionReason, action }
   }, [content, campaignName])
 
-  const DraggedItemIcon = content
-    ? getSidebarItemIcon(content.dragData as AnySidebarItem)
-    : null
+  const DraggedItemIcon = content ? getSidebarItemIcon(content.dragData) : null
   const DraggedItemName = content ? content.dragData.name : ''
 
   return createPortal(
@@ -191,9 +189,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
           </span>
           {dropTargetInfo?.isValid ? (
             <span className="text-muted-foreground whitespace-nowrap text-xs">
-              {dropTargetInfo.action === 'move-and-trash'
-                ? 'Move to "Trash"'
-                : `${getActionVerb(dropTargetInfo.action)} "${dropTargetInfo.name}"`}
+              {dropTargetInfo.label}
             </span>
           ) : dropTargetInfo?.rejectionReason ? (
             <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
@@ -231,7 +227,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
         // Empty editor drops navigate, not move
         if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {
-          navigateToItem(draggedItem as AnySidebarItem, true)
+          navigateToItem(draggedItem, true)
           return
         }
 
@@ -242,9 +238,8 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         if (!wouldMoveChangePosition(draggedItem, targetData)) return
 
         const targetId =
-          isSidebarItem(targetData) &&
           targetData.type === SIDEBAR_ITEM_TYPES.folders
-            ? (targetData._id as Id<'folders'>)
+            ? targetData._id
             : undefined
 
         // Compute move options from action
@@ -256,7 +251,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
               : undefined
 
         try {
-          await moveItem(draggedItem as AnySidebarItem, {
+          await moveItem(draggedItem, {
             parentId: targetId,
             deleted,
           })

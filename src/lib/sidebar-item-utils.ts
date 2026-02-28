@@ -12,6 +12,7 @@ import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { assertNever } from '~/lib/utils'
 
 // Determine type and slug from search params
 export const getTypeAndSlug = (
@@ -102,7 +103,7 @@ export function getItemTypeLabel(type: SidebarItemType): string {
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
-      return 'Item'
+      return assertNever(type)
   }
 }
 

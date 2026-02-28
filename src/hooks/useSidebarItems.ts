@@ -14,6 +14,7 @@ import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
+import { assertNever } from '~/lib/utils'
 
 export interface AllSidebarItemsValue {
   data: Array<AnySidebarItem>
@@ -232,7 +233,7 @@ export const sortItemsByOptions = (
           ? a.updatedTime - b.updatedTime
           : b.updatedTime - a.updatedTime
       default:
-        return 0
+        return assertNever(options.order)
     }
   }
 

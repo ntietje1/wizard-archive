@@ -20,6 +20,7 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
+import { assertNever } from '~/lib/utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
@@ -546,24 +547,29 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const downloadPromises: Array<Promise<void>> = items.map(
             async (item) => {
               try {
-                if (
-                  item.type === SIDEBAR_ITEM_TYPES.files ||
-                  item.type === SIDEBAR_ITEM_TYPES.gameMaps
-                ) {
-                  if (!item.downloadUrl) {
-                    console.warn(`No download URL for: ${item.path}`)
-                    return
+                switch (item.type) {
+                  case SIDEBAR_ITEM_TYPES.files:
+                  case SIDEBAR_ITEM_TYPES.gameMaps: {
+                    if (!item.downloadUrl) {
+                      console.warn(`No download URL for: ${item.path}`)
+                      return
+                    }
+                    const response = await fetch(item.downloadUrl)
+                    if (!response.ok) {
+                      console.warn(`Failed to fetch: ${item.path}`)
+                      return
+                    }
+                    const blob = await response.blob()
+                    zip.file(item.path, blob)
+                    break
                   }
-                  const response = await fetch(item.downloadUrl)
-                  if (!response.ok) {
-                    console.warn(`Failed to fetch: ${item.path}`)
-                    return
+                  case SIDEBAR_ITEM_TYPES.notes: {
+                    const markdown = convertBlocksToMarkdown(item.content)
+                    zip.file(item.path, markdown)
+                    break
                   }
-                  const blob = await response.blob()
-                  zip.file(item.path, blob)
-                } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                  const markdown = convertBlocksToMarkdown(item.content)
-                  zip.file(item.path, markdown)
+                  default:
+                    assertNever(item)
                 }
               } catch (error) {
                 console.warn(`Failed to process: ${item.path}`, error)
@@ -620,24 +626,29 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         const downloadPromises = items.map(async (item) => {
           try {
-            if (
-              item.type === SIDEBAR_ITEM_TYPES.files ||
-              item.type === SIDEBAR_ITEM_TYPES.gameMaps
-            ) {
-              if (!item.downloadUrl) {
-                console.warn(`No download URL for: ${item.path}`)
-                return
+            switch (item.type) {
+              case SIDEBAR_ITEM_TYPES.files:
+              case SIDEBAR_ITEM_TYPES.gameMaps: {
+                if (!item.downloadUrl) {
+                  console.warn(`No download URL for: ${item.path}`)
+                  return
+                }
+                const response = await fetch(item.downloadUrl)
+                if (!response.ok) {
+                  console.warn(`Failed to fetch: ${item.path}`)
+                  return
+                }
+                const blob = await response.blob()
+                zip.file(item.path, blob)
+                break
               }
-              const response = await fetch(item.downloadUrl)
-              if (!response.ok) {
-                console.warn(`Failed to fetch: ${item.path}`)
-                return
+              case SIDEBAR_ITEM_TYPES.notes: {
+                const markdown = convertBlocksToMarkdown(item.content)
+                zip.file(item.path, markdown)
+                break
               }
-              const blob = await response.blob()
-              zip.file(item.path, blob)
-            } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-              const markdown = convertBlocksToMarkdown(item.content)
-              zip.file(item.path, markdown)
+              default:
+                assertNever(item)
             }
           } catch (error) {
             console.warn(`Failed to process: ${item.path}`, error)
@@ -868,6 +879,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
   return {
     actions,
-    dialogsContent,
+    Dialogs: dialogsContent,
   }
 }

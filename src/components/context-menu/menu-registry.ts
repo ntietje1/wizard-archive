@@ -23,6 +23,7 @@ import {
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { assertNever } from '~/lib/utils'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
@@ -37,7 +38,7 @@ function getTypeName(ctx: MenuContext): string {
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
-      return 'Item'
+      return assertNever(ctx.item)
   }
 }
 

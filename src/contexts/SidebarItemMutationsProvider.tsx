@@ -20,6 +20,7 @@ import type {
   CreateItemResult,
   SidebarItemMutationsValue,
 } from '~/hooks/useSidebarItemMutations'
+import { assertNever } from '~/lib/utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
 import { SidebarItemMutationsContext } from '~/hooks/useSidebarItemMutations'
@@ -173,9 +174,8 @@ export function SidebarItemMutationsProvider({
           })
           return { id: fileId, slug, type: args.type }
         }
-        default: {
-          throw new Error(`Unsupported sidebar item type`)
-        }
+        default:
+          return assertNever(args)
       }
     },
     [

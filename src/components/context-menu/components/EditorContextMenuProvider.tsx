@@ -83,7 +83,7 @@ export function EditorContextMenuProvider({
   return (
     <EditorContextMenuContext.Provider value={contextValue}>
       <PlaceHolderContextMenu>{children}</PlaceHolderContextMenu>
-      <Dialogs />
+      {Dialogs}
     </EditorContextMenuContext.Provider>
   )
 }

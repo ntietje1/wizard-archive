@@ -15,6 +15,7 @@ import type { EditorViewerProps } from '../sidebar-item-editor'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 import { validateFileForUpload } from '~/lib/file-validation'
+import { assertNever } from '~/lib/utils'
 
 function getFileType(
   contentType: string | null | undefined,
@@ -132,12 +133,13 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
     case 'audio':
       return <AudioFileViewer audioUrl={file.downloadUrl} />
     case 'other':
-    default:
       return (
         <OtherFileViewer
           fileUrl={file.downloadUrl}
           fileName={file.name || 'File'}
         />
       )
+    default:
+      return assertNever(fileType)
   }
 }

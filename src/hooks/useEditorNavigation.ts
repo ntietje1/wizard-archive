@@ -5,6 +5,7 @@ import { useLastEditorItem } from './useLastEditorItem'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
+import { assertNever } from '~/lib/utils'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
@@ -113,9 +114,8 @@ export const useEditorNavigation = () => {
         case SIDEBAR_ITEM_TYPES.files:
           await navigateToFile(item.slug, replace)
           break
-        default: {
-          console.warn('Unknown item type', item)
-        }
+        default:
+          assertNever(item.type)
       }
     },
     [

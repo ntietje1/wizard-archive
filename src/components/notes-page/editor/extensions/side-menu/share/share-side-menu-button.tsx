@@ -13,6 +13,7 @@ import type {
 import type { AggregateShareStatus } from '~/hooks/useBlocksShare'
 import { Share2 } from '~/lib/icons'
 import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/hooks/useBlocksShare'
+import { assertNever } from '~/lib/utils'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,7 +33,7 @@ const getButtonColorClass = (status: AggregateShareStatus): string => {
     case AGGREGATE_SHARE_STATUS.NOT_SHARED:
       return '!text-gray-500'
     default:
-      return '!text-gray-500'
+      return assertNever(status)
   }
 }
 

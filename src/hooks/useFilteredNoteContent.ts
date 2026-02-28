@@ -9,6 +9,7 @@ import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { assertNever } from '~/lib/utils'
 
 function canViewBlock(
   meta: BlockMeta,
@@ -21,6 +22,8 @@ function canViewBlock(
       return meta.sharedWith.includes(viewAsPlayerId)
     case SHARE_STATUS.NOT_SHARED:
       return false
+    default:
+      return assertNever(meta.shareStatus)
   }
 }
 

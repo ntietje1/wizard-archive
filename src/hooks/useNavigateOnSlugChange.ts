@@ -7,6 +7,7 @@ import type {
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { assertNever } from '~/lib/utils'
 
 interface NavigateOnSlugChangeParams {
   itemId: SidebarItemId
@@ -63,6 +64,8 @@ export function useNavigateOnSlugChange() {
         case SIDEBAR_ITEM_TYPES.files:
           navigateToFile(newSlug, true)
           break
+        default:
+          assertNever(itemType)
       }
     },
     [

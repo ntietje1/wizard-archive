@@ -3,20 +3,18 @@ import {
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import type {
-  SidebarItem,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { assertNever } from '~/lib/utils'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
+export const OPEN_ACTION = 'open' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
-export interface SidebarDragData extends SidebarItem<SidebarItemType> {
+export type SidebarDragData = AnySidebarItem & {
   [key: string | symbol]: unknown
   ancestorIds?: Array<Id<'folders'>>
-  deletionTime?: number
 }
 
 export interface MapDropZoneData {
@@ -48,45 +46,13 @@ export type SidebarDropData =
   | MapDropZoneData
   | TrashDropZoneData
 
-// Type predicates for narrowing drop data types
-export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
-  return (
-    !isSidebarRootDropZone(data) &&
-    !isEmptyEditorDropZone(data) &&
-    !isMapDropZone(data) &&
-    !isTrashDropZone(data) &&
-    data.type in SIDEBAR_ITEM_TYPES
-  )
-}
-
-export function isMapDropZone(data: SidebarDropData): data is MapDropZoneData {
-  return data.type === MAP_DROP_ZONE_TYPE
-}
-
-export function isEmptyEditorDropZone(
-  data: SidebarDropData,
-): data is EmptyEditorDropZoneData {
-  return data.type === EMPTY_EDITOR_DROP_TYPE
-}
-
-export function isTrashDropZone(
-  data: SidebarDropData,
-): data is TrashDropZoneData {
-  return data.type === TRASH_DROP_ZONE_TYPE
-}
-
-export function isSidebarRootDropZone(
-  data: SidebarDropData,
-): data is SidebarRootDropZoneData {
-  return data.type === SIDEBAR_ROOT_TYPE
-}
-
 export type DragDropAction =
   | 'move'
   | 'trash'
   | 'move-and-trash'
   | 'restore'
   | 'pin'
+  | 'open'
   | null
 
 /**
@@ -101,30 +67,27 @@ export function getDragDropAction(
 
   const isTrashedItem = !!draggedItem.deletionTime
 
-  if (isTrashDropZone(targetData)) {
-    return isTrashedItem ? 'move' : 'trash'
+  switch (targetData.type) {
+    case TRASH_DROP_ZONE_TYPE:
+      return isTrashedItem ? 'move' : 'trash'
+    case MAP_DROP_ZONE_TYPE:
+      return 'pin'
+    case EMPTY_EDITOR_DROP_TYPE:
+      return 'open'
+    case SIDEBAR_ROOT_TYPE:
+      return isTrashedItem ? 'restore' : 'move'
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files: {
+      const isTargetTrashed = !!targetData.deletionTime
+      if (isTrashedItem && !isTargetTrashed) return 'restore'
+      if (!isTrashedItem && isTargetTrashed) return 'move-and-trash'
+      return 'move'
+    }
+    default:
+      return assertNever(targetData)
   }
-
-  if (isMapDropZone(targetData)) {
-    return 'pin'
-  }
-
-  if (isEmptyEditorDropZone(targetData)) {
-    return null
-  }
-
-  if (isSidebarRootDropZone(targetData)) {
-    return isTrashedItem ? 'restore' : 'move'
-  }
-
-  if (isSidebarItem(targetData)) {
-    const isTargetTrashed = !!targetData.deletionTime
-    if (isTrashedItem && !isTargetTrashed) return 'restore'
-    if (!isTrashedItem && isTargetTrashed) return 'move-and-trash'
-    return 'move'
-  }
-
-  return null
 }
 
 export type DropRejectionReason =
@@ -150,57 +113,52 @@ export function validateDrop(
     return { valid: false, reason: 'missing_data' }
   }
 
-  // Handle trash drop zone
-  else if (isTrashDropZone(targetData)) {
-    return { valid: true }
-  }
+  switch (targetData.type) {
+    case TRASH_DROP_ZONE_TYPE:
+      return { valid: true }
 
-  // Handle map drop zone - allow pinning items to map
-  else if (isMapDropZone(targetData)) {
-    if (
-      draggedItem.type === SIDEBAR_ITEM_TYPES.gameMaps &&
-      draggedItem._id === targetData.mapId
-    ) {
-      return { valid: false, reason: 'self_pin' }
-    }
-    return { valid: true }
-  }
+    case MAP_DROP_ZONE_TYPE:
+      if (
+        draggedItem.type === SIDEBAR_ITEM_TYPES.gameMaps &&
+        draggedItem._id === targetData.mapId
+      ) {
+        return { valid: false, reason: 'self_pin' }
+      }
+      return { valid: true }
 
-  // Handle root or empty editor drops
-  else if (
-    isSidebarRootDropZone(targetData) ||
-    isEmptyEditorDropZone(targetData)
-  ) {
-    return { valid: true }
-  } else if (isSidebarItem(targetData)) {
-    // Only folders accept item drops
-    if (targetData.type !== SIDEBAR_ITEM_TYPES.folders) {
+    case SIDEBAR_ROOT_TYPE:
+    case EMPTY_EDITOR_DROP_TYPE:
+      return { valid: true }
+
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files:
       return { valid: false, reason: 'not_folder' }
-    }
 
-    // Item dropped on itself is allowed (no-op, won't change position)
-    if (targetData._id === draggedItem._id) {
+    case SIDEBAR_ITEM_TYPES.folders: {
+      // Item dropped on itself is allowed (no-op, won't change position)
+      if (targetData._id === draggedItem._id) {
+        return { valid: true }
+      }
+
+      // Folders cannot be dropped on their own children
+      if (
+        draggedItem.type === SIDEBAR_ITEM_TYPES.folders &&
+        targetData.ancestorIds?.includes(draggedItem._id)
+      ) {
+        return { valid: false, reason: 'circular' }
+      }
+
+      // Only allow drop if user explicitly has full_access on the target folder
+      if (targetData.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
+        return { valid: false, reason: 'no_permission' }
+      }
+
       return { valid: true }
     }
 
-    // Folders cannot be dropped on their own children
-    if (
-      draggedItem.type === SIDEBAR_ITEM_TYPES.folders &&
-      targetData.ancestorIds?.includes(draggedItem._id as Id<'folders'>)
-    ) {
-      return { valid: false, reason: 'circular' }
-    }
-
-    // Check permission on target folder (for moving items into it)
-    // Only allow drop if user explicitly has full_access on the target folder
-    if (targetData.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
-      return { valid: false, reason: 'no_permission' }
-    }
-
-    return { valid: true }
-  } else {
-    console.error('Invalid target data type:', targetData)
-    return { valid: false, reason: 'not_folder' }
+    default:
+      return assertNever(targetData)
   }
 }
 
@@ -212,41 +170,84 @@ export function wouldMoveChangePosition(
   draggedItem: SidebarDragData | null,
   targetData: SidebarDropData | null,
 ): boolean {
-  if (!draggedItem || !targetData) {
-    return false
-  }
+  if (!draggedItem || !targetData) return false
 
-  // Trash drop zones: trashing a non-trashed item always changes, moving
-  // an already-trashed item to trash root only changes if it has a parent
-  else if (isTrashDropZone(targetData)) {
-    return draggedItem.deletionTime ? draggedItem.parentId != null : true
+  switch (targetData.type) {
+    // Trashing a non-trashed item always changes, moving
+    // an already-trashed item to trash root only changes if it has a parent
+    case TRASH_DROP_ZONE_TYPE:
+      return draggedItem.deletionTime ? draggedItem.parentId != null : true
+    // Map drop zones always result in a change (pinning)
+    case MAP_DROP_ZONE_TYPE:
+      return true
+    // Empty editor drops don't move, but should show overlay feedback
+    case EMPTY_EDITOR_DROP_TYPE:
+      return true
+    // Moving to root - check if already at root
+    case SIDEBAR_ROOT_TYPE:
+      if (draggedItem.deletionTime) return true
+      return draggedItem.parentId != null
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files: {
+      // Dropping on itself is a no-op
+      if (draggedItem._id === targetData._id) return false
+      // Cross-trash boundary always changes state (restore or trash)
+      if (!!draggedItem.deletionTime !== !!targetData.deletionTime) return true
+      // Moving to a folder - check if already parented to this target (only relevant for dragged folders)
+      return draggedItem.parentId !== targetData._id
+    }
+    default:
+      return assertNever(targetData)
   }
+}
 
-  // Map drop zones always result in a change (pinning)
-  else if (isMapDropZone(targetData)) {
-    return true
+/**
+ * Returns a human-readable label for the drag overlay.
+ * Combines the action and target name into a single string.
+ */
+export function getDropLabel(
+  action: DragDropAction,
+  targetData: SidebarDropData,
+  campaignName?: string,
+): string | null {
+  switch (targetData.type) {
+    case EMPTY_EDITOR_DROP_TYPE:
+      return 'Open in editor'
+    case TRASH_DROP_ZONE_TYPE:
+      return 'Move to "Trash"'
+    case MAP_DROP_ZONE_TYPE:
+      return `Pin to "${targetData.mapName}"`
+    case SIDEBAR_ROOT_TYPE: {
+      const name = campaignName || 'Root'
+      return `${getActionVerb(action)} "${name}"`
+    }
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files:
+      return `${getActionVerb(action)} "${targetData.name}"`
+    default:
+      return assertNever(targetData)
   }
+}
 
-  // Empty editor drops don't move, they open
-  else if (isEmptyEditorDropZone(targetData)) {
-    return false
-  }
-
-  // Moving to root - check if already at root
-  else if (isSidebarRootDropZone(targetData)) {
-    // Restoring a trashed item always changes state
-    if (draggedItem.deletionTime) return true
-    return draggedItem.parentId != null
-  } else if (isSidebarItem(targetData)) {
-    // Dropping on itself is a no-op
-    if (draggedItem._id === targetData._id) return false
-    // Cross-trash boundary always changes state (restore or trash)
-    if (!!draggedItem.deletionTime !== !!targetData.deletionTime) return true
-    // Moving to a folder - check if already in that folder
-    return draggedItem.parentId !== targetData._id
-  } else {
-    console.error('Invalid target data type:', targetData)
-    return false
+function getActionVerb(action: DragDropAction): string {
+  switch (action) {
+    case 'restore':
+      return 'Restore to'
+    case 'pin':
+      return 'Pin to'
+    case 'open':
+      return 'Open in'
+    case 'move':
+    case 'trash':
+    case 'move-and-trash':
+    case null:
+      return 'Move to'
+    default:
+      return assertNever(action)
   }
 }
 
@@ -257,21 +258,21 @@ export function canDropFilesOnTarget(
   targetData: SidebarDropData | null,
 ): boolean {
   if (!targetData) return false
-  else if (
-    isSidebarRootDropZone(targetData) ||
-    isEmptyEditorDropZone(targetData)
-  ) {
-    return true
-  } else if (isMapDropZone(targetData)) {
-    return false
-  } else if (isTrashDropZone(targetData)) {
-    return false
-  } else if (isSidebarItem(targetData)) {
-    return (
-      targetData.type === SIDEBAR_ITEM_TYPES.folders && !targetData.deletionTime
-    )
-  } else {
-    console.error('Invalid target data type:', targetData)
-    return false
+
+  switch (targetData.type) {
+    case SIDEBAR_ROOT_TYPE:
+    case EMPTY_EDITOR_DROP_TYPE:
+      return true
+    case MAP_DROP_ZONE_TYPE:
+    case TRASH_DROP_ZONE_TYPE:
+      return false
+    case SIDEBAR_ITEM_TYPES.folders:
+      return !targetData.deletionTime
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files:
+      return false
+    default:
+      return assertNever(targetData)
   }
 }

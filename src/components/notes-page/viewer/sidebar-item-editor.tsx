@@ -3,6 +3,7 @@ import type {
   AnySidebarItem,
   AnySidebarItemWithContent,
 } from 'convex/sidebarItems/types/types'
+import { assertNever } from '~/lib/utils'
 import { NoteEditor } from '~/components/notes-page/viewer/note/note-editor'
 import { MapViewer } from '~/components/notes-page/viewer/map/map-viewer'
 import { FolderViewer } from '~/components/notes-page/viewer/folder/folder-viewer'
@@ -28,10 +29,8 @@ export function SidebarItemEditor({
         return <FolderViewer key={item._id} item={item} search={search} />
       case SIDEBAR_ITEM_TYPES.files:
         return <FileViewer key={item._id} item={item} search={search} />
-      default: {
-        console.warn(`Unknown item type`, item)
-        return null
-      }
+      default:
+        return assertNever(item)
     }
   })()
 
