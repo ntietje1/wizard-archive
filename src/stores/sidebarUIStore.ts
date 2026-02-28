@@ -6,7 +6,7 @@ import type {
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarDragData, DragDropAction } from '~/lib/dnd-utils'
+import type { DragDropAction } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
 
 export type { DragDropAction } from '~/lib/dnd-utils'
@@ -23,7 +23,6 @@ interface SidebarUIState {
 
   // Transient
   renamingId: SidebarItemId | null
-  activeDragItem: SidebarDragData | null
   sidebarDragTargetId: string | null
   dragDropAction: DragDropAction
   fileDragHoveredId: Id<'folders'> | null
@@ -45,7 +44,6 @@ interface SidebarUIActions {
   toggleCloseAllFoldersMode: (campaignId: string) => void
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
-  setActiveDragItem: (item: SidebarDragData | null) => void
   setSidebarDragTargetId: (id: string | null) => void
   setDragDropAction: (action: DragDropAction) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
@@ -89,7 +87,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       // Transient
       renamingId: null,
-      activeDragItem: null,
       sidebarDragTargetId: null,
       dragDropAction: null,
       fileDragHoveredId: null,
@@ -149,7 +146,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           }))
         }),
 
-      setActiveDragItem: (item) => set({ activeDragItem: item }),
       setSidebarDragTargetId: (id) =>
         set((state) => {
           if (state.sidebarDragTargetId === id) return state

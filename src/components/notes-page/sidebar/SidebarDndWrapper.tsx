@@ -80,6 +80,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
     (s) => s.setSidebarDragTargetId,
   )
   const setDragDropAction = useSidebarUIStore((s) => s.setDragDropAction)
+  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
   useEffect(() => {
     return monitorForElements({
@@ -155,7 +156,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
     const { dragData, dropTarget } = content
 
     const validation = validateDrop(dragData, dropTarget)
-    const action = getDragDropAction(dragData, dropTarget)
 
     // If the drop wouldn't change anything (e.g. folder on itself), show nothing
     if (validation.valid && !wouldMoveChangePosition(dragData, dropTarget)) {
@@ -163,12 +163,17 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
     }
 
     const rejectionReason = !validation.valid ? validation.reason : undefined
-    const label = getDropLabel(action, dropTarget, campaignName)
+    const label = getDropLabel(dragDropAction, dropTarget, campaignName)
 
     if (!label && validation.valid) return null
 
-    return { label, isValid: validation.valid, rejectionReason, action }
-  }, [content, campaignName])
+    return {
+      label,
+      isValid: validation.valid,
+      rejectionReason,
+      action: dragDropAction,
+    }
+  }, [content, campaignName, dragDropAction])
 
   const DraggedItemIcon = content ? getSidebarItemIcon(content.dragData) : null
   const DraggedItemName = content ? content.dragData.name : ''
