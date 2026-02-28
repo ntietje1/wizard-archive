@@ -12,25 +12,37 @@ export const getSidebarItemByName = async (
     ctx.db
       .query('notes')
       .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', campaignId).eq('name', name),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('name', name),
       )
       .unique(),
     ctx.db
       .query('folders')
       .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', campaignId).eq('name', name),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('name', name),
       )
       .unique(),
     ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', campaignId).eq('name', name),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('name', name),
       )
       .unique(),
     ctx.db
       .query('files')
       .withIndex('by_campaign_name', (q) =>
-        q.eq('campaignId', campaignId).eq('name', name),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('name', name),
       )
       .unique(),
   ])

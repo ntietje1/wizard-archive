@@ -15,6 +15,7 @@ export type ViewContext =
   | 'search-results'
   | 'recent-items'
   | 'favorites'
+  | 'trash-view'
 
 export interface MenuContext {
   // Core data
@@ -29,6 +30,10 @@ export interface MenuContext {
   // View state
   activeMap?: GameMapWithContent
   activePin?: MapPinWithItem
+
+  // Item state
+  isItemTrashed?: boolean
+  isTrashView?: boolean
 
   // Session state
   hasActiveSession?: boolean

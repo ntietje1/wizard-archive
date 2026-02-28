@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Folder } from 'convex/folders/types'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { getDescendantCount, useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface FolderDeleteConfirmDialogProps {
   folder: Folder
@@ -17,47 +17,47 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { deleteItem } = useSidebarItemMutations()
+  const { moveItem } = useSidebarItemMutations()
   const { parentItemsMap } = useAllSidebarItems()
 
-  const children = parentItemsMap.get(folder._id)
-  const hasDirectChildren = (children?.length ?? 0) > 0
+  const descendantCount = getDescendantCount(folder._id, parentItemsMap)
 
   const handleConfirm = useCallback(async () => {
     try {
-      await deleteItem(folder)
-      toast.success('Folder deleted')
+      await moveItem(folder, { deleted: true })
+      onConfirm?.()
+      toast.success('Moved to trash')
     } catch (error) {
       console.error(error)
-      toast.error('Failed to delete folder')
+      toast.error('Failed to move folder to trash')
     } finally {
-      onConfirm?.()
       onClose()
     }
-  }, [deleteItem, folder, onConfirm, onClose])
+  }, [moveItem, folder, onConfirm, onClose])
 
   return (
     <ConfirmationDialog
       isOpen={isDeleting}
       onClose={onClose}
       onConfirm={handleConfirm}
-      title="Delete Folder"
+      title="Move to Trash"
       description={
-        hasDirectChildren ? (
+        descendantCount > 0 ? (
           <>
-            <strong className="text-red-600">
-              {"This folder isn't empty!"}
+            <strong className="text-amber-600">
+              {`This folder contains ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'}!`}
             </strong>
             <br />
             <span>
-              Are you sure you want to delete it and all its contents?
+              Are you sure you want to move it and all its contents to the
+              trash?
             </span>
           </>
         ) : (
-          <>Are you sure you want to delete this folder?</>
+          <>Are you sure you want to move this folder to the trash?</>
         )
       }
-      confirmLabel="Delete Folder"
+      confirmLabel="Move to Trash"
       confirmVariant="destructive"
     />
   )

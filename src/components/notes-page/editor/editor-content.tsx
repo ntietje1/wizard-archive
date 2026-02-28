@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
+import { TrashPageViewer } from '../viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-utils'
@@ -12,7 +13,7 @@ import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useFileDropZone } from '~/hooks/useFileDropZone'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -26,6 +27,11 @@ export function EditorContent() {
         <LoadingSpinner size="lg" />
       </div>
     )
+  }
+
+  // Show trash page when ?trash=true and no specific item selected
+  if (editorSearch.trash === true && !item) {
+    return <TrashPageViewer />
   }
 
   if (!item) {
@@ -64,13 +70,10 @@ function EmptyEditorContent() {
     })
   }, [])
 
-  const {
-    isDraggingFiles,
-    handleDragEnter,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = useFileDragDrop(undefined)
+  const { isDraggingFiles, fileDropProps } = useFileDropZone({
+    targetId: undefined,
+    canAcceptFiles: true,
+  })
 
   return (
     <div
@@ -79,10 +82,7 @@ function EmptyEditorContent() {
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
         isDraggingFiles && 'bg-muted/50',
       )}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      {...fileDropProps}
     >
       {isDm ? (
         <CreateNewDashboard />

@@ -2,6 +2,7 @@ import { memo, useCallback, useRef, useState } from 'react'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
+import { TrashButton } from './trash-button'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -53,6 +54,9 @@ const SidebarContent = memo(function SidebarContent() {
           ) : (
             <div className="shrink-0 border-t" />
           )}
+          <div className="shrink-0 px-2 pb-1">
+            <TrashButton />
+          </div>
           <SessionPanel />
         </ResizablePanelGroup>
       </EditorContextMenu>

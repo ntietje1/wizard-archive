@@ -14,7 +14,7 @@ import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useFileDropZone } from '~/hooks/useFileDropZone'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
@@ -90,12 +90,11 @@ function FolderCardInner({
   const ref = useRef<HTMLDivElement>(null)
   const { navigateToFolder } = useEditorNavigation()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
+  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
   const canDrag = hasAtLeastPermissionLevel(
     folder.myPermissionLevel,
@@ -114,11 +113,10 @@ function FolderCardInner({
 
   useDroppable({ ref, data: dropData })
 
-  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
-  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
-    useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const isFileValidDrop =
-    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
+  const { isFileDropTarget, fileDropProps } = useFileDropZone({
+    targetId: folder._id,
+    canAcceptFiles: canDropFilesOnTarget(dropData),
+  })
 
   const handleCardActivate = () => {
     if (isDraggingRef.current) return
@@ -129,18 +127,17 @@ function FolderCardInner({
     }
   }
   const cardContent = (
-    <div
-      ref={ref}
-      className="h-[140px]"
-      onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
-      onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
-      onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
-      onDrop={canAcceptFileDrops ? handleDrop : undefined}
-    >
+    <div ref={ref} className="h-[140px]" {...fileDropProps}>
       <div
-        className={`folder-wrapper group transition-all relative ${
-          isDropTarget || isFileValidDrop ? 'valid-drop-target' : ''
-        }`}
+        className={`folder-wrapper group transition-all relative ${(() => {
+          if (!isDropTarget && !isFileDropTarget) return ''
+          if (
+            isDropTarget &&
+            (dragDropAction === 'trash' || dragDropAction === 'move-and-trash')
+          )
+            return 'trash-drop-target'
+          return 'valid-drop-target'
+        })()}`}
         onClick={handleCardActivate}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {

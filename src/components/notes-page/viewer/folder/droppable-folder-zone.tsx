@@ -3,7 +3,7 @@ import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useFileDropZone } from '~/hooks/useFileDropZone'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
@@ -33,30 +33,32 @@ export function DroppableFolderZone({
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
+  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
   useDroppable({ ref, data: dropData })
 
-  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
-  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
-    useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const { isFileDropTarget, fileDropProps } = useFileDropZone({
+    targetId: folder._id,
+    canAcceptFiles: canDropFilesOnTarget(dropData),
+  })
 
-  const isFileValidDrop =
-    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
+  const isTrashAction =
+    dragDropAction === 'trash' || dragDropAction === 'move-and-trash'
+
+  const activeHighlight =
+    isDropTarget && isTrashAction
+      ? 'bg-drop-highlight-trash'
+      : highlightClassName
 
   return (
     <div
       ref={ref}
       className={cn(
         className,
-        isDropTarget && highlightClassName,
-        isFileValidDrop && highlightClassName,
+        isDropTarget && activeHighlight,
+        isFileDropTarget && highlightClassName,
       )}
-      onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
-      onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
-      onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
-      onDrop={canAcceptFileDrops ? handleDrop : undefined}
+      {...fileDropProps}
     >
       {children}
     </div>

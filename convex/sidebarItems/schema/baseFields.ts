@@ -23,4 +23,4 @@ export const commonSidebarItemValidatorFields = {
   shares: v.optional(v.array(sidebarItemShareValidator)),
   isBookmarked: v.optional(v.boolean()),
   myPermissionLevel: v.optional(permissionLevelValidator),
-} // TODO: potentially make these required
+}

@@ -1,69 +1,27 @@
-import { deleteFile } from '../../files/functions/deleteFile'
-import { deleteFolder } from '../../folders/functions/deleteFolder'
-import { deleteMap } from '../../gameMaps/functions/deleteMap'
-import { deleteNote } from '../../notes/functions/deleteNote'
+import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
+import type { AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
+
+const SIDEBAR_TABLES = ['folders', 'notes', 'gameMaps', 'files'] as const
 
 export async function deleteCampaign(
   ctx: CampaignMutationCtx,
 ): Promise<Id<'campaigns'>> {
   const campaignId = ctx.campaign._id
 
-  const folders = await ctx.db
-    .query('folders')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', null),
-    )
-    .collect()
+  // Delete all sidebar items (both active and trashed) with their dependents
+  for (const table of SIDEBAR_TABLES) {
+    const items = await ctx.db
+      .query(table)
+      .withIndex('by_campaign_parent_name', (q) =>
+        q.eq('campaignId', campaignId),
+      )
+      .collect()
 
-  for (const folder of folders) {
-    await deleteFolder(ctx, { folderId: folder._id })
-  }
-
-  const notes = await ctx.db
-    .query('notes')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', null),
-    )
-    .collect()
-
-  for (const note of notes) {
-    await deleteNote(ctx, { noteId: note._id })
-  }
-
-  const maps = await ctx.db
-    .query('gameMaps')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', null),
-    )
-    .collect()
-
-  for (const map of maps) {
-    await deleteMap(ctx, { mapId: map._id })
-  }
-
-  const files = await ctx.db
-    .query('files')
-    .withIndex('by_campaign_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('parentId', null),
-    )
-    .collect()
-
-  for (const file of files) {
-    await deleteFile(ctx, { fileId: file._id })
-  }
-
-  // Delete block shares
-  const blockShares = await ctx.db
-    .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', campaignId),
-    )
-    .collect()
-
-  for (const share of blockShares) {
-    await ctx.db.delete(share._id)
+    for (const item of items) {
+      await hardDeleteItem(ctx, item as AnySidebarItemFromDb)
+    }
   }
 
   // Delete sessions

@@ -50,9 +50,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-drop-highlight: var(--drop-highlight);
+  --color-drop-highlight-trash: var(--drop-highlight-trash);
 }
 
 :root {
+  --drop-highlight: oklch(0.95 0.02 250);
+  --drop-highlight-trash: oklch(0.95 0.05 25);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
@@ -88,6 +92,8 @@
 }
 
 .dark {
+  --drop-highlight: oklch(0.25 0.03 250);
+  --drop-highlight-trash: oklch(0.25 0.06 25);
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -189,7 +195,28 @@
 
 .folder-wrapper.valid-drop-target .folder svg {
   filter: drop-shadow(0 0px 0.75px rgba(161, 161, 170, 0.75))
-    drop-shadow(0 1px 3px rgba(251, 191, 36, 0.7));
+    drop-shadow(0 1px 4px rgba(59, 130, 246, 0.6));
+}
+
+.folder-wrapper.trash-drop-target .folder {
+  color: oklch(0.75 0.15 25);
+}
+
+.folder-wrapper.trash-drop-target .folder svg {
+  filter: drop-shadow(0 0px 0.75px rgba(239, 68, 68, 0.5))
+    drop-shadow(0 1px 4px rgba(239, 68, 68, 0.6));
+}
+
+.folder-wrapper.trash-drop-target .folder-seam-cover {
+  background: oklch(0.75 0.15 25);
+}
+
+:is(.dark) .folder-wrapper.trash-drop-target .folder {
+  color: oklch(0.45 0.12 25);
+}
+
+:is(.dark) .folder-wrapper.trash-drop-target .folder-seam-cover {
+  background: oklch(0.45 0.12 25);
 }
 
 @layer utilities {

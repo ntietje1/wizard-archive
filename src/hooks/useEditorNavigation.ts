@@ -14,6 +14,7 @@ const createContentSearch = (updates: Partial<EditorSearch>): EditorSearch => {
     map: undefined,
     folder: undefined,
     file: undefined,
+    trash: undefined,
     ...updates,
   }
   return search
@@ -131,6 +132,10 @@ export const useEditorNavigation = () => {
     setLastSelectedItem(null)
   }, [navigateToEditor, setLastSelectedItem])
 
+  const navigateToTrash = useCallback(async () => {
+    await navigateToEditor(createContentSearch({ trash: true }))
+  }, [navigateToEditor])
+
   return {
     navigateToNote,
     navigateToMap,
@@ -138,5 +143,6 @@ export const useEditorNavigation = () => {
     navigateToFile,
     navigateToItem,
     clearEditorContent,
+    navigateToTrash,
   }
 }

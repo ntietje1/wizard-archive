@@ -9,7 +9,7 @@ import { mapPinTableFields } from './baseSchema'
 const mapWithContentValidatorFields = {
   ...commonValidatorFields('gameMaps'),
   ...commonSidebarItemValidatorFields,
-  imageStorageId: v.optional(v.id('_storage')),
+  imageStorageId: v.union(v.id('_storage'), v.null()),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   imageUrl: v.union(v.string(), v.null()),
 }

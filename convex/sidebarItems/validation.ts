@@ -282,7 +282,10 @@ async function checkSlugConflict(
   }
   return query
     .withIndex('by_campaign_slug', (q) =>
-      q.eq('campaignId', campaignId).eq('slug', slug),
+      q
+        .eq('campaignId', campaignId)
+        .eq('slug', slug)
+        .eq('deletionTime', undefined),
     )
     .unique()
     .then((conflict) =>

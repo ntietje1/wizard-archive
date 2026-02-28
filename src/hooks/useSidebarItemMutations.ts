@@ -55,11 +55,12 @@ export interface SidebarItemMutationsValue {
     item: AnySidebarItem,
     newName: string,
   ) => { promise: Promise<{ slug: string } | void> }
-  move: (
+  moveItem: (
     item: AnySidebarItem,
-    newParentId: Id<'folders'> | undefined,
+    options: { parentId?: Id<'folders'>; deleted?: boolean },
   ) => Promise<unknown>
-  deleteItem: (item: AnySidebarItem) => Promise<void>
+  permanentlyDeleteItem: (item: AnySidebarItem) => Promise<void>
+  emptyTrashBin: () => Promise<void>
   validateName: (
     name: string,
     parentId: Id<'folders'> | undefined,

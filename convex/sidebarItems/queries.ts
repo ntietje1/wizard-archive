@@ -5,6 +5,7 @@ import { getSidebarItemById as getSidebarItemByIdFn } from './functions/getSideb
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { getSidebarItemByName as getSidebarItemByNameFn } from './functions/getSidebarItemByName'
+import { getTrashedSidebarItems as getTrashedSidebarItemsFn } from './functions/getTrashedSidebarItems'
 import { anySidebarItemValidator } from './schema/schema'
 import {
   sidebarItemIdValidator,
@@ -70,5 +71,13 @@ export const getSidebarItemByName = campaignQuery({
   returns: v.union(anySidebarItemValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItem | null> => {
     return await getSidebarItemByNameFn(ctx, { name: args.name })
+  },
+})
+
+export const getTrashedSidebarItems = campaignQuery({
+  args: { campaignId: v.id('campaigns') },
+  returns: v.array(anySidebarItemValidator),
+  handler: async (ctx): Promise<Array<AnySidebarItem>> => {
+    return await getTrashedSidebarItemsFn(ctx)
   },
 })

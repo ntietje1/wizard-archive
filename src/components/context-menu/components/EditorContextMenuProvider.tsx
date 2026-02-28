@@ -14,6 +14,7 @@ import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 interface ProviderProps {
   viewContext: ViewContext
   item?: AnySidebarItem
+  isTrashView?: boolean
   children: React.ReactNode
   onDialogOpen?: () => void
   onDialogClose?: () => void
@@ -22,6 +23,7 @@ interface ProviderProps {
 export function EditorContextMenuProvider({
   viewContext,
   item,
+  isTrashView,
   children,
   onDialogOpen,
   onDialogClose,
@@ -33,11 +35,14 @@ export function EditorContextMenuProvider({
   const { editor, blockId } = useBlockNoteContextMenu()
 
   const permissionLevel = item?.myPermissionLevel
+  const isItemTrashed = !!item?.deletionTime
 
   const menuContext = useMemo(
     () => ({
       item,
       viewContext,
+      isItemTrashed,
+      isTrashView: isTrashView || viewContext === 'trash-view',
       currentUserId: campaign.data?.myMembership?.userId,
       memberRole: campaign.data?.myMembership?.role,
       permissionLevel,
@@ -50,6 +55,8 @@ export function EditorContextMenuProvider({
     [
       item,
       viewContext,
+      isItemTrashed,
+      isTrashView,
       campaign.data?.myMembership?.userId,
       campaign.data?.myMembership?.role,
       permissionLevel,

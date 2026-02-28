@@ -6,7 +6,10 @@ import { DroppableFolderZone } from './droppable-folder-zone'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
 import { CreateNewDashboard } from '~/components/notes-page/editor/create-new-dashboard'
-import { useFilteredSidebarItems } from '~/hooks/useSidebarItems'
+import {
+  useFilteredSidebarItems,
+  useTrashedSidebarItems,
+} from '~/hooks/useSidebarItems'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
@@ -16,18 +19,27 @@ export function FolderViewer({
   item: folder,
 }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
-  const children = parentItemsMap.get(folder._id) ?? []
+  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } =
+    useTrashedSidebarItems()
 
-  const hasFullAccess = hasAtLeastPermissionLevel(
-    folder.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const isDeleted = !!folder.deletionTime
+  const effectiveStatus = isDeleted ? trashedStatus : status
+  const children = isDeleted
+    ? (trashedParentItemsMap.get(folder._id) ?? [])
+    : (parentItemsMap.get(folder._id) ?? [])
+
+  const hasFullAccess =
+    !isDeleted &&
+    hasAtLeastPermissionLevel(
+      folder.myPermissionLevel,
+      PERMISSION_LEVEL.FULL_ACCESS,
+    )
 
   const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(
     ' / ',
   )
 
-  if (status === 'pending') {
+  if (effectiveStatus === 'pending') {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <LoadingSpinner size="lg" />

@@ -19,33 +19,89 @@ export const getSidebarItemBySlug = async (
       item = await ctx.db
         .query('folders')
         .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', campaignId).eq('slug', slug),
+          q
+            .eq('campaignId', campaignId)
+            .eq('slug', slug)
+            .eq('deletionTime', undefined),
         )
-        .unique()
+        .first()
+      if (!item) {
+        item = await ctx.db
+          .query('folders')
+          .withIndex('by_campaign_slug', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('slug', slug)
+              .gt('deletionTime', 0),
+          )
+          .first()
+      }
       break
     case SIDEBAR_ITEM_TYPES.notes:
       item = await ctx.db
         .query('notes')
         .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', campaignId).eq('slug', slug),
+          q
+            .eq('campaignId', campaignId)
+            .eq('slug', slug)
+            .eq('deletionTime', undefined),
         )
-        .unique()
+        .first()
+      if (!item) {
+        item = await ctx.db
+          .query('notes')
+          .withIndex('by_campaign_slug', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('slug', slug)
+              .gt('deletionTime', 0),
+          )
+          .first()
+      }
       break
     case SIDEBAR_ITEM_TYPES.gameMaps:
       item = await ctx.db
         .query('gameMaps')
         .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', campaignId).eq('slug', slug),
+          q
+            .eq('campaignId', campaignId)
+            .eq('slug', slug)
+            .eq('deletionTime', undefined),
         )
-        .unique()
+        .first()
+      if (!item) {
+        item = await ctx.db
+          .query('gameMaps')
+          .withIndex('by_campaign_slug', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('slug', slug)
+              .gt('deletionTime', 0),
+          )
+          .first()
+      }
       break
     case SIDEBAR_ITEM_TYPES.files:
       item = await ctx.db
         .query('files')
         .withIndex('by_campaign_slug', (q) =>
-          q.eq('campaignId', campaignId).eq('slug', slug),
+          q
+            .eq('campaignId', campaignId)
+            .eq('slug', slug)
+            .eq('deletionTime', undefined),
         )
-        .unique()
+        .first()
+      if (!item) {
+        item = await ctx.db
+          .query('files')
+          .withIndex('by_campaign_slug', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('slug', slug)
+              .gt('deletionTime', 0),
+          )
+          .first()
+      }
       break
     default:
       throw new Error(`Unknown item type, ${type}`)

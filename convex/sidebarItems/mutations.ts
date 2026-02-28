@@ -1,8 +1,10 @@
 import { v } from 'convex/values'
-import { campaignMutation } from '../functions'
+import { campaignMutation, dmMutation } from '../functions'
 import { sidebarItemIdValidator } from './schema/baseValidators'
 import { updateSidebarItem as updateSidebarItemFn } from './functions/updateSidebarItem'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
+import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
+import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import type { SidebarItemId } from './types/baseTypes'
 
 export const updateSidebarItem = campaignMutation({
@@ -31,12 +33,37 @@ export const moveSidebarItem = campaignMutation({
     campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
     parentId: v.optional(v.id('folders')),
+    deleted: v.optional(v.boolean()),
   },
   returns: sidebarItemIdValidator,
   handler: async (ctx, args): Promise<SidebarItemId> => {
     return await moveSidebarItemFn(ctx, {
       itemId: args.itemId,
       parentId: args.parentId,
+      deleted: args.deleted,
     })
+  },
+})
+
+export const permanentlyDeleteSidebarItem = campaignMutation({
+  args: {
+    campaignId: v.id('campaigns'),
+    itemId: sidebarItemIdValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await permanentlyDeleteSidebarItemFn(ctx, { itemId: args.itemId })
+    return null
+  },
+})
+
+export const emptyTrashBin = dmMutation({
+  args: {
+    campaignId: v.id('campaigns'),
+  },
+  returns: v.null(),
+  handler: async (ctx): Promise<null> => {
+    await emptyTrashBinFn(ctx)
+    return null
   },
 })

@@ -9,6 +9,7 @@ import {
 } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
+  DragDropAction,
   DropRejectionReason,
   SidebarDragData,
   SidebarDropData,
@@ -16,8 +17,10 @@ import type {
 import type { Id } from 'convex/_generated/dataModel'
 import {
   EMPTY_EDITOR_DROP_TYPE,
+  getDragDropAction,
   isMapDropZone,
   isSidebarItem,
+  isTrashDropZone,
   validateDrop,
   wouldMoveChangePosition,
 } from '~/lib/dnd-utils'
@@ -27,6 +30,17 @@ import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { Ban } from '~/lib/icons'
+
+function getActionVerb(action: DragDropAction): string {
+  switch (action) {
+    case 'restore':
+      return 'Restore to'
+    case 'pin':
+      return 'Pin to'
+    default:
+      return 'Move to'
+  }
+}
 
 function rejectionReasonMessage(reason: DropRejectionReason): string {
   switch (reason) {
@@ -38,6 +52,8 @@ function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot pin map to itself'
     case 'not_folder':
       return 'Cannot drop here'
+    case 'missing_data':
+      return 'Missing data'
   }
 }
 
@@ -62,6 +78,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
   const setSidebarDragTargetId = useSidebarUIStore(
     (s) => s.setSidebarDragTargetId,
   )
+  const setDragDropAction = useSidebarUIStore((s) => s.setDragDropAction)
 
   useEffect(() => {
     return monitorForElements({
@@ -77,7 +94,7 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         lastDropTargetKeyRef.current = null
         setContent({ dragData, dropTarget: null })
       },
-      onDrag: ({ location }) => {
+      onDrag: ({ location, source }) => {
         const input = location.current.input
         if (overlayRef.current) {
           overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
@@ -103,6 +120,12 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
               targetId = SIDEBAR_ROOT_TYPE
           }
           setSidebarDragTargetId(targetId)
+
+          const action = getDragDropAction(
+            source.data as SidebarDragData,
+            dropTarget,
+          )
+          setDragDropAction(action)
         }
       },
       onDrop: () => {
@@ -111,48 +134,40 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         }
         lastDropTargetKeyRef.current = null
         setSidebarDragTargetId(null)
+        setDragDropAction(null)
       },
     })
-  }, [setSidebarDragTargetId])
+  }, [setSidebarDragTargetId, setDragDropAction])
 
   const dropTargetInfo = useMemo(() => {
     if (!content?.dropTarget) return null
     const { dragData, dropTarget } = content
 
     const validation = validateDrop(dragData, dropTarget)
-    const rejectionReason = !validation.valid ? validation.reason : undefined
+    const action = getDragDropAction(dragData, dropTarget)
 
-    if (isMapDropZone(dropTarget)) {
-      return {
-        name: dropTarget.mapName,
-        isValid: validation.valid,
-        rejectionReason,
-        action: 'pin' as const,
-      }
-    } else if (isSidebarItem(dropTarget)) {
-      return {
-        name: dropTarget.name,
-        isValid: validation.valid,
-        rejectionReason,
-        action: 'move' as const,
-      }
-    } else if (dropTarget.type === SIDEBAR_ROOT_TYPE) {
-      return {
-        name: campaignName || 'root',
-        isValid: validation.valid,
-        rejectionReason,
-        action: 'move' as const,
-      }
+    // If the drop wouldn't change anything (e.g. folder on itself), show nothing
+    if (validation.valid && !wouldMoveChangePosition(dragData, dropTarget)) {
+      return null
     }
 
-    return validation.valid
-      ? null
-      : {
-          name: null,
-          isValid: false,
-          rejectionReason,
-          action: 'move' as const,
-        }
+    const rejectionReason = !validation.valid ? validation.reason : undefined
+
+    // Determine the target name for overlay text
+    let name: string | null = null
+    if (isTrashDropZone(dropTarget)) {
+      name = 'Trash'
+    } else if (isMapDropZone(dropTarget)) {
+      name = dropTarget.mapName
+    } else if (isSidebarItem(dropTarget)) {
+      name = dropTarget.name
+    } else if (dropTarget.type === SIDEBAR_ROOT_TYPE) {
+      name = campaignName || 'root'
+    }
+
+    if (!name && validation.valid) return null
+
+    return { name, isValid: validation.valid, rejectionReason, action }
   }, [content, campaignName])
 
   const DraggedItemIcon = content
@@ -176,8 +191,9 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
           </span>
           {dropTargetInfo?.isValid ? (
             <span className="text-muted-foreground whitespace-nowrap text-xs">
-              {dropTargetInfo.action === 'pin' ? 'Pin to' : 'Move to'} &quot;
-              {dropTargetInfo.name}&quot;
+              {dropTargetInfo.action === 'move-and-trash'
+                ? 'Move to "Trash"'
+                : `${getActionVerb(dropTargetInfo.action)} "${dropTargetInfo.name}"`}
             </span>
           ) : dropTargetInfo?.rejectionReason ? (
             <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
@@ -197,7 +213,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
   const campaignData = campaign.data
 
   const { navigateToItem } = useEditorNavigationContext()
-  const { move } = useSidebarItemMutations()
+  const { moveItem } = useSidebarItemMutations()
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
@@ -211,16 +227,19 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         const draggedItem = source.data as SidebarDragData
         const targetData = topTarget.data as SidebarDropData
 
-        if (isMapDropZone(targetData)) {
-          return
-        }
+        const action = getDragDropAction(draggedItem, targetData)
 
+        // Empty editor drops navigate, not move
         if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {
           navigateToItem(draggedItem as AnySidebarItem, true)
           return
         }
 
+        // Map drops are handled by the map component
+        if (action === 'pin') return
+
         if (!validateDrop(draggedItem, targetData).valid) return
+        if (!wouldMoveChangePosition(draggedItem, targetData)) return
 
         const targetId =
           isSidebarItem(targetData) &&
@@ -228,11 +247,25 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
             ? (targetData._id as Id<'folders'>)
             : undefined
 
-        if (draggedItem._id === targetId) return
-        if (!wouldMoveChangePosition(draggedItem, targetData)) return
+        // Compute move options from action
+        const deleted =
+          action === 'trash' || action === 'move-and-trash'
+            ? true
+            : action === 'restore'
+              ? false
+              : undefined
 
         try {
-          await move(draggedItem as AnySidebarItem, targetId)
+          await moveItem(draggedItem as AnySidebarItem, {
+            parentId: targetId,
+            deleted,
+          })
+
+          if (action === 'trash' || action === 'move-and-trash') {
+            toast.success('Moved to trash')
+          } else if (action === 'restore') {
+            toast.success('Item restored')
+          }
 
           if (targetId && campaignId) {
             setFolderState(campaignId, targetId, true)
@@ -244,7 +277,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         }
       },
     })
-  }, [move, setFolderState, campaignId, navigateToItem])
+  }, [moveItem, setFolderState, campaignId, navigateToItem])
 
   return (
     <>

@@ -4,6 +4,8 @@ export type CommonTableFields = {
   updatedTime: number
   updatedBy: Id<'userProfiles'>
   createdBy: Id<'userProfiles'>
+  deletionTime?: number
+  deletedBy?: Id<'userProfiles'>
 }
 
 export type ConvexValidatorFields<T extends TableNames> = {

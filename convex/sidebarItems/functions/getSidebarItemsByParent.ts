@@ -14,25 +14,37 @@ export const getSidebarItemsByParent = async (
     ctx.db
       .query('folders')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('parentId', resolvedParentId),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('parentId', resolvedParentId),
       )
       .collect(),
     ctx.db
       .query('notes')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('parentId', resolvedParentId),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('parentId', resolvedParentId),
       )
       .collect(),
     ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('parentId', resolvedParentId),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('parentId', resolvedParentId),
       )
       .collect(),
     ctx.db
       .query('files')
       .withIndex('by_campaign_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('parentId', resolvedParentId),
+        q
+          .eq('campaignId', campaignId)
+          .eq('deletionTime', undefined)
+          .eq('parentId', resolvedParentId),
       )
       .collect(),
   ])

@@ -11,10 +11,12 @@ import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
+export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 export interface SidebarDragData extends SidebarItem<SidebarItemType> {
   [key: string | symbol]: unknown
   ancestorIds?: Array<Id<'folders'>>
+  deletionTime?: number
 }
 
 export interface MapDropZoneData {
@@ -34,18 +36,26 @@ export interface EmptyEditorDropZoneData {
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
 
+export interface TrashDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof TRASH_DROP_ZONE_TYPE
+}
+
 export type SidebarDropData =
   | SidebarDragData
   | SidebarRootDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData
+  | TrashDropZoneData
 
 // Type predicates for narrowing drop data types
 export function isSidebarItem(data: SidebarDropData): data is SidebarDragData {
   return (
     !isSidebarRootDropZone(data) &&
     !isEmptyEditorDropZone(data) &&
-    !isMapDropZone(data)
+    !isMapDropZone(data) &&
+    !isTrashDropZone(data) &&
+    data.type in SIDEBAR_ITEM_TYPES
   )
 }
 
@@ -59,10 +69,62 @@ export function isEmptyEditorDropZone(
   return data.type === EMPTY_EDITOR_DROP_TYPE
 }
 
+export function isTrashDropZone(
+  data: SidebarDropData,
+): data is TrashDropZoneData {
+  return data.type === TRASH_DROP_ZONE_TYPE
+}
+
 export function isSidebarRootDropZone(
   data: SidebarDropData,
 ): data is SidebarRootDropZoneData {
   return data.type === SIDEBAR_ROOT_TYPE
+}
+
+export type DragDropAction =
+  | 'move'
+  | 'trash'
+  | 'move-and-trash'
+  | 'restore'
+  | 'pin'
+  | null
+
+/**
+ * Computes the semantic action for a drag-drop operation.
+ * Single source of truth used for overlay text, highlighting, and drop handling.
+ */
+export function getDragDropAction(
+  draggedItem: SidebarDragData | null,
+  targetData: SidebarDropData | null,
+): DragDropAction {
+  if (!draggedItem || !targetData) return null
+
+  const isTrashedItem = !!draggedItem.deletionTime
+
+  if (isTrashDropZone(targetData)) {
+    return isTrashedItem ? 'move' : 'trash'
+  }
+
+  if (isMapDropZone(targetData)) {
+    return 'pin'
+  }
+
+  if (isEmptyEditorDropZone(targetData)) {
+    return null
+  }
+
+  if (isSidebarRootDropZone(targetData)) {
+    return isTrashedItem ? 'restore' : 'move'
+  }
+
+  if (isSidebarItem(targetData)) {
+    const isTargetTrashed = !!targetData.deletionTime
+    if (isTrashedItem && !isTargetTrashed) return 'restore'
+    if (!isTrashedItem && isTargetTrashed) return 'move-and-trash'
+    return 'move'
+  }
+
+  return null
 }
 
 export type DropRejectionReason =
@@ -70,6 +132,7 @@ export type DropRejectionReason =
   | 'not_folder'
   | 'circular'
   | 'no_permission'
+  | 'missing_data'
 
 export type DropValidationResult =
   | { valid: true }
@@ -84,7 +147,12 @@ export function validateDrop(
   targetData: SidebarDropData | null,
 ): DropValidationResult {
   if (!draggedItem || !targetData) {
-    return { valid: false, reason: 'not_folder' }
+    return { valid: false, reason: 'missing_data' }
+  }
+
+  // Handle trash drop zone
+  else if (isTrashDropZone(targetData)) {
+    return { valid: true }
   }
 
   // Handle map drop zone - allow pinning items to map
@@ -148,6 +216,12 @@ export function wouldMoveChangePosition(
     return false
   }
 
+  // Trash drop zones: trashing a non-trashed item always changes, moving
+  // an already-trashed item to trash root only changes if it has a parent
+  else if (isTrashDropZone(targetData)) {
+    return draggedItem.deletionTime ? draggedItem.parentId != null : true
+  }
+
   // Map drop zones always result in a change (pinning)
   else if (isMapDropZone(targetData)) {
     return true
@@ -160,10 +234,14 @@ export function wouldMoveChangePosition(
 
   // Moving to root - check if already at root
   else if (isSidebarRootDropZone(targetData)) {
-    return draggedItem.parentId !== undefined
+    // Restoring a trashed item always changes state
+    if (draggedItem.deletionTime) return true
+    return draggedItem.parentId != null
   } else if (isSidebarItem(targetData)) {
     // Dropping on itself is a no-op
     if (draggedItem._id === targetData._id) return false
+    // Cross-trash boundary always changes state (restore or trash)
+    if (!!draggedItem.deletionTime !== !!targetData.deletionTime) return true
     // Moving to a folder - check if already in that folder
     return draggedItem.parentId !== targetData._id
   } else {
@@ -186,8 +264,12 @@ export function canDropFilesOnTarget(
     return true
   } else if (isMapDropZone(targetData)) {
     return false
+  } else if (isTrashDropZone(targetData)) {
+    return false
   } else if (isSidebarItem(targetData)) {
-    return targetData.type === SIDEBAR_ITEM_TYPES.folders
+    return (
+      targetData.type === SIDEBAR_ITEM_TYPES.folders && !targetData.deletionTime
+    )
   } else {
     console.error('Invalid target data type:', targetData)
     return false

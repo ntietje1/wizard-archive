@@ -6,8 +6,10 @@ import type {
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { SidebarDragData, DragDropAction } from '~/lib/dnd-utils'
 import type { Id } from 'convex/_generated/dataModel'
+
+export type { DragDropAction } from '~/lib/dnd-utils'
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -23,6 +25,7 @@ interface SidebarUIState {
   renamingId: SidebarItemId | null
   activeDragItem: SidebarDragData | null
   sidebarDragTargetId: string | null
+  dragDropAction: DragDropAction
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
   pendingItemName: string
@@ -44,6 +47,7 @@ interface SidebarUIActions {
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setActiveDragItem: (item: SidebarDragData | null) => void
   setSidebarDragTargetId: (id: string | null) => void
+  setDragDropAction: (action: DragDropAction) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
@@ -87,6 +91,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       renamingId: null,
       activeDragItem: null,
       sidebarDragTargetId: null,
+      dragDropAction: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
       pendingItemName: '',
@@ -149,6 +154,11 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         set((state) => {
           if (state.sidebarDragTargetId === id) return state
           return { sidebarDragTargetId: id }
+        }),
+      setDragDropAction: (action) =>
+        set((state) => {
+          if (state.dragDropAction === action) return state
+          return { dragDropAction: action }
         }),
       setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
       setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),

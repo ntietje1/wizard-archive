@@ -5,7 +5,10 @@ import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
   ctx: CampaignQueryCtx,
-  { initialParentId }: { initialParentId: Id<'folders'> | null },
+  {
+    initialParentId,
+    isTrashed,
+  }: { initialParentId: Id<'folders'> | null; isTrashed?: boolean },
 ): Promise<Array<Folder>> {
   const ancestors: Array<Folder> = []
   let currentParentId: Id<'folders'> | null = initialParentId
@@ -18,6 +21,10 @@ export async function getSidebarItemAncestors(
     visited.add(currentParentId)
     const rawFolder = await ctx.db.get(currentParentId)
     if (!rawFolder) {
+      break
+    }
+    // Trashed items only show trashed ancestors
+    if (isTrashed && !rawFolder.deletionTime) {
       break
     }
     const folder = await enhanceSidebarItem(ctx, { item: rawFolder })
