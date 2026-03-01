@@ -1,12 +1,9 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
-import { useDroppable } from '~/hooks/useDroppable'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
+import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface DroppableFolderZoneProps {
   folder: Folder
@@ -22,35 +19,18 @@ export function DroppableFolderZone({
   highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { itemsMap, getAncestorSidebarItems } = useAllSidebarItems()
 
-  const ancestorIds = useMemo(
-    () => getAncestorSidebarItems(folder._id).map((item) => item._id),
-    [folder._id, getAncestorSidebarItems],
-  )
-
-  const dropData = { ...folder, ancestorIds }
+  useSidebarItemDropTarget({ ref, item: folder })
 
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
   const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
-  // Mirror the validation that useSidebarItemDropTarget applies in the sidebar so
-  // the folder zone only highlights when the drop would actually be accepted.
-  useDroppable<typeof dropData, SidebarDragData>({
-    ref,
-    data: dropData,
-    canDrop: (sourceData) => {
-      const draggedItem = itemsMap.get(sourceData.sidebarItemId) ?? null
-      return validateDrop(draggedItem, { ...folder, ancestorIds }).valid
-    },
-  })
-
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: folder._id,
-    canAcceptFiles: canDropFilesOnTarget(dropData),
+    canAcceptFiles: !folder.deletionTime,
   })
 
   const isTrashAction = dragDropAction === 'trash'

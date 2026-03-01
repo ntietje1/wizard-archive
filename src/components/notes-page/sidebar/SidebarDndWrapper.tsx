@@ -14,7 +14,6 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   SidebarDragData,
   SidebarDropData,
-  SidebarItemDropData,
 } from '~/lib/dnd-utils'
 import {
   EMPTY_EDITOR_DROP_TYPE,
@@ -23,6 +22,7 @@ import {
   getDragDropAction,
   getDropLabel,
   rejectionReasonMessage,
+  resolveDropTarget,
   validateDrop,
   wouldDropHaveEffect,
 } from '~/lib/dnd-utils'
@@ -107,22 +107,14 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
         if (key !== lastDropTargetKeyRef.current) {
           lastDropTargetKeyRef.current = key
 
-          // Resolve sidebar item drop targets to their full item form
-          let dropTarget: SidebarDropData | null = null
-          if (rawDropTarget && 'sidebarItemId' in rawDropTarget) {
-            const payload = rawDropTarget as SidebarItemDropData
-            const targetItem =
-              itemsMapRef.current.get(payload.sidebarItemId) ??
-              trashedItemsMapRef.current.get(payload.sidebarItemId)
-            if (targetItem) {
-              const ancestorIds = getAncestorSidebarItemsRef
-                .current(targetItem._id)
-                .map((a) => a._id)
-              dropTarget = { ...targetItem, ancestorIds }
-            }
-          } else {
-            dropTarget = rawDropTarget as SidebarDropData | null
-          }
+          const dropTarget = rawDropTarget
+            ? resolveDropTarget(
+                rawDropTarget,
+                itemsMapRef.current,
+                trashedItemsMapRef.current,
+                (id) => getAncestorSidebarItemsRef.current(id).map((a) => a._id),
+              )
+            : null
 
           setContent((prev) => {
             if (!prev) return null
@@ -300,22 +292,12 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
           null
         if (!draggedItem) return
 
-        // Resolve the drop target: sidebar item payloads need full item + fresh ancestorIds
-        let targetData: SidebarDropData | null = null
-        if ('sidebarItemId' in topTarget.data) {
-          const payload = topTarget.data as SidebarItemDropData
-          const targetItem =
-            itemsMapRef.current.get(payload.sidebarItemId) ??
-            trashedItemsMapRef.current.get(payload.sidebarItemId)
-          if (targetItem) {
-            const ancestorIds = getAncestorSidebarItemsRef.current(
-              targetItem._id,
-            ).map((a) => a._id)
-            targetData = { ...targetItem, ancestorIds }
-          }
-        } else {
-          targetData = topTarget.data as SidebarDropData
-        }
+        const targetData = resolveDropTarget(
+          topTarget.data,
+          itemsMapRef.current,
+          trashedItemsMapRef.current,
+          (id) => getAncestorSidebarItemsRef.current(id).map((a) => a._id),
+        )
         if (!targetData) return
 
         const action = getDragDropAction(draggedItem, targetData)

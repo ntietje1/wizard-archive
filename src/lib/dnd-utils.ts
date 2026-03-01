@@ -297,6 +297,27 @@ function getActionVerb(action: DragDropAction): string {
 }
 
 /**
+ * Resolves raw pragmatic-dnd drop target data into a fully typed SidebarDropData.
+ * Sidebar item targets carry minimal `{ type, sidebarItemId }` payloads — this
+ * function looks up the full item from the provided maps and computes fresh
+ * ancestorIds at resolution time (avoiding stale render-time captures).
+ */
+export function resolveDropTarget(
+  rawData: Record<string, unknown>,
+  itemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
+  trashedItemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
+  getAncestorIds: (id: SidebarItemId) => Array<Id<'folders'>>,
+): SidebarDropData | null {
+  if ('sidebarItemId' in rawData) {
+    const sid = rawData.sidebarItemId as SidebarItemId
+    const item = itemsMap.get(sid) ?? trashedItemsMap.get(sid)
+    if (!item) return null
+    return { ...item, ancestorIds: getAncestorIds(item._id) }
+  }
+  return rawData as SidebarDropData
+}
+
+/**
  * Validates if external files can be dropped on a target item.
  */
 export function canDropFilesOnTarget(
