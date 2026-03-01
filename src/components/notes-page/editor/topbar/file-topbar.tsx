@@ -1,11 +1,9 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { EditableBreadcrumb } from './editable-breadcrumb'
+import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
@@ -22,8 +20,6 @@ export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { itemsMap } = useAllSidebarItems()
-  const { navigateToItem } = useEditorNavigation()
-  const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const { isDm, campaignId } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
@@ -34,13 +30,9 @@ export function FileTopbar() {
   const rootTrashedItems = trashedParentItemsMap.get(undefined) ?? []
 
   const canRename =
-    item &&
+    !!item &&
+    canEdit &&
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.FULL_ACCESS, permOpts)
-
-  const handleRename = async (newName: string) => {
-    if (!item) return
-    await rename(item, newName)
-  }
 
   const isNotSharedWithPlayer =
     item &&
@@ -79,28 +71,16 @@ export function FileTopbar() {
           )}
           {item && (
             <EditableBreadcrumb
-              initialName={item.name}
-              defaultName=""
-              onRename={handleRename}
-              ancestors={item.ancestors}
-              onNavigateToItem={navigateToItem}
-              campaignId={item.campaignId}
-              parentId={item.parentId ?? undefined}
-              excludeId={item._id}
-              disabled={
-                !canEdit || !canRename || (isNotSharedWithPlayer ?? false)
-              }
+              item={item}
+              canRename={canRename && !isNotSharedWithPlayer}
               showNotSharedTooltip={!!isNotSharedWithPlayer}
             />
           )}
           {isEmptyEditor && (
-            <EditableBreadcrumb
+            <EditableName
               initialName=""
               defaultName="Untitled Item"
-              onRename={handleRename}
               onChange={setPendingItemName}
-              ancestors={[]}
-              onNavigateToItem={navigateToItem}
               campaignId={campaignId}
             />
           )}

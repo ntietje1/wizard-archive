@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useRenameItem } from '~/hooks/useRenameItem'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
 import {
   Tooltip,
@@ -14,8 +16,8 @@ import {
 
 interface EditableNameProps {
   initialName: string
-  defaultName: string
-  onRename: (newName: string) => Promise<void>
+  defaultName?: string
+  onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
@@ -26,7 +28,7 @@ interface EditableNameProps {
 
 export function EditableName({
   initialName,
-  defaultName,
+  defaultName = '',
   onRename,
   onChange,
   campaignId,
@@ -75,7 +77,7 @@ export function EditableName({
         setIsEditing(false)
         return
       }
-      await onRename(trimmedName)
+      await onRename?.(trimmedName)
       setIsEditing(false)
     } catch (error) {
       toast.error('Failed to rename. Please try again.')
@@ -170,76 +172,53 @@ export function EditableName({
 }
 
 interface EditableBreadcrumbProps {
-  initialName: string
-  defaultName: string
-  onRename: (newName: string) => Promise<void>
-  onChange?: (name: string) => void
-  ancestors: Array<AnySidebarItem>
-  onNavigateToItem: (item: AnySidebarItem) => void
-  campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
-  excludeId?: SidebarItemId
-  disabled?: boolean
+  item: AnySidebarItemWithContent
+  canRename: boolean
   showNotSharedTooltip?: boolean
 }
 
 export function EditableBreadcrumb({
-  initialName,
-  defaultName,
-  onRename,
-  onChange,
-  ancestors,
-  onNavigateToItem,
-  campaignId,
-  parentId,
-  excludeId,
-  disabled,
+  item,
+  canRename,
   showNotSharedTooltip,
 }: EditableBreadcrumbProps) {
+  const { navigateToItem } = useEditorNavigation()
+  const { rename } = useRenameItem()
+
+  const handleRename = useCallback(
+    async (newName: string) => {
+      await rename(item, newName)
+    },
+    [rename, item],
+  )
+
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
-        {ancestors.map((ancestor) => {
-          return (
-            <div
-              key={ancestor._id}
-              className="flex items-center min-w-6 flex-shrink"
+        {item.ancestors.map((ancestor) => (
+          <div
+            key={ancestor._id}
+            className="flex items-center min-w-6 flex-shrink"
+          >
+            <button
+              onClick={() => navigateToItem(ancestor)}
+              className="rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-gray-900 hover:bg-muted"
+              title={ancestor.name}
+              type="button"
             >
-              <button
-                onClick={() => onNavigateToItem(ancestor)}
-                disabled={disabled}
-                className={cn(
-                  'rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5',
-                  disabled
-                    ? 'cursor-default'
-                    : 'cursor-pointer hover:text-gray-900 hover:bg-muted',
-                )}
-                title={ancestor.name}
-                type="button"
-              >
-                {ancestor.name}
-              </button>
-              <span
-                className={cn(
-                  'text-gray-400 flex-shrink-0',
-                  disabled && 'cursor-default',
-                )}
-              >
-                /
-              </span>
-            </div>
-          )
-        })}
+              {ancestor.name}
+            </button>
+            <span className="text-gray-400 flex-shrink-0">/</span>
+          </div>
+        ))}
       </div>
       <EditableName
-        initialName={initialName}
-        defaultName={defaultName}
-        onRename={onRename}
-        onChange={onChange}
-        campaignId={campaignId}
-        parentId={parentId}
-        excludeId={excludeId}
-        disabled={disabled}
+        initialName={item.name}
+        onRename={handleRename}
+        campaignId={item.campaignId}
+        parentId={item.parentId ?? undefined}
+        excludeId={item._id}
+        disabled={!canRename}
         showNotSharedTooltip={showNotSharedTooltip}
       />
     </div>
