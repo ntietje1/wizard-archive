@@ -8,7 +8,7 @@ import {
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { Image, Minus, Plus, RotateCcw } from 'lucide-react'
+import { Ban, Image, Minus, Plus, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -19,12 +19,16 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
-import type { SidebarDragData } from '~/lib/dnd-utils'
+import type { DropValidationResult, SidebarDragData } from '~/lib/dnd-utils'
+import {
+  MAP_DROP_ZONE_TYPE,
+  rejectionReasonMessage,
+  validateDrop,
+} from '~/lib/dnd-utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
-import { MAP_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
@@ -272,6 +276,10 @@ export function MapViewer({
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
+  // Keep a ref to `map` so the monitorForElements closure doesn't go stale
+  // when pins are added/removed (which would otherwise re-register the monitor).
+  const mapRef = useRef(map)
+  mapRef.current = map
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
 
@@ -282,6 +290,10 @@ export function MapViewer({
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap: allItemsMap } = useAllSidebarItems()
+  const allItemsMapRef = useRef(allItemsMap)
+  allItemsMapRef.current = allItemsMap
+  const [mapDragValidation, setMapDragValidation] =
+    useState<DropValidationResult | null>(null)
   const permOpts = useMemo(
     () => ({ isDm, viewAsPlayerId, allItemsMap }),
     [isDm, viewAsPlayerId, allItemsMap],
@@ -388,33 +400,36 @@ export function MapViewer({
   )
   const dropCleanupRef = useRef<(() => void) | null>(null)
 
-  const mapContainerRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      dropCleanupRef.current?.()
-      dropCleanupRef.current = null
+  const mapContainerRef = useCallback((el: HTMLDivElement | null) => {
+    dropCleanupRef.current?.()
+    dropCleanupRef.current = null
 
-      if (!el) return
+    if (!el) return
 
-      dropCleanupRef.current = dropTargetForElements({
-        element: el,
-        getData: () => ({
+    dropCleanupRef.current = dropTargetForElements({
+      element: el,
+      getData: () => ({
+        type: MAP_DROP_ZONE_TYPE,
+        mapId: mapRef.current._id,
+        mapName: mapRef.current.name,
+        pinnedItemIds: mapRef.current.pins.map((pin) => pin.itemId),
+      }),
+      onDragEnter: ({ source }) => {
+        const sourceData = source.data as SidebarDragData
+        const draggedItem =
+          allItemsMapRef.current.get(sourceData.sidebarItemId) ?? null
+        const validation = validateDrop(draggedItem, {
           type: MAP_DROP_ZONE_TYPE,
-          mapId: map._id,
-          mapName: map.name,
-        }),
-        onDragEnter: () => {
-          el.setAttribute('data-drop-over', '')
-        },
-        onDragLeave: () => {
-          el.removeAttribute('data-drop-over')
-        },
-        onDrop: () => {
-          el.removeAttribute('data-drop-over')
-        },
-      })
-    },
-    [map],
-  )
+          mapId: mapRef.current._id,
+          mapName: mapRef.current.name,
+          pinnedItemIds: mapRef.current.pins.map((pin) => pin.itemId),
+        })
+        setMapDragValidation(validation)
+      },
+      onDragLeave: () => setMapDragValidation(null),
+      onDrop: () => setMapDragValidation(null),
+    })
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -584,21 +599,22 @@ export function MapViewer({
     },
     [map._id, map.campaignId, createItemPinMutation],
   )
+  const createPinAtPositionRef = useRef(createPinAtPosition)
+  createPinAtPositionRef.current = createPinAtPosition
 
   useEffect(() => {
     return monitorForElements({
       onDrop: ({ source, location }) => {
-        const dropTargets = location.current.dropTargets
-        const topTarget = dropTargets[0]
+        const topTarget = location.current.dropTargets[0]
         if (!topTarget) return
 
         const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
-        if (targetData.mapId !== map._id) return
+        if (targetData.mapId !== mapRef.current._id) return
 
         const itemId = (source.data as SidebarDragData).sidebarItemId
 
-        if (map.pins.some((pin) => pin.itemId === itemId)) {
+        if (mapRef.current.pins.some((pin) => pin.itemId === itemId)) {
           toast.error('Item is already pinned on this map')
           return
         }
@@ -618,10 +634,10 @@ export function MapViewer({
           y: Math.max(0, Math.min(100, y)),
         }
 
-        createPinAtPosition(itemId, position)
+        createPinAtPositionRef.current(itemId, position)
       },
     })
-  }, [map._id, map.pins, createPinAtPosition])
+  }, [])
 
   const handlePlacePin = useCallback(
     async (position: PinPosition) => {
@@ -817,12 +833,34 @@ export function MapViewer({
           </div>
 
           <div ref={mapContainerRef} className="flex-1 relative min-h-0">
-            {/* Visual ring indicator when sidebar drag is over the map */}
-            <div className="absolute inset-0 z-[998] ring-2 ring-primary ring-offset-2 pointer-events-none hidden [[data-drop-over]>&]:block" />
-            {/* Drag-drop mode banner */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-green-600 text-white px-4 py-2 rounded-md shadow-lg hidden [[data-drop-over]>&]:block">
-              <p className="text-sm font-medium">Release to place pin here</p>
-            </div>
+            {/* Ring + banner while a sidebar item is dragged over the map */}
+            {mapDragValidation && (
+              <>
+                <div
+                  className={cn(
+                    'absolute inset-0 z-[998] ring-2 ring-offset-2 pointer-events-none',
+                    mapDragValidation.valid
+                      ? 'ring-primary'
+                      : 'ring-destructive',
+                  )}
+                />
+                <div
+                  className={cn(
+                    'absolute top-4 left-1/2 -translate-x-1/2 z-[2000] text-white px-4 py-2 rounded-md shadow-lg',
+                    mapDragValidation.valid ? 'bg-green-600' : 'bg-destructive',
+                  )}
+                >
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    {!mapDragValidation.valid && (
+                      <Ban className="w-4 h-4 shrink-0" />
+                    )}
+                    {mapDragValidation.valid
+                      ? 'Release to place pin here'
+                      : rejectionReasonMessage(mapDragValidation.reason)}
+                  </p>
+                </div>
+              </>
+            )}
             {/* Loading spinner while map image is loading */}
             {map.imageUrl && !imageLoaded && (
               <div className="absolute inset-0 z-[999] flex items-center justify-center">

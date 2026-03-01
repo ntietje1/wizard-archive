@@ -76,7 +76,6 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
     (s) => s.setSidebarDragTargetId,
   )
   const setDragDropAction = useSidebarUIStore((s) => s.setDragDropAction)
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
   useEffect(() => {
     return monitorForElements({
@@ -179,8 +178,12 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
       return null
     }
 
+    // Derive action directly from content — never read back from the store,
+    // which flushes asynchronously and would be stale on the first render after
+    // a drop-target change.
+    const action = getDragDropAction(draggedItem, dropTarget)
     const rejectionReason = !validation.valid ? validation.reason : undefined
-    const label = getDropLabel(dragDropAction, dropTarget, campaignName)
+    const label = getDropLabel(action, dropTarget, campaignName)
 
     if (!label && validation.valid) return null
 
@@ -188,9 +191,9 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
       label,
       isValid: validation.valid,
       rejectionReason,
-      action: dragDropAction,
+      action,
     }
-  }, [content, campaignName, dragDropAction])
+  }, [content, campaignName])
 
   const DraggedItemIcon = content
     ? getSidebarItemIcon(content.draggedItem)
@@ -238,9 +241,23 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
   const { itemsMap, getAncestorSidebarItems } = useAllSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashedSidebarItems()
 
-  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
   const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
   const setIsDraggingFiles = useSidebarUIStore((s) => s.setIsDraggingFiles)
+
+  // Refs so the onDrop monitor closure always reads current values without
+  // needing to be torn down and re-registered on every Convex data update.
+  const itemsMapRef = useRef(itemsMap)
+  itemsMapRef.current = itemsMap
+  const trashedItemsMapRef = useRef(trashedItemsMap)
+  trashedItemsMapRef.current = trashedItemsMap
+  const getAncestorSidebarItemsRef = useRef(getAncestorSidebarItems)
+  getAncestorSidebarItemsRef.current = getAncestorSidebarItems
+  const moveItemRef = useRef(moveItem)
+  moveItemRef.current = moveItem
+  const campaignIdRef = useRef(campaignId)
+  campaignIdRef.current = campaignId
+  const navigateToItemRef = useRef(navigateToItem)
+  navigateToItemRef.current = navigateToItem
 
   // Prevent the browser from opening dragged files in a new tab.
   // Using capture phase so this fires BEFORE element bubble listeners,
@@ -278,7 +295,9 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
         const dragSid = (source.data as SidebarDragData).sidebarItemId
         const draggedItem =
-          (itemsMap.get(dragSid) ?? trashedItemsMap.get(dragSid)) ?? null
+          (itemsMapRef.current.get(dragSid) ??
+            trashedItemsMapRef.current.get(dragSid)) ??
+          null
         if (!draggedItem) return
 
         // Resolve the drop target: sidebar item payloads need full item + fresh ancestorIds
@@ -286,12 +305,12 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         if ('sidebarItemId' in topTarget.data) {
           const payload = topTarget.data as SidebarItemDropData
           const targetItem =
-            itemsMap.get(payload.sidebarItemId) ??
-            trashedItemsMap.get(payload.sidebarItemId)
+            itemsMapRef.current.get(payload.sidebarItemId) ??
+            trashedItemsMapRef.current.get(payload.sidebarItemId)
           if (targetItem) {
-            const ancestorIds = getAncestorSidebarItems(targetItem._id).map(
-              (a) => a._id,
-            )
+            const ancestorIds = getAncestorSidebarItemsRef.current(
+              targetItem._id,
+            ).map((a) => a._id)
             targetData = { ...targetItem, ancestorIds }
           }
         } else {
@@ -303,7 +322,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
         // Empty editor drops navigate, not move
         if (targetData.type === EMPTY_EDITOR_DROP_TYPE) {
-          navigateToItem(draggedItem, true)
+          navigateToItemRef.current(draggedItem, true)
           return
         }
 
@@ -323,7 +342,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
           action === 'trash' ? true : action === 'restore' ? false : undefined
 
         try {
-          await moveItem(draggedItem, {
+          await moveItemRef.current(draggedItem, {
             parentId: targetId,
             deleted,
           })
@@ -334,8 +353,10 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
             toast.success('Item restored')
           }
 
-          if (targetId && campaignId) {
-            setFolderState(campaignId, targetId, true)
+          if (targetId && campaignIdRef.current) {
+            useSidebarUIStore
+              .getState()
+              .setFolderState(campaignIdRef.current, targetId, true)
           }
         } catch (error) {
           const message =
@@ -344,15 +365,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         }
       },
     })
-  }, [
-    itemsMap,
-    trashedItemsMap,
-    getAncestorSidebarItems,
-    moveItem,
-    setFolderState,
-    campaignId,
-    navigateToItem,
-  ])
+  }, [])
 
   useEffect(() => {
     return monitorForExternal({

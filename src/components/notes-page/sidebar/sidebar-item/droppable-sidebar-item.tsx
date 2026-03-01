@@ -43,8 +43,7 @@ export function DroppableSidebarItem({
   const shouldHighlight =
     isDropTarget || isFileDropTarget || isFileParentValidDrop
 
-  const isTrashAction =
-    dragDropAction === 'trash' || dragDropAction === 'move-and-trash'
+  const isTrashAction = dragDropAction === 'trash'
 
   const highlightClass = shouldHighlight
     ? isDropTarget && isTrashAction

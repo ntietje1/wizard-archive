@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget, validateDrop } from '~/lib/dnd-utils'
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useDroppable } from '~/hooks/useDroppable'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
@@ -21,7 +22,7 @@ export function DroppableFolderZone({
   highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { getAncestorSidebarItems } = useAllSidebarItems()
+  const { itemsMap, getAncestorSidebarItems } = useAllSidebarItems()
 
   const ancestorIds = useMemo(
     () => getAncestorSidebarItems(folder._id).map((item) => item._id),
@@ -35,7 +36,16 @@ export function DroppableFolderZone({
   )
   const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
 
-  useDroppable({ ref, data: dropData })
+  // Mirror the validation that useSidebarItemDropTarget applies in the sidebar so
+  // the folder zone only highlights when the drop would actually be accepted.
+  useDroppable<typeof dropData, SidebarDragData>({
+    ref,
+    data: dropData,
+    canDrop: (sourceData) => {
+      const draggedItem = itemsMap.get(sourceData.sidebarItemId) ?? null
+      return validateDrop(draggedItem, { ...folder, ancestorIds }).valid
+    },
+  })
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
@@ -43,8 +53,7 @@ export function DroppableFolderZone({
     canAcceptFiles: canDropFilesOnTarget(dropData),
   })
 
-  const isTrashAction =
-    dragDropAction === 'trash' || dragDropAction === 'move-and-trash'
+  const isTrashAction = dragDropAction === 'trash'
 
   const activeHighlight =
     isDropTarget && isTrashAction

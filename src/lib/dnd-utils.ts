@@ -31,6 +31,8 @@ export interface MapDropZoneData {
   type: typeof MAP_DROP_ZONE_TYPE
   mapId: Id<'gameMaps'>
   mapName: string
+  /** IDs of sidebar items already pinned to this map, used for overlay validation. */
+  pinnedItemIds?: ReadonlyArray<SidebarItemId>
 }
 
 export interface SidebarRootDropZoneData {
@@ -99,6 +101,7 @@ export function getDragDropAction(
 
 export type DropRejectionReason =
   | 'self_pin'
+  | 'already_pinned'
   | 'not_folder'
   | 'circular'
   | 'no_permission'
@@ -114,6 +117,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot move folder into itself'
     case 'self_pin':
       return 'Cannot pin map to itself'
+    case 'already_pinned':
+      return 'Already pinned to this map'
     case 'not_folder':
       return 'Cannot drop here'
     case 'missing_data':
@@ -156,6 +161,9 @@ export function validateDrop(
         draggedItem._id === targetData.mapId
       ) {
         return { valid: false, reason: 'self_pin' }
+      }
+      if (targetData.pinnedItemIds?.includes(draggedItem._id)) {
+        return { valid: false, reason: 'already_pinned' }
       }
       return { valid: true }
 
