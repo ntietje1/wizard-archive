@@ -596,8 +596,7 @@ export function MapViewer({
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== map._id) return
 
-        const draggedItem = source.data as SidebarDragData
-        const itemId = draggedItem._id
+        const itemId = (source.data as SidebarDragData).sidebarItemId
 
         if (map.pins.some((pin) => pin.itemId === itemId)) {
           toast.error('Item is already pinned on this map')

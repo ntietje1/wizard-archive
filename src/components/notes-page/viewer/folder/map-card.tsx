@@ -52,7 +52,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: map,
+    data: { sidebarItemId: map._id },
     canDrag,
     dragOpacity: '0.2',
   })

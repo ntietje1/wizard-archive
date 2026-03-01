@@ -22,7 +22,7 @@ export function DraggableSidebarItem({
 
   useDraggable({
     ref,
-    data: { ...item },
+    data: { sidebarItemId: item._id },
     canDrag,
   })
 

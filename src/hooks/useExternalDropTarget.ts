@@ -17,7 +17,10 @@ export function useExternalDropTarget({
 
   useEffect(() => {
     const el = ref.current
-    if (!el || !canAcceptFiles) return
+    if (!el || !canAcceptFiles) {
+      setIsFileDropTarget(false)
+      return
+    }
 
     // Override the document-level 'none' dropEffect set by the global prevention
     // listener. This runs in bubble phase (after the capture-phase global listener),
@@ -45,6 +48,7 @@ export function useExternalDropTarget({
     return () => {
       el.removeEventListener('dragover', handleDragOver)
       cleanupDropTarget()
+      setIsFileDropTarget(false)
     }
   }, [ref, parentId, canAcceptFiles])
 

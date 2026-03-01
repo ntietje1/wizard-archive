@@ -196,7 +196,7 @@ function TrashPopoverItem({
 
   useDraggable({
     ref,
-    data: { ...item },
+    data: { sidebarItemId: item._id },
     canDrag: true,
   })
 

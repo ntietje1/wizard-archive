@@ -1,9 +1,9 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { canDropFilesOnTarget } from '~/lib/dnd-utils'
-import { useDroppable } from '~/hooks/useDroppable'
+import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableSidebarItemProps {
@@ -17,29 +17,21 @@ export function DroppableSidebarItem({
 }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const { getAncestorSidebarItems } = useAllSidebarItems()
-  const ancestorIds = useMemo(
-    () => getAncestorSidebarItems(item._id).map((a) => a._id),
-    [item._id, getAncestorSidebarItems],
-  )
+  const { ancestorIds } = useSidebarItemDropTarget({ ref, item })
 
   const isDropTarget = useSidebarUIStore((s) => {
     const id = s.sidebarDragTargetId
     if (id === null) return false
     if (id === item._id) return true
-    return ancestorIds.includes(id as Folder['_id'])
+    return ancestorIds.includes(id as Id<'folders'>)
   })
   const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
-  const dropData = { ...item, ancestorIds }
-
-  useDroppable({ ref, data: dropData })
-
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: item._id,
-    canAcceptFiles: canDropFilesOnTarget(dropData),
+    canAcceptFiles: canDropFilesOnTarget(item),
   })
 
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
@@ -61,10 +53,7 @@ export function DroppableSidebarItem({
     : 'bg-background'
 
   return (
-    <div
-      ref={ref}
-      className={`w-full min-w-0 ${highlightClass}`}
-    >
+    <div ref={ref} className={`w-full min-w-0 ${highlightClass}`}>
       {children}
     </div>
   )

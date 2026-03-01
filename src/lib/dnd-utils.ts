@@ -4,6 +4,7 @@ import {
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertNever } from '~/lib/utils'
 
@@ -12,17 +13,16 @@ export const OPEN_ACTION = 'open' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
-/** Data attached to a dragged sidebar item. Contains only the item itself. */
-export type SidebarDragData = AnySidebarItem & {
-  [key: string | symbol]: unknown
+export type SidebarDragData = {
+  sidebarItemId: SidebarItemId
 }
 
-/**
- * Data attached to a sidebar item registered as a drop target.
- * Includes ancestorIds for circular-reference validation in validateDrop.
- */
-export type SidebarItemDropData = AnySidebarItem & {
-  [key: string | symbol]: unknown
+export type SidebarItemDropData = {
+  type: AnySidebarItem['type']
+  sidebarItemId: SidebarItemId
+}
+
+export type ResolvedSidebarItemDropData = AnySidebarItem & {
   ancestorIds?: Array<Id<'folders'>>
 }
 
@@ -49,7 +49,7 @@ export interface TrashDropZoneData {
 }
 
 export type SidebarDropData =
-  | SidebarItemDropData
+  | ResolvedSidebarItemDropData
   | SidebarRootDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData
@@ -69,7 +69,7 @@ export type DragDropAction =
  * Single source of truth used for overlay text, highlighting, and drop handling.
  */
 export function getDragDropAction(
-  draggedItem: SidebarDragData | null,
+  draggedItem: AnySidebarItem | null,
   targetData: SidebarDropData | null,
 ): DragDropAction {
   if (!draggedItem || !targetData) return null
@@ -106,6 +106,23 @@ export type DropRejectionReason =
   | 'no_permission'
   | 'missing_data'
 
+export function rejectionReasonMessage(reason: DropRejectionReason): string {
+  switch (reason) {
+    case 'no_permission':
+      return 'No permission to move here'
+    case 'circular':
+      return 'Cannot move folder into itself'
+    case 'self_pin':
+      return 'Cannot pin map to itself'
+    case 'not_folder':
+      return 'Cannot drop here'
+    case 'missing_data':
+      return 'Missing data'
+    default:
+      return assertNever(reason)
+  }
+}
+
 export type DropValidationResult =
   | { valid: true }
   | { valid: false; reason: DropRejectionReason }
@@ -115,7 +132,7 @@ export type DropValidationResult =
  * Returns a result with a specific rejection reason when invalid.
  */
 export function validateDrop(
-  draggedItem: SidebarDragData | null,
+  draggedItem: AnySidebarItem | null,
   targetData: SidebarDropData | null,
 ): DropValidationResult {
   if (!draggedItem || !targetData) {
@@ -172,30 +189,30 @@ export function validateDrop(
 }
 
 /**
- * Checks if dropping an item would actually change its position.
- * Returns false if the item is already in the target location.
+ * Checks if dropping an item would have any effect (move, open, pin, etc.).
+ * Returns false for no-op drops where the item is already in the target location.
  */
-export function wouldMoveChangePosition(
-  draggedItem: SidebarDragData | null,
+export function wouldDropHaveEffect(
+  draggedItem: AnySidebarItem | null,
   targetData: SidebarDropData | null,
 ): boolean {
   if (!draggedItem || !targetData) return false
 
   switch (targetData.type) {
-    // Trashing a non-trashed item always changes, moving
-    // an already-trashed item to trash root only changes if it has a parent
-    case TRASH_DROP_ZONE_TYPE:
-      return draggedItem.deletionTime ? draggedItem.parentId != null : true
     // Map drop zones always result in a change (pinning)
     case MAP_DROP_ZONE_TYPE:
       return true
-    // Empty editor drops don't move, but should show overlay feedback
+    // Empty editor drops open the item in the editor — always an effect
     case EMPTY_EDITOR_DROP_TYPE:
       return true
     // Moving to root - check if already at root
     case SIDEBAR_ROOT_TYPE:
       if (draggedItem.deletionTime) return true
       return draggedItem.parentId != null
+    // Moving to trash root: always an effect for non-trashed items; for
+    // already-trashed items, only an effect if nested (moves to trash root)
+    case TRASH_DROP_ZONE_TYPE:
+      return !draggedItem.deletionTime || draggedItem.parentId != null
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.gameMaps:

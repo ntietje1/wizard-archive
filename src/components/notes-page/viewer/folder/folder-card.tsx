@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -15,7 +15,6 @@ import { EditorContextMenu } from '~/components/context-menu/components/EditorCo
 import { useDraggable } from '~/hooks/useDraggable'
 import { useDroppable } from '~/hooks/useDroppable'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
@@ -101,16 +100,11 @@ function FolderCardInner({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const { getAncestorSidebarItems } = useAllSidebarItems()
-  const ancestorIds = useMemo(
-    () => getAncestorSidebarItems(folder._id).map((a) => a._id),
-    [folder._id, getAncestorSidebarItems],
-  )
-  const dropData = { ...folder, ancestorIds }
+  const dropData = { type: folder.type, sidebarItemId: folder._id }
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { ...folder },
+    data: { sidebarItemId: folder._id },
     canDrag,
     dragOpacity: '0.2',
   })
@@ -120,7 +114,7 @@ function FolderCardInner({
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: folder._id,
-    canAcceptFiles: canDropFilesOnTarget(dropData),
+    canAcceptFiles: canDropFilesOnTarget(folder),
   })
 
   const handleCardActivate = () => {
