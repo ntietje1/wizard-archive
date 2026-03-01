@@ -145,6 +145,9 @@ export async function validateSidebarParentChange(
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get(newParentId)
+    if (parentFromDb?.deletionTime) {
+      throw new Error('Cannot move items into a trashed folder')
+    }
     await requireItemAccess(ctx, {
       rawItem: parentFromDb,
       requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

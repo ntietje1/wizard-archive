@@ -109,9 +109,9 @@ function FolderCardInner({
     dragOpacity: '0.2',
   })
 
-  useDroppable({ ref, data: dropData })
+  useDroppable({ ref, data: dropData, canDrop: () => !folder.deletionTime })
 
-  const { isFileDropTarget } = useExternalDropTarget({
+  useExternalDropTarget({
     ref,
     parentId: folder._id,
     canAcceptFiles: canDropFilesOnTarget(folder),
@@ -129,12 +129,8 @@ function FolderCardInner({
     <div ref={ref} className="h-[140px]">
       <div
         className={`folder-wrapper group transition-all relative ${(() => {
-          if (!isDropTarget && !isFileDropTarget) return ''
-          if (
-            isDropTarget &&
-            (dragDropAction === 'trash' || dragDropAction === 'move-and-trash')
-          )
-            return 'trash-drop-target'
+          if (!isDropTarget) return ''
+          if (dragDropAction === 'trash') return 'trash-drop-target'
           return 'valid-drop-target'
         })()}`}
         onClick={handleCardActivate}

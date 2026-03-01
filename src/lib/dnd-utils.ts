@@ -58,7 +58,6 @@ export type SidebarDropData =
 export type DragDropAction =
   | 'move'
   | 'trash'
-  | 'move-and-trash'
   | 'restore'
   | 'pin'
   | 'open'
@@ -78,7 +77,7 @@ export function getDragDropAction(
 
   switch (targetData.type) {
     case TRASH_DROP_ZONE_TYPE:
-      return isTrashedItem ? 'move' : 'trash'
+      return 'trash'
     case MAP_DROP_ZONE_TYPE:
       return 'pin'
     case EMPTY_EDITOR_DROP_TYPE:
@@ -91,7 +90,6 @@ export function getDragDropAction(
     case SIDEBAR_ITEM_TYPES.files: {
       const isTargetTrashed = !!targetData.deletionTime
       if (isTrashedItem && !isTargetTrashed) return 'restore'
-      if (!isTrashedItem && isTargetTrashed) return 'move-and-trash'
       return 'move'
     }
     default:
@@ -105,6 +103,8 @@ export type DropRejectionReason =
   | 'circular'
   | 'no_permission'
   | 'missing_data'
+  | 'trashed_folder'
+  | 'cannot_move_trash'
 
 export function rejectionReasonMessage(reason: DropRejectionReason): string {
   switch (reason) {
@@ -118,6 +118,10 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot drop here'
     case 'missing_data':
       return 'Missing data'
+    case 'trashed_folder':
+      return 'Trashed folders are uneditable'
+    case 'cannot_move_trash':
+      return 'Cannot move items within trash'
     default:
       return assertNever(reason)
   }
@@ -141,6 +145,9 @@ export function validateDrop(
 
   switch (targetData.type) {
     case TRASH_DROP_ZONE_TYPE:
+      if (draggedItem.deletionTime) {
+        return { valid: false, reason: 'cannot_move_trash' }
+      }
       return { valid: true }
 
     case MAP_DROP_ZONE_TYPE:
@@ -162,6 +169,11 @@ export function validateDrop(
       return { valid: false, reason: 'not_folder' }
 
     case SIDEBAR_ITEM_TYPES.folders: {
+      // Trashed folders cannot receive any drops
+      if (targetData.deletionTime) {
+        return { valid: false, reason: 'trashed_folder' }
+      }
+
       // Item dropped on itself is allowed (no-op, won't change position)
       if (targetData._id === draggedItem._id) {
         return { valid: true }
@@ -269,7 +281,6 @@ function getActionVerb(action: DragDropAction): string {
       return 'Open in'
     case 'move':
     case 'trash':
-    case 'move-and-trash':
     case null:
       return 'Move to'
     default:

@@ -320,11 +320,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
         // Compute move options from action
         const deleted =
-          action === 'trash' || action === 'move-and-trash'
-            ? true
-            : action === 'restore'
-              ? false
-              : undefined
+          action === 'trash' ? true : action === 'restore' ? false : undefined
 
         try {
           await moveItem(draggedItem, {
@@ -332,7 +328,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
             deleted,
           })
 
-          if (action === 'trash' || action === 'move-and-trash') {
+          if (action === 'trash') {
             toast.success('Moved to trash')
           } else if (action === 'restore') {
             toast.success('Item restored')

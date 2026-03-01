@@ -56,8 +56,8 @@ export function DroppableFolderZone({
       ref={ref}
       className={cn(
         className,
-        isDropTarget && activeHighlight,
-        isFileDropTarget && highlightClassName,
+        !folder.deletionTime && isDropTarget && activeHighlight,
+        !folder.deletionTime && isFileDropTarget && highlightClassName,
       )}
     >
       {children}
