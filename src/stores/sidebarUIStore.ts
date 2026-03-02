@@ -28,6 +28,7 @@ interface SidebarUIState {
   dragValidation: DropValidationResult | null
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
+  isDraggingElement: boolean
   pendingItemName: string
   selectedType: SidebarItemType | null
   selectedSlug: string | null
@@ -50,6 +51,7 @@ interface SidebarUIActions {
   setDragValidation: (validation: DropValidationResult | null) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
+  setIsDraggingElement: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
   setSelected: (type: SidebarItemType | null, slug: string | null) => void
 }
@@ -94,6 +96,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       dragValidation: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
+      isDraggingElement: false,
       pendingItemName: '',
       selectedType: null,
       selectedSlug: null,
@@ -166,6 +169,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         }),
       setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
       setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
+      setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
       setPendingItemName: (name) => set({ pendingItemName: name }),
 
       setSelected: (type, slug) =>

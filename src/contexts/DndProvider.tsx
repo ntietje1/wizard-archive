@@ -144,6 +144,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const setDragValidation = useSidebarUIStore((s) => s.setDragValidation)
   const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
   const setIsDraggingFiles = useSidebarUIStore((s) => s.setIsDraggingFiles)
+  const setIsDraggingElement = useSidebarUIStore((s) => s.setIsDraggingElement)
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
@@ -249,9 +250,11 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const lastDropTargetKeyRef = useRef<string | null>(null)
 
-  // Prevent the browser from opening dragged files in a new tab.
-  // Using capture phase so this fires BEFORE element bubble listeners,
-  // letting registered drop targets override dropEffect to 'copy'.
+  const isElementDragRef = useRef(false)
+
+  // Capture-phase handlers: prevent browser from opening dragged files,
+  // and mark events as `synthetic` during element drags to avoid BlockNote
+  // SideMenu interference
   useEffect(() => {
     const isFileDrag = (e: DragEvent) => {
       if (!e.dataTransfer) return false
@@ -261,11 +264,23 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
       return false
     }
     const handleDragOver = (e: DragEvent) => {
+      if (
+        isElementDragRef.current &&
+        !(e.target as Element)?.closest?.('.bn-editor')
+      ) {
+        ;(e as unknown as Record<string, unknown>).synthetic = true
+      }
       if (!isFileDrag(e)) return
       e.preventDefault()
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
     }
     const handleDrop = (e: DragEvent) => {
+      if (
+        isElementDragRef.current &&
+        !(e.target as Element)?.closest?.('.bn-editor')
+      ) {
+        ;(e as unknown as Record<string, unknown>).synthetic = true
+      }
       if (isFileDrag(e)) e.preventDefault()
     }
     document.addEventListener('dragover', handleDragOver, true)
@@ -280,6 +295,8 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     return monitorForElements({
       onDragStart: ({ source, location }) => {
+        isElementDragRef.current = true
+
         const ctx = ctxRef.current
         const sid = getDragItemId(source.data)
         const draggedItem = sid
@@ -294,6 +311,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
 
         lastDropTargetKeyRef.current = null
         setDragValidation(null)
+        setIsDraggingElement(true)
         if (draggedItem) setDragState({ draggedItem, dropTarget: null })
       },
       onDrag: ({ location, source }) => {
@@ -337,6 +355,8 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         }
       },
       onDrop: async ({ source, location }) => {
+        isElementDragRef.current = false
+
         // Synchronous: hide overlay, clear store
         if (overlayRef.current) overlayRef.current.style.display = 'none'
         lastDropTargetKeyRef.current = null
@@ -344,6 +364,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         setSidebarDragTargetId(null)
         setDragDropAction(null)
         setDragValidation(null)
+        setIsDraggingElement(false)
 
         // Async: execute drop via registry
         const topTarget = location.current.dropTargets[0]
@@ -378,7 +399,12 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         }
       },
     })
-  }, [setSidebarDragTargetId, setDragDropAction, setDragValidation])
+  }, [
+    setSidebarDragTargetId,
+    setDragDropAction,
+    setDragValidation,
+    setIsDraggingElement,
+  ])
 
   // External file drag monitor
   useEffect(() => {
