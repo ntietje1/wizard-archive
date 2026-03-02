@@ -14,12 +14,13 @@ import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
+import { assertNever } from '~/lib/utils'
 
 export interface AllSidebarItemsValue {
   data: Array<AnySidebarItem>
   status: UseQueryResult['status']
   itemsMap: Map<SidebarItemId, AnySidebarItem>
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
   getAncestorSidebarItems: (itemId: SidebarItemId) => Array<Folder>
 }
 
@@ -56,13 +57,13 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
   }, [data])
 
   const sidebarItemParentIdMap = useMemo(() => {
-    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
       // If the item's parent folder isn't in our permitted set, show at root
       const effectiveParentId =
         item.parentId && !sidebarItemIdMap.has(item.parentId)
-          ? undefined
-          : (item.parentId ?? undefined)
+          ? null
+          : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {
@@ -115,6 +116,99 @@ export const useAllSidebarItems = (): AllSidebarItemsValue => {
   return ctx
 }
 
+// ---------------------------------------------------------------------------
+// Trashed sidebar items (mirrors the active items pattern above)
+// ---------------------------------------------------------------------------
+
+export interface TrashedSidebarItemsValue {
+  data: Array<AnySidebarItem>
+  status: UseQueryResult['status']
+  itemsMap: Map<SidebarItemId, AnySidebarItem>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
+}
+
+export const TrashedSidebarItemsContext =
+  createContext<TrashedSidebarItemsValue | null>(null)
+
+/**
+ * Provider hook — call ONCE at the provider level to create the query + derived data.
+ * Renders a single React Query observer for `getTrashedSidebarItems`.
+ */
+export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
+  const { campaignId } = useCampaign()
+
+  const query = useQuery({
+    ...convexQuery(
+      api.sidebarItems.queries.getTrashedSidebarItems,
+      campaignId ? { campaignId } : 'skip',
+    ),
+    placeholderData: keepPreviousData,
+    staleTime: Infinity,
+  })
+
+  const data: Array<AnySidebarItem> = useMemo(
+    () => query.data ?? [],
+    [query.data],
+  )
+
+  const itemsMap = useMemo(() => {
+    const map = new Map<SidebarItemId, AnySidebarItem>()
+    data.forEach((item) => map.set(item._id, item))
+    return map
+  }, [data])
+
+  const parentItemsMap = useMemo(() => {
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
+    data.forEach((item) => {
+      const effectiveParentId =
+        item.parentId && !itemsMap.has(item.parentId)
+          ? null
+          : item.parentId
+      if (map.has(effectiveParentId)) {
+        map.get(effectiveParentId)?.push(item)
+      } else {
+        map.set(effectiveParentId, [item])
+      }
+    })
+    return map
+  }, [data, itemsMap])
+
+  return { data, status: query.status, itemsMap, parentItemsMap }
+}
+
+/**
+ * Consumer hook — reads from context.
+ */
+export const useTrashedSidebarItems = (): TrashedSidebarItemsValue => {
+  const ctx = useContext(TrashedSidebarItemsContext)
+  if (!ctx) {
+    throw new Error(
+      'useTrashedSidebarItems must be used within a TrashedSidebarItemsProvider',
+    )
+  }
+  return ctx
+}
+
+/**
+ * Recursively counts all descendants of a folder using a parentItemsMap.
+ */
+export function getDescendantCount(
+  folderId: Id<'folders'>,
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>,
+  visited: Set<Id<'folders'>> = new Set(),
+): number {
+  if (visited.has(folderId)) return 0
+  visited.add(folderId)
+  const children = parentItemsMap.get(folderId) ?? []
+  let count = children.length
+  for (const child of children) {
+    if (isFolder(child)) {
+      count += getDescendantCount(child._id, parentItemsMap, visited)
+    }
+  }
+  return count
+}
+
 export const sortItemsByOptions = (
   options: SortOptions,
   items?: Array<AnySidebarItem>,
@@ -139,7 +233,7 @@ export const sortItemsByOptions = (
           ? a.updatedTime - b.updatedTime
           : b.updatedTime - a.updatedTime
       default:
-        return 0
+        return assertNever(options.order)
     }
   }
 
@@ -169,12 +263,12 @@ export const useFilteredSidebarItems = () => {
   }, [filteredData])
 
   const filteredParentItemsMap = useMemo(() => {
-    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     filteredData.forEach((item) => {
       const effectiveParentId =
         item.parentId && !filteredItemsMap.has(item.parentId)
-          ? undefined
-          : (item.parentId ?? undefined)
+          ? null
+          : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {

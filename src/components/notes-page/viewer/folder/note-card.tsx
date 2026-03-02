@@ -43,7 +43,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: note,
+    data: { sidebarItemId: note._id },
     canDrag,
   })
 

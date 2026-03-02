@@ -212,7 +212,7 @@ export function MdLinkClickHandler({
 
         const validation = validateSidebarItemName({
           name: mdLink.itemName,
-          siblings: parentItemsMap.get(undefined),
+          siblings: parentItemsMap.get(null),
         })
         if (!validation.valid) {
           toast.error(validation.error)
@@ -222,6 +222,7 @@ export function MdLinkClickHandler({
           const result = await createNote({
             campaignId: campaignData._id,
             name: mdLink.itemName,
+            parentId: null,
           })
           if (result) navigateToNote(result.slug)
         } catch (err) {

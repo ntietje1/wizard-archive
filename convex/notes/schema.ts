@@ -19,9 +19,20 @@ export const notesTables = {
   notes: defineTable({
     ...noteTableFields,
   })
-    .index('by_campaign_parent_name', ['campaignId', 'parentId', 'name'])
-    .index('by_campaign_name', ['campaignId', 'name'])
-    .index('by_campaign_slug', ['campaignId', 'slug']),
+    .index('by_campaign_parent_name', [
+      'campaignId',
+      'deletionTime',
+      'parentId',
+      'name',
+    ])
+    .index('by_campaign_name', ['campaignId', 'deletionTime', 'name'])
+    .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
+    .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
+    .index('by_campaign_parent_deletionTime', [
+      'campaignId',
+      'parentId',
+      'deletionTime',
+    ]),
 }
 
 const noteValidatorFields = {

@@ -1,11 +1,10 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
-import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
+import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface DroppableFolderZoneProps {
   folder: Folder
@@ -21,42 +20,40 @@ export function DroppableFolderZone({
   highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { getAncestorSidebarItems } = useAllSidebarItems()
 
-  const ancestorIds = useMemo(
-    () => getAncestorSidebarItems(folder._id).map((item) => item._id),
-    [folder._id, getAncestorSidebarItems],
-  )
-
-  const dropData = { ...folder, ancestorIds }
+  useSidebarItemDropTarget({ ref, item: folder })
 
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
+  const isTrashAction = useSidebarUIStore(
+    (s) =>
+      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+  )
 
-  useDroppable({ ref, data: dropData })
+  useExternalDropTarget({
+    ref,
+    parentId: folder._id,
+    canAcceptFiles: canDropFilesOnTarget(folder),
+  })
 
-  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
-  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
-    useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
-  const isFileValidDrop =
-    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
+  const activeHighlight =
+    isDropTarget && isTrashAction
+      ? 'bg-drop-highlight-trash'
+      : highlightClassName
 
   return (
     <div
       ref={ref}
       className={cn(
         className,
-        isDropTarget && highlightClassName,
-        isFileValidDrop && highlightClassName,
+        !folder.deletionTime && isDropTarget && activeHighlight,
+        !folder.deletionTime && isFileDragTarget && highlightClassName,
       )}
-      onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
-      onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
-      onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
-      onDrop={canAcceptFileDrops ? handleDrop : undefined}
     >
       {children}
     </div>

@@ -2,7 +2,6 @@ import { memo, useCallback } from 'react'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
@@ -15,7 +14,6 @@ import { EditorContextMenu } from '~/components/context-menu/components/EditorCo
 
 interface FlatSidebarItemProps {
   item: AnySidebarItem
-  ancestorIds: Array<Id<'folders'>>
   isExpanded: boolean
   renamingId: SidebarItemId | null
   setRenamingId: (id: SidebarItemId | null) => void
@@ -23,7 +21,6 @@ interface FlatSidebarItemProps {
 
 function FlatSidebarItemComponent({
   item,
-  ancestorIds,
   isExpanded,
   renamingId,
   setRenamingId,
@@ -55,7 +52,7 @@ function FlatSidebarItemComponent({
   }, [setRenamingId])
 
   return (
-    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+    <DraggableSidebarItem item={item}>
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
@@ -71,7 +68,7 @@ function FlatSidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={false}
           campaignId={item.campaignId}
-          parentId={item.parentId ?? undefined}
+          parentId={item.parentId}
           excludeId={item._id}
         />
       </EditorContextMenu>

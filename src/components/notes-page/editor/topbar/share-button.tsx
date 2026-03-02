@@ -60,7 +60,8 @@ export function ShareButton() {
   }
 
   const dmUserProfile = campaign.data?.dmUserProfile
-  const isDisabled = !canShare || isMutating
+  const isItemTrashed = !!item.deletionTime
+  const isDisabled = isItemTrashed || !canShare || isMutating
   const isShared = aggregateShareStatus !== 'not_shared'
 
   const Chevron = open ? ChevronUp : ChevronDown

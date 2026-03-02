@@ -1,63 +1,57 @@
-import { useCallback } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { EditableBreadcrumb } from './editable-breadcrumb'
+import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
-import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useAllSidebarItems } from '~/hooks/useSidebarItems'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import {
+  useAllSidebarItems,
+  useTrashedSidebarItems,
+} from '~/hooks/useSidebarItems'
+import { Trash2 } from '~/lib/icons'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
-  const { item, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { itemsMap } = useAllSidebarItems()
-  const { setLastSelectedItem } = useLastEditorItem()
-  const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { isDm, campaignId, dmUsername, campaignSlug } = useCampaign()
+  const { isDm, campaignId } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 
-  const routeParams = { dmUsername, campaignSlug }
+  const isTrashView = editorSearch.trash === true && !item
+
+  const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
+  const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
 
   const canRename =
-    item &&
+    !!item &&
+    canEdit &&
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.FULL_ACCESS, permOpts)
-
-  const handleRename = async (newName: string) => {
-    if (!item) return
-    await rename(item, newName)
-  }
-
-  const handleNavigateToItem = useCallback(
-    (ancestor: AnySidebarItem) => {
-      setLastSelectedItem({ type: ancestor.type, slug: ancestor.slug })
-    },
-    [setLastSelectedItem],
-  )
 
   const isNotSharedWithPlayer =
     item &&
     viewAsPlayerId &&
     !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
-  const isEmptyEditor = !item && !hasRequestedItem
+  const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
 
   const middleContent = (
-    <ItemButtonWrapper>
+    <ItemButtonWrapper isTrashView={isTrashView}>
       {canEdit && <EditorViewModeToggleButton disabled={!item} />}
     </ItemButtonWrapper>
   )
 
   return (
-    <EditorContextMenu viewContext="topbar" item={item ?? undefined}>
+    <EditorContextMenu
+      viewContext="topbar"
+      item={item ?? undefined}
+      isTrashView={isTrashView}
+    >
       <div className="flex items-center px-4 pt-1 h-10 shrink-0 w-full min-w-0 overflow-hidden gap-4">
         <div
           className={cn(
@@ -66,30 +60,29 @@ export function FileTopbar() {
           )}
         >
           {isLoading && <Skeleton className="h-5 w-32 my-0.5" />}
+          {isTrashView && (
+            <div className="flex items-center gap-2 min-w-0">
+              <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="font-medium truncate">Trash</span>
+              <span className="text-sm text-muted-foreground shrink-0">
+                {`${rootTrashedItems.length} item${rootTrashedItems.length !== 1 ? 's' : ''}`}
+              </span>
+            </div>
+          )}
           {item && (
             <EditableBreadcrumb
-              initialName={item.name}
-              defaultName=""
-              onRename={handleRename}
-              ancestors={item.ancestors}
-              onNavigateToItem={handleNavigateToItem}
-              routeParams={routeParams}
-              campaignId={item.campaignId}
-              parentId={item.parentId ?? undefined}
-              excludeId={item._id}
-              disabled={!canRename || (isNotSharedWithPlayer ?? false)}
+              item={item}
+              canRename={canRename && !isNotSharedWithPlayer}
               showNotSharedTooltip={!!isNotSharedWithPlayer}
             />
           )}
           {isEmptyEditor && (
-            <EditableBreadcrumb
+            <EditableName
               initialName=""
               defaultName="Untitled Item"
-              onRename={handleRename}
               onChange={setPendingItemName}
-              ancestors={[]}
-              routeParams={routeParams}
               campaignId={campaignId}
+              parentId={null}
             />
           )}
         </div>

@@ -94,3 +94,9 @@ export const hasEditAccess: Predicate = (ctx) => {
 export const hasFullAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === 'full_access'
 }
+
+export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true
+
+export const isItemNotTrashed: Predicate = (ctx) => ctx.isItemTrashed !== true
+
+export const isTrashView: Predicate = (ctx) => ctx.isTrashView === true

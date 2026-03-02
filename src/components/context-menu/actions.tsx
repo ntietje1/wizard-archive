@@ -5,32 +5,34 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { FileDeleteConfirmDialog } from '../dialogs/delete/file-delete-confirm-dialog'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarFile } from 'convex/files/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { getSelectedTypeAndSlug } from '~/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
+
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
+import { assertNever } from '~/lib/utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
-import { NoteDeleteConfirmDialog } from '~/components/dialogs/delete/note-delete-confirm-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { MapDeleteConfirmDialog } from '~/components/dialogs/delete/map-delete-confirm-dialog'
+import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { useSession } from '~/hooks/useSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
+import {
+  getDescendantCount,
+  useAllSidebarItems,
+  useTrashedSidebarItems,
+} from '~/hooks/useSidebarItems'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -43,18 +45,22 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     useEditorNavigationContext()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const {
+    createItem,
+    getDefaultName,
+    moveItem,
+    permanentlyDeleteItem,
+    emptyTrashBin,
+  } = useSidebarItemMutations()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
+  const { parentItemsMap } = useAllSidebarItems()
+  const { data: allTrashedItems, parentItemsMap: trashedParentItemsMap } =
+    useTrashedSidebarItems()
 
-  const [deleteNoteDialog, setDeleteNoteDialog] = useState<Note | null>(null)
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
-    null,
-  )
-  const [deleteMapDialog, setDeleteMapDialog] = useState<GameMap | null>(null)
-  const [deleteFileDialog, setDeleteFileDialog] = useState<SidebarFile | null>(
     null,
   )
   const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(
@@ -63,6 +69,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] =
     useState<AnySidebarItem | null>(null)
+  const [confirmPermanentDeleteItem, setConfirmPermanentDeleteItem] =
+    useState<AnySidebarItem | null>(null)
+  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const actions: ActionHandlers = {
     open: useCallback(
@@ -85,19 +94,29 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     delete: (ctx: MenuContext) => {
       if (!ctx.item) return
       const item = ctx.item
-      if (isNote(item)) {
-        setDeleteNoteDialog(item)
-        onDialogOpen?.()
-      } else if (isFolder(item)) {
-        setDeleteFolderDialog(item)
-        onDialogOpen?.()
-      } else if (isGameMap(item)) {
-        setDeleteMapDialog(item)
-        onDialogOpen?.()
-      } else if (isFile(item)) {
-        setDeleteFileDialog(item)
-        onDialogOpen?.()
+
+      // Non-empty folders: show confirmation dialog
+      if (isFolder(item)) {
+        const children = parentItemsMap.get(item._id)
+        if (children && children.length > 0) {
+          setDeleteFolderDialog(item)
+          onDialogOpen?.()
+          return
+        }
       }
+
+      // Everything else (including empty folders): trash immediately
+      const current = getSelectedTypeAndSlug()
+      if (current && item.type === current.type && item.slug === current.slug) {
+        clearEditorContent()
+      }
+      moveItem(item, { deleted: true }).then(
+        () => toast.success('Moved to trash'),
+        (error) => {
+          console.error(error)
+          toast.error('Failed to move to trash')
+        },
+      )
     },
 
     showInSidebar: useCallback(
@@ -119,8 +138,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -149,8 +168,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.folders,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -179,8 +198,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -209,8 +228,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -360,7 +379,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         { campaignId },
         {
           onSuccess: () => toast.success('Session started'),
-          onError: (error: any) => {
+          onError: (error: unknown) => {
             console.error('Failed to start session:', error)
             toast.error('Failed to start session')
           },
@@ -528,24 +547,29 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const downloadPromises: Array<Promise<void>> = items.map(
             async (item) => {
               try {
-                if (
-                  item.type === SIDEBAR_ITEM_TYPES.files ||
-                  item.type === SIDEBAR_ITEM_TYPES.gameMaps
-                ) {
-                  if (!item.downloadUrl) {
-                    console.warn(`No download URL for: ${item.path}`)
-                    return
+                switch (item.type) {
+                  case SIDEBAR_ITEM_TYPES.files:
+                  case SIDEBAR_ITEM_TYPES.gameMaps: {
+                    if (!item.downloadUrl) {
+                      console.warn(`No download URL for: ${item.path}`)
+                      return
+                    }
+                    const response = await fetch(item.downloadUrl)
+                    if (!response.ok) {
+                      console.warn(`Failed to fetch: ${item.path}`)
+                      return
+                    }
+                    const blob = await response.blob()
+                    zip.file(item.path, blob)
+                    break
                   }
-                  const response = await fetch(item.downloadUrl)
-                  if (!response.ok) {
-                    console.warn(`Failed to fetch: ${item.path}`)
-                    return
+                  case SIDEBAR_ITEM_TYPES.notes: {
+                    const markdown = convertBlocksToMarkdown(item.content)
+                    zip.file(item.path, markdown)
+                    break
                   }
-                  const blob = await response.blob()
-                  zip.file(item.path, blob)
-                } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-                  const markdown = convertBlocksToMarkdown(item.content)
-                  zip.file(item.path, markdown)
+                  default:
+                    assertNever(item)
                 }
               } catch (error) {
                 console.warn(`Failed to process: ${item.path}`, error)
@@ -602,24 +626,29 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         const downloadPromises = items.map(async (item) => {
           try {
-            if (
-              item.type === SIDEBAR_ITEM_TYPES.files ||
-              item.type === SIDEBAR_ITEM_TYPES.gameMaps
-            ) {
-              if (!item.downloadUrl) {
-                console.warn(`No download URL for: ${item.path}`)
-                return
+            switch (item.type) {
+              case SIDEBAR_ITEM_TYPES.files:
+              case SIDEBAR_ITEM_TYPES.gameMaps: {
+                if (!item.downloadUrl) {
+                  console.warn(`No download URL for: ${item.path}`)
+                  return
+                }
+                const response = await fetch(item.downloadUrl)
+                if (!response.ok) {
+                  console.warn(`Failed to fetch: ${item.path}`)
+                  return
+                }
+                const blob = await response.blob()
+                zip.file(item.path, blob)
+                break
               }
-              const response = await fetch(item.downloadUrl)
-              if (!response.ok) {
-                console.warn(`Failed to fetch: ${item.path}`)
-                return
+              case SIDEBAR_ITEM_TYPES.notes: {
+                const markdown = convertBlocksToMarkdown(item.content)
+                zip.file(item.path, markdown)
+                break
               }
-              const blob = await response.blob()
-              zip.file(item.path, blob)
-            } else if (item.type === SIDEBAR_ITEM_TYPES.notes) {
-              const markdown = convertBlocksToMarkdown(item.content)
-              zip.file(item.path, markdown)
+              default:
+                assertNever(item)
             }
           } catch (error) {
             console.warn(`Failed to process: ${item.path}`, error)
@@ -649,6 +678,31 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.error('Failed to download')
       }
     }, [convex, campaignId]),
+
+    restore: useCallback(
+      async (ctx: MenuContext) => {
+        if (!ctx.item) return
+        try {
+          await moveItem(ctx.item, { deleted: false })
+          toast.success('Item restored')
+        } catch (error) {
+          console.error(error)
+          toast.error('Failed to restore item')
+        }
+      },
+      [moveItem],
+    ),
+
+    permanentlyDelete: (ctx: MenuContext) => {
+      if (!ctx.item) return
+      setConfirmPermanentDeleteItem(ctx.item)
+      onDialogOpen?.()
+    },
+
+    emptyTrash: () => {
+      setConfirmEmptyTrash(true)
+      onDialogOpen?.()
+    },
 
     toggleBookmark: useCallback(
       (ctx: MenuContext) => {
@@ -682,25 +736,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const dialogsContent = useMemo(
     () => (
       <>
-        {deleteNoteDialog && (
-          <NoteDeleteConfirmDialog
-            key={`delete-note-${deleteNoteDialog._id}`}
-            note={deleteNoteDialog}
-            isDeleting={true}
-            onConfirm={() => {
-              const current = getSelectedTypeAndSlug()
-              if (
-                current &&
-                deleteNoteDialog.type === current.type &&
-                deleteNoteDialog.slug === current.slug
-              ) {
-                clearEditorContent()
-              }
-            }}
-            onClose={closeDialog(setDeleteNoteDialog)}
-          />
-        )}
-
         {deleteFolderDialog && (
           <FolderDeleteConfirmDialog
             key={`delete-folder-${deleteFolderDialog._id}`}
@@ -717,44 +752,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               }
             }}
             onClose={closeDialog(setDeleteFolderDialog)}
-          />
-        )}
-
-        {deleteMapDialog && (
-          <MapDeleteConfirmDialog
-            key={`delete-map-${deleteMapDialog._id}`}
-            map={deleteMapDialog}
-            isDeleting={true}
-            onConfirm={() => {
-              const current = getSelectedTypeAndSlug()
-              if (
-                current &&
-                deleteMapDialog.type === current.type &&
-                deleteMapDialog.slug === current.slug
-              ) {
-                clearEditorContent()
-              }
-            }}
-            onClose={closeDialog(setDeleteMapDialog)}
-          />
-        )}
-
-        {deleteFileDialog && (
-          <FileDeleteConfirmDialog
-            key={`delete-file-${deleteFileDialog._id}`}
-            file={deleteFileDialog}
-            isDeleting={true}
-            onConfirm={() => {
-              const current = getSelectedTypeAndSlug()
-              if (
-                current &&
-                deleteFileDialog.type === current.type &&
-                deleteFileDialog.slug === current.slug
-              ) {
-                clearEditorContent()
-              }
-            }}
-            onClose={closeDialog(setDeleteFileDialog)}
           />
         )}
 
@@ -787,27 +784,101 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             onClose={closeDialog(setEditSidebarItemDialog)}
           />
         )}
+
+        {confirmEmptyTrash && (
+          <ConfirmationDialog
+            key="empty-trash"
+            isOpen={true}
+            onClose={() => {
+              setConfirmEmptyTrash(false)
+              onDialogClose?.()
+            }}
+            onConfirm={async () => {
+              if (!campaignId) return
+              try {
+                await emptyTrashBin()
+                toast.success('Trash emptied')
+              } catch (error) {
+                console.error(error)
+                toast.error('Failed to empty trash')
+              } finally {
+                setConfirmEmptyTrash(false)
+                onDialogClose?.()
+              }
+            }}
+            title="Empty Trash"
+            description={`Are you sure you want to permanently delete ${allTrashedItems.length === 1 ? '1 item' : `all ${allTrashedItems.length} items`} in the trash? This action cannot be undone.`}
+            confirmLabel="Empty Trash"
+            confirmVariant="destructive"
+          />
+        )}
+
+        {confirmPermanentDeleteItem && (
+          <ConfirmationDialog
+            key={`permanent-delete-${confirmPermanentDeleteItem._id}`}
+            isOpen={true}
+            onClose={closeDialog(setConfirmPermanentDeleteItem)}
+            onConfirm={async () => {
+              try {
+                await permanentlyDeleteItem(confirmPermanentDeleteItem)
+                toast.success('Item permanently deleted')
+                const current = getSelectedTypeAndSlug()
+                if (
+                  current &&
+                  confirmPermanentDeleteItem.type === current.type &&
+                  confirmPermanentDeleteItem.slug === current.slug
+                ) {
+                  clearEditorContent()
+                }
+              } catch (error) {
+                console.error(error)
+                toast.error('Failed to delete item')
+              } finally {
+                setConfirmPermanentDeleteItem(null)
+                onDialogClose?.()
+              }
+            }}
+            title="Permanently Delete"
+            description={(() => {
+              const descendantCount = isFolder(confirmPermanentDeleteItem)
+                ? getDescendantCount(
+                    confirmPermanentDeleteItem._id,
+                    trashedParentItemsMap,
+                  )
+                : 0
+              const base = `Are you sure you want to permanently delete "${confirmPermanentDeleteItem.name}"?`
+              const detail =
+                descendantCount > 0
+                  ? ` This will also delete ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'} inside it.`
+                  : ''
+              return `${base}${detail} This action cannot be undone.`
+            })()}
+            confirmLabel="Delete Forever"
+            confirmVariant="destructive"
+          />
+        )}
       </>
     ),
     [
-      deleteNoteDialog,
       deleteFolderDialog,
-      deleteMapDialog,
       editMapDialog,
       editFileDialog,
       editSidebarItemDialog,
+      confirmPermanentDeleteItem,
+      confirmEmptyTrash,
+      allTrashedItems,
+      trashedParentItemsMap,
       campaignId,
       clearEditorContent,
-      deleteFileDialog,
       closeDialog,
+      permanentlyDeleteItem,
+      onDialogClose,
+      emptyTrashBin,
     ],
   )
 
-  // Return Dialogs as a stable component function
-  const Dialogs = useCallback(() => dialogsContent, [dialogsContent])
-
   return {
     actions,
-    Dialogs,
+    Dialogs: dialogsContent,
   }
 }

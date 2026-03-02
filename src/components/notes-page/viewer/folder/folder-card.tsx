@@ -4,7 +4,7 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -14,8 +14,8 @@ import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
-import { useDroppable } from '~/hooks/useDroppable'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 function FolderSvg() {
@@ -86,17 +86,18 @@ function FolderCardSkeleton() {
 function FolderCardInner({
   item: folder,
   onClick,
-  parentId,
 }: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
+  )
+  const isTrashAction = useSidebarUIStore(
+    (s) =>
+      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
 
   const canDrag = hasAtLeastPermissionLevel(
@@ -104,33 +105,27 @@ function FolderCardInner({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const ancestorIds = parentId ? [parentId] : []
-  const dropData = { ...folder, ancestorIds }
-
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { ...folder, ancestorIds },
+    data: { sidebarItemId: folder._id },
     canDrag,
     dragOpacity: '0.2',
   })
 
-  useDroppable({ ref, data: dropData })
+  useSidebarItemDropTarget({ ref, item: folder })
 
-  const canAcceptFileDrops = canDropFilesOnTarget(dropData)
-  const { handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
-    useFileDragDrop(canAcceptFileDrops ? folder._id : undefined)
-  const isFileValidDrop =
-    isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
+  useExternalDropTarget({
+    ref,
+    parentId: folder._id,
+    canAcceptFiles: canDropFilesOnTarget(folder),
+  })
+
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
   const cardContent = (
-    <div
-      ref={ref}
-      className="h-[140px]"
-      onDragEnter={canAcceptFileDrops ? handleDragEnter : undefined}
-      onDragOver={canAcceptFileDrops ? handleDragOver : undefined}
-      onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
-      onDrop={canAcceptFileDrops ? handleDrop : undefined}
-    >
+    <div ref={ref} className="h-[140px]">
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
@@ -149,9 +144,11 @@ function FolderCardInner({
         }}
       >
         <div
-          className={`folder-wrapper group transition-all relative ${
-            isDropTarget || isFileValidDrop ? 'valid-drop-target' : ''
-          }`}
+          className={`folder-wrapper group transition-all relative ${(() => {
+            if (!isDropTarget && !isFileDragTarget) return ''
+            if (isDropTarget && isTrashAction) return 'trash-drop-target'
+            return 'valid-drop-target'
+          })()}`}
         >
           <FolderSvg />
 

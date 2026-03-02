@@ -8,7 +8,7 @@ interface MapDialogProps {
   onClose: () => void
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
   onSuccess?: (mapSlug?: string) => void
 }
 

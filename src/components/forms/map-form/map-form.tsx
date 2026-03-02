@@ -34,7 +34,7 @@ export interface MapFormValues {
 interface MapFormProps {
   mapId?: Id<'gameMaps'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
   onClose: () => void
   onSuccess?: (mapSlug?: string) => void
 }
@@ -126,7 +126,7 @@ export function MapForm({
     initialName: map.data?.name ?? '',
     isActive: !!mapId,
     campaignId,
-    parentId: map.data?.parentId ?? undefined,
+    parentId: map.data?.parentId ?? null,
     excludeId: mapId,
   })
 
@@ -188,7 +188,7 @@ export function MapForm({
             campaignId,
             name: values.name,
             imageStorageId: finalImageStorageId,
-            parentId,
+            parentId: parentId ?? null,
           })
         await openParentFolders(newMapId)
         // Get the created map's slug for onSuccess callback

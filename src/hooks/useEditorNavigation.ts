@@ -5,6 +5,7 @@ import { useLastEditorItem } from './useLastEditorItem'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
+import { assertNever } from '~/lib/utils'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
@@ -14,6 +15,7 @@ const createContentSearch = (updates: Partial<EditorSearch>): EditorSearch => {
     map: undefined,
     folder: undefined,
     file: undefined,
+    trash: undefined,
     ...updates,
   }
   return search
@@ -112,9 +114,8 @@ export const useEditorNavigation = () => {
         case SIDEBAR_ITEM_TYPES.files:
           await navigateToFile(item.slug, replace)
           break
-        default: {
-          console.warn('Unknown item type', item)
-        }
+        default:
+          assertNever(item.type)
       }
     },
     [
@@ -131,6 +132,10 @@ export const useEditorNavigation = () => {
     setLastSelectedItem(null)
   }, [navigateToEditor, setLastSelectedItem])
 
+  const navigateToTrash = useCallback(async () => {
+    await navigateToEditor(createContentSearch({ trash: true }))
+  }, [navigateToEditor])
+
   return {
     navigateToNote,
     navigateToMap,
@@ -138,5 +143,6 @@ export const useEditorNavigation = () => {
     navigateToFile,
     navigateToItem,
     clearEditorContent,
+    navigateToTrash,
   }
 }

@@ -17,7 +17,7 @@ export { validateItemName, checkNameConflict }
  */
 export function validateNoCircularParent(
   itemId: SidebarItemId,
-  newParentId: Id<'folders'> | undefined,
+  newParentId: Id<'folders'> | null,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): ValidationResult {
   return validateNoCircularParentShared(itemId, newParentId, (id) =>
@@ -38,13 +38,13 @@ export function getAncestorIds(
 
   const ancestors: Array<Id<'folders'>> = []
   const seen = new Set<Id<'folders'>>()
-  let currentId = item.parentId ?? undefined
+  let currentId = item.parentId
 
   while (currentId && !seen.has(currentId)) {
     seen.add(currentId)
     ancestors.push(currentId)
     const current = itemsMap.get(currentId)
-    currentId = current?.parentId ?? undefined
+    currentId = current?.parentId ?? null
   }
 
   return ancestors
@@ -52,7 +52,7 @@ export function getAncestorIds(
 
 export interface SidebarItemValidationOptions {
   name: string
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   itemId?: SidebarItemId
   siblings?: Array<AnySidebarItem>
   itemsMap?: Map<SidebarItemId, AnySidebarItem>

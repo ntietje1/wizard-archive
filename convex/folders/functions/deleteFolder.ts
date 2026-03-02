@@ -26,9 +26,10 @@ export async function deleteFolder(
 
   const campaignId = ctx.campaign._id
 
+  // Query all children (including trashed ones) so hard delete cleans up everything
   const childFolders = await ctx.db
     .query('folders')
-    .withIndex('by_campaign_parent_name', (q) =>
+    .withIndex('by_campaign_parent_deletionTime', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
@@ -39,7 +40,7 @@ export async function deleteFolder(
 
   const childNotes = await ctx.db
     .query('notes')
-    .withIndex('by_campaign_parent_name', (q) =>
+    .withIndex('by_campaign_parent_deletionTime', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
@@ -50,7 +51,7 @@ export async function deleteFolder(
 
   const childMaps = await ctx.db
     .query('gameMaps')
-    .withIndex('by_campaign_parent_name', (q) =>
+    .withIndex('by_campaign_parent_deletionTime', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()
@@ -61,7 +62,7 @@ export async function deleteFolder(
 
   const childFiles = await ctx.db
     .query('files')
-    .withIndex('by_campaign_parent_name', (q) =>
+    .withIndex('by_campaign_parent_deletionTime', (q) =>
       q.eq('campaignId', campaignId).eq('parentId', folderId),
     )
     .collect()

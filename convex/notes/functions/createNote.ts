@@ -20,7 +20,7 @@ export async function createNote(
     content,
   }: {
     name: string
-    parentId?: Id<'folders'>
+    parentId: Id<'folders'> | null
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
@@ -46,7 +46,7 @@ export async function createNote(
   const noteId = await ctx.db.insert('notes', {
     name,
     slug: uniqueSlug,
-    parentId: parentId ?? null,
+    parentId,
     iconName: iconName ?? null,
     color: color ?? null,
     allPermissionLevel: null,

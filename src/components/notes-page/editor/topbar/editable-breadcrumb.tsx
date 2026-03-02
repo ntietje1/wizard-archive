@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type {
+  AnySidebarItem,
+  AnySidebarItemWithContent,
+} from 'convex/sidebarItems/types/types'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
+import { useRenameItem } from '~/hooks/useRenameItem'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { useCampaign } from '~/hooks/useCampaign'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
 import {
   buildEditorLinkProps,
@@ -19,11 +25,11 @@ import {
 
 interface EditableNameProps {
   initialName: string
-  defaultName: string
-  onRename: (newName: string) => Promise<void>
+  defaultName?: string
+  onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   excludeId?: SidebarItemId
   disabled?: boolean
   showNotSharedTooltip?: boolean
@@ -31,7 +37,7 @@ interface EditableNameProps {
 
 export function EditableName({
   initialName,
-  defaultName,
+  defaultName = '',
   onRename,
   onChange,
   campaignId,
@@ -80,7 +86,7 @@ export function EditableName({
         setIsEditing(false)
         return
       }
-      await onRename(trimmedName)
+      await onRename?.(trimmedName)
       setIsEditing(false)
     } catch (error) {
       toast.error('Failed to rename. Please try again.')
@@ -177,30 +183,14 @@ export function EditableName({
 interface BreadcrumbAncestorProps {
   ancestor: AnySidebarItem
   linkProps: EditorLinkProps
-  onNavigateToItem?: (item: AnySidebarItem) => void
-  disabled?: boolean
+  onClick: () => void
 }
 
 function BreadcrumbAncestor({
   ancestor,
   linkProps,
-  onNavigateToItem,
-  disabled,
+  onClick,
 }: BreadcrumbAncestorProps) {
-  if (disabled) {
-    return (
-      <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
-        <span
-          className="rounded-sm truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-default"
-          title={ancestor.name}
-        >
-          {ancestor.name}
-        </span>
-        <span className="text-gray-400 flex-shrink-0 cursor-default">/</span>
-      </div>
-    )
-  }
-
   return (
     <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
       <Link
@@ -208,7 +198,7 @@ function BreadcrumbAncestor({
         activeOptions={{ includeSearch: false }}
         className="rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-gray-900 hover:bg-muted"
         title={ancestor.name}
-        onClick={() => onNavigateToItem?.(ancestor)}
+        onClick={onClick}
       >
         {ancestor.name}
       </Link>
@@ -218,56 +208,49 @@ function BreadcrumbAncestor({
 }
 
 interface EditableBreadcrumbProps {
-  initialName: string
-  defaultName: string
-  onRename: (newName: string) => Promise<void>
-  onChange?: (name: string) => void
-  ancestors: Array<AnySidebarItem>
-  onNavigateToItem?: (item: AnySidebarItem) => void
-  routeParams: { dmUsername: string; campaignSlug: string }
-  campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
-  excludeId?: SidebarItemId
-  disabled?: boolean
+  item: AnySidebarItemWithContent
+  canRename: boolean
   showNotSharedTooltip?: boolean
 }
 
 export function EditableBreadcrumb({
-  initialName,
-  defaultName,
-  onRename,
-  onChange,
-  ancestors,
-  onNavigateToItem,
-  routeParams,
-  campaignId,
-  parentId,
-  excludeId,
-  disabled,
+  item,
+  canRename,
   showNotSharedTooltip,
 }: EditableBreadcrumbProps) {
+  const { rename } = useRenameItem()
+  const { setLastSelectedItem } = useLastEditorItem()
+  const { dmUsername, campaignSlug } = useCampaign()
+  const routeParams = { dmUsername, campaignSlug }
+
+  const handleRename = useCallback(
+    async (newName: string) => {
+      await rename(item, newName)
+    },
+    [rename, item],
+  )
+
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
-        {ancestors.map((ancestor) => (
+        {item.ancestors.map((ancestor) => (
           <BreadcrumbAncestor
             key={ancestor._id}
             ancestor={ancestor}
             linkProps={buildEditorLinkProps(ancestor, routeParams)}
-            onNavigateToItem={onNavigateToItem}
-            disabled={disabled}
+            onClick={() =>
+              setLastSelectedItem({ type: ancestor.type, slug: ancestor.slug })
+            }
           />
         ))}
       </div>
       <EditableName
-        initialName={initialName}
-        defaultName={defaultName}
-        onRename={onRename}
-        onChange={onChange}
-        campaignId={campaignId}
-        parentId={parentId}
-        excludeId={excludeId}
-        disabled={disabled}
+        initialName={item.name}
+        onRename={handleRename}
+        campaignId={item.campaignId}
+        parentId={item.parentId}
+        excludeId={item._id}
+        disabled={!canRename}
         showNotSharedTooltip={showNotSharedTooltip}
       />
     </div>

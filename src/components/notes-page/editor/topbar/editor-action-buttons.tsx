@@ -8,9 +8,11 @@ import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { MoreVertical, X } from '~/lib/icons'
 
-export function ContextMenuButton() {
+export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
   const { item } = useCurrentItem()
   const topbarContextMenuRef = useRef<EditorContextMenuRef>(null)
+
+  const hasMenu = !!item || isTrashView
 
   const baseButton = (
     <EmptyContextMenu>
@@ -18,7 +20,7 @@ export function ContextMenuButton() {
         <Button
           variant="ghost"
           size="icon"
-          disabled={!item}
+          disabled={!hasMenu}
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -34,14 +36,15 @@ export function ContextMenuButton() {
     </EmptyContextMenu>
   )
 
-  if (!item) {
+  if (!hasMenu) {
     return baseButton
   }
   return (
     <EditorContextMenu
       ref={topbarContextMenuRef}
       viewContext="topbar"
-      item={item}
+      item={item ?? undefined}
+      isTrashView={isTrashView}
     >
       {baseButton}
     </EditorContextMenu>

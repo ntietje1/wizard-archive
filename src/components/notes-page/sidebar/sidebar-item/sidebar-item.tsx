@@ -24,13 +24,11 @@ import { useSortOptions } from '~/hooks/useSortOptions'
 
 interface SidebarItemProps {
   item: AnySidebarItem
-  ancestorIds?: Array<Id<'folders'>>
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
 }
 
 function SidebarItemComponent({
   item,
-  ancestorIds = [],
   parentItemsMap,
 }: SidebarItemProps) {
   const { rename } = useRenameItem()
@@ -52,12 +50,6 @@ function SidebarItemComponent({
     return sortItemsByOptions(sortOptions, children) ?? []
   }, [sortOptions, children])
 
-  // Build ancestor IDs for children
-  const currentAncestors = useMemo(() => {
-    if (!isFolder) return undefined
-    return [...ancestorIds, item._id]
-  }, [ancestorIds, item._id, isFolder])
-
   const handleClick = useCallback(
     () => setLastSelectedItem({ type: item.type, slug: item.slug }),
     [setLastSelectedItem, item.type, item.slug],
@@ -76,7 +68,7 @@ function SidebarItemComponent({
   }, [setRenamingId])
 
   const itemButton = (
-    <DraggableSidebarItem item={item} ancestorIds={ancestorIds}>
+    <DraggableSidebarItem item={item}>
       <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
         <SidebarItemButtonBase
           icon={icon}
@@ -92,7 +84,7 @@ function SidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={isFolder}
           campaignId={item.campaignId}
-          parentId={item.parentId ?? undefined}
+          parentId={item.parentId}
           excludeId={item._id}
           shareButton={<SidebarShareButton item={item} />}
         />
@@ -102,7 +94,7 @@ function SidebarItemComponent({
 
   if (isFolder) {
     return (
-      <DroppableSidebarItem item={item} ancestorIds={ancestorIds}>
+      <DroppableSidebarItem item={item}>
         <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
           {itemButton}
           <CollapsibleContent
@@ -117,7 +109,6 @@ function SidebarItemComponent({
               <SidebarItem
                 key={childItem._id}
                 item={childItem}
-                ancestorIds={currentAncestors}
                 parentItemsMap={parentItemsMap}
               />
             ))}

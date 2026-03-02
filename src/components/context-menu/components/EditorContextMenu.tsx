@@ -31,6 +31,7 @@ export interface EditorContextMenuRef {
 interface Props {
   viewContext: ViewContext
   item?: AnySidebarItem
+  isTrashView?: boolean
   children?: React.ReactNode
   className?: string
   menuClassName?: string
@@ -259,6 +260,7 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, Props>(
     {
       viewContext,
       item,
+      isTrashView,
       children,
       className,
       menuClassName = 'w-48 z-[9999]',
@@ -272,6 +274,7 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, Props>(
       <EditorContextMenuProvider
         viewContext={viewContext}
         item={item}
+        isTrashView={isTrashView}
         onDialogOpen={onDialogOpen}
         onDialogClose={onDialogClose}
       >

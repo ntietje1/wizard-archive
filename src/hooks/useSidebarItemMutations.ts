@@ -12,7 +12,7 @@ import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 interface CreateItemBase {
   campaignId: Id<'campaigns'>
   name: string
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   iconName?: string
   color?: string
 }
@@ -50,26 +50,27 @@ export type CreateItemResult = {
 
 export interface SidebarItemMutationsValue {
   createItem: (args: CreateItemArgs) => Promise<CreateItemResult>
-  getDefaultName: (type: SidebarItemType, parentId?: Id<'folders'>) => string
+  getDefaultName: (type: SidebarItemType, parentId: Id<'folders'> | null) => string
   rename: (
     item: AnySidebarItem,
     newName: string,
   ) => { promise: Promise<{ slug: string } | void> }
-  move: (
+  moveItem: (
     item: AnySidebarItem,
-    newParentId: Id<'folders'> | undefined,
+    options: { parentId?: Id<'folders'> | null; deleted?: boolean },
   ) => Promise<unknown>
-  deleteItem: (item: AnySidebarItem) => Promise<void>
+  permanentlyDeleteItem: (item: AnySidebarItem) => Promise<void>
+  emptyTrashBin: () => Promise<void>
   validateName: (
     name: string,
-    parentId: Id<'folders'> | undefined,
+    parentId: Id<'folders'> | null,
     excludeId?: SidebarItemId,
   ) => ValidationResult
   canMoveToParent: (
     itemId: SidebarItemId,
-    newParentId: Id<'folders'> | undefined,
+    newParentId: Id<'folders'> | null,
   ) => boolean
-  getSiblings: (parentId: Id<'folders'> | undefined) => Array<AnySidebarItem>
+  getSiblings: (parentId: Id<'folders'> | null) => Array<AnySidebarItem>
 }
 
 export const SidebarItemMutationsContext =

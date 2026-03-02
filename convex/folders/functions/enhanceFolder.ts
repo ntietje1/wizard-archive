@@ -16,6 +16,7 @@ export const enhanceFolderWithContent = async (
 ): Promise<FolderWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: folder.parentId,
+    isTrashed: !!folder.deletionTime,
   })
   return {
     ...folder,

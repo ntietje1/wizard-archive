@@ -4,6 +4,8 @@ export type CommonTableFields = {
   updatedTime: number
   updatedBy: Id<'userProfiles'>
   createdBy: Id<'userProfiles'>
+  deletionTime?: number
+  deletedBy?: Id<'userProfiles'>
 }
 
 export type ConvexValidatorFields<T extends TableNames> = {
@@ -13,3 +15,9 @@ export type ConvexValidatorFields<T extends TableNames> = {
 
 export type CommonValidatorFields<T extends TableNames> = CommonTableFields &
   ConvexValidatorFields<T>
+
+export function assertNever(value: never): never {
+  throw new Error(
+    `Unhandled discriminated union member: ${JSON.stringify(value)}`,
+  )
+}
