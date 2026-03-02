@@ -11,10 +11,7 @@ import {
 } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type {
-  SidebarDragData,
-  SidebarDropData,
-} from '~/lib/dnd-utils'
+import type { SidebarDragData, SidebarDropData } from '~/lib/dnd-utils'
 import {
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
@@ -31,7 +28,10 @@ import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { useFileDropHandler } from '~/hooks/useFileDropHandler'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { useAllSidebarItems, useTrashedSidebarItems } from '~/hooks/useSidebarItems'
+import {
+  useAllSidebarItems,
+  useTrashedSidebarItems,
+} from '~/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { processDataTransferItems } from '~/lib/folder-reader'
 import { Ban } from '~/lib/icons'
@@ -46,16 +46,21 @@ function getDropTargetKey(
   target: Record<string, unknown> | null,
 ): string | null {
   if (!target) return null
-  const type = target.type as string
-  if (type === MAP_DROP_ZONE_TYPE) return `map:${target.mapId}`
-  if (
-    type === TRASH_DROP_ZONE_TYPE ||
-    type === EMPTY_EDITOR_DROP_TYPE ||
-    type === SIDEBAR_ROOT_TYPE
-  )
-    return type
-  // Sidebar item drop targets (all four item types)
-  return target.sidebarItemId as string
+  switch (target.type as SidebarDropData['type']) {
+    case MAP_DROP_ZONE_TYPE:
+      return `map:${target.mapId}`
+    case TRASH_DROP_ZONE_TYPE:
+    case EMPTY_EDITOR_DROP_TYPE:
+    case SIDEBAR_ROOT_TYPE:
+      return target.type as string
+    case SIDEBAR_ITEM_TYPES.notes:
+    case SIDEBAR_ITEM_TYPES.folders:
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case SIDEBAR_ITEM_TYPES.files:
+      return target.sidebarItemId as string
+    default:
+      return null
+  }
 }
 
 function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
@@ -82,7 +87,8 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
       onDragStart: ({ source, location }) => {
         const sid = (source.data as SidebarDragData).sidebarItemId
         const draggedItem =
-          (itemsMapRef.current.get(sid) ?? trashedItemsMapRef.current.get(sid)) ??
+          itemsMapRef.current.get(sid) ??
+          trashedItemsMapRef.current.get(sid) ??
           null
         const input = location.current.input
 
@@ -112,7 +118,8 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
                 rawDropTarget,
                 itemsMapRef.current,
                 trashedItemsMapRef.current,
-                (id) => getAncestorSidebarItemsRef.current(id).map((a) => a._id),
+                (id) =>
+                  getAncestorSidebarItemsRef.current(id).map((a) => a._id),
               )
             : null
 
@@ -133,7 +140,10 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
               case SIDEBAR_ROOT_TYPE:
                 targetId = SIDEBAR_ROOT_TYPE
                 break
-              default: // non-item types don't need to be handled here
+              case TRASH_DROP_ZONE_TYPE:
+                targetId = TRASH_DROP_ZONE_TYPE
+                break
+              default:
                 break
             }
           }
@@ -141,8 +151,8 @@ function DragOverlay({ campaignName }: { campaignName: string | undefined }) {
 
           const sid2 = (source.data as SidebarDragData).sidebarItemId
           const draggedItem =
-            (itemsMapRef.current.get(sid2) ??
-              trashedItemsMapRef.current.get(sid2)) ??
+            itemsMapRef.current.get(sid2) ??
+            trashedItemsMapRef.current.get(sid2) ??
             null
           const action = getDragDropAction(draggedItem, dropTarget)
           setDragDropAction(action)
@@ -287,8 +297,8 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
 
         const dragSid = (source.data as SidebarDragData).sidebarItemId
         const draggedItem =
-          (itemsMapRef.current.get(dragSid) ??
-            trashedItemsMapRef.current.get(dragSid)) ??
+          itemsMapRef.current.get(dragSid) ??
+          trashedItemsMapRef.current.get(dragSid) ??
           null
         if (!draggedItem) return
 

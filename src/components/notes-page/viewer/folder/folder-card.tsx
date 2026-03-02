@@ -13,7 +13,7 @@ import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
-import { useDroppable } from '~/hooks/useDroppable'
+import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
@@ -100,8 +100,6 @@ function FolderCardInner({
     PERMISSION_LEVEL.FULL_ACCESS,
   )
 
-  const dropData = { type: folder.type, sidebarItemId: folder._id }
-
   const { isDraggingRef } = useDraggable({
     ref,
     data: { sidebarItemId: folder._id },
@@ -109,7 +107,7 @@ function FolderCardInner({
     dragOpacity: '0.2',
   })
 
-  useDroppable({ ref, data: dropData, canDrop: () => !folder.deletionTime })
+  useSidebarItemDropTarget({ ref, item: folder })
 
   useExternalDropTarget({
     ref,

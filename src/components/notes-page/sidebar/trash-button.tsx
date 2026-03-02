@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useRef, useState } from 'react'
 import { TrashPopoverContent } from './trash-popover-content'
 import {
   Popover,
@@ -7,6 +6,7 @@ import {
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useDroppable } from '~/hooks/useDroppable'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
 import { cn } from '~/lib/shadcn/utils'
@@ -17,30 +17,21 @@ export function TrashButton() {
   const [open, setOpen] = useState(false)
   const { navigateToTrash } = useEditorNavigation()
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
 
   const { parentItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(undefined) ?? []
   const trashCount = rootTrashedItems.length
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === TRASH_DROP_ZONE_TYPE,
+  )
 
   const handleOpenFullPage = () => {
     setOpen(false)
     navigateToTrash()
   }
 
-  useEffect(() => {
-    const el = buttonRef.current
-    if (!el) return
-
-    return dropTargetForElements({
-      element: el,
-      getData: () => ({ type: TRASH_DROP_ZONE_TYPE }),
-      onDragEnter: () => setIsDragOver(true),
-      onDragLeave: () => setIsDragOver(false),
-      onDrop: () => setIsDragOver(false),
-    })
-  }, [])
+  useDroppable({ ref: buttonRef, data: { type: TRASH_DROP_ZONE_TYPE } })
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -50,12 +41,7 @@ export function TrashButton() {
             ref={buttonRef}
             className={cn(
               'flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors',
-              isDragOver &&
-                dragDropAction === 'trash' &&
-                'bg-destructive/10 text-destructive',
-              isDragOver &&
-                dragDropAction === 'move' &&
-                'bg-accent text-foreground',
+              isDropTarget && 'bg-destructive/10 text-destructive',
             )}
           >
             <Trash2 className="h-4 w-4 shrink-0" />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { ItemCard } from '../folder/item-card'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
@@ -14,15 +14,20 @@ import { Trash2 } from '~/lib/icons'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
 
   const { parentItemsMap, status } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(undefined) ?? []
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
-  const isTrashDrag = isDragOver && dragDropAction === 'trash'
 
-  // Set up as drop target for trashing items.
-  // Re-run when status/length changes because early returns swap which div is mounted.
+  // Highlighting comes from the store (set by DragOverlay's monitor),
+  // which already tracks only the innermost drop target.
+  const isDropTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === TRASH_DROP_ZONE_TYPE,
+  )
+  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isTrashDrag = isDropTarget && dragDropAction === 'trash'
+
+  // Register as a drop target. Re-run when status/length changes because
+  // early returns swap which div is mounted.
   const hasItems = rootTrashedItems.length > 0
   useEffect(() => {
     const el = dropRef.current
@@ -31,20 +36,6 @@ export function TrashPageViewer() {
     return dropTargetForElements({
       element: el,
       getData: () => ({ type: TRASH_DROP_ZONE_TYPE }),
-      // Only highlight when the trash zone itself is the innermost drop target,
-      // not when hovering a child folder card nested inside it.
-      onDragEnter: ({ self, location }) => {
-        const isInnermost =
-          location.current.dropTargets[0]?.element === self.element
-        setIsDragOver(isInnermost)
-      },
-      onDrag: ({ self, location }) => {
-        const isInnermost =
-          location.current.dropTargets[0]?.element === self.element
-        setIsDragOver(isInnermost)
-      },
-      onDragLeave: () => setIsDragOver(false),
-      onDrop: () => setIsDragOver(false),
     })
   }, [status, hasItems])
 
@@ -66,7 +57,7 @@ export function TrashPageViewer() {
           ref={dropRef}
           className={cn(
             'flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors',
-            isTrashDrag ? 'bg-destructive/10' : isDragOver && 'bg-muted',
+            isTrashDrag ? 'bg-destructive/10' : isDropTarget && 'bg-muted',
           )}
         >
           <Trash2 className="h-10 w-10 opacity-30" />
@@ -85,7 +76,7 @@ export function TrashPageViewer() {
         ref={dropRef}
         className={cn(
           'flex flex-col h-full w-full min-h-0 transition-colors',
-          isTrashDrag ? 'bg-destructive/10' : isDragOver && 'bg-muted',
+          isTrashDrag ? 'bg-destructive/10' : isDropTarget && 'bg-muted',
         )}
       >
         <TrashBanner />

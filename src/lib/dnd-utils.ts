@@ -9,7 +9,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import { assertNever } from '~/lib/utils'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
-export const OPEN_ACTION = 'open' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 

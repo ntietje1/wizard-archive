@@ -19,15 +19,12 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
   )
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-
   useDroppable({ ref, data: rootTargetData })
 
-  const canAcceptFileDrops = canDropFilesOnTarget(rootTargetData)
-  useExternalDropTarget({
+  const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: undefined,
-    canAcceptFiles: canAcceptFileDrops,
+    canAcceptFiles: canDropFilesOnTarget(rootTargetData),
   })
 
   return (
@@ -36,7 +33,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
       className={cn(
         className,
         isDropTarget && 'bg-muted',
-        isDraggingFiles && canAcceptFileDrops && 'bg-muted/50',
+        isFileDropTarget && 'bg-muted/50',
       )}
     >
       {children}
