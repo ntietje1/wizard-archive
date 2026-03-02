@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -6,6 +7,10 @@ import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
+import {
+  buildEditorLinkProps,
+  type EditorLinkProps,
+} from '~/hooks/useEditorLinkProps'
 import {
   Tooltip,
   TooltipContent,
@@ -169,13 +174,57 @@ export function EditableName({
   )
 }
 
+interface BreadcrumbAncestorProps {
+  ancestor: AnySidebarItem
+  linkProps: EditorLinkProps
+  onNavigateToItem?: (item: AnySidebarItem) => void
+  disabled?: boolean
+}
+
+function BreadcrumbAncestor({
+  ancestor,
+  linkProps,
+  onNavigateToItem,
+  disabled,
+}: BreadcrumbAncestorProps) {
+  if (disabled) {
+    return (
+      <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
+        <span
+          className="rounded-sm truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-default"
+          title={ancestor.name}
+        >
+          {ancestor.name}
+        </span>
+        <span className="text-gray-400 flex-shrink-0 cursor-default">/</span>
+      </div>
+    )
+  }
+
+  return (
+    <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
+      <Link
+        {...linkProps}
+        activeOptions={{ includeSearch: false }}
+        className="rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-gray-900 hover:bg-muted"
+        title={ancestor.name}
+        onClick={() => onNavigateToItem?.(ancestor)}
+      >
+        {ancestor.name}
+      </Link>
+      <span className="text-gray-400 flex-shrink-0">/</span>
+    </div>
+  )
+}
+
 interface EditableBreadcrumbProps {
   initialName: string
   defaultName: string
   onRename: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   ancestors: Array<AnySidebarItem>
-  onNavigateToItem: (item: AnySidebarItem) => void
+  onNavigateToItem?: (item: AnySidebarItem) => void
+  routeParams: { dmUsername: string; campaignSlug: string }
   campaignId?: Id<'campaigns'>
   parentId?: Id<'folders'>
   excludeId?: SidebarItemId
@@ -190,6 +239,7 @@ export function EditableBreadcrumb({
   onChange,
   ancestors,
   onNavigateToItem,
+  routeParams,
   campaignId,
   parentId,
   excludeId,
@@ -199,37 +249,15 @@ export function EditableBreadcrumb({
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
-        {ancestors.map((ancestor) => {
-          return (
-            <div
-              key={ancestor._id}
-              className="flex items-center min-w-6 flex-shrink"
-            >
-              <button
-                onClick={() => onNavigateToItem(ancestor)}
-                disabled={disabled}
-                className={cn(
-                  'rounded-sm transition-colors truncate text-gray-500 min-w-0 px-0.5 mx-0.5',
-                  disabled
-                    ? 'cursor-default'
-                    : 'cursor-pointer hover:text-gray-900 hover:bg-muted',
-                )}
-                title={ancestor.name}
-                type="button"
-              >
-                {ancestor.name}
-              </button>
-              <span
-                className={cn(
-                  'text-gray-400 flex-shrink-0',
-                  disabled && 'cursor-default',
-                )}
-              >
-                /
-              </span>
-            </div>
-          )
-        })}
+        {ancestors.map((ancestor) => (
+          <BreadcrumbAncestor
+            key={ancestor._id}
+            ancestor={ancestor}
+            linkProps={buildEditorLinkProps(ancestor, routeParams)}
+            onNavigateToItem={onNavigateToItem}
+            disabled={disabled}
+          />
+        ))}
       </div>
       <EditableName
         initialName={initialName}

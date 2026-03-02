@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ClientOnly } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
@@ -19,7 +19,8 @@ import {
   Music,
   Video,
 } from '~/lib/icons'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
@@ -77,7 +78,8 @@ function FileCardSkeleton() {
 
 function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
-  const { navigateToFile } = useEditorNavigation()
+  const linkProps = useEditorLinkProps(file)
+  const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(
     file.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
@@ -100,65 +102,63 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
     canDrag,
   })
 
-  const handleCardActivate = () => {
-    if (!isDraggingRef.current) {
-      if (onClick) {
-        onClick()
-      } else if (file.slug) {
-        navigateToFile(file.slug)
-      }
-    }
-  }
-
   const cardContent = (
     <div ref={ref} className="w-full h-[140px]">
-      <Card
-        className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md"
-        onClick={handleCardActivate}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+      <Link
+        {...linkProps}
+        activeOptions={{ includeSearch: false }}
+        className="block w-full h-full [&.active]:pointer-events-auto"
+        onClick={(e) => {
+          if (isDraggingRef.current) {
             e.preventDefault()
-            handleCardActivate()
+            return
           }
+          if (onClick) {
+            e.preventDefault()
+            onClick()
+            return
+          }
+          setLastSelectedItem({ type: file.type, slug: file.slug })
         }}
-        tabIndex={0}
-        role="button"
       >
-        {/* Top Section: Title + Menu Button */}
-        <div className="flex items-center justify-between min-w-0">
-          <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-            {file.name}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleMoreOptions(e)
-            }}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </div>
+        <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md">
+          {/* Top Section: Title + Menu Button */}
+          <div className="flex items-center justify-between min-w-0">
+            <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+              {file.name}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleMoreOptions(e)
+              }}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </div>
 
-        {/* Icon Section: Centered Large Icon */}
-        <div className="flex items-center justify-center flex-1 mb-10">
-          <FileIcon
-            className={`w-12 h-12 select-none ${
-              contentType?.startsWith('image/')
-                ? 'text-blue-500'
-                : contentType === 'application/pdf'
-                  ? 'text-red-500'
-                  : contentType?.startsWith('video/')
-                    ? 'text-purple-500'
-                    : contentType?.startsWith('audio/')
-                      ? 'text-green-500'
-                      : 'text-slate-500'
-            }`}
-          />
-        </div>
-      </Card>
+          {/* Icon Section: Centered Large Icon */}
+          <div className="flex items-center justify-center flex-1 mb-10">
+            <FileIcon
+              className={`w-12 h-12 select-none ${
+                contentType?.startsWith('image/')
+                  ? 'text-blue-500'
+                  : contentType === 'application/pdf'
+                    ? 'text-red-500'
+                    : contentType?.startsWith('video/')
+                      ? 'text-purple-500'
+                      : contentType?.startsWith('audio/')
+                        ? 'text-green-500'
+                        : 'text-slate-500'
+              }`}
+            />
+          </div>
+        </Card>
+      </Link>
     </div>
   )
 

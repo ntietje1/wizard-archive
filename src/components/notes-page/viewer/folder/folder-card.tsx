@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ClientOnly } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { ItemCardProps } from './item-card'
@@ -9,7 +9,8 @@ import { CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { MoreVertical } from '~/lib/icons'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
@@ -88,7 +89,8 @@ function FolderCardInner({
   parentId,
 }: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
-  const { navigateToFolder } = useEditorNavigation()
+  const linkProps = useEditorLinkProps(folder)
+  const { setLastSelectedItem } = useLastEditorItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
@@ -120,14 +122,6 @@ function FolderCardInner({
   const isFileValidDrop =
     isDraggingFiles && canAcceptFileDrops && fileDragHoveredId === folder._id
 
-  const handleCardActivate = () => {
-    if (isDraggingRef.current) return
-    if (onClick) {
-      onClick()
-    } else {
-      navigateToFolder(folder.slug)
-    }
-  }
   const cardContent = (
     <div
       ref={ref}
@@ -137,44 +131,54 @@ function FolderCardInner({
       onDragLeave={canAcceptFileDrops ? handleDragLeave : undefined}
       onDrop={canAcceptFileDrops ? handleDrop : undefined}
     >
-      <div
-        className={`folder-wrapper group transition-all relative ${
-          isDropTarget || isFileValidDrop ? 'valid-drop-target' : ''
-        }`}
-        onClick={handleCardActivate}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+      <Link
+        {...linkProps}
+        activeOptions={{ includeSearch: false }}
+        className="block h-full [&.active]:pointer-events-auto"
+        onClick={(e) => {
+          if (isDraggingRef.current) {
             e.preventDefault()
-            handleCardActivate()
+            return
           }
+          if (onClick) {
+            e.preventDefault()
+            onClick()
+            return
+          }
+          setLastSelectedItem({ type: folder.type, slug: folder.slug })
         }}
-        tabIndex={0}
-        role="button"
       >
-        <FolderSvg />
-
-        <div className="folder-content px-2">
-          <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
-            <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
-              {folder.name}
-            </CardTitle>
-          </div>
-        </div>
-
-        {/* Three-dot menu button in top right */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-5 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
-          aria-label="Open folder menu"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleMoreOptions(e)
-          }}
+        <div
+          className={`folder-wrapper group transition-all relative ${
+            isDropTarget || isFileValidDrop ? 'valid-drop-target' : ''
+          }`}
         >
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </div>
+          <FolderSvg />
+
+          <div className="folder-content px-2">
+            <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
+              <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+                {folder.name}
+              </CardTitle>
+            </div>
+          </div>
+
+          {/* Three-dot menu button in top right */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-5 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            aria-label="Open folder menu"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleMoreOptions(e)
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
+      </Link>
     </div>
   )
 

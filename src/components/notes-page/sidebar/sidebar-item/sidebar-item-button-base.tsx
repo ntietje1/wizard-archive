@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { EditableName } from './editable-item-name'
 import type { SidebarItemButtonProps } from './types'
@@ -14,7 +15,8 @@ function SidebarItemButtonBaseComponent({
   isSelected = false,
   isRenaming = false,
   showChevron = true,
-  onSelect = () => {},
+  linkProps,
+  onClick,
   onMoreOptions = () => {},
   onToggleExpanded = () => {},
   onFinishRename,
@@ -24,6 +26,20 @@ function SidebarItemButtonBaseComponent({
   excludeId,
   shareButton,
 }: SidebarItemButtonProps) {
+  const nameContent = onFinishRename ? (
+    <EditableName
+      initialName={name}
+      isRenaming={isRenaming}
+      onFinishRename={onFinishRename}
+      onCancelRename={onCancelRename}
+      campaignId={campaignId}
+      parentId={parentId}
+      excludeId={excludeId}
+    />
+  ) : (
+    <span className="truncate ml-1">{name}</span>
+  )
+
   return (
     <div
       className={cn(
@@ -46,6 +62,7 @@ function SidebarItemButtonBaseComponent({
               className="h-6 w-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
               onClick={(e) => {
                 e.stopPropagation()
+                e.preventDefault()
                 onToggleExpanded(e)
               }}
             >
@@ -67,25 +84,20 @@ function SidebarItemButtonBaseComponent({
       />
 
       {/* Item Name */}
-      <button
-        type="button"
-        className="flex items-center min-w-0 flex-1 h-full rounded-sm"
-        onClick={onSelect}
-      >
-        {onFinishRename ? (
-          <EditableName
-            initialName={name}
-            isRenaming={isRenaming}
-            onFinishRename={onFinishRename}
-            onCancelRename={onCancelRename}
-            campaignId={campaignId}
-            parentId={parentId}
-            excludeId={excludeId}
-          />
-        ) : (
-          <span className="truncate ml-1">{name}</span>
-        )}
-      </button>
+      {isRenaming || !linkProps ? (
+        <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">
+          {nameContent}
+        </div>
+      ) : (
+        <Link
+          {...linkProps}
+          activeOptions={{ includeSearch: false }}
+          className="flex items-center min-w-0 flex-1 h-full rounded-sm"
+          onClick={onClick}
+        >
+          {nameContent}
+        </Link>
+      )}
 
       {/* Action Buttons */}
       {!isRenaming && (
@@ -96,7 +108,10 @@ function SidebarItemButtonBaseComponent({
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
-              onClick={onMoreOptions}
+              onClick={(e) => {
+                e.preventDefault()
+                onMoreOptions(e)
+              }}
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>

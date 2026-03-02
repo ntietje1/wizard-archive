@@ -1,9 +1,10 @@
+import { useCallback } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { EditableBreadcrumb } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -13,16 +14,19 @@ import { useEditorMode } from '~/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, isLoading, hasRequestedItem } = useCurrentItem()
   const { itemsMap } = useAllSidebarItems()
-  const { navigateToItem } = useEditorNavigation()
+  const { setLastSelectedItem } = useLastEditorItem()
   const { rename } = useRenameItem()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { isDm, campaignId } = useCampaign()
+  const { isDm, campaignId, dmUsername, campaignSlug } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
+
+  const routeParams = { dmUsername, campaignSlug }
 
   const canRename =
     item &&
@@ -32,6 +36,13 @@ export function FileTopbar() {
     if (!item) return
     await rename(item, newName)
   }
+
+  const handleNavigateToItem = useCallback(
+    (ancestor: AnySidebarItem) => {
+      setLastSelectedItem({ type: ancestor.type, slug: ancestor.slug })
+    },
+    [setLastSelectedItem],
+  )
 
   const isNotSharedWithPlayer =
     item &&
@@ -61,7 +72,8 @@ export function FileTopbar() {
               defaultName=""
               onRename={handleRename}
               ancestors={item.ancestors}
-              onNavigateToItem={navigateToItem}
+              onNavigateToItem={handleNavigateToItem}
+              routeParams={routeParams}
               campaignId={item.campaignId}
               parentId={item.parentId ?? undefined}
               excludeId={item._id}
@@ -76,7 +88,7 @@ export function FileTopbar() {
               onRename={handleRename}
               onChange={setPendingItemName}
               ancestors={[]}
-              onNavigateToItem={navigateToItem}
+              routeParams={routeParams}
               campaignId={campaignId}
             />
           )}

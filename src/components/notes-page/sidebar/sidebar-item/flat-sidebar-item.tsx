@@ -7,7 +7,8 @@ import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useFolderState } from '~/hooks/useFolderState'
 import { useContextMenu } from '~/hooks/useContextMenu'
-import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
+import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
@@ -29,15 +30,16 @@ function FlatSidebarItemComponent({
 }: FlatSidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const { navigateToItem } = useEditorNavigationContext()
+  const linkProps = useEditorLinkProps(item)
+  const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
 
   const icon = getSidebarItemIcon(item)
 
-  const handleSelect = useCallback(
-    () => navigateToItem(item),
-    [navigateToItem, item],
+  const handleClick = useCallback(
+    () => setLastSelectedItem({ type: item.type, slug: item.slug }),
+    [setLastSelectedItem, item.type, item.slug],
   )
 
   const handleFinishRename = useCallback(
@@ -61,7 +63,8 @@ function FlatSidebarItemComponent({
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
-          onSelect={handleSelect}
+          linkProps={linkProps}
+          onClick={handleClick}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={handleMoreOptions}
           onFinishRename={handleFinishRename}

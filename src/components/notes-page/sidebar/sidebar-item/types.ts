@@ -2,9 +2,11 @@ import type { MouseEvent, ReactNode } from 'react'
 import type { LucideIcon } from '~/lib/icons'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { EditorLinkProps } from '~/hooks/useEditorLinkProps'
 
 export interface SidebarItemHandlers {
-  onSelect?: (e: MouseEvent) => void
+  linkProps?: EditorLinkProps
+  onClick?: (e: MouseEvent) => void
   onMoreOptions?: (e: MouseEvent) => void
   onToggleExpanded?: (e: MouseEvent) => void
 }
