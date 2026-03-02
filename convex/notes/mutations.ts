@@ -47,7 +47,7 @@ export const createNote = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.optional(v.id('folders')),
+    parentId: v.union(v.id('folders'), v.null()),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),

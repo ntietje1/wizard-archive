@@ -5,12 +5,13 @@ import { MapCard } from './map-card'
 import { FileCard } from './file-card'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { assertNever } from '~/lib/utils'
 
 export interface ItemCardProps<T extends AnySidebarItem> {
   item: T
   onClick?: () => void
   isLoading?: boolean
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
 }
 
 export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {
@@ -24,7 +25,6 @@ export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {
     case SIDEBAR_ITEM_TYPES.files:
       return <FileCard item={item} />
     default:
-      console.error(`Unsupported item type: ${(item as { type: string }).type}`)
-      return null
+      return assertNever(item)
   }
 }

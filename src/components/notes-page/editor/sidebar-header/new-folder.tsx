@@ -22,7 +22,8 @@ export function NewFolderButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.folders,
         campaignId,
-        name: getDefaultName(SIDEBAR_ITEM_TYPES.folders),
+        parentId: null,
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, null),
       })
       openParentFolders(result.id)
       navigateToItem(result)

@@ -18,7 +18,7 @@ export async function createFile(
   }: {
     name: string
     storageId?: Id<'_storage'>
-    parentId?: Id<'folders'>
+    parentId: Id<'folders'> | null
     iconName?: string
     color?: string
   },
@@ -47,7 +47,7 @@ export async function createFile(
     iconName: iconName ?? null,
     color: color ?? null,
     storageId: storageId ?? null,
-    parentId: parentId ?? null,
+    parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     updatedTime: now,

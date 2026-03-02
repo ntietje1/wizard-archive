@@ -4,6 +4,7 @@ export type EditorSearch = {
   note?: string
   file?: string
   heading?: string
+  trash?: boolean
 }
 
 export const validateSearch = (
@@ -59,6 +60,10 @@ export const validateSearch = (
   // heading can be present alongside note
   if (heading) {
     result.heading = heading
+  }
+
+  if ('trash' in search && search.trash === true) {
+    result.trash = true
   }
 
   return result

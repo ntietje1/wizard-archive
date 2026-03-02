@@ -18,7 +18,7 @@ export async function createMap(
   }: {
     name: string
     imageStorageId?: Id<'_storage'>
-    parentId?: Id<'folders'>
+    parentId: Id<'folders'> | null
     iconName?: string
     color?: string
   },
@@ -47,7 +47,7 @@ export async function createMap(
     iconName: iconName ?? null,
     color: color ?? null,
     imageStorageId: imageStorageId ?? null,
-    parentId: parentId ?? null,
+    parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     updatedTime: now,

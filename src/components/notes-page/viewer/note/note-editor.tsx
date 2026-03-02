@@ -33,6 +33,7 @@ import { useDisableAutolink } from '~/hooks/useDisableAutolink'
 import { useScrollToHeading } from '~/hooks/useScrollToHeading'
 import { useRestoreScrollPosition } from '~/hooks/useRestoreScrollPosition'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
+import { useNoteEditorDropTarget } from '~/hooks/useNoteEditorDropTarget'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -167,6 +168,9 @@ const CollaborativeNoteReady = ({
   )
   useRestoreScrollPosition(note._id, scrollAreaRef, isScrollingToHeading)
 
+  const editorDropRef = useRef<HTMLDivElement>(null)
+  useNoteEditorDropTarget({ ref: editorDropRef, editor, noteId: note._id })
+
   const handleWrapperContextMenu = useCallback((e: React.MouseEvent) => {
     if (!e.isTrusted) return
 
@@ -192,24 +196,25 @@ const CollaborativeNoteReady = ({
         onContextMenu={handleWrapperContextMenu}
       >
         <div className="note-editor-fill-height">
-          <BlockNoteView
-            className="mx-auto w-full max-w-3xl mt-2"
-            key={note._id + 'editor'}
-            editor={editor}
-            theme="light"
-            linkToolbar={false}
-            sideMenu={false}
-            formattingToolbar={false}
-            slashMenu={false}
-            editable={editorMode === 'editor'}
-          >
-            <BlockNoteContextMenuHandler />
-            <WikiLinkAutocomplete editor={editor} />
-            <WikiLinkClickHandler editor={editor} />
-            <MdLinkClickHandler editor={editor} />
-            <SideMenuController sideMenu={SideMenuRenderer} />
-            <SlashMenu editor={editor} />
-          </BlockNoteView>
+          <div ref={editorDropRef} className="mx-auto w-full max-w-3xl mt-2">
+            <BlockNoteView
+              key={note._id + 'editor'}
+              editor={editor}
+              theme="light"
+              linkToolbar={false}
+              sideMenu={false}
+              formattingToolbar={false}
+              slashMenu={false}
+              editable={editorMode === 'editor'}
+            >
+              <BlockNoteContextMenuHandler />
+              <WikiLinkAutocomplete editor={editor} />
+              <WikiLinkClickHandler editor={editor} />
+              <MdLinkClickHandler editor={editor} />
+              <SideMenuController sideMenu={SideMenuRenderer} />
+              <SlashMenu editor={editor} />
+            </BlockNoteView>
+          </div>
         </div>
       </ScrollArea>
     </BlockNoteContextMenuProvider>

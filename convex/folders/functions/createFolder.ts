@@ -16,7 +16,7 @@ export async function createFolder(
     color,
   }: {
     name: string
-    parentId?: Id<'folders'>
+    parentId: Id<'folders'> | null
     iconName?: string
     color?: string
   },
@@ -43,7 +43,7 @@ export async function createFolder(
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    parentId: parentId ?? null,
+    parentId,
     allPermissionLevel: null,
     inheritShares: false,
     campaignId,

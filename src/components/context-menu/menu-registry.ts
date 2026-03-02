@@ -16,12 +16,14 @@ import {
   Navigation,
   Pencil,
   Plus,
+  RotateCcw,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { assertNever } from '~/lib/utils'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
@@ -36,7 +38,7 @@ function getTypeName(ctx: MenuContext): string {
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
-      return 'Item'
+      return assertNever(ctx.item)
   }
 }
 
@@ -82,6 +84,11 @@ export type ActionHandlers = {
 
   // Bookmark actions
   toggleBookmark: (ctx: MenuContext) => void
+
+  // Trash actions
+  restore: (ctx: MenuContext) => void
+  permanentlyDelete: (ctx: MenuContext) => void
+  emptyTrash: (ctx: MenuContext) => void
 }
 
 export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
@@ -424,7 +431,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: FolderDown,
       group: 'download',
       priority: 82,
-      shouldShow: (ctx) => p.atRoot(ctx),
+      shouldShow: (ctx) => p.atRoot(ctx) && p.inSidebar(ctx),
       action: actions.downloadAll,
     },
 
@@ -436,7 +443,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 90,
       shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) && p.inSidebar(ctx) && p.isSidebarItem(ctx),
+        p.hasFullAccess(ctx) &&
+        p.inSidebar(ctx) &&
+        p.isItemNotTrashed(ctx) &&
+        p.isSidebarItem(ctx),
       action: actions.rename,
     },
     {
@@ -446,7 +456,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
+        p.hasFullAccess(ctx) &&
+        p.isItemNotTrashed(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
       action: actions.editMap,
     },
     {
@@ -456,7 +468,9 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+        p.hasFullAccess(ctx) &&
+        p.isItemNotTrashed(ctx) &&
+        p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editFile,
     },
     {
@@ -468,6 +482,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       shouldShow: (ctx) =>
         p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
+        p.isItemNotTrashed(ctx) &&
         p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,
     },
@@ -475,7 +490,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     // ========== DANGER GROUP ==========
     {
       id: 'delete',
-      label: 'Delete',
+      label: 'Move to Trash',
       icon: Trash2,
       group: 'danger',
       priority: 100,
@@ -483,10 +498,42 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       shouldShow: (ctx) =>
         p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
+        p.isItemNotTrashed(ctx) &&
         (p.inView('sidebar')(ctx) ||
           p.inView('folder-view')(ctx) ||
           p.inView('topbar')(ctx)),
       action: actions.delete,
+    },
+
+    // ========== TRASH VIEW ACTIONS ==========
+    {
+      id: 'restore',
+      label: 'Restore',
+      icon: RotateCcw,
+      group: 'primary',
+      priority: 0,
+      shouldShow: (ctx) => p.isItemTrashed(ctx) && p.isSidebarItem(ctx),
+      action: actions.restore,
+    },
+    {
+      id: 'permanently-delete',
+      label: 'Delete Forever',
+      icon: Trash2,
+      group: 'danger',
+      priority: 100,
+      variant: 'danger',
+      shouldShow: (ctx) => p.isItemTrashed(ctx) && p.isSidebarItem(ctx),
+      action: actions.permanentlyDelete,
+    },
+    {
+      id: 'empty-trash',
+      label: 'Empty Trash',
+      icon: Trash2,
+      group: 'danger',
+      priority: 101,
+      variant: 'danger',
+      shouldShow: (ctx) => p.isTrashView(ctx) && p.isDm(ctx),
+      action: actions.emptyTrash,
     },
   ]
 }

@@ -27,10 +27,13 @@ export function useEditorMode(): EditorModeContextType {
     useCampaignEditorState(campaignKey)
   const { item: currentItem } = useCurrentItem()
 
-  const canEdit = hasAtLeastPermissionLevel(
-    currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-    PERMISSION_LEVEL.EDIT,
-  )
+  const isDeleted = !!currentItem?.deletionTime
+  const canEdit =
+    !isDeleted &&
+    hasAtLeastPermissionLevel(
+      currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+      PERMISSION_LEVEL.EDIT,
+    )
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
 
   const storeSetEditorMode = useEditorModeStore((s) => s.setEditorMode)

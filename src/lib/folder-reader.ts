@@ -98,7 +98,7 @@ async function readDirectoryRecursively(
  * Handles both individual files and folders, preserving the hierarchy.
  */
 export async function processDataTransferItems(
-  items: DataTransferItemList,
+  items: DataTransferItemList | ReadonlyArray<DataTransferItem>,
 ): Promise<DropResult> {
   const result: DropResult = {
     files: [],

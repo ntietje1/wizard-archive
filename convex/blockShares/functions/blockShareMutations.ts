@@ -51,9 +51,14 @@ async function upsertBlockForSharing(
 async function addBlockShare(
   ctx: CampaignMutationCtx,
   {
+    noteId,
     blockId,
     campaignMemberId,
-  }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
+  }: {
+    noteId: Id<'notes'>
+    blockId: Id<'blocks'>
+    campaignMemberId: Id<'campaignMembers'>
+  },
 ): Promise<Id<'blockShares'>> {
   const campaignId = ctx.campaign._id
 
@@ -81,6 +86,7 @@ async function addBlockShare(
 
   return await ctx.db.insert('blockShares', {
     campaignId,
+    noteId,
     blockId,
     campaignMemberId,
     sessionId: currentSession?._id,
@@ -150,7 +156,7 @@ export async function shareBlockWithMemberHelper(
     shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
   })
 
-  await addBlockShare(ctx, { blockId, campaignMemberId })
+  await addBlockShare(ctx, { noteId, blockId, campaignMemberId })
 }
 
 export async function unshareBlockFromMemberHelper(

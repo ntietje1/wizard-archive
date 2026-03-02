@@ -26,6 +26,7 @@ export const enhanceFileWithContent = async (
 ): Promise<FileWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: file.parentId,
+    isTrashed: !!file.deletionTime,
   })
   return {
     ...file,

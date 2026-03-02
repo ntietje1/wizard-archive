@@ -48,6 +48,7 @@ export const enhanceGameMapWithContent = async (
 ): Promise<GameMapWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: gameMap.parentId,
+    isTrashed: !!gameMap.deletionTime,
   })
 
   const rawPins: Array<MapPin> = await ctx.db

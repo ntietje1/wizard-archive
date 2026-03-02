@@ -35,7 +35,7 @@ export interface FileFormValues {
 interface FileFormProps {
   fileId?: Id<'files'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
 }
@@ -122,7 +122,7 @@ export function FileForm({
     initialName: file.data?.name ?? '',
     isActive: !!fileId && !!file.data,
     campaignId,
-    parentId: file.data?.parentId ?? undefined,
+    parentId: file.data?.parentId ?? null,
     excludeId: fileId,
   })
 
@@ -192,7 +192,7 @@ export function FileForm({
             campaignId,
             name: finalName,
             storageId: finalStorageId,
-            parentId,
+            parentId: parentId ?? null,
           })
         await openParentFolders(newFileId)
         // Get the created file's slug for onSuccess callback

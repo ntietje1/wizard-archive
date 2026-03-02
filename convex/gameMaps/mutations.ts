@@ -15,7 +15,7 @@ export const createMap = campaignMutation({
     campaignId: v.id('campaigns'),
     name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
-    parentId: v.optional(v.id('folders')),
+    parentId: v.union(v.id('folders'), v.null()),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },

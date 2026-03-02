@@ -8,7 +8,7 @@ interface FileDialogProps {
   onClose: () => void
   fileId?: Id<'files'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
   onSuccess?: (fileSlug?: string) => void
 }
 

@@ -2,10 +2,10 @@ import { v } from 'convex/values'
 
 export const commonTableFields = {
   updatedTime: v.number(),
-  updatedBy: v.id('userProfiles'),
+  updatedBy: v.id('userProfiles'), // TODO: make updated fields optional
   createdBy: v.id('userProfiles'),
-
-  // TODO: add deleteStatus (deleted, archived, undefined)
+  deletionTime: v.optional(v.number()),
+  deletedBy: v.optional(v.id('userProfiles')),
 }
 
 export const convexValidatorFields = (tableName: string) => ({

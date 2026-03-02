@@ -13,6 +13,7 @@ import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
+import { assertNever } from '~/lib/utils'
 import { Label } from '~/components/shadcn/ui/label'
 import { Button } from '~/components/shadcn/ui/button'
 import { FileEdit } from '~/lib/icons'
@@ -49,7 +50,7 @@ function getTypeName(type: SidebarItemType): string {
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
-      return 'Item'
+      return assertNever(type)
   }
 }
 
@@ -66,7 +67,7 @@ function getDefaultIconName(type: SidebarItemType): string {
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
     default:
-      return 'FileText'
+      return assertNever(type)
   }
 }
 
@@ -128,7 +129,7 @@ export function SidebarItemEditDialog({
     initialName: item.name ?? '',
     isActive: isOpen,
     campaignId: item.campaignId,
-    parentId: item.parentId ?? undefined,
+    parentId: item.parentId,
     excludeId: item._id,
   })
 

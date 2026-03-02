@@ -19,7 +19,10 @@ export const enhanceNoteWithContent = async (
   { note }: { note: Note },
 ): Promise<NoteWithContent> => {
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
-    getSidebarItemAncestors(ctx, { initialParentId: note.parentId }),
+    getSidebarItemAncestors(ctx, {
+      initialParentId: note.parentId,
+      isTrashed: !!note.deletionTime,
+    }),
     getTopLevelBlocksByNote(ctx, { noteId: note._id }),
   ])
 

@@ -191,7 +191,7 @@ export function WikiLinkClickHandler({
 
         const validation = validateSidebarItemName({
           name: link.itemName,
-          siblings: parentItemsMap.get(undefined),
+          siblings: parentItemsMap.get(null),
         })
         if (!validation.valid) {
           toast.error(validation.error)
@@ -201,6 +201,7 @@ export function WikiLinkClickHandler({
           const result = await createNote({
             campaignId: campaignData._id,
             name: link.itemName,
+            parentId: null,
           })
           if (result) navigateToNote(result.slug)
         } catch (err) {

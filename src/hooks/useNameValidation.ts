@@ -10,7 +10,7 @@ interface UseNameValidationOptions {
   initialName: string
   isActive: boolean
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   excludeId?: SidebarItemId
 }
 

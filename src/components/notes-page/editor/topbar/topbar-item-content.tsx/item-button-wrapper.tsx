@@ -5,15 +5,17 @@ import type { ReactNode } from 'react'
 
 export const ItemButtonWrapper = ({
   children,
+  isTrashView,
 }: {
   children?: ReactNode | undefined
+  isTrashView?: boolean
 }) => {
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
       {children}
-      <ShareButton />
-      <ViewAsPlayerButton />
-      <ContextMenuButton />
+      {!isTrashView && <ShareButton />}
+      {!isTrashView && <ViewAsPlayerButton />}
+      <ContextMenuButton isTrashView={isTrashView} />
     </div>
   )
 }

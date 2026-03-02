@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
-import type { Id } from 'convex/_generated/dataModel'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
@@ -9,8 +8,6 @@ import {
 } from '~/hooks/useSidebarItems'
 import { useSortOptions } from '~/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-
-const EMPTY_ANCESTORS: Array<Id<'folders'>> = []
 
 export function BookmarkedItemsList() {
   const { data: filteredItems, status } = useFilteredSidebarItems()
@@ -37,7 +34,6 @@ export function BookmarkedItemsList() {
             <FlatSidebarItem
               key={item._id}
               item={item}
-              ancestorIds={EMPTY_ANCESTORS}
               isExpanded={false}
               renamingId={renamingId}
               setRenamingId={setRenamingId}

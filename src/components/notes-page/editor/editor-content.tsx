@@ -1,19 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
+import { TrashPageViewer } from '../viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
-import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-utils'
+import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-registry'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useFileDragDrop } from '~/hooks/useFileDragDrop'
+import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
@@ -26,6 +28,11 @@ export function EditorContent() {
         <LoadingSpinner size="lg" />
       </div>
     )
+  }
+
+  // Show trash page when ?trash=true and no specific item selected
+  if (editorSearch.trash === true && !item) {
+    return <TrashPageViewer />
   }
 
   if (!item) {
@@ -43,49 +50,33 @@ function EmptyEditorContent() {
   const { isDm } = useCampaign()
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
+  const { isDropTarget } = useDndDropTarget({
+    ref,
+    data: { type: EMPTY_EDITOR_DROP_TYPE },
+    highlightId: EMPTY_EDITOR_DROP_TYPE,
+  })
 
-    return dropTargetForElements({
-      element: el,
-      getData: () => ({
-        type: EMPTY_EDITOR_DROP_TYPE,
-      }),
-      onDragEnter: () => {
-        el.classList.add('bg-muted')
-      },
-      onDragLeave: () => {
-        el.classList.remove('bg-muted')
-      },
-      onDrop: () => {
-        el.classList.remove('bg-muted')
-      },
-    })
-  }, [])
+  useExternalDropTarget({
+    ref,
+    parentId: null,
+    canAcceptFiles: true,
+  })
 
-  const {
-    isDraggingFiles,
-    handleDragEnter,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = useFileDragDrop(undefined)
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
 
   return (
     <div
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
-        isDraggingFiles && 'bg-muted/50',
+        isDropTarget && !isFileDragTarget && 'bg-muted',
+        isFileDragTarget && 'bg-muted/50',
       )}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {isDm ? (
-        <CreateNewDashboard />
+        <CreateNewDashboard parentId={null} />
       ) : (
         <p className="text-muted-foreground">
           Select an item from the sidebar to view it.
@@ -139,7 +130,8 @@ function NotSharedContent() {
       const result = await createItem({
         type: requestedType,
         campaignId,
-        name: getDefaultName(requestedType),
+        parentId: null,
+        name: getDefaultName(requestedType, null),
       })
       openParentFolders(result.id)
       navigateToItem(result)
