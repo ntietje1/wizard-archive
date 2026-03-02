@@ -15,6 +15,7 @@ import type { Id } from 'convex/_generated/dataModel'
 
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
+export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -58,6 +59,12 @@ export interface EmptyEditorDropZoneData {
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
 
+export interface NoteEditorDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof NOTE_EDITOR_DROP_TYPE
+  noteId: Id<'notes'>
+}
+
 export interface TrashDropZoneData {
   [key: string | symbol]: unknown
   type: typeof TRASH_DROP_ZONE_TYPE
@@ -68,6 +75,7 @@ export type SidebarDropData =
   | SidebarRootDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData
+  | NoteEditorDropZoneData
   | TrashDropZoneData
 
 export type DragDropAction =
@@ -76,6 +84,7 @@ export type DragDropAction =
   | 'restore'
   | 'pin'
   | 'open'
+  | 'link'
   | null
 
 export type DropRejectionReason =
@@ -88,6 +97,7 @@ export type DropRejectionReason =
   | 'trashed_folder'
   | 'name_conflict'
   | 'dm_only'
+  | 'trashed_item'
 
 export type DropValidationResult =
   | { valid: true }
@@ -131,11 +141,7 @@ export interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
     ctx: DndContext,
   ) => string | null
   execute:
-    | ((
-        item: AnySidebarItem,
-        target: T,
-        ctx: DndContext,
-      ) => Promise<void>)
+    | ((item: AnySidebarItem, target: T, ctx: DndContext) => Promise<void>)
     | null
   canAcceptFiles: boolean | ((target: T) => boolean)
   getHighlightId: (target: T) => string | null
@@ -143,7 +149,9 @@ export interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
 }
 
 /** Creates a typed config — T is erased for the registry but enforced within methods. */
-function typedConfig<T extends SidebarDropData>(c: DropZoneConfig<T>): DropZoneConfig {
+function typedConfig<T extends SidebarDropData>(
+  c: DropZoneConfig<T>,
+): DropZoneConfig {
   return c as DropZoneConfig
 }
 
@@ -157,6 +165,8 @@ function getActionVerb(action: DragDropAction): string {
       return 'Pin to'
     case 'open':
       return 'Open in'
+    case 'link':
+      return 'Add link'
     case 'move':
     case 'trash':
     case null:
@@ -184,6 +194,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'An item with this name already exists here'
     case 'dm_only':
       return 'Only the DM can do this'
+    case 'trashed_item':
+      return 'Cannot link to a trashed item'
   }
 }
 
@@ -316,6 +328,20 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
   getTargetKey: (raw) => raw.sidebarItemId as string,
 })
 
+const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
+  action: () => 'link',
+  validate: (item) => {
+    if (item.deletionTime) return { valid: false, reason: 'trashed_item' }
+    return { valid: true }
+  },
+  wouldHaveEffect: () => true,
+  getLabel: () => 'Add link here',
+  execute: null, // handled by note editor component
+  canAcceptFiles: false,
+  getHighlightId: (t) => `note:${t.noteId}`,
+  getTargetKey: (raw) => `note:${raw.noteId}`,
+})
+
 const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
   action: () => 'move',
   validate: () => ({ valid: false, reason: 'not_folder' }),
@@ -332,6 +358,7 @@ const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
 type DropZoneType =
   | typeof TRASH_DROP_ZONE_TYPE
   | typeof MAP_DROP_ZONE_TYPE
+  | typeof NOTE_EDITOR_DROP_TYPE
   | typeof EMPTY_EDITOR_DROP_TYPE
   | typeof SIDEBAR_ROOT_TYPE
   | SidebarItemType
@@ -339,6 +366,7 @@ type DropZoneType =
 export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
   [TRASH_DROP_ZONE_TYPE]: trashConfig,
   [MAP_DROP_ZONE_TYPE]: mapConfig,
+  [NOTE_EDITOR_DROP_TYPE]: noteEditorConfig,
   [EMPTY_EDITOR_DROP_TYPE]: emptyEditorConfig,
   [SIDEBAR_ROOT_TYPE]: rootConfig,
   [SIDEBAR_ITEM_TYPES.folders]: folderConfig,
