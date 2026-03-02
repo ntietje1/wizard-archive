@@ -23,7 +23,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
-    parentId: undefined,
+    parentId: null,
     canAcceptFiles: canDropFilesOnTarget(rootTargetData),
   })
 

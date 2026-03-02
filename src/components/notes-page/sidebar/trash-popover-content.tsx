@@ -26,7 +26,7 @@ export function TrashPopoverContent({
   const { navigateToItem } = useEditorNavigation()
 
   const { data: allTrashedItems, parentItemsMap } = useTrashedSidebarItems()
-  const rootTrashedItems = parentItemsMap.get(undefined) ?? []
+  const rootTrashedItems = parentItemsMap.get(null) ?? []
 
   const { moveItem, permanentlyDeleteItem, emptyTrashBin } =
     useSidebarItemMutations()

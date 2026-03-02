@@ -20,7 +20,7 @@ interface EditableNameProps {
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   excludeId?: SidebarItemId
   disabled?: boolean
   showNotSharedTooltip?: boolean
@@ -216,7 +216,7 @@ export function EditableBreadcrumb({
         initialName={item.name}
         onRename={handleRename}
         campaignId={item.campaignId}
-        parentId={item.parentId ?? undefined}
+        parentId={item.parentId}
         excludeId={item._id}
         disabled={!canRename}
         showNotSharedTooltip={showNotSharedTooltip}

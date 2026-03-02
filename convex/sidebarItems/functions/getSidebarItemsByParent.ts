@@ -5,11 +5,10 @@ import type { CampaignQueryCtx } from '../../functions'
 
 export const getSidebarItemsByParent = async (
   ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'folders'> | null | undefined },
+  { parentId }: { parentId: Id<'folders'> | null },
 ): Promise<Array<AnySidebarItem>> => {
   const campaignId = ctx.campaign._id
 
-  const resolvedParentId = parentId ?? null
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db
       .query('folders')
@@ -17,7 +16,7 @@ export const getSidebarItemsByParent = async (
         q
           .eq('campaignId', campaignId)
           .eq('deletionTime', undefined)
-          .eq('parentId', resolvedParentId),
+          .eq('parentId', parentId),
       )
       .collect(),
     ctx.db
@@ -26,7 +25,7 @@ export const getSidebarItemsByParent = async (
         q
           .eq('campaignId', campaignId)
           .eq('deletionTime', undefined)
-          .eq('parentId', resolvedParentId),
+          .eq('parentId', parentId),
       )
       .collect(),
     ctx.db
@@ -35,7 +34,7 @@ export const getSidebarItemsByParent = async (
         q
           .eq('campaignId', campaignId)
           .eq('deletionTime', undefined)
-          .eq('parentId', resolvedParentId),
+          .eq('parentId', parentId),
       )
       .collect(),
     ctx.db
@@ -44,7 +43,7 @@ export const getSidebarItemsByParent = async (
         q
           .eq('campaignId', campaignId)
           .eq('deletionTime', undefined)
-          .eq('parentId', resolvedParentId),
+          .eq('parentId', parentId),
       )
       .collect(),
   ])

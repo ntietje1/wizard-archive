@@ -8,7 +8,7 @@ import { isFolder } from '~/lib/sidebar-item-utils'
  */
 export function permanentDeleteDescription(
   item: AnySidebarItem,
-  trashedParentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>,
+  trashedParentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>,
 ): string {
   const descendantCount = isFolder(item)
     ? getDescendantCount(item._id, trashedParentItemsMap)

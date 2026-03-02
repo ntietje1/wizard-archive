@@ -20,7 +20,7 @@ export interface AllSidebarItemsValue {
   data: Array<AnySidebarItem>
   status: UseQueryResult['status']
   itemsMap: Map<SidebarItemId, AnySidebarItem>
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
   getAncestorSidebarItems: (itemId: SidebarItemId) => Array<Folder>
 }
 
@@ -57,13 +57,13 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
   }, [data])
 
   const sidebarItemParentIdMap = useMemo(() => {
-    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
       // If the item's parent folder isn't in our permitted set, show at root
       const effectiveParentId =
         item.parentId && !sidebarItemIdMap.has(item.parentId)
-          ? undefined
-          : (item.parentId ?? undefined)
+          ? null
+          : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {
@@ -124,7 +124,7 @@ export interface TrashedSidebarItemsValue {
   data: Array<AnySidebarItem>
   status: UseQueryResult['status']
   itemsMap: Map<SidebarItemId, AnySidebarItem>
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
 }
 
 export const TrashedSidebarItemsContext =
@@ -158,12 +158,12 @@ export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
   }, [data])
 
   const parentItemsMap = useMemo(() => {
-    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
       const effectiveParentId =
         item.parentId && !itemsMap.has(item.parentId)
-          ? undefined
-          : (item.parentId ?? undefined)
+          ? null
+          : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {
@@ -194,7 +194,7 @@ export const useTrashedSidebarItems = (): TrashedSidebarItemsValue => {
  */
 export function getDescendantCount(
   folderId: Id<'folders'>,
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>,
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>,
   visited: Set<Id<'folders'>> = new Set(),
 ): number {
   if (visited.has(folderId)) return 0
@@ -263,12 +263,12 @@ export const useFilteredSidebarItems = () => {
   }, [filteredData])
 
   const filteredParentItemsMap = useMemo(() => {
-    const map = new Map<Id<'folders'> | undefined, Array<AnySidebarItem>>()
+    const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     filteredData.forEach((item) => {
       const effectiveParentId =
         item.parentId && !filteredItemsMap.has(item.parentId)
-          ? undefined
-          : (item.parentId ?? undefined)
+          ? null
+          : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {

@@ -222,7 +222,7 @@ export function wouldDropHaveEffect(
     case SIDEBAR_ROOT_TYPE:
       if (draggedItem.deletionTime) return true
       return draggedItem.parentId != null
-    // Only non-trashed items can be trashed (trashed items are rejected by validateDrop)
+    // Dropping an already-trashed item on trash is a no-op
     case TRASH_DROP_ZONE_TYPE:
       return !draggedItem.deletionTime
     case SIDEBAR_ITEM_TYPES.notes:

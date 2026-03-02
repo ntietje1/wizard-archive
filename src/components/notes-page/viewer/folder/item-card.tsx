@@ -11,7 +11,7 @@ export interface ItemCardProps<T extends AnySidebarItem> {
   item: T
   onClick?: () => void
   isLoading?: boolean
-  parentId?: Id<'folders'>
+  parentId?: Id<'folders'> | null
 }
 
 export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {

@@ -611,7 +611,6 @@ export function MapViewer({
         const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== mapRef.current._id) return
-
         const itemId = (source.data as SidebarDragData).sidebarItemId
 
         if (mapRef.current.pins.some((pin) => pin.itemId === itemId)) {

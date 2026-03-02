@@ -55,7 +55,7 @@ function CreateNewButton({
 }
 
 interface CreateNewDashboardProps {
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
   folderPath?: string
 }
 

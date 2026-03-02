@@ -72,7 +72,7 @@ function EmptyEditorContent() {
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
-    parentId: undefined,
+    parentId: null,
     canAcceptFiles: true,
   })
 
@@ -85,7 +85,7 @@ function EmptyEditorContent() {
       )}
     >
       {isDm ? (
-        <CreateNewDashboard />
+        <CreateNewDashboard parentId={null} />
       ) : (
         <p className="text-muted-foreground">
           Select an item from the sidebar to view it.
@@ -139,7 +139,8 @@ function NotSharedContent() {
       const result = await createItem({
         type: requestedType,
         campaignId,
-        name: getDefaultName(requestedType),
+        parentId: null,
+        name: getDefaultName(requestedType, null),
       })
       openParentFolders(result.id)
       navigateToItem(result)

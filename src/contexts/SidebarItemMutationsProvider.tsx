@@ -86,7 +86,7 @@ export function SidebarItemMutationsProvider({
   )
 
   const getSiblings = useCallback(
-    (parentId: Id<'folders'> | undefined) => {
+    (parentId: Id<'folders'> | null) => {
       return parentItemsMap.get(parentId) ?? []
     },
     [parentItemsMap],
@@ -95,7 +95,7 @@ export function SidebarItemMutationsProvider({
   const validateName = useCallback(
     (
       name: string,
-      parentId: Id<'folders'> | undefined,
+      parentId: Id<'folders'> | null,
       excludeId?: SidebarItemId,
     ) => {
       const trimmed = name.trim()
@@ -107,7 +107,7 @@ export function SidebarItemMutationsProvider({
   )
 
   const canMoveToParent = useCallback(
-    (itemId: SidebarItemId, newParentId: Id<'folders'> | undefined) => {
+    (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => {
       return validateNoCircularParent(itemId, newParentId, (id) =>
         itemsMap.get(id),
       ).valid
@@ -116,7 +116,7 @@ export function SidebarItemMutationsProvider({
   )
 
   const getDefaultName = useCallback(
-    (type: SidebarItemType, parentId?: Id<'folders'>) => {
+    (type: SidebarItemType, parentId: Id<'folders'> | null) => {
       return findUniqueDefaultName(type, getSiblings(parentId))
     },
     [getSiblings],
@@ -127,7 +127,7 @@ export function SidebarItemMutationsProvider({
   const createItem = useCallback(
     async (args: CreateItemArgs): Promise<CreateItemResult> => {
       const trimmedName = args.name.trim()
-      const nameResult = validateName(trimmedName, args.parentId ?? undefined)
+      const nameResult = validateName(trimmedName, args.parentId)
       if (!nameResult.valid) throw new Error(nameResult.error)
 
       switch (args.type) {
@@ -192,7 +192,7 @@ export function SidebarItemMutationsProvider({
       const trimmedName = newName.trim()
       const result = validateName(
         trimmedName,
-        item.parentId ?? undefined,
+        item.parentId,
         item._id,
       )
       if (!result.valid) throw new Error(result.error)
@@ -235,7 +235,7 @@ export function SidebarItemMutationsProvider({
   const moveItem = useCallback(
     (
       item: AnySidebarItem,
-      options: { parentId?: Id<'folders'>; deleted?: boolean },
+      options: { parentId?: Id<'folders'> | null; deleted?: boolean },
     ) => {
       const { parentId, deleted } = options
       const isTrashing = deleted === true && !item.deletionTime

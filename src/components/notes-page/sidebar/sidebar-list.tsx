@@ -13,7 +13,7 @@ export function SidebarList() {
   const { sortOptions } = useSortOptions()
 
   const rootItems: Array<AnySidebarItem> = useMemo(() => {
-    return sortItemsByOptions(sortOptions, parentItemsMap.get(undefined)) ?? []
+    return sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
   }, [parentItemsMap, sortOptions])
 
   if (status !== 'success') {

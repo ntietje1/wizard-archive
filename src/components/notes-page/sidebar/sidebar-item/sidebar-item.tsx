@@ -23,7 +23,7 @@ import { useSortOptions } from '~/hooks/useSortOptions'
 
 interface SidebarItemProps {
   item: AnySidebarItem
-  parentItemsMap: Map<Id<'folders'> | undefined, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
 }
 
 function SidebarItemComponent({
@@ -81,7 +81,7 @@ function SidebarItemComponent({
           onCancelRename={handleCancelRename}
           showChevron={isFolder}
           campaignId={item.campaignId}
-          parentId={item.parentId ?? undefined}
+          parentId={item.parentId}
           excludeId={item._id}
           shareButton={<SidebarShareButton item={item} />}
         />

@@ -25,7 +25,7 @@ export const getAllSidebarItems = campaignQuery({
 export const getSidebarItemsByParent = campaignQuery({
   args: {
     campaignId: v.id('campaigns'),
-    parentId: v.optional(v.id('folders')),
+    parentId: v.union(v.id('folders'), v.null()),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {

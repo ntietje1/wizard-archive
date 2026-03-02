@@ -21,7 +21,7 @@ export function TrashPageViewer() {
     status,
     itemsMap: trashedItemsMap,
   } = useTrashedSidebarItems()
-  const rootTrashedItems = parentItemsMap.get(undefined) ?? []
+  const rootTrashedItems = parentItemsMap.get(null) ?? []
 
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === TRASH_DROP_ZONE_TYPE,

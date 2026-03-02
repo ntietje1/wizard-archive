@@ -26,7 +26,7 @@ import { getErrorMessage, uploadFile } from '~/lib/file-upload'
 
 interface DropOptions {
   campaignId: Id<'campaigns'>
-  parentId?: Id<'folders'>
+  parentId: Id<'folders'> | null
 }
 
 export interface UploadProgress {
@@ -64,7 +64,7 @@ export function useFileDropHandler() {
     async (
       file: File,
       targetCampaignId: Id<'campaigns'>,
-      parentId?: Id<'folders'>,
+      parentId: Id<'folders'> | null,
       silent = false,
     ): Promise<boolean> => {
       const fileName = file.name
@@ -192,7 +192,7 @@ export function useFileDropHandler() {
     async (
       folder: FolderStructure,
       targetCampaignId: Id<'campaigns'>,
-      parentId: Id<'folders'> | undefined,
+      parentId: Id<'folders'> | null,
       progress: UploadProgress,
     ): Promise<Id<'folders'>> => {
       const result = await createItem({
@@ -266,7 +266,7 @@ export function useFileDropHandler() {
         await uploadSingleFile(
           files[0].file,
           targetCampaignId,
-          options?.parentId,
+          options?.parentId ?? null,
           false,
         )
         return
@@ -313,7 +313,7 @@ export function useFileDropHandler() {
             const success = await uploadSingleFile(
               file,
               targetCampaignId,
-              options?.parentId,
+              options?.parentId ?? null,
               true,
             )
             if (!success && validation.success) {
@@ -344,7 +344,7 @@ export function useFileDropHandler() {
           lastFolderId = await uploadFolderRecursive(
             folder,
             targetCampaignId,
-            options?.parentId,
+            options?.parentId ?? null,
             progress,
           )
         }

@@ -138,8 +138,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -168,8 +168,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.folders,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -198,8 +198,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -228,8 +228,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           const result = await createItem({
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
-            parentId: ctx.item?._id,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id),
+            parentId: ctx.item?._id ?? null,
+            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
           })
           openParentFolders(result.id)
           navigateToItem(result)

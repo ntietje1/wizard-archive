@@ -30,7 +30,7 @@ async function collectItemsRecursively(
   {
     parentId,
     currentPath,
-  }: { parentId: Id<'folders'> | undefined; currentPath: string },
+  }: { parentId: Id<'folders'> | null; currentPath: string },
 ): Promise<Array<DownloadItem>> {
   const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
@@ -141,7 +141,7 @@ export async function getRootContentsForDownload(
   ctx: CampaignQueryCtx,
 ): Promise<{ items: Array<DownloadItem> }> {
   const items = await collectItemsRecursively(ctx, {
-    parentId: undefined,
+    parentId: null,
     currentPath: '',
   })
   return { items }

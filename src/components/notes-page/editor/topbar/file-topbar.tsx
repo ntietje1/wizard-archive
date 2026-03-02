@@ -27,7 +27,7 @@ export function FileTopbar() {
   const isTrashView = editorSearch.trash === true && !item
 
   const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
-  const rootTrashedItems = trashedParentItemsMap.get(undefined) ?? []
+  const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
 
   const canRename =
     !!item &&
@@ -82,6 +82,7 @@ export function FileTopbar() {
               defaultName="Untitled Item"
               onChange={setPendingItemName}
               campaignId={campaignId}
+              parentId={null}
             />
           )}
         </div>

@@ -327,7 +327,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         const targetId =
           targetData.type === SIDEBAR_ITEM_TYPES.folders
             ? targetData._id
-            : undefined
+            : null
 
         // Compute move options from action
         const deleted =
@@ -381,7 +381,7 @@ export function SidebarDndWrapper({ children }: { children: React.ReactNode }) {
         const parentId =
           typeof rawParentId === 'string'
             ? (rawParentId as Id<'folders'>)
-            : undefined
+            : null
         try {
           const dropResult = await processDataTransferItems(source.items)
           if (

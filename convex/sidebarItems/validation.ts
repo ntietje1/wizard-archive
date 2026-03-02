@@ -33,7 +33,7 @@ export async function checkUniqueNameUnderParent(
     name,
     excludeId,
   }: {
-    parentId: Id<'folders'> | null | undefined
+    parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
   },
@@ -53,7 +53,7 @@ export async function validateNoCircularParent(
     newParentId,
   }: {
     itemId: SidebarItemId
-    newParentId: Id<'folders'> | null | undefined
+    newParentId: Id<'folders'> | null
   },
 ): Promise<{ valid: boolean; error?: string }> {
   if (!newParentId) {
@@ -102,7 +102,7 @@ export async function validateSidebarItemName(
     name,
     excludeId,
   }: {
-    parentId: Id<'folders'> | null | undefined
+    parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
   },
@@ -133,7 +133,7 @@ export async function validateSidebarParentChange(
     newParentId,
   }: {
     item: AnySidebarItem
-    newParentId: Id<'folders'> | null | undefined
+    newParentId: Id<'folders'> | null
   },
 ): Promise<void> {
   const result = await validateNoCircularParent(ctx, {
@@ -162,7 +162,7 @@ export async function validateSidebarParentChange(
  */
 export async function validateSidebarCreateParent(
   ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'folders'> | null | undefined },
+  { parentId }: { parentId: Id<'folders'> | null },
 ): Promise<void> {
   if (parentId) {
     const parentItem = await getSidebarItemById(ctx, { id: parentId })
@@ -192,7 +192,7 @@ export async function validateSidebarMove(
     newParentId,
   }: {
     item: AnySidebarItem
-    newParentId: Id<'folders'> | null | undefined
+    newParentId: Id<'folders'> | null
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })

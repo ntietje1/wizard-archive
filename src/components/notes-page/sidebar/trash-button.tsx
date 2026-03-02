@@ -20,7 +20,7 @@ export function TrashButton() {
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   const { parentItemsMap, itemsMap: trashedItemsMap } = useTrashedSidebarItems()
-  const rootTrashedItems = parentItemsMap.get(undefined) ?? []
+  const rootTrashedItems = parentItemsMap.get(null) ?? []
   const trashCount = rootTrashedItems.length
 
   const isDropTarget = useSidebarUIStore(

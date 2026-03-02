@@ -32,7 +32,7 @@ export const moveSidebarItem = campaignMutation({
   args: {
     campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
-    parentId: v.optional(v.id('folders')),
+    parentId: v.optional(v.union(v.id('folders'), v.null())),
     deleted: v.optional(v.boolean()),
   },
   returns: sidebarItemIdValidator,

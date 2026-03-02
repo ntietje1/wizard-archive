@@ -106,27 +106,23 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        <ContextMenuItem
-          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
-        >
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}>
           <FilePlus className="h-4 w-4 mr-2" />
           New Note
         </ContextMenuItem>
         <ContextMenuItem
-          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
+          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
         >
           <FolderPlus className="h-4 w-4 mr-2" />
           New Folder
         </ContextMenuItem>
         <ContextMenuItem
-          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
+          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
         >
           <MapPin className="h-4 w-4 mr-2" />
           New Map
         </ContextMenuItem>
-        <ContextMenuItem
-          onSelect={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
-        >
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}>
           <File className="h-4 w-4 mr-2" />
           New File
         </ContextMenuItem>

@@ -54,7 +54,7 @@ export async function moveSidebarItem(
     deleted,
   }: {
     itemId: SidebarItemId
-    parentId?: Id<'folders'>
+    parentId?: Id<'folders'> | null
     deleted?: boolean
   },
 ): Promise<SidebarItemId> {

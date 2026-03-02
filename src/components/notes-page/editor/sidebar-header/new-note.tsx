@@ -22,7 +22,8 @@ export function NewNoteButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
-        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes),
+        parentId: null,
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
       openParentFolders(result.id)
       navigateToItem(result)
