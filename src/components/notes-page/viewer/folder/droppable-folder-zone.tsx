@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
+import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
@@ -30,7 +31,7 @@ export function DroppableFolderZone({
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: folder._id,
-    canAcceptFiles: !folder.deletionTime,
+    canAcceptFiles: canDropFilesOnTarget(folder),
   })
 
   const isTrashAction = dragDropAction === 'trash'

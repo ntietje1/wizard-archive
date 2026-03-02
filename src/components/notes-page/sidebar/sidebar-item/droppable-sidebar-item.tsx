@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'

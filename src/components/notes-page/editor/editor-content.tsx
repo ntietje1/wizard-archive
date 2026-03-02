@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 import { TrashPageViewer } from '../viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
-import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-utils'
+import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-registry'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
@@ -49,26 +49,11 @@ function EmptyEditorContent() {
   const { isDm } = useCampaign()
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    return dropTargetForElements({
-      element: el,
-      getData: () => ({
-        type: EMPTY_EDITOR_DROP_TYPE,
-      }),
-      onDragEnter: () => {
-        el.classList.add('bg-muted')
-      },
-      onDragLeave: () => {
-        el.classList.remove('bg-muted')
-      },
-      onDrop: () => {
-        el.classList.remove('bg-muted')
-      },
-    })
-  }, [])
+  const { isDropTarget } = useDndDropTarget({
+    ref,
+    data: { type: EMPTY_EDITOR_DROP_TYPE },
+    highlightId: EMPTY_EDITOR_DROP_TYPE,
+  })
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
@@ -81,6 +66,7 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
+        isDropTarget && !isFileDropTarget && 'bg-muted',
         isFileDropTarget && 'bg-muted/50',
       )}
     >

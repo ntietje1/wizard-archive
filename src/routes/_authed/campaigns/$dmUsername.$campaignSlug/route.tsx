@@ -10,7 +10,7 @@ import { SidebarLayout } from '~/components/notes-page/sidebar/sidebar-layout'
 import { SidebarLayoutProvider } from '~/contexts/SidebarLayoutContext'
 import { SessionProvider } from '~/contexts/SessionContext'
 import { EditorNavigationProvider } from '~/contexts/EditorNavigationProvider'
-import { SidebarDndWrapper } from '~/components/notes-page/sidebar/SidebarDndWrapper'
+import { DndProvider } from '~/contexts/DndProvider'
 import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
 
 export const Route = createFileRoute(
@@ -42,7 +42,7 @@ function RouteComponent() {
           <AllSidebarItemsProvider>
             <SidebarItemMutationsProvider>
               <EditorNavigationProvider>
-                <SidebarDndWrapper>
+                <DndProvider>
                   <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex flex-1 min-h-0">
                       <SidebarLayoutProvider>
@@ -54,7 +54,7 @@ function RouteComponent() {
                     </div>
                     <ViewAsBanner />
                   </div>
-                </SidebarDndWrapper>
+                </DndProvider>
               </EditorNavigationProvider>
             </SidebarItemMutationsProvider>
           </AllSidebarItemsProvider>

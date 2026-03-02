@@ -27,11 +27,8 @@ export function useExternalDropTarget({
     // so it wins and shows the copy/accept cursor over this element.
     const handleDragOver = (e: DragEvent) => {
       if (!e.dataTransfer) return
-      for (const type of e.dataTransfer.types) {
-        if (type === 'Files') {
-          e.dataTransfer.dropEffect = 'copy'
-          return
-        }
+      if (e.dataTransfer.types.includes('Files')) {
+        e.dataTransfer.dropEffect = 'copy'
       }
     }
     el.addEventListener('dragover', handleDragOver)

@@ -1,42 +1,36 @@
 import { useRef, useState } from 'react'
 import { TrashPopoverContent } from './trash-popover-content'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
-import { useDroppable } from '~/hooks/useDroppable'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
-import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
+import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
 import { Trash2 } from '~/lib/icons'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 export function TrashButton() {
   const [open, setOpen] = useState(false)
   const { navigateToTrash } = useEditorNavigation()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const { parentItemsMap, itemsMap: trashedItemsMap } = useTrashedSidebarItems()
+  const { parentItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const trashCount = rootTrashedItems.length
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === TRASH_DROP_ZONE_TYPE,
-  )
+  const { isDropTarget } = useDndDropTarget({
+    ref: buttonRef,
+    data: { type: TRASH_DROP_ZONE_TYPE },
+    highlightId: TRASH_DROP_ZONE_TYPE,
+  })
 
   const handleOpenFullPage = () => {
     setOpen(false)
     navigateToTrash()
   }
-
-  useDroppable<{ type: typeof TRASH_DROP_ZONE_TYPE }, SidebarDragData>({
-    ref: buttonRef,
-    data: { type: TRASH_DROP_ZONE_TYPE },
-    canDrop: (sourceData) => !trashedItemsMap.has(sourceData.sidebarItemId),
-  })
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

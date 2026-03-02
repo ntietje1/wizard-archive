@@ -1,14 +1,13 @@
 import { useRef } from 'react'
 import { ItemCard } from '../folder/item-card'
-import type { SidebarDragData } from '~/lib/dnd-utils'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { TrashBanner } from '~/components/notes-page/editor/deleted-item-banner'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
-import { useDroppable } from '~/hooks/useDroppable'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
-import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-utils'
+import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { Trash2 } from '~/lib/icons'
@@ -16,24 +15,16 @@ import { Trash2 } from '~/lib/icons'
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
-  const {
-    parentItemsMap,
-    status,
-    itemsMap: trashedItemsMap,
-  } = useTrashedSidebarItems()
+  const { parentItemsMap, status } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === TRASH_DROP_ZONE_TYPE,
-  )
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
-  const isTrashDrag = isDropTarget && dragDropAction === 'trash'
-
-  useDroppable<{ type: typeof TRASH_DROP_ZONE_TYPE }, SidebarDragData>({
+  const { isDropTarget } = useDndDropTarget({
     ref: dropRef,
     data: { type: TRASH_DROP_ZONE_TYPE },
-    canDrop: (sourceData) => !trashedItemsMap.has(sourceData.sidebarItemId),
+    highlightId: TRASH_DROP_ZONE_TYPE,
   })
+  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isTrashDrag = isDropTarget && dragDropAction === 'trash'
 
   return (
     <EditorContextMenu
@@ -50,6 +41,10 @@ export function TrashPageViewer() {
         {status === 'pending' ? (
           <div className="flex-1 min-h-0 flex items-center justify-center">
             <LoadingSpinner size="lg" />
+          </div>
+        ) : status === 'error' ? (
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <p className="text-sm">Failed to load trash</p>
           </div>
         ) : rootTrashedItems.length === 0 ? (
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">

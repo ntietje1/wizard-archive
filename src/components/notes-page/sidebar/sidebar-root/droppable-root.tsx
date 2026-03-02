@@ -1,10 +1,9 @@
 import { useRef } from 'react'
 import { SIDEBAR_ROOT_TYPE } from 'convex/sidebarItems/types/baseTypes'
-import { canDropFilesOnTarget } from '~/lib/dnd-utils'
+import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
-import { useDroppable } from '~/hooks/useDroppable'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 interface DroppableRootProps {
   children: React.ReactNode
@@ -16,10 +15,11 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   const rootTargetData = { type: SIDEBAR_ROOT_TYPE } as const
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === SIDEBAR_ROOT_TYPE,
-  )
-  useDroppable({ ref, data: rootTargetData })
+  const { isDropTarget } = useDndDropTarget({
+    ref,
+    data: rootTargetData,
+    highlightId: SIDEBAR_ROOT_TYPE,
+  })
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
@@ -32,7 +32,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
       ref={ref}
       className={cn(
         className,
-        isDropTarget && 'bg-muted',
+        isDropTarget && !isFileDropTarget && 'bg-muted',
         isFileDropTarget && 'bg-muted/50',
       )}
     >

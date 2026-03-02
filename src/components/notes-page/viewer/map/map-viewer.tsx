@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { useMutation } from '@tanstack/react-query'
-import {
-  dropTargetForElements,
-  monitorForElements,
-} from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
@@ -19,12 +16,12 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/components/context-menu/components/EditorContextMenu'
-import type { DropValidationResult, SidebarDragData } from '~/lib/dnd-utils'
 import {
   MAP_DROP_ZONE_TYPE,
+  getDragItemId,
   rejectionReasonMessage,
-  validateDrop,
-} from '~/lib/dnd-utils'
+} from '~/lib/dnd-registry'
+import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
@@ -34,6 +31,7 @@ import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
 import { Button } from '~/components/shadcn/ui/button'
 import { getSidebarItemIcon } from '~/lib/category-icons'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
@@ -290,10 +288,26 @@ export function MapViewer({
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap: allItemsMap } = useAllSidebarItems()
-  const allItemsMapRef = useRef(allItemsMap)
-  allItemsMapRef.current = allItemsMap
-  const [mapDragValidation, setMapDragValidation] =
-    useState<DropValidationResult | null>(null)
+
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapDropData = useMemo(
+    () => ({
+      type: MAP_DROP_ZONE_TYPE,
+      mapId: map._id,
+      mapName: map.name,
+      pinnedItemIds: map.pins.map((p) => p.itemId),
+    }),
+    [map._id, map.name, map.pins],
+  )
+  const { isDropTarget: isMapDropTarget } = useDndDropTarget({
+    ref: mapContainerRef,
+    data: mapDropData,
+    highlightId: `map:${map._id}`,
+  })
+  const mapDragValidation = useSidebarUIStore((s) =>
+    isMapDropTarget ? s.dragValidation : null,
+  )
+
   const permOpts = useMemo(
     () => ({ isDm, viewAsPlayerId, allItemsMap }),
     [isDm, viewAsPlayerId, allItemsMap],
@@ -398,44 +412,6 @@ export function MapViewer({
     },
     [setSavedTransform],
   )
-  const dropCleanupRef = useRef<(() => void) | null>(null)
-
-  const mapContainerRef = useCallback((el: HTMLDivElement | null) => {
-    dropCleanupRef.current?.()
-    dropCleanupRef.current = null
-
-    if (!el) return
-
-    dropCleanupRef.current = dropTargetForElements({
-      element: el,
-      getData: () => ({
-        type: MAP_DROP_ZONE_TYPE,
-        mapId: mapRef.current._id,
-        mapName: mapRef.current.name,
-        pinnedItemIds: mapRef.current.pins.map((pin) => pin.itemId),
-      }),
-      onDragEnter: ({ source }) => {
-        const sourceData = source.data as SidebarDragData
-        const draggedItem =
-          allItemsMapRef.current.get(sourceData.sidebarItemId) ?? null
-        const validation = validateDrop(draggedItem, {
-          type: MAP_DROP_ZONE_TYPE,
-          mapId: mapRef.current._id,
-          mapName: mapRef.current.name,
-          pinnedItemIds: mapRef.current.pins.map((pin) => pin.itemId),
-        })
-        setMapDragValidation(validation)
-      },
-      onDragLeave: () => setMapDragValidation(null),
-      onDrop: () => setMapDragValidation(null),
-    })
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      dropCleanupRef.current?.()
-    }
-  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -611,7 +587,8 @@ export function MapViewer({
         const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== mapRef.current._id) return
-        const itemId = (source.data as SidebarDragData).sidebarItemId
+        const itemId = getDragItemId(source.data)
+        if (!itemId) return
 
         if (mapRef.current.pins.some((pin) => pin.itemId === itemId)) {
           toast.error('Item is already pinned on this map')

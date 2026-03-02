@@ -6,10 +6,10 @@ import type {
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { DragDropAction } from '~/lib/dnd-utils'
+import type { DragDropAction, DropValidationResult } from '~/lib/dnd-registry'
 import type { Id } from 'convex/_generated/dataModel'
 
-export type { DragDropAction } from '~/lib/dnd-utils'
+export type { DragDropAction } from '~/lib/dnd-registry'
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -25,6 +25,7 @@ interface SidebarUIState {
   renamingId: SidebarItemId | null
   sidebarDragTargetId: string | null
   dragDropAction: DragDropAction
+  dragValidation: DropValidationResult | null
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
   pendingItemName: string
@@ -46,6 +47,7 @@ interface SidebarUIActions {
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setSidebarDragTargetId: (id: string | null) => void
   setDragDropAction: (action: DragDropAction) => void
+  setDragValidation: (validation: DropValidationResult | null) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
@@ -89,6 +91,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       renamingId: null,
       sidebarDragTargetId: null,
       dragDropAction: null,
+      dragValidation: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
       pendingItemName: '',
@@ -155,6 +158,11 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         set((state) => {
           if (state.dragDropAction === action) return state
           return { dragDropAction: action }
+        }),
+      setDragValidation: (validation) =>
+        set((state) => {
+          if (state.dragValidation === validation) return state
+          return { dragValidation: validation }
         }),
       setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
       setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),

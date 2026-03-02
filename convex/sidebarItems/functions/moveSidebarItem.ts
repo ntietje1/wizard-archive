@@ -158,7 +158,7 @@ export async function moveSidebarItem(
     await validateSidebarMove(ctx, { item: currentItem, newParentId: parentId })
 
     await ctx.db.patch(itemId, {
-      parentId: parentId ?? null,
+      parentId: parentId,
       updatedTime: Date.now(),
       updatedBy: ctx.user.profile._id,
     })
