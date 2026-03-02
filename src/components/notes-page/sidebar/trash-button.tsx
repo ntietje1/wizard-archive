@@ -5,7 +5,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-registry'
@@ -14,7 +13,6 @@ import { Trash2 } from '~/lib/icons'
 
 export function TrashButton() {
   const [open, setOpen] = useState(false)
-  const { navigateToTrash } = useEditorNavigation()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   const { parentItemsMap } = useTrashedSidebarItems()
@@ -26,11 +24,6 @@ export function TrashButton() {
     data: { type: TRASH_DROP_ZONE_TYPE },
     highlightId: TRASH_DROP_ZONE_TYPE,
   })
-
-  const handleOpenFullPage = () => {
-    setOpen(false)
-    navigateToTrash()
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,7 +54,6 @@ export function TrashButton() {
       >
         <TrashPopoverContent
           onClose={() => setOpen(false)}
-          onOpenFullPage={handleOpenFullPage}
         />
       </PopoverContent>
     </Popover>

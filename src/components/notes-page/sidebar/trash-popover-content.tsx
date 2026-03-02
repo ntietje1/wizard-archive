@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { Button } from '~/components/shadcn/ui/button'
+import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
@@ -11,18 +12,17 @@ import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useDraggable } from '~/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { permanentDeleteDescription } from '~/lib/trash-utils'
+import { EDITOR_ROUTE } from '~/hooks/useEditorLinkProps'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from '~/lib/icons'
 
 interface TrashPopoverContentProps {
   onClose: () => void
-  onOpenFullPage: () => void
 }
 
 export function TrashPopoverContent({
   onClose,
-  onOpenFullPage,
 }: TrashPopoverContentProps) {
-  const { campaignId, isDm } = useCampaign()
+  const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
 
   const { data: allTrashedItems, parentItemsMap } = useTrashedSidebarItems()
@@ -93,16 +93,21 @@ export function TrashPopoverContent({
 
   return (
     <div className="relative flex flex-col w-72">
-      {/* Open full page button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-0 right-0 h-6 w-6 text-muted-foreground"
-        onClick={onOpenFullPage}
+      {/* Open full page link */}
+      <Link
+        to={EDITOR_ROUTE}
+        params={{ dmUsername, campaignSlug }}
+        search={{ trash: true }}
+        className={buttonVariants({
+          variant: 'ghost',
+          size: 'icon',
+          className: 'absolute top-0 right-0 h-6 w-6 text-muted-foreground',
+        })}
+        onClick={onClose}
         title="Open full page"
       >
         <SquareArrowOutUpRight className="h-3.5 w-3.5" />
-      </Button>
+      </Link>
 
       {/* Header */}
       <div className="px-2 pb-1.5">

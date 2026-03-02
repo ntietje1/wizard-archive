@@ -1,4 +1,5 @@
 import { memo, useCallback, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
@@ -9,17 +10,22 @@ import {
 } from '~/components/shadcn/ui/resizable'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useSidebarLayout'
-import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
 import { useCampaign } from '~/hooks/useCampaign'
-import { Button } from '~/components/shadcn/ui/button'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { EDITOR_ROUTE } from '~/hooks/useEditorLinkProps'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 import { Plus } from '~/lib/icons'
 
 const SIDEBAR_MIN_WIDTH = 160
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
-  const { clearEditorContent } = useEditorNavigationContext()
-  const { isDm } = useCampaign()
+  const { isDm, dmUsername, campaignSlug } = useCampaign()
+  const { setLastSelectedItem } = useLastEditorItem()
+
+  const handleNewClick = useCallback(() => {
+    setLastSelectedItem(null)
+  }, [setLastSelectedItem])
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -42,14 +48,19 @@ const SidebarContent = memo(function SidebarContent() {
           </ResizablePanel>
           {isDm ? (
             <div className="shrink-0 p-2 border-t border-b">
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={clearEditorContent}
+              <Link
+                to={EDITOR_ROUTE}
+                params={{ dmUsername, campaignSlug }}
+                search={{}}
+                className={buttonVariants({
+                  variant: 'outline',
+                  className: 'w-full gap-2',
+                })}
+                onClick={handleNewClick}
               >
                 <Plus className="h-4 w-4" />
                 New
-              </Button>
+              </Link>
             </div>
           ) : (
             <div className="shrink-0 border-t" />
