@@ -1,17 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { DropValidationResult, SidebarDropData } from '~/lib/dnd-registry'
+import type { SidebarDropData } from '~/lib/dnd-registry'
 
 export interface DndValue {
   resolveItem: (id: SidebarItemId) => AnySidebarItem | null
   resolveDropTarget: (
     rawData: Record<string, unknown>,
   ) => SidebarDropData | null
-  validateDrop: (
-    item: AnySidebarItem | null,
-    target: SidebarDropData | null,
-  ) => DropValidationResult
 }
 
 export const DndProviderContext = createContext<DndValue | null>(null)

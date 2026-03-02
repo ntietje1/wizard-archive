@@ -8,24 +8,16 @@ import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import type {
-  DndContext,
-  DropValidationResult,
-  SidebarDropData,
-} from '~/lib/dnd-registry'
+import type { DndContext, DropOutcome } from '~/lib/dnd-registry'
 import type { DropResult } from '~/lib/folder-reader'
 import type { DndValue } from '~/hooks/useDnd'
 import {
-  DROP_ZONE_REGISTRY,
-  getDragDropAction,
   getDragItemId,
-  getDropLabel,
   getDropTargetKey,
   getHighlightId,
   rejectionReasonMessage,
+  resolveDropOutcome,
   resolveDropTarget,
-  validateDrop,
-  wouldDropHaveEffect,
 } from '~/lib/dnd-registry'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorNavigationContext } from '~/hooks/useEditorNavigationContext'
@@ -57,49 +49,17 @@ interface InternalCtx {
 
 // ─── Overlay ─────────────────────────────────────────────────────────
 
-interface DragOverlayProps {
-  overlayRef: React.RefObject<HTMLDivElement | null>
-  dragState: {
-    draggedItem: AnySidebarItem
-    dropTarget: SidebarDropData | null
-  } | null
-  dndContext: DndContext
-}
-
 function DragOverlayContent({
   dragState,
-  dndContext,
-}: Omit<DragOverlayProps, 'overlayRef'>) {
+}: {
+  dragState: {
+    draggedItem: AnySidebarItem
+    outcome: DropOutcome | null
+  } | null
+}) {
   if (!dragState) return null
 
-  const { draggedItem, dropTarget } = dragState
-
-  if (!dropTarget) {
-    const DraggedIcon = getSidebarItemIcon(draggedItem)
-    return (
-      <div className="bg-background rounded-sm shadow-lg shadow-foreground/25 px-2 py-1 font-semibold flex flex-col items-start w-fit opacity-70">
-        <span className="flex items-center gap-1 whitespace-nowrap">
-          <DraggedIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-          <span className="truncate text-xs text-foreground">
-            {draggedItem.name}
-          </span>
-        </span>
-      </div>
-    )
-  }
-
-  const validation = validateDrop(draggedItem, dropTarget, dndContext)
-
-  // No-op drops: don't show overlay
-  if (validation.valid && !wouldDropHaveEffect(draggedItem, dropTarget)) {
-    return null
-  }
-
-  const action = getDragDropAction(draggedItem, dropTarget)
-  const label = getDropLabel(action, dropTarget, dndContext)
-
-  if (!label && validation.valid) return null
-
+  const { draggedItem, outcome } = dragState
   const DraggedIcon = getSidebarItemIcon(draggedItem)
 
   return (
@@ -110,14 +70,15 @@ function DragOverlayContent({
           {draggedItem.name}
         </span>
       </span>
-      {validation.valid ? (
+      {outcome?.type === 'operation' && (
         <span className="text-muted-foreground whitespace-nowrap text-xs">
-          {label}
+          {outcome.label}
         </span>
-      ) : (
+      )}
+      {outcome?.type === 'rejection' && (
         <span className="text-destructive whitespace-nowrap text-xs flex items-center gap-1">
           <Ban className="w-3 h-3" />
-          {rejectionReasonMessage(validation.reason)}
+          {rejectionReasonMessage(outcome.reason)}
         </span>
       )}
     </div>
@@ -140,8 +101,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const setSidebarDragTargetId = useSidebarUIStore(
     (s) => s.setSidebarDragTargetId,
   )
-  const setDragDropAction = useSidebarUIStore((s) => s.setDragDropAction)
-  const setDragValidation = useSidebarUIStore((s) => s.setDragValidation)
+  const setDragOutcome = useSidebarUIStore((s) => s.setDragOutcome)
   const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
   const setIsDraggingFiles = useSidebarUIStore((s) => s.setIsDraggingFiles)
   const setIsDraggingElement = useSidebarUIStore((s) => s.setIsDraggingElement)
@@ -173,7 +133,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     [parentItemsMap],
   )
 
-  // DndContext for registry execute/validate functions
+  // DndContext for registry resolve functions
   const dndContext: DndContext = useMemo(
     () => ({
       moveItem,
@@ -209,18 +169,9 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   )
 
   const resolveDropTargetWrapped = useCallback(
-    (rawData: Record<string, unknown>): SidebarDropData | null =>
+    (rawData: Record<string, unknown>) =>
       resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds),
     [itemsMap, trashedItemsMap, getAncestorIds],
-  )
-
-  // Wrapped validateDrop with context baked in
-  const validateDropWrapped = useCallback(
-    (
-      item: AnySidebarItem | null,
-      target: SidebarDropData | null,
-    ): DropValidationResult => validateDrop(item, target, dndContext),
-    [dndContext],
   )
 
   // Single ref for all monitor closures — one ref instead of 6+
@@ -244,7 +195,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   // Drag state for overlay (only the overlay re-renders when this changes)
   const [dragState, setDragState] = useState<{
     draggedItem: AnySidebarItem
-    dropTarget: SidebarDropData | null
+    outcome: DropOutcome | null
   } | null>(null)
 
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -310,9 +261,9 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         }
 
         lastDropTargetKeyRef.current = null
-        setDragValidation(null)
+        setDragOutcome(null)
         setIsDraggingElement(true)
-        if (draggedItem) setDragState({ draggedItem, dropTarget: null })
+        if (draggedItem) setDragState({ draggedItem, outcome: null })
       },
       onDrag: ({ location, source }) => {
         const input = location.current.input
@@ -337,21 +288,24 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
               )
             : null
 
-          setDragState((prev) => {
-            if (!prev) return null
-            return { ...prev, dropTarget }
-          })
-
-          setSidebarDragTargetId(getHighlightId(dropTarget))
-
           const sid = getDragItemId(source.data)
           const draggedItem = sid
             ? (ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null)
             : null
-          setDragDropAction(getDragDropAction(draggedItem, dropTarget))
-          setDragValidation(
-            validateDrop(draggedItem, dropTarget, ctx.dndContext),
+
+          const outcome = resolveDropOutcome(
+            draggedItem,
+            dropTarget,
+            ctx.dndContext,
           )
+
+          setDragState((prev) => {
+            if (!prev) return null
+            return { ...prev, outcome }
+          })
+
+          setSidebarDragTargetId(getHighlightId(dropTarget))
+          setDragOutcome(outcome)
         }
       },
       onDrop: async ({ source, location }) => {
@@ -362,8 +316,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         lastDropTargetKeyRef.current = null
         setDragState(null)
         setSidebarDragTargetId(null)
-        setDragDropAction(null)
-        setDragValidation(null)
+        setDragOutcome(null)
         setIsDraggingElement(false)
 
         // Async: execute drop via registry
@@ -385,13 +338,15 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         )
         if (!targetData) return
 
-        const config = DROP_ZONE_REGISTRY[targetData.type]
-        if (!config.execute) return
-        if (!validateDrop(draggedItem, targetData, ctx.dndContext).valid) return
-        if (!config.wouldHaveEffect(draggedItem, targetData)) return
+        const outcome = resolveDropOutcome(
+          draggedItem,
+          targetData,
+          ctx.dndContext,
+        )
+        if (outcome?.type !== 'operation' || !outcome.execute) return
 
         try {
-          await config.execute(draggedItem, targetData, ctx.dndContext)
+          await outcome.execute()
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Failed to move item'
@@ -399,12 +354,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
         }
       },
     })
-  }, [
-    setSidebarDragTargetId,
-    setDragDropAction,
-    setDragValidation,
-    setIsDraggingElement,
-  ])
+  }, [setSidebarDragTargetId, setDragOutcome, setIsDraggingElement])
 
   // External file drag monitor
   useEffect(() => {
@@ -451,14 +401,13 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     })
   }, [setIsDraggingFiles, setFileDragHoveredId])
 
-  // Context value — only changes when resolveItem or dndContext changes
+  // Context value
   const value: DndValue = useMemo(
     () => ({
       resolveItem,
       resolveDropTarget: resolveDropTargetWrapped,
-      validateDrop: validateDropWrapped,
     }),
-    [resolveItem, resolveDropTargetWrapped, validateDropWrapped],
+    [resolveItem, resolveDropTargetWrapped],
   )
 
   return (
@@ -471,7 +420,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
             className="fixed pointer-events-none z-[10000]"
             style={{ top: 0, left: 0, display: 'none' }}
           >
-            <DragOverlayContent dragState={dragState} dndContext={dndContext} />
+            <DragOverlayContent dragState={dragState} />
           </div>,
           document.body,
         )}

@@ -6,10 +6,8 @@ import type {
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { DragDropAction, DropValidationResult } from '~/lib/dnd-registry'
+import type { DropOutcome } from '~/lib/dnd-registry'
 import type { Id } from 'convex/_generated/dataModel'
-
-export type { DragDropAction } from '~/lib/dnd-registry'
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -24,8 +22,7 @@ interface SidebarUIState {
   // Transient
   renamingId: SidebarItemId | null
   sidebarDragTargetId: string | null
-  dragDropAction: DragDropAction
-  dragValidation: DropValidationResult | null
+  dragOutcome: DropOutcome | null
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
   isDraggingElement: boolean
@@ -47,8 +44,7 @@ interface SidebarUIActions {
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setSidebarDragTargetId: (id: string | null) => void
-  setDragDropAction: (action: DragDropAction) => void
-  setDragValidation: (validation: DropValidationResult | null) => void
+  setDragOutcome: (outcome: DropOutcome | null) => void
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
@@ -92,8 +88,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       // Transient
       renamingId: null,
       sidebarDragTargetId: null,
-      dragDropAction: null,
-      dragValidation: null,
+      dragOutcome: null,
       fileDragHoveredId: null,
       isDraggingFiles: false,
       isDraggingElement: false,
@@ -157,19 +152,11 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           if (state.sidebarDragTargetId === id) return state
           return { sidebarDragTargetId: id }
         }),
-      setDragDropAction: (action) =>
-        set((state) => {
-          if (state.dragDropAction === action) return state
-          return { dragDropAction: action }
-        }),
-      setDragValidation: (validation) =>
-        set((state) => {
-          if (state.dragValidation === validation) return state
-          return { dragValidation: validation }
-        }),
+      setDragOutcome: (outcome) => set({ dragOutcome: outcome }),
       setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
       setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
-      setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
+      setIsDraggingElement: (isDragging) =>
+        set({ isDraggingElement: isDragging }),
       setPendingItemName: (name) => set({ pendingItemName: name }),
 
       setSelected: (type, slug) =>

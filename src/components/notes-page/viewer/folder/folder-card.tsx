@@ -93,7 +93,10 @@ function FolderCardInner({
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isTrashAction = useSidebarUIStore(
+    (s) =>
+      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+  )
 
   const canDrag = hasAtLeastPermissionLevel(
     folder.myPermissionLevel,
@@ -128,7 +131,7 @@ function FolderCardInner({
       <div
         className={`folder-wrapper group transition-all relative ${(() => {
           if (!isDropTarget) return ''
-          if (dragDropAction === 'trash') return 'trash-drop-target'
+          if (isTrashAction) return 'trash-drop-target'
           return 'valid-drop-target'
         })()}`}
         onClick={handleCardActivate}

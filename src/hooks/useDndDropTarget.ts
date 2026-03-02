@@ -1,13 +1,14 @@
-import { useDnd } from './useDnd'
-import type { SidebarDragData } from '~/lib/dnd-registry'
-import { wouldDropHaveEffect } from '~/lib/dnd-registry'
 import { useDroppable } from '~/hooks/useDroppable'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 /**
  * Unified drop target hook for all DnD zones.
- * Wraps useDroppable with automatic canDrop (via wouldDropHaveEffect)
- * and returns reactive isDropTarget from the store.
+ * Wraps useDroppable and returns reactive isDropTarget from the store.
+ *
+ * canDrop always returns true so the target stays in pragmatic-dnd's
+ * dropTargets[] even for no-op drops — this prevents the drag from
+ * "falling through" to ancestor drop zones. No-op suppression (hiding
+ * the highlight / overlay) is handled in DndProvider's onDrag handler.
  */
 export function useDndDropTarget<T extends Record<string, unknown>>({
   ref,
@@ -18,16 +19,9 @@ export function useDndDropTarget<T extends Record<string, unknown>>({
   data: T
   highlightId: string
 }): { isDropTarget: boolean } {
-  const { resolveItem, resolveDropTarget } = useDnd()
-
-  useDroppable<T, SidebarDragData>({
+  useDroppable<T>({
     ref,
     data,
-    canDrop: (sourceData) => {
-      const item = resolveItem(sourceData.sidebarItemId)
-      const target = resolveDropTarget(data)
-      return wouldDropHaveEffect(item, target)
-    },
   })
 
   const isDropTarget = useSidebarUIStore(

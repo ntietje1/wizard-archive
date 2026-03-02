@@ -304,8 +304,8 @@ export function MapViewer({
     data: mapDropData,
     highlightId: `map:${map._id}`,
   })
-  const mapDragValidation = useSidebarUIStore((s) =>
-    isMapDropTarget ? s.dragValidation : null,
+  const mapDragOutcome = useSidebarUIStore((s) =>
+    isMapDropTarget ? s.dragOutcome : null,
   )
 
   const permOpts = useMemo(
@@ -810,12 +810,12 @@ export function MapViewer({
 
           <div ref={mapContainerRef} className="flex-1 relative min-h-0">
             {/* Ring + banner while a sidebar item is dragged over the map */}
-            {mapDragValidation && (
+            {mapDragOutcome && (
               <>
                 <div
                   className={cn(
                     'absolute inset-0 z-[998] ring-2 ring-offset-2 pointer-events-none',
-                    mapDragValidation.valid
+                    mapDragOutcome.type === 'operation'
                       ? 'ring-primary'
                       : 'ring-destructive',
                   )}
@@ -823,16 +823,18 @@ export function MapViewer({
                 <div
                   className={cn(
                     'absolute top-4 left-1/2 -translate-x-1/2 z-[2000] text-white px-4 py-2 rounded-md shadow-lg',
-                    mapDragValidation.valid ? 'bg-green-600' : 'bg-destructive',
+                    mapDragOutcome.type === 'operation'
+                      ? 'bg-green-600'
+                      : 'bg-destructive',
                   )}
                 >
                   <p className="text-sm font-medium flex items-center gap-1.5">
-                    {!mapDragValidation.valid && (
+                    {mapDragOutcome.type === 'rejection' && (
                       <Ban className="w-4 h-4 shrink-0" />
                     )}
-                    {mapDragValidation.valid
+                    {mapDragOutcome.type === 'operation'
                       ? 'Release to place pin here'
-                      : rejectionReasonMessage(mapDragValidation.reason)}
+                      : rejectionReasonMessage(mapDragOutcome.reason)}
                   </p>
                 </div>
               </>

@@ -25,7 +25,10 @@ export function DroppableSidebarItem({
     if (id === item._id) return true
     return ancestorIds.includes(id as Id<'folders'>)
   })
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isTrashAction = useSidebarUIStore(
+    (s) =>
+      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+  )
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
   const { isFileDropTarget } = useExternalDropTarget({
@@ -42,8 +45,6 @@ export function DroppableSidebarItem({
 
   const shouldHighlight =
     isDropTarget || isFileDropTarget || isFileParentValidDrop
-
-  const isTrashAction = dragDropAction === 'trash'
 
   const highlightClass = shouldHighlight
     ? isDropTarget && isTrashAction

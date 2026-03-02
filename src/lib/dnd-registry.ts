@@ -99,11 +99,35 @@ export type DropRejectionReason =
   | 'dm_only'
   | 'trashed_item'
 
-export type DropValidationResult =
-  | { valid: true }
-  | { valid: false; reason: DropRejectionReason }
+// ─── Outcome Types ──────────────────────────────────────────────────
 
-// ─── Execution Context ───────────────────────────────────────────────
+export type OperationOutcome = {
+  type: 'operation'
+  action: Exclude<DragDropAction, null>
+  label: string
+  execute: (() => Promise<void>) | null
+}
+
+export type RejectionOutcome = {
+  type: 'rejection'
+  reason: DropRejectionReason
+}
+
+export type DropOutcome = OperationOutcome | RejectionOutcome
+
+function operation(
+  action: Exclude<DragDropAction, null>,
+  label: string,
+  execute?: () => Promise<void>,
+): OperationOutcome {
+  return { type: 'operation', action, label, execute: execute ?? null }
+}
+
+function rejection(reason: DropRejectionReason): RejectionOutcome {
+  return { type: 'rejection', reason }
+}
+
+// ─── Execution Context ──────────────────────────────────────────────
 
 export interface DndContext {
   moveItem: (
@@ -125,24 +149,14 @@ export interface DndContext {
   ) => boolean
 }
 
-// ─── Drop Zone Config ────────────────────────────────────────────────
+// ─── Drop Zone Config ───────────────────────────────────────────────
 
 export interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
-  action: (item: AnySidebarItem, target: T) => DragDropAction
-  validate: (
+  resolve: (
     item: AnySidebarItem,
     target: T,
     ctx: DndContext,
-  ) => DropValidationResult
-  wouldHaveEffect: (item: AnySidebarItem, target: T) => boolean
-  getLabel: (
-    action: DragDropAction,
-    target: T,
-    ctx: DndContext,
-  ) => string | null
-  execute:
-    | ((item: AnySidebarItem, target: T, ctx: DndContext) => Promise<void>)
-    | null
+  ) => DropOutcome | null
   canAcceptFiles: boolean | ((target: T) => boolean)
   getHighlightId: (target: T) => string | null
   getTargetKey?: (rawTarget: Record<string, unknown>) => string
@@ -155,24 +169,7 @@ function typedConfig<T extends SidebarDropData>(
   return c as DropZoneConfig
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-function getActionVerb(action: DragDropAction): string {
-  switch (action) {
-    case 'restore':
-      return 'Restore to'
-    case 'pin':
-      return 'Pin to'
-    case 'open':
-      return 'Open in'
-    case 'link':
-      return 'Add link'
-    case 'move':
-    case 'trash':
-    case null:
-      return 'Move to'
-  }
-}
+// ─── Helpers ────────────────────────────────────────────────────────
 
 export function rejectionReasonMessage(reason: DropRejectionReason): string {
   switch (reason) {
@@ -199,129 +196,116 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
   }
 }
 
-// ─── Configs ─────────────────────────────────────────────────────────
+// ─── Configs ────────────────────────────────────────────────────────
 
 const trashConfig: DropZoneConfig = {
-  action: () => 'trash',
-  validate: (item, _target, ctx) => {
+  resolve: (item, _target, ctx) => {
     if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-      return { valid: false, reason: 'dm_only' }
+      return rejection('dm_only')
     }
-    return { valid: true }
-  },
-  wouldHaveEffect: (item) => !item.deletionTime,
-  getLabel: () => 'Move to "Trash"',
-  execute: async (item, _target, ctx) => {
-    await ctx.moveItem(item, { deleted: true })
-    toast.success('Moved to trash')
+    if (item.deletionTime) return null
+    return operation('trash', 'Move to "Trash"', async () => {
+      await ctx.moveItem(item, { deleted: true })
+      toast.success('Moved to trash')
+    })
   },
   canAcceptFiles: false,
   getHighlightId: () => TRASH_DROP_ZONE_TYPE,
 }
 
 const mapConfig = typedConfig<MapDropZoneData>({
-  action: () => 'pin',
-  validate: (item, t) => {
+  resolve: (item, t) => {
     if (item.type === SIDEBAR_ITEM_TYPES.gameMaps && item._id === t.mapId) {
-      return { valid: false, reason: 'self_pin' }
+      return rejection('self_pin')
     }
     if (t.pinnedItemIds?.includes(item._id)) {
-      return { valid: false, reason: 'already_pinned' }
+      return rejection('already_pinned')
     }
-    return { valid: true }
+    return operation('pin', `Pin to "${t.mapName}"`)
   },
-  wouldHaveEffect: () => true,
-  getLabel: (_action, t) => `Pin to "${t.mapName}"`,
-  execute: null, // handled by map component
   canAcceptFiles: false,
   getHighlightId: (t) => `map:${t.mapId}`,
   getTargetKey: (raw) => `map:${raw.mapId}`,
 })
 
 const emptyEditorConfig: DropZoneConfig = {
-  action: () => 'open',
-  validate: () => ({ valid: true }),
-  wouldHaveEffect: () => true,
-  getLabel: () => 'Open in editor',
-  execute: async (item, _target, ctx) => {
-    await ctx.navigateToItem(item, true)
-  },
+  resolve: (item, _target, ctx) =>
+    operation('open', 'Open in editor', async () => {
+      await ctx.navigateToItem(item, true)
+    }),
   canAcceptFiles: true,
   getHighlightId: () => EMPTY_EDITOR_DROP_TYPE,
 }
 
 const rootConfig: DropZoneConfig = {
-  action: (item) => (item.deletionTime ? 'restore' : 'move'),
-  validate: (item, _target, ctx) => {
+  resolve: (item, _target, ctx) => {
+    const name = ctx.campaignName || 'Root'
+
     if (item.deletionTime) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-        return { valid: false, reason: 'dm_only' }
+        return rejection('dm_only')
       }
+      if (ctx.hasSiblingNameConflict(item.name, null, item._id)) {
+        return rejection('name_conflict')
+      }
+      return operation('restore', `Restore to "${name}"`, async () => {
+        await ctx.moveItem(item, { parentId: null, deleted: false })
+        toast.success('Item restored')
+      })
     }
+
+    if (item.parentId == null) return null
+
     if (ctx.hasSiblingNameConflict(item.name, null, item._id)) {
-      return { valid: false, reason: 'name_conflict' }
+      return rejection('name_conflict')
     }
-    return { valid: true }
-  },
-  wouldHaveEffect: (item) => {
-    if (item.deletionTime) return true
-    return item.parentId != null
-  },
-  getLabel: (action, _target, ctx) => {
-    const name = ctx.campaignName || 'Root'
-    return `${getActionVerb(action)} "${name}"`
-  },
-  execute: async (item, _target, ctx) => {
-    const deleted = item.deletionTime ? false : undefined
-    await ctx.moveItem(item, { parentId: null, deleted })
-    if (item.deletionTime) toast.success('Item restored')
+    return operation('move', `Move to "${name}"`, async () => {
+      await ctx.moveItem(item, { parentId: null })
+    })
   },
   canAcceptFiles: true,
   getHighlightId: () => SIDEBAR_ROOT_TYPE,
 }
 
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
-  action: (item, t) => {
-    if (item.deletionTime && !t.deletionTime) return 'restore'
-    return 'move'
-  },
-  validate: (item, t, ctx) => {
-    if (t.deletionTime) return { valid: false, reason: 'trashed_folder' }
-    if (t._id === item._id) return { valid: true }
+  resolve: (item, t, ctx) => {
+    if (item._id === t._id) return null
+    if (t.deletionTime) return rejection('trashed_folder')
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
       t.ancestorIds?.includes(item._id)
     ) {
-      return { valid: false, reason: 'circular' }
+      return rejection('circular')
     }
     if (t.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
-      return { valid: false, reason: 'no_permission' }
+      return rejection('no_permission')
     }
+
+    const folderId = t._id as Id<'folders'>
+
     if (item.deletionTime && !t.deletionTime) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-        return { valid: false, reason: 'dm_only' }
+        return rejection('dm_only')
       }
+      if (ctx.hasSiblingNameConflict(item.name, folderId, item._id)) {
+        return rejection('name_conflict')
+      }
+      return operation('restore', `Restore to "${t.name}"`, async () => {
+        await ctx.moveItem(item, { parentId: folderId, deleted: false })
+        toast.success('Item restored')
+        ctx.setFolderOpen(folderId)
+      })
     }
-    if (
-      ctx.hasSiblingNameConflict(item.name, t._id as Id<'folders'>, item._id)
-    ) {
-      return { valid: false, reason: 'name_conflict' }
+
+    if (item.parentId === t._id) return null
+
+    if (ctx.hasSiblingNameConflict(item.name, folderId, item._id)) {
+      return rejection('name_conflict')
     }
-    return { valid: true }
-  },
-  wouldHaveEffect: (item, t) => {
-    if (item._id === t._id) return false
-    if (!!item.deletionTime !== !!t.deletionTime) return true
-    return item.parentId !== t._id
-  },
-  getLabel: (action, t) => `${getActionVerb(action)} "${t.name}"`,
-  execute: async (item, t, ctx) => {
-    const action = folderConfig.action(item, t)
-    const deleted = action === 'restore' ? false : undefined
-    const folderId = t._id as Id<'folders'>
-    await ctx.moveItem(item, { parentId: folderId, deleted })
-    if (action === 'restore') toast.success('Item restored')
-    ctx.setFolderOpen(folderId)
+    return operation('move', `Move to "${t.name}"`, async () => {
+      await ctx.moveItem(item, { parentId: folderId })
+      ctx.setFolderOpen(folderId)
+    })
   },
   canAcceptFiles: (t) => !t.deletionTime,
   getHighlightId: (t) => t._id,
@@ -329,31 +313,23 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 })
 
 const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
-  action: () => 'link',
-  validate: (item) => {
-    if (item.deletionTime) return { valid: false, reason: 'trashed_item' }
-    return { valid: true }
+  resolve: (item) => {
+    if (item.deletionTime) return rejection('trashed_item')
+    return operation('link', 'Add link here')
   },
-  wouldHaveEffect: () => true,
-  getLabel: () => 'Add link here',
-  execute: null, // handled by note editor component
   canAcceptFiles: false,
   getHighlightId: (t) => `note:${t.noteId}`,
   getTargetKey: (raw) => `note:${raw.noteId}`,
 })
 
 const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
-  action: () => 'move',
-  validate: () => ({ valid: false, reason: 'not_folder' }),
-  wouldHaveEffect: () => false,
-  getLabel: () => null,
-  execute: null,
+  resolve: () => null,
   canAcceptFiles: false,
   getHighlightId: (t) => t._id,
   getTargetKey: (raw) => raw.sidebarItemId as string,
 })
 
-// ─── Registry ────────────────────────────────────────────────────────
+// ─── Registry ───────────────────────────────────────────────────────
 
 type DropZoneType =
   | typeof TRASH_DROP_ZONE_TYPE
@@ -375,48 +351,27 @@ export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
   [SIDEBAR_ITEM_TYPES.files]: nonFolderItemConfig,
 }
 
-// ─── Dispatch Functions ──────────────────────────────────────────────
+// ─── Dispatch Functions ─────────────────────────────────────────────
 
-export function getDragDropAction(
-  item: AnySidebarItem | null,
-  target: SidebarDropData | null,
-): DragDropAction {
-  if (!item || !target) return null
-  return DROP_ZONE_REGISTRY[target.type].action(item, target)
-}
-
-export function validateDrop(
+export function resolveDropOutcome(
   item: AnySidebarItem | null,
   target: SidebarDropData | null,
   ctx: DndContext,
-): DropValidationResult {
-  if (!item || !target) return { valid: false, reason: 'missing_data' }
+): DropOutcome | null {
+  if (!item || !target) return null
   const config = DROP_ZONE_REGISTRY[target.type]
-  const action = config.action(item, target)
-  // Source item permission: move/trash/restore require FULL_ACCESS
+  const outcome = config.resolve(item, target, ctx)
+  if (!outcome || outcome.type === 'rejection') return outcome
+  // Source permission: move/trash/restore require FULL_ACCESS on the item
   if (
-    (action === 'move' || action === 'trash' || action === 'restore') &&
+    (outcome.action === 'move' ||
+      outcome.action === 'trash' ||
+      outcome.action === 'restore') &&
     item.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS
   ) {
-    return { valid: false, reason: 'no_permission' }
+    return rejection('no_permission')
   }
-  return config.validate(item, target, ctx)
-}
-
-export function wouldDropHaveEffect(
-  item: AnySidebarItem | null,
-  target: SidebarDropData | null,
-): boolean {
-  if (!item || !target) return false
-  return DROP_ZONE_REGISTRY[target.type].wouldHaveEffect(item, target)
-}
-
-export function getDropLabel(
-  action: DragDropAction,
-  target: SidebarDropData,
-  ctx: DndContext,
-): string | null {
-  return DROP_ZONE_REGISTRY[target.type].getLabel(action, target, ctx)
+  return outcome
 }
 
 export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {
@@ -454,5 +409,7 @@ export function resolveDropTarget(
     if (!item) return null
     return { ...item, ancestorIds: getAncestorIds(item._id) }
   }
+  const type = rawData.type
+  if (typeof type !== 'string' || !(type in DROP_ZONE_REGISTRY)) return null
   return rawData as SidebarDropData
 }

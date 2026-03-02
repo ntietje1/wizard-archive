@@ -23,8 +23,12 @@ export function TrashPageViewer() {
     data: { type: TRASH_DROP_ZONE_TYPE },
     highlightId: TRASH_DROP_ZONE_TYPE,
   })
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
-  const isTrashDrag = isDropTarget && dragDropAction === 'trash'
+  const isTrashDrag = useSidebarUIStore(
+    (s) =>
+      isDropTarget &&
+      s.dragOutcome?.type === 'operation' &&
+      s.dragOutcome.action === 'trash',
+  )
 
   return (
     <EditorContextMenu

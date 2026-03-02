@@ -26,15 +26,16 @@ export function DroppableFolderZone({
   const isDropTarget = useSidebarUIStore(
     (s) => s.sidebarDragTargetId === folder._id,
   )
-  const dragDropAction = useSidebarUIStore((s) => s.dragDropAction)
+  const isTrashAction = useSidebarUIStore(
+    (s) =>
+      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+  )
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref,
     parentId: folder._id,
     canAcceptFiles: canDropFilesOnTarget(folder),
   })
-
-  const isTrashAction = dragDropAction === 'trash'
 
   const activeHighlight =
     isDropTarget && isTrashAction

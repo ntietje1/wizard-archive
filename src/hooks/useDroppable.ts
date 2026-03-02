@@ -1,19 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 
-interface UseDroppableOptions<
-  T extends Record<string, unknown>,
-  TSource extends Record<string, unknown> = Record<string, unknown>,
-> {
+interface UseDroppableOptions<T extends Record<string, unknown>> {
   ref: React.RefObject<HTMLElement | null>
   data: T
-  canDrop?: (sourceData: TSource) => boolean
+  canDrop?: (sourceData: unknown) => boolean
 }
 
-export function useDroppable<
-  T extends Record<string, unknown>,
-  TSource extends Record<string, unknown> = Record<string, unknown>,
->({ ref, data, canDrop }: UseDroppableOptions<T, TSource>) {
+export function useDroppable<T extends Record<string, unknown>>({
+  ref,
+  data,
+  canDrop,
+}: UseDroppableOptions<T>) {
   const dataRef = useRef(data)
   dataRef.current = data
 
@@ -27,7 +25,7 @@ export function useDroppable<
     return dropTargetForElements({
       element: el,
       getData: () => dataRef.current,
-      canDrop: ({ source }) => canDropRef.current?.(source.data as TSource) ?? true,
+      canDrop: ({ source }) => canDropRef.current?.(source.data) ?? true,
     })
   }, [ref])
 }
