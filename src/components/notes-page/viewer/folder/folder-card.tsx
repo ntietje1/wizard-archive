@@ -118,6 +118,10 @@ function FolderCardInner({
     canAcceptFiles: canDropFilesOnTarget(folder),
   })
 
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
+
   const handleCardActivate = () => {
     if (isDraggingRef.current) return
     if (onClick) {
@@ -130,8 +134,8 @@ function FolderCardInner({
     <div ref={ref} className="h-[140px]">
       <div
         className={`folder-wrapper group transition-all relative ${(() => {
-          if (!isDropTarget) return ''
-          if (isTrashAction) return 'trash-drop-target'
+          if (!isDropTarget && !isFileDragTarget) return ''
+          if (isDropTarget && isTrashAction) return 'trash-drop-target'
           return 'valid-drop-target'
         })()}`}
         onClick={handleCardActivate}

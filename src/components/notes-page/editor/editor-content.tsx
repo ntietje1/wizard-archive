@@ -15,6 +15,7 @@ import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
@@ -55,19 +56,23 @@ function EmptyEditorContent() {
     highlightId: EMPTY_EDITOR_DROP_TYPE,
   })
 
-  const { isFileDropTarget } = useExternalDropTarget({
+  useExternalDropTarget({
     ref,
     parentId: null,
     canAcceptFiles: true,
   })
+
+  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
 
   return (
     <div
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center transition-colors',
-        isDropTarget && !isFileDropTarget && 'bg-muted',
-        isFileDropTarget && 'bg-muted/50',
+        isDropTarget && !isFileDragTarget && 'bg-muted',
+        isFileDragTarget && 'bg-muted/50',
       )}
     >
       {isDm ? (

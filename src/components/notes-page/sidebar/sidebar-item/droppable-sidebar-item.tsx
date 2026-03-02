@@ -31,20 +31,21 @@ export function DroppableSidebarItem({
   )
   const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
 
-  const { isFileDropTarget } = useExternalDropTarget({
+  useExternalDropTarget({
     ref,
     parentId: item._id,
     canAcceptFiles: canDropFilesOnTarget(item),
   })
 
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isFileDirectTarget = isDraggingFiles && fileDragHoveredId === item._id
   const isFileParentValidDrop =
     isDraggingFiles &&
     fileDragHoveredId !== null &&
     ancestorIds.includes(fileDragHoveredId)
 
   const shouldHighlight =
-    isDropTarget || isFileDropTarget || isFileParentValidDrop
+    isDropTarget || isFileDirectTarget || isFileParentValidDrop
 
   const highlightClass = shouldHighlight
     ? isDropTarget && isTrashAction
