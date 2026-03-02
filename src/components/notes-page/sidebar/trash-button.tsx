@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { TrashPopoverContent } from './trash-popover-content'
+import type { SidebarDragData } from '~/lib/dnd-utils'
 import {
   Popover,
   PopoverContent,
@@ -18,7 +19,7 @@ export function TrashButton() {
   const { navigateToTrash } = useEditorNavigation()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const { parentItemsMap } = useTrashedSidebarItems()
+  const { parentItemsMap, itemsMap: trashedItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(undefined) ?? []
   const trashCount = rootTrashedItems.length
 
@@ -31,7 +32,11 @@ export function TrashButton() {
     navigateToTrash()
   }
 
-  useDroppable({ ref: buttonRef, data: { type: TRASH_DROP_ZONE_TYPE } })
+  useDroppable<{ type: typeof TRASH_DROP_ZONE_TYPE }, SidebarDragData>({
+    ref: buttonRef,
+    data: { type: TRASH_DROP_ZONE_TYPE },
+    canDrop: (sourceData) => !trashedItemsMap.has(sourceData.sidebarItemId),
+  })
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

@@ -106,7 +106,6 @@ export type DropRejectionReason =
   | 'no_permission'
   | 'missing_data'
   | 'trashed_folder'
-  | 'cannot_move_trash'
 
 export function rejectionReasonMessage(reason: DropRejectionReason): string {
   switch (reason) {
@@ -124,8 +123,6 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Missing data'
     case 'trashed_folder':
       return 'Trashed folders are uneditable'
-    case 'cannot_move_trash':
-      return 'Cannot move items within trash'
     default:
       return assertNever(reason)
   }
@@ -149,9 +146,6 @@ export function validateDrop(
 
   switch (targetData.type) {
     case TRASH_DROP_ZONE_TYPE:
-      if (draggedItem.deletionTime) {
-        return { valid: false, reason: 'cannot_move_trash' }
-      }
       return { valid: true }
 
     case MAP_DROP_ZONE_TYPE:
@@ -228,10 +222,9 @@ export function wouldDropHaveEffect(
     case SIDEBAR_ROOT_TYPE:
       if (draggedItem.deletionTime) return true
       return draggedItem.parentId != null
-    // Moving to trash root: always an effect for non-trashed items; for
-    // already-trashed items, only an effect if nested (moves to trash root)
+    // Only non-trashed items can be trashed (trashed items are rejected by validateDrop)
     case TRASH_DROP_ZONE_TYPE:
-      return !draggedItem.deletionTime || draggedItem.parentId != null
+      return !draggedItem.deletionTime
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.gameMaps:
