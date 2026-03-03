@@ -1,5 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type {
@@ -9,6 +10,115 @@ import type {
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
+
+/**
+ * Walk the ancestor folder chain once and resolve inherited permissions
+ * for all provided members + the "all players" level.
+ *
+ * Used by both:
+ * - getSidebarItemWithShares (UI query, N members)
+ * - getSidebarItemPermissionLevel (access control, 1 member)
+ */
+export async function resolveAllInheritedPermissions(
+  ctx: CampaignQueryCtx,
+  {
+    parentId,
+    memberIds,
+  }: {
+    parentId: Id<'folders'> | null
+    memberIds: Array<Id<'campaignMembers'>>
+  },
+): Promise<{
+  allPlayers: { level: PermissionLevel | null; folderName: string | null }
+  members: Record<
+    Id<'campaignMembers'>,
+    { level: PermissionLevel; folderName: string | null }
+  >
+}> {
+  const result: {
+    allPlayers: { level: PermissionLevel | null; folderName: string | null }
+    members: Record<
+      Id<'campaignMembers'>,
+      { level: PermissionLevel; folderName: string | null }
+    >
+  } = {
+    allPlayers: { level: null, folderName: null },
+    members: {} as Record<
+      Id<'campaignMembers'>,
+      { level: PermissionLevel; folderName: string | null }
+    >,
+  }
+
+  // Track which members still need resolution
+  const unresolvedMembers = new Set(memberIds)
+  let allPlayersResolved = false
+
+  let currentParentId = parentId
+  while (currentParentId) {
+    const folder = await ctx.db.get(currentParentId)
+    if (!folder) break
+
+    if (!folder.inheritShares) {
+      currentParentId = folder.parentId
+      continue
+    }
+
+    // Batch-fetch all shares for this folder in one index query
+    if (unresolvedMembers.size > 0) {
+      const shares = await getSidebarItemSharesForItem(ctx, {
+        sidebarItemId: currentParentId,
+      })
+
+      for (const share of shares) {
+        if (unresolvedMembers.has(share.campaignMemberId)) {
+          result.members[share.campaignMemberId] = {
+            level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+            folderName: folder.name,
+          }
+          unresolvedMembers.delete(share.campaignMemberId)
+        }
+      }
+    }
+
+    // Check allPermissionLevel — resolves "all players" and any remaining unresolved members
+    if (
+      folder.allPermissionLevel !== null &&
+      folder.allPermissionLevel !== undefined
+    ) {
+      if (!allPlayersResolved) {
+        result.allPlayers = {
+          level: folder.allPermissionLevel,
+          folderName: folder.name,
+        }
+        allPlayersResolved = true
+      }
+
+      // All remaining unresolved members inherit this level
+      for (const memberId of unresolvedMembers) {
+        result.members[memberId] = {
+          level: folder.allPermissionLevel,
+          folderName: folder.name,
+        }
+      }
+      unresolvedMembers.clear()
+    }
+
+    // If everything is resolved, stop walking
+    if (allPlayersResolved && unresolvedMembers.size === 0) break
+
+    currentParentId = folder.parentId ?? null
+  }
+
+  // Fill in unresolved members with NONE
+  for (const memberId of unresolvedMembers) {
+    result.members[memberId] = {
+      level: PERMISSION_LEVEL.NONE,
+      folderName: null,
+    }
+  }
+
+  return result
+}
 
 export async function getSidebarItemPermissionLevel(
   ctx: CampaignQueryCtx,
@@ -20,7 +130,7 @@ export async function getSidebarItemPermissionLevel(
 
   const checkId = ctx.membership._id
 
-  // Check for an explicit per-player share
+  // Check for an explicit per-player share on the item itself
   const share: SidebarItemShare | null = await getSidebarItemShareForMember(
     ctx,
     {
@@ -39,79 +149,11 @@ export async function getSidebarItemPermissionLevel(
   }
 
   // Walk up folder hierarchy for inherited permission
-  const parentId = item.parentId ?? null
-  return await resolveInheritedPermission(ctx, {
-    parentId,
-    playerId: checkId,
+  const inherited = await resolveAllInheritedPermissions(ctx, {
+    parentId: item.parentId ?? null,
+    memberIds: [checkId],
   })
-}
-
-async function resolveInheritedPermission(
-  ctx: CampaignQueryCtx,
-  {
-    parentId,
-    playerId,
-  }: {
-    parentId: Id<'folders'> | null
-    playerId: Id<'campaignMembers'>
-  },
-): Promise<PermissionLevel> {
-  const { level } = await resolveInheritedPermissionWithSource(ctx, {
-    parentId,
-    memberId: playerId,
-  })
-  return level ?? PERMISSION_LEVEL.NONE
-}
-
-export async function resolveInheritedPermissionWithSource(
-  ctx: CampaignQueryCtx,
-  {
-    parentId,
-    memberId,
-  }: {
-    parentId: Id<'folders'> | null
-    memberId: Id<'campaignMembers'> | null
-  },
-): Promise<{ level: PermissionLevel | null; folderName: string | null }> {
-  let currentParentId = parentId
-  while (currentParentId) {
-    const folder = await ctx.db.get(currentParentId)
-    if (!folder) break
-
-    // continue walking up until we find a folder that inherits shares
-    if (!folder.inheritShares) {
-      currentParentId = folder.parentId
-      continue
-    }
-
-    // Check individual member share if memberId provided
-    if (memberId) {
-      const share = await getSidebarItemShareForMember(ctx, {
-        sidebarItemId: currentParentId,
-        campaignMemberId: memberId,
-      })
-      if (share) {
-        return {
-          level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-          folderName: folder.name,
-        }
-      }
-    }
-
-    // Check allPermissionLevel
-    if (
-      folder.allPermissionLevel !== null &&
-      folder.allPermissionLevel !== undefined
-    ) {
-      return {
-        level: folder.allPermissionLevel,
-        folderName: folder.name,
-      }
-    }
-
-    currentParentId = folder.parentId ?? null
-  }
-  return { level: null, folderName: null }
+  return inherited.members[checkId]?.level ?? PERMISSION_LEVEL.NONE
 }
 
 async function getSidebarItemShareForMember(

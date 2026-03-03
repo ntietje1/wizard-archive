@@ -1,25 +1,27 @@
-import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
-import { resolveInheritedPermissionWithSource } from './sidebarItemPermissions'
+import { resolveAllInheritedPermissions } from './sidebarItemPermissions'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMember } from '../../campaigns/types'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const getSidebarItemWithShares = async (
   ctx: CampaignQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  {
+    sidebarItemId,
+    playerMemberIds,
+  }: {
+    sidebarItemId: SidebarItemId
+    playerMemberIds: Array<Id<'campaignMembers'>>
+  },
 ): Promise<{
   allPermissionLevel: PermissionLevel | null
   inheritShares: boolean | null
   shares: Array<SidebarItemShare>
-  playerMembers: Array<CampaignMember>
   inheritedAllPermissionLevel: PermissionLevel | null
   inheritedFromFolderName: string | null
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
@@ -36,27 +38,18 @@ export const getSidebarItemWithShares = async (
     inheritShares = item.inheritShares
   }
 
-  // Get player members
-  const allMembers = await getCampaignMembers(ctx)
-  const playerMembers = allMembers.filter(
-    (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
-  )
-
   // Always fetch individual shares
   const shares = await getSidebarItemSharesForItem(ctx, {
     sidebarItemId,
   })
 
-  // Resolve inherited all-players permission level with source folder name
-  const {
-    level: inheritedAllPermissionLevel,
-    folderName: inheritedFromFolderName,
-  } = await resolveInheritedPermissionWithSource(ctx, {
+  // Resolve all inherited permissions in a single ancestor walk
+  const inherited = await resolveAllInheritedPermissions(ctx, {
     parentId: item.parentId ?? null,
-    memberId: null,
+    memberIds: playerMemberIds,
   })
 
-  // Resolve per-member inherited permissions with source folder names
+  // Map batched result back into the existing return shape
   const memberInheritedPermissions: Record<
     Id<'campaignMembers'>,
     PermissionLevel
@@ -65,29 +58,24 @@ export const getSidebarItemWithShares = async (
     Id<'campaignMembers'>,
     string
   > = {}
-  await Promise.all(
-    playerMembers.map(async (member) => {
-      const { level, folderName } = await resolveInheritedPermissionWithSource(
-        ctx,
-        {
-          parentId: item.parentId ?? null,
-          memberId: member._id,
-        },
-      )
-      memberInheritedPermissions[member._id] = level ?? PERMISSION_LEVEL.NONE
-      if (folderName) {
-        memberInheritedFromFolderNames[member._id] = folderName
+  for (const memberId of playerMemberIds) {
+    const entry = inherited.members[memberId]
+    if (entry) {
+      memberInheritedPermissions[memberId] = entry.level
+      if (entry.folderName) {
+        memberInheritedFromFolderNames[memberId] = entry.folderName
       }
-    }),
-  )
+    } else {
+      memberInheritedPermissions[memberId] = PERMISSION_LEVEL.NONE
+    }
+  }
 
   return {
     allPermissionLevel: item.allPermissionLevel,
     inheritShares,
     shares,
-    playerMembers,
-    inheritedAllPermissionLevel,
-    inheritedFromFolderName,
+    inheritedAllPermissionLevel: inherited.allPlayers.level,
+    inheritedFromFolderName: inherited.allPlayers.folderName,
     memberInheritedPermissions,
     memberInheritedFromFolderNames,
   }

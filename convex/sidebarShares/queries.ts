@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
 import { dmQuery } from '../functions'
-import { campaignMemberValidator } from '../campaigns/schema'
 import {
   permissionLevelValidator,
   sidebarItemIdValidator,
 } from '../sidebarItems/schema/baseValidators'
+import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { sidebarItemShareValidator } from './schema'
 import { getSidebarItemShares as getSidebarItemSharesFn } from './functions/getSidebarItemShares'
 import { getSidebarItemWithShares as getSidebarItemWithSharesFn } from './functions/getSidebarItemWithShares'
@@ -23,8 +23,9 @@ export const getSidebarItemShares = dmQuery({
 })
 
 /**
- * Get share info for a sidebar item along with player members.
- * Returns allPermissionLevel and individual shares.
+ * Get share info for a sidebar item.
+ * Returns allPermissionLevel, individual shares, and inherited permissions.
+ * Player member list is fetched client-side via useCampaignMembers().
  */
 export const getSidebarItemWithShares = dmQuery({
   args: {
@@ -35,7 +36,6 @@ export const getSidebarItemWithShares = dmQuery({
     allPermissionLevel: v.union(permissionLevelValidator, v.null()),
     inheritShares: v.union(v.boolean(), v.null()),
     shares: v.array(sidebarItemShareValidator),
-    playerMembers: v.array(campaignMemberValidator),
     inheritedAllPermissionLevel: v.union(permissionLevelValidator, v.null()),
     inheritedFromFolderName: v.union(v.string(), v.null()),
     memberInheritedPermissions: v.record(
@@ -48,8 +48,19 @@ export const getSidebarItemWithShares = dmQuery({
     ),
   }),
   handler: async (ctx, args) => {
+    const members = await ctx.db
+      .query('campaignMembers')
+      .withIndex('by_campaign_user', (q) =>
+        q.eq('campaignId', ctx.campaign._id),
+      )
+      .collect()
+    const playerMemberIds = members
+      .filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
+      .map((m) => m._id)
+
     return await getSidebarItemWithSharesFn(ctx, {
       sidebarItemId: args.sidebarItemId,
+      playerMemberIds,
     })
   },
 })

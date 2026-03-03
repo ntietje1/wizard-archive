@@ -9,6 +9,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/hooks/useBlocksShare'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 
 export interface ShareItemWithPermission extends ShareItem {
   permissionLevel: PermissionLevel
@@ -36,6 +37,11 @@ interface SidebarItemShareInfo {
 export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const { campaign, isDm } = useCampaign()
   const campaignData = campaign.data
+  const campaignMembersQuery = useCampaignMembers()
+  const playerMembers = useMemo(
+    () => campaignMembersQuery.data?.filter((m) => m.role === 'Player') ?? [],
+    [campaignMembersQuery.data],
+  )
 
   // For now, we only support single item selection
   const singleItem = items.length === 1 ? items[0] : undefined
@@ -125,8 +131,10 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   const hasCompleteData = useMemo(
     () =>
-      items.length > 0 && items.every((item) => itemShareInfoMap.has(item._id)),
-    [items, itemShareInfoMap],
+      items.length > 0 &&
+      campaignMembersQuery.isSuccess &&
+      items.every((item) => itemShareInfoMap.has(item._id)),
+    [items, itemShareInfoMap, campaignMembersQuery.isSuccess],
   )
 
   // Derive aggregate share status from allPermissionLevel, inherited values, and individual shares
@@ -160,11 +168,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
     return AGGREGATE_SHARE_STATUS.NOT_SHARED
   }, [items, itemShareInfoMap, hasCompleteData])
-
-  const playerMembers = useMemo(
-    () => query.data?.playerMembers ?? [],
-    [query.data?.playerMembers],
-  )
 
   // Get share state for a specific member across all items
   const getShareState = useCallback(
