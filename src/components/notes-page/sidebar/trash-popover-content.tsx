@@ -6,13 +6,13 @@ import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useEditorNavigation } from '~/hooks/useEditorNavigation'
+import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useDraggable } from '~/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { permanentDeleteDescription } from '~/lib/trash-utils'
-import { EDITOR_ROUTE } from '~/hooks/useEditorLinkProps'
+import { EDITOR_ROUTE, useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from '~/lib/icons'
 
 interface TrashPopoverContentProps {
@@ -23,7 +23,7 @@ export function TrashPopoverContent({
   onClose,
 }: TrashPopoverContentProps) {
   const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
-  const { navigateToItem } = useEditorNavigation()
+  const { setLastSelectedItem } = useLastEditorItem()
 
   const { data: allTrashedItems, parentItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
@@ -79,10 +79,10 @@ export function TrashPopoverContent({
 
   const handleItemClick = useCallback(
     (item: AnySidebarItem) => {
-      navigateToItem(item)
+      setLastSelectedItem({ type: item.type, slug: item.slug })
       onClose()
     },
-    [navigateToItem, onClose],
+    [setLastSelectedItem, onClose],
   )
 
   const getDeletionTimeLabel = (item: AnySidebarItem) => {
@@ -198,6 +198,7 @@ function TrashPopoverItem({
 }) {
   const Icon = getSidebarItemIcon(item)
   const ref = useRef<HTMLDivElement>(null)
+  const linkProps = useEditorLinkProps(item)
 
   useDraggable({
     ref,
@@ -208,25 +209,29 @@ function TrashPopoverItem({
   return (
     <div
       ref={ref}
-      className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-accent group min-w-0 cursor-pointer"
-      onClick={() => onClick(item)}
+      className="flex items-center gap-1.5 rounded-md hover:bg-accent group min-w-0"
     >
-      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm truncate">{item.name}</div>
-        <div className="text-xs text-muted-foreground truncate">
-          Deleted {deletionTimeLabel}
+      <Link
+        {...linkProps}
+        activeOptions={{ includeSearch: false }}
+        draggable={false}
+        className="flex items-center gap-1.5 px-2 py-1 flex-1 min-w-0"
+        onClick={() => onClick(item)}
+      >
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm truncate">{item.name}</div>
+          <div className="text-xs text-muted-foreground truncate">
+            Deleted {deletionTimeLabel}
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-0.5 shrink-0">
+      </Link>
+      <div className="flex items-center gap-0.5 shrink-0 pr-2">
         <Button
           variant="outline"
           size="icon"
           className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRestore(item)
-          }}
+          onClick={() => onRestore(item)}
           title="Restore"
         >
           <RotateCcw className="h-3 w-3" />
@@ -235,10 +240,7 @@ function TrashPopoverItem({
           variant="outline"
           size="icon"
           className="h-6 w-6 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => {
-            e.stopPropagation()
-            onPermanentDelete(item)
-          }}
+          onClick={() => onPermanentDelete(item)}
           title="Delete forever"
         >
           <Trash2 className="h-3 w-3" />

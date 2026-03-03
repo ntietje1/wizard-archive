@@ -88,9 +88,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const pageNum = Number(
-            entry.target.getAttribute('data-page-number'),
-          )
+          const pageNum = Number(entry.target.getAttribute('data-page-number'))
           if (!isNaN(pageNum)) {
             visibilityMap.set(pageNum, entry.intersectionRatio)
           }
@@ -190,7 +188,10 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-0 bg-background flex flex-col">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full min-h-0 bg-background flex flex-col"
+    >
       {numPages === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <LoadingSpinner size="lg" />

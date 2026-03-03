@@ -93,6 +93,7 @@ function SidebarItemButtonBaseComponent({
           {...linkProps}
           activeOptions={{ includeSearch: false }}
           className="flex items-center min-w-0 flex-1 h-full rounded-sm"
+          draggable={false}
           onClick={onClick}
         >
           {nameContent}
