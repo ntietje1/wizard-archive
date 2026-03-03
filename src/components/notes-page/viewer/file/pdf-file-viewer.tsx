@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 3
