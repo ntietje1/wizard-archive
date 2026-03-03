@@ -18,7 +18,11 @@ export default defineConfig({
     tanstackStart({
       customViteReactPlugin: true,
     }),
-    react(),
+    react({
+      babel: {
+        plugins: ['babel-plugin-react-compiler'],
+      },
+    }),
   ],
   optimizeDeps: {
     exclude: ['@tanstack/router-devtools-core'],
