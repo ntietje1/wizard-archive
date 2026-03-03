@@ -5,7 +5,7 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { Ban, Image, Minus, Plus, RotateCcw } from 'lucide-react'
+import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -29,7 +29,7 @@ import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useMapView } from '~/hooks/useMapView'
 import { MapViewProvider } from '~/contexts/MapViewContext'
-import { Button } from '~/components/shadcn/ui/button'
+import { ZoomControls } from '~/components/viewer-controls/zoom-controls'
 import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { cn } from '~/lib/shadcn/utils'
@@ -778,35 +778,11 @@ export function MapViewer({
           }}
         >
           {/* Zoom controls */}
-          <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleZoomIn}
-              className="bg-white shadow-md"
-              title="Zoom In"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleZoomOut}
-              className="bg-white shadow-md"
-              title="Zoom Out"
-            >
-              <Minus className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleResetTransform}
-              className="bg-white shadow-md"
-              title="Reset View"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-          </div>
+          <ZoomControls
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onReset={handleResetTransform}
+          />
 
           <div ref={mapContainerRef} className="flex-1 relative min-h-0">
             {/* Ring + banner while a sidebar item is dragged over the map */}

@@ -85,6 +85,28 @@ function DragOverlayContent({
   )
 }
 
+function DragOverlayPortal({
+  overlayRef,
+  dragState,
+}: {
+  overlayRef: React.RefObject<HTMLDivElement | null>
+  dragState: {
+    draggedItem: AnySidebarItem
+    outcome: DropOutcome | null
+  } | null
+}) {
+  return createPortal(
+    <div
+      ref={overlayRef}
+      className="fixed pointer-events-none z-[10000]"
+      style={{ top: 0, left: 0, display: 'none' }}
+    >
+      <DragOverlayContent dragState={dragState} />
+    </div>,
+    document.body,
+  )
+}
+
 // ─── Provider ────────────────────────────────────────────────────────
 
 export function DndProvider({ children }: { children: React.ReactNode }) {
@@ -414,16 +436,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     <DndProviderContext.Provider value={value}>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
       <ClientOnly fallback={null}>
-        {createPortal(
-          <div
-            ref={overlayRef}
-            className="fixed pointer-events-none z-[10000]"
-            style={{ top: 0, left: 0, display: 'none' }}
-          >
-            <DragOverlayContent dragState={dragState} />
-          </div>,
-          document.body,
-        )}
+        <DragOverlayPortal overlayRef={overlayRef} dragState={dragState} />
       </ClientOnly>
     </DndProviderContext.Provider>
   )

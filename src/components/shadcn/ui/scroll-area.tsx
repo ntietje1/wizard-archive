@@ -20,6 +20,7 @@ const ScrollArea = React.forwardRef<
     type?: 'auto' | 'always' | 'scroll' | 'hover'
     viewportClassName?: string
     contentClassName?: string
+    viewportRef?: React.Ref<HTMLDivElement>
   }
 >(
   (
@@ -29,6 +30,7 @@ const ScrollArea = React.forwardRef<
       type = 'hover',
       viewportClassName,
       contentClassName,
+      viewportRef,
       ...props
     },
     ref,
@@ -46,6 +48,7 @@ const ScrollArea = React.forwardRef<
           {...props}
         >
           <ScrollAreaPrimitive.Viewport
+            ref={viewportRef}
             data-slot="scroll-area-viewport"
             className={cn(
               'focus-ring size-full rounded-[inherit] overflow-x-hidden w-full max-w-full',

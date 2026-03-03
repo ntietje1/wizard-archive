@@ -1,21 +1,32 @@
-import { useCallback } from 'react'
+import { lazy, Suspense, useCallback } from 'react'
+import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { AudioFileViewer } from './audio-file-viewer'
-import { ImageFileViewer } from './image-file-viewer'
-import { OtherFileViewer } from './other-file-viewer'
-import { PdfFileViewer } from './pdf-file-viewer'
-import { VideoFileViewer } from './video-file-viewer'
 import type { FileWithContent } from 'convex/files/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
+import { AudioFileViewer } from './audio-file-viewer'
+import { ImageFileViewer } from './image-file-viewer'
+import { OtherFileViewer } from './other-file-viewer'
+import { VideoFileViewer } from './video-file-viewer'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
 import { validateFileForUpload } from '~/lib/file-validation'
 import { assertNever } from '~/lib/utils'
+import { LoadingSpinner } from '~/components/loading/loading-spinner'
+
+const PdfFileViewer = lazy(() =>
+  import('./pdf-file-viewer').then((m) => ({ default: m.PdfFileViewer })),
+)
+
+const pdfFallback = (
+  <div className="flex items-center justify-center w-full h-full">
+    <LoadingSpinner size="lg" />
+  </div>
+)
 
 function getFileType(
   contentType: string | null | undefined,
@@ -123,10 +134,11 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
       )
     case 'pdf':
       return (
-        <PdfFileViewer
-          pdfUrl={file.downloadUrl}
-          title={file.name || 'PDF Document'}
-        />
+        <ClientOnly fallback={pdfFallback}>
+          <Suspense fallback={pdfFallback}>
+            <PdfFileViewer pdfUrl={file.downloadUrl} />
+          </Suspense>
+        </ClientOnly>
       )
     case 'video':
       return <VideoFileViewer videoUrl={file.downloadUrl} />

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
-import { Minus, Plus, RotateCcw } from 'lucide-react'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { isValidFileUrl } from '~/lib/file-url-validation'
-import { Button } from '~/components/shadcn/ui/button'
+import { ZoomControls } from '~/components/viewer-controls/zoom-controls'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
 interface ImageFileViewerProps {
@@ -54,35 +53,11 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
 
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleZoomIn}
-          className="bg-white shadow-md"
-          title="Zoom In"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleZoomOut}
-          className="bg-white shadow-md"
-          title="Zoom Out"
-        >
-          <Minus className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleResetTransform}
-          className="bg-white shadow-md"
-          title="Reset View"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </Button>
-      </div>
+      <ZoomControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onReset={handleResetTransform}
+      />
 
       <div className="flex-1 relative min-h-0">
         {!imageLoaded && !imageError && (
