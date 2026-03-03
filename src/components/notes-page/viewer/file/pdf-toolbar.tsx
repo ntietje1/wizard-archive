@@ -30,6 +30,7 @@ export function PdfToolbar({
           onClick={onPrevPage}
           disabled={currentPage <= 1}
           title="Previous page"
+          aria-label="Previous page"
           className="h-7 w-7"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -43,6 +44,7 @@ export function PdfToolbar({
           onClick={onNextPage}
           disabled={currentPage >= numPages}
           title="Next page"
+          aria-label="Next page"
           className="h-7 w-7"
         >
           <ChevronRight className="w-4 h-4" />

@@ -40,11 +40,7 @@ const ScrollArea = React.forwardRef<
         <ScrollAreaPrimitive.Root
           ref={ref}
           data-slot="scroll-area"
-          className={cn(
-            'relative flex overflow-hidden w-full',
-            viewportClassName,
-            className,
-          )}
+          className={cn('relative flex overflow-hidden w-full', className)}
           {...props}
         >
           <ScrollAreaPrimitive.Viewport
