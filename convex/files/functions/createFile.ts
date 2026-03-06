@@ -4,37 +4,40 @@ import {
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createFile(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     name,
     storageId,
     parentId,
     iconName,
     color,
+    campaignId,
   }: {
     name: string
     storageId?: Id<'_storage'>
     parentId: Id<'folders'> | null
     iconName?: string
     color?: string
+    campaignId: Id<'campaigns'>
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
-  const campaignId = ctx.campaign._id
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId, campaignId })
   await validateSidebarItemName(ctx, {
     parentId,
     name,
+    campaignId,
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.files,
     name,
+    campaignId,
   })
 
   const now = Date.now()

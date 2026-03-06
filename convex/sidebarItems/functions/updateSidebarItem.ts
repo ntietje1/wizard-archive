@@ -1,10 +1,10 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess, validateSidebarItemRename } from '../validation'
 import type { SidebarItemId } from '../types/baseTypes'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function updateSidebarItem(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     itemId,
     name,

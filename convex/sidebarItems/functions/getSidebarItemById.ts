@@ -3,21 +3,33 @@ import { getMap } from '../../gameMaps/functions/getMap'
 import { getFolder } from '../../folders/functions/getFolder'
 import { getFile } from '../../files/functions/getFile'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { requireCampaignMembership } from '../../functions'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
+
+export const requireSidebarItemById = async (
+  ctx: AuthQueryCtx,
+  { id }: { id: SidebarItemId },
+): Promise<AnySidebarItemWithContent> => {
+  const result = await getSidebarItemById(ctx, { id })
+  if (!result) {
+    throw new Error('Sidebar item not found')
+  }
+  return result
+}
 
 export const getSidebarItemById = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { id }: { id: SidebarItemId },
 ): Promise<AnySidebarItemWithContent | null> => {
-  const campaignId = ctx.campaign._id
-
   const item = await ctx.db.get(id)
-  if (!item || item.campaignId !== campaignId) {
+  if (!item) {
     return null
   }
+
+  await requireCampaignMembership(ctx, item.campaignId)
 
   let result: AnySidebarItemWithContent | null = null
 

@@ -6,38 +6,41 @@ import {
 } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../../prosemirrorSync'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
 
 export async function createNote(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     name,
     parentId,
     iconName,
     color,
     content,
+    campaignId,
   }: {
     name: string
     parentId: Id<'folders'> | null
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
+    campaignId: Id<'campaigns'>
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
-  const campaignId = ctx.campaign._id
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId, campaignId })
   await validateSidebarItemName(ctx, {
     parentId,
     name,
+    campaignId,
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.notes,
     name,
+    campaignId,
   })
 
   const now = Date.now()

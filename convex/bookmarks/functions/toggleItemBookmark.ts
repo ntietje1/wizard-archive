@@ -1,15 +1,13 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export async function toggleItemBookmark(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ) {
-  const campaignId = ctx.campaign._id
-  const campaignMemberId = ctx.membership._id
-
   const item = await ctx.db.get(sidebarItemId)
   if (!item) {
     throw new Error('Sidebar item not found')
@@ -18,6 +16,10 @@ export async function toggleItemBookmark(
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
+
+  const campaignId = item.campaignId
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
+  const campaignMemberId = membership._id
 
   // Check if bookmark already exists
   const existingBookmark = await ctx.db

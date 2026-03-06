@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { authQuery } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import {
@@ -28,9 +28,8 @@ const downloadItemValidator = v.union(
   }),
 )
 
-export const getFolderContentsForDownload = campaignQuery({
+export const getFolderContentsForDownload = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
   },
   returns: v.object({
@@ -42,12 +41,14 @@ export const getFolderContentsForDownload = campaignQuery({
   },
 })
 
-export const getRootContentsForDownload = campaignQuery({
+export const getRootContentsForDownload = authQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.object({
     items: v.array(downloadItemValidator),
   }),
-  handler: async (ctx) => {
-    return await getRootContentsForDownloadFn(ctx)
+  handler: async (ctx, args) => {
+    return await getRootContentsForDownloadFn(ctx, {
+      campaignId: args.campaignId,
+    })
   },
 })

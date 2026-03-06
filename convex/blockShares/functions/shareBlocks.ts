@@ -1,11 +1,12 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { shareBlockWithMemberHelper } from './blockShareMutations'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireDmRole } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export const shareBlocks = async (
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     blocks,
@@ -17,10 +18,13 @@ export const shareBlocks = async (
   },
 ): Promise<null> => {
   const note = await ctx.db.get(noteId)
-  await requireItemAccess(ctx, {
+  const item = await requireItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+
+  const campaignId = item.campaignId
+  await requireDmRole(ctx, campaignId)
 
   await Promise.all(
     blocks.map((blockItem) =>

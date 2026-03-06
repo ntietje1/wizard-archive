@@ -19,9 +19,7 @@ interface TrashPopoverContentProps {
   onClose: () => void
 }
 
-export function TrashPopoverContent({
-  onClose,
-}: TrashPopoverContentProps) {
+export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 

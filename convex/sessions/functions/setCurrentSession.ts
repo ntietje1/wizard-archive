@@ -1,21 +1,23 @@
 import { getCurrentSession } from './getCurrentSession'
 import { getSession } from './getSession'
+import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function setCurrentSession(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { sessionId }: { sessionId: Id<'sessions'> },
 ): Promise<Id<'sessions'>> {
-  const campaignId = ctx.campaign._id
-  const now = Date.now()
-
-  const newSession = await getSession(ctx, { sessionId })
-  if (!newSession || newSession.campaignId !== campaignId) {
+  const session = await getSession(ctx, { sessionId })
+  if (!session) {
     throw new Error('Session not found')
   }
 
-  const currentSession = await getCurrentSession(ctx)
+  const campaignId = session.campaignId
+  await requireDmRole(ctx, campaignId)
+  const now = Date.now()
+
+  const currentSession = await getCurrentSession(ctx, { campaignId })
   if (currentSession && currentSession._id !== sessionId) {
     await ctx.db.patch(currentSession._id, {
       endedAt: now,

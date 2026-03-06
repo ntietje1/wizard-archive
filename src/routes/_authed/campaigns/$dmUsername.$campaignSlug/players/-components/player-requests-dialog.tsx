@@ -8,7 +8,6 @@ import {
 import { toast } from 'sonner'
 import { useConvexMutation } from '@convex-dev/react-query'
 import type { CampaignMember } from 'convex/campaigns/types'
-import { useCampaign } from '~/hooks/useCampaign'
 import {
   Dialog,
   DialogContent,
@@ -109,7 +108,6 @@ export function PlayerRequestsDialog({
   onClose,
   players,
 }: PlayerRequestsDialogProps) {
-  const { campaignId } = useCampaign()
   const updateStatus = useMutation({
     mutationFn: useConvexMutation(
       api.campaigns.mutations.updateCampaignMemberStatus,
@@ -136,8 +134,7 @@ export function PlayerRequestsDialog({
   ) => {
     try {
       setUpdatingId(memberId)
-      if (!campaignId) return
-      await updateStatus.mutateAsync({ campaignId, memberId, status })
+      await updateStatus.mutateAsync({ memberId, status })
       toast.success('Player status updated')
     } catch (e) {
       console.error(e)

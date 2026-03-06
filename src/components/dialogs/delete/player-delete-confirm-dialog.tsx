@@ -29,7 +29,6 @@ export function PlayerDeleteConfirmDialog({
   const handleConfirm = useCallback(async () => {
     await updateMemberStatus
       .mutateAsync({
-        campaignId: player.campaignId,
         memberId: player._id,
         status: CAMPAIGN_MEMBER_STATUS.Removed,
       })
@@ -44,7 +43,7 @@ export function PlayerDeleteConfirmDialog({
         onConfirm?.()
         onClose()
       })
-  }, [updateMemberStatus, player._id, player.campaignId, onConfirm, onClose])
+  }, [updateMemberStatus, player._id, onConfirm, onClose])
 
   const playerName = player.userProfile.name ?? 'this player'
 

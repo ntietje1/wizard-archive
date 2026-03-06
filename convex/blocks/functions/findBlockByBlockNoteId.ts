@@ -1,15 +1,17 @@
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 
 export const findBlockByBlockNoteId = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { noteId, blockId }: { noteId: Id<'notes'>; blockId: string },
 ): Promise<Block | null> => {
   const note = await ctx.db.get(noteId)
   if (!note) {
     throw new Error('Note not found')
   }
+  await requireCampaignMembership(ctx, note.campaignId)
 
   const block = await ctx.db
     .query('blocks')

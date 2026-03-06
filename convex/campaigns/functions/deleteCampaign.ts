@@ -1,14 +1,15 @@
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
-import type { AnySidebarItemFromDb } from '../../sidebarItems/types/types'
+import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 const SIDEBAR_TABLES = ['folders', 'notes', 'gameMaps', 'files'] as const
 
 export async function deleteCampaign(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
+  { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Id<'campaigns'>> {
-  const campaignId = ctx.campaign._id
+  await requireDmRole(ctx, campaignId)
 
   // Delete all sidebar items (both active and trashed) with their dependents
   for (const table of SIDEBAR_TABLES) {
@@ -20,7 +21,7 @@ export async function deleteCampaign(
       .collect()
 
     for (const item of items) {
-      await hardDeleteItem(ctx, item as AnySidebarItemFromDb)
+      await hardDeleteItem(ctx, item)
     }
   }
 

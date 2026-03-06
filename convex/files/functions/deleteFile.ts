@@ -2,14 +2,15 @@ import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarIt
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function deleteFile(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { fileId }: { fileId: Id<'files'> },
 ): Promise<Id<'files'>> {
   const fileFromDb = await ctx.db.get(fileId)
+  if (!fileFromDb) throw new Error('File not found')
   const file = await requireItemAccess(ctx, {
     rawItem: fileFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

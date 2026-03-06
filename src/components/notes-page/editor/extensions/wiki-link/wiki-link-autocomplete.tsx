@@ -239,7 +239,6 @@ export function WikiLinkAutocomplete({
       api.notes.queries.getNote,
       context?.mode === 'heading' && context.resolvedItem?._id
         ? {
-            campaignId: context.resolvedItem.campaignId,
             noteId: context.resolvedItem._id as Id<'notes'>,
           }
         : 'skip',

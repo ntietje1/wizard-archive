@@ -517,7 +517,6 @@ export function MapViewer({
       if (draggedPinPositionRef.current) {
         try {
           await updateItemPinMutation.mutateAsync({
-            campaignId: map.campaignId,
             mapPinId: pinId,
             x: draggedPinPositionRef.current.x,
             y: draggedPinPositionRef.current.y,
@@ -539,7 +538,7 @@ export function MapViewer({
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [draggingPin, updateItemPinMutation, map.campaignId])
+  }, [draggingPin, updateItemPinMutation])
 
   const getPercentageFromClick = useCallback(
     (e: React.MouseEvent): PinPosition => {
@@ -561,7 +560,6 @@ export function MapViewer({
     async (itemId: SidebarItemId, position: PinPosition) => {
       try {
         await createItemPinMutation.mutateAsync({
-          campaignId: map.campaignId,
           mapId: map._id,
           x: position.x,
           y: position.y,
@@ -573,7 +571,7 @@ export function MapViewer({
         toast.error('Failed to place pin')
       }
     },
-    [map._id, map.campaignId, createItemPinMutation],
+    [map._id, createItemPinMutation],
   )
   const createPinAtPositionRef = useRef(createPinAtPosition)
   createPinAtPositionRef.current = createPinAtPosition
@@ -631,7 +629,6 @@ export function MapViewer({
 
       try {
         await updateItemPinMutation.mutateAsync({
-          campaignId: map.campaignId,
           mapPinId: pendingPinMove.pinId,
           x: position.x,
           y: position.y,
@@ -643,7 +640,7 @@ export function MapViewer({
         toast.error('Failed to move pin')
       }
     },
-    [pendingPinMove, map.campaignId, updateItemPinMutation],
+    [pendingPinMove, updateItemPinMutation],
   )
 
   const handleMapClick = useCallback(
@@ -913,7 +910,7 @@ export function MapViewer({
                 </TransformComponent>
               </TransformWrapper>
             ) : (
-              <MapImageUpload mapId={map._id} campaignId={map.campaignId} />
+              <MapImageUpload mapId={map._id} />
             )}
           </div>
 
@@ -963,13 +960,7 @@ export function MapViewer({
   )
 }
 
-function MapImageUpload({
-  mapId,
-  campaignId,
-}: {
-  mapId: Id<'gameMaps'>
-  campaignId: Id<'campaigns'>
-}) {
+function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
   const updateMap = useMutation({
     mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
   })
@@ -989,7 +980,6 @@ function MapImageUpload({
     onUploadComplete: async (storageId) => {
       try {
         await updateMap.mutateAsync({
-          campaignId,
           mapId,
           imageStorageId: storageId,
         })

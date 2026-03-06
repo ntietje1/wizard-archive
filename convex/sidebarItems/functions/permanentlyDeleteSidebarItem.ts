@@ -2,13 +2,14 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireItemAccess } from '../validation'
+import { requireCampaignMembership } from '../../functions'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
 import type { SidebarItemId } from '../types/baseTypes'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function permanentlyDeleteSidebarItem(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { itemId }: { itemId: SidebarItemId },
 ): Promise<void> {
   const item = await requireItemAccess(ctx, {
@@ -20,9 +21,10 @@ export async function permanentlyDeleteSidebarItem(
     throw new Error('Item not found in trash')
   }
 
+  const { membership } = await requireCampaignMembership(ctx, item.campaignId)
   if (
     item.type === SIDEBAR_ITEM_TYPES.folders &&
-    ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+    membership.role !== CAMPAIGN_MEMBER_ROLE.DM
   ) {
     throw new Error('Only the DM can permanently delete folders')
   }

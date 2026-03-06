@@ -29,6 +29,7 @@ import type * as blocks_functions_updateBlock from "../blocks/functions/updateBl
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
 import type * as bookmarks_functions_deleteItemBookmarks from "../bookmarks/functions/deleteItemBookmarks.js";
+import type * as bookmarks_functions_getCampaignBookmarks from "../bookmarks/functions/getCampaignBookmarks.js";
 import type * as bookmarks_functions_getItemBookmark from "../bookmarks/functions/getItemBookmark.js";
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
@@ -124,6 +125,7 @@ import type * as sidebarItems_functions_getTrashedSidebarItems from "../sidebarI
 import type * as sidebarItems_functions_hardDeleteItem from "../sidebarItems/functions/hardDeleteItem.js";
 import type * as sidebarItems_functions_moveSidebarItem from "../sidebarItems/functions/moveSidebarItem.js";
 import type * as sidebarItems_functions_permanentlyDeleteSidebarItem from "../sidebarItems/functions/permanentlyDeleteSidebarItem.js";
+import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
 import type * as sidebarItems_functions_updateSidebarItem from "../sidebarItems/functions/updateSidebarItem.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
@@ -135,6 +137,7 @@ import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValid
 import type * as sidebarItems_types_baseTypes from "../sidebarItems/types/baseTypes.js";
 import type * as sidebarItems_types_types from "../sidebarItems/types/types.js";
 import type * as sidebarItems_validation from "../sidebarItems/validation.js";
+import type * as sidebarShares_functions_getCampaignShares from "../sidebarShares/functions/getCampaignShares.js";
 import type * as sidebarShares_functions_getSidebarItemShares from "../sidebarShares/functions/getSidebarItemShares.js";
 import type * as sidebarShares_functions_getSidebarItemSharesForItem from "../sidebarShares/functions/getSidebarItemSharesForItem.js";
 import type * as sidebarShares_functions_getSidebarItemWithShares from "../sidebarShares/functions/getSidebarItemWithShares.js";
@@ -197,6 +200,7 @@ declare const fullApi: ApiFromModules<{
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
   "bookmarks/functions/deleteItemBookmarks": typeof bookmarks_functions_deleteItemBookmarks;
+  "bookmarks/functions/getCampaignBookmarks": typeof bookmarks_functions_getCampaignBookmarks;
   "bookmarks/functions/getItemBookmark": typeof bookmarks_functions_getItemBookmark;
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
@@ -292,6 +296,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/hardDeleteItem": typeof sidebarItems_functions_hardDeleteItem;
   "sidebarItems/functions/moveSidebarItem": typeof sidebarItems_functions_moveSidebarItem;
   "sidebarItems/functions/permanentlyDeleteSidebarItem": typeof sidebarItems_functions_permanentlyDeleteSidebarItem;
+  "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
   "sidebarItems/functions/updateSidebarItem": typeof sidebarItems_functions_updateSidebarItem;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
@@ -303,6 +308,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/types/baseTypes": typeof sidebarItems_types_baseTypes;
   "sidebarItems/types/types": typeof sidebarItems_types_types;
   "sidebarItems/validation": typeof sidebarItems_validation;
+  "sidebarShares/functions/getCampaignShares": typeof sidebarShares_functions_getCampaignShares;
   "sidebarShares/functions/getSidebarItemShares": typeof sidebarShares_functions_getSidebarItemShares;
   "sidebarShares/functions/getSidebarItemSharesForItem": typeof sidebarShares_functions_getSidebarItemSharesForItem;
   "sidebarShares/functions/getSidebarItemWithShares": typeof sidebarShares_functions_getSidebarItemWithShares;

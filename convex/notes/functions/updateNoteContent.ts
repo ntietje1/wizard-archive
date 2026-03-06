@@ -1,12 +1,12 @@
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
 
 export async function updateNoteContent(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<Id<'notes'>> {
   const noteFromDb = await ctx.db.get(noteId)

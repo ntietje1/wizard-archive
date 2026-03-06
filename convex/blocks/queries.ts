@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { dmQuery } from '../functions'
+import { authQuery } from '../functions'
 import { blockShareValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
 import {
@@ -10,9 +10,8 @@ import {
 import { getBlockWithShares as getBlockWithSharesFn } from './functions/getBlockWithShares'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 
-export const getBlockWithShares = dmQuery({
+export const getBlockWithShares = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockId: blockNoteIdValidator,
   },
@@ -40,9 +39,8 @@ const blockShareInfoValidator = v.object({
   isTopLevel: v.boolean(),
 })
 
-export const getBlocksWithShares = dmQuery({
+export const getBlocksWithShares = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockIds: v.array(blockNoteIdValidator),
   },

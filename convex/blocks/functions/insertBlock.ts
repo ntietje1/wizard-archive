@@ -1,11 +1,11 @@
 import { SHARE_STATUS } from '../../blockShares/types'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function insertBlock(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   params: {
     noteId: Id<'notes'>
     campaignId: Id<'campaigns'>

@@ -1,17 +1,23 @@
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { Bookmark } from '../types'
 
 export async function getItemBookmark(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Bookmark | null> {
+  const item = await ctx.db.get(sidebarItemId)
+  if (!item) return null
+
+  const { membership } = await requireCampaignMembership(ctx, item.campaignId)
+
   return await ctx.db
     .query('bookmarks')
     .withIndex('by_campaign_member_item', (q) =>
       q
-        .eq('campaignId', ctx.campaign._id)
-        .eq('campaignMemberId', ctx.membership._id)
+        .eq('campaignId', item.campaignId)
+        .eq('campaignMemberId', membership._id)
         .eq('sidebarItemId', sidebarItemId),
     )
     .unique()

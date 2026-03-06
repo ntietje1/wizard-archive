@@ -1,15 +1,20 @@
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
+import { requireDmRole } from '../../functions'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
 
 /**
  * Permanently deletes all trashed items in the campaign in a single mutation.
  * Only root-level trashed items need explicit tree walks — their descendants
  * are handled by `applyToTree`.
  */
-export async function emptyTrashBin(ctx: CampaignMutationCtx): Promise<void> {
-  const campaignId = ctx.campaign._id
+export async function emptyTrashBin(
+  ctx: AuthMutationCtx,
+  { campaignId }: { campaignId: Id<'campaigns'> },
+): Promise<void> {
+  await requireDmRole(ctx, campaignId)
 
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db

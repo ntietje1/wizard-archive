@@ -1,17 +1,19 @@
+import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function startSession(
-  ctx: CampaignMutationCtx,
-  { name }: { name?: string } = {},
+  ctx: AuthMutationCtx,
+  { name, campaignId }: { name?: string; campaignId: Id<'campaigns'> },
 ): Promise<Id<'sessions'>> {
+  const { campaign } = await requireDmRole(ctx, campaignId)
   const now = Date.now()
 
   // End current session if one exists
-  if (ctx.campaign.currentSessionId) {
-    const existingSession = await ctx.db.get(ctx.campaign.currentSessionId)
+  if (campaign.currentSessionId) {
+    const existingSession = await ctx.db.get(campaign.currentSessionId)
     if (existingSession) {
-      await ctx.db.patch(ctx.campaign.currentSessionId, {
+      await ctx.db.patch(campaign.currentSessionId, {
         endedAt: now,
         updatedTime: now,
         updatedBy: ctx.user.profile._id,
@@ -20,7 +22,7 @@ export async function startSession(
   }
 
   const sessionId = await ctx.db.insert('sessions', {
-    campaignId: ctx.campaign._id,
+    campaignId,
     name,
     startedAt: now,
     updatedTime: now,
@@ -28,7 +30,7 @@ export async function startSession(
     createdBy: ctx.user.profile._id,
   })
 
-  await ctx.db.patch(ctx.campaign._id, {
+  await ctx.db.patch(campaignId, {
     currentSessionId: sessionId,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,

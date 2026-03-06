@@ -1,12 +1,14 @@
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import type { AnySidebarItem } from '../types/types'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemByName = async (
-  ctx: CampaignQueryCtx,
-  { name }: { name: string },
+  ctx: AuthQueryCtx,
+  { name, campaignId }: { name: string; campaignId: Id<'campaigns'> },
 ): Promise<AnySidebarItem | null> => {
-  const campaignId = ctx.campaign._id
+  await requireCampaignMembership(ctx, campaignId)
 
   const [note, folder, map, file] = await Promise.all([
     ctx.db

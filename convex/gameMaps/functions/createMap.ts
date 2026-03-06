@@ -4,37 +4,40 @@ import {
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createMap(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     name,
     imageStorageId,
     parentId,
     iconName,
     color,
+    campaignId,
   }: {
     name: string
     imageStorageId?: Id<'_storage'>
     parentId: Id<'folders'> | null
     iconName?: string
     color?: string
+    campaignId: Id<'campaigns'>
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
-  const campaignId = ctx.campaign._id
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId, campaignId })
   await validateSidebarItemName(ctx, {
     parentId,
     name,
+    campaignId,
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     name,
+    campaignId,
   })
 
   const now = Date.now()

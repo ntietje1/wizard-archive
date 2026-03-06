@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { campaignMutation, dmMutation } from '../functions'
+import { authMutation } from '../functions'
 import { sidebarItemIdValidator } from './schema/baseValidators'
 import { updateSidebarItem as updateSidebarItemFn } from './functions/updateSidebarItem'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
@@ -7,9 +7,8 @@ import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from '
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import type { SidebarItemId } from './types/baseTypes'
 
-export const updateSidebarItem = campaignMutation({
+export const updateSidebarItem = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
@@ -28,9 +27,8 @@ export const updateSidebarItem = campaignMutation({
   },
 })
 
-export const moveSidebarItem = campaignMutation({
+export const moveSidebarItem = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
     parentId: v.optional(v.union(v.id('folders'), v.null())),
     deleted: v.optional(v.boolean()),
@@ -45,9 +43,8 @@ export const moveSidebarItem = campaignMutation({
   },
 })
 
-export const permanentlyDeleteSidebarItem = campaignMutation({
+export const permanentlyDeleteSidebarItem = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     itemId: sidebarItemIdValidator,
   },
   returns: v.null(),
@@ -57,13 +54,13 @@ export const permanentlyDeleteSidebarItem = campaignMutation({
   },
 })
 
-export const emptyTrashBin = dmMutation({
+export const emptyTrashBin = authMutation({
   args: {
     campaignId: v.id('campaigns'),
   },
   returns: v.null(),
-  handler: async (ctx): Promise<null> => {
-    await emptyTrashBinFn(ctx)
+  handler: async (ctx, args): Promise<null> => {
+    await emptyTrashBinFn(ctx, { campaignId: args.campaignId })
     return null
   },
 })

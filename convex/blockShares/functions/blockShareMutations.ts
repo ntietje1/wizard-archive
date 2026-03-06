@@ -4,23 +4,25 @@ import { updateBlock } from '../../blocks/functions/updateBlock'
 import { removeBlockIfNotNeeded } from '../../blocks/functions/removeBlockIfNotNeeded'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import { SHARE_STATUS } from '../types'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireDmRole } from '../../functions'
+import type { NoteFromDb } from '../../notes/types'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { BlockItem, ShareStatus } from '../types'
 
 async function upsertBlockForSharing(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
-    noteId,
+    note,
     blockItem,
     shareStatus,
   }: {
-    noteId: Id<'notes'>
+    note: NoteFromDb
     blockItem: BlockItem
     shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {
-  const campaignId = ctx.campaign._id
+  const noteId = note._id
 
   const existingBlock = await findBlockByBlockNoteId(ctx, {
     noteId,
@@ -38,7 +40,7 @@ async function upsertBlockForSharing(
   }
 
   return await insertBlock(ctx, {
-    campaignId,
+    campaignId: note.campaignId,
     blockId: blockItem.blockNoteId,
     content: blockItem.content,
     isTopLevel: true,
@@ -49,7 +51,7 @@ async function upsertBlockForSharing(
 }
 
 async function addBlockShare(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     blockId,
@@ -60,12 +62,9 @@ async function addBlockShare(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<Id<'blockShares'>> {
-  const campaignId = ctx.campaign._id
-
   const block = await ctx.db.get(blockId)
-  if (!block || block.campaignId !== campaignId) {
-    throw new Error('Block not found')
-  }
+  if (!block) throw new Error('Block not found')
+  const campaignId = block.campaignId
 
   const existingShare = await ctx.db
     .query('blockShares')
@@ -81,7 +80,7 @@ async function addBlockShare(
     return existingShare._id
   }
 
-  const currentSession = await getCurrentSession(ctx)
+  const currentSession = await getCurrentSession(ctx, { campaignId })
   const now = Date.now()
 
   return await ctx.db.insert('blockShares', {
@@ -97,19 +96,20 @@ async function addBlockShare(
 }
 
 async function removeBlockShare(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     blockId,
     campaignMemberId,
   }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const block = await ctx.db.get(blockId)
+  if (!block) return
 
   const share = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
       q
-        .eq('campaignId', campaignId)
+        .eq('campaignId', block.campaignId)
         .eq('blockId', blockId)
         .eq('campaignMemberId', campaignMemberId),
     )
@@ -121,15 +121,16 @@ async function removeBlockShare(
 }
 
 async function clearBlockShares(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const block = await ctx.db.get(blockId)
+  if (!block) return
 
   const shares = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', campaignId).eq('blockId', blockId),
+      q.eq('campaignId', block.campaignId).eq('blockId', blockId),
     )
     .collect()
 
@@ -139,7 +140,7 @@ async function clearBlockShares(
 }
 
 export async function shareBlockWithMemberHelper(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     blockItem,
@@ -150,17 +151,21 @@ export async function shareBlockWithMemberHelper(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  await requireDmRole(ctx, note.campaignId)
+
   const blockId = await upsertBlockForSharing(ctx, {
-    noteId,
+    note,
     blockItem,
     shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
   })
 
-  await addBlockShare(ctx, { noteId, blockId, campaignMemberId })
+  await addBlockShare(ctx, { noteId: note._id, blockId, campaignMemberId })
 }
 
 export async function unshareBlockFromMemberHelper(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     blockNoteId,
@@ -171,13 +176,15 @@ export async function unshareBlockFromMemberHelper(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  await requireDmRole(ctx, note.campaignId)
 
   const block = await findBlockByBlockNoteId(ctx, {
     noteId,
     blockId: blockNoteId,
   })
-  if (!block || block.campaignId !== campaignId) return
+  if (!block) return
 
   await removeBlockShare(ctx, { blockId: block._id, campaignMemberId })
 
@@ -185,7 +192,7 @@ export async function unshareBlockFromMemberHelper(
   const remainingShares = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', campaignId).eq('blockId', block._id),
+      q.eq('campaignId', block.campaignId).eq('blockId', block._id),
     )
     .first()
 
@@ -201,15 +208,19 @@ export async function unshareBlockFromMemberHelper(
 }
 
 export async function setBlockShareStatusHelper(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     blockItem,
     status,
   }: { noteId: Id<'notes'>; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  await requireDmRole(ctx, note.campaignId)
+
   const blockId = await upsertBlockForSharing(ctx, {
-    noteId,
+    note,
     blockItem,
     shareStatus: status,
   })

@@ -27,10 +27,7 @@ interface SidebarItemProps {
   parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
 }
 
-function SidebarItemComponent({
-  item,
-  parentItemsMap,
-}: SidebarItemProps) {
+function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
   const { rename } = useRenameItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)

@@ -1,11 +1,15 @@
 import { getCurrentSession } from './getCurrentSession'
+import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function endCurrentSession(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
+  { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Id<'sessions'>> {
-  const currentSession = await getCurrentSession(ctx)
+  await requireDmRole(ctx, campaignId)
+
+  const currentSession = await getCurrentSession(ctx, { campaignId })
   if (!currentSession) {
     throw new Error('No active session')
   }
@@ -17,7 +21,7 @@ export async function endCurrentSession(
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })
-  await ctx.db.patch(ctx.campaign._id, {
+  await ctx.db.patch(campaignId, {
     currentSessionId: null,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,

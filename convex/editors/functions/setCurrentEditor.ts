@@ -1,23 +1,26 @@
 import { SORT_DIRECTIONS, SORT_ORDERS } from '../types'
+import { requireCampaignMembership } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { SortDirection, SortOrder } from '../types'
 
 export async function setCurrentEditor(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     sortOrder,
     sortDirection,
     sidebarWidth,
     isSidebarExpanded,
+    campaignId,
   }: {
     sortOrder?: SortOrder
     sortDirection?: SortDirection
     sidebarWidth?: number
     isSidebarExpanded?: boolean
+    campaignId: Id<'campaigns'>
   },
 ): Promise<Id<'editor'>> {
-  const campaignId = ctx.campaign._id
+  await requireCampaignMembership(ctx, campaignId)
   const now = Date.now()
 
   const editor = await ctx.db

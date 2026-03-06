@@ -4,20 +4,32 @@ import { getBlockPermissionLevel } from '../../blockShares/functions/getBlockPer
 import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
+import type { AuthQueryCtx } from '../../functions'
+import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 
 export const enhanceNote = async (
-  ctx: CampaignQueryCtx,
-  { note }: { note: NoteFromDb },
+  ctx: AuthQueryCtx,
+  {
+    note,
+    sharesMap,
+    bookmarkIds,
+  }: {
+    note: NoteFromDb
+    sharesMap?: SharesMap
+    bookmarkIds?: Set<SidebarItemId>
+  },
 ): Promise<Note> => {
-  return enhanceBase(ctx, { item: note })
+  return enhanceBase(ctx, { item: note, sharesMap, bookmarkIds })
 }
 
 export const enhanceNoteWithContent = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { note }: { note: Note },
 ): Promise<NoteWithContent> => {
+  await requireCampaignMembership(ctx, note.campaignId)
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,

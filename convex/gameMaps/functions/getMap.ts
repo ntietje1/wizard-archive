@@ -1,15 +1,18 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireCampaignMembership } from '../../functions'
 import { enhanceGameMapWithContent } from './enhanceMap'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { GameMapWithContent } from '../types'
 
 export const getMap = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { mapId }: { mapId: Id<'gameMaps'> },
 ): Promise<GameMapWithContent | null> => {
   const rawMap = await ctx.db.get(mapId)
+  if (!rawMap) return null
+  await requireCampaignMembership(ctx, rawMap.campaignId)
   const map = await checkItemAccess(ctx, {
     rawItem: rawMap,
     requiredLevel: PERMISSION_LEVEL.VIEW,

@@ -1,10 +1,11 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function removeItemPin(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { mapPinId }: { mapPinId: Id<'mapPins'> },
 ): Promise<Id<'mapPins'>> {
   const pin = await ctx.db.get(mapPinId)
@@ -13,6 +14,8 @@ export async function removeItemPin(
   }
 
   const map = await ctx.db.get(pin.mapId)
+  if (!map) throw new Error('Map not found')
+  await requireCampaignMembership(ctx, map.campaignId)
   await requireItemAccess(ctx, {
     rawItem: map,
     requiredLevel: PERMISSION_LEVEL.EDIT,

@@ -161,9 +161,7 @@ export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
     const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
       const effectiveParentId =
-        item.parentId && !itemsMap.has(item.parentId)
-          ? null
-          : item.parentId
+        item.parentId && !itemsMap.has(item.parentId) ? null : item.parentId
       if (map.has(effectiveParentId)) {
         map.get(effectiveParentId)?.push(item)
       } else {

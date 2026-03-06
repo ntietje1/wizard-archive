@@ -1,22 +1,25 @@
 import { findUniqueSlug } from '../../common/slug'
+import { requireDmRole } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function updateCampaign(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     name,
     description,
     slug,
+    campaignId,
   }: {
     name?: string
     description?: string
     slug?: string
+    campaignId: Id<'campaigns'>
   },
 ): Promise<Id<'campaigns'>> {
+  const { campaign } = await requireDmRole(ctx, campaignId)
   const profile = ctx.user.profile
-  const campaign = ctx.campaign
 
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 

@@ -3,6 +3,7 @@ import { hasAtLeastPermissionLevel } from '../permissions/hasAtLeastPermissionLe
 import { PERMISSION_LEVEL } from '../permissions/types'
 import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
+import { requireCampaignMembership } from '../functions'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
@@ -11,7 +12,7 @@ import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { SidebarItemId, SidebarItemType } from './types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
-import type { CampaignMutationCtx, CampaignQueryCtx } from '../functions'
+import type { AuthQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
 import type {
   AnySidebarItem,
@@ -27,18 +28,21 @@ export { validateItemName } from './sharedValidation'
  * Fetches all siblings and delegates to shared checkNameConflict.
  */
 export async function checkUniqueNameUnderParent(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     parentId,
     name,
     excludeId,
+    campaignId,
   }: {
     parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
+    campaignId: Id<'campaigns'>
   },
 ): Promise<{ valid: boolean; error?: string }> {
-  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  await requireCampaignMembership(ctx, campaignId)
+  const siblings = await getSidebarItemsByParent(ctx, { parentId, campaignId })
   return checkNameConflict(name, siblings, excludeId)
 }
 
@@ -47,7 +51,7 @@ export async function checkUniqueNameUnderParent(
  * Server version uses async ctx.db.get lookups.
  */
 export async function validateNoCircularParent(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     itemId,
     newParentId,
@@ -56,6 +60,9 @@ export async function validateNoCircularParent(
     newParentId: Id<'folders'> | null
   },
 ): Promise<{ valid: boolean; error?: string }> {
+  const item = await ctx.db.get(itemId)
+  if (!item) throw new Error('Item not found')
+  await requireCampaignMembership(ctx, item.campaignId)
   if (!newParentId) {
     return { valid: true }
   }
@@ -96,23 +103,26 @@ export async function validateNoCircularParent(
  * Returns siblings so callers can reuse them (e.g. for default name generation).
  */
 export async function validateSidebarItemName(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     parentId,
     name,
     excludeId,
+    campaignId,
   }: {
     parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
+    campaignId: Id<'campaigns'>
   },
 ): Promise<{ siblings: Array<AnySidebarItem> }> {
+  await requireCampaignMembership(ctx, campaignId)
   const nameResult = validateItemName(name)
   if (!nameResult.valid) {
     throw new Error(nameResult.error)
   }
 
-  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const siblings = await getSidebarItemsByParent(ctx, { parentId, campaignId })
   const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
     throw new Error(uniqueResult.error)
@@ -127,7 +137,7 @@ export async function validateSidebarItemName(
  * Throws an error if validation fails.
  */
 export async function validateSidebarParentChange(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     item,
     newParentId,
@@ -136,6 +146,7 @@ export async function validateSidebarParentChange(
     newParentId: Id<'folders'> | null
   },
 ): Promise<void> {
+  await requireCampaignMembership(ctx, item.campaignId)
   const result = await validateNoCircularParent(ctx, {
     itemId: item._id,
     newParentId,
@@ -161,9 +172,13 @@ export async function validateSidebarParentChange(
  * Throws if validation fails.
  */
 export async function validateSidebarCreateParent(
-  ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'folders'> | null },
+  ctx: AuthQueryCtx,
+  {
+    parentId,
+    campaignId,
+  }: { parentId: Id<'folders'> | null; campaignId: Id<'campaigns'> },
 ): Promise<void> {
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
   if (parentId) {
     const parentItem = await getSidebarItemById(ctx, { id: parentId })
     if (!parentItem) {
@@ -174,7 +189,7 @@ export async function validateSidebarCreateParent(
       throw new Error('You do not have sufficient permission for this item')
     }
   } else {
-    if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
       throw new Error('Only the DM can create items at the root level')
     }
   }
@@ -186,7 +201,7 @@ export async function validateSidebarCreateParent(
  * The caller is responsible for checking permission on the item itself.
  */
 export async function validateSidebarMove(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     item,
     newParentId,
@@ -195,12 +210,14 @@ export async function validateSidebarMove(
     newParentId: Id<'folders'> | null
   },
 ): Promise<void> {
+  await requireCampaignMembership(ctx, item.campaignId)
   await validateSidebarParentChange(ctx, { item, newParentId })
 
   await validateSidebarItemName(ctx, {
     parentId: newParentId,
     name: item.name,
     excludeId: item._id,
+    campaignId: item.campaignId,
   })
 }
 
@@ -210,7 +227,7 @@ export async function validateSidebarMove(
  * the user lacks permission.
  */
 export async function checkItemAccess<T extends AnySidebarItemFromDb>(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     rawItem,
     requiredLevel,
@@ -220,9 +237,9 @@ export async function checkItemAccess<T extends AnySidebarItemFromDb>(
   },
 ): Promise<EnhancedSidebarItem<T> | null> {
   if (!rawItem) return null
+  await requireCampaignMembership(ctx, rawItem.campaignId)
   const item = await enhanceSidebarItem(ctx, { item: rawItem })
-  const level = await getSidebarItemPermissionLevel(ctx, { item })
-  if (!hasAtLeastPermissionLevel(level, requiredLevel)) {
+  if (!hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)) {
     return null
   }
   return item
@@ -233,7 +250,7 @@ export async function checkItemAccess<T extends AnySidebarItemFromDb>(
  * fails the campaign check, or lacks the required permission.
  */
 export async function requireItemAccess<T extends AnySidebarItemFromDb>(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     rawItem,
     requiredLevel,
@@ -242,9 +259,10 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
     requiredLevel: PermissionLevel
   },
 ): Promise<EnhancedSidebarItem<T>> {
-  if (!rawItem || rawItem.campaignId !== ctx.campaign._id) {
+  if (!rawItem) {
     throw new Error('Item not found')
   }
+  await requireCampaignMembership(ctx, rawItem.campaignId)
   const item = await checkItemAccess(ctx, { rawItem, requiredLevel })
   if (!item) {
     throw new Error('You do not have sufficient permission for this item')
@@ -253,19 +271,19 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
 }
 
 async function checkSlugConflict(
-  ctx: CampaignMutationCtx,
+  ctx: AuthQueryCtx,
   {
     type,
     slug,
     excludeId,
+    campaignId,
   }: {
     type: SidebarItemType
     slug: string
     excludeId?: SidebarItemId
+    campaignId: Id<'campaigns'>
   },
 ): Promise<boolean> {
-  const campaignId = ctx.campaign._id
-
   let query
   switch (type) {
     case SIDEBAR_ITEM_TYPES.notes:
@@ -299,33 +317,41 @@ async function checkSlugConflict(
 }
 
 export async function findUniqueSidebarItemSlug(
-  ctx: CampaignMutationCtx,
+  ctx: AuthQueryCtx,
   {
     type,
     name,
     itemId,
+    campaignId,
   }: {
     type: SidebarItemType
     name: string
     itemId: SidebarItemId
+    campaignId: Id<'campaigns'>
   },
 ): Promise<string> {
+  await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { type, slug, excludeId: itemId }),
+    checkSlugConflict(ctx, { type, slug, excludeId: itemId, campaignId }),
   )
 }
 
 export async function findNewSidebarItemSlug(
-  ctx: CampaignMutationCtx,
+  ctx: AuthQueryCtx,
   {
     type,
     name,
+    campaignId,
   }: {
     type: SidebarItemType
     name: string
+    campaignId: Id<'campaigns'>
   },
 ): Promise<string> {
-  return findUniqueSlug(name, (slug) => checkSlugConflict(ctx, { type, slug }))
+  await requireCampaignMembership(ctx, campaignId)
+  return findUniqueSlug(name, (slug) =>
+    checkSlugConflict(ctx, { type, slug, campaignId }),
+  )
 }
 
 /**
@@ -334,7 +360,7 @@ export async function findNewSidebarItemSlug(
  * Returns the new slug.
  */
 export async function validateSidebarItemRename(
-  ctx: CampaignMutationCtx,
+  ctx: AuthQueryCtx,
   {
     item,
     newName,
@@ -343,16 +369,20 @@ export async function validateSidebarItemRename(
     newName: string
   },
 ): Promise<string> {
+  await requireCampaignMembership(ctx, item.campaignId)
   const trimmedName = newName.trim()
+  const campaignId = item.campaignId
   await validateSidebarItemName(ctx, {
     parentId: item.parentId,
     name: trimmedName,
     excludeId: item._id,
+    campaignId,
   })
 
   return findUniqueSidebarItemSlug(ctx, {
     type: item.type,
     name: trimmedName,
     itemId: item._id,
+    campaignId,
   })
 }

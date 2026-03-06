@@ -5,7 +5,8 @@ import { saveTopLevelBlocksForNote } from './blocks/functions/saveTopLevelBlocks
 import { requireItemAccess } from './sidebarItems/validation'
 import { PERMISSION_LEVEL } from './permissions/types'
 import { editorSchema } from './notes/editorSpecs'
-import { buildCampaignMutationCtx, buildCampaignQueryCtx } from './functions'
+import { authenticate } from './functions'
+import type { AuthMutationCtx, AuthQueryCtx } from './functions'
 import type { PermissionLevel } from './permissions/types'
 import type { Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -35,8 +36,9 @@ async function checkAccess(
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
   if (!noteFromDb) throw new Error('Note not found')
-  const campaignCtx = await buildCampaignQueryCtx(ctx, noteFromDb.campaignId)
-  await requireItemAccess(campaignCtx, {
+  const user = await authenticate(ctx)
+  const authCtx: AuthQueryCtx = { ...ctx, user }
+  await requireItemAccess(authCtx, {
     rawItem: noteFromDb,
     requiredLevel: level,
   })
@@ -71,12 +73,13 @@ const sync = prosemirrorSync.syncApi({
     const noteId = documentId as Id<'notes'>
     const noteFromDb = await ctx.db.get(noteId)
     if (!noteFromDb) throw new Error('Note not found')
-    const campaignCtx = await buildCampaignMutationCtx(
-      ctx,
-      noteFromDb.campaignId,
-    )
+    const user = await authenticate(ctx)
+    const authCtx: AuthMutationCtx = { ...ctx, user }
     const blocks = pmSnapshotToBlocks(snapshot)
-    await saveTopLevelBlocksForNote(campaignCtx, { noteId, content: blocks })
+    await saveTopLevelBlocksForNote(authCtx, {
+      noteId,
+      content: blocks,
+    })
   },
 })
 

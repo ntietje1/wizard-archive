@@ -96,7 +96,6 @@ export function SidebarItemEditDialog({
       try {
         const previousSlug = item.slug
         const response = await updateMutation.mutateAsync({
-          campaignId: item.campaignId,
           itemId: item._id,
           name: value.name || undefined,
           iconName: value.iconName,

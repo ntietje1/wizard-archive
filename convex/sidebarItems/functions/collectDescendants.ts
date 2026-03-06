@@ -1,5 +1,5 @@
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import type { QueryCtx } from '../../_generated/server'
 
 export interface DescendantItems {
   folders: Array<Doc<'folders'>>
@@ -16,16 +16,17 @@ export interface DescendantItems {
  * Set `trashed: true` to collect trashed descendants (needed for restore / permanent delete).
  */
 export async function collectDescendants(
-  ctx: CampaignQueryCtx,
+  ctx: QueryCtx,
   {
     folderId,
+    campaignId,
     trashed = false,
   }: {
     folderId: Id<'folders'>
+    campaignId: Id<'campaigns'>
     trashed?: boolean
   },
 ): Promise<DescendantItems> {
-  const campaignId = ctx.campaign._id
   const result: DescendantItems = {
     folders: [],
     notes: [],

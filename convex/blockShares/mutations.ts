@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { dmMutation } from '../functions'
+import { authMutation } from '../functions'
 import {
   blockNoteIdValidator,
   blockShareStatusValidator,
@@ -14,9 +14,8 @@ const blockItemValidator = v.object({
   content: customBlockValidator,
 })
 
-export const setBlocksShareStatus = dmMutation({
+export const setBlocksShareStatus = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     status: blockShareStatusValidator,
@@ -31,9 +30,8 @@ export const setBlocksShareStatus = dmMutation({
   },
 })
 
-export const shareBlocks = dmMutation({
+export const shareBlocks = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blocks: v.array(blockItemValidator),
     campaignMemberId: v.id('campaignMembers'),
@@ -48,9 +46,8 @@ export const shareBlocks = dmMutation({
   },
 })
 
-export const unshareBlocks = dmMutation({
+export const unshareBlocks = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),

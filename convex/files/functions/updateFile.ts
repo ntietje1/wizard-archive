@@ -4,11 +4,12 @@ import {
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateFile(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     fileId,
     name,
@@ -24,6 +25,8 @@ export async function updateFile(
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
   const fileFromDb = await ctx.db.get(fileId)
+  if (!fileFromDb) throw new Error('File not found')
+  await requireCampaignMembership(ctx, fileFromDb.campaignId)
   const file = await requireItemAccess(ctx, {
     rawItem: fileFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

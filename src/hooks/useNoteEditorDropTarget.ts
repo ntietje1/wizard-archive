@@ -76,5 +76,4 @@ export function useNoteEditorDropTarget({
       },
     })
   }, [noteId])
-
 }

@@ -3,15 +3,18 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireCampaignMembership } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateFolder(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { folderId, name }: { folderId: Id<'folders'>; name?: string },
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
   const folderFromDb = await ctx.db.get(folderId)
+  if (!folderFromDb) throw new Error('Folder not found')
+  await requireCampaignMembership(ctx, folderFromDb.campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

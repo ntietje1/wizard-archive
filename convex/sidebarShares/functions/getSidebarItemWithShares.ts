@@ -1,22 +1,21 @@
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
-import { resolveAllInheritedPermissions } from './sidebarItemPermissions'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireDmRole } from '../../functions'
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { resolveInheritedPermissions } from './sidebarItemPermissions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const getSidebarItemWithShares = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     sidebarItemId,
-    playerMemberIds,
   }: {
     sidebarItemId: SidebarItemId
-    playerMemberIds: Array<Id<'campaignMembers'>>
   },
 ): Promise<{
   allPermissionLevel: PermissionLevel | null
@@ -32,24 +31,34 @@ export const getSidebarItemWithShares = async (
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
+  await requireDmRole(ctx, item.campaignId)
+
+  const members = await ctx.db
+    .query('campaignMembers')
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', item.campaignId))
+    .collect()
+  const playerMemberIds = members
+    .filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
+    .map((m) => m._id)
 
   let inheritShares: boolean | null = null
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     inheritShares = item.inheritShares
   }
 
-  // Always fetch individual shares
-  const shares = await getSidebarItemSharesForItem(ctx, {
-    sidebarItemId,
-  })
+  const shares = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q.eq('campaignId', item.campaignId).eq('sidebarItemId', sidebarItemId),
+    )
+    .collect()
 
-  // Resolve all inherited permissions in a single ancestor walk
-  const inherited = await resolveAllInheritedPermissions(ctx, {
+  const inherited = await resolveInheritedPermissions(ctx, {
     parentId: item.parentId ?? null,
+    campaignId: item.campaignId,
     memberIds: playerMemberIds,
   })
 
-  // Map batched result back into the existing return shape
   const memberInheritedPermissions: Record<
     Id<'campaignMembers'>,
     PermissionLevel

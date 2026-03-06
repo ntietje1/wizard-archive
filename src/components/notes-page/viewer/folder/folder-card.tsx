@@ -83,10 +83,7 @@ function FolderCardSkeleton() {
   )
 }
 
-function FolderCardInner({
-  item: folder,
-  onClick,
-}: ItemCardProps<Folder>) {
+function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()

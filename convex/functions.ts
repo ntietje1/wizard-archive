@@ -1,34 +1,25 @@
-import { v } from 'convex/values'
 import { mutationGeneric, queryGeneric } from 'convex/server'
-import { getCampaign } from './campaigns/functions/getCampaign'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
-import type { MutationCtx, QueryCtx } from './_generated/server'
+import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
 import type { AuthUser } from './users/types'
 import type {
-  Campaign,
+  CampaignFromDb,
   CampaignMember,
   CampaignMemberRole,
 } from './campaigns/types'
-import type { SidebarItemId } from './sidebarItems/types/baseTypes'
 
 // --- Context types ---
 
 export type AuthQueryCtx = QueryCtx & { user: AuthUser }
 export type AuthMutationCtx = MutationCtx & { user: AuthUser }
-export type CampaignQueryCtx = AuthQueryCtx & {
-  campaign: Campaign
-  membership: CampaignMember
-}
-export type CampaignMutationCtx = AuthMutationCtx & {
-  campaign: Campaign
-  membership: CampaignMember
-}
 
 // --- Context enrichment ---
 
-async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUser> {
+export async function authenticate(
+  ctx: QueryCtx | MutationCtx,
+): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new Error('Not authenticated')
   const profile = await ctx.db
@@ -43,8 +34,8 @@ async function checkMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
   options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
-): Promise<{ campaign: Campaign; membership: CampaignMember }> {
-  const campaign = await getCampaign(ctx, { campaignId })
+): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+  const campaign = await ctx.db.get(campaignId)
   if (!campaign) throw new Error('Campaign not found')
   const member = await ctx.db
     .query('campaignMembers')
@@ -66,37 +57,40 @@ async function checkMembership(
   }
 }
 
-// --- Build campaign context from raw ctx (for library callbacks like prosemirrorSync) ---
+// --- Cached campaign membership helpers ---
 
-export async function buildCampaignQueryCtx(
-  ctx: QueryCtx,
+const membershipCache = new WeakMap<
+  DatabaseReader,
+  Map<string, { campaign: CampaignFromDb; membership: CampaignMember }>
+>()
+
+export async function requireCampaignMembership(
+  ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
-): Promise<CampaignQueryCtx> {
-  const user = await authenticate(ctx)
-  const authCtx = { ...ctx, user } as AuthQueryCtx
-  const { campaign, membership } = await checkMembership(authCtx, campaignId)
-  return { ...authCtx, campaign, membership }
+): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+  let cache = membershipCache.get(ctx.db)
+  if (!cache) {
+    cache = new Map()
+    membershipCache.set(ctx.db, cache)
+  }
+  if (!cache.has(campaignId)) {
+    cache.set(campaignId, await checkMembership(ctx, campaignId))
+  }
+  return cache.get(campaignId)!
 }
 
-export async function buildCampaignMutationCtx(
-  ctx: MutationCtx,
+export async function requireDmRole(
+  ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
-): Promise<CampaignMutationCtx> {
-  const user = await authenticate(ctx)
-  const authCtx = { ...ctx, user } as AuthMutationCtx
-  const { campaign, membership } = await checkMembership(authCtx, campaignId)
-  return { ...authCtx, campaign, membership }
+): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+  const result = await requireCampaignMembership(ctx, campaignId)
+  if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throw new Error('Not a DM')
+  }
+  return result
 }
 
 // --- Config types ---
-
-type WithCampaignId = {
-  campaignId: Validator<Id<'campaigns'>, 'required', string>
-}
-
-type WithSidebarItemId = WithCampaignId & {
-  sidebarItemId: Validator<SidebarItemId, 'required', string>
-}
 
 type AuthConfig<TArgs extends PropertyValidators, TReturn> = {
   args: TArgs
@@ -108,26 +102,6 @@ type AuthMutationConfig<TArgs extends PropertyValidators, TReturn> = {
   args: TArgs
   returns: Validator<unknown, 'required', string>
   handler: (ctx: AuthMutationCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
-type CampaignConfig<
-  TCtx,
-  TArgs extends PropertyValidators & WithCampaignId,
-  TReturn,
-> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: TCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
-type SidebarConfig<
-  TCtx,
-  TArgs extends PropertyValidators & WithSidebarItemId,
-  TReturn,
-> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: TCtx, args: ObjectType<TArgs>) => Promise<TReturn>
 }
 
 // --- Wrappers ---
@@ -154,96 +128,6 @@ export function authMutation<TArgs extends PropertyValidators, TReturn>(
     handler: async (ctx: MutationCtx, args: ObjectType<TArgs>) => {
       const user = await authenticate(ctx)
       return config.handler({ ...ctx, user }, args)
-    },
-  })
-}
-
-export function campaignQuery<
-  TArgs extends PropertyValidators & WithCampaignId,
-  TReturn,
->(config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>) {
-  return queryGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (
-      ctx: QueryCtx,
-      args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
-    ) => {
-      const user = await authenticate(ctx)
-      const authCtx = { ...ctx, user } as AuthQueryCtx
-      const { campaign, membership } = await checkMembership(
-        authCtx,
-        args.campaignId,
-      )
-      return config.handler({ ...authCtx, campaign, membership }, args)
-    },
-  })
-}
-
-export function campaignMutation<
-  TArgs extends PropertyValidators & WithCampaignId,
-  TReturn,
->(config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>) {
-  return mutationGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (
-      ctx: MutationCtx,
-      args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
-    ) => {
-      const user = await authenticate(ctx)
-      const authCtx = { ...ctx, user } as AuthMutationCtx
-      const { campaign, membership } = await checkMembership(
-        authCtx,
-        args.campaignId,
-      )
-      return config.handler({ ...authCtx, campaign, membership }, args)
-    },
-  })
-}
-
-export function dmQuery<
-  TArgs extends PropertyValidators & WithCampaignId,
-  TReturn,
->(config: CampaignConfig<CampaignQueryCtx, TArgs, TReturn>) {
-  return queryGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (
-      ctx: QueryCtx,
-      args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
-    ) => {
-      const user = await authenticate(ctx)
-      const authCtx = { ...ctx, user } as AuthQueryCtx
-      const { campaign, membership } = await checkMembership(
-        authCtx,
-        args.campaignId,
-        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-      )
-      return config.handler({ ...authCtx, campaign, membership }, args)
-    },
-  })
-}
-
-export function dmMutation<
-  TArgs extends PropertyValidators & WithCampaignId,
-  TReturn,
->(config: CampaignConfig<CampaignMutationCtx, TArgs, TReturn>) {
-  return mutationGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (
-      ctx: MutationCtx,
-      args: ObjectType<TArgs> & { campaignId: Id<'campaigns'> },
-    ) => {
-      const user = await authenticate(ctx)
-      const authCtx = { ...ctx, user } as AuthMutationCtx
-      const { campaign, membership } = await checkMembership(
-        authCtx,
-        args.campaignId,
-        { allowedRoles: [CAMPAIGN_MEMBER_ROLE.DM] },
-      )
-      return config.handler({ ...authCtx, campaign, membership }, args)
     },
   })
 }

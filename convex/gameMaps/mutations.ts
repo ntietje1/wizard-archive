@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { campaignMutation } from '../functions'
+import { authMutation } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
@@ -10,7 +10,7 @@ import { updatePinVisibility as updatePinVisibilityFn } from './functions/update
 import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
 import type { Id } from '../_generated/dataModel'
 
-export const createMap = campaignMutation({
+export const createMap = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
@@ -33,13 +33,13 @@ export const createMap = campaignMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
+      campaignId: args.campaignId,
     })
   },
 })
 
-export const updateMap = campaignMutation({
+export const updateMap = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     name: v.optional(v.string()),
     imageStorageId: v.optional(v.union(v.id('_storage'), v.null())),
@@ -64,9 +64,8 @@ export const updateMap = campaignMutation({
   },
 })
 
-export const deleteMap = campaignMutation({
+export const deleteMap = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
   },
   returns: v.id('gameMaps'),
@@ -75,9 +74,8 @@ export const deleteMap = campaignMutation({
   },
 })
 
-export const createItemPin = campaignMutation({
+export const createItemPin = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapId: v.id('gameMaps'),
     x: v.number(),
     y: v.number(),
@@ -94,9 +92,8 @@ export const createItemPin = campaignMutation({
   },
 })
 
-export const updateItemPin = campaignMutation({
+export const updateItemPin = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     x: v.number(),
     y: v.number(),
@@ -111,9 +108,8 @@ export const updateItemPin = campaignMutation({
   },
 })
 
-export const updatePinVisibility = campaignMutation({
+export const updatePinVisibility = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
     visible: v.boolean(),
   },
@@ -126,9 +122,8 @@ export const updatePinVisibility = campaignMutation({
   },
 })
 
-export const removeItemPin = campaignMutation({
+export const removeItemPin = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     mapPinId: v.id('mapPins'),
   },
   returns: v.id('mapPins'),

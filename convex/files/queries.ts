@@ -1,12 +1,11 @@
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { authQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
 import { getFile as getFileFn } from './functions/getFile'
 import type { FileWithContent } from './types'
 
-export const getFile = campaignQuery({
+export const getFile = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     fileId: v.id('files'),
   },
   returns: v.union(fileWithContentValidator, v.null()),

@@ -1,4 +1,3 @@
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { deleteFile } from '../../files/functions/deleteFile'
 import { deleteMap } from '../../gameMaps/functions/deleteMap'
 import { deleteNote } from '../../notes/functions/deleteNote'
@@ -6,25 +5,22 @@ import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarIt
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { CampaignMutationCtx } from '../../functions'
+import { requireDmRole } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function deleteFolder(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { folderId }: { folderId: Id<'folders'> },
 ): Promise<Id<'folders'>> {
   const folderFromDb = await ctx.db.get(folderId)
+  if (!folderFromDb) throw new Error('Folder not found')
+  const campaignId = folderFromDb.campaignId
+  await requireDmRole(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-
-  // folders specifically require DM level to delete rather than full access
-  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    throw new Error('Only the DM can delete folders')
-  }
-
-  const campaignId = ctx.campaign._id
 
   // Query all children (including trashed ones) so hard delete cleans up everything
   const childFolders = await ctx.db

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { authQuery } from '../functions'
 import { getAllSidebarItems as getAllSidebarItemsFn } from './functions/getAllSidebarItems'
-import { getSidebarItemById as getSidebarItemByIdFn } from './functions/getSidebarItemById'
+import { requireSidebarItemById } from './functions/getSidebarItemById'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { getSidebarItemByName as getSidebarItemByNameFn } from './functions/getSidebarItemByName'
@@ -14,41 +14,39 @@ import {
 import { anySidebarItemWithContentValidator } from './schema/contentSchema'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 
-export const getAllSidebarItems = campaignQuery({
+export const getAllSidebarItems = authQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx): Promise<Array<AnySidebarItem>> => {
-    return await getAllSidebarItemsFn(ctx)
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
+    return await getAllSidebarItemsFn(ctx, { campaignId: args.campaignId })
   },
 })
 
-export const getSidebarItemsByParent = campaignQuery({
+export const getSidebarItemsByParent = authQuery({
   args: {
     campaignId: v.id('campaigns'),
     parentId: v.union(v.id('folders'), v.null()),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
-    return await getSidebarItemsByParentFn(ctx, { parentId: args.parentId })
+    return await getSidebarItemsByParentFn(ctx, {
+      parentId: args.parentId,
+      campaignId: args.campaignId,
+    })
   },
 })
 
-export const getSidebarItem = campaignQuery({
+export const getSidebarItem = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     id: sidebarItemIdValidator,
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    const result = await getSidebarItemByIdFn(ctx, { id: args.id })
-    if (!result) {
-      throw new Error('Sidebar item not found')
-    }
-    return result
+    return await requireSidebarItemById(ctx, { id: args.id })
   },
 })
 
-export const getSidebarItemBySlug = campaignQuery({
+export const getSidebarItemBySlug = authQuery({
   args: {
     campaignId: v.id('campaigns'),
     type: sidebarItemTypeValidator,
@@ -59,25 +57,29 @@ export const getSidebarItemBySlug = campaignQuery({
     return await getSidebarItemBySlugFn(ctx, {
       type: args.type,
       slug: args.slug,
+      campaignId: args.campaignId,
     })
   },
 })
 
-export const getSidebarItemByName = campaignQuery({
+export const getSidebarItemByName = authQuery({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
   },
   returns: v.union(anySidebarItemValidator, v.null()),
   handler: async (ctx, args): Promise<AnySidebarItem | null> => {
-    return await getSidebarItemByNameFn(ctx, { name: args.name })
+    return await getSidebarItemByNameFn(ctx, {
+      name: args.name,
+      campaignId: args.campaignId,
+    })
   },
 })
 
-export const getTrashedSidebarItems = campaignQuery({
+export const getTrashedSidebarItems = authQuery({
   args: { campaignId: v.id('campaigns') },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx): Promise<Array<AnySidebarItem>> => {
-    return await getTrashedSidebarItemsFn(ctx)
+  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
+    return await getTrashedSidebarItemsFn(ctx, { campaignId: args.campaignId })
   },
 })

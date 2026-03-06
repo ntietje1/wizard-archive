@@ -1,10 +1,11 @@
 import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     initialParentId,
     isTrashed,
@@ -23,6 +24,7 @@ export async function getSidebarItemAncestors(
     if (!rawFolder) {
       break
     }
+    await requireCampaignMembership(ctx, rawFolder.campaignId)
     // Trashed items only show trashed ancestors
     if (isTrashed && !rawFolder.deletionTime) {
       break

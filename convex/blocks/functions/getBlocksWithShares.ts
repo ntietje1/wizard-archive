@@ -5,14 +5,15 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
+import { requireDmRole } from '../../functions'
 import type { ShareStatus } from '../../blockShares/types'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMember } from '../../campaigns/types'
 import type { BlockShareInfo } from '../types'
 
 export const getBlocksWithShares = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     noteId,
     blockIds,
@@ -25,12 +26,16 @@ export const getBlocksWithShares = async (
   playerMembers: Array<CampaignMember>
 }> => {
   const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  await requireDmRole(ctx, note.campaignId)
   await checkItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
-  const allMembers = await getCampaignMembers(ctx)
+  const allMembers = await getCampaignMembers(ctx, {
+    campaignId: note.campaignId,
+  })
   const playerMembers = allMembers.filter(
     (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
   )

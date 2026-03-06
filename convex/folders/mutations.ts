@@ -1,13 +1,12 @@
 import { v } from 'convex/values'
-import { campaignMutation, dmMutation } from '../functions'
+import { authMutation } from '../functions'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import { deleteFolder as deleteFolderFn } from './functions/deleteFolder'
 import type { Id } from '../_generated/dataModel'
 
-export const updateFolder = campaignMutation({
+export const updateFolder = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
     name: v.optional(v.string()),
   },
@@ -26,9 +25,8 @@ export const updateFolder = campaignMutation({
   },
 })
 
-export const deleteFolder = dmMutation({
+export const deleteFolder = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     folderId: v.id('folders'),
   },
   returns: v.id('folders'),
@@ -37,7 +35,7 @@ export const deleteFolder = dmMutation({
   },
 })
 
-export const createFolder = campaignMutation({
+export const createFolder = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
@@ -58,6 +56,7 @@ export const createFolder = campaignMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
+      campaignId: args.campaignId,
     })
   },
 })

@@ -1,15 +1,14 @@
 import { v } from 'convex/values'
-import { dmQuery } from '../functions'
+import { authQuery } from '../functions'
 import { blockShareValidator } from './schema'
-import { getBlockSharesForBlock } from './functions/getBlockSharesForBlock'
+import { getBlockSharesDm } from './functions/getBlockSharesForBlock'
 
-export const getBlockShares = dmQuery({
+export const getBlockShares = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     blockId: v.id('blocks'),
   },
   returns: v.array(blockShareValidator),
   handler: async (ctx, args) => {
-    return await getBlockSharesForBlock(ctx, { blockId: args.blockId })
+    return await getBlockSharesDm(ctx, { blockId: args.blockId })
   },
 })

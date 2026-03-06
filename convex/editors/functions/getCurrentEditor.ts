@@ -1,5 +1,6 @@
 import type { Id } from '../../_generated/dataModel'
 import type { AuthQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
 import type { Editor } from '../types'
 
 export async function getCurrentEditor(
@@ -9,6 +10,8 @@ export async function getCurrentEditor(
   if (!campaignId) {
     return null
   }
+
+  await requireCampaignMembership(ctx, campaignId)
 
   const editor = await ctx.db
     .query('editor')

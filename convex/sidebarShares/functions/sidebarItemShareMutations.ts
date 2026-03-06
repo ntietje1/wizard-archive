@@ -1,5 +1,5 @@
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type {
   SidebarItemId,
@@ -8,7 +8,7 @@ import type {
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function shareSidebarItemWithMember(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     sidebarItemId,
     sidebarItemType,
@@ -21,7 +21,9 @@ export async function shareSidebarItemWithMember(
     permissionLevel: PermissionLevel | null
   },
 ): Promise<Id<'sidebarItemShares'>> {
-  const campaignId = ctx.campaign._id
+  const item = await ctx.db.get(sidebarItemId)
+  if (!item) throw new Error('Sidebar item not found')
+  const campaignId = item.campaignId
 
   // Check if share already exists
   const existingShare = await ctx.db
@@ -52,7 +54,7 @@ export async function shareSidebarItemWithMember(
   }
 
   // Get current session if any
-  const currentSession = await getCurrentSession(ctx)
+  const currentSession = await getCurrentSession(ctx, { campaignId })
 
   return await ctx.db.insert('sidebarItemShares', {
     campaignId,
@@ -68,7 +70,7 @@ export async function shareSidebarItemWithMember(
 }
 
 export async function unshareSidebarItemFromMember(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     sidebarItemId,
     campaignMemberId,
@@ -77,7 +79,9 @@ export async function unshareSidebarItemFromMember(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const item = await ctx.db.get(sidebarItemId)
+  if (!item) return
+  const campaignId = item.campaignId
 
   const share = await ctx.db
     .query('sidebarItemShares')
@@ -95,10 +99,12 @@ export async function unshareSidebarItemFromMember(
 }
 
 export async function deleteSidebarItemShares(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const item = await ctx.db.get(sidebarItemId)
+  if (!item) return
+  const campaignId = item.campaignId
 
   const shares = await ctx.db
     .query('sidebarItemShares')

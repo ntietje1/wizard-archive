@@ -1,14 +1,17 @@
+import { requireDmRole } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function updateSession(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { sessionId, name }: { sessionId: Id<'sessions'>; name?: string },
 ): Promise<null> {
   const session = await ctx.db.get(sessionId)
-  if (!session || session.campaignId !== ctx.campaign._id) {
+  if (!session) {
     throw new Error('Session not found')
   }
+
+  await requireDmRole(ctx, session.campaignId)
 
   const updates: Partial<Doc<'sessions'>> = {}
   if (name !== undefined) {

@@ -1,12 +1,12 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { enhanceNoteWithContent } from './enhanceNote'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { NoteWithContent } from '../types'
 import type { Id } from '../../_generated/dataModel'
 
 export const getNote = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<NoteWithContent | null> => {
   const rawNote = await ctx.db.get(noteId)

@@ -1,19 +1,22 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../types'
+import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { CampaignMemberStatus } from '../types'
 
 export async function updateCampaignMemberStatus(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     memberId,
     status,
   }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get(memberId)
-  if (!member || member.campaignId !== ctx.campaign._id) {
+  if (!member) {
     throw new Error('Member not found')
   }
+
+  await requireDmRole(ctx, member.campaignId)
 
   if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) {
     throw new Error('Only player membership status can be changed')

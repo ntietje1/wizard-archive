@@ -10,9 +10,10 @@ import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
 import { applyToDependents } from './applyToDependents'
+import { requireCampaignMembership } from '../../functions'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { FolderFromDb } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 
@@ -23,11 +24,13 @@ const clearDeletion = { deletionTime: undefined, deletedBy: undefined }
  * Returns a patch object with the unique name/slug if they differ from current.
  */
 async function resolveRestoreConflicts(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   item: AnySidebarItemFromDb,
 ): Promise<Record<string, unknown>> {
+  const campaignId = item.campaignId
   const siblings = await getSidebarItemsByParent(ctx, {
     parentId: item.parentId,
+    campaignId,
   })
   const otherNames = siblings
     .filter((s) => s._id !== item._id)
@@ -38,6 +41,7 @@ async function resolveRestoreConflicts(
     type: item.type,
     name: uniqueName,
     itemId: item._id,
+    campaignId,
   })
 
   const patch: Record<string, unknown> = {}
@@ -47,7 +51,7 @@ async function resolveRestoreConflicts(
 }
 
 export async function moveSidebarItem(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     itemId,
     parentId,
@@ -64,6 +68,9 @@ export async function moveSidebarItem(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
+  const campaignId = item.campaignId
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
+
   const isTrashing = deleted === true && !item.deletionTime
   const isRestoring = deleted === false && !!item.deletionTime
   const isMoving = parentId !== undefined
@@ -72,7 +79,7 @@ export async function moveSidebarItem(
   if (isTrashing) {
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
-      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+      membership.role !== CAMPAIGN_MEMBER_ROLE.DM
     ) {
       throw new Error('Only the DM can trash folders')
     }
@@ -92,7 +99,7 @@ export async function moveSidebarItem(
   if (isRestoring) {
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
-      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+      membership.role !== CAMPAIGN_MEMBER_ROLE.DM
     ) {
       throw new Error('Only the DM can restore folders')
     }
@@ -120,19 +127,21 @@ export async function moveSidebarItem(
       await applyToTree(
         ctx,
         freshItem,
-        async (ctx, i) => {
+        async (_treeCtx, i) => {
           if (i._id === freshItem._id) return // root already handled above
           if (!i.deletionTime) return
 
-          await applyToDependents(ctx, i, async (ctx, doc) => {
-            await ctx.db.patch(doc._id, clearDeletion)
+          await applyToDependents(_treeCtx, i, async (_depCtx, doc) => {
+            await _depCtx.db.patch(doc._id, clearDeletion)
           })
 
           // Slugs are campaign-global, so descendants need deduplication too
+          // Uses outer ctx (AuthMutationCtx) for slug validation
           const descSlug = await findUniqueSidebarItemSlug(ctx, {
             type: i.type,
             name: i.name,
             itemId: i._id,
+            campaignId,
           })
           await ctx.db.patch(i._id, {
             ...clearDeletion,

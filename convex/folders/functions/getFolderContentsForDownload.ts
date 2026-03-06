@@ -6,10 +6,11 @@ import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sid
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import { assertNever } from '../../common/types'
+import type { AuthQueryCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
-import { assertNever } from '../../common/types'
 
 export type DownloadItem =
   | {
@@ -26,13 +27,18 @@ export type DownloadItem =
     }
 
 async function collectItemsRecursively(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   {
     parentId,
     currentPath,
-  }: { parentId: Id<'folders'> | null; currentPath: string },
+    campaignId,
+  }: {
+    parentId: Id<'folders'> | null
+    currentPath: string
+    campaignId: Id<'campaigns'>
+  },
 ): Promise<Array<DownloadItem>> {
-  const children = await getSidebarItemsByParent(ctx, { parentId })
+  const children = await getSidebarItemsByParent(ctx, { parentId, campaignId })
   const items: Array<DownloadItem> = []
   const permissionLevels = await Promise.all(
     children.map((child) =>
@@ -61,9 +67,7 @@ async function collectItemsRecursively(
       }
       case SIDEBAR_ITEM_TYPES.notes: {
         const baseName = child.name
-        const noteName = baseName.endsWith('.md')
-          ? baseName
-          : `${baseName}.md`
+        const noteName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
@@ -73,9 +77,7 @@ async function collectItemsRecursively(
           ),
         )
         const content = visibleBlocks
-          .filter(
-            (block): block is NonNullable<typeof block> => block !== null,
-          )
+          .filter((block): block is NonNullable<typeof block> => block !== null)
           .map((block) => block.content)
         items.push({
           type: SIDEBAR_ITEM_TYPES.notes,
@@ -106,6 +108,7 @@ async function collectItemsRecursively(
         const nestedItems = await collectItemsRecursively(ctx, {
           parentId: child._id,
           currentPath: nestedPath,
+          campaignId,
         })
         items.push(...nestedItems)
         break
@@ -119,10 +122,13 @@ async function collectItemsRecursively(
 }
 
 export async function getFolderContentsForDownload(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   folderId: Id<'folders'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
   const folderFromDb = await ctx.db.get(folderId)
+  if (!folderFromDb) throw new Error('Folder not found')
+  const campaignId = folderFromDb.campaignId
+  await requireCampaignMembership(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -132,17 +138,21 @@ export async function getFolderContentsForDownload(
   const items = await collectItemsRecursively(ctx, {
     parentId: folderId,
     currentPath: '',
+    campaignId,
   })
 
   return { folderName, items }
 }
 
 export async function getRootContentsForDownload(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
+  { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<{ items: Array<DownloadItem> }> {
+  await requireCampaignMembership(ctx, campaignId)
   const items = await collectItemsRecursively(ctx, {
     parentId: null,
     currentPath: '',
+    campaignId,
   })
   return { items }
 }

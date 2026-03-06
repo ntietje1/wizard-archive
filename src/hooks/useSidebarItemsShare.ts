@@ -51,7 +51,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       api.sidebarShares.queries.getSidebarItemWithShares,
       campaignData?._id && singleItem && isDm
         ? {
-            campaignId: campaignData._id,
             sidebarItemId: singleItem._id,
           }
         : 'skip',
@@ -217,7 +216,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       await Promise.all(
         items.map((item) =>
           setAllPlayersPermissionMutation.mutateAsync({
-            campaignId: campaignData._id,
             sidebarItemId: item._id,
             permissionLevel: newLevel,
           }),
@@ -266,7 +264,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
           await Promise.all(
             items.map((item) =>
               unshareSidebarItem.mutateAsync({
-                campaignId: campaignData._id,
                 sidebarItemId: item._id,
                 campaignMemberId: memberId,
               }),
@@ -285,7 +282,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
           await Promise.all(
             itemsToShare.map((item) =>
               shareSidebarItem.mutateAsync({
-                campaignId: campaignData._id,
                 sidebarItemId: item._id,
                 sidebarItemType: item.type,
                 campaignMemberId: memberId,
@@ -371,7 +367,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
       try {
         await setFolderInheritSharesMutation.mutateAsync({
-          campaignId: campaignData._id,
           folderId: singleItem._id,
           inheritShares: enabled,
         })
@@ -398,7 +393,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         await Promise.all(
           items.map((item) =>
             updateSharePermission.mutateAsync({
-              campaignId: campaignData._id,
               sidebarItemId: item._id,
               sidebarItemType: item.type,
               campaignMemberId: memberId,
@@ -423,7 +417,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         await Promise.all(
           items.map((item) =>
             setAllPlayersPermissionMutation.mutateAsync({
-              campaignId: campaignData._id,
               sidebarItemId: item._id,
               permissionLevel: level,
             }),
@@ -457,7 +450,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         await Promise.all(
           items.map((item) =>
             unshareSidebarItem.mutateAsync({
-              campaignId: campaignData._id,
               sidebarItemId: item._id,
               campaignMemberId: memberId,
             }),

@@ -1,12 +1,11 @@
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { authQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
 import { getNote as getNoteFn } from './functions/getNote'
 import type { NoteWithContent } from './types'
 
-export const getNote = campaignQuery({
+export const getNote = authQuery({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
   },
   returns: v.union(noteWithContentValidator, v.null()),

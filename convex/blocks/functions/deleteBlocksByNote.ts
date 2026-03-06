@@ -1,16 +1,17 @@
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 
 export async function deleteBlocksByNote(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
 
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', campaignId).eq('noteId', noteId),
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId),
     )
     .collect()
 

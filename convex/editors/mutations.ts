@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { campaignMutation } from '../functions'
+import { authMutation } from '../functions'
 import { sortDirectionValidator, sortOrderValidator } from './schema'
 import { setCurrentEditor as setCurrentEditorFn } from './functions/setCurrentEditor'
 import type { Id } from '../_generated/dataModel'
 
-export const setCurrentEditor = campaignMutation({
+export const setCurrentEditor = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     sortOrder: v.optional(sortOrderValidator),
@@ -19,6 +19,7 @@ export const setCurrentEditor = campaignMutation({
       sortDirection: args.sortDirection,
       sidebarWidth: args.sidebarWidth,
       isSidebarExpanded: args.isSidebarExpanded,
+      campaignId: args.campaignId,
     })
   },
 })

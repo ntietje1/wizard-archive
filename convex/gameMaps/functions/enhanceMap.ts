@@ -3,7 +3,16 @@ import {
   enhanceBase,
   enhanceSidebarItem,
 } from '../../sidebarItems/functions/enhanceSidebarItem'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { getCampaignBookmarks } from '../../bookmarks/functions/getCampaignBookmarks'
+import {
+  getAllCampaignShares,
+  getMemberShares,
+} from '../../sidebarShares/functions/getCampaignShares'
+import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
+import type { AuthQueryCtx } from '../../functions'
+import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type {
   GameMap,
   GameMapFromDb,
@@ -13,11 +22,19 @@ import type {
 } from '../types'
 
 export const enhanceGameMap = async (
-  ctx: CampaignQueryCtx,
-  { gameMap }: { gameMap: GameMapFromDb },
+  ctx: AuthQueryCtx,
+  {
+    gameMap,
+    sharesMap,
+    bookmarkIds,
+  }: {
+    gameMap: GameMapFromDb
+    sharesMap?: SharesMap
+    bookmarkIds?: Set<SidebarItemId>
+  },
 ): Promise<GameMap> => {
   const [base, imageUrl] = await Promise.all([
-    enhanceBase(ctx, { item: gameMap }),
+    enhanceBase(ctx, { item: gameMap, sharesMap, bookmarkIds }),
     gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
   ])
 
@@ -28,12 +45,24 @@ export const enhanceGameMap = async (
 }
 
 const enhanceMapPin = async (
-  ctx: CampaignQueryCtx,
-  { pin }: { pin: MapPin },
+  ctx: AuthQueryCtx,
+  {
+    pin,
+    sharesMap,
+    bookmarkIds,
+  }: {
+    pin: MapPin
+    sharesMap: SharesMap
+    bookmarkIds: Set<SidebarItemId>
+  },
 ): Promise<MapPinWithItem | null> => {
   const item = await ctx.db.get(pin.itemId)
   if (item) {
-    const enhancedItem = await enhanceSidebarItem(ctx, { item })
+    const enhancedItem = await enhanceSidebarItem(ctx, {
+      item,
+      sharesMap,
+      bookmarkIds,
+    })
     return {
       ...pin,
       item: enhancedItem,
@@ -43,21 +72,34 @@ const enhanceMapPin = async (
 }
 
 export const enhanceGameMapWithContent = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { gameMap }: { gameMap: GameMap },
 ): Promise<GameMapWithContent> => {
-  const ancestors = await getSidebarItemAncestors(ctx, {
-    initialParentId: gameMap.parentId,
-    isTrashed: !!gameMap.deletionTime,
-  })
+  const { membership } = await requireCampaignMembership(
+    ctx,
+    gameMap.campaignId,
+  )
+  const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
 
-  const rawPins: Array<MapPin> = await ctx.db
-    .query('mapPins')
-    .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
-    .collect()
+  const [ancestors, rawPins, bookmarkIds, sharesMap] = await Promise.all([
+    getSidebarItemAncestors(ctx, {
+      initialParentId: gameMap.parentId,
+      isTrashed: !!gameMap.deletionTime,
+    }),
+    ctx.db
+      .query('mapPins')
+      .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
+      .collect() as Promise<Array<MapPin>>,
+    getCampaignBookmarks(ctx, gameMap.campaignId, membership._id),
+    hasFullAccess
+      ? getAllCampaignShares(ctx, gameMap.campaignId)
+      : getMemberShares(ctx, gameMap.campaignId, membership._id),
+  ])
 
   const pins = (
-    await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, { pin })))
+    await Promise.all(
+      rawPins.map((pin) => enhanceMapPin(ctx, { pin, sharesMap, bookmarkIds })),
+    )
   ).filter((pin) => pin !== null)
 
   return {

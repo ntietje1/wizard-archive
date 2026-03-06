@@ -19,7 +19,7 @@ export type SessionContextValue = {
   setCurrentSession: UseMutationResult<
     Id<'sessions'>,
     Error,
-    { campaignId: Id<'campaigns'>; sessionId: Id<'sessions'> }
+    { sessionId: Id<'sessions'> }
   >
   nextSessionNumber: number
 }

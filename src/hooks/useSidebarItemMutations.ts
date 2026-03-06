@@ -50,7 +50,10 @@ export type CreateItemResult = {
 
 export interface SidebarItemMutationsValue {
   createItem: (args: CreateItemArgs) => Promise<CreateItemResult>
-  getDefaultName: (type: SidebarItemType, parentId: Id<'folders'> | null) => string
+  getDefaultName: (
+    type: SidebarItemType,
+    parentId: Id<'folders'> | null,
+  ) => string
   rename: (
     item: AnySidebarItem,
     newName: string,

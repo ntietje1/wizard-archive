@@ -3,14 +3,16 @@ import { insertBlock } from './insertBlock'
 import { updateBlock } from './updateBlock'
 import { removeBlockIfNotNeeded } from './removeBlockIfNotNeeded'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function saveTopLevelBlocksForNote(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  const campaignId = note.campaignId
 
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')

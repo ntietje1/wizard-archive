@@ -1,7 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { applyToDependents } from './applyToDependents'
+import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { CampaignMutationCtx } from '../../functions'
 
 /**
  * Hard-deletes a single sidebar item and all its dependent rows
@@ -11,7 +11,7 @@ import type { CampaignMutationCtx } from '../../functions'
  * Does NOT check permissions — caller must have already authorized.
  */
 export async function hardDeleteItem(
-  ctx: CampaignMutationCtx,
+  ctx: MutationCtx,
   item: AnySidebarItemFromDb,
 ): Promise<void> {
   // Clean up storage for files and maps

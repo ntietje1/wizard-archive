@@ -1,7 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { Id, TableNames } from '../../_generated/dataModel'
+import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { CampaignMutationCtx } from '../../functions'
 
 /**
  * Collects all dependent entities of a sidebar item (blocks, pins, shares,
@@ -14,14 +14,11 @@ import type { CampaignMutationCtx } from '../../functions'
  * itself and must be handled separately by the caller when needed.
  */
 export async function applyToDependents(
-  ctx: CampaignMutationCtx,
+  ctx: MutationCtx,
   item: AnySidebarItemFromDb,
-  operation: (
-    ctx: CampaignMutationCtx,
-    doc: { _id: Id<TableNames> },
-  ) => Promise<void>,
+  operation: (ctx: MutationCtx, doc: { _id: Id<TableNames> }) => Promise<void>,
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const campaignId = item.campaignId
 
   // Type-specific dependents
   switch (item.type) {

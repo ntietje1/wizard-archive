@@ -3,11 +3,11 @@ import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarItemShareMutations'
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function deleteNote(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<Id<'notes'>> {
   const noteFromDb = await ctx.db.get(noteId)

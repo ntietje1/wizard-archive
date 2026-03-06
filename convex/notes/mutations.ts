@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { campaignMutation } from '../functions'
+import { authMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
@@ -7,9 +7,8 @@ import { deleteNote as deleteNoteFn } from './functions/deleteNote'
 import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
 import type { Id } from '../_generated/dataModel'
 
-export const updateNote = campaignMutation({
+export const updateNote = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
@@ -32,9 +31,8 @@ export const updateNote = campaignMutation({
   },
 })
 
-export const deleteNote = campaignMutation({
+export const deleteNote = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
   },
   returns: v.id('notes'),
@@ -43,7 +41,7 @@ export const deleteNote = campaignMutation({
   },
 })
 
-export const createNote = campaignMutation({
+export const createNote = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
@@ -66,13 +64,13 @@ export const createNote = campaignMutation({
       iconName: args.iconName,
       color: args.color,
       content: args.content,
+      campaignId: args.campaignId,
     })
   },
 })
 
-export const updateNoteContent = campaignMutation({
+export const updateNoteContent = authMutation({
   args: {
-    campaignId: v.id('campaigns'),
     noteId: v.id('notes'),
     content: v.array(customBlockValidator),
   },

@@ -1,7 +1,8 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireDmRole } from '../../functions'
 import { shareSidebarItemWithMember } from './sidebarItemShareMutations'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type {
@@ -10,7 +11,7 @@ import type {
 } from '../../sidebarItems/types/baseTypes'
 
 export const shareSidebarItem = async (
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     sidebarItemId,
     sidebarItemType,
@@ -28,6 +29,7 @@ export const shareSidebarItem = async (
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+  await requireDmRole(ctx, item!.campaignId)
 
   return await shareSidebarItemWithMember(ctx, {
     sidebarItemId,

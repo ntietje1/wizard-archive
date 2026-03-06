@@ -52,9 +52,7 @@ export function TrashButton() {
         align="end"
         className="p-2 w-auto"
       >
-        <TrashPopoverContent
-          onClose={() => setOpen(false)}
-        />
+        <TrashPopoverContent onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   )

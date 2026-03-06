@@ -123,7 +123,6 @@ export function SessionPanel() {
                     onClick={() => {
                       if (campaignId) {
                         setCurrentSession.mutate({
-                          campaignId,
                           sessionId: s._id,
                         })
                       }

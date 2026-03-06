@@ -3,12 +3,13 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireCampaignMembership } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateMap(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     mapId,
     name,
@@ -24,6 +25,8 @@ export async function updateMap(
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
   const mapFromDb = await ctx.db.get(mapId)
+  if (!mapFromDb) throw new Error('Map not found')
+  await requireCampaignMembership(ctx, mapFromDb.campaignId)
   const map = await requireItemAccess(ctx, {
     rawItem: mapFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

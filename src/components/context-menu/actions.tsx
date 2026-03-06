@@ -139,7 +139,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.notes,
             campaignId,
             parentId: ctx.item?._id ?? null,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
+            name: getDefaultName(
+              SIDEBAR_ITEM_TYPES.notes,
+              ctx.item?._id ?? null,
+            ),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -169,7 +172,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.folders,
             campaignId,
             parentId: ctx.item?._id ?? null,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id ?? null),
+            name: getDefaultName(
+              SIDEBAR_ITEM_TYPES.folders,
+              ctx.item?._id ?? null,
+            ),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -199,7 +205,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.gameMaps,
             campaignId,
             parentId: ctx.item?._id ?? null,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id ?? null),
+            name: getDefaultName(
+              SIDEBAR_ITEM_TYPES.gameMaps,
+              ctx.item?._id ?? null,
+            ),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -229,7 +238,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
             type: SIDEBAR_ITEM_TYPES.files,
             campaignId,
             parentId: ctx.item?._id ?? null,
-            name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
+            name: getDefaultName(
+              SIDEBAR_ITEM_TYPES.files,
+              ctx.item?._id ?? null,
+            ),
           })
           openParentFolders(result.id)
           navigateToItem(result)
@@ -328,7 +340,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         try {
           if (!campaignId) return
           await convex.mutation(api.gameMaps.mutations.removeItemPin, {
-            campaignId,
             mapPinId: ctx.activePin._id,
           })
           toast.success('Pin removed')
@@ -348,7 +359,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         try {
           if (!campaignId) return
           await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
-            campaignId,
             mapPinId: ctx.activePin._id,
             visible: newVisible,
           })
@@ -409,7 +419,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           await convex.mutation(
             api.sidebarShares.mutations.setAllPlayersPermission,
             {
-              campaignId,
               sidebarItemId: ctx.item._id,
               permissionLevel: level,
             },
@@ -459,7 +468,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         try {
           const fullItem = await convex.query(
             api.sidebarItems.queries.getSidebarItem,
-            { id: ctx.item._id, campaignId: ctx.item.campaignId },
+            { id: ctx.item._id },
           )
           if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
             toast.error('Failed to load note content')
@@ -531,7 +540,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           }
           const { folderName, items } = await convex.query(
             api.folders.queries.getFolderContentsForDownload,
-            { campaignId, folderId: ctx.item._id },
+            { folderId: ctx.item._id },
           )
 
           if (items.length === 0) {
@@ -710,7 +719,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         toggleBookmarkMutation
           .mutateAsync({
-            campaignId,
             sidebarItemId: ctx.item._id,
           })
           .catch((error) => {

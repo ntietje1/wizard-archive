@@ -38,7 +38,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     convexQuery(
       api.blocks.queries.getBlocksWithShares,
       isNote(item) && blockIds.length > 0 && campaignData
-        ? { campaignId: campaignData._id, noteId: item._id, blockIds }
+        ? { noteId: item._id, blockIds }
         : 'skip',
     ),
   )
@@ -151,7 +151,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
           : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
-        campaignId: campaignData._id,
         noteId: item._id,
         blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id, content: b })),
         status: newStatus,
@@ -173,7 +172,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     try {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
-          campaignId: campaignData._id,
           noteId: item._id,
           blockNoteIds: topLevelBlocks.map((b) => b.id),
           campaignMemberId: memberId,
@@ -191,7 +189,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         if (blocksToShare.length === 0) return
 
         await shareBlocks.mutateAsync({
-          campaignId: campaignData._id,
           noteId: item._id,
           blocks: blocksToShare.map((b) => ({ blockNoteId: b.id, content: b })),
           campaignMemberId: memberId,

@@ -4,11 +4,11 @@ import {
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateNote(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   {
     noteId,
     name,

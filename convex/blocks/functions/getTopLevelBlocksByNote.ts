@@ -1,18 +1,21 @@
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 
 export async function getTopLevelBlocksByNote(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<Array<Block>> {
-  const campaignId = ctx.campaign._id
+  const note = await ctx.db.get(noteId)
+  if (!note) throw new Error('Note not found')
+  await requireCampaignMembership(ctx, note.campaignId)
 
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
       q
-        .eq('campaignId', campaignId)
+        .eq('campaignId', note.campaignId)
         .eq('noteId', noteId)
         .eq('isTopLevel', true),
     )

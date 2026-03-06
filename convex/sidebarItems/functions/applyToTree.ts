@@ -1,10 +1,10 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { collectDescendants } from './collectDescendants'
+import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { CampaignMutationCtx } from '../../functions'
 
 type ItemOperation = (
-  ctx: CampaignMutationCtx,
+  ctx: MutationCtx,
   item: AnySidebarItemFromDb,
 ) => Promise<void>
 
@@ -16,7 +16,7 @@ type ItemOperation = (
  * used by trash, restore, and permanent-delete.
  */
 export async function applyToTree(
-  ctx: CampaignMutationCtx,
+  ctx: MutationCtx,
   item: AnySidebarItemFromDb,
   operation: ItemOperation,
   opts?: { trashed?: boolean },
@@ -24,6 +24,7 @@ export async function applyToTree(
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     const descendants = await collectDescendants(ctx, {
       folderId: item._id,
+      campaignId: item.campaignId,
       trashed: opts?.trashed,
     })
 

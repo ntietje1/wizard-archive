@@ -1,15 +1,18 @@
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireCampaignMembership } from '../../functions'
 import { enhanceFileWithContent } from './enhanceFile'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { FileWithContent } from '../types'
 
 export const getFile = async (
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
   { fileId }: { fileId: Id<'files'> },
 ): Promise<FileWithContent | null> => {
   const rawFile = await ctx.db.get(fileId)
+  if (!rawFile) return null
+  await requireCampaignMembership(ctx, rawFile.campaignId)
   const file = await checkItemAccess(ctx, {
     rawItem: rawFile,
     requiredLevel: PERMISSION_LEVEL.VIEW,

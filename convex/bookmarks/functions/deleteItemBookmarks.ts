@@ -1,11 +1,13 @@
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export async function deleteItemBookmarks(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<void> {
-  const campaignId = ctx.campaign._id
+  const item = await ctx.db.get(sidebarItemId)
+  if (!item) return
+  const campaignId = item.campaignId
 
   const bookmarks = await ctx.db
     .query('bookmarks')

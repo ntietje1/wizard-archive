@@ -3,42 +3,104 @@ import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMap } from '../../gameMaps/functions/enhanceMap'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { getItemBookmark } from '../../bookmarks/functions/getItemBookmark'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { getSidebarItemSharesForItem } from '../../sidebarShares/functions/getSidebarItemSharesForItem'
+import { requireCampaignMembership } from '../../functions'
+import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
+import type { SidebarItemId } from '../types/baseTypes'
+import type { SidebarItemShare } from '../../sidebarShares/types'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 
 export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
-  ctx: CampaignQueryCtx,
-  { item }: { item: T },
+  ctx: AuthQueryCtx,
+  {
+    item,
+    sharesMap,
+    bookmarkIds,
+  }: {
+    item: T
+    sharesMap?: SharesMap
+    bookmarkIds?: Set<SidebarItemId>
+  },
 ): Promise<EnhancedSidebarItem<T>> {
+  await requireCampaignMembership(ctx, item.campaignId)
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.files:
-      return enhanceFile(ctx, { file: item }) as Promise<EnhancedSidebarItem<T>>
+      return enhanceFile(ctx, {
+        file: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return enhanceGameMap(ctx, { gameMap: item }) as Promise<
-        EnhancedSidebarItem<T>
-      >
+      return enhanceGameMap(ctx, {
+        gameMap: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.folders:
-      return enhanceFolder(ctx, { folder: item }) as Promise<
-        EnhancedSidebarItem<T>
-      >
+      return enhanceFolder(ctx, {
+        folder: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.notes:
-      return enhanceNote(ctx, { note: item }) as Promise<EnhancedSidebarItem<T>>
+      return enhanceNote(ctx, {
+        note: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
     default:
       throw new Error('Unknown item type')
   }
 }
 
 export async function enhanceBase<T extends AnySidebarItemFromDb>(
-  ctx: CampaignQueryCtx,
-  { item }: { item: T },
+  ctx: AuthQueryCtx,
+  {
+    item,
+    sharesMap,
+    bookmarkIds,
+  }: {
+    item: T
+    sharesMap?: SharesMap
+    bookmarkIds?: Set<SidebarItemId>
+  },
 ) {
-  const [bookmark, shares, myPermissionLevel] = await Promise.all([
-    getItemBookmark(ctx, { sidebarItemId: item._id }),
-    getSidebarItemSharesForItem(ctx, { sidebarItemId: item._id }),
+  const { membership } = await requireCampaignMembership(ctx, item.campaignId)
+
+  // Batch path: all data is pre-loaded
+  if (sharesMap && bookmarkIds) {
+    const itemShares = sharesMap.get(item._id)
+    return {
+      ...item,
+      shares: itemShares ? [...itemShares.values()] : [],
+      isBookmarked: bookmarkIds.has(item._id),
+      myPermissionLevel: await getSidebarItemPermissionLevel(ctx, {
+        item,
+        sharesMap,
+      }),
+    }
+  }
+
+  // Single-item path: direct queries in parallel
+  const [shares, bookmark, myPermissionLevel] = await Promise.all([
+    ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
+      )
+      .collect() as Promise<Array<SidebarItemShare>>,
+    ctx.db
+      .query('bookmarks')
+      .withIndex('by_campaign_member_item', (q) =>
+        q
+          .eq('campaignId', item.campaignId)
+          .eq('campaignMemberId', membership._id)
+          .eq('sidebarItemId', item._id),
+      )
+      .unique(),
     getSidebarItemPermissionLevel(ctx, { item }),
   ])
-  return { ...item, isBookmarked: !!bookmark, shares, myPermissionLevel }
+
+  return { ...item, shares, isBookmarked: bookmark !== null, myPermissionLevel }
 }

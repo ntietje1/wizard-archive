@@ -1,11 +1,11 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { AuthMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function updateBlock(
-  ctx: CampaignMutationCtx,
+  ctx: AuthMutationCtx,
   params: {
     blockDbId: Id<'blocks'>
     position?: number

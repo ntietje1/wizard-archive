@@ -5,13 +5,19 @@ import type {
   AnySidebarItemWithContent,
 } from '../types/types'
 import type { SidebarItemType } from '../types/baseTypes'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemBySlug = async (
-  ctx: CampaignQueryCtx,
-  { type, slug }: { type: SidebarItemType; slug: string },
+  ctx: AuthQueryCtx,
+  {
+    type,
+    slug,
+    campaignId,
+  }: { type: SidebarItemType; slug: string; campaignId: Id<'campaigns'> },
 ): Promise<AnySidebarItemWithContent | null> => {
-  const campaignId = ctx.campaign._id
+  await requireCampaignMembership(ctx, campaignId)
   let item: AnySidebarItemFromDb | null = null
 
   switch (type) {

@@ -1,52 +1,68 @@
+import { requireCampaignMembership } from '../../functions'
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { getCampaignBookmarks } from '../../bookmarks/functions/getCampaignBookmarks'
+import {
+  getAllCampaignShares,
+  getMemberShares,
+} from '../../sidebarShares/functions/getCampaignShares'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import type { AnySidebarItem, AnySidebarItemFromDb } from '../types/types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 
 export const getSidebarItemsByParent = async (
-  ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'folders'> | null },
+  ctx: AuthQueryCtx,
+  {
+    parentId,
+    campaignId,
+  }: { parentId: Id<'folders'> | null; campaignId: Id<'campaigns'> },
 ): Promise<Array<AnySidebarItem>> => {
-  const campaignId = ctx.campaign._id
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
+  const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
 
-  const [folders, notes, maps, files] = await Promise.all([
-    ctx.db
-      .query('folders')
-      .withIndex('by_campaign_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('deletionTime', undefined)
-          .eq('parentId', parentId),
-      )
-      .collect(),
-    ctx.db
-      .query('notes')
-      .withIndex('by_campaign_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('deletionTime', undefined)
-          .eq('parentId', parentId),
-      )
-      .collect(),
-    ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('deletionTime', undefined)
-          .eq('parentId', parentId),
-      )
-      .collect(),
-    ctx.db
-      .query('files')
-      .withIndex('by_campaign_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('deletionTime', undefined)
-          .eq('parentId', parentId),
-      )
-      .collect(),
-  ])
+  const [folders, notes, maps, files, bookmarkIds, sharesMap] =
+    await Promise.all([
+      ctx.db
+        .query('folders')
+        .withIndex('by_campaign_parent_name', (q) =>
+          q
+            .eq('campaignId', campaignId)
+            .eq('deletionTime', undefined)
+            .eq('parentId', parentId),
+        )
+        .collect(),
+      ctx.db
+        .query('notes')
+        .withIndex('by_campaign_parent_name', (q) =>
+          q
+            .eq('campaignId', campaignId)
+            .eq('deletionTime', undefined)
+            .eq('parentId', parentId),
+        )
+        .collect(),
+      ctx.db
+        .query('gameMaps')
+        .withIndex('by_campaign_parent_name', (q) =>
+          q
+            .eq('campaignId', campaignId)
+            .eq('deletionTime', undefined)
+            .eq('parentId', parentId),
+        )
+        .collect(),
+      ctx.db
+        .query('files')
+        .withIndex('by_campaign_parent_name', (q) =>
+          q
+            .eq('campaignId', campaignId)
+            .eq('deletionTime', undefined)
+            .eq('parentId', parentId),
+        )
+        .collect(),
+      getCampaignBookmarks(ctx, campaignId, membership._id),
+      hasFullAccess
+        ? getAllCampaignShares(ctx, campaignId)
+        : getMemberShares(ctx, campaignId, membership._id),
+    ])
 
   const allItems: Array<AnySidebarItemFromDb> = [
     ...folders,
@@ -56,6 +72,8 @@ export const getSidebarItemsByParent = async (
   ]
 
   return await Promise.all(
-    allItems.map((item) => enhanceSidebarItem(ctx, { item })),
+    allItems.map((item) =>
+      enhanceSidebarItem(ctx, { item, sharesMap, bookmarkIds }),
+    ),
   )
 }

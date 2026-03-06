@@ -190,11 +190,7 @@ export function SidebarItemMutationsProvider({
   const rename = useCallback(
     (item: AnySidebarItem, newName: string) => {
       const trimmedName = newName.trim()
-      const result = validateName(
-        trimmedName,
-        item.parentId,
-        item._id,
-      )
+      const result = validateName(trimmedName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
 
       optimisticUpdate((prev) =>
@@ -202,7 +198,6 @@ export function SidebarItemMutationsProvider({
       )
 
       const promise = updateSidebarItemMutation({
-        campaignId: item.campaignId,
         itemId: item._id,
         name: trimmedName,
       }).then(
@@ -307,7 +302,6 @@ export function SidebarItemMutationsProvider({
       }
 
       const mutation = moveSidebarItemMutation({
-        campaignId: item.campaignId,
         itemId: item._id,
         parentId,
         deleted,
@@ -332,7 +326,6 @@ export function SidebarItemMutationsProvider({
       trashedOptimisticUpdate((prev) => prev.filter((i) => i._id !== item._id))
 
       const mutation = permanentlyDeleteSidebarItemMutation({
-        campaignId: item.campaignId,
         itemId: item._id,
       })
 

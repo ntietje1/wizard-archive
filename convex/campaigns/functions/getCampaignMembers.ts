@@ -1,14 +1,18 @@
-import type { CampaignQueryCtx } from '../../functions'
+import { requireCampaignMembership } from '../../functions'
+import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { UserProfile } from '../../users/types'
 import type { CampaignMember } from '../types'
 
 export async function getCampaignMembers(
-  ctx: CampaignQueryCtx,
+  ctx: AuthQueryCtx,
+  { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Array<CampaignMember>> {
+  await requireCampaignMembership(ctx, campaignId)
+
   const members = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', ctx.campaign._id))
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await Promise.all(
