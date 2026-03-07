@@ -26,12 +26,12 @@ import { useCampaign } from '~/hooks/useCampaign'
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
     case AGGREGATE_SHARE_STATUS.ALL_SHARED:
-      return '!text-blue-600'
+      return '!text-primary'
     case AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED:
     case AGGREGATE_SHARE_STATUS.MIXED_SHARED:
-      return '!text-amber-500'
+      return '!text-primary'
     case AGGREGATE_SHARE_STATUS.NOT_SHARED:
-      return '!text-gray-500'
+      return '!text-muted-foreground'
     default:
       return assertNever(status)
   }

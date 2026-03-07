@@ -43,7 +43,7 @@ function AuthRedirectPage() {
     <div className="flex items-center justify-center h-screen">
       <div className="text-center flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-10 h-10 animate-spin" />
-        <p className="text-slate-600">Redirecting...</p>
+        <p className="text-muted-foreground">Redirecting...</p>
       </div>
     </div>
   )

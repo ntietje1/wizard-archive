@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { TrashPopoverContent } from './trash-popover-content'
+import { SidebarRow } from './sidebar-row'
 import {
   Popover,
   PopoverContent,
@@ -13,7 +14,7 @@ import { Trash2 } from '~/lib/icons'
 
 export function TrashButton() {
   const [open, setOpen] = useState(false)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
 
   const { parentItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
@@ -29,21 +30,23 @@ export function TrashButton() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <button
+          <SidebarRow
             ref={buttonRef}
+            role="button"
+            icon={Trash2}
+            label="Trash"
             className={cn(
-              'flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors',
+              'cursor-pointer',
               isDropTarget && 'bg-destructive/10 text-destructive',
             )}
-          >
-            <Trash2 className="h-4 w-4 shrink-0" />
-            <span className="flex-1 text-left">Trash</span>
-            {trashCount > 0 && (
-              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">
-                {trashCount}
-              </span>
-            )}
-          </button>
+            rightSlot={
+              trashCount > 0 ? (
+                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                  {trashCount}
+                </span>
+              ) : undefined
+            }
+          />
         }
       />
       <PopoverContent

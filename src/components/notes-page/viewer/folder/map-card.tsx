@@ -25,7 +25,7 @@ function MapCardSkeleton() {
           <Skeleton className="h-5 w-32" />
           <Skeleton className="w-6 h-6 rounded" />
         </div>
-        <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
+        <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
           <Skeleton className="w-full h-full" />
         </div>
       </Card>
@@ -82,7 +82,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
         <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md">
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between mb-1 min-w-0">
-            <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+            <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
               {map.name}
             </CardTitle>
             <Button
@@ -100,7 +100,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           </div>
 
           {/* Image Section */}
-          <div className="w-full flex-1 bg-slate-100 relative rounded-sm overflow-hidden">
+          <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
             {imageUrlQuery.isLoading && map.imageStorageId ? (
               <Skeleton className="w-full h-full" />
             ) : imageUrl ? (
@@ -110,8 +110,8 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-                <MapPin className="w-12 h-12 text-slate-400" />
+              <div className="w-full h-full flex items-center justify-center">
+                <MapPin className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />

@@ -12,7 +12,7 @@ export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-red-500">Invalid File URL</p>
+          <p className="text-lg font-medium text-destructive">Invalid File URL</p>
           <p className="text-sm mt-2">
             The file URL does not meet security requirements.
           </p>
@@ -25,9 +25,9 @@ export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
     <div className="relative w-full h-full min-h-0 bg-background overflow-auto flex flex-col">
       <div className="flex-1 relative min-h-0 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+          <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
             <svg
-              className="w-12 h-12 text-gray-600"
+              className="w-12 h-12 text-muted-foreground"
               fill="currentColor"
               viewBox="0 0 20 20"
             >

@@ -17,8 +17,8 @@ export function PageHeader({
     <div className={className}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">{title}</h1>
-          {description && <p className="text-slate-600">{description}</p>}
+          <h1 className="text-3xl font-bold text-foreground mb-2">{title}</h1>
+          {description && <p className="text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="ml-4">{actions}</div>}
       </div>

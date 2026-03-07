@@ -165,7 +165,7 @@ export function CampaignDialog({
               />
               {field.state.meta.errors.length > 0 &&
               field.state.meta.isTouched ? (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   {field.state.meta.errors[0]}
                 </p>
               ) : null}
@@ -244,7 +244,7 @@ export function CampaignDialog({
               </div>
               {field.state.meta.errors.length > 0 &&
               field.state.meta.isTouched ? (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   {field.state.meta.errors[0]}
                 </p>
               ) : null}

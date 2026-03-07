@@ -64,8 +64,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                   className={cn(
                     'relative flex h-8 items-center justify-center rounded-md px-2 text-xs transition-colors',
                     'hover:ring-2 hover:ring-ring hover:ring-offset-1',
-                    isSelected &&
-                      'ring-2 ring-amber-500 dark:ring-amber-400 ring-offset-1',
+                    isSelected && 'ring-2 ring-ring ring-offset-1',
                   )}
                   onClick={() => {
                     onChange(color.hex)

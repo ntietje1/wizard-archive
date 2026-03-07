@@ -70,7 +70,7 @@ export const ViewAsPlayerButton = () => {
                 title={label}
                 className={cn(
                   viewAsPlayerId
-                    ? 'text-blue-600 hover:text-blue-700 aria-expanded:text-blue-600'
+                    ? 'text-primary hover:text-primary aria-expanded:text-primary'
                     : '',
                 )}
               >

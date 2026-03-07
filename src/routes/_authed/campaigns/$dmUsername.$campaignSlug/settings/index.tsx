@@ -46,10 +46,10 @@ function CampaignSettingsPage() {
   if (!isDM) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl font-bold text-foreground mb-4">
           User Campaign Settings
         </h2>
-        <p className="text-gray-600">settings go here</p>
+        <p className="text-muted-foreground">settings go here</p>
       </div>
     )
   }
@@ -59,13 +59,13 @@ function CampaignSettingsPage() {
       <div className="p-6 space-y-8">
         <div>
           <h2 className="text-2xl font-bold">Campaign Settings</h2>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             {"Manage your campaign's configuration and preferences."}
           </p>
         </div>
 
         {/* Basic Information */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-card rounded-lg border border-border p-6">
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
           <form
             onSubmit={(e) => {
@@ -84,7 +84,7 @@ function CampaignSettingsPage() {
             >
               {(field) => (
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label className="block text-sm font-medium text-foreground mb-1">
                     Campaign Name
                   </Label>
                   <Input
@@ -93,7 +93,7 @@ function CampaignSettingsPage() {
                     onBlur={field.handleBlur}
                   />
                   {field.state.meta.errors.length ? (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-sm text-destructive mt-1">
                       {field.state.meta.errors[0]}
                     </p>
                   ) : null}
@@ -104,12 +104,12 @@ function CampaignSettingsPage() {
             <form.Field name="description">
               {(field) => (
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label className="block text-sm font-medium text-foreground mb-1">
                     Description
                   </Label>
                   <textarea
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -143,7 +143,7 @@ function CampaignSettingsPage() {
             >
               {(field) => (
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label className="block text-sm font-medium text-foreground mb-1">
                     Campaign Slug
                   </Label>
                   <Input
@@ -151,7 +151,7 @@ function CampaignSettingsPage() {
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     This appears in the URL. Use lowercase letters, numbers, and
                     hyphens only.
                   </p>
@@ -161,7 +161,7 @@ function CampaignSettingsPage() {
 
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90"
             >
               Save Changes
             </button>
@@ -169,17 +169,17 @@ function CampaignSettingsPage() {
         </div>
 
         {/* Privacy & Access */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-card rounded-lg border border-border p-6">
           <h3 className="text-lg font-semibold mb-4">Privacy & Access</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-medium">Campaign Visibility</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Control who can see your campaign
                 </p>
               </div>
-              <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="private">Private</option>
                 <option value="friends">Friends Only</option>
                 <option value="public">Public</option>
@@ -189,7 +189,7 @@ function CampaignSettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-medium">Allow Player Invitations</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Let players invite others to join
                 </p>
               </div>
@@ -201,7 +201,7 @@ function CampaignSettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-medium">Allow Character Creation</h4>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Let players create new characters
                 </p>
               </div>
@@ -217,14 +217,14 @@ function CampaignSettingsPage() {
         </div>
 
         {/* Game Rules */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-card rounded-lg border border-border p-6">
           <h3 className="text-lg font-semibold mb-4">Game Rules</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Game System
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="5e">D&D 5th Edition</option>
                 <option value="pathfinder">Pathfinder</option>
                 <option value="3.5e">D&D 3.5 Edition</option>
@@ -233,7 +233,7 @@ function CampaignSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Starting Level
               </label>
               <input
@@ -241,49 +241,53 @@ function CampaignSettingsPage() {
                 min="1"
                 max="20"
                 defaultValue="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 House Rules
               </label>
               <textarea
                 rows={4}
                 placeholder="Any special rules or modifications for this campaign..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-white rounded-lg border border-red-200 p-6">
-          <h3 className="text-lg font-semibold text-red-900 mb-4">
+        <div className="bg-card rounded-lg border border-destructive/30 p-6">
+          <h3 className="text-lg font-semibold text-destructive mb-4">
             Danger Zone
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-red-900">Archive Campaign</h4>
-                <p className="text-sm text-red-700">
+                <h4 className="font-medium text-destructive">
+                  Archive Campaign
+                </h4>
+                <p className="text-sm text-destructive">
                   Hide this campaign from active campaigns
                 </p>
               </div>
-              <button className="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200">
+              <button className="bg-destructive/15 text-destructive px-4 py-2 rounded-lg hover:bg-destructive/25">
                 Archive
               </button>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-red-900">Delete Campaign</h4>
-                <p className="text-sm text-red-700">
+                <h4 className="font-medium text-destructive">
+                  Delete Campaign
+                </h4>
+                <p className="text-sm text-destructive">
                   Permanently delete this campaign and all its data
                 </p>
               </div>
-              <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+              <button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-lg hover:bg-destructive/90">
                 Delete
               </button>
             </div>

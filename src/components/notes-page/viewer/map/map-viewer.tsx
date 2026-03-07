@@ -795,10 +795,10 @@ export function MapViewer({
                 />
                 <div
                   className={cn(
-                    'absolute top-4 left-1/2 -translate-x-1/2 z-[2000] text-white px-4 py-2 rounded-md shadow-lg',
+                    'absolute top-4 left-1/2 -translate-x-1/2 z-[2000] px-4 py-2 rounded-md shadow-lg',
                     mapDragOutcome.type === 'operation'
-                      ? 'bg-green-600'
-                      : 'bg-destructive',
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-destructive text-destructive-foreground',
                   )}
                 >
                   <p className="text-sm font-medium flex items-center gap-1.5">
@@ -916,7 +916,7 @@ export function MapViewer({
 
           {/* Pin placement mode banner */}
           {pendingPinItem && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg">
               <p className="text-sm font-medium">
                 Click on map to place pin. Press Escape to cancel.
               </p>
@@ -925,7 +925,7 @@ export function MapViewer({
 
           {/* Pin move mode banner */}
           {pendingPinMove && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg">
               <p className="text-sm font-medium">
                 Click on map or drag to move pin. Press Escape to cancel.
               </p>
@@ -934,7 +934,7 @@ export function MapViewer({
 
           {/* Pin dragging mode banner */}
           {draggingPin && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-amber-600 text-white px-4 py-2 rounded-md shadow-lg">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg">
               <p className="text-sm font-medium">
                 Release to move pin. Press Escape to cancel.
               </p>

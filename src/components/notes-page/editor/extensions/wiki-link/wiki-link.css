@@ -10,11 +10,11 @@
 }
 
 .wiki-link-content.wiki-link-ghost {
-  color: #9ca3af;
+  color: var(--muted-foreground);
 }
 
 .wiki-link-content.wiki-link-ghost:hover {
-  color: #6b7280;
+  color: var(--foreground);
 }
 
 /* Brackets hidden by default */
@@ -76,13 +76,11 @@
 
 /* Tooltip */
 .wiki-link-tooltip {
-  background-color: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
-  border: 1px solid hsl(var(--border));
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 2px);
-  box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 0.1),
-    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
   padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
   white-space: nowrap;

@@ -45,7 +45,7 @@ function SidebarItemButtonBaseComponent({
       className={cn(
         'relative flex items-center w-full h-8 px-1 rounded-sm',
         'group',
-        '[[data-item-dragging]_&]:bg-amber-500/10',
+        '[[data-item-dragging]_&]:bg-primary/10',
         isSelected && 'bg-muted',
         !isSelected && 'hover:bg-muted/50',
       )}

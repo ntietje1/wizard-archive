@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -17,66 +17,88 @@ import { useDraggable } from '~/hooks/useDraggable'
 import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { cn } from '~/lib/shadcn/utils'
 
-function FolderSvg() {
+const H = 140
+const R = 4
+const TAB_W = 80
+const TAB_H = 12
+const NOTCH_W = 12
+
+function folderPath(w: number) {
+  return [
+    `M ${R},0`,
+    `L ${TAB_W},0`,
+    `L ${TAB_W + NOTCH_W},${TAB_H}`,
+    `L ${w - R},${TAB_H}`,
+    `A ${R},${R} 0 0,1 ${w},${TAB_H + R}`,
+    `L ${w},${H - R}`,
+    `A ${R},${R} 0 0,1 ${w - R},${H}`,
+    `L ${R},${H}`,
+    `A ${R},${R} 0 0,1 0,${H - R}`,
+    `L 0,${R}`,
+    `A ${R},${R} 0 0,1 ${R},0`,
+    'Z',
+  ].join(' ')
+}
+
+type DropState = 'none' | 'valid' | 'trash'
+
+function FolderSvg({
+  containerRef,
+  dropState = 'none',
+}: {
+  containerRef: React.RefObject<HTMLElement | null>
+  dropState?: DropState
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const pathRef = useRef<SVGPathElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const svg = svgRef.current
+    const path = pathRef.current
+    if (!container || !svg || !path) return
+    const ro = new ResizeObserver((entries) => {
+      const w = Math.round(entries[0]?.contentBoxSize[0]?.inlineSize ?? 0)
+      if (w > 0) {
+        svg.setAttribute('viewBox', `0 0 ${w} ${H}`)
+        path.setAttribute('d', folderPath(w))
+      }
+    })
+    ro.observe(container)
+    return () => ro.disconnect()
+  }, [containerRef])
+
   return (
-    <div className="folder flex h-full relative text-white">
-      {/* Left section */}
-      <div className="folder-left shrink-0 w-[120px] -mr-px">
-        <svg
-          viewBox="0 0 120 200"
-          preserveAspectRatio="none"
-          className="w-full h-full block"
-        >
-          <path
-            d="M 100,15 L 85,0 L 10,0 C 5,0 0,5 0,15 L 0,185 C 0,195 5,200 10,200 L 120,200 L 120,15 Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
-
-      {/* Middle section */}
-      <div className="folder-middle grow min-w-[20px] -mr-px">
-        <svg
-          viewBox="0 0 20 200"
-          preserveAspectRatio="none"
-          className="w-full h-full block"
-        >
-          <rect x="0" y="15" width="20" height="200" fill="currentColor" />
-        </svg>
-      </div>
-
-      {/* Right section*/}
-      <div className="folder-right shrink-0 w-[60px]">
-        <svg
-          viewBox="0 0 60 200"
-          preserveAspectRatio="none"
-          className="w-full h-full block"
-        >
-          <path
-            d="M 0,15 L 50,15 C 55,15 59,17 60,25 L 60,185 C 60,195 57,200 50,200 L 0,200 Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
-
-      {/* Background (hides seams) */}
-      <div className="folder-seam-cover absolute top-[11.5px] left-5 right-5 bottom-[1.5px] bg-white pointer-events-none z-[1]"></div>
-    </div>
+    <svg
+      ref={svgRef}
+      className={cn(
+        'absolute inset-0 w-full h-full overflow-visible transition-[filter] duration-100',
+        dropState === 'none' && 'group-hover:drop-shadow-md',
+        dropState === 'valid' && 'drop-shadow-ring',
+        dropState === 'trash' && 'drop-shadow-destructive',
+      )}
+    >
+      <path
+        ref={pathRef}
+        className={cn(
+          'stroke-foreground/10 stroke-2 [paint-order:stroke]',
+          dropState === 'trash' ? 'fill-destructive-muted' : 'fill-card',
+        )}
+      />
+    </svg>
   )
 }
 
 function FolderCardSkeleton() {
+  const wrapperRef = useRef<HTMLDivElement>(null)
   return (
     <div className="h-[140px]">
-      <div className="folder-wrapper">
-        <FolderSvg />
-        <div className="folder-content px-2">
-          <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
-            <div className="pt-2">
-              <Skeleton className="h-5 w-32" />
-            </div>
-          </div>
+      <div ref={wrapperRef} className="relative block w-full h-full">
+        <FolderSvg containerRef={wrapperRef} />
+        <div className="relative z-[2] pt-4 px-3">
+          <Skeleton className="h-5 w-32" />
         </div>
       </div>
     </div>
@@ -121,6 +143,13 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
+  const dropState: DropState =
+    !isDropTarget && !isFileDragTarget
+      ? 'none'
+      : isDropTarget && isTrashAction
+        ? 'trash'
+        : 'valid'
+
   const cardContent = (
     <div ref={ref} className="h-[140px]">
       <Link
@@ -141,30 +170,21 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
           setLastSelectedItem({ type: folder.type, slug: folder.slug })
         }}
       >
-        <div
-          className={`folder-wrapper group transition-all relative ${
-            !isDropTarget && !isFileDragTarget
-              ? ''
-              : isDropTarget && isTrashAction
-                ? 'trash-drop-target'
-                : 'valid-drop-target'
-          }`}
-        >
-          <FolderSvg />
+        <div className="relative block w-full h-full cursor-pointer group">
+          <FolderSvg containerRef={ref} dropState={dropState} />
 
-          <div className="folder-content px-2">
-            <div className="flex items-center gap-2 mb-2 min-w-0 py-0">
-              <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+          <div className="relative z-[2] pt-3 px-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
                 {folder.name}
               </CardTitle>
             </div>
           </div>
 
-          {/* Three-dot menu button in top right */}
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-5 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            className="absolute top-[18px] right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
             aria-label="Open folder menu"
             onClick={(e) => {
               e.preventDefault()

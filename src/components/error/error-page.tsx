@@ -14,10 +14,10 @@ export default function ErrorPage({
   return (
     <div className="h-screen flex flex-col items-center justify-center p-4">
       <div className="text-center space-y-4">
-        <h2 className="text-2xl font-bold text-red-600">
+        <h2 className="text-2xl font-bold text-destructive">
           Something went wrong!
         </h2>
-        <p className="text-gray-600 max-w-md">{error}</p>
+        <p className="text-muted-foreground max-w-md">{error}</p>
         <div className="space-x-4">
           <Button onClick={() => window.location.reload()}>Refresh</Button>
           <Link to="/">

@@ -125,7 +125,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
         <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md">
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between min-w-0">
-            <CardTitle className="p-1 text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+            <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
               {file.name}
             </CardTitle>
             <Button
@@ -145,17 +145,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           {/* Icon Section: Centered Large Icon */}
           <div className="flex items-center justify-center flex-1 mb-10">
             <FileIcon
-              className={`w-12 h-12 select-none ${
-                contentType?.startsWith('image/')
-                  ? 'text-blue-500'
-                  : contentType === 'application/pdf'
-                    ? 'text-red-500'
-                    : contentType?.startsWith('video/')
-                      ? 'text-purple-500'
-                      : contentType?.startsWith('audio/')
-                        ? 'text-green-500'
-                        : 'text-slate-500'
-              }`}
+              className="w-12 h-12 select-none text-muted-foreground"
             />
           </div>
         </Card>

@@ -64,8 +64,8 @@ export function SessionPanel() {
           </div>
         </div>
         {hasActiveSession ? (
-          <span
-            className="shrink-0 h-2.5 w-2.5 pt-1 self-start rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]"
+          <span // TODO: remove hard coded shadow
+            className="shrink-0 h-2.5 w-2.5 pt-1 self-start rounded-full bg-primary shadow-[0_0_8px_oklch(0.57_0.16_286.05/0.7)]"
             aria-label="Session live"
           />
         ) : (

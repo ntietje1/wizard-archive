@@ -11,7 +11,7 @@ export function VideoFileViewer({ videoUrl }: VideoFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-red-500">Invalid Video URL</p>
+          <p className="text-lg font-medium text-destructive">Invalid Video URL</p>
           <p className="text-sm mt-2">
             The video URL does not meet security requirements.
           </p>

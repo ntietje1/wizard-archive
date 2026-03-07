@@ -26,7 +26,7 @@ export function ZoomControls({
         variant="outline"
         size="icon"
         onClick={onZoomIn}
-        className="bg-white shadow-md"
+        className="bg-card shadow-md"
         title="Zoom In"
       >
         <Plus className="w-4 h-4" />
@@ -35,7 +35,7 @@ export function ZoomControls({
         variant="outline"
         size="icon"
         onClick={onZoomOut}
-        className="bg-white shadow-md"
+        className="bg-card shadow-md"
         title="Zoom Out"
       >
         <Minus className="w-4 h-4" />
@@ -44,7 +44,7 @@ export function ZoomControls({
         variant="outline"
         size="icon"
         onClick={onReset}
-        className="bg-white shadow-md"
+        className="bg-card shadow-md"
         title="Reset View"
       >
         <RotateCcw className="w-4 h-4" />

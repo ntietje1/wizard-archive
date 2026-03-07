@@ -4,6 +4,7 @@ import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
 import { TrashButton } from './trash-button'
+import { SidebarRow } from './sidebar-row'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -13,7 +14,6 @@ import { useSidebarLayout } from '~/hooks/useSidebarLayout'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { EDITOR_ROUTE } from '~/hooks/useEditorLinkProps'
-import { buttonVariants } from '~/components/shadcn/ui/button'
 import { Plus } from '~/lib/icons'
 
 const SIDEBAR_MIN_WIDTH = 160
@@ -47,27 +47,25 @@ const SidebarContent = memo(function SidebarContent() {
             <FileSidebar />
           </ResizablePanel>
           {isDm ? (
-            <div className="shrink-0 p-2 border-t border-b">
+            <div className="shrink-0 p-1 border-t">
               <Link
                 to={EDITOR_ROUTE}
                 params={{ dmUsername, campaignSlug }}
                 search={{}}
-                className={buttonVariants({
-                  variant: 'outline',
-                  className: 'w-full gap-2',
-                })}
+                className="block"
                 onClick={handleNewClick}
+                draggable={false}
               >
-                <Plus className="h-4 w-4" />
-                New
+                <SidebarRow icon={Plus} label="New" />
               </Link>
+              <TrashButton />
             </div>
           ) : (
-            <div className="shrink-0 border-t" />
+            <div className="shrink-0 p-1 border-t">
+              <TrashButton />
+            </div>
           )}
-          <div className="shrink-0 px-2 pb-1">
-            <TrashButton />
-          </div>
+          <div className="shrink-0 border-t" />
           <SessionPanel />
         </ResizablePanelGroup>
       </EditorContextMenu>

@@ -13,33 +13,33 @@
 }
 
 .md-link-display.md-link-ghost {
-  color: #9ca3af !important;
+  color: var(--muted-foreground) !important;
 }
 
 .md-link-display.md-link-ghost:hover {
-  color: #6b7280 !important;
+  color: var(--foreground) !important;
 }
 
 .md-link-display.md-link-external {
-  color: #2563eb !important;
+  color: var(--primary) !important;
 }
 
 .md-link-display.md-link-external:hover {
-  color: #1d4ed8 !important;
+  color: var(--accent-foreground) !important;
   text-decoration-thickness: 2px;
 }
 
-/* External link brackets and target - desaturated blue */
+/* External link brackets and target */
 .md-link-bracket-open:has(~ .md-link-display.md-link-external),
 .md-link-display.md-link-external ~ .md-link-bracket-middle,
 .md-link-display.md-link-external ~ .md-link-bracket-close {
-  color: #084baa !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* External link target - underlined */
 .md-link-display.md-link-external ~ .md-link-target,
 .md-link-display.md-link-external ~ a .md-link-target {
-  color: #084baa !important;
+  color: var(--accent-foreground) !important;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -172,13 +172,11 @@ a:has(.md-link-bracket):hover ~ .md-link-bracket-close {
    ========================================================================== */
 
 .md-link-tooltip {
-  background-color: hsl(var(--popover));
-  color: hsl(var(--popover-foreground));
-  border: 1px solid hsl(var(--border));
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 2px);
-  box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 0.1),
-    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
   padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
   white-space: nowrap;

@@ -44,7 +44,7 @@ export function FolderDeleteConfirmDialog({
       description={
         descendantCount > 0 ? (
           <>
-            <strong className="text-amber-600">
+            <strong className="text-primary">
               {`This folder contains ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'}!`}
             </strong>
             <br />

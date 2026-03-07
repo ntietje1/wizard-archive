@@ -29,7 +29,7 @@ export function LoadingSpinner({
 
   return (
     <div
-      className={`animate-spin rounded-full border-2 border-gray-200 border-t-gray-900 ${sizeClasses[size]} ${fadeInClasses} ${className}`}
+      className={`animate-spin rounded-full border-2 border-muted border-t-foreground ${sizeClasses[size]} ${fadeInClasses} ${className}`}
       role="status"
       aria-label={ariaLabel}
     >

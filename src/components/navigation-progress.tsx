@@ -44,7 +44,7 @@ export function NavigationProgress() {
       }`}
     >
       <div
-        className={`h-full w-full origin-left bg-purple-500 ${
+        className={`h-full w-full origin-left bg-primary ${
           state === 'loading'
             ? 'animate-progress-load'
             : 'animate-progress-complete'

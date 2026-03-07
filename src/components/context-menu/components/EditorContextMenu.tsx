@@ -158,9 +158,9 @@ const EditorMenuContent = forwardRef<
           <ContextMenuSubTrigger
             className={cn(
               menuItem.variant === 'danger' &&
-                'text-red-600 focus:text-red-600',
+                'text-destructive focus:text-destructive',
               menuItem.variant === 'share' &&
-                'text-amber-600 focus:text-amber-600',
+                'text-primary focus:text-primary',
               menuItem.className,
             )}
             disabled={disabled}

@@ -44,7 +44,7 @@ export default function PlayersDmControls({
   return (
     <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <CopyField
-        className="bg-slate-100"
+        className="bg-secondary"
         text={joinUrl}
         placeholder="Join URL not configured"
         onCopy={onCopyJoinUrl}
@@ -61,7 +61,7 @@ export default function PlayersDmControls({
           Manage Requests
         </Button>
         {pendingCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-primary-foreground text-[10px] leading-[18px] text-center">
             {pendingCount}
           </span>
         )}

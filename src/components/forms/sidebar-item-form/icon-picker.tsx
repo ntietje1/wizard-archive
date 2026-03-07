@@ -48,8 +48,7 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
                   className={cn(
                     'relative flex h-8 w-8 items-center justify-center rounded-md transition-colors',
                     'hover:bg-accent hover:text-accent-foreground',
-                    (isSelected || isDefault) &&
-                      'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-500 dark:ring-amber-400',
+                    (isSelected || isDefault) && 'bg-accent ring-2 ring-ring',
                   )}
                   onClick={() => {
                     onChange(iconName === defaultIcon ? null : iconName)

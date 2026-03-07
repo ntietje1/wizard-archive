@@ -72,7 +72,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           <div className="p-1 flex-1 min-w-0 flex flex-col justify-between">
             <div className="overflow-hidden">
               <div className="flex items-center gap-2 mb-2 min-w-0">
-                <CardTitle className="text-sm font-medium text-slate-800 truncate select-none flex-1 min-w-0">
+                <CardTitle className="text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
                   {note.name}
                 </CardTitle>
               </div>
@@ -80,8 +80,8 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           </div>
 
           {/* Icon Section */}
-          <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-slate-100 flex items-center justify-center">
-            <FileText className="w-8 h-8 text-slate-400" />
+          <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-muted flex items-center justify-center">
+            <FileText className="w-8 h-8 text-muted-foreground" />
             {/* Three-dot menu button in top right */}
             <Button
               variant="ghost"

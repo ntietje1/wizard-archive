@@ -23,14 +23,13 @@ export function EmptyState({
   return (
     <div className={`col-span-full ${className}`}>
       <div className="text-center py-12">
-        <Icon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-slate-600 mb-2">{title}</h3>
-        <p className="text-slate-500 mb-6 max-w-md mx-auto">{description}</p>
+        <Icon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+          {description}
+        </p>
         {action && (
-          <Button
-            onClick={action.onClick}
-            className="bg-amber-600 hover:bg-amber-700"
-          >
+          <Button onClick={action.onClick}>
             {action.icon && <action.icon className="w-4 h-4" />}
             {action.label}
           </Button>

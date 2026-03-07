@@ -13,7 +13,6 @@ import { Badge } from '~/components/shadcn/ui/badge'
 interface BaseContentCardProps {
   title: string
   description?: string
-  color?: string
   icon?: LucideIcon
   badges?: Array<{
     text: string
@@ -50,7 +49,6 @@ type ContentCardProps = BaseContentCardProps &
 export function ContentCard({
   title,
   description,
-  color: _color,
   icon,
   badges,
   actionButtons,
@@ -63,7 +61,7 @@ export function ContentCard({
   const Icon = icon
   const cardContent = (
     <Card
-      className={`bg-white border border-slate-200 w-full h-full ${hoverEffect?.enabled ? hoverEffect.className || '' : ''} ${
+      className={`bg-card border border-border w-full h-full ${hoverEffect?.enabled ? hoverEffect.className || '' : ''} ${
         linkWrapper ? '' : className
       }`}
       onClick={!linkWrapper ? onClick : undefined}
@@ -72,9 +70,9 @@ export function ContentCard({
         <div className="flex items-start justify-between">
           <div className="flex-1 pr-20">
             <div className="flex items-center gap-2 mb-1">
-              {Icon && <Icon className="w-8 h-8 text-amber-600 select-none" />}
+              {Icon && <Icon className="w-8 h-8 text-primary select-none" />}
               <CardTitle
-                className={`text-lg text-slate-800 line-clamp-1 select-none`}
+                className={`text-lg text-foreground line-clamp-1 select-none`}
               >
                 {title}
               </CardTitle>

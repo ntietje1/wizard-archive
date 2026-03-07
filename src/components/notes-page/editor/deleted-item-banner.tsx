@@ -221,7 +221,7 @@ function BannerBar({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center justify-between px-3 h-8 border-b border-red-300 bg-red-50 text-red-900 dark:bg-red-950/90 dark:border-red-700 dark:text-red-200">
+    <div className="flex items-center justify-between px-3 h-8 border-b border-destructive/40 bg-destructive/10 text-destructive dark:bg-destructive/20 dark:border-destructive/60 dark:text-destructive/70">
       <div className="flex items-center gap-1.5 text-xs font-medium min-w-0">
         <Trash2 className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{message}</span>
@@ -244,7 +244,7 @@ function BannerButton({
     <Button
       variant="ghost"
       size="sm"
-      className="h-5 px-1.5 text-xs text-red-700 hover:text-red-900 hover:bg-red-100 dark:text-red-300 dark:hover:text-red-100 dark:hover:bg-red-800/50"
+      className="h-5 px-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/15"
       onClick={onClick}
     >
       {children}

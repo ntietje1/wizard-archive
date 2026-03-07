@@ -605,7 +605,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.error('Failed to download folder')
         }
       },
-      [convex, campaignId],
+      [convex],
     ),
 
     downloadAll: useCallback(async () => {

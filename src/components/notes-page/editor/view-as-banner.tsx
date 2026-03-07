@@ -35,7 +35,7 @@ export function ViewAsBanner() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 pointer-events-none border-[3px] border-amber-400 dark:border-amber-500/70"
+            className="fixed inset-0 z-50 pointer-events-none border-[3px] border-primary/60 dark:border-primary/70"
           />
         )}
       </AnimatePresence>
@@ -51,7 +51,7 @@ export function ViewAsBanner() {
             transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
             className="overflow-hidden"
           >
-            <div className="flex items-center justify-between px-3 h-8 border-t border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/90 dark:border-amber-700 dark:text-amber-200">
+            <div className="flex items-center justify-between px-3 h-8 border-t border-primary/40 bg-accent text-accent-foreground">
               <div className="flex items-center gap-1.5 text-xs font-medium">
                 <Eye className="h-3.5 w-3.5" />
                 <span>
@@ -62,7 +62,7 @@ export function ViewAsBanner() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 px-1.5 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:text-amber-300 dark:hover:text-amber-100 dark:hover:bg-amber-800/50"
+                className="h-5 px-1.5 text-xs text-accent-foreground hover:text-accent-foreground hover:bg-accent dark:text-primary dark:hover:text-primary dark:hover:bg-accent"
                 onClick={() => setViewAsPlayerId(undefined)}
               >
                 <X className="h-3 w-3 mr-0.5" />

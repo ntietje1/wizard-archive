@@ -42,7 +42,7 @@ function PlayerRequestCard({
       <div className="flex items-center gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <div className="font-medium text-slate-800">
+            <div className="font-medium text-foreground">
               @{player.userProfile.name ?? 'Unknown'}
             </div>
             <Badge
@@ -50,14 +50,14 @@ function PlayerRequestCard({
               className={cn(
                 'text-xs border-transparent',
                 player.status === CAMPAIGN_MEMBER_STATUS.Rejected
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-amber-100 text-amber-700',
+                  ? 'bg-destructive/15 text-destructive'
+                  : 'bg-accent text-accent-foreground',
               )}
             >
               {player.status}
             </Badge>
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-muted-foreground">
             @{player.userProfile.username}
           </div>
         </div>
@@ -145,11 +145,11 @@ export function PlayerRequestsDialog({
 
         <div className="space-y-6">
           <section>
-            <h3 className="text-sm font-medium text-slate-800 mb-2">{`Pending Requests (${pending.length})`}</h3>
+            <h3 className="text-sm font-medium text-foreground mb-2">{`Pending Requests (${pending.length})`}</h3>
             <ul className="divide-y rounded-md border">
               {pending.length === 0 ? (
                 <li className="p-3">
-                  <div className="flex items-center justify-center text-sm text-slate-500 h-10">
+                  <div className="flex items-center justify-center text-sm text-muted-foreground h-10">
                     No pending requests
                   </div>
                 </li>
@@ -160,7 +160,7 @@ export function PlayerRequestsDialog({
                     className="flex items-center justify-between gap-3 p-3"
                   >
                     <div>
-                      <div className="text-medium text-slate-800">
+                      <div className="font-medium text-foreground">
                         @{p.userProfile.username}
                       </div>
                     </div>
@@ -193,9 +193,9 @@ export function PlayerRequestsDialog({
 
           <section className="min-h-12">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-800">{`Rejected and Removed (${rejectedOrRemoved.length})`}</h3>
+              <h3 className="text-sm font-medium text-foreground">{`Rejected and Removed (${rejectedOrRemoved.length})`}</h3>
               <button
-                className="text-xs text-slate-600 underline underline-offset-2 hover:text-slate-800"
+                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
                 onClick={() => setShowRejected((s) => !s)}
               >
                 {showRejected ? 'Show less' : 'Show more'}
@@ -204,7 +204,7 @@ export function PlayerRequestsDialog({
             <ul className="divide-y rounded-md border">
               {rejectedOrRemoved.length === 0 ? (
                 <li className="p-3">
-                  <div className="flex items-center justify-center text-sm text-slate-500 h-10">
+                  <div className="flex items-center justify-center text-sm text-muted-foreground h-10">
                     No rejected or removed players
                   </div>
                 </li>
