@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { unshareBlockFromMemberHelper } from './blockShareMutations'
 import { requireDmRole } from '../../functions'
+import { unshareBlockFromMemberHelper } from './blockShareMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -26,13 +26,15 @@ export const unshareBlocks = async (
   const campaignId = item.campaignId
   await requireDmRole(ctx, campaignId)
 
-  for (const blockNoteId of blockNoteIds) {
-    await unshareBlockFromMemberHelper(ctx, {
-      noteId,
-      blockNoteId,
-      campaignMemberId,
-    })
-  }
+  await Promise.all(
+    blockNoteIds.map((blockNoteId) =>
+      unshareBlockFromMemberHelper(ctx, {
+        noteId,
+        blockNoteId,
+        campaignMemberId,
+      }),
+    ),
+  )
 
   return null
 }

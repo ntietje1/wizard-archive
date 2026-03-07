@@ -73,7 +73,7 @@ const sync = prosemirrorSync.syncApi({
     const noteId = documentId as Id<'notes'>
     const noteFromDb = await ctx.db.get(noteId)
     if (!noteFromDb) throw new Error('Note not found')
-    const user = await authenticate(ctx)
+    const user = await authenticate(ctx) // TODO: see if this can be de-duplicated with checkWrite auth
     const authCtx: AuthMutationCtx = { ...ctx, user }
     const blocks = pmSnapshotToBlocks(snapshot)
     await saveTopLevelBlocksForNote(authCtx, {

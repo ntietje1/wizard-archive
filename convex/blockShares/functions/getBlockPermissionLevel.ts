@@ -7,7 +7,7 @@ import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../permissions/types'
 import type { Id } from '../../_generated/dataModel'
 
-export async function getBlockPermissionLevel(
+async function getBlockPermissionLevel(
   ctx: AuthQueryCtx,
   { block }: { block: Block },
 ): Promise<PermissionLevel> {
@@ -39,16 +39,13 @@ export async function getBlockPermissionLevel(
 export async function enforceBlockSharePermissionsOrNull(
   ctx: AuthQueryCtx,
   { block }: { block: Block },
-): Promise<Block | null> {
-  await requireCampaignMembership(ctx, block.campaignId)
-  const permissionLevel: PermissionLevel = await getBlockPermissionLevel(ctx, {
-    block,
-  })
+): Promise<{ block: Block; permissionLevel: PermissionLevel } | null> {
+  const permissionLevel = await getBlockPermissionLevel(ctx, { block })
   if (permissionLevel === PERMISSION_LEVEL.NONE) {
     return null
   }
 
-  return block
+  return { block, permissionLevel }
 }
 
 async function isBlockSharedWithMember(

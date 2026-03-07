@@ -6,11 +6,11 @@ import {
   requireItemAccess,
   validateSidebarMove,
 } from '../validation'
+import { requireCampaignMembership } from '../../functions'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
 import { applyToDependents } from './applyToDependents'
-import { requireCampaignMembership } from '../../functions'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
@@ -87,8 +87,9 @@ export async function moveSidebarItem(
     const now = Date.now()
     const deletedBy = ctx.user.profile._id
 
-    await applyToTree(ctx, item, async (ctx, i) => {
-      await applyToDependents(ctx, i, async (ctx, doc) => {
+    await applyToTree(ctx, item, async (_, i) => {
+      // eslint-disable-next-line no-shadow
+      await applyToDependents(ctx, i, async (_, doc) => {
         await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
       })
       await ctx.db.patch(i._id, { deletionTime: now, deletedBy })
@@ -117,7 +118,7 @@ export async function moveSidebarItem(
     const conflictPatch = await resolveRestoreConflicts(ctx, freshItem)
 
     // Restore root item + its dependents
-    await applyToDependents(ctx, freshItem, async (ctx, doc) => {
+    await applyToDependents(ctx, freshItem, async (_, doc) => {
       await ctx.db.patch(doc._id, clearDeletion)
     })
     await ctx.db.patch(itemId, { ...clearDeletion, ...conflictPatch })
@@ -127,16 +128,16 @@ export async function moveSidebarItem(
       await applyToTree(
         ctx,
         freshItem,
-        async (_treeCtx, i) => {
+        async (_, i) => {
           if (i._id === freshItem._id) return // root already handled above
           if (!i.deletionTime) return
 
-          await applyToDependents(_treeCtx, i, async (_depCtx, doc) => {
-            await _depCtx.db.patch(doc._id, clearDeletion)
+          // eslint-disable-next-line no-shadow
+          await applyToDependents(ctx, i, async (_, doc) => {
+            await ctx.db.patch(doc._id, clearDeletion)
           })
 
           // Slugs are campaign-global, so descendants need deduplication too
-          // Uses outer ctx (AuthMutationCtx) for slug validation
           const descSlug = await findUniqueSidebarItemSlug(ctx, {
             type: i.type,
             name: i.name,

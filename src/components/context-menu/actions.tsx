@@ -534,10 +534,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const toastId = toast.loading('Preparing download...')
 
         try {
-          if (!campaignId) {
-            toast.dismiss(toastId)
-            return
-          }
           const { folderName, items } = await convex.query(
             api.folders.queries.getFolderContentsForDownload,
             { folderId: ctx.item._id },

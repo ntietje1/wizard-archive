@@ -15,12 +15,12 @@ export const setAllPlayersPermission = async (
     permissionLevel: PermissionLevel | null
   },
 ): Promise<null> => {
-  const item = await ctx.db.get(sidebarItemId)
-  await requireItemAccess(ctx, {
-    rawItem: item,
+  const itemFromDb = await ctx.db.get(sidebarItemId)
+  const item = await requireItemAccess(ctx, {
+    rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  await requireDmRole(ctx, item!.campaignId)
+  await requireDmRole(ctx, item.campaignId)
 
   await ctx.db.patch(sidebarItemId, {
     allPermissionLevel: permissionLevel,

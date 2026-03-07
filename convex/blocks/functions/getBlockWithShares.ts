@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
+import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
@@ -54,7 +54,7 @@ export const getBlockWithShares = async (
 
   let shares: Array<BlockShare> = []
   if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-    shares = await getBlockSharesForBlock(ctx, { blockId: block._id })
+    shares = await getBlockSharesByBlock(ctx, { block })
   }
 
   return {

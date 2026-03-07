@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { setBlockShareStatusHelper } from './blockShareMutations'
 import { requireDmRole } from '../../functions'
+import { setBlockShareStatusHelper } from './blockShareMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { ShareStatus } from '../types'
@@ -27,13 +27,15 @@ export const setBlocksShareStatus = async (
   const campaignId = item.campaignId
   await requireDmRole(ctx, campaignId)
 
-  for (const blockItem of blocks) {
-    await setBlockShareStatusHelper(ctx, {
-      noteId,
-      blockItem,
-      status,
-    })
-  }
+  await Promise.all(
+    blocks.map((blockItem) =>
+      setBlockShareStatusHelper(ctx, {
+        noteId,
+        blockItem,
+        status,
+      }),
+    ),
+  )
 
   return null
 }

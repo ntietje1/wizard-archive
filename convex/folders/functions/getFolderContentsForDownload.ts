@@ -71,14 +71,16 @@ async function collectItemsRecursively(
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
-        const visibleBlocks = await Promise.all(
+        const results = await Promise.all(
           topLevelBlocks.map((block) =>
             enforceBlockSharePermissionsOrNull(ctx, { block }),
           ),
         )
-        const content = visibleBlocks
-          .filter((block): block is NonNullable<typeof block> => block !== null)
-          .map((block) => block.content)
+        const content = results
+          .filter(
+            (result): result is NonNullable<typeof result> => result !== null,
+          )
+          .map((result) => result.block.content)
         items.push({
           type: SIDEBAR_ITEM_TYPES.notes,
           name: noteName,

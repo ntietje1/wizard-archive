@@ -127,6 +127,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         className="block h-full [&.active]:pointer-events-auto"
+        draggable={false}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -141,11 +142,13 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
         }}
       >
         <div
-          className={`folder-wrapper group transition-all relative ${(() => {
-            if (!isDropTarget && !isFileDragTarget) return ''
-            if (isDropTarget && isTrashAction) return 'trash-drop-target'
-            return 'valid-drop-target'
-          })()}`}
+          className={`folder-wrapper group transition-all relative ${
+            !isDropTarget && !isFileDragTarget
+              ? ''
+              : isDropTarget && isTrashAction
+                ? 'trash-drop-target'
+                : 'valid-drop-target'
+          }`}
         >
           <FolderSvg />
 

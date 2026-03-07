@@ -1,3 +1,5 @@
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { requireItemAccess } from '../../sidebarItems/validation'
 import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
@@ -7,6 +9,10 @@ export async function deleteItemBookmarks(
 ): Promise<void> {
   const item = await ctx.db.get(sidebarItemId)
   if (!item) return
+  await requireItemAccess(ctx, {
+    rawItem: item,
+    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+  })
   const campaignId = item.campaignId
 
   const bookmarks = await ctx.db

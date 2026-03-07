@@ -53,6 +53,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         className="block w-full h-full [&.active]:pointer-events-auto"
+        draggable={false}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()

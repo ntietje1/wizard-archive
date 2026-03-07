@@ -24,12 +24,12 @@ export const shareSidebarItem = async (
     permissionLevel: PermissionLevel | null
   },
 ): Promise<Id<'sidebarItemShares'>> => {
-  const item = await ctx.db.get(sidebarItemId)
-  await requireItemAccess(ctx, {
-    rawItem: item,
+  const itemFromDb = await ctx.db.get(sidebarItemId)
+  const item = await requireItemAccess(ctx, {
+    rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  await requireDmRole(ctx, item!.campaignId)
+  await requireDmRole(ctx, item.campaignId)
 
   return await shareSidebarItemWithMember(ctx, {
     sidebarItemId,

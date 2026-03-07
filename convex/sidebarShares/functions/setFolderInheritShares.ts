@@ -14,12 +14,12 @@ export const setFolderInheritShares = async (
     inheritShares: boolean
   },
 ): Promise<null> => {
-  const folder = await ctx.db.get(folderId)
-  await requireItemAccess(ctx, {
-    rawItem: folder,
+  const folderFromDb = await ctx.db.get(folderId)
+  const folder = await requireItemAccess(ctx, {
+    rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  await requireDmRole(ctx, folder!.campaignId)
+  await requireDmRole(ctx, folder.campaignId)
 
   await ctx.db.patch(folderId, {
     inheritShares,

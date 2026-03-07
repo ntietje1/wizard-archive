@@ -65,6 +65,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         className="block w-full h-full [&.active]:pointer-events-auto"
+        draggable={false}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()

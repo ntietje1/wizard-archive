@@ -1,9 +1,10 @@
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import { getBlockPermissionLevel } from '../../blockShares/functions/getBlockPermissionLevel'
-import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
+import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
+import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
@@ -41,14 +42,14 @@ export const enhanceNoteWithContent = async (
   const blockMeta: Record<string, BlockMeta> = {}
   await Promise.all(
     topLevelBlocks.map(async (block) => {
-      const [myPermissionLevel, blockShares] = await Promise.all([
-        getBlockPermissionLevel(ctx, { block }),
+      const [result, blockShares] = await Promise.all([
+        enforceBlockSharePermissionsOrNull(ctx, { block }),
         block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-          ? getBlockSharesForBlock(ctx, { blockId: block._id })
+          ? getBlockSharesByBlock(ctx, { block })
           : Promise.resolve([]),
       ])
       blockMeta[block.blockId] = {
-        myPermissionLevel,
+        myPermissionLevel: result?.permissionLevel ?? PERMISSION_LEVEL.NONE,
         shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
         sharedWith: blockShares.map((s) => s.campaignMemberId),
       }

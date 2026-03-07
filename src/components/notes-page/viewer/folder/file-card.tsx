@@ -108,6 +108,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         className="block w-full h-full [&.active]:pointer-events-auto"
+        draggable={false}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()

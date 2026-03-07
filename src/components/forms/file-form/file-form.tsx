@@ -93,7 +93,7 @@ export function FileForm({
       document.removeEventListener('dragover', handleDragOver)
       document.removeEventListener('drop', handleDrop)
     }
-  }, [fileUpload.handleFileSelect, fileUpload])
+  }, [fileUpload])
 
   // Get initial values based on current props
   const defaultValues = useMemo((): FileFormValues => {

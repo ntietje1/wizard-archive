@@ -53,16 +53,16 @@ export async function checkUniqueNameUnderParent(
 export async function validateNoCircularParent(
   ctx: AuthQueryCtx,
   {
+    campaignId,
     itemId,
     newParentId,
   }: {
+    campaignId: Id<'campaigns'>
     itemId: SidebarItemId
     newParentId: Id<'folders'> | null
   },
 ): Promise<{ valid: boolean; error?: string }> {
-  const item = await ctx.db.get(itemId)
-  if (!item) throw new Error('Item not found')
-  await requireCampaignMembership(ctx, item.campaignId)
+  await requireCampaignMembership(ctx, campaignId)
   if (!newParentId) {
     return { valid: true }
   }
@@ -148,6 +148,7 @@ export async function validateSidebarParentChange(
 ): Promise<void> {
   await requireCampaignMembership(ctx, item.campaignId)
   const result = await validateNoCircularParent(ctx, {
+    campaignId: item.campaignId,
     itemId: item._id,
     newParentId,
   })
@@ -262,7 +263,6 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
   if (!rawItem) {
     throw new Error('Item not found')
   }
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   const item = await checkItemAccess(ctx, { rawItem, requiredLevel })
   if (!item) {
     throw new Error('You do not have sufficient permission for this item')

@@ -10,7 +10,7 @@ export async function getBlockSharesDm(
   const block = await ctx.db.get(blockId)
   if (!block) throw new Error('Block not found')
   await requireDmRole(ctx, block.campaignId)
-  return await getBlockSharesForBlock(ctx, { blockId })
+  return await getBlockSharesByBlock(ctx, { block })
 }
 
 export async function getBlockSharesForBlock(
@@ -20,11 +20,17 @@ export async function getBlockSharesForBlock(
   const block = await ctx.db.get(blockId)
   if (!block) throw new Error('Block not found')
   await requireCampaignMembership(ctx, block.campaignId)
+  return await getBlockSharesByBlock(ctx, { block })
+}
 
+export async function getBlockSharesByBlock(
+  ctx: AuthQueryCtx,
+  { block }: { block: { _id: Id<'blocks'>; campaignId: Id<'campaigns'> } },
+): Promise<Array<BlockShare>> {
   return await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', block.campaignId).eq('blockId', blockId),
+      q.eq('campaignId', block.campaignId).eq('blockId', block._id),
     )
     .collect()
 }

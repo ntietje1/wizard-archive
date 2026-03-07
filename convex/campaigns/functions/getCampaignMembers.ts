@@ -21,14 +21,17 @@ export async function getCampaignMembers(
       if (profile) profilesByUserId.set(member.userId, profile)
     }),
   )
-  return members.map((member) => {
+  return members.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
     if (!profile) {
-      throw new Error(`User profile not found for userId: ${member.userId}`)
+      console.warn(`User profile not found for userId: ${member.userId}`)
+      return []
     }
-    return {
-      ...member,
-      userProfile: profile,
-    }
+    return [
+      {
+        ...member,
+        userProfile: profile,
+      },
+    ]
   })
 }

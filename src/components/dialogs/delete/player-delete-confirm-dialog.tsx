@@ -27,22 +27,19 @@ export function PlayerDeleteConfirmDialog({
   })
 
   const handleConfirm = useCallback(async () => {
-    await updateMemberStatus
-      .mutateAsync({
+    try {
+      await updateMemberStatus.mutateAsync({
         memberId: player._id,
         status: CAMPAIGN_MEMBER_STATUS.Removed,
       })
-      .then(() => {
-        toast.success('Player removed successfully')
-      })
-      .catch((error: Error) => {
-        console.error(error)
-        toast.error('Failed to remove player')
-      })
-      .finally(() => {
-        onConfirm?.()
-        onClose()
-      })
+      toast.success('Player removed successfully')
+      onConfirm?.()
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to remove player')
+    } finally {
+      onClose()
+    }
   }, [updateMemberStatus, player._id, onConfirm, onClose])
 
   const playerName = player.userProfile.name ?? 'this player'

@@ -20,9 +20,11 @@ export async function deleteMap(
     .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
     .collect()
 
-  for (const pin of pins) {
-    await ctx.db.delete(pin._id)
-  }
+  await Promise.all(
+    pins.map((pin) => {
+      ctx.db.delete(pin._id)
+    }),
+  )
 
   await deleteSidebarItemShares(ctx, { sidebarItemId: mapId })
   await deleteItemBookmarks(ctx, { sidebarItemId: mapId })

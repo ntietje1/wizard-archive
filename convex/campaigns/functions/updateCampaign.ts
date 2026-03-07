@@ -30,7 +30,11 @@ export async function updateCampaign(
     updates.description = description.trim()
   }
 
-  if (slug !== undefined && slug.trim() !== campaign.slug) {
+  if (
+    slug !== undefined &&
+    slug.trim().length > 0 &&
+    slug.trim() !== campaign.slug
+  ) {
     slug = slug.trim()
     const uniqueSlug = await findUniqueSlug(slug, async (s) => {
       const conflict = await ctx.db

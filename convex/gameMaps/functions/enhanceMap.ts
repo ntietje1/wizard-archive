@@ -89,7 +89,7 @@ export const enhanceGameMapWithContent = async (
     ctx.db
       .query('mapPins')
       .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
-      .collect() as Promise<Array<MapPin>>,
+      .collect(),
     getCampaignBookmarks(ctx, gameMap.campaignId, membership._id),
     hasFullAccess
       ? getAllCampaignShares(ctx, gameMap.campaignId)

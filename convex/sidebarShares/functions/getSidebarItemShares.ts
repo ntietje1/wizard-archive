@@ -11,11 +11,11 @@ export const getSidebarItemShares = async (
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Array<SidebarItemShare>> => {
   const itemFromDb = await ctx.db.get(sidebarItemId)
-  await requireItemAccess(ctx, {
+  const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-  await requireDmRole(ctx, itemFromDb!.campaignId)
+  await requireDmRole(ctx, item.campaignId)
   return await getSidebarItemSharesForItem(ctx, {
     sidebarItemId,
   })

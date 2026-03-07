@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { getBlockSharesForBlock } from '../../blockShares/functions/getBlockSharesForBlock'
+import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
@@ -40,40 +40,36 @@ export const getBlocksWithShares = async (
     (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
   )
 
-  const blocks: Array<BlockShareInfo> = []
+  const blocks = await Promise.all(
+    blockIds.map(async (blockId): Promise<BlockShareInfo> => {
+      const block = await findBlockByBlockNoteId(ctx, { noteId, blockId })
 
-  for (const blockId of blockIds) {
-    const block = await findBlockByBlockNoteId(ctx, {
-      noteId,
-      blockId,
-    })
+      if (!block) {
+        return {
+          blockNoteId: blockId,
+          shareStatus: SHARE_STATUS.NOT_SHARED,
+          sharedMemberIds: [],
+          isTopLevel: true,
+        }
+      }
 
-    if (!block) {
-      blocks.push({
+      const shareStatus: ShareStatus =
+        block.shareStatus ?? SHARE_STATUS.NOT_SHARED
+
+      let sharedMemberIds: Array<Id<'campaignMembers'>> = []
+      if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
+        const shares = await getBlockSharesByBlock(ctx, { block })
+        sharedMemberIds = shares.map((s) => s.campaignMemberId)
+      }
+
+      return {
         blockNoteId: blockId,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
-        sharedMemberIds: [],
-        isTopLevel: true,
-      })
-      continue
-    }
-
-    const shareStatus: ShareStatus =
-      block.shareStatus ?? SHARE_STATUS.NOT_SHARED
-
-    let sharedMemberIds: Array<Id<'campaignMembers'>> = []
-    if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-      const shares = await getBlockSharesForBlock(ctx, { blockId: block._id })
-      sharedMemberIds = shares.map((s) => s.campaignMemberId)
-    }
-
-    blocks.push({
-      blockNoteId: blockId,
-      shareStatus,
-      sharedMemberIds,
-      isTopLevel: block.isTopLevel,
-    })
-  }
+        shareStatus,
+        sharedMemberIds,
+        isTopLevel: block.isTopLevel,
+      }
+    }),
+  )
 
   return {
     blocks,

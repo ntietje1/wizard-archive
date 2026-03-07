@@ -97,7 +97,7 @@ export function MapForm({
       document.removeEventListener('dragover', handleDragOver)
       document.removeEventListener('drop', handleDrop)
     }
-  }, [imageUpload.handleFileSelect, imageUpload])
+  }, [imageUpload])
 
   // Get initial values based on current props
   const defaultValues = useMemo((): MapFormValues => {

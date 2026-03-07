@@ -81,17 +81,6 @@ function PlayerRequestCard({
             ? 'Undo Reject'
             : 'Undo Removal'}
         </Button>
-        {player.status === CAMPAIGN_MEMBER_STATUS.Pending && (
-          <Button
-            size="sm"
-            disabled={updatingId === player._id}
-            onClick={() =>
-              handleUpdate(player._id, CAMPAIGN_MEMBER_STATUS.Accepted)
-            }
-          >
-            <Check className="w-4 h-4" /> Accept
-          </Button>
-        )}
       </div>
     </li>
   )
