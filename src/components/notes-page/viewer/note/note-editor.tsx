@@ -34,6 +34,7 @@ import { useScrollToHeading } from '~/hooks/useScrollToHeading'
 import { useRestoreScrollPosition } from '~/hooks/useRestoreScrollPosition'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { useNoteEditorDropTarget } from '~/hooks/useNoteEditorDropTarget'
+import { useResolvedTheme } from '~/hooks/useTheme'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -77,6 +78,7 @@ const ReadOnlyNote = ({
   content: Array<CustomBlock>
   noteId: Id<'notes'>
 }) => {
+  const resolvedTheme = useResolvedTheme()
   const initialContent = content.length > 0 ? content : undefined
 
   const editor: CustomBlockNoteEditor = useCreateBlockNote({
@@ -99,7 +101,7 @@ const ReadOnlyNote = ({
         key={noteId + 'viewer'}
         editable={false}
         editor={editor}
-        theme="light"
+        theme={resolvedTheme}
         sideMenu={false}
         formattingToolbar={false}
         slashMenu={false}
@@ -158,6 +160,7 @@ const CollaborativeNoteReady = ({
   editorMode: string
   scrollAreaRef: React.RefObject<HTMLDivElement | null>
 }) => {
+  const resolvedTheme = useResolvedTheme()
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)
   useDisableAutolink(editor)
@@ -200,7 +203,7 @@ const CollaborativeNoteReady = ({
             <BlockNoteView
               key={note._id + 'editor'}
               editor={editor}
-              theme="light"
+              theme={resolvedTheme}
               linkToolbar={false}
               sideMenu={false}
               formattingToolbar={false}

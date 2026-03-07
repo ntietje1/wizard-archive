@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -25,54 +25,37 @@ const TAB_W = 80
 const TAB_H = 12
 const NOTCH_W = 12
 
-function folderPath(w: number) {
-  return [
-    `M ${R},0`,
-    `L ${TAB_W},0`,
-    `L ${TAB_W + NOTCH_W},${TAB_H}`,
-    `L ${w - R},${TAB_H}`,
-    `A ${R},${R} 0 0,1 ${w},${TAB_H + R}`,
-    `L ${w},${H - R}`,
-    `A ${R},${R} 0 0,1 ${w - R},${H}`,
-    `L ${R},${H}`,
-    `A ${R},${R} 0 0,1 0,${H - R}`,
-    `L 0,${R}`,
-    `A ${R},${R} 0 0,1 ${R},0`,
-    'Z',
-  ].join(' ')
-}
+/** Tab + notch fill */
+const TAB_FILL = [
+  `M ${R},0`,
+  `L ${TAB_W},0`,
+  `L ${TAB_W + NOTCH_W},${TAB_H}`,
+  `L ${TAB_W + NOTCH_W},${TAB_H + 1}`,
+  `L ${R},${TAB_H + 1}`,
+  `L ${R},${TAB_H + R}`,
+  `L 0,${TAB_H + R}`,
+  `L 0,${R}`,
+  `A ${R},${R} 0 0,1 ${R},0`,
+  'Z',
+].join(' ')
+
+/** Tab + notch outline */
+const TAB_STROKE = [
+  `M 0,${TAB_H + R}`,
+  `L 0,${R}`,
+  `A ${R},${R} 0 0,1 ${R},0`,
+  `L ${TAB_W},0`,
+  `L ${TAB_W + NOTCH_W},${TAB_H}`,
+].join(' ')
 
 type DropState = 'none' | 'valid' | 'trash'
 
-function FolderSvg({
-  containerRef,
-  dropState = 'none',
-}: {
-  containerRef: React.RefObject<HTMLElement | null>
-  dropState?: DropState
-}) {
-  const svgRef = useRef<SVGSVGElement>(null)
-  const pathRef = useRef<SVGPathElement>(null)
-
-  useEffect(() => {
-    const container = containerRef.current
-    const svg = svgRef.current
-    const path = pathRef.current
-    if (!container || !svg || !path) return
-    const ro = new ResizeObserver((entries) => {
-      const w = Math.round(entries[0]?.contentBoxSize[0]?.inlineSize ?? 0)
-      if (w > 0) {
-        svg.setAttribute('viewBox', `0 0 ${w} ${H}`)
-        path.setAttribute('d', folderPath(w))
-      }
-    })
-    ro.observe(container)
-    return () => ro.disconnect()
-  }, [containerRef])
+function FolderSvg({ dropState = 'none' }: { dropState?: DropState }) {
+  const fillClass =
+    dropState === 'trash' ? 'fill-destructive-muted' : 'fill-card'
 
   return (
     <svg
-      ref={svgRef}
       className={cn(
         'absolute inset-0 w-full h-full overflow-visible transition-[filter] duration-100',
         dropState === 'none' && 'group-hover:drop-shadow-md',
@@ -80,23 +63,24 @@ function FolderSvg({
         dropState === 'trash' && 'drop-shadow-destructive',
       )}
     >
-      <path
-        ref={pathRef}
-        className={cn(
-          'stroke-foreground/10 stroke-2 [paint-order:stroke]',
-          dropState === 'trash' ? 'fill-destructive-muted' : 'fill-card',
-        )}
+      <rect
+        y={TAB_H}
+        width="100%"
+        height={H - TAB_H}
+        rx={R}
+        className={cn(fillClass, 'stroke-border stroke-2 [paint-order:stroke]')}
       />
+      <path d={TAB_STROKE} className="fill-none stroke-border stroke-2" />
+      <path d={TAB_FILL} className={fillClass} />
     </svg>
   )
 }
 
 function FolderCardSkeleton() {
-  const wrapperRef = useRef<HTMLDivElement>(null)
   return (
     <div className="h-[140px]">
-      <div ref={wrapperRef} className="relative block w-full h-full">
-        <FolderSvg containerRef={wrapperRef} />
+      <div className="relative block w-full h-full">
+        <FolderSvg />
         <div className="relative z-[2] pt-4 px-3">
           <Skeleton className="h-5 w-32" />
         </div>
@@ -171,7 +155,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
         }}
       >
         <div className="relative block w-full h-full cursor-pointer group">
-          <FolderSvg containerRef={ref} dropState={dropState} />
+          <FolderSvg dropState={dropState} />
 
           <div className="relative z-[2] pt-3 px-2">
             <div className="flex items-center gap-2 min-w-0">

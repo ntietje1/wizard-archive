@@ -79,7 +79,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           setLastSelectedItem({ type: map.type, slug: map.slug })
         }}
       >
-        <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md">
+        <Card className="w-full h-full cursor-pointer transition-shadow hover:shadow-md group flex flex-col p-2 relative rounded-md">
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between mb-1 min-w-0">
             <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
@@ -114,7 +114,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
                 <MapPin className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10" />
           </div>
         </Card>
       </Link>

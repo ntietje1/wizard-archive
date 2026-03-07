@@ -62,7 +62,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                   key={color.name}
                   type="button"
                   className={cn(
-                    'relative flex h-8 items-center justify-center rounded-md px-2 text-xs transition-colors',
+                    'relative flex h-8 items-center justify-center rounded-md px-2 text-xs',
                     'hover:ring-2 hover:ring-ring hover:ring-offset-1',
                     isSelected && 'ring-2 ring-ring ring-offset-1',
                   )}

@@ -90,7 +90,7 @@ export function FileUploadSection({
 
       {/* File Card */}
       <Card
-        className={`group w-full border-2 transition-all ${
+        className={`group w-full border-2 ${
           fileUpload.preview
             ? fileUpload.isDragActive
               ? 'border-primary bg-primary/5'

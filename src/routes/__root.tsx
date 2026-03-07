@@ -17,6 +17,8 @@ import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { NavigationProgress } from '~/components/navigation-progress'
+import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
+import { prefetchTheme } from '~/hooks/useTheme'
 import appCss from '~/styles/app.css?url'
 
 const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
@@ -74,17 +76,24 @@ export const Route = createRootRouteWithContext<{
   }),
   beforeLoad: async (ctx) => {
     if (typeof window !== 'undefined') {
-      return { userId: null, token: null }
+      return {
+        userId: null,
+        token: null,
+        initialTheme: undefined as string | undefined,
+      }
     }
 
     const auth = await fetchClerkAuth()
     const { userId, token } = auth
+    let initialTheme: string | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
+      initialTheme = await prefetchTheme(ctx.context.queryClient)
     }
     return {
       userId,
       token,
+      initialTheme,
     }
   },
   component: RootComponent,
@@ -96,19 +105,32 @@ function RootComponent() {
   return (
     <ClerkProvider>
       <ConvexProviderWithClerk client={context.convexClient} useAuth={useAuth}>
-        <RootDocument>
-          <Outlet />
-        </RootDocument>
+        <ThemeProvider
+          initialTheme={
+            context.initialTheme as 'light' | 'dark' | 'system' | undefined
+          }
+        >
+          <RootDocument initialTheme={context.initialTheme}>
+            <Outlet />
+          </RootDocument>
+        </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   )
 }
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({
+  children,
+  initialTheme,
+}: {
+  children: React.ReactNode
+  initialTheme?: string
+}) {
   return (
-    <html>
+    <html suppressHydrationWarning>
       <head>
         <HeadContent />
+        <ThemeScript initialTheme={initialTheme} />
       </head>
       <body className="flex flex-col min-h-screen">
         <NavigationProgress />

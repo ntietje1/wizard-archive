@@ -43,7 +43,7 @@ function CreateNewButton({
         <p className="font-medium text-sm">{name}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-colors text-muted-foreground group-hover:text-foreground">
+      <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground group-hover:text-foreground">
         {isCreating ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (

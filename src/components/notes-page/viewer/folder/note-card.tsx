@@ -67,7 +67,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           setLastSelectedItem({ type: note.type, slug: note.slug })
         }}
       >
-        <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
+        <Card className="w-full h-full cursor-pointer transition-shadow hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
           {/* Left Content Section */}
           <div className="p-1 flex-1 min-w-0 flex flex-col justify-between">
             <div className="overflow-hidden">

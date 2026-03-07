@@ -38,7 +38,7 @@ export function TrashPageViewer() {
       <div
         ref={dropRef}
         className={cn(
-          'flex flex-col h-full w-full min-h-0 transition-colors',
+          'flex flex-col h-full w-full min-h-0',
           isTrashDrag ? 'bg-destructive/10' : isDropTarget && 'bg-muted',
         )}
       >

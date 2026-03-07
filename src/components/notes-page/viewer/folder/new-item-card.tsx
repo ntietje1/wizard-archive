@@ -85,7 +85,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         render={
           <div ref={triggerRef} className="h-[140px]">
             <Card
-              className="w-full h-full cursor-pointer rounded-md border-dashed flex items-center justify-center hover:bg-accent/50 hover:border-solid transition-all"
+              className="w-full h-full cursor-pointer rounded-md border-dashed flex items-center justify-center hover:bg-accent/50 hover:border-solid"
               onClick={handleClick}
               role="button"
               tabIndex={0}

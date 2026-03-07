@@ -122,7 +122,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           setLastSelectedItem({ type: file.type, slug: file.slug })
         }}
       >
-        <Card className="w-full h-full cursor-pointer transition-all hover:shadow-md group flex flex-col p-2 relative rounded-md">
+        <Card className="w-full h-full cursor-pointer transition-shadow hover:shadow-md group flex flex-col p-2 relative rounded-md">
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between min-w-0">
             <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">

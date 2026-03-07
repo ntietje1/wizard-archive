@@ -12,6 +12,7 @@ export type UserProfile = {
   firstName?: string
   lastName?: string
   imageUrl?: string
+  theme?: 'light' | 'dark' | 'system'
 }
 
 export type AuthUser = { identity: UserIdentity; profile: UserProfile }

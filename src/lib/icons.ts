@@ -87,6 +87,7 @@ export {
   File,
   FileTypeIcon,
   RotateCcw,
+  Monitor,
 } from 'lucide-react'
 
 export type { LucideIcon } from 'lucide-react'

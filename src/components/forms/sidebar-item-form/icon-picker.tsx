@@ -46,7 +46,7 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
                   key={iconName}
                   type="button"
                   className={cn(
-                    'relative flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                    'relative flex h-8 w-8 items-center justify-center rounded-md',
                     'hover:bg-accent hover:text-accent-foreground',
                     (isSelected || isDefault) && 'bg-accent ring-2 ring-ring',
                   )}

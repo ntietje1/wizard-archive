@@ -15,6 +15,7 @@ import {
   useTrashedSidebarItems,
 } from '~/hooks/useSidebarItems'
 import { Trash2 } from '~/lib/icons'
+import { ThemeToggle } from '~/components/theme-toggle'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
@@ -88,6 +89,7 @@ export function FileTopbar() {
         </div>
 
         {middleContent}
+        <ThemeToggle />
       </div>
     </EditorContextMenu>
   )

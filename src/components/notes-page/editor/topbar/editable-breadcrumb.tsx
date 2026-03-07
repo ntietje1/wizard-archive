@@ -196,7 +196,7 @@ function BreadcrumbAncestor({
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
-        className="rounded-sm transition-colors truncate text-muted-foreground min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-foreground hover:bg-muted"
+        className="rounded-sm truncate text-muted-foreground min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-foreground hover:bg-muted"
         title={ancestor.name}
         onClick={onClick}
       >

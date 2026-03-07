@@ -120,7 +120,7 @@
   --primary-foreground: oklch(1.00 0 0);
   --secondary: oklch(0.24 0 0);
   --secondary-foreground: oklch(1.00 0 0);
-  --muted: oklch(0.18 0.01 311.95);
+  --muted: oklch(0.25 0.01 311.95);
   --muted-foreground: oklch(0.71 0 0);
   --accent: oklch(0.22 0.03 289.89);
   --accent-foreground: oklch(0.80 0.11 287.86);
@@ -159,6 +159,118 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ==========================================================================
+   BlockNote theme integration
+   Map BlockNote's internal CSS variables to the app's theme tokens.
+   :root ancestor bumps specificity above BlockNote's own declarations.
+   All values reference CSS custom properties that respond to .dark,
+   so a single rule set covers both light and dark modes.
+   ========================================================================== */
+
+:root .bn-container {
+  /* Editor surface */
+  --bn-colors-editor-text: var(--foreground);
+  --bn-colors-editor-background: var(--background);
+
+  /* Menus / popovers */
+  --bn-colors-menu-text: var(--popover-foreground);
+  --bn-colors-menu-background: var(--popover);
+
+  /* Tooltips */
+  --bn-colors-tooltip-text: var(--popover-foreground);
+  --bn-colors-tooltip-background: var(--muted);
+
+  /* Hover state */
+  --bn-colors-hovered-text: var(--accent-foreground);
+  --bn-colors-hovered-background: var(--accent);
+
+  /* Selected state */
+  --bn-colors-selected-text: var(--primary-foreground);
+  --bn-colors-selected-background: var(--primary);
+
+  /* Disabled state */
+  --bn-colors-disabled-text: var(--muted-foreground);
+  --bn-colors-disabled-background: var(--muted);
+
+  /* Shadows & borders */
+  --bn-colors-shadow: var(--border);
+  --bn-colors-border: var(--border);
+
+  /* Side menu drag handle */
+  --bn-colors-side-menu: var(--muted-foreground);
+
+  /* Border radius & shadows */
+  --bn-border-radius: var(--radius);
+  --bn-shadow-medium: var(--shadow-md);
+  --bn-shadow-light: var(--shadow-sm);
+  --bn-border: 1px solid var(--border);
+}
+
+/* --- Block-level overrides for hardcoded colours in BlockNote's Block.css --- */
+
+/* Blockquotes */
+:root [data-content-type="quote"] blockquote {
+  border-left-color: var(--muted-foreground);
+  color: var(--muted-foreground);
+}
+
+/* Horizontal dividers */
+:root [data-content-type="divider"] hr {
+  border-top-color: var(--border);
+}
+
+/* Code blocks */
+:root .bn-block-content[data-content-type="codeBlock"] {
+  background-color: var(--secondary);
+  color: var(--foreground);
+}
+
+:root .bn-block-content[data-content-type="codeBlock"] > div > select {
+  color: var(--muted-foreground);
+}
+
+/* Inline code */
+:root .bn-inline-content code {
+  background-color: var(--muted);
+  padding: 0.15em 0.35em;
+  border-radius: var(--radius-md);
+  font-size: 0.9em;
+}
+
+/* Table cell borders */
+:root .bn-editor [data-content-type="table"] th,
+:root .bn-editor [data-content-type="table"] td {
+  border-color: var(--border);
+}
+
+/* Nested block indent line */
+:root .bn-block-group .bn-block-group > .bn-block-outer:not([data-prev-depth-changed])::before {
+  border-left: 1px solid var(--border);
+}
+
+/* File block – "add file" button */
+:root [data-file-block] .bn-add-file-button {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+:root .bn-editor[contenteditable="true"] [data-file-block] .bn-add-file-button:hover,
+:root [data-file-block] .bn-file-name-with-icon:hover,
+:root .ProseMirror-selectednode .bn-file-name-with-icon {
+  background-color: var(--accent);
+}
+
+/* Page break dots */
+:root .bn-block-content[data-content-type="pageBreak"] > div {
+  border-top-color: var(--border);
+}
+
+/* Placeholder text */
+:root .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  color: var(--muted-foreground);
+}
+
 
 /* BlockNote editor - fill available height */
 .note-editor-fill-height {
