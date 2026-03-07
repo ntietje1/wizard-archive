@@ -6,71 +6,66 @@
   - Custom join link
   - Request-based access control (users click link to send a request for access, DM approval needed)
   - Player management
-- Role-based access
-  - Players vs DMs
 - Note creation/editing
   - Blocknote.js editor with live sync
-  - Custom blocks and menus for feature-specific integrations like tags
+  - Custom blocks and menus for feature-specific integrations like wikilinks
+  - See "Collab editing" section for collaboration details
+  - Future: embedding of other content types into notes
 - Virtual file system
   - File tree sidebar with draggable elements
   - Sortable
   - Custom right-click context menus
-- Note tagging system
-  - Block-level tagging
-  - All tagged content viewable as a read-only document
-- Note sharing
-  - Allows selectively sharing individual blocks within a note
-  - Sharing to specific players or all players at once
-  - DM can share notes to specific players
-  - Future: Players can share notes amongst other players or maybe even the DM
-- Tag Categories
-  - Characters, Locations, and Sessions
-  - Tags created automatically, with automatic pages to view all tags for a specific category
-  - Can make custom categories / tags
-  - Folders under categories for organization
-  - Sessions have custom auto-tagging on share, based on the current session
-  - Folder view or flat view toggle for category pages with breadcrumb navigation
+  - Bookmarks
+- Note linking system
+  - obsidian-style markdown links
+  - Link to specific headings in links
+  - Link to external links
+  - Comprehensive sharing and permission system with per-player or all player settings
+  - note block-level sharing
+  - maps with map-pin sharing
+  - Future:
+    - Back link viewer
 - Maps
-  - Locations can be pinned onto a map image
-  - Future: Other types of tags allowed to be pinned
-  - Future: Embed maps as pins on other maps
-  - Future: Improve map UI
+  - Pin any type of sidebar item onto a map
+  - Clicking the pin opens it in the editor
+  - Allows for embedding maps within maps
+  - Add setting to automatically copy share state to pin visibility
+- Sharing
+  - Sharing to specific players or all players at once
+  - Optional share inheriting from folders
+  - Players can only see items they have permission to see
+  - Future:
+    - Player-owned and managed items
+- Trash bin
+  - Soft delete for all items and their related entities
+  - Auto-delete after 30 days, can restore at any point before then
+- Collab editing
+  - All edits are live synced
+  - Notes editable like google docs
+  - Future: better presence
+    - who last edited/viewed
+    - who is present now
+    - live cursors
+    - comments on notes
+- Import/export
+  - Markdown/PDF/other export
+  - Future:
+    - Notion/Obsidian import
+    - Asset manager/media library for bulk asset operations
 
 # Planned user features road map
 
-- Shared Notes interweaved with personal notes
-  - have a special type of block that can be inserted into the read-only view of the shared tagged blocks
-  - this block would be editable, automatically tagged to whatever tag it's placed in
-  - also has all the same features of any other block (sharable, taggable)
-  - each tag note has multiple pages. Start with 2: "your notes", "shared notes"
-  - shared notes are read-only except for insertable editable blocks
+- Canvas content type
+  - Allow spatial organization of notes
 - Version History with Rollback
-  - Last edited by / Created by
-- Wiki-style page linking (integrated with tag linking as well)
-  - Heading linking
 - Navigation Features
-  - Tabs in note page
-  - Search feature
-  - Breadcrumb in note page
-  - Bookmarks
-- Character/Location note hover elements
-  - DM customizable element that shows up on tag hover
-  - What shows up for session tag hover?
-- Character sheet attachment to character
-  - Just PDF for full character sheet, custom UI for hover-card content
-  - Add this to character specific page
-  - Custom character sheet creator is extension feature
-  - Requires file upload
-- Player attachment to character
-  - Potentially allow the user to create their own character?
-  - Give the user a space to add backstory, etc.
+  - Search by content
+  - Search by name
+- Sidebar item hover elements
+  - Customizable element that shows up on link hover
 - Scenery
-  - Where will this show from the player's POV?
-  - Custom block for DM view (use share button to share scenery?)
-  - Requires file upload
-- Music integration (spotify, youtube, etc.)
+  - Dedicated page outside of the editor
   - Custom block for DM view
-  - Sound effects?
 - Campaign settings
   - DM settings:
     - Archive / delete campaigns (remove delete button from campaigns index page)
@@ -81,42 +76,36 @@
   - Integrate with notes and character sheets
     - Clickable rolls integrated into character sheet/character hover card for attack/damage rolls and ability checks
     - Ability to add rolls into DM notes for quick access
-- DM "presentation" mode
-  - A view-only DM mode to be used during an active session
-- Player notes
-  - Player notes for each tag page notes
-  - Standalone notes with personal file tree in sidebar
-  - Extension: interweaving of player-notes into DM-notes
-- Robust keyboard controls
+- Robust keyboard controls: tanstack hotkeys??
   - Standard controls like undo/redo, copy/cut/paste where appropriate
   - File tree controls (copy keybinds from popular tools)
   - Editor controls
   - Note navigation controls (go to previous note, see previously viewed notes, like vscode features)
-- Comments on notes
-  - Sharable like blocks
-  - Able to reply to comments (non-threaded)
 - Custom UI themes
-- User presence
-  - Live cursors
-  - Active avatars per campaign and per note page
-  - Last edited, last viewed, etc.
 - DM-made campaign invites (enter email to auto-accept new player)
   - Requires email integration
 - Email notifications (for invites/requests, etc.)
-- Import/export
-  - Markdown/PDF/other export
-  - Notion/Obsidian import
-  - Asset manager/media library for bulk asset operations
+
+# Technologies to explore:
+
+- Zod for better schema validation
+- React Compiler?
+- Deploying on cloudflare workers
+- Canvas implementations
 
 # Extension features:
 
+- Music integration (spotify, youtube, etc.)
+  - Custom block for DM view
+  - Sound effects?
 - Initiative/combat tracker
   - Integrates with character sheets and notes
   - Custom block to initiate combat
+- Virtual table top (like roll20, foundry) / Combat encounters
+  - Like foundry/roll20
 - Character sheet creator
 - Obsidian-like knowledge graph
 - Discord integration
-- Virtual table top (like roll20, foundry)
 - Desktop app using electron
 - Better mobile support
 - Offline editing
