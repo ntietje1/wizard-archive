@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
-import { getFunctionName } from 'convex/server'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
 import type {
   FunctionArgs,
@@ -32,9 +32,8 @@ export function useAuthQuery<
   const skip = args === 'skip'
 
   return useQuery({
-    queryKey: ['convexQuery', getFunctionName(query), skip ? 'skip' : args],
-    staleTime: Infinity,
+    ...convexQuery(query, skip ? 'skip' : args),
     ...options,
     enabled: !skip && isAuthenticated && (options?.enabled ?? true),
-  })
+  } as UseQueryOptions<TData<TQuery>>)
 }

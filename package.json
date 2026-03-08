@@ -23,7 +23,7 @@
     "@blocknote/shadcn": "^0.46.2",
     "@convex-dev/better-auth": "0.10.13",
     "@convex-dev/prosemirror-sync": "^0.2.1",
-    "@convex-dev/react-query": "0.0.0-alpha.11",
+    "@convex-dev/react-query": "0.1.0",
     "@dnd-kit/modifiers": "^9.0.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@tanstack/devtools-vite": "^0.3.12",
