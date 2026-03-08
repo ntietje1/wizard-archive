@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SidebarItemEditor } from '../viewer/sidebar-item-editor'
 import { TrashPageViewer } from '../viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
@@ -7,6 +8,7 @@ import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/lib/dnd-registry'
 import { getItemTypeLabel, getTypeAndSlug } from '~/lib/sidebar-item-utils'
 import { cn } from '~/lib/shadcn/utils'
+import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
@@ -21,6 +23,17 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { isDm } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
+  const { itemsMap } = useAllSidebarItems()
+
+  const canView =
+    !!item &&
+    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, {
+      isDm,
+      viewAsPlayerId,
+      allItemsMap: itemsMap,
+    })
 
   if (isLoading) {
     return (
@@ -35,7 +48,7 @@ export function EditorContent() {
     return <TrashPageViewer />
   }
 
-  if (!item) {
+  if (!canView) {
     if (hasRequestedItem) {
       return <NotSharedContent />
     } else {
