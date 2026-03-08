@@ -10,11 +10,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     from: '/_authed/campaigns/$dmUsername/$campaignSlug',
   })
 
-  const campaign = useAuthQuery(
-    api.campaigns.queries.getCampaignBySlug,
-    { dmUsername, slug: campaignSlug },
-    { staleTime: Infinity },
-  )
+  const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {
+    dmUsername,
+    slug: campaignSlug,
+  })
 
   const value: CampaignContextType = {
     dmUsername,

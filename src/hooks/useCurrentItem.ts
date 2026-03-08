@@ -23,7 +23,6 @@ export function useCurrentItem() {
       ? { campaignId, type: typeAndSlug.type, slug: typeAndSlug.slug }
       : 'skip',
     {
-      staleTime: Infinity,
       placeholderData: typeAndSlug ? keepPreviousData : undefined,
     },
   )

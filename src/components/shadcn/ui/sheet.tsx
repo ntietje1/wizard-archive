@@ -3,7 +3,7 @@ import { Dialog as SheetPrimitive } from '@base-ui/react/dialog'
 
 import { XIcon } from 'lucide-react'
 import { cn } from '~/lib/shadcn/utils'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -61,10 +61,8 @@ function SheetContent({
           <SheetPrimitive.Close
             data-slot="sheet-close"
             render={
-              <Button
-                variant="ghost"
-                className="absolute top-3 right-3"
-                size="icon-sm"
+              <button
+                className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'absolute top-3 right-3')}
               />
             }
           >

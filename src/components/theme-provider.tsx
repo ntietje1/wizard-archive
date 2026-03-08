@@ -47,7 +47,7 @@ export function ThemeProvider({
   const { data: profile } = useAuthQuery(
     api.users.queries.getUserProfile,
     {},
-    { staleTime: Infinity, placeholderData: keepPreviousData },
+    { placeholderData: keepPreviousData },
   )
 
   const mutationFn = useConvexMutation(api.users.mutations.setTheme)

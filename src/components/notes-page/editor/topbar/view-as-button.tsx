@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/components/context-menu/components/EmptyContextMenu'
-import { Button } from '~/components/shadcn/ui/button'
+import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -62,20 +62,19 @@ export const ViewAsPlayerButton = () => {
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger
             render={
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isPending}
-                aria-label={label}
-                title={label}
+              <button
                 className={cn(
+                  buttonVariants({ variant: 'ghost', size: 'icon' }),
                   viewAsPlayerId
                     ? 'text-primary hover:text-primary aria-expanded:text-primary'
                     : '',
                 )}
+                disabled={isPending}
+                aria-label={label}
+                title={label}
               >
                 <Eye className="h-4 w-4" />
-              </Button>
+              </button>
             }
           />
           <DropdownMenuContent className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto z-[9999]">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Lock, Users } from '~/lib/icons'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 import {
   Popover,
   PopoverContent,
@@ -10,6 +10,7 @@ import { SharePermissionMenu } from '~/components/share/share-permission-menu'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/hooks/useSidebarItemsShare'
+import { cn } from '~/lib/shadcn/utils'
 
 export function ShareButton() {
   const { item, isLoading: isItemLoading } = useCurrentItem()
@@ -39,72 +40,58 @@ export function ShareButton() {
     return null
   }
 
-  if (isItemLoading || (item && isPending)) {
-    return (
-      <Button variant="outline" size="sm" disabled className="gap-1.5">
-        <Lock className="h-3.5 w-3.5 animate-pulse" />
-        <span className="text-xs animate-pulse">Loading</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground" />
-      </Button>
-    )
-  }
-
-  if (!item) {
-    return (
-      <Button variant="outline" size="sm" disabled className="gap-1.5">
-        <Lock className="h-3.5 w-3.5" />
-        <span className="text-xs">Private</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground" />
-      </Button>
-    )
-  }
-
   const dmUserProfile = campaign.data?.dmUserProfile
-  const isItemTrashed = !!item.deletionTime
-  const isDisabled = isItemTrashed || !canShare || isMutating
-  const isShared = aggregateShareStatus !== 'not_shared'
+  const isItemTrashed = !!item?.deletionTime
+  const isDisabled =
+    isItemLoading || !item || isItemTrashed || !canShare || isMutating
+  const isShared = item && aggregateShareStatus !== 'not_shared'
+  const hasShareData = item && !isPending
 
   const Chevron = open ? ChevronUp : ChevronDown
   const StatusIcon = isShared ? Users : Lock
+  const label = isShared ? 'Shared' : 'Private'
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        disabled={isDisabled}
         render={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isDisabled}
-            className="gap-1.5"
+          <button
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'gap-1.5',
+            )}
           >
             <StatusIcon className="h-3.5 w-3.5" />
-            <span className="text-xs">{isShared ? 'Shared' : 'Private'}</span>
+            <span className="text-xs">{label}</span>
             <Chevron className="h-3 w-3 text-muted-foreground" />
-          </Button>
+          </button>
         }
       />
-      <PopoverContent
-        align="start"
-        side="bottom"
-        sideOffset={4}
-        className="w-auto p-2"
-      >
-        <SharePermissionMenu
-          dmUserProfile={dmUserProfile}
-          isPending={isPending}
-          isMutating={isMutating}
-          shareItems={shareItems}
-          allPlayersPermissionLevel={allPlayersPermissionLevel}
-          inheritedAllPermissionLevel={inheritedAllPermissionLevel}
-          inheritedFromFolderName={inheritedFromFolderName}
-          isFolder={isFolder}
-          inheritShares={inheritShares}
-          onSetMemberPermission={setMemberPermission}
-          onClearMemberPermission={clearMemberPermission}
-          onSetAllPlayersPermission={setAllPlayersPermission}
-          onSetInheritShares={setInheritShares}
-        />
-      </PopoverContent>
+      {hasShareData && (
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          className="w-auto p-2"
+        >
+          <SharePermissionMenu
+            dmUserProfile={dmUserProfile}
+            isPending={isPending}
+            isMutating={isMutating}
+            shareItems={shareItems}
+            allPlayersPermissionLevel={allPlayersPermissionLevel}
+            inheritedAllPermissionLevel={inheritedAllPermissionLevel}
+            inheritedFromFolderName={inheritedFromFolderName}
+            isFolder={isFolder}
+            inheritShares={inheritShares}
+            onSetMemberPermission={setMemberPermission}
+            onClearMemberPermission={clearMemberPermission}
+            onSetAllPlayersPermission={setAllPlayersPermission}
+            onSetInheritShares={setInheritShares}
+          />
+        </PopoverContent>
+      )}
     </Popover>
   )
 }

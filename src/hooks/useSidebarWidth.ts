@@ -15,7 +15,6 @@ export const useEditorSettings = () => {
   const editorQuery = useAuthQuery(
     api.editors.queries.getCurrentEditor,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    { staleTime: 5000 },
   )
 
   const setCurrentEditor = useMutation({

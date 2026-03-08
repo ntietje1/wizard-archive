@@ -33,6 +33,7 @@ export function TrashButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        nativeButton={false}
         render={
           <SidebarRow
             ref={buttonRef}

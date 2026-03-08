@@ -37,7 +37,7 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
   const query = useAuthQuery(
     api.sidebarItems.queries.getAllSidebarItems,
     campaignId ? { campaignId } : 'skip',
-    { placeholderData: keepPreviousData, staleTime: Infinity },
+    { placeholderData: keepPreviousData },
   )
 
   const data: Array<AnySidebarItem> = useMemo(
@@ -137,7 +137,7 @@ export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
   const query = useAuthQuery(
     api.sidebarItems.queries.getTrashedSidebarItems,
     campaignId ? { campaignId } : 'skip',
-    { placeholderData: keepPreviousData, staleTime: Infinity },
+    { placeholderData: keepPreviousData },
   )
 
   const data: Array<AnySidebarItem> = useMemo(

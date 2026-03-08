@@ -18,7 +18,6 @@ export const useSortOptions = () => {
   const currentEditor = useAuthQuery(
     api.editors.queries.getCurrentEditor,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    { staleTime: Infinity },
   )
   const setCurrentEditor = useMutation({
     mutationFn: useConvexMutation(api.editors.mutations.setCurrentEditor),

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { authClient } from '~/lib/auth-client'
-import { Button } from '~/components/shadcn/ui/button'
+import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 import {
   Card,
   CardContent,
@@ -289,13 +289,13 @@ function DeleteAccountSection() {
         <AlertDialog>
           <AlertDialogTrigger
             render={
-              <Button variant="destructive" disabled={isDeleting}>
+              <button className={buttonVariants({ variant: 'destructive' })} disabled={isDeleting}>
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   'Delete account'
                 )}
-              </Button>
+              </button>
             }
           />
           <AlertDialogContent>

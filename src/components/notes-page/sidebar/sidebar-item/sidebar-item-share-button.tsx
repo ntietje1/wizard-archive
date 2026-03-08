@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Share2 } from '~/lib/icons'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
+import { cn } from '~/lib/shadcn/utils'
 import {
   Popover,
   PopoverContent,
@@ -65,14 +66,15 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+            <button
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm',
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               <Share2 className="h-3.5 w-3.5" />
-            </Button>
+            </button>
           }
         />
         <PopoverContent

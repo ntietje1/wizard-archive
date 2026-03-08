@@ -2,7 +2,7 @@ import * as React from 'react'
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog'
 
 import { cn } from '~/lib/shadcn/utils'
-import { Button } from '~/components/shadcn/ui/button'
+import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
@@ -163,7 +163,7 @@ function AlertDialogCancel({
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={cn(className)}
-      render={<Button variant={variant} size={size} />}
+      render={<button className={buttonVariants({ variant, size })} />}
       {...props}
     />
   )

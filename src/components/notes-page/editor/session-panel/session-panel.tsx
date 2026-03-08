@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { EllipsisIcon } from 'lucide-react'
 import type { Session } from 'convex/sessions/types'
-import { Button } from '~/components/shadcn/ui/button'
+import { Button, buttonVariants } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
 } from '~/components/shadcn/ui/dropdown-menu'
 import { useSession } from '~/hooks/useSession'
 import { useCampaign } from '~/hooks/useCampaign'
+import { cn } from '~/lib/shadcn/utils'
 
 export function SessionPanel() {
   const { campaignId } = useCampaign()
@@ -103,9 +104,9 @@ export function SessionPanel() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="outline" size="lg" className="aspect-square">
+              <button className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'aspect-square')}>
                 <EllipsisIcon className="size-5" />
-              </Button>
+              </button>
             }
           />
           <DropdownMenuContent align="end">

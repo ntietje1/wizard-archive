@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
+import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 function getInitials(name?: string, email?: string): string {
@@ -51,7 +52,12 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <button
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'icon' }),
+              'rounded-full',
+            )}
+          >
             <Avatar size="sm">
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
@@ -60,7 +66,7 @@ export function UserMenu() {
                 {getInitials(profile.name, profile.email)}
               </AvatarFallback>
             </Avatar>
-          </Button>
+          </button>
         }
       />
       <DropdownMenuContent align="end" sideOffset={8}>
