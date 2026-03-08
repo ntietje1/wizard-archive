@@ -1,5 +1,10 @@
 import { useCallback, useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { UserProfile } from 'convex/users/types'
@@ -42,6 +47,7 @@ export function ThemeProvider({
   const { data: profile } = useQuery({
     ...profileQueryOptions,
     staleTime: Infinity,
+    placeholderData: keepPreviousData,
   })
 
   const mutationFn = useConvexMutation(api.users.mutations.setTheme)
