@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
@@ -10,6 +10,7 @@ import type { CampaignMember } from 'convex/campaigns/types'
 import type { BlockShareInfo } from 'convex/blocks/types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { isNote } from '~/lib/sidebar-item-utils'
 
 export interface ShareItem {
@@ -34,13 +35,11 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const campaignData = campaign.data
   const blockIds = useMemo(() => blocks.map((b) => b.id), [blocks])
 
-  const query = useQuery(
-    convexQuery(
-      api.blocks.queries.getBlocksWithShares,
-      isNote(item) && blockIds.length > 0 && campaignData
-        ? { noteId: item._id, blockIds }
-        : 'skip',
-    ),
+  const query = useAuthQuery(
+    api.blocks.queries.getBlocksWithShares,
+    isNote(item) && blockIds.length > 0 && campaignData
+      ? { noteId: item._id, blockIds }
+      : 'skip',
   )
 
   const setBlocksShareStatus = useMutation({

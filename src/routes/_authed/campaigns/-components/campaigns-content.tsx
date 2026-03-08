@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
 import { CampaignDialog } from './campaign-dialog'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'convex/campaigns/types'
@@ -14,6 +12,7 @@ import { CreateActionCard } from '~/components/content-grid-page/create-action-c
 import { ContentCard } from '~/components/content-grid-page/content-card'
 import { CampaignDeleteConfirmDialog } from '~/components/dialogs/delete/campaign-delete-confirm-dialog'
 import { CardGridSkeleton } from '~/components/content-grid-page/card-grid-skeleton'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 export function CampaignsContent() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
@@ -22,9 +21,7 @@ export function CampaignsContent() {
   const [deletingCampaignId, setDeletingCampaignId] =
     useState<Id<'campaigns'> | null>(null)
 
-  const campaigns = useQuery(
-    convexQuery(api.campaigns.queries.getUserCampaigns, {}),
-  )
+  const campaigns = useAuthQuery(api.campaigns.queries.getUserCampaigns, {})
 
   const currentlyEditingCampaign = campaigns.data?.find(
     (campaign: Campaign) => campaign._id === editingCampaignId,

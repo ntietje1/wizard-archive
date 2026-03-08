@@ -1,14 +1,15 @@
 import { useCallback, useMemo } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/hooks/useBlocksShare'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 
 export interface ShareItemWithPermission extends ShareItem {
@@ -46,15 +47,11 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   // For now, we only support single item selection
   const singleItem = items.length === 1 ? items[0] : undefined
 
-  const query = useQuery(
-    convexQuery(
-      api.sidebarShares.queries.getSidebarItemWithShares,
-      campaignData?._id && singleItem && isDm
-        ? {
-            sidebarItemId: singleItem._id,
-          }
-        : 'skip',
-    ),
+  const query = useAuthQuery(
+    api.sidebarShares.queries.getSidebarItemWithShares,
+    campaignData?._id && singleItem && isDm
+      ? { sidebarItemId: singleItem._id }
+      : 'skip',
   )
 
   const shareSidebarItem = useMutation({

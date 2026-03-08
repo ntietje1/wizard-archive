@@ -1,9 +1,9 @@
 import { useMatch } from '@tanstack/react-router'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
+import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 
 import { useCampaign } from '~/hooks/useCampaign'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { getTypeAndSlug } from '~/lib/sidebar-item-utils'
 
 export function useCurrentItem() {
@@ -17,20 +17,16 @@ export function useCurrentItem() {
 
   const typeAndSlug = getTypeAndSlug(editorSearch)
 
-  const sidebarItemQuery = useQuery({
-    ...convexQuery(
-      api.sidebarItems.queries.getSidebarItemBySlug,
-      typeAndSlug && campaignId
-        ? {
-            campaignId,
-            type: typeAndSlug.type,
-            slug: typeAndSlug.slug,
-          }
-        : 'skip',
-    ),
-    staleTime: Infinity,
-    placeholderData: typeAndSlug ? keepPreviousData : undefined,
-  })
+  const sidebarItemQuery = useAuthQuery(
+    api.sidebarItems.queries.getSidebarItemBySlug,
+    typeAndSlug && campaignId
+      ? { campaignId, type: typeAndSlug.type, slug: typeAndSlug.slug }
+      : 'skip',
+    {
+      staleTime: Infinity,
+      placeholderData: typeAndSlug ? keepPreviousData : undefined,
+    },
+  )
 
   const rawItem = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
 

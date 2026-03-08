@@ -1,7 +1,8 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 
 const DEFAULT_SIDEBAR_WIDTH = 280
@@ -11,13 +12,11 @@ export const useEditorSettings = () => {
   const { campaign } = useCampaign()
   const campaignData = campaign.data
 
-  const editorQuery = useQuery({
-    ...convexQuery(
-      api.editors.queries.getCurrentEditor,
-      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    ),
-    staleTime: 5000,
-  })
+  const editorQuery = useAuthQuery(
+    api.editors.queries.getCurrentEditor,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
+    { staleTime: 5000 },
+  )
 
   const setCurrentEditor = useMutation({
     mutationFn: useConvexMutation(api.editors.mutations.setCurrentEditor),

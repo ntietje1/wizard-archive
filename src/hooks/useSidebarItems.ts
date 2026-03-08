@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useMemo } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
+import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -12,6 +11,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { isFolder } from '~/lib/sidebar-item-utils'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { assertNever } from '~/lib/utils'
@@ -34,14 +34,11 @@ export const AllSidebarItemsContext =
 export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
   const { campaignId } = useCampaign()
 
-  const query = useQuery({
-    ...convexQuery(
-      api.sidebarItems.queries.getAllSidebarItems,
-      campaignId ? { campaignId } : 'skip',
-    ),
-    placeholderData: keepPreviousData,
-    staleTime: Infinity,
-  })
+  const query = useAuthQuery(
+    api.sidebarItems.queries.getAllSidebarItems,
+    campaignId ? { campaignId } : 'skip',
+    { placeholderData: keepPreviousData, staleTime: Infinity },
+  )
 
   const data: Array<AnySidebarItem> = useMemo(
     () => query.data ?? [],
@@ -137,14 +134,11 @@ export const TrashedSidebarItemsContext =
 export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
   const { campaignId } = useCampaign()
 
-  const query = useQuery({
-    ...convexQuery(
-      api.sidebarItems.queries.getTrashedSidebarItems,
-      campaignId ? { campaignId } : 'skip',
-    ),
-    placeholderData: keepPreviousData,
-    staleTime: Infinity,
-  })
+  const query = useAuthQuery(
+    api.sidebarItems.queries.getTrashedSidebarItems,
+    campaignId ? { campaignId } : 'skip',
+    { placeholderData: keepPreviousData, staleTime: Infinity },
+  )
 
   const data: Array<AnySidebarItem> = useMemo(
     () => query.data ?? [],

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/components/file-upload/generic-file-upload-section'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { validateFileForUpload } from '~/lib/file-validation'
 import {
   InputGroup,
@@ -56,8 +57,9 @@ export function FileForm({
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToFile } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
-  const file = useQuery(
-    convexQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip'),
+  const file = useAuthQuery(
+    api.files.queries.getFile,
+    fileId ? { fileId } : 'skip',
   )
 
   const createMutation = useMutation({

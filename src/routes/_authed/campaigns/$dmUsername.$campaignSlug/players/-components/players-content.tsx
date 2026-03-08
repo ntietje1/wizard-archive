@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import {
@@ -23,11 +22,9 @@ export default function PlayersContent() {
   const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
   const campaignData = campaign.data
 
-  const players = useQuery(
-    convexQuery(
-      api.campaigns.queries.getPlayersByCampaign,
-      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    ),
+  const players = useAuthQuery(
+    api.campaigns.queries.getPlayersByCampaign,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
   const [isRequestsOpen, setIsRequestsOpen] = useState(false)

@@ -1,28 +1,21 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/hooks/useCampaign'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { SessionContext } from '~/hooks/useSession'
 
 function useSessionInternal() {
   const { campaignId } = useCampaign()
 
-  const currentSession = useQuery(
-    convexQuery(
-      api.sessions.queries.getCurrentSession,
-      campaignId
-        ? {
-            campaignId,
-          }
-        : 'skip',
-    ),
+  const currentSession = useAuthQuery(
+    api.sessions.queries.getCurrentSession,
+    campaignId ? { campaignId } : 'skip',
   )
 
-  const sessions = useQuery(
-    convexQuery(
-      api.sessions.queries.getSessionsByCampaign,
-      campaignId ? { campaignId } : 'skip',
-    ),
+  const sessions = useAuthQuery(
+    api.sessions.queries.getSessionsByCampaign,
+    campaignId ? { campaignId } : 'skip',
   )
 
   const startSession = useMutation({

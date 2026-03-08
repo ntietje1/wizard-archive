@@ -1,23 +1,20 @@
-import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { CampaignContextType } from '~/hooks/useCampaign'
 import { CampaignContext } from '~/hooks/useCampaign'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
     from: '/_authed/campaigns/$dmUsername/$campaignSlug',
   })
 
-  const campaign = useQuery({
-    ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
-      dmUsername,
-      slug: campaignSlug,
-    }),
-    staleTime: Infinity,
-  })
+  const campaign = useAuthQuery(
+    api.campaigns.queries.getCampaignBySlug,
+    { dmUsername, slug: campaignSlug },
+    { staleTime: Infinity },
+  )
 
   const value: CampaignContextType = {
     dmUsername,

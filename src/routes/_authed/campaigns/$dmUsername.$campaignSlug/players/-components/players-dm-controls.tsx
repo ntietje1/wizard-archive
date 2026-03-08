@@ -2,10 +2,9 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
-import { useQuery } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { convexQuery } from '@convex-dev/react-query'
 import { Button } from '~/components/shadcn/ui/button'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { CopyField } from '~/components/copy-field'
 import { getOrigin } from '~/utils/origin'
@@ -22,11 +21,9 @@ export default function PlayersDmControls({
   const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
   const campaignData = campaign.data
   const campaignMember = campaignData?.myMembership
-  const players = useQuery(
-    convexQuery(
-      api.campaigns.queries.getPlayersByCampaign,
-      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    ),
+  const players = useAuthQuery(
+    api.campaigns.queries.getPlayersByCampaign,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
   const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`

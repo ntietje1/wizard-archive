@@ -1,7 +1,6 @@
 import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -46,11 +45,9 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const isSelected = useIsSelectedItem(map)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const imageUrlQuery = useQuery(
-    convexQuery(
-      api.storage.queries.getDownloadUrl,
-      map.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
-    ),
+  const imageUrlQuery = useAuthQuery(
+    api.storage.queries.getDownloadUrl,
+    map.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
   )
 
   const imageUrl = imageUrlQuery.data || null

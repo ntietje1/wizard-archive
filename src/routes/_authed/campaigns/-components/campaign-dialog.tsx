@@ -1,13 +1,9 @@
 import { useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import {
-  convexQuery,
-  useConvex,
-  useConvexMutation,
-} from '@convex-dev/react-query'
+import { useConvex, useConvexMutation } from '@convex-dev/react-query'
 import {
   validateCampaignName,
   validateCampaignSlugAsync,
@@ -21,6 +17,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { Link, Sword } from '~/lib/icons'
 import { FormDialog } from '~/components/forms/base-form/form-dialog'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string
@@ -46,9 +43,7 @@ export function CampaignDialog({
   campaign,
 }: CampaignDialogProps) {
   const convex = useConvex()
-  const userProfile = useQuery(
-    convexQuery(api.users.queries.getUserProfile, {}),
-  )
+  const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
   const createCampaign = useMutation({
     mutationFn: useConvexMutation(api.campaigns.mutations.createCampaign),
   })

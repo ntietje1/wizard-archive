@@ -1,5 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { Link } from '@tanstack/react-router'
 import { LogOut, Settings } from '~/lib/icons'
@@ -18,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
 import { Button } from '~/components/shadcn/ui/button'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 function getInitials(name?: string, email?: string): string {
   if (name) {
@@ -33,9 +32,7 @@ function getInitials(name?: string, email?: string): string {
 }
 
 export function UserMenu() {
-  const profileQuery = useQuery(
-    convexQuery(api.users.queries.getUserProfile, {}),
-  )
+  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
 
   const handleSignOut = async () => {

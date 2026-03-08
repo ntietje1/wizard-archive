@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/components/file-upload/image-upload-section'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import {
   InputGroup,
   InputGroupAddon,
@@ -55,8 +56,9 @@ export function MapForm({
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToMap } = useEditorNavigation()
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
-  const map = useQuery(
-    convexQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip'),
+  const map = useAuthQuery(
+    api.gameMaps.queries.getMap,
+    mapId ? { mapId } : 'skip',
   )
 
   const createMutation = useMutation({
