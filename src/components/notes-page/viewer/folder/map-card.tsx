@@ -11,8 +11,10 @@ import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { MapPin, MoreVertical } from '~/lib/icons'
+import { cn } from '~/lib/shadcn/utils'
 import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
@@ -41,6 +43,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
     map.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
+  const isSelected = useIsSelectedItem(map)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const imageUrlQuery = useQuery(
@@ -79,7 +82,12 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           setLastSelectedItem({ type: map.type, slug: map.slug })
         }}
       >
-        <Card className="w-full h-full cursor-pointer transition-shadow hover:shadow-md group flex flex-col p-2 relative rounded-md">
+        <Card
+          className={cn(
+            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md hover:bg-muted/70',
+            isSelected && 'ring-ring ring-2',
+          )}
+        >
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between mb-1 min-w-0">
             <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">

@@ -789,7 +789,7 @@ export function MapViewer({
                   className={cn(
                     'absolute inset-0 z-[998] ring-2 ring-offset-2 pointer-events-none',
                     mapDragOutcome.type === 'operation'
-                      ? 'ring-primary'
+                      ? 'ring-ring'
                       : 'ring-destructive',
                   )}
                 />

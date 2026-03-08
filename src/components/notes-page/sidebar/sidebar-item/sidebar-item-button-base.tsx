@@ -47,7 +47,7 @@ function SidebarItemButtonBaseComponent({
         'group',
         '[[data-item-dragging]_&]:bg-primary/10',
         isSelected && 'bg-muted',
-        !isSelected && 'hover:bg-muted/50',
+        !isSelected && 'hover:bg-muted/70',
       )}
     >
       {/* Icon / Chevron Toggle */}

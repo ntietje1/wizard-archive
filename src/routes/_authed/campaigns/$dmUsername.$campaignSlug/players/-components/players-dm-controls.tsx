@@ -61,7 +61,7 @@ export default function PlayersDmControls({
           Manage Requests
         </Button>
         {pendingCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-primary-foreground text-[10px] leading-[18px] text-center">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-[18px] text-center">
             {pendingCount}
           </span>
         )}

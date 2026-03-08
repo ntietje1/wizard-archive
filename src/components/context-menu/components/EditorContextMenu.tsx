@@ -159,8 +159,7 @@ const EditorMenuContent = forwardRef<
             className={cn(
               menuItem.variant === 'danger' &&
                 'text-destructive focus:text-destructive',
-              menuItem.variant === 'share' &&
-                'text-primary focus:text-primary',
+              menuItem.variant === 'share' && 'text-primary focus:text-primary',
               menuItem.className,
             )}
             disabled={disabled}

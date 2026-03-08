@@ -10,14 +10,12 @@ interface DroppableFolderZoneProps {
   folder: Folder
   children: React.ReactNode
   className?: string
-  highlightClassName?: string
 }
 
 export function DroppableFolderZone({
   folder,
   children,
   className,
-  highlightClassName = 'bg-muted/50',
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -43,8 +41,8 @@ export function DroppableFolderZone({
 
   const activeHighlight =
     isDropTarget && isTrashAction
-      ? 'bg-drop-highlight-trash'
-      : highlightClassName
+      ? 'ring-2 ring-inset ring-destructive/60 bg-destructive/5'
+      : 'ring-2 ring-inset ring-ring/60 bg-ring/5'
 
   return (
     <div
@@ -52,7 +50,9 @@ export function DroppableFolderZone({
       className={cn(
         className,
         !folder.deletionTime && isDropTarget && activeHighlight,
-        !folder.deletionTime && isFileDragTarget && highlightClassName,
+        !folder.deletionTime &&
+          isFileDragTarget &&
+          'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >
       {children}

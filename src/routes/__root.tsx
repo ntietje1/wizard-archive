@@ -127,7 +127,7 @@ function RootDocument({
   initialTheme?: string
 }) {
   return (
-    <html suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
         <ThemeScript initialTheme={initialTheme} />

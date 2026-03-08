@@ -27,10 +27,7 @@ export function ThemeToggle() {
           </Button>
         }
       />
-      <PopoverContent
-        align="end"
-        className="w-36 p-1 gap-0"
-      >
+      <PopoverContent align="end" className="w-36 p-1 gap-0">
         {themeOptions.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
@@ -52,9 +49,7 @@ export function ThemeToggle() {
           className={cn(
             'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none cursor-default',
             'hover:bg-accent hover:text-accent-foreground',
-            theme === 'system'
-              ? 'text-foreground'
-              : 'text-muted-foreground',
+            theme === 'system' ? 'text-foreground' : 'text-muted-foreground',
           )}
         >
           <Monitor className="size-4" />

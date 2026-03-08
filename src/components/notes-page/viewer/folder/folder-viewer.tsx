@@ -57,7 +57,6 @@ export function FolderViewer({
         <DroppableFolderZone
           folder={folder}
           className="flex flex-col h-full w-full min-h-0"
-          highlightClassName="bg-muted/50"
         >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
@@ -80,7 +79,6 @@ export function FolderViewer({
       <DroppableFolderZone
         folder={folder}
         className="flex flex-col h-full w-full min-h-0"
-        highlightClassName="bg-muted/50"
       >
         <ScrollArea className="flex-1 min-h-0">
           <div className="w-full min-w-0">

@@ -39,7 +39,9 @@ export function TrashPageViewer() {
         ref={dropRef}
         className={cn(
           'flex flex-col h-full w-full min-h-0',
-          isTrashDrag ? 'bg-destructive/10' : isDropTarget && 'bg-muted',
+          isTrashDrag
+            ? 'ring-2 ring-inset ring-destructive/60 bg-destructive/5'
+            : isDropTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
         )}
       >
         {status === 'pending' ? (

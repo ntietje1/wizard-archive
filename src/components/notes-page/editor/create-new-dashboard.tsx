@@ -34,7 +34,7 @@ function CreateNewButton({
       variant="outline"
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-4 w-full px-4 py-3 h-auto justify-start text-left group bg-card hover:bg-accent/50"
+      className="flex items-center gap-4 w-full px-4 py-3 h-auto justify-start text-left group"
     >
       <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-muted">
         <Icon className="h-5 w-5 text-muted-foreground" />

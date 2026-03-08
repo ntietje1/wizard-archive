@@ -8,8 +8,10 @@ import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { FileText, MoreVertical } from '~/lib/icons'
+import { cn } from '~/lib/shadcn/utils'
 import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
@@ -39,6 +41,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
     note.myPermissionLevel,
     PERMISSION_LEVEL.FULL_ACCESS,
   )
+  const isSelected = useIsSelectedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const { isDraggingRef } = useDraggable({
@@ -67,7 +70,12 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           setLastSelectedItem({ type: note.type, slug: note.slug })
         }}
       >
-        <Card className="w-full h-full cursor-pointer transition-shadow hover:shadow-md group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
+        <Card
+          className={cn(
+            'w-full h-full cursor-pointer group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md hover:bg-muted/70',
+            isSelected && 'ring-ring ring-2',
+          )}
+        >
           {/* Left Content Section */}
           <div className="p-1 flex-1 min-w-0 flex flex-col justify-between">
             <div className="overflow-hidden">

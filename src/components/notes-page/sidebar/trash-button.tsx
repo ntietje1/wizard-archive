@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from '~/components/shadcn/ui/popover'
 import { useDndDropTarget } from '~/hooks/useDndDropTarget'
+import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/lib/dnd-registry'
 import { cn } from '~/lib/shadcn/utils'
@@ -26,6 +27,9 @@ export function TrashButton() {
     highlightId: TRASH_DROP_ZONE_TYPE,
   })
 
+  const { item, editorSearch } = useCurrentItem()
+  const isTrashViewActive = editorSearch.trash === true && !item
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -35,9 +39,11 @@ export function TrashButton() {
             role="button"
             icon={Trash2}
             label="Trash"
+            isActive={isTrashViewActive || open}
             className={cn(
               'cursor-pointer',
-              isDropTarget && 'bg-destructive/10 text-destructive',
+              isDropTarget &&
+                'ring-2 ring-inset ring-destructive/60 bg-destructive/5 text-destructive',
             )}
             rightSlot={
               trashCount > 0 ? (

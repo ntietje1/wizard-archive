@@ -71,8 +71,10 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget && !isFileDragTarget && 'bg-muted',
-        isFileDragTarget && 'bg-muted/50',
+        isDropTarget &&
+          !isFileDragTarget &&
+          'ring-2 ring-inset ring-ring/60 bg-ring/5',
+        isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >
       {isDm ? (

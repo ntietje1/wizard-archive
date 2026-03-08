@@ -13,6 +13,9 @@ import {
 
 const FOUC_SCRIPT = `(function(){try{var t=window.__INITIAL_THEME__;var r=(t==='dark'||t==='light')?t:(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.classList.add(r)}catch(e){}})();`
 
+const escapeScriptContent = (str: string) =>
+  str.replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
+
 /**
  * Blocking inline script that sets the theme class on `<html>` before paint.
  * Render this inside `<head>`.
@@ -21,7 +24,7 @@ export function ThemeScript({ initialTheme }: { initialTheme?: string }) {
   return (
     <script
       dangerouslySetInnerHTML={{
-        __html: `window.__INITIAL_THEME__=${JSON.stringify(initialTheme ?? null)};${FOUC_SCRIPT}`,
+        __html: `window.__INITIAL_THEME__=${escapeScriptContent(JSON.stringify(initialTheme ?? null))};${FOUC_SCRIPT}`,
       }}
     />
   )
@@ -41,15 +44,17 @@ export function ThemeProvider({
     staleTime: Infinity,
   })
 
+  const mutationFn = useConvexMutation(api.users.mutations.setTheme)
+
   const setThemeMutation = useMutation({
-    mutationFn: useConvexMutation(api.users.mutations.setTheme),
-  })
-
-  const theme: Theme = profile?.theme ?? initialTheme ?? 'system'
-  const resolved = resolveTheme(theme)
-
-  const setTheme = useCallback(
-    (newTheme: Theme) => {
+    mutationFn,
+    onMutate: async ({ theme: newTheme }: { theme: Theme }) => {
+      await queryClient.cancelQueries({
+        queryKey: profileQueryOptions.queryKey,
+      })
+      const previous = queryClient.getQueryData<UserProfile>(
+        profileQueryOptions.queryKey,
+      )
       queryClient.setQueryData(
         profileQueryOptions.queryKey,
         (old: UserProfile | null | undefined) => {
@@ -58,9 +63,27 @@ export function ThemeProvider({
         },
       )
       applyThemeClass(resolveTheme(newTheme))
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous?.theme) {
+        queryClient.setQueryData(profileQueryOptions.queryKey, context.previous)
+        applyThemeClass(resolveTheme(context.previous.theme))
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })
+    },
+  })
+
+  const theme: Theme = profile?.theme ?? initialTheme ?? 'system'
+  const resolved = resolveTheme(theme)
+
+  const setTheme = useCallback(
+    (newTheme: Theme) => {
       setThemeMutation.mutate({ theme: newTheme })
     },
-    [queryClient, setThemeMutation],
+    [setThemeMutation],
   )
 
   useEffect(() => {

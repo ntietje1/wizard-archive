@@ -11,6 +11,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { MoreVertical } from '~/lib/icons'
 import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
+import { useIsSelectedItem } from '~/hooks/useSelectedItem'
 import { useContextMenu } from '~/hooks/useContextMenu'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useDraggable } from '~/hooks/useDraggable'
@@ -50,28 +51,76 @@ const TAB_STROKE = [
 
 type DropState = 'none' | 'valid' | 'trash'
 
-function FolderSvg({ dropState = 'none' }: { dropState?: DropState }) {
-  const fillClass =
-    dropState === 'trash' ? 'fill-destructive-muted' : 'fill-card'
+function FolderSvg({
+  dropState = 'none',
+  isSelected = false,
+}: {
+  dropState?: DropState
+  isSelected?: boolean
+}) {
+  const isDrop = dropState !== 'none'
+  const strokeClass =
+    dropState === 'trash'
+      ? 'stroke-destructive'
+      : dropState === 'valid'
+        ? 'stroke-ring'
+        : isSelected
+          ? 'stroke-ring'
+          : 'stroke-border'
+  const strokeWidth = isDrop
+    ? 'stroke-[3]'
+    : isSelected
+      ? 'stroke-[2.5]'
+      : 'stroke-2'
+  const tintClass =
+    dropState === 'trash'
+      ? 'fill-destructive/5'
+      : dropState === 'valid'
+        ? 'fill-ring/5'
+        : undefined
 
   return (
-    <svg
-      className={cn(
-        'absolute inset-0 w-full h-full overflow-visible transition-[filter] duration-100',
-        dropState === 'none' && 'group-hover:drop-shadow-md',
-        dropState === 'valid' && 'drop-shadow-ring',
-        dropState === 'trash' && 'drop-shadow-destructive',
-      )}
-    >
+    <svg className={cn('absolute inset-0 w-full h-full overflow-visible')}>
       <rect
         y={TAB_H}
         width="100%"
         height={H - TAB_H}
         rx={R}
-        className={cn(fillClass, 'stroke-border stroke-2 [paint-order:stroke]')}
+        className={cn(
+          'fill-card [paint-order:stroke]',
+          strokeWidth,
+          strokeClass,
+        )}
       />
-      <path d={TAB_STROKE} className="fill-none stroke-border stroke-2" />
-      <path d={TAB_FILL} className={fillClass} />
+      <path
+        d={TAB_STROKE}
+        className={cn('fill-none', strokeWidth, strokeClass)}
+      />
+      <path d={TAB_FILL} className="fill-card" />
+      {tintClass && (
+        <>
+          <rect
+            y={TAB_H + 1}
+            width="100%"
+            height={H - TAB_H - 1}
+            rx={R}
+            className={cn(tintClass, 'stroke-none')}
+          />
+          <path d={TAB_FILL} className={tintClass} />
+        </>
+      )}
+      {/* Hover fill — clipped to folder shape */}
+      <rect
+        y={TAB_H + 1}
+        width="100%"
+        height={H - TAB_H - 1}
+        rx={R}
+        className="fill-muted/70 stroke-none opacity-0 group-hover:opacity-100"
+      />
+      <path
+        d={TAB_FILL}
+        className="fill-muted/70 opacity-0 group-hover:opacity-100"
+      />
     </svg>
   )
 }
@@ -81,7 +130,7 @@ function FolderCardSkeleton() {
     <div className="h-[140px]">
       <div className="relative block w-full h-full">
         <FolderSvg />
-        <div className="relative z-[2] pt-4 px-3">
+        <div className="relative z-[2] pt-3 px-2">
           <Skeleton className="h-5 w-32" />
         </div>
       </div>
@@ -93,6 +142,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()
+  const isSelected = useIsSelectedItem(folder)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const isDropTarget = useSidebarUIStore(
@@ -155,7 +205,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
         }}
       >
         <div className="relative block w-full h-full cursor-pointer group">
-          <FolderSvg dropState={dropState} />
+          <FolderSvg dropState={dropState} isSelected={isSelected} />
 
           <div className="relative z-[2] pt-3 px-2">
             <div className="flex items-center gap-2 min-w-0">

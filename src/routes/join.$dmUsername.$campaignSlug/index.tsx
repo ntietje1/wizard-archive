@@ -345,7 +345,7 @@ function RouteComponent() {
           children: (
             <Button
               onClick={goToHome}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold rounded-xl shadow-lg"
             >
               Exit
             </Button>

@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import type { Id } from 'convex/_generated/dataModel'
 import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { useSidebarItemDropTarget } from '~/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
@@ -17,14 +16,11 @@ export function DroppableSidebarItem({
 }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const { ancestorIds } = useSidebarItemDropTarget({ ref, item })
+  useSidebarItemDropTarget({ ref, item })
 
-  const isDropTarget = useSidebarUIStore((s) => {
-    const id = s.sidebarDragTargetId
-    if (id === null) return false
-    if (id === item._id) return true
-    return ancestorIds.includes(id as Id<'folders'>)
-  })
+  const isDirectTarget = useSidebarUIStore(
+    (s) => s.sidebarDragTargetId === item._id,
+  )
   const isTrashAction = useSidebarUIStore(
     (s) =>
       s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
@@ -39,22 +35,28 @@ export function DroppableSidebarItem({
 
   const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
   const isFileDirectTarget = isDraggingFiles && fileDragHoveredId === item._id
-  const isFileParentValidDrop =
-    isDraggingFiles &&
-    fileDragHoveredId !== null &&
-    ancestorIds.includes(fileDragHoveredId)
 
-  const shouldHighlight =
-    isDropTarget || isFileDirectTarget || isFileParentValidDrop
-
-  const highlightClass = shouldHighlight
-    ? isDropTarget && isTrashAction
-      ? 'bg-drop-highlight-trash'
-      : 'bg-drop-highlight'
-    : 'bg-background'
+  const isHighlighted = isDirectTarget || isFileDirectTarget
+  const ringClass = isDirectTarget
+    ? isTrashAction
+      ? 'before:ring-destructive/60'
+      : 'before:ring-ring/60'
+    : isFileDirectTarget
+      ? 'before:ring-ring/40'
+      : ''
+  const bgClass = isDirectTarget
+    ? isTrashAction
+      ? 'bg-destructive/5'
+      : 'bg-ring/5'
+    : isFileDirectTarget
+      ? 'bg-ring/5'
+      : ''
 
   return (
-    <div ref={ref} className={`w-full min-w-0 ${highlightClass}`}>
+    <div
+      ref={ref}
+      className={`w-full min-w-0 relative ${bgClass} ${isHighlighted ? `before:absolute before:inset-0 before:ring-2 before:ring-inset before:pointer-events-none before:z-10 before:rounded-[inherit] ${ringClass}` : ''}`}
+    >
       {children}
     </div>
   )

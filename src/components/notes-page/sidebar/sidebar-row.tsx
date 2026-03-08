@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
-import { cn } from '~/lib/shadcn/utils'
 import type { LucideIcon } from '~/lib/icons'
+import { cn } from '~/lib/shadcn/utils'
 
 interface SidebarRowProps extends React.ComponentPropsWithoutRef<'div'> {
   icon: LucideIcon
@@ -20,7 +20,7 @@ export const SidebarRow = forwardRef<HTMLDivElement, SidebarRowProps>(
         className={cn(
           'flex items-center w-full h-8 px-1 rounded-sm group',
           isActive && 'bg-muted',
-          !isActive && 'hover:bg-muted/50',
+          !isActive && 'hover:bg-muted/70',
           className,
         )}
         {...props}

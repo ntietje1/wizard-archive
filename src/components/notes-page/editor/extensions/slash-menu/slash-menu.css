@@ -102,5 +102,6 @@
 
 .slash-menu-item.selected .slash-menu-item-subtitle,
 .slash-menu-item:hover .slash-menu-item-subtitle {
-  color: oklch(from var(--accent-foreground) l c h / 0.7);
+  color: var(--accent-foreground);
+  opacity: 0.7;
 }

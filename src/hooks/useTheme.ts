@@ -10,13 +10,9 @@ export type ThemeProviderState = {
   setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
-  theme: 'system',
-  setTheme: () => null,
-}
-
-export const ThemeProviderContext =
-  createContext<ThemeProviderState>(initialState)
+export const ThemeProviderContext = createContext<
+  ThemeProviderState | undefined
+>(undefined)
 
 export const profileQueryOptions = convexQuery(
   api.users.queries.getUserProfile,
@@ -34,6 +30,7 @@ export function resolveTheme(theme: Theme): 'dark' | 'light' {
 }
 
 export function applyThemeClass(resolved: 'dark' | 'light') {
+  if (typeof document === 'undefined') return
   const root = document.documentElement
   const other = resolved === 'dark' ? 'light' : 'dark'
   if (!root.classList.contains(resolved)) {
@@ -42,12 +39,18 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
   root.classList.remove(other)
 }
 
+const VALID_THEMES = new Set(['dark', 'light', 'system'])
+
+function isValidTheme(value: unknown): value is Theme {
+  return typeof value === 'string' && VALID_THEMES.has(value)
+}
+
 export async function prefetchTheme(
   queryClient: QueryClient,
 ): Promise<Theme | undefined> {
   try {
     const profile = await queryClient.ensureQueryData(profileQueryOptions)
-    return (profile?.theme as Theme) ?? undefined
+    return isValidTheme(profile?.theme) ? profile.theme : undefined
   } catch {
     return undefined
   }
