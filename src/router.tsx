@@ -8,7 +8,7 @@ import { routeTree } from './routeTree.gen'
 import ErrorPage from './components/error/error-page'
 import NotFoundPage from './components/not-found/not-found'
 
-export function createRouter() {
+export function getRouter() {
   const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
   if (!CONVEX_URL) {
     throw new Error('missing VITE_CONVEX_URL envar')
@@ -58,6 +58,6 @@ export function createRouter() {
 
 declare module '@tanstack/react-router' {
   interface Register {
-    router: ReturnType<typeof createRouter>
+    router: ReturnType<typeof getRouter>
   }
 }

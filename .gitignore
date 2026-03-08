@@ -5,6 +5,7 @@ yarn.lock
 !.env
 .env
 .env.local
+.env.dev
 .DS_Store
 .cache
 .vercel

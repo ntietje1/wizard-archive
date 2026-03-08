@@ -16,16 +16,29 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart({
-      customViteReactPlugin: true,
+      // customViteReactPlugin: true,
     }),
     react({
       babel: {
         plugins: ['babel-plugin-react-compiler'],
       },
     }),
+    // {
+    //   name: 'fix-better-auth-optimize',
+    //   configResolved(config) {
+    //     const exclude = config.optimizeDeps.exclude
+    //     const idx = exclude?.indexOf('better-auth')
+    //     if (idx != null && idx >= 0) {
+    //       exclude.splice(idx, 1)
+    //     }
+    //   },
+    // },
   ],
   optimizeDeps: {
     exclude: ['@tanstack/router-devtools-core'],
   },
-  envPrefix: ['VITE_', 'CLERK_'],
+  ssr: {
+    noExternal: ['@convex-dev/better-auth'],
+  },
+  envPrefix: ['VITE_'],
 })

@@ -24,7 +24,7 @@ export async function authenticate(
   if (!identity) throw new Error('Not authenticated')
   const profile = await ctx.db
     .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('clerkUserId', identity.subject))
+    .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
   if (!profile) throw new Error('No profile found')
   return { identity, profile }

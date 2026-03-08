@@ -3,12 +3,10 @@ import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
 
 const userProfileTableFields = {
-  clerkUserId: v.string(),
+  authUserId: v.string(),
   username: v.string(),
   email: v.optional(v.string()),
   name: v.optional(v.string()),
-  firstName: v.optional(v.string()),
-  lastName: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
   theme: v.optional(
     v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
@@ -20,7 +18,7 @@ export const userTables = {
   userProfiles: defineTable({
     ...userProfileTableFields,
   })
-    .index('by_user', ['clerkUserId'])
+    .index('by_user', ['authUserId'])
     .index('by_username', ['username']),
 }
 

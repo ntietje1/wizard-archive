@@ -14,7 +14,6 @@ function AuthRedirectPage() {
       const joinUrl = sessionStorage.getItem('joinCampaignRedirectUrl')
 
       if (joinUrl) {
-        // Validate URL is safe (relative or same-origin)
         try {
           const url = new URL(joinUrl, window.location.origin)
           if (url.origin !== window.location.origin) {

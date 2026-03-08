@@ -7,7 +7,7 @@ export async function getUserProfileByUserId(
 ): Promise<UserProfile | null> {
   const profile = await ctx.db
     .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('clerkUserId', userId))
+    .withIndex('by_user', (q) => q.eq('authUserId', userId))
     .unique()
   return profile
 }

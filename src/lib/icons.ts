@@ -55,6 +55,7 @@ export {
   SortAsc,
   SortDesc,
   Lock,
+  LogOut,
   UploadCloud,
   Notebook,
   MoreHorizontal,

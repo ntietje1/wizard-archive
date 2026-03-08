@@ -1,12 +1,7 @@
-import {
-  createStartHandler,
-  defaultStreamHandler,
-} from '@tanstack/react-start/server'
-import { createClerkHandler } from '@clerk/tanstack-react-start/server'
-import { createRouter } from './router'
+import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
 
-export default createClerkHandler(
-  createStartHandler({
-    createRouter,
-  }),
-)(defaultStreamHandler)
+const handler = createStartHandler(defaultStreamHandler)
+
+export default {
+  fetch: handler,
+}

@@ -1,5 +1,4 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
 import { PanelLeft, PanelLeftOpen } from 'lucide-react'
 import type { LucideIcon } from '~/lib/icons'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
@@ -10,6 +9,7 @@ import { Button } from '~/components/shadcn/ui/button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
 import { Separator } from '~/components/shadcn/ui/separator'
 import { useSidebarLayout } from '~/hooks/useSidebarLayout'
+import { UserMenu } from '~/components/auth/UserMenu'
 
 type NavigationItem = {
   name: string
@@ -88,9 +88,7 @@ export const NavigationSidebar = () => {
 
       {/* User profile at bottom */}
       <ClientOnly>
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
+        <UserMenu />
       </ClientOnly>
     </div>
   )

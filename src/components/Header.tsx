@@ -1,12 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { SignedIn, UserButton } from '@clerk/tanstack-react-start'
+import { useConvexAuth } from 'convex/react'
 import type { ReactNode } from 'react'
+import { UserMenu } from '~/components/auth/UserMenu'
 
 type HeaderProps = {
   children?: ReactNode
 }
 
 export function Header({ children }: HeaderProps) {
+  const { isAuthenticated } = useConvexAuth()
+
   return (
     <div className="bg-background h-10 border-b border-border">
       <div className="mx-auto flex justify-between items-center h-full px-2">
@@ -21,9 +24,7 @@ export function Header({ children }: HeaderProps) {
           {children}
         </header>
         <div className="ml-auto">
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
+          {isAuthenticated && <UserMenu />}
         </div>
       </div>
     </div>
