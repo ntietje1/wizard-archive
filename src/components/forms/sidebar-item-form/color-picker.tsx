@@ -37,7 +37,10 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         <PopoverTrigger
           render={
             <button
-              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 w-9 p-0 min-w-9')}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'h-9 w-9 p-0 min-w-9',
+              )}
               type="button"
             >
               <div className="relative flex items-center justify-center w-full h-full">

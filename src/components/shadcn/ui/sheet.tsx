@@ -62,7 +62,10 @@ function SheetContent({
             data-slot="sheet-close"
             render={
               <button
-                className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'absolute top-3 right-3')}
+                className={cn(
+                  buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+                  'absolute top-3 right-3',
+                )}
               />
             }
           >

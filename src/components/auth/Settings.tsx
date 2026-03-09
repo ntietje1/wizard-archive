@@ -114,7 +114,9 @@ function ChangePasswordSection() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-confirm-password">Confirm new password</Label>
+            <Label htmlFor="settings-confirm-password">
+              Confirm new password
+            </Label>
             <Input
               id="settings-confirm-password"
               type="password"
@@ -280,16 +282,22 @@ function DeleteAccountSection() {
   return (
     <Card className="border-destructive/50">
       <CardHeader>
-        <CardTitle className="text-lg text-destructive">Delete Account</CardTitle>
+        <CardTitle className="text-lg text-destructive">
+          Delete Account
+        </CardTitle>
         <CardDescription>
-          Permanently delete your account and all associated data. This action cannot be undone.
+          Permanently delete your account and all associated data. This action
+          cannot be undone.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <AlertDialog>
           <AlertDialogTrigger
             render={
-              <button className={buttonVariants({ variant: 'destructive' })} disabled={isDeleting}>
+              <button
+                className={buttonVariants({ variant: 'destructive' })}
+                disabled={isDeleting}
+              >
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -302,7 +310,8 @@ function DeleteAccountSection() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete your account and remove all of your data. This action cannot be undone.
+                This will permanently delete your account and remove all of your
+                data. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

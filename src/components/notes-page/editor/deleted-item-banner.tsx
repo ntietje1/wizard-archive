@@ -11,7 +11,10 @@ import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/lib/sidebar-item-utils'
-import { emptyTrashDescription, permanentDeleteDescription } from '~/lib/trash-utils'
+import {
+  emptyTrashDescription,
+  permanentDeleteDescription,
+} from '~/lib/trash-utils'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from '~/lib/icons'
 

@@ -11,7 +11,10 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useDraggable } from '~/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { emptyTrashDescription, permanentDeleteDescription } from '~/lib/trash-utils'
+import {
+  emptyTrashDescription,
+  permanentDeleteDescription,
+} from '~/lib/trash-utils'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from '~/lib/icons'
@@ -138,7 +141,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       {/* Footer */}
       <div className="border-t mt-1.5 pt-1.5 px-2 flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground leading-tight">
-          Items older than {TRASH_RETENTION_DAYS} days are automatically deleted.
+          Items older than {TRASH_RETENTION_DAYS} days are automatically
+          deleted.
         </p>
         {isDm && rootTrashedItems.length > 0 && (
           <Button

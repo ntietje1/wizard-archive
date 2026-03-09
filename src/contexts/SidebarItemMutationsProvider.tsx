@@ -261,7 +261,10 @@ export function SidebarItemMutationsProvider({
                 { campaignId },
               ]) ?? []
             for (const child of trashedItems) {
-              if (child.parentId === folderId && !descendantIds.has(child._id)) {
+              if (
+                child.parentId === folderId &&
+                !descendantIds.has(child._id)
+              ) {
                 descendantIds.add(child._id)
                 if (isFolder(child)) collectDescendants(child._id)
               }
@@ -271,19 +274,24 @@ export function SidebarItemMutationsProvider({
         }
 
         trashedOptimisticUpdate((prev) =>
-          prev.filter(
-            (i) => i._id !== item._id && !descendantIds.has(i._id),
-          ),
+          prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
         )
-        const restoredDescendants = descendantIds.size > 0
-          ? (queryClient.getQueryData<Array<AnySidebarItem>>([
-              'convexQuery',
-              api.sidebarItems.queries.getTrashedSidebarItems,
-              { campaignId },
-            ]) ?? [])
-              .filter((i) => descendantIds.has(i._id))
-              .map((i) => ({ ...i, deletionTime: undefined, deletedBy: undefined }))
-          : []
+        const restoredDescendants =
+          descendantIds.size > 0
+            ? (
+                queryClient.getQueryData<Array<AnySidebarItem>>([
+                  'convexQuery',
+                  api.sidebarItems.queries.getTrashedSidebarItems,
+                  { campaignId },
+                ]) ?? []
+              )
+                .filter((i) => descendantIds.has(i._id))
+                .map((i) => ({
+                  ...i,
+                  deletionTime: undefined,
+                  deletedBy: undefined,
+                }))
+            : []
         optimisticUpdate((prev) => [
           ...prev,
           {
@@ -296,9 +304,7 @@ export function SidebarItemMutationsProvider({
         ])
         undo = () => {
           optimisticUpdate((prev) =>
-            prev.filter(
-              (i) => i._id !== item._id && !descendantIds.has(i._id),
-            ),
+            prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
           )
           trashedOptimisticUpdate((prev) => [...prev, item])
         }
@@ -322,9 +328,7 @@ export function SidebarItemMutationsProvider({
         const descendantIds = new Set(descendants.map((d) => d._id))
 
         optimisticUpdate((prev) =>
-          prev.filter(
-            (i) => i._id !== item._id && !descendantIds.has(i._id),
-          ),
+          prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
         )
         trashedOptimisticUpdate((prev) => [
           {
@@ -342,9 +346,7 @@ export function SidebarItemMutationsProvider({
         ])
         undo = () => {
           trashedOptimisticUpdate((prev) =>
-            prev.filter(
-              (i) => i._id !== item._id && !descendantIds.has(i._id),
-            ),
+            prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
           )
           optimisticUpdate((prev) => [...prev, item, ...descendants])
         }

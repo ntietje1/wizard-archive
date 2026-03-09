@@ -25,7 +25,10 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
         <PopoverTrigger
           render={
             <button
-              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-9 w-9 p-0 min-w-9')}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'h-9 w-9 p-0 min-w-9',
+              )}
               type="button"
             >
               <CurrentIcon className="h-4 w-4" />

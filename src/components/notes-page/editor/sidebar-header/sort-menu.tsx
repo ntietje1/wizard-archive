@@ -38,7 +38,9 @@ export function SortMenu() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <button className={buttonVariants({ variant: 'ghost', size: 'icon' })}>
+            <button
+              className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+            >
               <SortDesc className="h-4 w-4" />
             </button>
           }

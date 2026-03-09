@@ -264,4 +264,3 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
     </Card>
   )
 }
-
