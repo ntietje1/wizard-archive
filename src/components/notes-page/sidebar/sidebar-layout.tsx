@@ -1,10 +1,9 @@
 import { memo, useCallback, useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { SessionPanel } from '../editor/session-panel/session-panel'
 import { SidebarHeader } from '../editor/sidebar-header/sidebar-header'
 import { FileSidebar } from './sidebar'
+import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
-import { SidebarRow } from './sidebar-row'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -12,20 +11,12 @@ import {
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { useSidebarLayout } from '~/hooks/useSidebarLayout'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useLastEditorItem } from '~/hooks/useLastEditorItem'
-import { EDITOR_ROUTE } from '~/hooks/useEditorLinkProps'
-import { Plus } from '~/lib/icons'
 
 const SIDEBAR_MIN_WIDTH = 160
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
-  const { isDm, dmUsername, campaignSlug } = useCampaign()
-  const { setLastSelectedItem } = useLastEditorItem()
-
-  const handleNewClick = useCallback(() => {
-    setLastSelectedItem(null)
-  }, [setLastSelectedItem])
+  const { isDm } = useCampaign()
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -48,16 +39,7 @@ const SidebarContent = memo(function SidebarContent() {
           </ResizablePanel>
           {isDm ? (
             <div className="shrink-0 p-1 border-t">
-              <Link
-                to={EDITOR_ROUTE}
-                params={{ dmUsername, campaignSlug }}
-                search={{}}
-                className="block"
-                onClick={handleNewClick}
-                draggable={false}
-              >
-                <SidebarRow icon={Plus} label="New" />
-              </Link>
+              <NewButton />
               <TrashButton />
             </div>
           ) : (
