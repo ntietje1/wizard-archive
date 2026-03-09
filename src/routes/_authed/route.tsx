@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { SignInForm } from '~/components/auth/SignInForm'
+import { Card, CardContent } from '~/components/shadcn/ui/card'
 
 function AuthedRouteComponent() {
   const { isAuthenticated, isLoading } = useConvexAuth()
@@ -11,7 +12,11 @@ function AuthedRouteComponent() {
   if (!isLoading && !isAuthenticated) {
     return (
       <div className="flex items-center justify-center p-24">
-        <SignInForm redirectTo={location.href} />
+        <Card className="w-full max-w-sm">
+          <CardContent className="pt-6">
+            <SignInForm redirectTo={location.href} />
+          </CardContent>
+        </Card>
       </div>
     )
   }

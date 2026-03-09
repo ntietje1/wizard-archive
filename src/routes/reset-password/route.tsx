@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AuthPageLayout } from '~/components/auth/AuthPageLayout'
 import { ResetPasswordForm } from '~/components/auth/ResetPasswordForm'
 
 export const Route = createFileRoute('/reset-password')({
@@ -10,8 +11,8 @@ export const Route = createFileRoute('/reset-password')({
 
 function ResetPasswordPage() {
   return (
-    <div className="flex items-center justify-center h-screen bg-muted">
+    <AuthPageLayout>
       <ResetPasswordForm />
-    </div>
+    </AuthPageLayout>
   )
 }

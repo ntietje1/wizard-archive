@@ -3,6 +3,7 @@ import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { isAuthError } from '~/hooks/useAuthQuery'
 import { validateSearch } from '~/components/notes-page/validate-search'
 import { FileTopbar } from '~/components/notes-page/editor/topbar/file-topbar'
 import { EditorContent } from '~/components/notes-page/editor/editor-content'
@@ -13,39 +14,43 @@ export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
 )({
   beforeLoad: async ({ context, params, search }) => {
-    const campaign = await context.queryClient.ensureQueryData(
-      convexQuery(api.campaigns.queries.getCampaignBySlug, {
-        dmUsername: params.dmUsername,
-        slug: params.campaignSlug,
-      }),
-    )
-    const typeAndSlug = getTypeAndSlug(search)
-    if (campaign?._id) {
-      await Promise.all([
-        context.queryClient.ensureQueryData(
-          convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
-            campaignId: campaign._id,
-          }),
-        ),
-        context.queryClient.ensureQueryData(
-          convexQuery(api.editors.queries.getCurrentEditor, {
-            campaignId: campaign._id,
-          }),
-        ),
-        context.queryClient.ensureQueryData(
-          convexQuery(api.campaigns.queries.getPlayersByCampaign, {
-            campaignId: campaign._id,
-          }),
-        ),
-        typeAndSlug &&
+    try {
+      const campaign = await context.queryClient.ensureQueryData(
+        convexQuery(api.campaigns.queries.getCampaignBySlug, {
+          dmUsername: params.dmUsername,
+          slug: params.campaignSlug,
+        }),
+      )
+      const typeAndSlug = getTypeAndSlug(search)
+      if (campaign?._id) {
+        await Promise.all([
           context.queryClient.ensureQueryData(
-            convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+            convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
               campaignId: campaign._id,
-              type: typeAndSlug.type,
-              slug: typeAndSlug.slug,
             }),
           ),
-      ])
+          context.queryClient.ensureQueryData(
+            convexQuery(api.editors.queries.getCurrentEditor, {
+              campaignId: campaign._id,
+            }),
+          ),
+          context.queryClient.ensureQueryData(
+            convexQuery(api.campaigns.queries.getPlayersByCampaign, {
+              campaignId: campaign._id,
+            }),
+          ),
+          typeAndSlug &&
+            context.queryClient.ensureQueryData(
+              convexQuery(api.sidebarItems.queries.getSidebarItemBySlug, {
+                campaignId: campaign._id,
+                type: typeAndSlug.type,
+                slug: typeAndSlug.slug,
+              }),
+            ),
+        ])
+      }
+    } catch (e) {
+      if (!isAuthError(e)) throw e
     }
   },
   component: EditorLayout,

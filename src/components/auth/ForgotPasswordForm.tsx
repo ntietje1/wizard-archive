@@ -2,13 +2,6 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '~/components/shadcn/ui/card'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
 import { Loader2 } from '~/lib/icons'
@@ -39,66 +32,62 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Check your email</CardTitle>
-          <CardDescription>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-2xl font-bold">Check your email</h1>
+          <p className="text-sm text-muted-foreground text-balance">
             If an account exists for {email}, we sent a password reset link.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            to="/sign-in"
-            className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-          >
-            Back to sign in
-          </Link>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <Link
+          to="/sign-in"
+          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
+        >
+          Back to sign in
+        </Link>
+      </div>
     )
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center">
-        <CardTitle className="text-xl">Forgot password</CardTitle>
-        <CardDescription>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <h1 className="text-2xl font-bold">Forgot password</h1>
+        <p className="text-sm text-muted-foreground text-balance">
           Enter your email and we'll send you a reset link
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-            />
-          </div>
+        </p>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+          />
+        </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Send reset link'
-            )}
-          </Button>
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            'Send reset link'
+          )}
+        </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            <Link
-              to="/sign-in"
-              className="text-primary underline-offset-4 hover:underline font-medium"
-            >
-              Back to sign in
-            </Link>
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+        <p className="text-center text-sm text-muted-foreground">
+          <Link
+            to="/sign-in"
+            className="text-primary underline-offset-4 hover:underline font-medium"
+          >
+            Back to sign in
+          </Link>
+        </p>
+      </form>
+    </div>
   )
 }

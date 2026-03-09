@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
+import { ERROR_CODE, isAppError } from 'convex/errors'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
 import type {
   FunctionArgs,
@@ -12,7 +13,7 @@ type TData<TQuery extends FunctionReference<'query', 'public'>> =
   FunctionReturnType<TQuery>
 
 type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> =
-  Omit<UseQueryOptions<TData<TQuery>>, 'queryKey' | 'queryFn'>
+  Omit<UseQueryOptions<TData<TQuery>>, 'queryKey' | 'queryFn' | 'retry'>
 
 /**
  * Like `useQuery(convexQuery(...))` but gates execution behind auth.
@@ -50,5 +51,10 @@ export function useAuthQuery<
     ...options,
     enabled: !shouldSkip && (options?.enabled ?? true),
     ...(initialData !== undefined ? { initialData } : {}),
+    retry: (failureCount, error) => {
+      if (isAppError(error, ERROR_CODE.NOT_AUTHENTICATED))
+        return failureCount < 3
+      return false
+    },
   } as UseQueryOptions<TData<TQuery>>)
 }
