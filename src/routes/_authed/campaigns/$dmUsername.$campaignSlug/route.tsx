@@ -1,7 +1,6 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { isAuthError } from '~/hooks/useAuthQuery'
+import { prefetchQuery } from '~/lib/prefetch'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
@@ -18,22 +17,17 @@ export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
 )({
   beforeLoad: async ({ context, params }) => {
-    try {
-      const campaign = await context.queryClient.ensureQueryData(
-        convexQuery(api.campaigns.queries.getCampaignBySlug, {
-          dmUsername: params.dmUsername,
-          slug: params.campaignSlug,
-        }),
+    const campaign = await prefetchQuery(
+      context.queryClient,
+      api.campaigns.queries.getCampaignBySlug,
+      { dmUsername: params.dmUsername, slug: params.campaignSlug },
+    )
+    if (campaign?._id) {
+      await prefetchQuery(
+        context.queryClient,
+        api.editors.queries.getCurrentEditor,
+        { campaignId: campaign._id },
       )
-      if (campaign?._id) {
-        await context.queryClient.ensureQueryData(
-          convexQuery(api.editors.queries.getCurrentEditor, {
-            campaignId: campaign._id,
-          }),
-        )
-      }
-    } catch (e) {
-      if (!isAuthError(e)) throw e
     }
   },
   component: RouteComponent,

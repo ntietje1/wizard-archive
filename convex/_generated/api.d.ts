@@ -56,6 +56,7 @@ import type * as editors_functions_setCurrentEditor from "../editors/functions/s
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
 import type * as editors_types from "../editors/types.js";
+import type * as errors from "../errors.js";
 import type * as files_functions_createFile from "../files/functions/createFile.js";
 import type * as files_functions_deleteFile from "../files/functions/deleteFile.js";
 import type * as files_functions_enhanceFile from "../files/functions/enhanceFile.js";
@@ -221,6 +222,7 @@ declare const fullApi: ApiFromModules<{
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;
   "editors/types": typeof editors_types;
+  errors: typeof errors;
   "files/functions/createFile": typeof files_functions_createFile;
   "files/functions/deleteFile": typeof files_functions_deleteFile;
   "files/functions/enhanceFile": typeof files_functions_enhanceFile;
