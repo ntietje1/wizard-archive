@@ -12,6 +12,8 @@ type SignUpFormProps = {
   redirectTo?: string
 }
 
+type SocialProvider = 'google'
+
 export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
   const navigate = useNavigate()
   const [name, setName] = useState('')
@@ -19,7 +21,9 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
+    null,
+  )
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,9 +34,8 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
       { email, password, name },
       {
         onSuccess: () => {
-          navigate({ to: redirectTo }).then(() => {
-            setIsLoading(false)
-          })
+          setIsLoading(false)
+          navigate({ to: redirectTo })
         },
         onError: (ctx) => {
           setError(ctx.error.message || 'Failed to create account')
@@ -42,9 +45,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
     )
   }
 
-  const handleSocialSignIn = async (
-    provider: 'github' | 'google' | 'discord',
-  ) => {
+  const handleSocialSignIn = async (provider: SocialProvider) => {
     setSocialLoading(provider)
     try {
       await authClient.signIn.social({

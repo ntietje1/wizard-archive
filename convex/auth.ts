@@ -58,6 +58,15 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           await ctx.db.patch(profile._id, updates)
         }
       },
+      onDelete: async (ctx, user) => {
+        const profile = await ctx.db
+          .query('userProfiles')
+          .withIndex('by_user', (q) => q.eq('authUserId', String(user._id)))
+          .unique()
+        if (profile) {
+          await ctx.db.delete(profile._id)
+        }
+      },
     },
   },
 })
@@ -87,6 +96,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
 
 export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi()
 
+// TODO: potentially make this return null if not logged in
 export const getCurrentUser = query({
   args: {},
   returns: userValidator,

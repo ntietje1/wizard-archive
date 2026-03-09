@@ -111,6 +111,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close
+          data-slot="dialog-close"
           render={
             <button
               type="button"

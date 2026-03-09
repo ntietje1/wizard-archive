@@ -40,18 +40,20 @@ export function useCurrentItem() {
 
   // The query has definitively resolved with null for the current params
   // (not stale previous data, not still loading).
-  const isNotFound =
+  const queryReturnedNull =
     rawItem === null &&
     sidebarItemQuery.status === 'success' &&
     !sidebarItemQuery.isFetching
 
   const hasRequestedItem = typeAndSlug !== null
-  const isLoading = hasRequestedItem && !item && !isNotFound
+  const isLoading = hasRequestedItem && !item && !queryReturnedNull
+  const isNotFound = hasRequestedItem && !item && !isLoading
 
   return {
     item,
     itemType: item?.type,
     isLoading,
+    isNotFound,
     editorSearch,
     hasRequestedItem,
   }

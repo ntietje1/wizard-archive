@@ -23,6 +23,9 @@ export function ForgotPasswordForm() {
           onError: () => setSubmitted(true),
         },
       )
+      .catch(() => {
+        setSubmitted(true)
+      })
       .finally(() => {
         setIsLoading(false)
       })

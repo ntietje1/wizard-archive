@@ -27,20 +27,14 @@ export const setUserPreferences = authMutation({
         updatedBy: userId,
         createdBy: userId,
       })
+    } else {
+      await ctx.db.patch(existing._id, {
+        ...args,
+        updatedTime: now,
+        updatedBy: userId,
+      })
+
+      return existing._id
     }
-
-    await ctx.db.patch(existing._id, {
-      ...(args.sidebarWidth !== undefined && {
-        sidebarWidth: args.sidebarWidth,
-      }),
-      ...(args.isSidebarExpanded !== undefined && {
-        isSidebarExpanded: args.isSidebarExpanded,
-      }),
-      ...(args.theme !== undefined && { theme: args.theme }),
-      updatedTime: now,
-      updatedBy: userId,
-    })
-
-    return existing._id
   },
 })

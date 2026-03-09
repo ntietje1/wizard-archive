@@ -30,6 +30,7 @@ export function isAppError(error: unknown, code: ErrorCode): boolean {
   )
     return true
   // Convex WebSocket errors wrap the message as a string
-  if (error instanceof Error && error.message.includes(code)) return true
+  if (error instanceof Error && error.message.includes(`"code":"${code}"`))
+    return true
   return false
 }

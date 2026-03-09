@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
+import type { UserPreferences } from 'convex/userPreferences/types'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 const DEFAULT_SIDEBAR_WIDTH = 280
@@ -15,15 +16,11 @@ export const userPreferencesQueryOptions = convexQuery(
 
 export async function prefetchUserPreferences(
   queryClient: QueryClient,
-): Promise<{ theme?: 'light' | 'dark' | 'system' } | undefined> {
-  try {
-    return (
-      (await queryClient.ensureQueryData(userPreferencesQueryOptions)) ??
-      undefined
-    )
-  } catch {
-    return undefined
-  }
+): Promise<UserPreferences | undefined> {
+  return await queryClient
+    .ensureQueryData(userPreferencesQueryOptions)
+    .catch(() => undefined)
+    .then((data) => data ?? undefined)
 }
 
 export const useUserPreferences = () => {

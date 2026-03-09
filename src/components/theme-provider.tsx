@@ -74,12 +74,12 @@ export function ThemeProvider({
       return { previous }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous?.theme) {
+      if (context?.previous) {
         queryClient.setQueryData(
           userPreferencesQueryOptions.queryKey,
           context.previous,
         )
-        applyThemeClass(resolveTheme(context.previous.theme))
+        applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
       }
     },
     onSettled: () => {

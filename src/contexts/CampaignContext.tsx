@@ -15,13 +15,12 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     slug: campaignSlug,
   })
 
-  const isCampaignLoaded = campaign.data !== undefined
   const value: CampaignContextType = {
     dmUsername,
     campaignSlug,
     campaign,
-    isCampaignLoaded,
-    isDm: isCampaignLoaded
+    isCampaignLoaded: campaign.data !== undefined,
+    isDm: campaign.data
       ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
       : undefined,
     campaignId: campaign.data?._id,

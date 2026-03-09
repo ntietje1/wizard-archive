@@ -5,6 +5,10 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import {
+  EmptyTrashConfirmDialog,
+  PermanentDeleteConfirmDialog,
+} from './hooks/trash-utils'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
@@ -20,22 +24,14 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
-import {
-  emptyTrashDescription,
-  permanentDeleteDescription,
-} from '~/lib/trash-utils'
 import { assertNever } from '~/lib/utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { useSession } from '~/hooks/useSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
-import {
-  useAllSidebarItems,
-  useTrashedSidebarItems,
-} from '~/hooks/useSidebarItems'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -92,39 +88,42 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       [openParentFolders, setRenamingId],
     ),
 
-    delete: (ctx: MenuContext) => {
-      if (!ctx.item) return
-      const item = ctx.item
+    delete: useCallback(
+      (ctx: MenuContext) => {
+        if (!ctx.item) return
+        const item = ctx.item
 
-      // Non-empty folders: show confirmation dialog
-      if (isFolder(item)) {
-        const children = parentItemsMap.get(item._id)
-        if (children && children.length > 0) {
-          setDeleteFolderDialog(item)
-          onDialogOpen?.()
-          return
-        }
-      }
-
-      // Everything else (including empty folders): trash immediately
-      moveItem(item, { deleted: true }).then(
-        () => {
-          const current = getSelectedTypeAndSlug()
-          if (
-            current &&
-            item.type === current.type &&
-            item.slug === current.slug
-          ) {
-            clearEditorContent()
+        // Non-empty folders: show confirmation dialog
+        if (isFolder(item)) {
+          const children = parentItemsMap.get(item._id)
+          if (children && children.length > 0) {
+            setDeleteFolderDialog(item)
+            onDialogOpen?.()
+            return
           }
-          toast.success('Moved to trash')
-        },
-        (error) => {
-          console.error(error)
-          toast.error('Failed to move to trash')
-        },
-      )
-    },
+        }
+
+        // Everything else (including empty folders): trash immediately
+        moveItem(item, { deleted: true }).then(
+          () => {
+            const current = getSelectedTypeAndSlug()
+            if (
+              current &&
+              item.type === current.type &&
+              item.slug === current.slug
+            ) {
+              clearEditorContent()
+            }
+            toast.success('Moved to trash')
+          },
+          (error) => {
+            console.error(error)
+            toast.error('Failed to move to trash')
+          },
+        )
+      },
+      [parentItemsMap, moveItem, clearEditorContent, onDialogOpen],
+    ),
 
     showInSidebar: useCallback(
       (ctx: MenuContext) => {
@@ -456,7 +455,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         const fileName = ctx.item.name
         const link = document.createElement('a')
-        link.href = ctx.item.downloadUrl ?? ''
+        link.href = ctx.item.downloadUrl
         link.download = fileName
         document.body.appendChild(link)
         link.click()
@@ -866,52 +865,4 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     actions,
     Dialogs: dialogsContent,
   }
-}
-
-function EmptyTrashConfirmDialog({
-  onClose,
-  onConfirm,
-}: {
-  onClose: () => void
-  onConfirm: () => Promise<void>
-}) {
-  const { data: allTrashedItems = [] } = useTrashedSidebarItems()
-
-  return (
-    <ConfirmationDialog
-      key="empty-trash"
-      isOpen={true}
-      onClose={onClose}
-      onConfirm={onConfirm}
-      title="Empty Trash"
-      description={emptyTrashDescription(allTrashedItems.length)}
-      confirmLabel="Empty Trash"
-      confirmVariant="destructive"
-    />
-  )
-}
-
-function PermanentDeleteConfirmDialog({
-  item,
-  onClose,
-  onConfirm,
-}: {
-  item: AnySidebarItem
-  onClose: () => void
-  onConfirm: () => Promise<void>
-}) {
-  const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
-
-  return (
-    <ConfirmationDialog
-      key={`permanent-delete-${item._id}`}
-      isOpen={true}
-      onClose={onClose}
-      onConfirm={onConfirm}
-      title="Permanently Delete"
-      description={permanentDeleteDescription(item, trashedParentItemsMap)}
-      confirmLabel="Delete Forever"
-      confirmVariant="destructive"
-    />
-  )
 }

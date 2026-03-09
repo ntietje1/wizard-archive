@@ -22,7 +22,8 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function EditorContent() {
-  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item, editorSearch, isLoading, isNotFound, hasRequestedItem } =
+    useCurrentItem()
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useAllSidebarItems()
@@ -49,11 +50,10 @@ export function EditorContent() {
   }
 
   if (!canView) {
-    if (hasRequestedItem) {
+    if (isNotFound || hasRequestedItem) {
       return <NotSharedContent />
-    } else {
-      return <EmptyEditorContent />
     }
+    return <EmptyEditorContent />
   }
 
   return <SidebarItemEditor item={item} search={editorSearch} />

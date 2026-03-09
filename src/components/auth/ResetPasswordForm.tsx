@@ -62,7 +62,7 @@ export function ResetPasswordForm() {
         },
       )
       .catch(() => {
-        setError('An unexpected error occured. Please try again.')
+        setError('An unexpected error occurred. Please try again.')
       })
       .finally(() => {
         setIsLoading(false)

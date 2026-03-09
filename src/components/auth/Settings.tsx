@@ -264,16 +264,19 @@ function TwoFactorSection() {
 function DeleteAccountSection() {
   const navigate = useNavigate()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleDelete = async () => {
     setIsDeleting(true)
+    setError('')
     await authClient.deleteUser({
       fetchOptions: {
         onSuccess: () => {
           navigate({ to: '/' })
         },
-        onError: () => {
+        onError: (ctx) => {
           setIsDeleting(false)
+          setError(ctx.error?.message || 'Failed to delete account')
         },
       },
     })
@@ -291,6 +294,7 @@ function DeleteAccountSection() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && <p className="text-sm text-destructive mb-4">{error}</p>}
         <AlertDialog>
           <AlertDialogTrigger
             render={
