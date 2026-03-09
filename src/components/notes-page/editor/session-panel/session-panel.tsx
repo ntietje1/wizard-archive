@@ -104,7 +104,14 @@ export function SessionPanel() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <button className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'aspect-square')}>
+              <button
+                type="button"
+                aria-label="Session options"
+                className={cn(
+                  buttonVariants({ variant: 'outline', size: 'lg' }),
+                  'aspect-square',
+                )}
+              >
                 <EllipsisIcon className="size-5" />
               </button>
             }

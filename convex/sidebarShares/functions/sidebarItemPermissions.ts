@@ -100,10 +100,7 @@ export async function resolveInheritedPermissions(
       }
     }
 
-    if (
-      folder.allPermissionLevel !== null &&
-      folder.allPermissionLevel !== undefined
-    ) {
+    if (folder.allPermissionLevel !== null) {
       if (!allPlayersResolved) {
         result.allPlayers = {
           level: folder.allPermissionLevel,

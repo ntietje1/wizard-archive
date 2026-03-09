@@ -14,7 +14,7 @@ import { Label } from '~/components/shadcn/ui/label'
 import { Loader2 } from '~/lib/icons'
 
 export function ResetPasswordForm() {
-  const { token } = useSearch({ strict: false }) as { token?: string }
+  const { token } = useSearch({ strict: false })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -113,6 +113,7 @@ export function ResetPasswordForm() {
               required
               disabled={isLoading}
               minLength={8}
+              autoComplete="new-password"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -126,6 +127,7 @@ export function ResetPasswordForm() {
               required
               disabled={isLoading}
               minLength={8}
+              autoComplete="new-password"
             />
           </div>
 

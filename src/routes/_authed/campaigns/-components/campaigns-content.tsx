@@ -30,12 +30,12 @@ export function CampaignsContent() {
     (campaign: Campaign) => campaign._id === deletingCampaignId,
   )
 
-  if (campaigns.status === 'error') {
-    return <CampaignsContentError />
-  }
-
   if (campaigns.status === 'pending') {
     return <CampaignsContentLoading />
+  }
+
+  if (campaigns.status === 'error') {
+    return <CampaignsContentError />
   }
 
   const handleDeleteSuccess = () => {

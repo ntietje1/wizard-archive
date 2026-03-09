@@ -22,7 +22,7 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     isDm: campaign.data
       ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
       : undefined,
-    campaignId: campaign?.data?._id,
+    campaignId: campaign.data?._id,
   }
 
   return (

@@ -16,12 +16,10 @@ import { Loader2 } from '~/lib/icons'
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setIsLoading(true)
 
     await authClient.requestPasswordReset(
@@ -31,8 +29,8 @@ export function ForgotPasswordForm() {
           setSubmitted(true)
           setIsLoading(false)
         },
-        onError: (ctx: { error: { message?: string } }) => {
-          setError(ctx.error.message || 'Something went wrong')
+        onError: () => {
+          setSubmitted(true)
           setIsLoading(false)
         },
       },
@@ -82,10 +80,6 @@ export function ForgotPasswordForm() {
               disabled={isLoading}
             />
           </div>
-
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (

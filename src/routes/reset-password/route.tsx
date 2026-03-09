@@ -4,7 +4,7 @@ import { ResetPasswordForm } from '~/components/auth/ResetPasswordForm'
 export const Route = createFileRoute('/reset-password')({
   component: ResetPasswordPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    token: (search.token as string) ?? undefined,
+    token: typeof search.token === 'string' ? search.token : undefined,
   }),
 })
 

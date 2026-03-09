@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
@@ -25,20 +25,25 @@ type EnableTwoFactorProps = {
 
 type Step = 'password' | 'qr' | 'verify' | 'backup-codes'
 
-export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) {
+export function EnableTwoFactor({
+  onComplete,
+  onCancel,
+}: EnableTwoFactorProps) {
   const [step, setStep] = useState<Step>('password')
   const [password, setPassword] = useState('')
   const [totpUri, setTotpUri] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [totpCode, setTotpCode] = useState('')
-  const [backupCodes, setBackupCodes] = useState<string[]>([])
+  const [backupCodes, setBackupCodes] = useState<Array<string>>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (totpUri) {
-      QRCode.toDataURL(totpUri, { width: 200, margin: 2 }).then(setQrDataUrl)
+      QRCode.toDataURL(totpUri, { width: 200, margin: 2 })
+        .then(setQrDataUrl)
+        .catch(() => setError('Failed to generate QR code'))
     }
   }, [totpUri])
 
@@ -61,6 +66,8 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
       setTotpUri(data.totpURI)
       setBackupCodes(data.backupCodes ?? [])
       setStep('qr')
+    } else {
+      setError('Failed to set up two-factor authentication. Please try again.')
     }
     setIsLoading(false)
   }
@@ -95,10 +102,10 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Enable Two-Factor Authentication</CardTitle>
-          <CardDescription>
-            Enter your password to get started
-          </CardDescription>
+          <CardTitle className="text-lg">
+            Enable Two-Factor Authentication
+          </CardTitle>
+          <CardDescription>Enter your password to get started</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordVerify} className="flex flex-col gap-4">
@@ -114,16 +121,18 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Continue'
+                )}
               </Button>
             </div>
           </form>
@@ -138,7 +147,8 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
         <CardHeader>
           <CardTitle className="text-lg">Scan QR Code</CardTitle>
           <CardDescription>
-            Scan this QR code with your authenticator app (e.g. Google Authenticator, Authy)
+            Scan this QR code with your authenticator app (e.g. Google
+            Authenticator, Authy)
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
@@ -202,11 +212,22 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={() => setStep('qr')}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep('qr')}
+              >
                 Back
               </Button>
-              <Button type="submit" disabled={isLoading || totpCode.length !== 6}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+              <Button
+                type="submit"
+                disabled={isLoading || totpCode.length !== 6}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Verify'
+                )}
               </Button>
             </div>
           </form>
@@ -221,13 +242,14 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
       <CardHeader>
         <CardTitle className="text-lg">Save Backup Codes</CardTitle>
         <CardDescription>
-          Store these codes in a safe place. You can use them to sign in if you lose access to your authenticator app.
+          Store these codes in a safe place. You can use them to sign in if you
+          lose access to your authenticator app.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="bg-muted rounded-lg p-4 font-mono text-sm grid grid-cols-2 gap-2">
-          {backupCodes.map((code) => (
-            <span key={code}>{code}</span>
+          {backupCodes.map((code, index) => (
+            <span key={index}>{code}</span>
           ))}
         </div>
 
@@ -235,9 +257,7 @@ export function EnableTwoFactor({ onComplete, onCancel }: EnableTwoFactorProps) 
           {copied ? 'Copied!' : 'Copy codes'}
         </Button>
 
-        <Button onClick={onComplete}>
-          I've saved my codes
-        </Button>
+        <Button onClick={onComplete}>I've saved my codes</Button>
       </CardContent>
     </Card>
   )

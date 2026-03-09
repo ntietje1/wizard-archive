@@ -41,7 +41,12 @@ export function useCurrentItem() {
   return {
     item,
     itemType: item?.type,
-    isLoading: typeAndSlug !== null && !item && sidebarItemQuery.isFetching,
+    isLoading:
+      typeAndSlug !== null &&
+      !item &&
+      (sidebarItemQuery.isFetching ||
+        (sidebarItemQuery.fetchStatus === 'idle' &&
+          sidebarItemQuery.status === 'pending')),
     editorSearch,
     hasRequestedItem: typeAndSlug !== null,
   }

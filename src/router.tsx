@@ -9,7 +9,7 @@ import ErrorPage from './components/error/error-page'
 import NotFoundPage from './components/not-found/not-found'
 
 export function getRouter() {
-  const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!
+  const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL
   if (!CONVEX_URL) {
     throw new Error('missing VITE_CONVEX_URL env var')
   }

@@ -63,6 +63,7 @@ export const ViewAsPlayerButton = () => {
           <DropdownMenuTrigger
             render={
               <button
+                type="button"
                 className={cn(
                   buttonVariants({ variant: 'ghost', size: 'icon' }),
                   viewAsPlayerId

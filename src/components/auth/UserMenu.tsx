@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { Link } from '@tanstack/react-router'
 import { LogOut, Settings } from '~/lib/icons'
@@ -10,6 +11,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -21,20 +23,49 @@ import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 function getInitials(name?: string, email?: string): string {
   if (name) {
-    return name
+    const initials = name
       .split(' ')
+      .filter(Boolean)
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2)
+    if (initials) return initials
   }
   if (email) return email[0].toUpperCase()
   return 'U'
 }
 
+const avatarButtonClassName = cn(
+  buttonVariants({ variant: 'ghost', size: 'icon' }),
+  'rounded-full',
+)
+
+function AvatarPlaceholder() {
+  return (
+    <button className={avatarButtonClassName} disabled>
+      <Avatar size="sm">
+        <AvatarFallback>U</AvatarFallback>
+      </Avatar>
+    </button>
+  )
+}
+
 export function UserMenu() {
+  const [mounted, setMounted] = useState(false)
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Always render the placeholder during SSR and initial hydration
+  // to avoid mismatch between server (which may have prefetched profile)
+  // and client (where Convex auth hasn't resolved yet)
+  if (!mounted || !profile) {
+    return <AvatarPlaceholder />
+  }
 
   const handleSignOut = async () => {
     await authClient.signOut({
@@ -46,18 +77,11 @@ export function UserMenu() {
     })
   }
 
-  if (!profile) return null
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'icon' }),
-              'rounded-full',
-            )}
-          >
+          <button className={avatarButtonClassName}>
             <Avatar size="sm">
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
@@ -70,21 +94,23 @@ export function UserMenu() {
         }
       />
       <DropdownMenuContent align="end" sideOffset={8}>
-        <DropdownMenuLabel>
-          <div className="flex flex-col gap-0.5">
-            {profile.name && (
-              <span className="text-sm font-medium">{profile.name}</span>
-            )}
-            {profile.email && (
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <div className="flex flex-col gap-0.5">
+              {profile.name && (
+                <span className="text-sm font-medium">{profile.name}</span>
+              )}
+              {profile.email && (
+                <span className="text-xs text-muted-foreground">
+                  {profile.email}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
-                {profile.email}
+                @{profile.username}
               </span>
-            )}
-            <span className="text-xs text-muted-foreground">
-              @{profile.username}
-            </span>
-          </div>
-        </DropdownMenuLabel>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link to="/settings" />}>
           <Settings className="h-4 w-4" />

@@ -72,6 +72,7 @@ export function FileTopbar() {
           )}
           {item && (
             <EditableBreadcrumb
+              key={item._id}
               item={item}
               canRename={canRename && !isNotSharedWithPlayer}
               showNotSharedTooltip={!!isNotSharedWithPlayer}

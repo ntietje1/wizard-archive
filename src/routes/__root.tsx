@@ -13,6 +13,7 @@ import { Toaster } from 'sonner'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import type { Theme } from '~/hooks/useTheme'
 import { NavigationProgress } from '~/components/navigation-progress'
 import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
 import { prefetchTheme } from '~/hooks/useTheme'
@@ -68,13 +69,13 @@ export const Route = createRootRouteWithContext<{
   beforeLoad: async (ctx) => {
     if (typeof window !== 'undefined') {
       return {
-        token: null as string | null,
-        initialTheme: undefined as string | undefined,
+        token: null,
+        initialTheme: undefined,
       }
     }
 
     const token = await fetchAuthToken()
-    let initialTheme: string | undefined
+    let initialTheme: Theme | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
       initialTheme = await prefetchTheme(ctx.context.queryClient)
@@ -96,11 +97,7 @@ function RootComponent() {
       authClient={authClient}
       initialToken={context.token}
     >
-      <ThemeProvider
-        initialTheme={
-          context.initialTheme as 'light' | 'dark' | 'system' | undefined
-        }
-      >
+      <ThemeProvider initialTheme={context.initialTheme}>
         <RootDocument initialTheme={context.initialTheme}>
           <Outlet />
         </RootDocument>

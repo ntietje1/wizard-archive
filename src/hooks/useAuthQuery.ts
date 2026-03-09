@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
@@ -17,9 +17,9 @@ type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> =
 /**
  * Like `useQuery(convexQuery(...))` but gates execution behind auth.
  *
- * - When auth is not ready: query stays `pending` (no null flash, no errors)
- * - When SSR prefetched data exists: returns it immediately via TanStack Query cache
- * - When auth resolves: enables the Convex subscription
+ * - When auth is not ready: uses 'skip' to prevent premature Convex
+ *   subscriptions, but bridges SSR-prefetched data via initialData
+ *   so hydration matches the server render.
  */
 export function useAuthQuery<
   TQuery extends FunctionReference<'query', 'public'>,
@@ -28,12 +28,27 @@ export function useAuthQuery<
   args: FunctionArgs<TQuery> | 'skip',
   options?: AuthQueryOptions<TQuery>,
 ): UseQueryResult<TData<TQuery>> {
-  const { isAuthenticated } = useConvexAuth()
+  const { isAuthenticated, isLoading } = useConvexAuth()
+  const queryClient = useQueryClient()
   const skip = args === 'skip'
+  const authReady = !isLoading && isAuthenticated
+  const shouldSkip = skip || !authReady
+
+  // When auth isn't ready, read SSR-prefetched data from the real-args
+  // cache entry to pass as initialData. This keeps the 'skip' query key
+  // (preventing Convex subscriptions) while preserving hydration parity.
+  let initialData: TData<TQuery> | undefined
+  if (!skip && !authReady) {
+    const { queryKey } = convexQuery(query, args)
+    initialData = queryClient.getQueryData<TData<TQuery>>(queryKey)
+  }
+
+  const convexArgs = (shouldSkip ? 'skip' : args) as FunctionArgs<TQuery>
 
   return useQuery({
-    ...convexQuery(query, skip ? 'skip' : args),
+    ...convexQuery(query, convexArgs),
     ...options,
-    enabled: !skip && isAuthenticated && (options?.enabled ?? true),
+    enabled: !shouldSkip && (options?.enabled ?? true),
+    ...(initialData !== undefined ? { initialData } : {}),
   } as UseQueryOptions<TData<TQuery>>)
 }

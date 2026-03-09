@@ -1,18 +1,17 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { SignInForm } from '~/components/auth/SignInForm'
 
 function AuthedRouteComponent() {
   const { isAuthenticated, isLoading } = useConvexAuth()
+  const location = useLocation()
 
+  // intentionally allow rendering of pages even when loading auth
+  // any sensitive information is behind an authed query anyway, which will show as loading until successfully authed
   if (!isLoading && !isAuthenticated) {
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? window.location.pathname + window.location.search
-        : '/campaigns'
     return (
       <div className="flex items-center justify-center p-24">
-        <SignInForm redirectTo={redirectTo} />
+        <SignInForm redirectTo={location.href} />
       </div>
     )
   }

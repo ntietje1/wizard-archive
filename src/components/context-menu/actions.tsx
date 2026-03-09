@@ -20,6 +20,10 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useToggleBookmark } from '~/hooks/useBookmarks'
 import { isFile, isFolder, isGameMap, isNote } from '~/lib/sidebar-item-utils'
+import {
+  emptyTrashDescription,
+  permanentDeleteDescription,
+} from '~/lib/trash-utils'
 import { assertNever } from '~/lib/utils'
 import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
@@ -29,7 +33,6 @@ import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
 import { useSession } from '~/hooks/useSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
 import {
-  getDescendantCount,
   useAllSidebarItems,
   useTrashedSidebarItems,
 } from '~/hooks/useSidebarItems'
@@ -57,8 +60,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useAllSidebarItems()
-  const { data: allTrashedItems, parentItemsMap: trashedParentItemsMap } =
-    useTrashedSidebarItems()
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
     null,
@@ -106,12 +107,18 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
 
       // Everything else (including empty folders): trash immediately
-      const current = getSelectedTypeAndSlug()
-      if (current && item.type === current.type && item.slug === current.slug) {
-        clearEditorContent()
-      }
       moveItem(item, { deleted: true }).then(
-        () => toast.success('Moved to trash'),
+        () => {
+          const current = getSelectedTypeAndSlug()
+          if (
+            current &&
+            item.type === current.type &&
+            item.slug === current.slug
+          ) {
+            clearEditorContent()
+          }
+          toast.success('Moved to trash')
+        },
         (error) => {
           console.error(error)
           toast.error('Failed to move to trash')
@@ -790,9 +797,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         )}
 
         {confirmEmptyTrash && (
-          <ConfirmationDialog
-            key="empty-trash"
-            isOpen={true}
+          <EmptyTrashConfirmDialog
             onClose={() => {
               setConfirmEmptyTrash(false)
               onDialogClose?.()
@@ -810,17 +815,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 onDialogClose?.()
               }
             }}
-            title="Empty Trash"
-            description={`Are you sure you want to permanently delete ${allTrashedItems.length === 1 ? '1 item' : `all ${allTrashedItems.length} items`} in the trash? This action cannot be undone.`}
-            confirmLabel="Empty Trash"
-            confirmVariant="destructive"
           />
         )}
 
         {confirmPermanentDeleteItem && (
-          <ConfirmationDialog
-            key={`permanent-delete-${confirmPermanentDeleteItem._id}`}
-            isOpen={true}
+          <PermanentDeleteConfirmDialog
+            item={confirmPermanentDeleteItem}
             onClose={closeDialog(setConfirmPermanentDeleteItem)}
             onConfirm={async () => {
               try {
@@ -842,23 +842,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 onDialogClose?.()
               }
             }}
-            title="Permanently Delete"
-            description={(() => {
-              const descendantCount = isFolder(confirmPermanentDeleteItem)
-                ? getDescendantCount(
-                    confirmPermanentDeleteItem._id,
-                    trashedParentItemsMap,
-                  )
-                : 0
-              const base = `Are you sure you want to permanently delete "${confirmPermanentDeleteItem.name}"?`
-              const detail =
-                descendantCount > 0
-                  ? ` This will also delete ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'} inside it.`
-                  : ''
-              return `${base}${detail} This action cannot be undone.`
-            })()}
-            confirmLabel="Delete Forever"
-            confirmVariant="destructive"
           />
         )}
       </>
@@ -870,8 +853,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       editSidebarItemDialog,
       confirmPermanentDeleteItem,
       confirmEmptyTrash,
-      allTrashedItems,
-      trashedParentItemsMap,
       campaignId,
       clearEditorContent,
       closeDialog,
@@ -885,4 +866,52 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     actions,
     Dialogs: dialogsContent,
   }
+}
+
+function EmptyTrashConfirmDialog({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void
+  onConfirm: () => Promise<void>
+}) {
+  const { data: allTrashedItems = [] } = useTrashedSidebarItems()
+
+  return (
+    <ConfirmationDialog
+      key="empty-trash"
+      isOpen={true}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title="Empty Trash"
+      description={emptyTrashDescription(allTrashedItems.length)}
+      confirmLabel="Empty Trash"
+      confirmVariant="destructive"
+    />
+  )
+}
+
+function PermanentDeleteConfirmDialog({
+  item,
+  onClose,
+  onConfirm,
+}: {
+  item: AnySidebarItem
+  onClose: () => void
+  onConfirm: () => Promise<void>
+}) {
+  const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
+
+  return (
+    <ConfirmationDialog
+      key={`permanent-delete-${item._id}`}
+      isOpen={true}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title="Permanently Delete"
+      description={permanentDeleteDescription(item, trashedParentItemsMap)}
+      confirmLabel="Delete Forever"
+      confirmVariant="destructive"
+    />
+  )
 }

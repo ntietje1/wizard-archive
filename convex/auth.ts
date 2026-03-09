@@ -2,10 +2,12 @@ import { betterAuth } from 'better-auth/minimal'
 import { createClient } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
 import { twoFactor } from 'better-auth/plugins'
+import { v } from 'convex/values'
 import { findUniqueSlug } from './common/slug'
 import authConfig from './auth.config'
 import { components, internal } from './_generated/api'
 import { query } from './_generated/server'
+import { userValidator } from './users/schema'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from './_generated/dataModel'
 
@@ -70,7 +72,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       requireEmailVerification: false,
       // TODO: integrate Resend for real email delivery
       async sendResetPassword({ user, url }) {
-        console.log(`[Auth] Password reset requested for ${user.email}: ${url}`)
+        console.log(`[Auth] Password reset requested for user ${user.id}`)
       },
     },
     socialProviders: {
@@ -87,6 +89,7 @@ export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi()
 
 export const getCurrentUser = query({
   args: {},
+  returns: userValidator,
   handler: async (ctx) => {
     return await authComponent.getAuthUser(ctx)
   },
