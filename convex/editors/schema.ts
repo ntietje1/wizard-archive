@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
-import { SORT_DIRECTIONS, SORT_ORDERS } from './types'
+import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from './types'
 
 export const sortOrderValidator = v.union(
   v.literal(SORT_ORDERS.Alphabetical),
@@ -14,13 +14,17 @@ export const sortDirectionValidator = v.union(
   v.literal(SORT_DIRECTIONS.Descending),
 )
 
+export const editorModeValidator = v.union(
+  v.literal(EDITOR_MODE.VIEWER),
+  v.literal(EDITOR_MODE.EDITOR),
+)
+
 const editorTableFields = {
   userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   sortOrder: sortOrderValidator,
   sortDirection: sortDirectionValidator,
-  sidebarWidth: v.optional(v.number()),
-  isSidebarExpanded: v.optional(v.boolean()),
+  editorMode: editorModeValidator,
 }
 
 export const editorTables = {

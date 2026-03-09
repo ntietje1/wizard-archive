@@ -1,19 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { CampaignsHeader } from './-components/campaigns-header'
 import { CampaignsContent } from './-components/campaigns-content'
 import { CampaignsFooter } from './-components/campaigns-footer'
-import { prefetchQuery } from '~/lib/prefetch'
 import { UserMenu } from '~/components/auth/UserMenu'
 
 export const Route = createFileRoute('/_authed/campaigns/')({
-  beforeLoad: async ({ context }) => {
-    await prefetchQuery(
-      context.queryClient,
-      api.campaigns.queries.getUserCampaigns,
-      {},
-    )
-  },
   component: RouteComponent,
 })
 

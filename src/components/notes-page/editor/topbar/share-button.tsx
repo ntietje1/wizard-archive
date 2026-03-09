@@ -43,7 +43,12 @@ export function ShareButton() {
   const dmUserProfile = campaign.data?.dmUserProfile
   const isItemTrashed = !!item?.deletionTime
   const isDisabled =
-    isItemLoading || !item || isItemTrashed || !canShare || isMutating
+    isItemLoading ||
+    !item ||
+    isItemTrashed ||
+    !canShare ||
+    isMutating ||
+    isPending
   const isShared = item && aggregateShareStatus !== 'not_shared'
   const hasShareData = item && !isPending
 

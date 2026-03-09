@@ -86,12 +86,14 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
     provider: 'github' | 'google' | 'discord',
   ) => {
     setSocialLoading(provider)
+    setError('')
     try {
       await authClient.signIn.social({
         provider,
         callbackURL: redirectTo,
       })
     } catch {
+      setError('Unable to sign in. Please try again.')
       setSocialLoading(null)
     }
   }
@@ -107,10 +109,7 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
             Enter the 6-digit code from your authenticator app
           </p>
         </div>
-        <form
-          onSubmit={handleTwoFactorVerify}
-          className="flex flex-col gap-4"
-        >
+        <form onSubmit={handleTwoFactorVerify} className="flex flex-col gap-4">
           <div className="flex justify-center">
             <InputOTP
               maxLength={6}

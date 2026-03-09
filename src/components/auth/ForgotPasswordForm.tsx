@@ -15,19 +15,17 @@ export function ForgotPasswordForm() {
     e.preventDefault()
     setIsLoading(true)
 
-    await authClient.requestPasswordReset(
-      { email, redirectTo: '/reset-password' },
-      {
-        onSuccess: () => {
-          setSubmitted(true)
-          setIsLoading(false)
+    await authClient
+      .requestPasswordReset(
+        { email, redirectTo: '/reset-password' },
+        {
+          onSuccess: () => setSubmitted(true),
+          onError: () => setSubmitted(true),
         },
-        onError: () => {
-          setSubmitted(true)
-          setIsLoading(false)
-        },
-      },
-    )
+      )
+      .finally(() => {
+        setIsLoading(false)
+      })
   }
 
   if (submitted) {

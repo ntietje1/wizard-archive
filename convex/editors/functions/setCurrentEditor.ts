@@ -1,22 +1,20 @@
-import { SORT_DIRECTIONS, SORT_ORDERS } from '../types'
+import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../types'
 import { requireCampaignMembership } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
-import type { SortDirection, SortOrder } from '../types'
+import type { EditorMode, SortDirection, SortOrder } from '../types'
 
 export async function setCurrentEditor(
   ctx: AuthMutationCtx,
   {
     sortOrder,
     sortDirection,
-    sidebarWidth,
-    isSidebarExpanded,
+    editorMode,
     campaignId,
   }: {
     sortOrder?: SortOrder
     sortDirection?: SortDirection
-    sidebarWidth?: number
-    isSidebarExpanded?: boolean
+    editorMode?: EditorMode
     campaignId: Id<'campaigns'>
   },
 ): Promise<Id<'editor'>> {
@@ -36,8 +34,7 @@ export async function setCurrentEditor(
       campaignId,
       sortOrder: sortOrder ?? SORT_ORDERS.DateCreated,
       sortDirection: sortDirection ?? SORT_DIRECTIONS.Ascending,
-      sidebarWidth,
-      isSidebarExpanded,
+      editorMode: editorMode ?? EDITOR_MODE.EDITOR,
       updatedTime: now,
       updatedBy: ctx.user.profile._id,
       createdBy: ctx.user.profile._id,
@@ -47,8 +44,7 @@ export async function setCurrentEditor(
   await ctx.db.patch(editor._id, {
     ...(sortOrder !== undefined && { sortOrder }),
     ...(sortDirection !== undefined && { sortDirection }),
-    ...(sidebarWidth !== undefined && { sidebarWidth }),
-    ...(isSidebarExpanded !== undefined && { isSidebarExpanded }),
+    ...(editorMode !== undefined && { editorMode }),
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })

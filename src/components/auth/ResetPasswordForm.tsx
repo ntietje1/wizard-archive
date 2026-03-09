@@ -49,19 +49,24 @@ export function ResetPasswordForm() {
 
     setIsLoading(true)
 
-    await authClient.resetPassword(
-      { newPassword, token },
-      {
-        onSuccess: () => {
-          setSuccess(true)
-          setIsLoading(false)
+    await authClient
+      .resetPassword(
+        { newPassword, token },
+        {
+          onSuccess: () => {
+            setSuccess(true)
+          },
+          onError: (ctx) => {
+            setError(ctx.error.message || 'Failed to reset password')
+          },
         },
-        onError: (ctx) => {
-          setError(ctx.error.message || 'Failed to reset password')
-          setIsLoading(false)
-        },
-      },
-    )
+      )
+      .catch(() => {
+        setError('An unexpected error occured. Please try again.')
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
   }
 
   if (success) {

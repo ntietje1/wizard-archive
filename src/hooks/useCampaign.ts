@@ -8,6 +8,7 @@ export type CampaignContextType = {
   campaignSlug: string
   campaign: UseQueryResult<Campaign, Error>
   isDm: boolean | undefined
+  isCampaignLoaded: boolean
   campaignId: Id<'campaigns'> | undefined
 }
 

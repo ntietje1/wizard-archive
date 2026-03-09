@@ -39,6 +39,8 @@ export function SortMenu() {
         <DropdownMenuTrigger
           render={
             <button
+              type="button"
+              aria-label="Sort options"
               className={buttonVariants({ variant: 'ghost', size: 'icon' })}
             >
               <SortDesc className="h-4 w-4" />

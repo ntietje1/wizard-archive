@@ -1,6 +1,4 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
-import { prefetchQuery } from '~/lib/prefetch'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
@@ -16,20 +14,6 @@ import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
 )({
-  beforeLoad: async ({ context, params }) => {
-    const campaign = await prefetchQuery(
-      context.queryClient,
-      api.campaigns.queries.getCampaignBySlug,
-      { dmUsername: params.dmUsername, slug: params.campaignSlug },
-    )
-    if (campaign?._id) {
-      await prefetchQuery(
-        context.queryClient,
-        api.editors.queries.getCurrentEditor,
-        { campaignId: campaign._id },
-      )
-    }
-  },
   component: RouteComponent,
 })
 

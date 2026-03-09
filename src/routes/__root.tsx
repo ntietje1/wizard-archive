@@ -16,7 +16,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { Theme } from '~/hooks/useTheme'
 import { NavigationProgress } from '~/components/navigation-progress'
 import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
-import { prefetchTheme } from '~/hooks/useTheme'
+import { prefetchUserPreferences } from '~/hooks/useUserPreferences'
 import { authClient } from '~/lib/auth-client'
 import { getToken } from '~/lib/auth-server'
 import appCss from '~/styles/app.css?url'
@@ -78,7 +78,8 @@ export const Route = createRootRouteWithContext<{
     let initialTheme: Theme | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
-      initialTheme = await prefetchTheme(ctx.context.queryClient)
+      const prefs = await prefetchUserPreferences(ctx.context.queryClient)
+      initialTheme = prefs?.theme
     }
     return {
       token,

@@ -162,8 +162,10 @@ import type * as storage_mutations from "../storage/mutations.js";
 import type * as storage_queries from "../storage/queries.js";
 import type * as storage_types from "../storage/types.js";
 import type * as storage_validation from "../storage/validation.js";
+import type * as userPreferences_mutations from "../userPreferences/mutations.js";
+import type * as userPreferences_queries from "../userPreferences/queries.js";
+import type * as userPreferences_types from "../userPreferences/types.js";
 import type * as users_functions_getUserProfile from "../users/functions/getUserProfile.js";
-import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_types from "../users/types.js";
 
@@ -328,8 +330,10 @@ declare const fullApi: ApiFromModules<{
   "storage/queries": typeof storage_queries;
   "storage/types": typeof storage_types;
   "storage/validation": typeof storage_validation;
+  "userPreferences/mutations": typeof userPreferences_mutations;
+  "userPreferences/queries": typeof userPreferences_queries;
+  "userPreferences/types": typeof userPreferences_types;
   "users/functions/getUserProfile": typeof users_functions_getUserProfile;
-  "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/types": typeof users_types;
 }>;

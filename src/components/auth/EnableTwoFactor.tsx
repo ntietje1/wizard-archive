@@ -93,9 +93,15 @@ export function EnableTwoFactor({
   }
 
   const handleCopyBackupCodes = () => {
-    navigator.clipboard.writeText(backupCodes.join('\n'))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    navigator.clipboard
+      .writeText(backupCodes.join('\n'))
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {
+        setError('Failed to copy to clipboard')
+      })
   }
 
   if (step === 'password') {

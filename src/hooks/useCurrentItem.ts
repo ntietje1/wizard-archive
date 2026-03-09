@@ -38,16 +38,21 @@ export function useCurrentItem() {
 
   const item = isStale ? null : rawItem
 
+  // The query has definitively resolved with null for the current params
+  // (not stale previous data, not still loading).
+  const isNotFound =
+    rawItem === null &&
+    sidebarItemQuery.status === 'success' &&
+    !sidebarItemQuery.isFetching
+
+  const hasRequestedItem = typeAndSlug !== null
+  const isLoading = hasRequestedItem && !item && !isNotFound
+
   return {
     item,
     itemType: item?.type,
-    isLoading:
-      typeAndSlug !== null &&
-      !item &&
-      (sidebarItemQuery.isFetching ||
-        (sidebarItemQuery.fetchStatus === 'idle' &&
-          sidebarItemQuery.status === 'pending')),
+    isLoading,
     editorSearch,
-    hasRequestedItem: typeAndSlug !== null,
+    hasRequestedItem,
   }
 }

@@ -10,7 +10,6 @@ export type UserProfile = {
   email?: string
   name?: string
   imageUrl?: string
-  theme?: 'light' | 'dark' | 'system'
 }
 
 export type AuthUser = { identity: UserIdentity; profile: UserProfile }

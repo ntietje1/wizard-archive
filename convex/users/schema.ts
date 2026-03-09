@@ -8,9 +8,6 @@ const userProfileTableFields = {
   email: v.optional(v.string()),
   name: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
-  theme: v.optional(
-    v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
-  ),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these

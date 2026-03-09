@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useEditorSettings } from '~/hooks/useSidebarWidth'
+import { useUserPreferences } from '~/hooks/useUserPreferences'
 import { SidebarLayoutContext } from '~/hooks/useSidebarLayout'
 
 export function SidebarLayoutProvider({
@@ -13,7 +13,7 @@ export function SidebarLayoutProvider({
     sidebarWidth,
     setSidebarWidth,
     isLoaded: isEditorSettingsLoaded,
-  } = useEditorSettings()
+  } = useUserPreferences()
 
   const value = useMemo(
     () => ({

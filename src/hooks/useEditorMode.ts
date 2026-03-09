@@ -1,13 +1,13 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
+import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from 'convex/_generated/api'
 import { EDITOR_MODE } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { Id } from 'convex/_generated/dataModel'
-import type { EditorMode } from 'convex/editors/types'
-import {
-  useCampaignEditorState,
-  useEditorModeStore,
-} from '~/stores/editorModeStore'
+import type { Editor, EditorMode } from 'convex/editors/types'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 
@@ -20,12 +20,60 @@ export interface EditorModeContextType {
 }
 
 export function useEditorMode(): EditorModeContextType {
-  const { isDm, campaignSlug, dmUsername } = useCampaign()
-  const campaignKey = `${dmUsername}/${campaignSlug}`
-
-  const { editorMode: rawEditorMode, viewAsPlayerId } =
-    useCampaignEditorState(campaignKey)
+  const { isDm, campaign } = useCampaign()
+  const campaignData = campaign.data
   const { item: currentItem } = useCurrentItem()
+  const queryClient = useQueryClient()
+
+  const editorQuery = useAuthQuery(
+    api.editors.queries.getCurrentEditor,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
+  )
+
+  const mutationFn = useConvexMutation(api.editors.mutations.setCurrentEditor)
+
+  const setEditorMutation = useMutation({
+    mutationFn,
+    onMutate: async ({ editorMode: newMode }) => {
+      if (!campaignData?._id || !newMode) return
+
+      const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
+        campaignId: campaignData._id,
+      })
+
+      await queryClient.cancelQueries({ queryKey: queryOptions.queryKey })
+
+      const previous = queryClient.getQueryData<Editor>(queryOptions.queryKey)
+
+      queryClient.setQueryData(
+        queryOptions.queryKey,
+        (old: Editor | null | undefined) => {
+          if (!old) return old
+          return { ...old, editorMode: newMode }
+        },
+      )
+
+      return { previous, queryKey: queryOptions.queryKey }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(context.queryKey, context.previous)
+      }
+    },
+    onSettled: () => {
+      if (!campaignData?._id) return
+      const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
+        campaignId: campaignData._id,
+      })
+      queryClient.invalidateQueries({ queryKey: queryOptions.queryKey })
+    },
+  })
+
+  const [viewAsPlayerId, setViewAsPlayerIdState] = useState<
+    Id<'campaignMembers'> | undefined
+  >(undefined)
+
+  const rawEditorMode = editorQuery.data?.editorMode ?? EDITOR_MODE.EDITOR
 
   const isDeleted = !!currentItem?.deletionTime
   const canEdit =
@@ -36,21 +84,22 @@ export function useEditorMode(): EditorModeContextType {
     )
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
 
-  const storeSetEditorMode = useEditorModeStore((s) => s.setEditorMode)
-  const storeSetViewAsPlayerId = useEditorModeStore((s) => s.setViewAsPlayerId)
-
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
-      if (canEdit) storeSetEditorMode(campaignKey, mode)
+      if (!canEdit || !campaignData?._id) return
+      setEditorMutation.mutate({
+        campaignId: campaignData._id,
+        editorMode: mode,
+      })
     },
-    [canEdit, campaignKey, storeSetEditorMode],
+    [canEdit, campaignData?._id, setEditorMutation],
   )
 
   const setViewAsPlayerId = useCallback(
     (playerId: Id<'campaignMembers'> | undefined) => {
-      if (isDm) storeSetViewAsPlayerId(campaignKey, playerId)
+      if (isDm) setViewAsPlayerIdState(playerId)
     },
-    [isDm, campaignKey, storeSetViewAsPlayerId],
+    [isDm],
   )
 
   return {
