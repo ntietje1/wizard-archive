@@ -2,6 +2,7 @@ import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { SignInForm } from '~/components/auth/SignInForm'
 import { Card, CardContent } from '~/components/shadcn/ui/card'
+import { SettingsDialog } from '~/components/settings/SettingsDialog'
 
 function AuthedRouteComponent() {
   const { isAuthenticated, isLoading } = useConvexAuth()
@@ -24,6 +25,7 @@ function AuthedRouteComponent() {
   return (
     <div className="flex flex-col h-screen">
       <Outlet />
+      <SettingsDialog />
     </div>
   )
 }

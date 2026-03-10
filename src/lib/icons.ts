@@ -89,6 +89,21 @@ export {
   FileTypeIcon,
   RotateCcw,
   Monitor,
+  CircleUser,
+  CreditCard,
+  Smile,
+  Cable,
+  Import,
+  Paintbrush,
+  Copy,
+  Camera,
+  KeyRound,
+  Mail,
+  ShieldCheck,
+  Smartphone,
+  Tablet,
+  Globe,
+  Laptop,
 } from 'lucide-react'
 
 export type { LucideIcon } from 'lucide-react'

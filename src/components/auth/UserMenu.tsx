@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { api } from 'convex/_generated/api'
-import { Link } from '@tanstack/react-router'
 import { LogOut, Settings } from '~/lib/icons'
 import { authClient } from '~/lib/auth-client'
 import {
@@ -20,6 +19,7 @@ import {
 import { buttonVariants } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
+import { useSettingsStore } from '~/components/settings/settings-store'
 
 function getInitials(name?: string, email?: string): string {
   if (name) {
@@ -55,6 +55,7 @@ export function UserMenu() {
   const [mounted, setMounted] = useState(false)
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
+  const openSettings = useSettingsStore((s) => s.open)
 
   useEffect(() => {
     setMounted(true)
@@ -93,26 +94,34 @@ export function UserMenu() {
           </button>
         }
       />
-      <DropdownMenuContent align="end" sideOffset={8}>
+      <DropdownMenuContent align="end" sideOffset={8} className="min-w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel>
-            <div className="flex flex-col gap-0.5">
-              {profile.name && (
-                <span className="text-sm font-medium">{profile.name}</span>
-              )}
-              {profile.email && (
+            <div className="flex items-center gap-3">
+              <Avatar size="md">
+                {profile.imageUrl && (
+                  <AvatarImage
+                    src={profile.imageUrl}
+                    alt={profile.name ?? ''}
+                  />
+                )}
+                <AvatarFallback>
+                  {getInitials(profile.name, profile.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5">
+                {profile.name && (
+                  <span className="text-sm font-medium">{profile.name}</span>
+                )}
                 <span className="text-xs text-muted-foreground">
-                  {profile.email}
+                  @{profile.username}
                 </span>
-              )}
-              <span className="text-xs text-muted-foreground">
-                @{profile.username}
-              </span>
+              </div>
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link to="/settings" />}>
+        <DropdownMenuItem onClick={() => openSettings()}>
           <Settings className="h-4 w-4" />
           Settings
         </DropdownMenuItem>

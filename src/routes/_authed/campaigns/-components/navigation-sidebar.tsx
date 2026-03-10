@@ -3,7 +3,7 @@ import { PanelLeft, PanelLeftOpen } from 'lucide-react'
 import type { LucideIcon } from '~/lib/icons'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
 import { useCampaign } from '~/hooks/useCampaign'
-import { FileText, Settings, Users } from '~/lib/icons'
+import { FileText, Users } from '~/lib/icons'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { Button } from '~/components/shadcn/ui/button'
 import { TooltipButton } from '~/components/tooltips/tooltip-button'
@@ -34,11 +34,6 @@ export const NavigationSidebar = () => {
       name: 'Players',
       to: '/campaigns/$dmUsername/$campaignSlug/players',
       icon: Users,
-    },
-    {
-      name: 'Settings',
-      to: '/campaigns/$dmUsername/$campaignSlug/settings',
-      icon: Settings,
     },
   ]
 

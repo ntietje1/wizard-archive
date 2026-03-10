@@ -16,7 +16,6 @@ import { Route as ForgotPasswordRouteRouteImport } from './routes/forgot-passwor
 import { Route as AuthRedirectRouteRouteImport } from './routes/auth-redirect/route'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedSettingsRouteRouteImport } from './routes/_authed/settings/route'
 import { Route as AuthedCampaignsRouteRouteImport } from './routes/_authed/campaigns/route'
 import { Route as AuthedCampaignsIndexRouteImport } from './routes/_authed/campaigns/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -63,11 +62,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedSettingsRouteRoute = AuthedSettingsRouteRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedCampaignsRouteRoute = AuthedCampaignsRouteRouteImport.update({
   id: '/campaigns',
@@ -149,7 +143,6 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
   '/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
-  '/settings': typeof AuthedSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/campaigns/': typeof AuthedCampaignsIndexRoute
   '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
@@ -169,7 +162,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRouteRoute
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
-  '/settings': typeof AuthedSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/campaigns': typeof AuthedCampaignsIndexRoute
   '/join/$dmUsername/$campaignSlug': typeof JoinDmUsernameCampaignSlugIndexRoute
@@ -189,7 +181,6 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRouteRoute
   '/sign-up': typeof SignUpRouteRoute
   '/_authed/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
-  '/_authed/settings': typeof AuthedSettingsRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authed/campaigns/': typeof AuthedCampaignsIndexRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
@@ -212,7 +203,6 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/campaigns'
-    | '/settings'
     | '/api/auth/$'
     | '/campaigns/'
     | '/campaigns/$dmUsername/$campaignSlug'
@@ -232,7 +222,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
-    | '/settings'
     | '/api/auth/$'
     | '/campaigns'
     | '/join/$dmUsername/$campaignSlug'
@@ -251,7 +240,6 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/_authed/campaigns'
-    | '/_authed/settings'
     | '/api/auth/$'
     | '/_authed/campaigns/'
     | '/_authed/campaigns/$dmUsername/$campaignSlug'
@@ -327,13 +315,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authed/settings': {
-      id: '/_authed/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthedSettingsRouteRouteImport
-      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/campaigns': {
       id: '/_authed/campaigns'
@@ -495,12 +476,10 @@ const AuthedCampaignsRouteRouteWithChildren =
 
 interface AuthedRouteRouteChildren {
   AuthedCampaignsRouteRoute: typeof AuthedCampaignsRouteRouteWithChildren
-  AuthedSettingsRouteRoute: typeof AuthedSettingsRouteRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedCampaignsRouteRoute: AuthedCampaignsRouteRouteWithChildren,
-  AuthedSettingsRouteRoute: AuthedSettingsRouteRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
