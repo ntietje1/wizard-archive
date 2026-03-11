@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { DeviceSession } from '~/lib/device-sessions'
 import { Loader2, Plus } from '~/lib/icons'
+import { getAvatarFallback } from '~/components/auth/avatar-utils'
 import {
   Avatar,
   AvatarFallback,
@@ -62,7 +63,7 @@ export function AccountSwitcher({
           <DropdownMenuItem
             key={ds.session.token}
             onClick={() => handleSwitch(ds.session.token)}
-            disabled={isSwitching}
+            disabled={switching !== null}
           >
             <div className="flex items-center gap-2.5 w-full">
               <Avatar size="sm">
@@ -70,8 +71,7 @@ export function AccountSwitcher({
                   <AvatarImage src={ds.user.image} alt={ds.user.name} />
                 )}
                 <AvatarFallback>
-                  {ds.user.name?.[0]?.toUpperCase() ??
-                    ds.user.email[0].toUpperCase()}
+                  {getAvatarFallback(ds.user.name, ds.user.email)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">

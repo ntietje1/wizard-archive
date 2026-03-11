@@ -72,6 +72,8 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
                 'h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm',
               )}
               onClick={(e) => e.stopPropagation()}
+              aria-label="Share"
+              type="button"
             >
               <Share2 className="h-3.5 w-3.5" />
             </button>

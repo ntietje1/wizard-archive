@@ -9,6 +9,7 @@ export type DeviceSession = {
 export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
   // @ts-expect-error -- plugin types not inferred through Convex adapter
   const { data } = await authClient.multiSession.listDeviceSessions()
+
   if (!data || data.length === 0) return []
 
   // Last entry per email wins (API returns oldest-first, so last = most recent)

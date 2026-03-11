@@ -50,7 +50,7 @@ export function ShareButton() {
     isMutating ||
     isPending
   const isShared = item && aggregateShareStatus !== 'not_shared'
-  const hasShareData = item && !isPending
+  const hasShareData = Boolean(item)
 
   const Chevron = open ? ChevronUp : ChevronDown
   const StatusIcon = isShared ? Users : Lock

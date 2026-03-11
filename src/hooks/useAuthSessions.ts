@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
+import { useCallback } from 'react'
 import type { ParsedUA } from '~/lib/parse-user-agent'
 import { authClient } from '~/lib/auth-client'
 import { parseUserAgent } from '~/lib/parse-user-agent'
@@ -42,6 +43,7 @@ export function useActiveSessions() {
         }
       })
     },
+    enabled: !!currentToken,
     meta: { errorToast: 'Failed to load sessions' },
   })
 
@@ -85,11 +87,12 @@ export function useDeviceSessions() {
     queryKey: DEVICE_SESSIONS_KEY,
     queryFn: fetchDeviceSessions,
     staleTime: 30_000,
+    meta: { errorToast: 'Failed to load device sessions' },
   })
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: DEVICE_SESSIONS_KEY })
-  }
+  }, [queryClient])
 
   return {
     allSessions: query.data ?? [],

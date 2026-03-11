@@ -37,16 +37,10 @@ const SidebarContent = memo(function SidebarContent() {
           >
             <FileSidebar />
           </ResizablePanel>
-          {isDm ? (
-            <div className="shrink-0 p-1 border-t">
-              <NewButton />
-              <TrashButton />
-            </div>
-          ) : (
-            <div className="shrink-0 p-1 border-t">
-              <TrashButton />
-            </div>
-          )}
+          <div className="shrink-0 p-1 border-t">
+            {isDm && <NewButton />}
+            <TrashButton />
+          </div>
           <div className="shrink-0 border-t" />
           <SessionPanel />
         </ResizablePanelGroup>
@@ -61,7 +55,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     setIsSidebarExpanded,
     sidebarWidth,
     setSidebarWidth,
-    isEditorSettingsLoaded,
+    isUserPreferencesLoaded,
   } = useSidebarLayout()
 
   const handleRef = useRef<HTMLDivElement>(null)
@@ -70,7 +64,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (!isSidebarExpanded || !isEditorSettingsLoaded) return
+      if (!isSidebarExpanded || !isUserPreferencesLoaded) return
 
       e.preventDefault()
       const startX = e.clientX
@@ -112,7 +106,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     },
     [
       isSidebarExpanded,
-      isEditorSettingsLoaded,
+      isUserPreferencesLoaded,
       sidebarWidth,
       setSidebarWidth,
       setIsSidebarExpanded,

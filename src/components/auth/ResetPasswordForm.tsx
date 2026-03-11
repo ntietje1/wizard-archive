@@ -132,7 +132,10 @@ export function ResetPasswordForm() {
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Resetting...</span>
+            </>
           ) : (
             'Reset password'
           )}

@@ -78,7 +78,6 @@ export function CampaignsContent() {
           <CreateActionCard
             onClick={() => {
               setCreatingCampaign(true)
-              console.log('creating campaign')
             }}
             title="New Campaign"
             description="Start a new adventure with your party"

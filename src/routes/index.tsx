@@ -1,13 +1,14 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { Button } from '~/components/shadcn/ui/button'
+import { Loader2 } from '~/lib/icons'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
-  const { isAuthenticated } = useConvexAuth()
+  const { isAuthenticated, isLoading } = useConvexAuth()
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
@@ -18,7 +19,11 @@ function Home() {
         <p className="text-xl text-muted-foreground">
           Your ultimate companion for building and sharing TTRPG adventures
         </p>
-        {isAuthenticated ? (
+        {isLoading ? (
+          <Button size="lg" className="text-lg px-8 min-w-32" disabled>
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </Button>
+        ) : isAuthenticated ? (
           <Link to="/campaigns">
             <Button size="lg" className="text-lg px-8 min-w-32">
               Continue

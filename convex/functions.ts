@@ -28,7 +28,7 @@ export async function authenticate(
     .query('userProfiles')
     .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
-  if (!profile) throw new Error('No profile found')
+  if (!profile) throwAppError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return { identity, profile }
 }
 

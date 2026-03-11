@@ -8,6 +8,7 @@ const userProfileTableFields = {
   email: v.optional(v.string()),
   name: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
+  imageStorageId: v.optional(v.id('_storage')),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these
@@ -28,7 +29,7 @@ const userProfileValidatorFields = {
 export const userProfileValidator = v.object(userProfileValidatorFields)
 
 export const userValidator = v.object({
-  _id: v.string(),
+  _id: v.id('user'),
   _creationTime: v.number(),
   name: v.string(),
   email: v.string(),

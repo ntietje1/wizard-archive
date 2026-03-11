@@ -56,6 +56,7 @@ import type * as editors_functions_setCurrentEditor from "../editors/functions/s
 import type * as editors_mutations from "../editors/mutations.js";
 import type * as editors_queries from "../editors/queries.js";
 import type * as editors_types from "../editors/types.js";
+import type * as email from "../email.js";
 import type * as errors from "../errors.js";
 import type * as files_functions_createFile from "../files/functions/createFile.js";
 import type * as files_functions_deleteFile from "../files/functions/deleteFile.js";
@@ -226,6 +227,7 @@ declare const fullApi: ApiFromModules<{
   "editors/mutations": typeof editors_mutations;
   "editors/queries": typeof editors_queries;
   "editors/types": typeof editors_types;
+  email: typeof email;
   errors: typeof errors;
   "files/functions/createFile": typeof files_functions_createFile;
   "files/functions/deleteFile": typeof files_functions_deleteFile;
@@ -2420,6 +2422,155 @@ export declare const components: {
     adapterTest: {
       runCustomTests: FunctionReference<"action", "internal", any, any>;
       runTests: FunctionReference<"action", "internal", any, any>;
+    };
+  };
+  resend: {
+    lib: {
+      cancelEmail: FunctionReference<
+        "mutation",
+        "internal",
+        { emailId: string },
+        null
+      >;
+      cleanupAbandonedEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      cleanupOldEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      createManualEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          replyTo?: Array<string>;
+          subject: string;
+          to: Array<string> | string;
+        },
+        string
+      >;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          bcc?: Array<string>;
+          bounced?: boolean;
+          cc?: Array<string>;
+          clicked?: boolean;
+          complained: boolean;
+          createdAt: number;
+          deliveryDelayed?: boolean;
+          errorMessage?: string;
+          failed?: boolean;
+          finalizedAt: number;
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          opened: boolean;
+          replyTo: Array<string>;
+          resendId?: string;
+          segment: number;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+          subject?: string;
+          template?: {
+            id: string;
+            variables?: Record<string, string | number>;
+          };
+          text?: string;
+          to: Array<string>;
+        } | null
+      >;
+      getStatus: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          bounced: boolean;
+          clicked: boolean;
+          complained: boolean;
+          deliveryDelayed: boolean;
+          errorMessage: string | null;
+          failed: boolean;
+          opened: boolean;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+        } | null
+      >;
+      handleEmailEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { event: any },
+        null
+      >;
+      sendEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          bcc?: Array<string>;
+          cc?: Array<string>;
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          options: {
+            apiKey: string;
+            initialBackoffMs: number;
+            onEmailEvent?: { fnHandle: string };
+            retryAttempts: number;
+            testMode: boolean;
+          };
+          replyTo?: Array<string>;
+          subject?: string;
+          template?: {
+            id: string;
+            variables?: Record<string, string | number>;
+          };
+          text?: string;
+          to: Array<string>;
+        },
+        string
+      >;
+      updateManualEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          emailId: string;
+          errorMessage?: string;
+          resendId?: string;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+        },
+        null
+      >;
     };
   };
 };

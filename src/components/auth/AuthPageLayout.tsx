@@ -19,7 +19,7 @@ export function AuthPageLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="relative hidden bg-muted lg:block">
-        <img
+        <img // TODO: replace this
           src="/placeholder.svg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"

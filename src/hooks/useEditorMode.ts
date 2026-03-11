@@ -83,16 +83,17 @@ export function useEditorMode(): EditorModeContextType {
       PERMISSION_LEVEL.EDIT,
     )
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
+  const mutate = setEditorMutation.mutate
 
   const setEditorMode = useCallback(
     (mode: EditorMode) => {
       if (!canEdit || !campaignData?._id) return
-      setEditorMutation.mutate({
+      mutate({
         campaignId: campaignData._id,
         editorMode: mode,
       })
     },
-    [canEdit, campaignData?._id, setEditorMutation],
+    [canEdit, campaignData?._id, mutate],
   )
 
   const setViewAsPlayerId = useCallback(

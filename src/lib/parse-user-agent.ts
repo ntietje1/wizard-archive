@@ -28,8 +28,8 @@ function parseDevice(ua: string): string {
   if (/Android/i.test(ua)) return 'Android Tablet'
   if (/Macintosh|Mac OS/i.test(ua)) return 'Mac'
   if (/Windows/i.test(ua)) return 'Windows PC'
-  if (/Linux/i.test(ua)) return 'Linux PC'
   if (/CrOS/i.test(ua)) return 'Chromebook'
+  if (/Linux/i.test(ua)) return 'Linux PC'
   return 'Unknown Device'
 }
 

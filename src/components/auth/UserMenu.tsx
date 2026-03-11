@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { LogOut, Settings } from '~/lib/icons'
 import { authClient } from '~/lib/auth-client'
+import { fetchDeviceSessions } from '~/lib/device-sessions'
 import { useTransitionOverlay } from '~/lib/transition-overlay'
 import {
   Avatar,
@@ -23,22 +24,8 @@ import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useSettingsStore } from '~/components/settings/settings-store'
 import { AccountSwitcher } from '~/components/auth/AccountSwitcher'
+import { getAvatarFallback } from '~/components/auth/avatar-utils'
 import { useDeviceSessions } from '~/hooks/useAuthSessions'
-
-function getInitials(name?: string, email?: string): string {
-  if (name) {
-    const initials = name
-      .split(' ')
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-    if (initials) return initials
-  }
-  if (email) return email[0].toUpperCase()
-  return 'U'
-}
 
 const avatarButtonClassName = cn(
   buttonVariants({ variant: 'ghost', size: 'icon' }),
@@ -90,7 +77,10 @@ export function UserMenu() {
         await authClient.signOut()
       }
       queryClient.clear()
-      window.location.href = '/sign-in'
+
+      const remaining = await fetchDeviceSessions()
+      window.location.href =
+        remaining.length > 0 ? '/sign-in?view=picker' : '/sign-in'
     } catch (error) {
       console.error('Failed to sign out:', error)
       window.location.reload()
@@ -105,9 +95,9 @@ export function UserMenu() {
     return <AvatarPlaceholder />
   }
 
-  const otherAccounts = profile.email
-    ? deviceSessions.allSessions.filter((ds) => ds.user.email !== profile.email)
-    : []
+  const otherAccounts = deviceSessions.allSessions.filter(
+    (ds) => profile.email && ds.user.email !== profile.email,
+  )
 
   return (
     <DropdownMenu
@@ -123,7 +113,7 @@ export function UserMenu() {
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
               )}
               <AvatarFallback>
-                {getInitials(profile.name, profile.email)}
+                {getAvatarFallback(profile.name, profile.email)}
               </AvatarFallback>
             </Avatar>
           </button>
@@ -141,7 +131,7 @@ export function UserMenu() {
                   />
                 )}
                 <AvatarFallback>
-                  {getInitials(profile.name, profile.email)}
+                  {getAvatarFallback(profile.name, profile.email)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-0.5">

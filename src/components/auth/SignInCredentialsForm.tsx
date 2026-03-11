@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import type { DeviceSession } from '~/lib/device-sessions'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -8,52 +9,78 @@ import { Separator } from '~/components/shadcn/ui/separator'
 import { Loader2 } from '~/lib/icons'
 import { GoogleIcon } from '~/lib/custom-icons'
 
-type SignUpFormProps = {
-  redirectTo?: string
+type SignInCredentialsFormProps = {
+  redirectTo: string
+  existingSessions: Array<DeviceSession>
+  sessionsLoaded: boolean
+  onPickAccount: () => void
+  onSuccess: () => void
+  onTwoFactor: () => void
+  onEmailNotVerified: () => void
+  email: string
+  onEmailChange: (email: string) => void
 }
 
-type SocialProvider = 'google'
-
-export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+export function SignInCredentialsForm({
+  redirectTo,
+  existingSessions,
+  sessionsLoaded,
+  onPickAccount,
+  onSuccess,
+  onTwoFactor,
+  onEmailNotVerified,
+  email,
+  onEmailChange,
+}: SignInCredentialsFormProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
-    null,
-  )
+  const [socialLoading, setSocialLoading] = useState<string | null>(null)
 
-  const handleEmailSignUp = async (e: React.FormEvent) => {
+  const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    let handled = false
-    await authClient.signUp
-      .email(
-        { email, password, name },
-        {
-          onSuccess: () => {
-            handled = true
-            setEmailSent(true)
-          },
-          onError: (ctx) => {
-            handled = true
-            setError(ctx.error.message || 'Failed to create account')
-          },
+    // If this account already has an active session, switch to it
+    const match = existingSessions.find(
+      (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
+    )
+    if (match) {
+      // @ts-expect-error -- plugin types not inferred through Convex adapter
+      await authClient.multiSession.setActive({
+        sessionToken: match.session.token,
+      })
+      window.location.href = redirectTo
+      return
+    }
+
+    await authClient.signIn.email(
+      { email, password },
+      {
+        onSuccess: (ctx) => {
+          if (ctx.data?.twoFactorRedirect) {
+            setIsLoading(false)
+            onTwoFactor()
+            return
+          }
+          onSuccess()
         },
-      )
-      .catch(() => {
-        if (!handled) setError('Failed to create account')
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
+        onError: (ctx) => {
+          if (ctx.error.code === 'EMAIL_NOT_VERIFIED') {
+            onEmailNotVerified()
+          } else {
+            setError(ctx.error.message || 'Invalid email or password')
+          }
+          setIsLoading(false)
+        },
+      },
+    )
   }
 
-  const handleSocialSignIn = async (provider: SocialProvider) => {
+  const handleSocialSignIn = async (
+    provider: 'github' | 'google' | 'discord',
+  ) => {
     setSocialLoading(provider)
     setError('')
     try {
@@ -62,39 +89,19 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
         callbackURL: redirectTo,
       })
     } catch {
-      setError('Failed to sign in with social provider')
+      setError('Unable to sign in. Please try again.')
       setSocialLoading(null)
     }
   }
 
   const isDisabled = isLoading || !!socialLoading
 
-  if (emailSent) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">Check your email</h1>
-          <p className="text-sm text-muted-foreground text-balance">
-            We sent a verification link to <strong>{email}</strong>. Click the
-            link to verify your account.
-          </p>
-        </div>
-        <Link
-          to="/sign-in"
-          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-        >
-          Back to sign in
-        </Link>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Create an account</h1>
+        <h1 className="text-2xl font-bold">Welcome back</h1>
         <p className="text-sm text-muted-foreground text-balance">
-          Get started with your adventure
+          Sign in to your account
         </p>
       </div>
       <div className="flex flex-col gap-4">
@@ -120,19 +127,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
         </div>
 
         {/* Email/password form */}
-        <form onSubmit={handleEmailSignUp} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              disabled={isDisabled}
-            />
-          </div>
+        <form onSubmit={handleEmailSignIn} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -140,26 +135,30 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               type="email"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => onEmailChange(e.target.value)}
               required
               disabled={isDisabled}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                to="/forgot-password"
+                className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
-              placeholder="Create a password"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={8}
               disabled={isDisabled}
             />
-            <p className="text-xs text-muted-foreground">
-              Must be at least 8 characters
-            </p>
           </div>
 
           {error && (
@@ -170,19 +169,30 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              'Create account'
+              'Sign in'
             )}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {"Don't have an account? "}
           <Link
-            to="/sign-in"
+            to="/sign-up"
             className="text-primary underline-offset-4 hover:underline font-medium"
           >
-            Sign in
+            Sign up
           </Link>
+        </p>
+        <p
+          className={`text-center text-sm transition-opacity ${sessionsLoaded && existingSessions.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        >
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:underline font-medium"
+            onClick={onPickAccount}
+          >
+            Switch to an existing account
+          </button>
         </p>
       </div>
     </div>

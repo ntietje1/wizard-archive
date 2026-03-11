@@ -42,10 +42,13 @@ export const updateProfileImage = authMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId)
-    if (!url) throw new Error('Failed to get image URL')
+    if (!url) throw new Error('Invalid storage ID')
 
+    // Clear external imageUrl (e.g. from OAuth) in favor of the storage file.
+    // The URL is resolved at query time via resolveProfileImageUrl.
     await ctx.db.patch(ctx.user.profile._id, {
-      imageUrl: url,
+      imageStorageId: args.storageId,
+      imageUrl: undefined,
     })
     return null
   },
@@ -63,6 +66,9 @@ export const updateName = authMutation({
     }
     if (name.length > 100) {
       throw new Error('Name must be at most 100 characters')
+    }
+    if (name === ctx.user.profile.name) {
+      return null
     }
 
     await ctx.db.patch(ctx.user.profile._id, { name })

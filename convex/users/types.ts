@@ -9,7 +9,8 @@ export type UserProfile = {
   username: string
   email?: string
   name?: string
-  imageUrl?: string
+  imageUrl?: string // comes from OAuth if applicable
+  imageStorageId?: Id<'_storage'> // user uploaded value (has priority over imageUrl)
 }
 
 export type AuthUser = { identity: UserIdentity; profile: UserProfile }

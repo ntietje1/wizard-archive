@@ -250,9 +250,9 @@ export function SidebarItemMutationsProvider({
 
       if (isRestoring) {
         // Collect descendants for folder restores
-        const descendantIds = new Set<string>()
+        const descendantIds = new Set<SidebarItemId>()
         if (isFolder(item)) {
-          const collectDescendants = (folderId: string) => {
+          const collectDescendants = (folderId: Id<'folders'>) => {
             // Look in trashed items for children of this folder
             const trashedItems =
               queryClient.getQueryData<Array<AnySidebarItem>>([
@@ -319,9 +319,8 @@ export function SidebarItemMutationsProvider({
         // Collect descendants for folder trashes
         const descendants: Array<AnySidebarItem> = []
         if (isFolder(item)) {
-          const collectDescendants = (folderId: string) => {
-            const folderChildren =
-              parentItemsMap.get(folderId as Id<'folders'>) ?? []
+          const collectDescendants = (folderId: Id<'folders'>) => {
+            const folderChildren = parentItemsMap.get(folderId) ?? []
             for (const child of folderChildren) {
               descendants.push(child)
               if (isFolder(child)) collectDescendants(child._id)

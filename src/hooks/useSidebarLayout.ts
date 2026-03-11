@@ -5,7 +5,7 @@ export type SidebarLayoutContextType = {
   setIsSidebarExpanded: (isExpanded: boolean) => void
   sidebarWidth: number
   setSidebarWidth: (width: number) => void
-  isEditorSettingsLoaded: boolean
+  isUserPreferencesLoaded: boolean
 }
 
 export const SidebarLayoutContext =

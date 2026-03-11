@@ -62,10 +62,6 @@ const ScrollArea = React.forwardRef<
               !hasVertical && 'overflow-y-hidden',
               viewportClassName,
             )}
-            // style={{
-            //   ...(!hasHorizontal && { overflowX: 'hidden' }),
-            //   ...(!hasVertical && { overflowY: 'hidden' }),
-            // }}
           >
             <ScrollAreaPrimitive.Content
               className={cn(

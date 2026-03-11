@@ -12,7 +12,7 @@ export function SidebarLayoutProvider({
     setIsSidebarExpanded,
     sidebarWidth,
     setSidebarWidth,
-    isLoaded: isEditorSettingsLoaded,
+    isLoaded: isUserPreferencesLoaded,
   } = useUserPreferences()
 
   const value = useMemo(
@@ -21,14 +21,14 @@ export function SidebarLayoutProvider({
       setIsSidebarExpanded,
       sidebarWidth,
       setSidebarWidth,
-      isEditorSettingsLoaded,
+      isUserPreferencesLoaded,
     }),
     [
       isSidebarExpanded,
       setIsSidebarExpanded,
       sidebarWidth,
       setSidebarWidth,
-      isEditorSettingsLoaded,
+      isUserPreferencesLoaded,
     ],
   )
 

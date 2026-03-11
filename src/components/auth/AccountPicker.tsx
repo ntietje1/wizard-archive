@@ -8,6 +8,7 @@ import {
   AvatarImage,
 } from '~/components/shadcn/ui/avatar'
 import { ChevronRight, Loader2 } from '~/lib/icons'
+import { getAvatarFallback } from '~/components/auth/avatar-utils'
 
 type AccountPickerProps = {
   sessions: Array<DeviceSession>
@@ -24,6 +25,7 @@ export function AccountPicker({
   const [error, setError] = useState('')
 
   const handleSwitch = async (session: DeviceSession) => {
+    setError('')
     setSwitchingToken(session.session.token)
     try {
       // @ts-expect-error -- plugin types not inferred through Convex adapter
@@ -59,12 +61,13 @@ export function AccountPicker({
             >
               <Avatar size="sm">
                 {ds.user.image && (
-                  <AvatarImage src={ds.user.image} alt={ds.user.name} />
+                  <AvatarImage
+                    src={ds.user.image}
+                    alt={ds.user.name ?? ds.user.email ?? 'User avatar'}
+                  />
                 )}
                 <AvatarFallback>
-                  {ds.user.name?.[0]?.toUpperCase() ??
-                    ds.user.email?.[0]?.toUpperCase() ??
-                    '?'}
+                  {getAvatarFallback(ds.user.name, ds.user.email, '?')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
@@ -84,9 +87,7 @@ export function AccountPicker({
           )
         })}
       </div>
-      {error && (
-        <p className="text-sm text-destructive text-center">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive text-center">{error}</p>}
       <Button
         type="button"
         variant="ghost"

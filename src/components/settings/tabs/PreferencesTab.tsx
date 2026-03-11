@@ -55,6 +55,7 @@ export function PreferencesTab() {
             <button
               key={value}
               type="button"
+              aria-pressed={theme === value}
               onClick={() => setTheme(value)}
               className={cn(
                 'flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer',

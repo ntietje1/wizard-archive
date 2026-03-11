@@ -1,6 +1,15 @@
 import type { QueryCtx } from '../../_generated/server'
 import type { UserProfile } from '../types'
 
+async function resolveProfileImageUrl(
+  ctx: QueryCtx,
+  profile: UserProfile,
+): Promise<UserProfile> {
+  if (!profile.imageStorageId) return profile
+  const url = await ctx.storage.getUrl(profile.imageStorageId)
+  return { ...profile, imageUrl: url ?? undefined }
+}
+
 export async function getUserProfileByUserId(
   ctx: QueryCtx,
   { userId }: { userId: string },
@@ -9,7 +18,8 @@ export async function getUserProfileByUserId(
     .query('userProfiles')
     .withIndex('by_user', (q) => q.eq('authUserId', userId))
     .unique()
-  return profile
+  if (!profile) return null
+  return resolveProfileImageUrl(ctx, profile)
 }
 
 export async function getUserProfileByUsername(
@@ -20,5 +30,6 @@ export async function getUserProfileByUsername(
     .query('userProfiles')
     .withIndex('by_username', (q) => q.eq('username', username))
     .unique()
-  return profile
+  if (!profile) return null
+  return resolveProfileImageUrl(ctx, profile)
 }

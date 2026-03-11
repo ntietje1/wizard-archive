@@ -27,6 +27,7 @@ export function EmptyTrashConfirmDialog({
     />
   )
 }
+
 export function PermanentDeleteConfirmDialog({
   item,
   onClose,

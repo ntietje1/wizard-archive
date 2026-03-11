@@ -16,6 +16,7 @@ type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> =
   Omit<UseQueryOptions<TData<TQuery>>, 'queryKey' | 'queryFn' | 'retry'>
 
 const AUTH_RETRY_COUNT = 3
+const DEFAULT_RETRY_COUNT = 2
 
 /**
  * Like `useQuery(convexQuery(...))` but gates execution behind auth.
@@ -56,7 +57,7 @@ export function useAuthQuery<
     retry: (failureCount, error) => {
       if (isAppError(error, ERROR_CODE.NOT_AUTHENTICATED))
         return failureCount < AUTH_RETRY_COUNT
-      return false
+      return failureCount < DEFAULT_RETRY_COUNT
     },
   } as UseQueryOptions<TData<TQuery>>)
 }

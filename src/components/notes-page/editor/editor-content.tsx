@@ -50,7 +50,7 @@ export function EditorContent() {
   }
 
   if (!canView) {
-    if (isNotFound || hasRequestedItem) {
+    if (hasRequestedItem) {
       return <NotSharedContent />
     }
     return <EmptyEditorContent />

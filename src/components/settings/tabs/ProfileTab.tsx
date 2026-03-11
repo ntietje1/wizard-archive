@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { debounce } from 'lodash-es'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -44,6 +44,7 @@ import {
   CheckIcon,
   Copy,
   Loader2,
+  Mail,
   Monitor,
   Smartphone,
   Tablet,
@@ -198,7 +199,6 @@ function SettingsRow({
     </div>
   )
 }
-
 // --- Account (avatar + preferred name) ---
 
 function AccountRow({ profile }: { profile: Profile }) {
@@ -420,6 +420,7 @@ function useOAuthProvider() {
 function EmailRow({ profile }: { profile: Profile }) {
   const [isEditing, setIsEditing] = useState(false)
   const [newEmail, setNewEmail] = useState('')
+  const [sentTo, setSentTo] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const oauthProvider = useOAuthProvider()
@@ -434,14 +435,23 @@ function EmailRow({ profile }: { profile: Profile }) {
     try {
       await authClient.changeEmail({
         newEmail: newEmail.trim(),
+        callbackURL: '/settings',
       })
-      toast.success('Email updated')
-      setIsEditing(false)
+      setSentTo(newEmail.trim())
       setNewEmail('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to change email')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setIsEditing(false)
+      setSentTo('')
+      setNewEmail('')
+      setError('')
     }
   }
 
@@ -482,6 +492,7 @@ function EmailRow({ profile }: { profile: Profile }) {
           disabled={!isLoaded}
           onClick={() => {
             setNewEmail('')
+            setSentTo('')
             setError('')
             setIsEditing(true)
           }}
@@ -489,32 +500,59 @@ function EmailRow({ profile }: { profile: Profile }) {
           Change email
         </Button>
       )}
-      <SettingsSubDialog open={isEditing} onOpenChange={setIsEditing}>
+      <SettingsSubDialog open={isEditing} onOpenChange={handleClose}>
         <SettingsSubDialogContent>
-          <DialogHeader>
-            <DialogTitle>Change email</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-email">New email address</Label>
-            <Input
-              id="edit-email"
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              disabled={isLoading}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </div>
-          <DialogFooter showCloseButton>
-            <Button onClick={handleSave} disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Save'
-              )}
-            </Button>
-          </DialogFooter>
+          {sentTo ? (
+            <>
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Mail className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium">
+                    Check your new email inbox
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    We sent a verification link to{' '}
+                    <strong className="text-foreground">{sentTo}</strong>. Click
+                    the link to complete the change.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => handleClose(false)}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Change email</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="edit-email">New email address</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  disabled={isLoading}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                />
+                {error && <p className="text-sm text-destructive">{error}</p>}
+              </div>
+              <DialogFooter showCloseButton>
+                <Button onClick={handleSave} disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Save'
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </SettingsSubDialogContent>
       </SettingsSubDialog>
     </div>
@@ -734,9 +772,9 @@ function TwoFactorRow() {
 // --- Delete Account ---
 
 function DeleteAccountRow() {
-  const navigate = useNavigate()
   const [isDeleting, setIsDeleting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const [error, setError] = useState('')
 
   const handleDelete = async () => {
@@ -745,7 +783,8 @@ function DeleteAccountRow() {
     await authClient.deleteUser({
       fetchOptions: {
         onSuccess: () => {
-          navigate({ to: '/' })
+          setIsDeleting(false)
+          setEmailSent(true)
         },
         onError: (ctx) => {
           setIsDeleting(false)
@@ -753,6 +792,14 @@ function DeleteAccountRow() {
         },
       },
     })
+  }
+
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setShowConfirm(false)
+      setEmailSent(false)
+      setError('')
+    }
   }
 
   return (
@@ -777,24 +824,52 @@ function DeleteAccountRow() {
           'Delete account'
         )}
       </Button>
-      <SettingsSubAlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+      <SettingsSubAlertDialog open={showConfirm} onOpenChange={handleClose}>
         <SettingsSubAlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete your account and remove all of your
-              data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete account
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {emailSent ? (
+            <>
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                  <Mail className="h-6 w-6 text-destructive" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium">Check your email</p>
+                  <p className="text-sm text-muted-foreground">
+                    We sent a verification link to confirm account deletion.
+                    Click the link in the email to permanently delete your
+                    account.
+                  </p>
+                </div>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Done</AlertDialogCancel>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete your account and remove all of
+                  your data. This action cannot be undone. We'll send a
+                  verification email to confirm.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Delete account'
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </SettingsSubAlertDialogContent>
       </SettingsSubAlertDialog>
     </div>
@@ -817,14 +892,24 @@ function ActiveSessionsSection() {
 
   const handleRevokeSession = async (token: string) => {
     setRevokingId(token)
-    await revokeSession(token)
-    setRevokingId(null)
+    try {
+      await revokeSession(token)
+    } catch {
+      toast.error('Failed to revoke session')
+    } finally {
+      setRevokingId(null)
+    }
   }
 
   const handleRevokeAllOtherSessions = async () => {
     setIsRevokingAll(true)
-    await revokeOtherSessions()
-    setIsRevokingAll(false)
+    try {
+      await revokeOtherSessions()
+    } catch {
+      toast.error('Failed to log out other sessions')
+    } finally {
+      setIsRevokingAll(false)
+    }
   }
 
   const otherSessionsExist = sessions.some((s) => !s.isCurrent)
@@ -943,7 +1028,7 @@ function ActiveSessionsSection() {
 
 // --- User ID ---
 
-function UserIdRow({ userId }: { userId: string }) {
+function UserIdRow({ userId }: { userId: Id<'userProfiles'> }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {

@@ -1,9 +1,17 @@
 import { betterAuth } from 'better-auth/minimal'
 import { createClient } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
+import { requireRunMutationCtx } from '@convex-dev/better-auth/utils'
 import { multiSession, twoFactor } from 'better-auth/plugins'
 import { findUniqueSlug } from './common/slug'
 import authConfig from './auth.config'
+import {
+  changeEmailConfirmationEmail,
+  deleteAccountVerificationEmail,
+  passwordResetEmail,
+  resend,
+  verificationEmail,
+} from './email'
 import { components, internal } from './_generated/api'
 import { query } from './_generated/server'
 import { userValidator } from './users/schema'
@@ -47,7 +55,11 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           .unique()
         if (!profile) return
 
-        const updates: Record<string, string | undefined> = {}
+        const updates: Partial<{
+          name: string | undefined
+          email: string | undefined
+          imageUrl: string | undefined
+        }> = {}
         if (newUser.name !== oldUser.name) updates.name = newUser.name
         if (newUser.email !== oldUser.email) updates.email = newUser.email
         if (newUser.image !== oldUser.image)
@@ -75,12 +87,42 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
     emailAndPassword: {
-      // TODO: require email verification
       enabled: true,
-      requireEmailVerification: false,
-      // TODO: integrate Resend for real email delivery
+      requireEmailVerification: true,
       async sendResetPassword({ user, url }) {
-        console.log(`[Auth] Password reset requested for user ${user.id}`)
+        await resend.sendEmail(
+          requireRunMutationCtx(ctx),
+          passwordResetEmail(user.email, url),
+        )
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      async sendVerificationEmail({ user, url }) {
+        await resend.sendEmail(
+          requireRunMutationCtx(ctx),
+          verificationEmail(user.email, url),
+        )
+      },
+    },
+    user: {
+      deleteUser: {
+        enabled: true,
+        async sendDeleteAccountVerification({ user, url }) {
+          await resend.sendEmail(
+            requireRunMutationCtx(ctx),
+            deleteAccountVerificationEmail(user.email, url),
+          )
+        },
+      },
+      changeEmail: {
+        enabled: true,
+        async sendChangeEmailVerification({ user, newEmail, url }) {
+          await resend.sendEmail(
+            requireRunMutationCtx(ctx),
+            changeEmailConfirmationEmail(user.email, newEmail, url),
+          )
+        },
       },
     },
     socialProviders: {
