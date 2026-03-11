@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
-import { SessionContext } from '~/hooks/useSession'
+import { SessionContext } from '~/hooks/useGameSession'
 
 function useSessionInternal() {
   const { campaignId } = useCampaign()

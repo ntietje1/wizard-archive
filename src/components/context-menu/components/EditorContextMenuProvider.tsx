@@ -7,7 +7,7 @@ import { PlaceHolderContextMenu } from './EmptyContextMenu'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
 import { useCampaign } from '~/hooks/useCampaign'
-import { useSession } from '~/hooks/useSession'
+import { useSession } from '~/hooks/useGameSession'
 import { useMapView } from '~/hooks/useMapView'
 import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
 

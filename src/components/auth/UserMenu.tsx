@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { LogOut, Settings } from '~/lib/icons'
 import { authClient } from '~/lib/auth-client'
+import { useTransitionOverlay } from '~/lib/transition-overlay'
 import {
   Avatar,
   AvatarFallback,
@@ -20,6 +22,8 @@ import { buttonVariants } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useSettingsStore } from '~/components/settings/settings-store'
+import { AccountSwitcher } from '~/components/auth/AccountSwitcher'
+import { useDeviceSessions } from '~/hooks/useAuthSessions'
 
 function getInitials(name?: string, email?: string): string {
   if (name) {
@@ -56,30 +60,61 @@ export function UserMenu() {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
   const openSettings = useSettingsStore((s) => s.open)
+  const queryClient = useQueryClient()
+  const deviceSessions = useDeviceSessions()
+  const showOverlay = useTransitionOverlay((s) => s.show)
+
+  const handleSwitchAccount = useCallback(
+    async (sessionToken: string) => {
+      showOverlay('Switching accounts\u2026')
+      try {
+        // @ts-expect-error -- plugin types not inferred through Convex adapter
+        await authClient.multiSession.setActive({ sessionToken })
+        window.location.href = '/campaigns'
+      } catch (error) {
+        console.error('Failed to switch account:', error)
+        window.location.reload()
+      }
+    },
+    [showOverlay],
+  )
+
+  const handleSignOut = useCallback(async () => {
+    showOverlay('Signing out\u2026')
+    try {
+      const token = deviceSessions.currentToken
+      if (token) {
+        // @ts-expect-error -- plugin types not inferred through Convex adapter
+        await authClient.multiSession.revoke({ sessionToken: token })
+      } else {
+        await authClient.signOut()
+      }
+      queryClient.clear()
+      window.location.href = '/sign-in'
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+      window.location.reload()
+    }
+  }, [queryClient, showOverlay, deviceSessions.currentToken])
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Always render the placeholder during SSR and initial hydration
-  // to avoid mismatch between server (which may have prefetched profile)
-  // and client (where Convex auth hasn't resolved yet)
   if (!mounted || !profile) {
     return <AvatarPlaceholder />
   }
 
-  const handleSignOut = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          window.location.href = '/'
-        },
-      },
-    })
-  }
+  const otherAccounts = profile.email
+    ? deviceSessions.allSessions.filter((ds) => ds.user.email !== profile.email)
+    : []
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) deviceSessions.refresh()
+      }}
+    >
       <DropdownMenuTrigger
         render={
           <button className={avatarButtonClassName}>
@@ -98,7 +133,7 @@ export function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuLabel>
             <div className="flex items-center gap-3">
-              <Avatar size="md">
+              <Avatar size="default">
                 {profile.imageUrl && (
                   <AvatarImage
                     src={profile.imageUrl}
@@ -120,6 +155,13 @@ export function UserMenu() {
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
+        <AccountSwitcher
+          otherAccounts={otherAccounts}
+          onAddAccount={() => {
+            window.location.href = '/sign-in?view=form'
+          }}
+          onSwitch={handleSwitchAccount}
+        />
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => openSettings()}>
           <Settings className="h-4 w-4" />

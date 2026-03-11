@@ -43,14 +43,12 @@ import {
   Camera,
   CheckIcon,
   Copy,
-  Globe,
-  Laptop,
   Loader2,
-  LogOut,
   Monitor,
   Smartphone,
   Tablet,
 } from '~/lib/icons'
+import { useActiveSessions } from '~/hooks/useAuthSessions'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useFileUpload } from '~/hooks/useFileUpload'
 import {
@@ -653,6 +651,7 @@ function TwoFactorRow() {
     setError('')
     setIsDisabling(true)
 
+    // @ts-expect-error -- plugin types not inferred through Convex adapter
     const { error: err } = await authClient.twoFactor.disable({
       password: disablePassword,
     })
@@ -804,55 +803,6 @@ function DeleteAccountRow() {
 
 // --- Active Sessions ---
 
-type MockSession = {
-  id: string
-  device: string
-  type: 'desktop' | 'mobile' | 'tablet'
-  browser: string
-  location: string
-  lastActive: string
-  isCurrent: boolean
-}
-
-const MOCK_SESSIONS: Array<MockSession> = [
-  {
-    id: '1',
-    device: 'Windows PC',
-    type: 'desktop',
-    browser: 'Chrome 122',
-    location: 'San Francisco, CA',
-    lastActive: 'Now',
-    isCurrent: true,
-  },
-  {
-    id: '2',
-    device: 'MacBook Pro',
-    type: 'desktop',
-    browser: 'Safari 17',
-    location: 'San Francisco, CA',
-    lastActive: '2 hours ago',
-    isCurrent: false,
-  },
-  {
-    id: '3',
-    device: 'iPhone 15',
-    type: 'mobile',
-    browser: 'Safari Mobile',
-    location: 'San Francisco, CA',
-    lastActive: '1 day ago',
-    isCurrent: false,
-  },
-  {
-    id: '4',
-    device: 'iPad Air',
-    type: 'tablet',
-    browser: 'Safari',
-    location: 'New York, NY',
-    lastActive: '3 days ago',
-    isCurrent: false,
-  },
-]
-
 const deviceIcons = {
   desktop: Monitor,
   mobile: Smartphone,
@@ -860,26 +810,34 @@ const deviceIcons = {
 } as const
 
 function ActiveSessionsSection() {
+  const { sessions, isLoading, revokeSession, revokeOtherSessions } =
+    useActiveSessions()
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [isRevokingAll, setIsRevokingAll] = useState(false)
 
-  const handleRevokeSession = async (sessionId: string) => {
-    setRevokingId(sessionId)
-    // TODO: Replace with authClient.revokeSession({ id: sessionId })
-    await new Promise((r) => setTimeout(r, 500))
-    toast.info('Session revocation not yet implemented')
+  const handleRevokeSession = async (token: string) => {
+    setRevokingId(token)
+    await revokeSession(token)
     setRevokingId(null)
   }
 
   const handleRevokeAllOtherSessions = async () => {
     setIsRevokingAll(true)
-    // TODO: Replace with authClient.revokeSessions() or similar
-    await new Promise((r) => setTimeout(r, 500))
-    toast.info('Revoke all sessions not yet implemented')
+    await revokeOtherSessions()
     setIsRevokingAll(false)
   }
 
-  const otherSessionsExist = MOCK_SESSIONS.some((s) => !s.isCurrent)
+  const otherSessionsExist = sessions.some((s) => !s.isCurrent)
+
+  if (isLoading) {
+    return (
+      <SettingsSection title="Active sessions">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      </SettingsSection>
+    )
+  }
 
   return (
     <SettingsSection title="Active sessions">
@@ -888,12 +846,12 @@ function ActiveSessionsSection() {
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-8 text-xs">Device</TableHead>
             <TableHead className="h-8 text-xs">Last active</TableHead>
-            <TableHead className="h-8 text-xs">Location</TableHead>
+            <TableHead className="h-8 text-xs">IP address</TableHead>
             <TableHead className="h-8 text-xs text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {MOCK_SESSIONS.map((session) => {
+          {sessions.map((session) => {
             const DeviceIcon = deviceIcons[session.type]
             return (
               <TableRow key={session.id} className="hover:bg-transparent">
@@ -915,7 +873,7 @@ function ActiveSessionsSection() {
                 </TableCell>
                 <TableCell className="py-2.5">
                   <p className="text-sm text-muted-foreground">
-                    {session.location}
+                    {session.ipAddress ?? 'Unknown'}
                   </p>
                 </TableCell>
                 <TableCell className="py-2.5 text-right">
@@ -927,18 +885,18 @@ function ActiveSessionsSection() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRevokeSession(session.id)}
-                      disabled={revokingId === session.id || isRevokingAll}
+                      onClick={() => handleRevokeSession(session.token)}
+                      disabled={revokingId === session.token || isRevokingAll}
                     >
                       <span className="relative inline-flex items-center justify-center">
                         <span
                           className={cn(
-                            revokingId === session.id && 'invisible',
+                            revokingId === session.token && 'invisible',
                           )}
                         >
                           Log out
                         </span>
-                        {revokingId === session.id && (
+                        {revokingId === session.token && (
                           <Loader2 className="size-3.5 animate-spin absolute" />
                         )}
                       </span>

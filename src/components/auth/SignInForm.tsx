@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
+import type { DeviceSession } from '~/lib/device-sessions'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -16,9 +17,20 @@ import { GoogleIcon } from '~/lib/custom-icons'
 
 type SignInFormProps = {
   redirectTo?: string
+  /** Known device sessions, used to detect duplicate sign-ins. */
+  existingSessions?: Array<DeviceSession>
+  /** Whether device sessions have finished loading. */
+  sessionsLoaded?: boolean
+  /** Called when user wants to go back to the account picker. */
+  onPickAccount: () => void
 }
 
-export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
+export function SignInForm({
+  redirectTo = '/campaigns',
+  existingSessions = [],
+  sessionsLoaded = false,
+  onPickAccount,
+}: SignInFormProps) {
   const navigate = useNavigate()
   const { isAuthenticated } = useConvexAuth()
   const [email, setEmail] = useState('')
@@ -42,6 +54,19 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
     e.preventDefault()
     setError('')
     setIsLoading(true)
+
+    // If this account already has an active session, switch to it
+    const match = existingSessions.find(
+      (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
+    )
+    if (match) {
+      // @ts-expect-error -- plugin types not inferred through Convex adapter
+      await authClient.multiSession.setActive({
+        sessionToken: match.session.token,
+      })
+      window.location.href = redirectTo
+      return
+    }
 
     await authClient.signIn.email(
       { email, password },
@@ -67,13 +92,14 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
     setError('')
     setIsLoading(true)
 
+    // @ts-expect-error -- plugin types not inferred through Convex adapter
     await authClient.twoFactor.verifyTotp(
       { code: totpCode },
       {
         onSuccess: () => {
           setPendingRedirect(redirectTo)
         },
-        onError: (ctx) => {
+        onError: (ctx: { error: { message?: string } }) => {
           setError(ctx.error.message || 'Invalid code')
           setIsLoading(false)
           setTotpCode('')
@@ -247,6 +273,15 @@ export function SignInForm({ redirectTo = '/campaigns' }: SignInFormProps) {
           >
             Sign up
           </Link>
+        </p>
+        <p className={`text-center text-sm transition-opacity ${sessionsLoaded && existingSessions.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:underline font-medium"
+            onClick={onPickAccount}
+          >
+            Switch to an existing account
+          </button>
         </p>
       </div>
     </div>

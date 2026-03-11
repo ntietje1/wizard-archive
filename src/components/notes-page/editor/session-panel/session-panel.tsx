@@ -11,7 +11,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '~/components/shadcn/ui/dropdown-menu'
-import { useSession } from '~/hooks/useSession'
+import { useSession } from '~/hooks/useGameSession'
 import { useCampaign } from '~/hooks/useCampaign'
 import { cn } from '~/lib/shadcn/utils'
 

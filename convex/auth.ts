@@ -1,8 +1,7 @@
 import { betterAuth } from 'better-auth/minimal'
 import { createClient } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
-import { twoFactor } from 'better-auth/plugins'
-import { v } from 'convex/values'
+import { multiSession, twoFactor } from 'better-auth/plugins'
 import { findUniqueSlug } from './common/slug'
 import authConfig from './auth.config'
 import { components, internal } from './_generated/api'
@@ -90,7 +89,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       },
     },
-    plugins: [convex({ authConfig }), twoFactor()],
+    plugins: [convex({ authConfig }), twoFactor(), multiSession()],
   })
 }
 

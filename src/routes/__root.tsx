@@ -14,6 +14,7 @@ import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import type { Theme } from '~/hooks/useTheme'
+import { TransitionOverlay } from '~/components/auth/TransitionOverlay'
 import { NavigationProgress } from '~/components/navigation-progress'
 import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
 import { prefetchUserPreferences } from '~/hooks/useUserPreferences'
@@ -124,6 +125,7 @@ function RootDocument({
         <NavigationProgress />
         {children}
         <Toaster />
+        <TransitionOverlay />
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>

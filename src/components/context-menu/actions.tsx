@@ -29,7 +29,7 @@ import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { useSession } from '~/hooks/useSession'
+import { useSession } from '~/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
