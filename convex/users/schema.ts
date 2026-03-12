@@ -6,6 +6,7 @@ const userProfileTableFields = {
   authUserId: v.string(),
   username: v.string(),
   email: v.optional(v.string()),
+  emailVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
   imageStorageId: v.optional(v.id('_storage')),
@@ -17,7 +18,8 @@ export const userTables = {
     ...userProfileTableFields,
   })
     .index('by_user', ['authUserId'])
-    .index('by_username', ['username']),
+    .index('by_username', ['username'])
+    .index('by_email', ['email']),
 }
 
 // only includes convex built-in fields and not commonTableFields

@@ -44,6 +44,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           authUserId: String(user._id),
           username,
           email: user.email,
+          emailVerified: user.emailVerified,
           name: user.name,
           imageUrl: user.image ?? undefined,
         })
@@ -58,10 +59,13 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
         const updates: Partial<{
           name: string | undefined
           email: string | undefined
+          emailVerified: boolean
           imageUrl: string | undefined
         }> = {}
         if (newUser.name !== oldUser.name) updates.name = newUser.name
         if (newUser.email !== oldUser.email) updates.email = newUser.email
+        if (newUser.emailVerified !== oldUser.emailVerified)
+          updates.emailVerified = newUser.emailVerified
         if (newUser.image !== oldUser.image)
           updates.imageUrl = newUser.image ?? undefined
 
@@ -99,6 +103,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     emailVerification: {
       sendOnSignUp: true,
       async sendVerificationEmail({ user, url }) {
+        if (user.emailVerified) return
         await resend.sendEmail(
           requireRunMutationCtx(ctx),
           verificationEmail(user.email, url),

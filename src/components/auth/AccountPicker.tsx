@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { DeviceSession } from '~/lib/device-sessions'
 import { authClient } from '~/lib/auth-client'
+import { usePendingAuthRedirect } from '~/hooks/usePendingAuthRedirect'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   Avatar,
@@ -21,6 +22,7 @@ export function AccountPicker({
   redirectTo,
   onUseOtherAccount,
 }: AccountPickerProps) {
+  const queueRedirect = usePendingAuthRedirect()
   const [switchingToken, setSwitchingToken] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -32,7 +34,7 @@ export function AccountPicker({
       await authClient.multiSession.setActive({
         sessionToken: session.session.token,
       })
-      window.location.href = redirectTo
+      queueRedirect(redirectTo)
     } catch (err) {
       console.error('Failed to switch account:', err)
       setError('Failed to switch account. Please try signing in again.')

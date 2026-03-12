@@ -4,6 +4,7 @@ import { api } from 'convex/_generated/api'
 import { LogOut, Settings } from '~/lib/icons'
 import { authClient } from '~/lib/auth-client'
 import { fetchDeviceSessions } from '~/lib/device-sessions'
+import { usePendingAuthRedirect } from '~/hooks/usePendingAuthRedirect'
 import { useTransitionOverlay } from '~/lib/transition-overlay'
 import {
   Avatar,
@@ -51,19 +52,22 @@ export function UserMenu() {
   const deviceSessions = useDeviceSessions()
   const showOverlay = useTransitionOverlay((s) => s.show)
 
+  const hideOverlay = useTransitionOverlay((s) => s.hide)
+  const queueRedirect = usePendingAuthRedirect(hideOverlay)
+
   const handleSwitchAccount = useCallback(
     async (sessionToken: string) => {
       showOverlay('Switching accounts\u2026')
       try {
         // @ts-expect-error -- plugin types not inferred through Convex adapter
         await authClient.multiSession.setActive({ sessionToken })
-        window.location.href = '/campaigns'
+        queueRedirect('/campaigns')
       } catch (error) {
         console.error('Failed to switch account:', error)
         window.location.reload()
       }
     },
-    [showOverlay],
+    [showOverlay, queueRedirect],
   )
 
   const handleSignOut = useCallback(async () => {

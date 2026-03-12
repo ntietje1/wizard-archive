@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { useConvexAuth } from 'convex/react'
+import { useState } from 'react'
 import { SignInCredentialsForm } from './SignInCredentialsForm'
 import { SignInTwoFactorForm } from './SignInTwoFactorForm'
 import { SignInEmailNotVerified } from './SignInEmailNotVerified'
 import type { DeviceSession } from '~/lib/device-sessions'
+import { usePendingAuthRedirect } from '~/hooks/usePendingAuthRedirect'
 
 type SignInFormProps = {
   redirectTo?: string
@@ -21,18 +20,9 @@ export function SignInForm({
   sessionsLoaded = false,
   onPickAccount,
 }: SignInFormProps) {
-  const navigate = useNavigate()
-  const { isAuthenticated } = useConvexAuth()
+  const setPendingRedirect = usePendingAuthRedirect()
   const [view, setView] = useState<View>('credentials')
   const [email, setEmail] = useState('')
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (pendingRedirect && isAuthenticated) {
-      navigate({ to: pendingRedirect })
-      setPendingRedirect(null)
-    }
-  }, [pendingRedirect, isAuthenticated, navigate])
 
   switch (view) {
     case 'two-factor':

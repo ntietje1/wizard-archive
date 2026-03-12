@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2 } from '~/lib/icons'
@@ -26,6 +29,10 @@ export function SignInEmailNotVerified({
     return () => clearInterval(timer)
   }, [cooldown])
 
+  const { data: verified } = useQuery(
+    convexQuery(api.users.queries.isEmailVerified, { email }),
+  )
+
   const handleResend = async () => {
     setIsResending(true)
     setError('')
@@ -41,6 +48,22 @@ export function SignInEmailNotVerified({
           setIsResending(false)
         },
       },
+    )
+  }
+
+  if (verified) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-2xl font-bold">Email verified!</h1>
+          <p className="text-sm text-muted-foreground text-balance">
+            Your email has been verified. You can now sign in.
+          </p>
+        </div>
+        <Button className="w-full" onClick={onBack}>
+          Sign in
+        </Button>
+      </div>
     )
   }
 

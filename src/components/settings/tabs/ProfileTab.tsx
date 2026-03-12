@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { debounce } from 'lodash-es'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
@@ -84,8 +85,18 @@ function getInitials(name?: string, email?: string): string {
 }
 
 export function ProfileTab() {
+  const navigate = useNavigate()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
+  const [deletionPending, setDeletionPending] = useState(false)
+
+  // When account deletion is confirmed via the email link, the profile is
+  // deleted reactively (unmounting the child). Detect that here and redirect.
+  useEffect(() => {
+    if (deletionPending && !profileQuery.isLoading && !profile) {
+      navigate({ to: '/sign-in', replace: true })
+    }
+  }, [deletionPending, profileQuery.isLoading, profile, navigate])
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,7 +138,9 @@ export function ProfileTab() {
             <Separator />
             <TwoFactorRow />
             <Separator />
-            <DeleteAccountRow />
+            <DeleteAccountRow
+              onDeletionEmailSent={() => setDeletionPending(true)}
+            />
           </SettingsSection>
 
           {/* Active sessions section */}
@@ -425,6 +438,16 @@ function EmailRow({ profile }: { profile: Profile }) {
   const [error, setError] = useState('')
   const oauthProvider = useOAuthProvider()
 
+  // When email change is confirmed via the verification link,
+  // Convex reactively updates profile.email — detect that and close dialog
+  useEffect(() => {
+    if (sentTo && profile.email === sentTo) {
+      toast.success('Email changed successfully')
+      setSentTo('')
+      setIsEditing(false)
+    }
+  }, [profile.email, sentTo])
+
   const handleSave = async () => {
     setError('')
     if (!newEmail.trim()) {
@@ -435,7 +458,7 @@ function EmailRow({ profile }: { profile: Profile }) {
     try {
       await authClient.changeEmail({
         newEmail: newEmail.trim(),
-        callbackURL: '/settings',
+        callbackURL: '/',
       })
       setSentTo(newEmail.trim())
       setNewEmail('')
@@ -771,7 +794,11 @@ function TwoFactorRow() {
 
 // --- Delete Account ---
 
-function DeleteAccountRow() {
+function DeleteAccountRow({
+  onDeletionEmailSent,
+}: {
+  onDeletionEmailSent: () => void
+}) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -785,6 +812,7 @@ function DeleteAccountRow() {
         onSuccess: () => {
           setIsDeleting(false)
           setEmailSent(true)
+          onDeletionEmailSent()
         },
         onError: (ctx) => {
           setIsDeleting(false)

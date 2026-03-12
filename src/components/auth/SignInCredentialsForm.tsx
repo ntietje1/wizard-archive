@@ -51,7 +51,7 @@ export function SignInCredentialsForm({
       await authClient.multiSession.setActive({
         sessionToken: match.session.token,
       })
-      window.location.href = redirectTo
+      onSuccess()
       return
     }
 

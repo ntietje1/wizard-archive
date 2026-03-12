@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { Link } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -69,21 +72,37 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
 
   const isDisabled = isLoading || !!socialLoading
 
+  const { data: verified } = useQuery({
+    ...convexQuery(api.users.queries.isEmailVerified, { email }),
+    enabled: emailSent,
+  })
+
   if (emailSent) {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">Check your email</h1>
-          <p className="text-sm text-muted-foreground text-balance">
-            We sent a verification link to <strong>{email}</strong>. Click the
-            link to verify your account.
-          </p>
+          {verified ? (
+            <>
+              <h1 className="text-2xl font-bold">Email verified!</h1>
+              <p className="text-sm text-muted-foreground text-balance">
+                Your account is ready. Sign in to get started.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold">Check your email</h1>
+              <p className="text-sm text-muted-foreground text-balance">
+                We sent a verification link to <strong>{email}</strong>. Click
+                the link to verify your account.
+              </p>
+            </>
+          )}
         </div>
         <Link
           to="/sign-in"
           className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
         >
-          Back to sign in
+          {verified ? 'Sign in' : 'Back to sign in'}
         </Link>
       </div>
     )

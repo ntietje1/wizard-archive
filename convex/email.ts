@@ -107,7 +107,7 @@ export function changeEmailConfirmationEmail(
 ) {
   return {
     from: FROM_EMAIL,
-    to: currentEmail,
+    to: newEmail,
     subject: `Confirm email change for ${APP_NAME}`,
     html: emailLayout(`
       <p style="color: #333; line-height: 1.6;">
