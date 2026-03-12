@@ -22,8 +22,7 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 
 export function EditorContent() {
-  const { item, editorSearch, isLoading, isNotFound, hasRequestedItem } =
-    useCurrentItem()
+  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useAllSidebarItems()

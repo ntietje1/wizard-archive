@@ -9,7 +9,6 @@ import {
   AvatarImage,
 } from '~/components/shadcn/ui/avatar'
 import { ChevronRight, Loader2 } from '~/lib/icons'
-import { getAvatarFallback } from '~/components/auth/avatar-utils'
 
 type AccountPickerProps = {
   sessions: Array<DeviceSession>
@@ -63,14 +62,9 @@ export function AccountPicker({
             >
               <Avatar size="sm">
                 {ds.user.image && (
-                  <AvatarImage
-                    src={ds.user.image}
-                    alt={ds.user.name ?? ds.user.email ?? 'User avatar'}
-                  />
+                  <AvatarImage src={ds.user.image} alt={ds.user.name} />
                 )}
-                <AvatarFallback>
-                  {getAvatarFallback(ds.user.name, ds.user.email, '?')}
-                </AvatarFallback>
+                <AvatarFallback>{ds.user.name}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate">

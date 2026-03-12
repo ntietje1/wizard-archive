@@ -24,7 +24,6 @@ import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useSettingsStore } from '~/components/settings/settings-store'
 import { AccountSwitcher } from '~/components/auth/AccountSwitcher'
-import { getAvatarFallback } from '~/components/auth/avatar-utils'
 import { useDeviceSessions } from '~/hooks/useAuthSessions'
 
 const avatarButtonClassName = cn(
@@ -112,9 +111,7 @@ export function UserMenu() {
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
               )}
-              <AvatarFallback>
-                {getAvatarFallback(profile.name, profile.email)}
-              </AvatarFallback>
+              <AvatarFallback>{profile.name}</AvatarFallback>
             </Avatar>
           </button>
         }
@@ -130,9 +127,7 @@ export function UserMenu() {
                     alt={profile.name ?? ''}
                   />
                 )}
-                <AvatarFallback>
-                  {getAvatarFallback(profile.name, profile.email)}
-                </AvatarFallback>
+                <AvatarFallback>{profile.name}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-0.5">
                 {profile.name && (

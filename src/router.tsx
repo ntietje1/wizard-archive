@@ -1,8 +1,7 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
-import { routerWithQueryClient } from '@tanstack/react-router-with-query'
 import { ConvexReactClient } from 'convex/react'
 import { ConvexQueryClient } from '@convex-dev/react-query'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { routeTree } from './routeTree.gen'
 import ErrorPage from './components/error/error-page'
@@ -30,28 +29,25 @@ export function getRouter() {
   })
   convexQueryClient.connect(queryClient)
 
-  const router = routerWithQueryClient(
-    createTanStackRouter({
-      routeTree,
-      defaultPreload: 'intent',
-      defaultPreloadDelay: 50,
-      scrollRestoration: true,
-      defaultPreloadStaleTime: 0,
-      defaultErrorComponent: (err) => <ErrorPage error={err.error.message} />,
-      defaultNotFoundComponent: () => <NotFoundPage />,
-      context: { queryClient, convexClient: convex, convexQueryClient },
-      Wrap: ({ children }) => (
-        <>
-          <ReactQueryDevtools
-            initialIsOpen={false}
-            buttonPosition="bottom-left"
-          />
-          {children}
-        </>
-      ),
-    }),
-    queryClient,
-  )
+  const router = createTanStackRouter({
+    routeTree,
+    defaultPreload: 'intent',
+    defaultPreloadDelay: 50,
+    scrollRestoration: true,
+    defaultPreloadStaleTime: 0,
+    defaultErrorComponent: (err) => <ErrorPage error={err.error.message} />,
+    defaultNotFoundComponent: () => <NotFoundPage />,
+    context: { queryClient, convexClient: convex, convexQueryClient },
+    Wrap: ({ children }) => (
+      <QueryClientProvider client={queryClient}>
+        <ReactQueryDevtools
+          initialIsOpen={false}
+          buttonPosition="bottom-left"
+        />
+        {children}
+      </QueryClientProvider>
+    ),
+  })
 
   return router
 }

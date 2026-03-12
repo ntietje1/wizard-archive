@@ -26,20 +26,26 @@ export function SignInTwoFactorForm({
     setError('')
     setIsLoading(true)
 
-    // @ts-expect-error -- plugin types not inferred through Convex adapter
-    await authClient.twoFactor.verifyTotp(
-      { code: totpCode },
-      {
-        onSuccess: () => {
-          onSuccess()
+    try {
+      // @ts-expect-error -- plugin types not inferred through Convex adapter
+      await authClient.twoFactor.verifyTotp(
+        { code: totpCode },
+        {
+          onSuccess: () => {
+            onSuccess()
+          },
+          onError: (ctx: { error: { message?: string } }) => {
+            setError(ctx.error.message || 'Invalid code')
+            setTotpCode('')
+          },
         },
-        onError: (ctx: { error: { message?: string } }) => {
-          setError(ctx.error.message || 'Invalid code')
-          setIsLoading(false)
-          setTotpCode('')
-        },
-      },
-    )
+      )
+    } catch {
+      setError('Unable to verify. Please try again.')
+      setTotpCode('')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

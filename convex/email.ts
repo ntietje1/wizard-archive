@@ -111,7 +111,7 @@ export function changeEmailConfirmationEmail(
     subject: `Confirm email change for ${APP_NAME}`,
     html: emailLayout(`
       <p style="color: #333; line-height: 1.6;">
-        A request was made to change your email address to <strong>${escapeHtml(newEmail)}</strong>. Click the button below to confirm this change.
+        A request was made to change your email address from <strong>${escapeHtml(currentEmail)}</strong> to <strong>${escapeHtml(newEmail)}</strong>. Click the button below to confirm this change.
       </p>
       ${actionButton(url, 'Confirm Email Change')}
       <p style="color: #666; font-size: 13px; line-height: 1.5;">

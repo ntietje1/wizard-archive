@@ -30,6 +30,7 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
                 'h-9 w-9 p-0 min-w-9',
               )}
               type="button"
+              aria-label="Select icon"
             >
               <CurrentIcon className="h-4 w-4" />
             </button>

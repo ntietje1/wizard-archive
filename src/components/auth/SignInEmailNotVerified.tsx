@@ -36,19 +36,26 @@ export function SignInEmailNotVerified({
   const handleResend = async () => {
     setIsResending(true)
     setError('')
-    await authClient.sendVerificationEmail(
-      { email },
-      {
-        onSuccess: () => {
-          setCooldown(COOLDOWN_SECONDS)
-          setIsResending(false)
+    try {
+      await authClient.sendVerificationEmail(
+        { email },
+        {
+          onSuccess: () => {
+            setCooldown(COOLDOWN_SECONDS)
+            setIsResending(false)
+          },
+          onError: (ctx: { error: { message?: string } }) => {
+            setError(
+              ctx.error.message || 'Failed to resend verification email',
+            )
+            setIsResending(false)
+          },
         },
-        onError: (ctx: { error: { message?: string } }) => {
-          setError(ctx.error.message || 'Failed to resend verification email')
-          setIsResending(false)
-        },
-      },
-    )
+      )
+    } catch {
+      setError('Unable to send verification email. Please try again.')
+      setIsResending(false)
+    }
   }
 
   if (verified) {

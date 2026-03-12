@@ -39,7 +39,7 @@ export function SignInForm({
           onBack={() => setView('credentials')}
         />
       )
-    default:
+    case 'credentials':
       return (
         <SignInCredentialsForm
           redirectTo={redirectTo}
@@ -53,5 +53,9 @@ export function SignInForm({
           onEmailChange={setEmail}
         />
       )
+    default: {
+      const _exhaustiveCheck: never = view
+      return _exhaustiveCheck
+    }
   }
 }

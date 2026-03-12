@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { DeviceSession } from '~/lib/device-sessions'
 import { Loader2, Plus } from '~/lib/icons'
-import { getAvatarFallback } from '~/components/auth/avatar-utils'
 import {
   Avatar,
   AvatarFallback,
@@ -30,6 +29,9 @@ export function AccountSwitcher({
       setSwitching(sessionToken)
       try {
         await onSwitch(sessionToken)
+      } catch (error) {
+        console.error(error)
+        throw error
       } finally {
         setSwitching(null)
       }
@@ -70,9 +72,7 @@ export function AccountSwitcher({
                 {ds.user.image && (
                   <AvatarImage src={ds.user.image} alt={ds.user.name} />
                 )}
-                <AvatarFallback>
-                  {getAvatarFallback(ds.user.name, ds.user.email)}
-                </AvatarFallback>
+                <AvatarFallback>{ds.user.name}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate">

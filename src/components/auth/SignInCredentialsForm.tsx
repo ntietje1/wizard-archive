@@ -42,40 +42,45 @@ export function SignInCredentialsForm({
     setError('')
     setIsLoading(true)
 
-    // If this account already has an active session, switch to it
-    const match = existingSessions.find(
-      (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
-    )
-    if (match) {
-      // @ts-expect-error -- plugin types not inferred through Convex adapter
-      await authClient.multiSession.setActive({
-        sessionToken: match.session.token,
-      })
-      onSuccess()
-      return
-    }
+    try {
+      // If this account already has an active session, switch to it
+      const match = existingSessions.find(
+        (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
+      )
+      if (match) {
+        // @ts-expect-error -- plugin types not inferred through Convex adapter
+        await authClient.multiSession.setActive({
+          sessionToken: match.session.token,
+        })
+        onSuccess()
+        return
+      }
 
-    await authClient.signIn.email(
-      { email, password },
-      {
-        onSuccess: (ctx) => {
-          if (ctx.data?.twoFactorRedirect) {
+      await authClient.signIn.email(
+        { email, password },
+        {
+          onSuccess: (ctx) => {
+            if (ctx.data?.twoFactorRedirect) {
+              setIsLoading(false)
+              onTwoFactor()
+              return
+            }
+            onSuccess()
+          },
+          onError: (ctx) => {
+            if (ctx.error.code === 'EMAIL_NOT_VERIFIED') {
+              onEmailNotVerified()
+            } else {
+              setError(ctx.error.message || 'Invalid email or password')
+            }
             setIsLoading(false)
-            onTwoFactor()
-            return
-          }
-          onSuccess()
+          },
         },
-        onError: (ctx) => {
-          if (ctx.error.code === 'EMAIL_NOT_VERIFIED') {
-            onEmailNotVerified()
-          } else {
-            setError(ctx.error.message || 'Invalid email or password')
-          }
-          setIsLoading(false)
-        },
-      },
-    )
+      )
+    } catch {
+      setError('Unable to sign in. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   const handleSocialSignIn = async (

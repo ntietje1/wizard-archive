@@ -22,6 +22,7 @@ function Home() {
         {isLoading ? (
           <Button size="lg" className="text-lg px-8 min-w-32" disabled>
             <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="sr-only">Loading</span>
           </Button>
         ) : isAuthenticated ? (
           <Link to="/campaigns">

@@ -605,23 +605,28 @@ function PasswordRow() {
     }
 
     setIsLoading(true)
-    await authClient.changePassword(
-      { currentPassword, newPassword },
-      {
-        onSuccess: () => {
-          toast.success('Password changed')
-          setIsEditing(false)
-          setCurrentPassword('')
-          setNewPassword('')
-          setConfirmPassword('')
-          setIsLoading(false)
+    try {
+      await authClient.changePassword(
+        { currentPassword, newPassword },
+        {
+          onSuccess: () => {
+            toast.success('Password changed')
+            setIsEditing(false)
+            setCurrentPassword('')
+            setNewPassword('')
+            setConfirmPassword('')
+            setIsLoading(false)
+          },
+          onError: (ctx) => {
+            setError(ctx.error.message || 'Failed to change password')
+            setIsLoading(false)
+          },
         },
-        onError: (ctx) => {
-          setError(ctx.error.message || 'Failed to change password')
-          setIsLoading(false)
-        },
-      },
-    )
+      )
+    } catch {
+      setError('Unable to change password. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -712,22 +717,27 @@ function TwoFactorRow() {
     setError('')
     setIsDisabling(true)
 
-    // @ts-expect-error -- plugin types not inferred through Convex adapter
-    const { error: err } = await authClient.twoFactor.disable({
-      password: disablePassword,
-    })
+    try {
+      // @ts-expect-error -- plugin types not inferred through Convex adapter
+      const { error: err } = await authClient.twoFactor.disable({
+        password: disablePassword,
+      })
 
-    if (err) {
-      setError(err.message || 'Failed to disable 2FA')
+      if (err) {
+        setError(err.message || 'Failed to disable 2FA')
+        setIsDisabling(false)
+        return
+      }
+
+      toast.success('Two-factor authentication disabled')
+      setShowDisableDialog(false)
+      setDisablePassword('')
       setIsDisabling(false)
-      return
+      session.refetch()
+    } catch {
+      setError('Unable to disable 2FA. Please try again.')
+      setIsDisabling(false)
     }
-
-    toast.success('Two-factor authentication disabled')
-    setShowDisableDialog(false)
-    setDisablePassword('')
-    setIsDisabling(false)
-    session.refetch()
   }
 
   return (
@@ -807,19 +817,24 @@ function DeleteAccountRow({
   const handleDelete = async () => {
     setIsDeleting(true)
     setError('')
-    await authClient.deleteUser({
-      fetchOptions: {
-        onSuccess: () => {
-          setIsDeleting(false)
-          setEmailSent(true)
-          onDeletionEmailSent()
+    try {
+      await authClient.deleteUser({
+        fetchOptions: {
+          onSuccess: () => {
+            setIsDeleting(false)
+            setEmailSent(true)
+            onDeletionEmailSent()
+          },
+          onError: (ctx) => {
+            setIsDeleting(false)
+            setError(ctx.error?.message || 'Failed to delete account')
+          },
         },
-        onError: (ctx) => {
-          setIsDeleting(false)
-          setError(ctx.error?.message || 'Failed to delete account')
-        },
-      },
-    })
+      })
+    } catch {
+      setIsDeleting(false)
+      setError('Unable to delete account. Please try again.')
+    }
   }
 
   const handleClose = (open: boolean) => {

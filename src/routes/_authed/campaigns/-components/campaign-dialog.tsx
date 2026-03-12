@@ -244,9 +244,13 @@ export function CampaignDialog({
                 </p>
               ) : null}
 
-              <UrlPreview
-                url={`${window.location.origin}/join/${userProfile.data?.username}/${field.state.value ? field.state.value : 'campaign-link'}`}
-              />
+              {userProfile.data?.username ? (
+                <UrlPreview
+                  url={`${window.location.origin}/join/${userProfile.data.username}/${field.state.value || 'campaign-link'}`}
+                />
+              ) : (
+                <UrlPreview url="Loading preview..." />
+              )}
             </div>
           )}
         </form.Field>

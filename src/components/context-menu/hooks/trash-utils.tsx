@@ -13,7 +13,11 @@ export function EmptyTrashConfirmDialog({
   onClose: () => void
   onConfirm: () => Promise<void>
 }) {
-  const { data: allTrashedItems = [] } = useTrashedSidebarItems()
+  const { data: allTrashedItems, status } = useTrashedSidebarItems()
+
+  if (status == 'pending' || !allTrashedItems) {
+    return null // Or a loading skeleton
+  }
 
   return (
     <ConfirmationDialog
