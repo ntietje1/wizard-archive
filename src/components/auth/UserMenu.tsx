@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { LogOut, Settings } from '~/lib/icons'
 import { authClient } from '~/lib/auth-client'
 import { fetchDeviceSessions } from '~/lib/device-sessions'
-import { usePendingAuthRedirect } from '~/hooks/usePendingAuthRedirect'
-import { useTransitionOverlay } from '~/lib/transition-overlay'
 import {
   Avatar,
   AvatarFallback,
@@ -48,30 +47,25 @@ export function UserMenu() {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
   const openSettings = useSettingsStore((s) => s.open)
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const deviceSessions = useDeviceSessions()
-  const showOverlay = useTransitionOverlay((s) => s.show)
-
-  const hideOverlay = useTransitionOverlay((s) => s.hide)
-  const queueRedirect = usePendingAuthRedirect(hideOverlay)
 
   const handleSwitchAccount = useCallback(
     async (sessionToken: string) => {
-      showOverlay('Switching accounts\u2026')
       try {
         // @ts-expect-error -- plugin types not inferred through Convex adapter
         await authClient.multiSession.setActive({ sessionToken })
-        queueRedirect('/campaigns')
+        navigate({ to: '/campaigns', reloadDocument: true })
       } catch (error) {
         console.error('Failed to switch account:', error)
         window.location.reload()
       }
     },
-    [showOverlay, queueRedirect],
+    [navigate],
   )
 
   const handleSignOut = useCallback(async () => {
-    showOverlay('Signing out\u2026')
     try {
       const token = deviceSessions.currentToken
       if (token) {
@@ -83,13 +77,15 @@ export function UserMenu() {
       queryClient.clear()
 
       const remaining = await fetchDeviceSessions()
-      window.location.href =
-        remaining.length > 0 ? '/sign-in?view=picker' : '/sign-in'
+      navigate({
+        to: '/sign-in',
+        search: remaining.length > 0 ? { view: 'picker' } : {},
+      })
     } catch (error) {
       console.error('Failed to sign out:', error)
       window.location.reload()
     }
-  }, [queryClient, showOverlay, deviceSessions.currentToken])
+  }, [queryClient, deviceSessions.currentToken, navigate])
 
   useEffect(() => {
     setMounted(true)
@@ -152,7 +148,10 @@ export function UserMenu() {
         <AccountSwitcher
           otherAccounts={otherAccounts}
           onAddAccount={() => {
-            window.location.href = '/sign-in?view=form'
+            navigate({
+              to: '/sign-in',
+              search: { view: 'form' },
+            })
           }}
           onSwitch={handleSwitchAccount}
         />

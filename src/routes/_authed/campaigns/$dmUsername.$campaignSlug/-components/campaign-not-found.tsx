@@ -29,12 +29,10 @@ export function CampaignNotFoundWrapper({
 }) {
   const { campaign } = useCampaign()
 
-  // use server data even if client errored
   const hasData = !!campaign.data
   const isError = campaign.status === 'error'
-  const showError = !hasData && isError
 
-  if (showError) {
+  if (!hasData && isError) {
     return <CampaignNotFound />
   }
   return children

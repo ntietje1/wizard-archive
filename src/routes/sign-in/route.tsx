@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from '~/lib/icons'
 import { AuthPageLayout } from '~/components/auth/AuthPageLayout'
 import { AccountPicker } from '~/components/auth/AccountPicker'
@@ -23,21 +22,12 @@ export const Route = createFileRoute('/sign-in')({
 })
 
 function RouteComponent() {
-  const { view: searchView } = Route.useSearch()
+  const { view } = Route.useSearch()
+  const navigate = useNavigate()
   const { allSessions, isLoaded } = useDeviceSessions()
-  const [forceView, setForceView] = useState<'form' | 'picker' | null>(
-    searchView ?? null,
-  )
-
-  // Sync local state when URL search params change via client-side navigation
-  useEffect(() => {
-    if (searchView) {
-      setForceView(searchView)
-    }
-  }, [searchView])
 
   // When picker is forced but sessions haven't loaded yet, show a spinner
-  if (forceView === 'picker' && !isLoaded) {
+  if (view === 'picker' && !isLoaded) {
     return (
       <AuthPageLayout>
         <div className="flex items-center justify-center py-8">
@@ -47,7 +37,7 @@ function RouteComponent() {
     )
   }
 
-  const showPicker = forceView === 'picker' && allSessions.length > 0
+  const showPicker = view === 'picker' && allSessions.length > 0
 
   return (
     <AuthPageLayout>
@@ -55,14 +45,18 @@ function RouteComponent() {
         <AccountPicker
           sessions={allSessions}
           redirectTo="/campaigns"
-          onUseOtherAccount={() => setForceView('form')}
+          onUseOtherAccount={() =>
+            navigate({ to: '/sign-in', search: { view: 'form' } })
+          }
         />
       ) : (
         <SignInForm
           redirectTo="/campaigns"
           existingSessions={allSessions}
           sessionsLoaded={isLoaded}
-          onPickAccount={() => setForceView('picker')}
+          onPickAccount={() =>
+            navigate({ to: '/sign-in', search: { view: 'picker' } })
+          }
         />
       )}
     </AuthPageLayout>

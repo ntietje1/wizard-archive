@@ -1,9 +1,9 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { SignInCredentialsForm } from './SignInCredentialsForm'
 import { SignInTwoFactorForm } from './SignInTwoFactorForm'
 import { SignInEmailNotVerified } from './SignInEmailNotVerified'
 import type { DeviceSession } from '~/lib/device-sessions'
-import { usePendingAuthRedirect } from '~/hooks/usePendingAuthRedirect'
 
 type SignInFormProps = {
   redirectTo?: string
@@ -20,7 +20,7 @@ export function SignInForm({
   sessionsLoaded = false,
   onPickAccount,
 }: SignInFormProps) {
-  const setPendingRedirect = usePendingAuthRedirect()
+  const navigate = useNavigate()
   const [view, setView] = useState<View>('credentials')
   const [email, setEmail] = useState('')
 
@@ -28,7 +28,7 @@ export function SignInForm({
     case 'two-factor':
       return (
         <SignInTwoFactorForm
-          onSuccess={() => setPendingRedirect(redirectTo)}
+          onSuccess={() => navigate({ to: redirectTo, reloadDocument: true })}
           onBack={() => setView('credentials')}
         />
       )
@@ -46,7 +46,7 @@ export function SignInForm({
           existingSessions={existingSessions}
           sessionsLoaded={sessionsLoaded}
           onPickAccount={onPickAccount}
-          onSuccess={() => setPendingRedirect(redirectTo)}
+          onSuccess={() => navigate({ to: redirectTo, reloadDocument: true })}
           onTwoFactor={() => setView('two-factor')}
           onEmailNotVerified={() => setView('email-not-verified')}
           email={email}
