@@ -1,4 +1,5 @@
 import { api } from 'convex/_generated/api'
+import { getInitials } from '~/shared/utils/get-initials'
 import { useSettingsStore } from './settings-store'
 import { ProfileTab } from './tabs/ProfileTab'
 import { PreferencesTab } from './tabs/PreferencesTab'
@@ -117,22 +118,6 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
   ),
 }
 
-function getInitials(name?: string, email?: string): string {
-  const trimmedName = name?.trim()
-  const trimmedEmail = email?.trim()
-  if (trimmedName) {
-    const initials = trimmedName
-      .split(' ')
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-    if (initials) return initials
-  }
-  if (trimmedEmail) return trimmedEmail[0].toUpperCase()
-  return 'U'
-}
 
 export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsStore()

@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '~/components/shadcn/ui/dropdown-menu'
+import { getInitials } from '~/shared/utils/get-initials'
 
 type AccountSwitcherProps = {
   otherAccounts: Array<DeviceSession>
@@ -72,7 +73,7 @@ export function AccountSwitcher({
                 {ds.user.image && (
                   <AvatarImage src={ds.user.image} alt={ds.user.name} />
                 )}
-                <AvatarFallback>{ds.user.name}</AvatarFallback>
+                <AvatarFallback>{getInitials(ds.user.name, ds.user.email)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate">

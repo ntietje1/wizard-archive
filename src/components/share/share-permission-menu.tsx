@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from '~/components/shadcn/ui/tooltip'
 import { Switch } from '~/components/shadcn/ui/switch'
+import { getInitials } from '~/shared/utils/get-initials'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
 
@@ -39,9 +40,6 @@ function permissionLabel(level: PermissionLevel | null): string {
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
 }
 
-function getInitial(profile: UserProfile): string {
-  return (profile.name ?? profile.username ?? '?').charAt(0).toUpperCase()
-}
 
 function getDisplayName(profile: UserProfile): string {
   return profile.name || profile.username || 'Player'
@@ -245,7 +243,7 @@ function DmRow({ profile }: { profile: UserProfile }) {
         {profile.imageUrl && (
           <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
         )}
-        <AvatarFallback>{getInitial(profile)}</AvatarFallback>
+        <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
       </Avatar>
       <div className="flex flex-col flex-1 min-w-0 select-none">
         <span className="text-sm font-medium truncate">
@@ -300,7 +298,7 @@ function PlayerRow({
         {profile.imageUrl && (
           <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
         )}
-        <AvatarFallback>{getInitial(profile)}</AvatarFallback>
+        <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
       </Avatar>
       <div className="flex flex-col flex-1 min-w-0">
         <span className="text-sm font-medium truncate">
@@ -452,7 +450,7 @@ function AvatarStack({ members }: { members: Array<CampaignMember> }) {
               alt={getDisplayName(member.userProfile)}
             />
           )}
-          <AvatarFallback>{getInitial(member.userProfile)}</AvatarFallback>
+          <AvatarFallback>{getInitials(member.userProfile.name, member.userProfile.email)}</AvatarFallback>
         </Avatar>
       ))}
       {members.length > 3 && (

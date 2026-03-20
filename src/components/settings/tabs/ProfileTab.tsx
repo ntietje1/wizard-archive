@@ -50,6 +50,7 @@ import {
   Smartphone,
   Tablet,
 } from '~/lib/icons'
+import { getInitials } from '~/shared/utils/get-initials'
 import { useActiveSessions } from '~/hooks/useAuthSessions'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useFileUpload } from '~/hooks/useFileUpload'
@@ -69,20 +70,7 @@ type Profile = NonNullable<
   >['data']
 >
 
-function getInitials(name?: string, email?: string): string {
-  if (name) {
-    const initials = name
-      .split(' ')
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-    if (initials) return initials
-  }
-  if (email) return email[0].toUpperCase()
-  return 'U'
-}
+
 
 export function ProfileTab() {
   const navigate = useNavigate()

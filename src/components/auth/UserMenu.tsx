@@ -22,6 +22,7 @@ import {
 import { buttonVariants } from '~/components/shadcn/ui/button'
 import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
+import { getInitials } from '~/shared/utils/get-initials'
 import { useSettingsStore } from '~/components/settings/settings-store'
 import { AccountSwitcher } from '~/components/auth/AccountSwitcher'
 import { useDeviceSessions } from '~/hooks/useAuthSessions'
@@ -111,7 +112,7 @@ export function UserMenu() {
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
               )}
-              <AvatarFallback>{profile.name}</AvatarFallback>
+              <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
             </Avatar>
           </button>
         }
@@ -127,7 +128,7 @@ export function UserMenu() {
                     alt={profile.name ?? ''}
                   />
                 )}
-                <AvatarFallback>{profile.name}</AvatarFallback>
+                <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-0.5">
                 {profile.name && (
