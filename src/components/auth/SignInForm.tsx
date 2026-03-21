@@ -39,7 +39,6 @@ export function SignInForm({
       return (
         <SignInEmailNotVerified
           email={email}
-          redirectTo={redirectTo}
           onBack={() => setView('credentials')}
         />
       )

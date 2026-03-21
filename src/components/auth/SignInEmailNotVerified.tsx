@@ -1,8 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2 } from '~/lib/icons'
@@ -11,16 +7,13 @@ const COOLDOWN_SECONDS = 60
 
 type SignInEmailNotVerifiedProps = {
   email: string
-  redirectTo: string
   onBack: () => void
 }
 
 export function SignInEmailNotVerified({
   email,
-  redirectTo,
   onBack,
 }: SignInEmailNotVerifiedProps) {
-  const navigate = useNavigate()
   const [isResending, setIsResending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [error, setError] = useState('')
@@ -32,17 +25,6 @@ export function SignInEmailNotVerified({
     }, 1000)
     return () => clearTimeout(timer)
   }, [cooldown])
-
-  // Poll for email verification — when detected, reload to pick up the session cookie
-  const { data: verified } = useQuery(
-    convexQuery(api.users.queries.isEmailVerified, { email }),
-  )
-
-  useEffect(() => {
-    if (verified) {
-      navigate({ to: redirectTo, reloadDocument: true })
-    }
-  }, [verified, navigate, redirectTo])
 
   const handleResend = async () => {
     setIsResending(true)

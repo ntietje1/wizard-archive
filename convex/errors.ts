@@ -3,6 +3,9 @@ import { ConvexError } from 'convex/values'
 // Error code enum — single source of truth
 export const ERROR_CODE = {
   NOT_AUTHENTICATED: 'NOT_AUTHENTICATED',
+  VALIDATION_USERNAME_TOO_SHORT: 'VALIDATION_USERNAME_TOO_SHORT',
+  VALIDATION_USERNAME_TOO_LONG: 'VALIDATION_USERNAME_TOO_LONG',
+  CONFLICT_USERNAME_TAKEN: 'CONFLICT_USERNAME_TAKEN',
 } as const
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE]

@@ -1,24 +1,29 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import { slugify } from '../common/slug'
+import { slugify, validateUsername } from '../common/slug'
+import { ERROR_CODE, throwAppError } from '../errors'
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from './constants'
 
 export const updateUsername = authMutation({
   args: {
     username: v.string(),
   },
-  returns: v.null(),
+  returns: v.string(),
   handler: async (ctx, args) => {
     const username = slugify(args.username)
 
-    if (username.length < 2) {
-      throw new Error('Username must be at least 2 characters')
-    }
-    if (username.length > 30) {
-      throw new Error('Username must be at most 30 characters')
+    const validationError = validateUsername(
+      username,
+      args.username,
+      USERNAME_MIN_LENGTH,
+      USERNAME_MAX_LENGTH,
+    )
+    if (validationError) {
+      throwAppError(ERROR_CODE.VALIDATION_USERNAME_TOO_SHORT, validationError)
     }
 
     if (username === ctx.user.profile.username) {
-      return null
+      return username
     }
 
     const existing = await ctx.db
@@ -27,11 +32,14 @@ export const updateUsername = authMutation({
       .unique()
 
     if (existing && existing._id !== ctx.user.profile._id) {
-      throw new Error('Username is already taken')
+      throwAppError(
+        ERROR_CODE.CONFLICT_USERNAME_TAKEN,
+        'Username is already taken',
+      )
     }
 
     await ctx.db.patch(ctx.user.profile._id, { username })
-    return null
+    return username
   },
 })
 

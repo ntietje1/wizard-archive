@@ -6,18 +6,6 @@ import { getUserProfileByUserId } from './functions/getUserProfile'
 import { checkUsernameExists as checkUsernameExistsFn } from './functions/checkUsernameExists'
 import type { UserProfile } from './types'
 
-export const isEmailVerified = query({
-  args: { email: v.string() },
-  returns: v.boolean(),
-  handler: async (ctx, { email }) => {
-    const profile = await ctx.db
-      .query('userProfiles')
-      .withIndex('by_email', (q) => q.eq('email', email))
-      .unique()
-    return profile?.emailVerified ?? false
-  },
-})
-
 export const getUserProfile = query({
   args: {},
   returns: v.union(v.null(), userProfileValidator),

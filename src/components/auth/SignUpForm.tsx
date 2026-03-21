@@ -1,8 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
+import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -18,8 +15,6 @@ type SignUpFormProps = {
 type SocialProvider = 'google'
 
 export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
-  const navigate = useNavigate()
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -37,7 +32,15 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
     let handled = false
     await authClient.signUp
       .email(
-        { email, password, name, callbackURL: redirectTo },
+        {
+          email,
+          password,
+          name: email
+            .split('@')[0]
+            .replace(/[._-]+/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          callbackURL: redirectTo,
+        },
         {
           onSuccess: () => {
             handled = true
@@ -72,18 +75,6 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
   }
 
   const isDisabled = isLoading || !!socialLoading
-
-  // Poll for email verification — when detected, reload to pick up the session cookie
-  const { data: verified } = useQuery({
-    ...convexQuery(api.users.queries.isEmailVerified, { email }),
-    enabled: emailSent,
-  })
-
-  useEffect(() => {
-    if (verified) {
-      navigate({ to: redirectTo, reloadDocument: true })
-    }
-  }, [verified, navigate, redirectTo])
 
   if (emailSent) {
     return (
@@ -137,19 +128,6 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
 
         {/* Email/password form */}
         <form onSubmit={handleEmailSignUp} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              disabled={isDisabled}
-              autoComplete="name"
-            />
-          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
