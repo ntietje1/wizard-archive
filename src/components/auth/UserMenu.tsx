@@ -54,7 +54,7 @@ export function UserMenu() {
   const handleSwitchAccount = useCallback(
     async (sessionToken: string) => {
       try {
-await authClient.multiSession.setActive({ sessionToken })
+        await authClient.multiSession.setActive({ sessionToken })
         navigate({ to: '/campaigns', reloadDocument: true })
       } catch (error) {
         console.error('Failed to switch account:', error)
@@ -68,7 +68,7 @@ await authClient.multiSession.setActive({ sessionToken })
     try {
       const token = deviceSessions.currentToken
       if (token) {
-await authClient.multiSession.revoke({ sessionToken: token })
+        await authClient.multiSession.revoke({ sessionToken: token })
       } else {
         await authClient.signOut()
       }

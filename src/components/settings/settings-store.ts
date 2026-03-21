@@ -21,8 +21,7 @@ type SettingsStore = {
 export const useSettingsStore = create<SettingsStore>((set) => ({
   isOpen: false,
   activeTab: 'profile',
-  open: (tab) =>
-    set({ isOpen: true, activeTab: tab ?? 'profile' }),
+  open: (tab) => set({ isOpen: true, activeTab: tab ?? 'profile' }),
   close: () => set({ isOpen: false }),
   setActiveTab: (tab) => set({ activeTab: tab }),
 }))

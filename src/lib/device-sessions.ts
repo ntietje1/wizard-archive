@@ -8,7 +8,7 @@ export type DeviceSession = {
 /** Fetch all device sessions, deduplicated by user email (keeps most recent). */
 export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
   try {
-const { data } = await authClient.multiSession.listDeviceSessions()
+    const { data } = await authClient.multiSession.listDeviceSessions()
 
     if (!data || data.length === 0) return []
 

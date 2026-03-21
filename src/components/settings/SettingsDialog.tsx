@@ -118,7 +118,6 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
   ),
 }
 
-
 export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsStore()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})

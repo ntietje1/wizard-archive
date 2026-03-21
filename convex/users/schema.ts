@@ -30,4 +30,3 @@ const userProfileValidatorFields = {
 }
 
 export const userProfileValidator = v.object(userProfileValidatorFields)
-
