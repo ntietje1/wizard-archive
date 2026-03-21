@@ -34,7 +34,11 @@ function emailLayout(content: string) {
 }
 
 function actionButton(url: string, label: string) {
-  const isProd = process.env.SITE_URL?.startsWith('https://')
+  const siteUrl = process.env.SITE_URL
+  if (!siteUrl) {
+    throw new Error('SiteUrl environment variable missing')
+  }
+  const isProd = siteUrl.startsWith('https://')
   if (isProd && !url.startsWith('https://')) {
     throw new Error('Action button URL must use HTTPS')
   }

@@ -13,12 +13,14 @@ type SignInCredentialsFormProps = {
   redirectTo: string
   existingSessions: Array<DeviceSession>
   sessionsLoaded: boolean
-  onPickAccount: () => void
+  onPickAccount?: () => void
   onSuccess: () => void
   onTwoFactor: () => void
   onEmailNotVerified: () => void
   email: string
   onEmailChange: (email: string) => void
+  password: string
+  onPasswordChange: (password: string) => void
 }
 
 export function SignInCredentialsForm({
@@ -31,8 +33,9 @@ export function SignInCredentialsForm({
   onEmailNotVerified,
   email,
   onEmailChange,
+  password,
+  onPasswordChange,
 }: SignInCredentialsFormProps) {
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
@@ -48,7 +51,6 @@ export function SignInCredentialsForm({
         (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
       )
       if (match) {
-        // @ts-expect-error -- plugin types not inferred through Convex adapter
         await authClient.multiSession.setActive({
           sessionToken: match.session.token,
         })
@@ -65,6 +67,7 @@ export function SignInCredentialsForm({
               onTwoFactor()
               return
             }
+            setIsLoading(false)
             onSuccess()
           },
           onError: (ctx) => {
@@ -160,7 +163,7 @@ export function SignInCredentialsForm({
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => onPasswordChange(e.target.value)}
               required
               disabled={isDisabled}
             />
@@ -194,7 +197,7 @@ export function SignInCredentialsForm({
           <button
             type="button"
             className="text-primary underline-offset-4 hover:underline font-medium"
-            onClick={onPickAccount}
+            onClick={() => onPickAccount?.()}
           >
             Switch to an existing account
           </button>

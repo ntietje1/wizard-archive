@@ -138,10 +138,6 @@ function RouteComponent() {
     }
 
     if (!isAuthenticated) {
-      if (showSignIn) {
-        return null
-      }
-
       return {
         title: "You've Been Invited!",
         description: campaign ? (

@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { Link } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { authClient } from '~/lib/auth-client'
+import { useAutoSignInOnVerify } from '~/hooks/use-auto-sign-in-on-verify'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -18,6 +16,7 @@ type SignUpFormProps = {
 type SocialProvider = 'google'
 
 export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
+  const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +27,13 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
     null,
   )
 
+  const { verified, signingIn, autoSignInFailed } = useAutoSignInOnVerify({
+    email,
+    password,
+    enabled: emailSent,
+    onSuccess: () => navigate({ to: redirectTo, reloadDocument: true }),
+  })
+
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -36,7 +42,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
     let handled = false
     await authClient.signUp
       .email(
-        { email, password, name },
+        { email, password, name, callbackURL: redirectTo },
         {
           onSuccess: () => {
             handled = true
@@ -72,21 +78,29 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
 
   const isDisabled = isLoading || !!socialLoading
 
-  const { data: verified } = useQuery({
-    ...convexQuery(api.users.queries.isEmailVerified, { email }),
-    enabled: emailSent,
-  })
-
   if (emailSent) {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
           {verified ? (
             <>
-              <h1 className="text-2xl font-bold">Email verified!</h1>
+              <h1 className="text-2xl font-bold">
+                {signingIn
+                  ? 'Signing you in...'
+                  : autoSignInFailed
+                    ? 'Verification complete'
+                    : 'Email verified!'}
+              </h1>
               <p className="text-sm text-muted-foreground text-balance">
-                Your account is ready. Sign in to get started.
+                {signingIn
+                  ? 'Please wait while we log you in.'
+                  : autoSignInFailed
+                    ? 'Automatic sign-in failed. Please sign in manually.'
+                    : 'Your account is ready.'}
               </p>
+              {signingIn && (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
+              )}
             </>
           ) : (
             <>
@@ -98,12 +112,14 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
             </>
           )}
         </div>
-        <Link
-          to="/sign-in"
-          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-        >
-          {verified ? 'Sign in' : 'Back to sign in'}
-        </Link>
+        {(!verified || autoSignInFailed) && (
+          <Link
+            to="/sign-in"
+            className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
+          >
+            {autoSignInFailed ? 'Sign in' : 'Back to sign in'}
+          </Link>
+        )}
       </div>
     )
   }

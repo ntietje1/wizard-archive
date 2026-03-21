@@ -27,7 +27,6 @@ export function SignInTwoFactorForm({
     setIsLoading(true)
 
     try {
-      // @ts-expect-error -- plugin types not inferred through Convex adapter
       await authClient.twoFactor.verifyTotp(
         { code: totpCode },
         {
@@ -63,6 +62,8 @@ export function SignInTwoFactorForm({
             value={totpCode}
             onChange={setTotpCode}
             disabled={isLoading}
+            aria-describedby={error ? 'totp-error' : undefined}
+            aria-invalid={!!error}
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -76,7 +77,13 @@ export function SignInTwoFactorForm({
         </div>
 
         {error && (
-          <p className="text-sm text-destructive text-center">{error}</p>
+          <p
+            id="totp-error"
+            role="alert"
+            className="text-sm text-destructive text-center"
+          >
+            {error}
+          </p>
         )}
 
         <Button

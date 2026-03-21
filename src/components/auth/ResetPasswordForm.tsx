@@ -54,6 +54,8 @@ export function ResetPasswordForm() {
         { newPassword, token },
         {
           onSuccess: () => {
+            setNewPassword('')
+            setConfirmPassword('')
             setSuccess(true)
           },
           onError: (ctx) => {
@@ -127,7 +129,9 @@ export function ResetPasswordForm() {
         </div>
 
         {error && (
-          <p className="text-sm text-destructive text-center">{error}</p>
+          <p className="text-sm text-destructive text-center" role="alert">
+            {error}
+          </p>
         )}
 
         <Button type="submit" className="w-full" disabled={isLoading}>

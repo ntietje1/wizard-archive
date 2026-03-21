@@ -83,7 +83,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
     const viewport = scrollViewportRef.current
     if (!viewport) return
 
-    const visibilityMap = new Map<number, number>()
+    const visibilityMap: Map<number, number> = new Map()
     let rafId: number | null = null
 
     const observer = new IntersectionObserver(

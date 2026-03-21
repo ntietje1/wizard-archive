@@ -31,5 +31,5 @@ yarn.lock
 app.config.timestamp_*.js
 
 
-# Claude Code worktrees
-.claude/worktrees/
+.claude/
+

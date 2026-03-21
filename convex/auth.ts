@@ -18,9 +18,19 @@ import { userValidator } from './users/schema'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from './_generated/dataModel'
 
-const siteUrl = process.env.SITE_URL!
-
+const siteUrl = process.env.SITE_URL
+if (!siteUrl) {
+  throw new Error('SITE_URL environment variable is required')
+}
 const authFunctions: AuthFunctions = internal.auth
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+if (!googleClientId || !googleClientSecret) {
+  throw new Error(
+    'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required',
+  )
+}
 
 export const authComponent = createClient<DataModel>(components.betterAuth, {
   authFunctions,
@@ -102,6 +112,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     },
     emailVerification: {
       sendOnSignUp: true,
+      autoSignInAfterVerification: true,
       async sendVerificationEmail({ user, url }) {
         if (user.emailVerified) return
         await resend.sendEmail(
@@ -122,7 +133,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       },
       changeEmail: {
         enabled: true,
-        async sendChangeEmailVerification({ user, newEmail, url }) {
+        async sendChangeEmailConfirmation({ user, newEmail, url }) {
           await resend.sendEmail(
             requireRunMutationCtx(ctx),
             changeEmailConfirmationEmail(user.email, newEmail, url),
@@ -132,8 +143,8 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     },
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
       },
     },
     plugins: [convex({ authConfig }), twoFactor(), multiSession()],

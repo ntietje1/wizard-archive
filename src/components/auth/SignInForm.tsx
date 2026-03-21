@@ -9,7 +9,7 @@ type SignInFormProps = {
   redirectTo?: string
   existingSessions?: Array<DeviceSession>
   sessionsLoaded?: boolean
-  onPickAccount: () => void
+  onPickAccount?: () => void
 }
 
 type View = 'credentials' | 'two-factor' | 'email-not-verified'
@@ -23,12 +23,16 @@ export function SignInForm({
   const navigate = useNavigate()
   const [view, setView] = useState<View>('credentials')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSuccess = () =>
+    navigate({ to: redirectTo, reloadDocument: true })
 
   switch (view) {
     case 'two-factor':
       return (
         <SignInTwoFactorForm
-          onSuccess={() => navigate({ to: redirectTo, reloadDocument: true })}
+          onSuccess={handleSuccess}
           onBack={() => setView('credentials')}
         />
       )
@@ -36,6 +40,8 @@ export function SignInForm({
       return (
         <SignInEmailNotVerified
           email={email}
+          password={password}
+          onSuccess={handleSuccess}
           onBack={() => setView('credentials')}
         />
       )
@@ -46,11 +52,13 @@ export function SignInForm({
           existingSessions={existingSessions}
           sessionsLoaded={sessionsLoaded}
           onPickAccount={onPickAccount}
-          onSuccess={() => navigate({ to: redirectTo, reloadDocument: true })}
+          onSuccess={handleSuccess}
           onTwoFactor={() => setView('two-factor')}
           onEmailNotVerified={() => setView('email-not-verified')}
           email={email}
           onEmailChange={setEmail}
+          password={password}
+          onPasswordChange={setPassword}
         />
       )
     default: {

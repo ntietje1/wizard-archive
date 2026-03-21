@@ -30,7 +30,6 @@ export function AccountPicker({
     setError('')
     setSwitchingToken(session.session.token)
     try {
-      // @ts-expect-error -- plugin types not inferred through Convex adapter
       await authClient.multiSession.setActive({
         sessionToken: session.session.token,
       })
@@ -65,7 +64,9 @@ export function AccountPicker({
                 {ds.user.image && (
                   <AvatarImage src={ds.user.image} alt={ds.user.name} />
                 )}
-                <AvatarFallback>{getInitials(ds.user.name, ds.user.email)}</AvatarFallback>
+                <AvatarFallback>
+                  {getInitials(ds.user.name, ds.user.email)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate">

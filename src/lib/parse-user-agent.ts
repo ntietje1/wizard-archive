@@ -5,7 +5,12 @@ export type ParsedUA = {
 }
 
 export function parseUserAgent(ua: string | null | undefined): ParsedUA {
-  if (!ua) return { device: 'Unknown', type: 'desktop', browser: 'Unknown' }
+  if (!ua)
+    return {
+      device: 'Unknown Device',
+      type: 'desktop',
+      browser: 'Unknown Browser',
+    }
 
   return {
     device: parseDevice(ua),

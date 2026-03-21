@@ -70,8 +70,6 @@ type Profile = NonNullable<
   >['data']
 >
 
-
-
 export function ProfileTab() {
   const navigate = useNavigate()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
@@ -418,6 +416,8 @@ function useOAuthProvider() {
 
   return provider
 }
+
+// TODO: add email format validation (zod?)
 function EmailRow({ profile }: { profile: Profile }) {
   const [isEditing, setIsEditing] = useState(false)
   const [newEmail, setNewEmail] = useState('')
@@ -706,7 +706,6 @@ function TwoFactorRow() {
     setIsDisabling(true)
 
     try {
-      // @ts-expect-error -- plugin types not inferred through Convex adapter
       const { error: err } = await authClient.twoFactor.disable({
         password: disablePassword,
       })
@@ -889,7 +888,10 @@ function DeleteAccountRow({
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handleDelete}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleDelete()
+                  }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   {isDeleting ? (

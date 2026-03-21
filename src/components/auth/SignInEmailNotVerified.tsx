@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
+import { useAutoSignInOnVerify } from '~/hooks/use-auto-sign-in-on-verify'
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2 } from '~/lib/icons'
 
@@ -10,11 +8,15 @@ const COOLDOWN_SECONDS = 60
 
 type SignInEmailNotVerifiedProps = {
   email: string
+  password: string
+  onSuccess: () => void
   onBack: () => void
 }
 
 export function SignInEmailNotVerified({
   email,
+  password,
+  onSuccess,
   onBack,
 }: SignInEmailNotVerifiedProps) {
   const [isResending, setIsResending] = useState(false)
@@ -23,15 +25,17 @@ export function SignInEmailNotVerified({
 
   useEffect(() => {
     if (cooldown <= 0) return
-    const timer = setInterval(() => {
+    const timer = setTimeout(() => {
       setCooldown((prev) => (prev <= 1 ? 0 : prev - 1))
     }, 1000)
-    return () => clearInterval(timer)
+    return () => clearTimeout(timer)
   }, [cooldown])
 
-  const { data: verified } = useQuery(
-    convexQuery(api.users.queries.isEmailVerified, { email }),
-  )
+  const { verified, signingIn, autoSignInFailed } = useAutoSignInOnVerify({
+    email,
+    password,
+    onSuccess,
+  })
 
   const handleResend = async () => {
     setIsResending(true)
@@ -45,9 +49,7 @@ export function SignInEmailNotVerified({
             setIsResending(false)
           },
           onError: (ctx: { error: { message?: string } }) => {
-            setError(
-              ctx.error.message || 'Failed to resend verification email',
-            )
+            setError(ctx.error.message || 'Failed to resend verification email')
             setIsResending(false)
           },
         },
@@ -62,14 +64,23 @@ export function SignInEmailNotVerified({
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">Email verified!</h1>
+          <h1 className="text-2xl font-bold">
+            {signingIn ? 'Signing you in...' : 'Email verified!'}
+          </h1>
           <p className="text-sm text-muted-foreground text-balance">
-            Your email has been verified. You can now sign in.
+            {signingIn
+              ? 'Please wait while we log you in.'
+              : 'Your email has been verified.'}
           </p>
+          {signingIn && (
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
+          )}
         </div>
-        <Button className="w-full" onClick={onBack}>
-          Sign in
-        </Button>
+        {autoSignInFailed && (
+          <Button className="w-full" onClick={onBack}>
+            Sign in
+          </Button>
+        )}
       </div>
     )
   }

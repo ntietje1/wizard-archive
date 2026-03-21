@@ -54,23 +54,21 @@ export function UserMenu() {
   const handleSwitchAccount = useCallback(
     async (sessionToken: string) => {
       try {
-        // @ts-expect-error -- plugin types not inferred through Convex adapter
-        await authClient.multiSession.setActive({ sessionToken })
+await authClient.multiSession.setActive({ sessionToken })
         navigate({ to: '/campaigns', reloadDocument: true })
       } catch (error) {
         console.error('Failed to switch account:', error)
-        window.location.reload()
+        deviceSessions.refresh()
       }
     },
-    [navigate],
+    [deviceSessions, navigate],
   )
 
   const handleSignOut = useCallback(async () => {
     try {
       const token = deviceSessions.currentToken
       if (token) {
-        // @ts-expect-error -- plugin types not inferred through Convex adapter
-        await authClient.multiSession.revoke({ sessionToken: token })
+await authClient.multiSession.revoke({ sessionToken: token })
       } else {
         await authClient.signOut()
       }
@@ -112,7 +110,9 @@ export function UserMenu() {
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
               )}
-              <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
+              <AvatarFallback>
+                {getInitials(profile.name, profile.email)}
+              </AvatarFallback>
             </Avatar>
           </button>
         }
@@ -128,7 +128,9 @@ export function UserMenu() {
                     alt={profile.name ?? ''}
                   />
                 )}
-                <AvatarFallback>{getInitials(profile.name, profile.email)}</AvatarFallback>
+                <AvatarFallback>
+                  {getInitials(profile.name, profile.email)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-0.5">
                 {profile.name && (

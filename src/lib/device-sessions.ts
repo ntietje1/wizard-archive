@@ -8,8 +8,7 @@ export type DeviceSession = {
 /** Fetch all device sessions, deduplicated by user email (keeps most recent). */
 export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
   try {
-    // @ts-expect-error -- plugin types not inferred through Convex adapter
-    const { data } = await authClient.multiSession.listDeviceSessions()
+const { data } = await authClient.multiSession.listDeviceSessions()
 
     if (!data || data.length === 0) return []
 
@@ -19,7 +18,8 @@ export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
       byEmail.set(ds.user.email, ds)
     }
     return Array.from(byEmail.values())
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch device sessions:', error)
     return []
   }
 }

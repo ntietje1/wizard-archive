@@ -251,15 +251,14 @@ export function SidebarItemMutationsProvider({
       if (isRestoring) {
         // Collect descendants for folder restores
         const descendantIds = new Set<SidebarItemId>()
+        const trashedItems =
+          queryClient.getQueryData<Array<AnySidebarItem>>([
+            'convexQuery',
+            api.sidebarItems.queries.getTrashedSidebarItems,
+            { campaignId },
+          ]) ?? []
         if (isFolder(item)) {
           const collectDescendants = (folderId: Id<'folders'>) => {
-            // Look in trashed items for children of this folder
-            const trashedItems =
-              queryClient.getQueryData<Array<AnySidebarItem>>([
-                'convexQuery',
-                api.sidebarItems.queries.getTrashedSidebarItems,
-                { campaignId },
-              ]) ?? []
             for (const child of trashedItems) {
               if (
                 child.parentId === folderId &&
@@ -274,16 +273,9 @@ export function SidebarItemMutationsProvider({
         }
 
         // Capture original trashed descendants before filtering them out
-        const trashedDescendants =
-          descendantIds.size > 0
-            ? (
-                queryClient.getQueryData<Array<AnySidebarItem>>([
-                  'convexQuery',
-                  api.sidebarItems.queries.getTrashedSidebarItems,
-                  { campaignId },
-                ]) ?? []
-              ).filter((i) => descendantIds.has(i._id))
-            : []
+        const trashedDescendants = trashedItems.filter((i) =>
+          descendantIds.has(i._id),
+        )
 
         trashedOptimisticUpdate((prev) =>
           prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
