@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { shareBlockWithMemberHelper } from './blockShareMutations'
 import { requireDmRole } from '../../functions'
+import { shareBlockWithMemberHelper } from './blockShareMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 

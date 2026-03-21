@@ -1,7 +1,7 @@
+import { requireCampaignMembership } from '../../functions'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import type { AnySidebarItem } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
-import { requireCampaignMembership } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemByName = async (

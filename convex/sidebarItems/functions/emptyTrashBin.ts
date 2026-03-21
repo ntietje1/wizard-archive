@@ -1,6 +1,6 @@
+import { requireDmRole } from '../../functions'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
-import { requireDmRole } from '../../functions'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'

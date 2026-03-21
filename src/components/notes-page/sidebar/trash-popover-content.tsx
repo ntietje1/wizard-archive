@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button, buttonVariants } from '~/components/shadcn/ui/button'
@@ -15,7 +16,6 @@ import {
   emptyTrashDescription,
   permanentDeleteDescription,
 } from '~/lib/trash-utils'
-import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from '~/lib/icons'
 

@@ -22,7 +22,7 @@ export async function hardDeleteItem(
     await ctx.storage.delete(item.imageStorageId)
   }
 
-  await applyToDependents(ctx, item, async (ctx, doc) => {
+  await applyToDependents(ctx, item, async (_, doc) => {
     await ctx.db.delete(doc._id)
   })
 

@@ -3,8 +3,8 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { WithoutSystemFields } from 'convex/server'
 import { requireCampaignMembership } from '../../functions'
+import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 

@@ -1,11 +1,11 @@
 import { api } from 'convex/_generated/api'
-import { getInitials } from '~/shared/utils/get-initials'
 import { useSettingsStore } from './settings-store'
 import { ProfileTab } from './tabs/ProfileTab'
 import { PreferencesTab } from './tabs/PreferencesTab'
 import { StubTab } from './tabs/StubTab'
 import type { SettingsTab } from './settings-store'
 import type { LucideIcon } from '~/lib/icons'
+import { getInitials } from '~/shared/utils/get-initials'
 import {
   Cable,
   CreditCard,

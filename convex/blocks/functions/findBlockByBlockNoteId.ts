@@ -1,6 +1,6 @@
+import { requireCampaignMembership } from '../../functions'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import { requireCampaignMembership } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
 
 export const findBlockByBlockNoteId = async (

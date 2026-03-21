@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
+import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
@@ -15,7 +16,6 @@ import {
   emptyTrashDescription,
   permanentDeleteDescription,
 } from '~/lib/trash-utils'
-import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from '~/lib/icons'
 
 function daysAgo(timestamp: number): number {

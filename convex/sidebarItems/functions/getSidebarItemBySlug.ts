@@ -1,4 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { requireCampaignMembership } from '../../functions'
 import { getSidebarItemById } from './getSidebarItemById'
 import type {
   AnySidebarItemFromDb,
@@ -6,7 +7,6 @@ import type {
 } from '../types/types'
 import type { SidebarItemType } from '../types/baseTypes'
 import type { AuthQueryCtx } from '../../functions'
-import { requireCampaignMembership } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemBySlug = async (

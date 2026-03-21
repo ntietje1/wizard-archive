@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import {
@@ -10,6 +9,7 @@ import { PlayerRequestsDialog } from './player-requests-dialog'
 import PlayersDmControls from './players-dm-controls'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { Link, Trash2, User, Users } from '~/lib/icons'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
