@@ -3,16 +3,14 @@ import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
 
 const userProfileTableFields = {
-  clerkUserId: v.string(),
+  authUserId: v.string(),
   username: v.string(),
-  email: v.optional(v.string()),
-  name: v.optional(v.string()),
-  firstName: v.optional(v.string()),
-  lastName: v.optional(v.string()),
-  imageUrl: v.optional(v.string()),
-  theme: v.optional(
-    v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
-  ),
+  email: v.union(v.string(), v.null()),
+  emailVerified: v.union(v.boolean(), v.null()),
+  name: v.union(v.string(), v.null()),
+  imageUrl: v.union(v.string(), v.null()),
+  imageStorageId: v.union(v.id('_storage'), v.null()),
+  twoFactorEnabled: v.union(v.boolean(), v.null()),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these
@@ -20,8 +18,9 @@ export const userTables = {
   userProfiles: defineTable({
     ...userProfileTableFields,
   })
-    .index('by_user', ['clerkUserId'])
-    .index('by_username', ['username']),
+    .index('by_user', ['authUserId'])
+    .index('by_username', ['username'])
+    .index('by_email', ['email']),
 }
 
 // only includes convex built-in fields and not commonTableFields

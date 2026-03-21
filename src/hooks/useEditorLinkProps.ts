@@ -48,6 +48,6 @@ export function useEditorLinkProps(item: {
 
   return useMemo(
     () => buildEditorLinkProps(item, { dmUsername, campaignSlug }),
-    [item.type, item.slug, dmUsername, campaignSlug],
+    [item, dmUsername, campaignSlug],
   )
 }

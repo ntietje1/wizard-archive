@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 import {
   Popover,
   PopoverContent,
@@ -24,14 +24,16 @@ export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 w-9 p-0 min-w-9"
+            <button
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'h-9 w-9 p-0 min-w-9',
+              )}
               type="button"
+              aria-label="Select icon"
             >
               <CurrentIcon className="h-4 w-4" />
-            </Button>
+            </button>
           }
         />
         <PopoverContent className="w-64 p-2" align="start" sideOffset={4}>

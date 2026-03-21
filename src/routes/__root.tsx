@@ -5,32 +5,25 @@ import {
   createRootRouteWithContext,
   useRouteContext,
 } from '@tanstack/react-router'
-import { ClerkProvider, useAuth } from '@clerk/tanstack-react-start'
+import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
 import * as React from 'react'
-import { getAuth } from '@clerk/tanstack-react-start/server'
-import { ConvexProviderWithClerk } from 'convex/react-clerk'
-import { getWebRequest } from '@tanstack/react-start/server'
 import { Toaster } from 'sonner'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import type { Theme } from '~/hooks/useTheme'
+import { TransitionOverlay } from '~/components/auth/TransitionOverlay'
 import { NavigationProgress } from '~/components/navigation-progress'
 import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
-import { prefetchTheme } from '~/hooks/useTheme'
+import { prefetchUserPreferences } from '~/hooks/useUserPreferences'
+import { authClient } from '~/lib/auth-client'
+import { getToken } from '~/lib/auth-server'
 import appCss from '~/styles/app.css?url'
 
-const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
-  const auth = await getAuth(getWebRequest(), {
-    treatPendingAsSignedOut: false,
-  })
-  const token = await auth.getToken({ template: 'convex' })
-
-  return {
-    userId: auth.userId,
-    token,
-  }
+const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
+  return await getToken()
 })
 
 export const Route = createRootRouteWithContext<{
@@ -77,21 +70,19 @@ export const Route = createRootRouteWithContext<{
   beforeLoad: async (ctx) => {
     if (typeof window !== 'undefined') {
       return {
-        userId: null,
         token: null,
-        initialTheme: undefined as string | undefined,
+        initialTheme: undefined,
       }
     }
 
-    const auth = await fetchClerkAuth()
-    const { userId, token } = auth
-    let initialTheme: string | undefined
+    const token = await fetchAuthToken()
+    let initialTheme: Theme | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
-      initialTheme = await prefetchTheme(ctx.context.queryClient)
+      const prefs = await prefetchUserPreferences(ctx.context.queryClient)
+      initialTheme = prefs?.theme
     }
     return {
-      userId,
       token,
       initialTheme,
     }
@@ -103,19 +94,17 @@ function RootComponent() {
   const context = useRouteContext({ from: Route.id })
 
   return (
-    <ClerkProvider>
-      <ConvexProviderWithClerk client={context.convexClient} useAuth={useAuth}>
-        <ThemeProvider
-          initialTheme={
-            context.initialTheme as 'light' | 'dark' | 'system' | undefined
-          }
-        >
-          <RootDocument initialTheme={context.initialTheme}>
-            <Outlet />
-          </RootDocument>
-        </ThemeProvider>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <ConvexBetterAuthProvider
+      client={context.convexClient}
+      authClient={authClient}
+      initialToken={context.token}
+    >
+      <ThemeProvider initialTheme={context.initialTheme}>
+        <RootDocument initialTheme={context.initialTheme}>
+          <Outlet />
+        </RootDocument>
+      </ThemeProvider>
+    </ConvexBetterAuthProvider>
   )
 }
 
@@ -136,6 +125,7 @@ function RootDocument({
         <NavigationProgress />
         {children}
         <Toaster />
+        <TransitionOverlay />
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>

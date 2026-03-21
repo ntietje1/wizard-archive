@@ -1,6 +1,6 @@
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import type { SortDirection, SortOrder } from 'convex/editors/types'
-import { Button } from '~/components/shadcn/ui/button'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,9 +38,13 @@ export function SortMenu() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon">
+            <button
+              type="button"
+              aria-label="Sort options"
+              className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+            >
               <SortDesc className="h-4 w-4" />
-            </Button>
+            </button>
           }
         />
         <DropdownMenuContent align="start" className="min-w-48">

@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import {
@@ -11,6 +9,7 @@ import { PlayerRequestsDialog } from './player-requests-dialog'
 import PlayersDmControls from './players-dm-controls'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { Link, Trash2, User, Users } from '~/lib/icons'
 import { ContentGrid } from '~/components/content-grid-page/content-grid'
@@ -23,11 +22,9 @@ export default function PlayersContent() {
   const { dmUsername, campaignSlug, campaign, isDm } = useCampaign()
   const campaignData = campaign.data
 
-  const players = useQuery(
-    convexQuery(
-      api.campaigns.queries.getPlayersByCampaign,
-      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    ),
+  const players = useAuthQuery(
+    api.campaigns.queries.getPlayersByCampaign,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
   const [isRequestsOpen, setIsRequestsOpen] = useState(false)

@@ -1,6 +1,6 @@
+import { requireCampaignMembership } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthQueryCtx } from '../../functions'
-import { requireCampaignMembership } from '../../functions'
 import type { Editor } from '../types'
 
 export async function getCurrentEditor(

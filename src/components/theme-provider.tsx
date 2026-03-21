@@ -2,19 +2,19 @@ import { useCallback, useEffect } from 'react'
 import {
   keepPreviousData,
   useMutation,
-  useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { UserProfile } from 'convex/users/types'
+import type { UserPreferences } from 'convex/userPreferences/types'
 import type { Theme } from '~/hooks/useTheme'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import {
   ThemeProviderContext,
   applyThemeClass,
-  profileQueryOptions,
   resolveTheme,
 } from '~/hooks/useTheme'
+import { userPreferencesQueryOptions } from '~/hooks/useUserPreferences'
 
 const FOUC_SCRIPT = `(function(){try{var t=window.__INITIAL_THEME__;var r=(t==='dark'||t==='light')?t:(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.classList.add(r)}catch(e){}})();`
 
@@ -44,26 +44,28 @@ export function ThemeProvider({
 }) {
   const queryClient = useQueryClient()
 
-  const { data: profile } = useQuery({
-    ...profileQueryOptions,
-    staleTime: Infinity,
-    placeholderData: keepPreviousData,
-  })
+  const { data: prefs } = useAuthQuery(
+    api.userPreferences.queries.getUserPreferences,
+    {},
+    { placeholderData: keepPreviousData },
+  )
 
-  const mutationFn = useConvexMutation(api.users.mutations.setTheme)
+  const mutationFn = useConvexMutation(
+    api.userPreferences.mutations.setUserPreferences,
+  )
 
   const setThemeMutation = useMutation({
     mutationFn,
     onMutate: async ({ theme: newTheme }: { theme: Theme }) => {
       await queryClient.cancelQueries({
-        queryKey: profileQueryOptions.queryKey,
+        queryKey: userPreferencesQueryOptions.queryKey,
       })
-      const previous = queryClient.getQueryData<UserProfile>(
-        profileQueryOptions.queryKey,
+      const previous = queryClient.getQueryData<UserPreferences>(
+        userPreferencesQueryOptions.queryKey,
       )
       queryClient.setQueryData(
-        profileQueryOptions.queryKey,
-        (old: UserProfile | null | undefined) => {
+        userPreferencesQueryOptions.queryKey,
+        (old: UserPreferences | null | undefined) => {
           if (!old) return old
           return { ...old, theme: newTheme }
         },
@@ -72,17 +74,22 @@ export function ThemeProvider({
       return { previous }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous?.theme) {
-        queryClient.setQueryData(profileQueryOptions.queryKey, context.previous)
-        applyThemeClass(resolveTheme(context.previous.theme))
+      if (context?.previous) {
+        queryClient.setQueryData(
+          userPreferencesQueryOptions.queryKey,
+          context.previous,
+        )
+        applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })
+      queryClient.invalidateQueries({
+        queryKey: userPreferencesQueryOptions.queryKey,
+      })
     },
   })
 
-  const theme: Theme = profile?.theme ?? initialTheme ?? 'system'
+  const theme: Theme = prefs?.theme ?? initialTheme ?? 'system'
   const resolved = resolveTheme(theme)
 
   const setTheme = useCallback(

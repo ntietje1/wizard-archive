@@ -1,6 +1,4 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { NavigationSidebar } from '../-components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from './-components/campaign-not-found'
 import { CampaignProvider } from '~/contexts/CampaignContext'
@@ -16,21 +14,6 @@ import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
 )({
-  beforeLoad: async ({ context, params }) => {
-    const campaign = await context.queryClient.ensureQueryData(
-      convexQuery(api.campaigns.queries.getCampaignBySlug, {
-        dmUsername: params.dmUsername,
-        slug: params.campaignSlug,
-      }),
-    )
-    if (campaign?._id) {
-      await context.queryClient.ensureQueryData(
-        convexQuery(api.editors.queries.getCurrentEditor, {
-          campaignId: campaign._id,
-        }),
-      )
-    }
-  },
   component: RouteComponent,
 })
 

@@ -1,5 +1,5 @@
-import { Moon, Sun, Monitor, CheckIcon } from '~/lib/icons'
-import { Button } from '~/components/shadcn/ui/button'
+import { CheckIcon, Monitor, Moon, Sun } from '~/lib/icons'
+import { buttonVariants } from '~/components/shadcn/ui/button'
 import {
   Popover,
   PopoverContent,
@@ -9,8 +9,8 @@ import { useTheme } from '~/hooks/useTheme'
 import { cn } from '~/lib/shadcn/utils'
 
 const themeOptions = [
-  { value: 'light' as const, label: 'Light', icon: Sun },
-  { value: 'dark' as const, label: 'Dark', icon: Moon },
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
 ] as const
 
 export function ThemeToggle() {
@@ -20,11 +20,14 @@ export function ThemeToggle() {
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="icon">
+          <button
+            type="button"
+            className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+          >
             <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
             <span className="sr-only">Toggle theme</span>
-          </Button>
+          </button>
         }
       />
       <PopoverContent align="end" className="w-36 p-1 gap-0">
@@ -32,9 +35,11 @@ export function ThemeToggle() {
           <button
             key={value}
             onClick={() => setTheme(value)}
+            type="button"
             className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none cursor-default',
+              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-default',
               'hover:bg-accent hover:text-accent-foreground',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               theme === value && 'bg-accent text-accent-foreground',
             )}
           >
@@ -46,6 +51,7 @@ export function ThemeToggle() {
         <div className="bg-border my-1 h-px -mx-1" />
         <button
           onClick={() => setTheme('system')}
+          type="button"
           className={cn(
             'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none cursor-default',
             'hover:bg-accent hover:text-accent-foreground',

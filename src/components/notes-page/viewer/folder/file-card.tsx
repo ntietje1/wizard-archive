@@ -1,13 +1,12 @@
 import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { SidebarFile } from 'convex/files/types'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
 import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
@@ -89,11 +88,9 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const isSelected = useIsSelectedItem(file)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const metadataQuery = useQuery(
-    convexQuery(
-      api.storage.queries.getStorageMetadata,
-      file.storageId ? { storageId: file.storageId } : 'skip',
-    ),
+  const metadataQuery = useAuthQuery(
+    api.storage.queries.getStorageMetadata,
+    file.storageId ? { storageId: file.storageId } : 'skip',
   )
 
   const contentType = metadataQuery.data?.contentType ?? null

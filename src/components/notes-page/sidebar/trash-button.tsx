@@ -33,6 +33,7 @@ export function TrashButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        nativeButton={false}
         render={
           <SidebarRow
             ref={buttonRef}
@@ -41,7 +42,7 @@ export function TrashButton() {
             label="Trash"
             isActive={isTrashViewActive || open}
             className={cn(
-              'cursor-pointer',
+              'cursor-pointer select-none',
               isDropTarget &&
                 'ring-2 ring-inset ring-destructive/60 bg-destructive/5 text-destructive',
             )}

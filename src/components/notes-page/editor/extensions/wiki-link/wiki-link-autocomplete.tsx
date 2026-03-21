@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { useQuery } from '@tanstack/react-query'
 import { getWikiLinkContext } from './wiki-link-utils'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -12,6 +10,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/lib/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/lib/heading-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import {
   getItemPath,
@@ -234,15 +233,11 @@ export function WikiLinkAutocomplete({
     [menu, sidebarItems, itemsMap],
   )
 
-  const noteQuery = useQuery(
-    convexQuery(
-      api.notes.queries.getNote,
-      context?.mode === 'heading' && context.resolvedItem?._id
-        ? {
-            noteId: context.resolvedItem._id as Id<'notes'>,
-          }
-        : 'skip',
-    ),
+  const noteQuery = useAuthQuery(
+    api.notes.queries.getNote,
+    context?.mode === 'heading' && context.resolvedItem?._id
+      ? { noteId: context.resolvedItem._id as Id<'notes'> }
+      : 'skip',
   )
 
   const headings = useMemo(() => {

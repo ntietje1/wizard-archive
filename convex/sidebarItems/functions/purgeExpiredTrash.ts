@@ -1,15 +1,14 @@
+import { TRASH_RETENTION_DAYS } from '../../common/constants'
 import { hardDeleteItem } from './hardDeleteItem'
 import { applyToTree } from './applyToTree'
-import type { AnySidebarItemFromDb } from '../types/types'
-import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
 
 const TRASHED_TABLES = ['folders', 'notes', 'gameMaps', 'files'] as const
 
 export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
-  const cutoff = Date.now() - THIRTY_DAYS_MS
+  const cutoff = Date.now() - TRASH_RETENTION_MS
 
   const campaigns = await ctx.db.query('campaigns').collect()
 

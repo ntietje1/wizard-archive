@@ -5,6 +5,10 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import {
+  EmptyTrashConfirmDialog,
+  PermanentDeleteConfirmDialog,
+} from './hooks/trash-utils'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
@@ -25,14 +29,9 @@ import { MapDialog } from '~/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/components/forms/sidebar-item-form/sidebar-item-edit-dialog'
 import { FolderDeleteConfirmDialog } from '~/components/dialogs/delete/folder-delete-confirm-dialog'
-import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
-import { useSession } from '~/hooks/useSession'
+import { useSession } from '~/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/lib/text-to-blocks'
-import {
-  getDescendantCount,
-  useAllSidebarItems,
-  useTrashedSidebarItems,
-} from '~/hooks/useSidebarItems'
+import { useAllSidebarItems } from '~/hooks/useSidebarItems'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -57,8 +56,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useAllSidebarItems()
-  const { data: allTrashedItems, parentItemsMap: trashedParentItemsMap } =
-    useTrashedSidebarItems()
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
     null,
@@ -91,33 +88,42 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       [openParentFolders, setRenamingId],
     ),
 
-    delete: (ctx: MenuContext) => {
-      if (!ctx.item) return
-      const item = ctx.item
+    delete: useCallback(
+      (ctx: MenuContext) => {
+        if (!ctx.item) return
+        const item = ctx.item
 
-      // Non-empty folders: show confirmation dialog
-      if (isFolder(item)) {
-        const children = parentItemsMap.get(item._id)
-        if (children && children.length > 0) {
-          setDeleteFolderDialog(item)
-          onDialogOpen?.()
-          return
+        // Non-empty folders: show confirmation dialog
+        if (isFolder(item)) {
+          const children = parentItemsMap.get(item._id)
+          if (children && children.length > 0) {
+            setDeleteFolderDialog(item)
+            onDialogOpen?.()
+            return
+          }
         }
-      }
 
-      // Everything else (including empty folders): trash immediately
-      const current = getSelectedTypeAndSlug()
-      if (current && item.type === current.type && item.slug === current.slug) {
-        clearEditorContent()
-      }
-      moveItem(item, { deleted: true }).then(
-        () => toast.success('Moved to trash'),
-        (error) => {
-          console.error(error)
-          toast.error('Failed to move to trash')
-        },
-      )
-    },
+        // Everything else (including empty folders): trash immediately
+        moveItem(item, { deleted: true }).then(
+          () => {
+            const current = getSelectedTypeAndSlug()
+            if (
+              current &&
+              item.type === current.type &&
+              item.slug === current.slug
+            ) {
+              clearEditorContent()
+            }
+            toast.success('Moved to trash')
+          },
+          (error) => {
+            console.error(error)
+            toast.error('Failed to move to trash')
+          },
+        )
+      },
+      [parentItemsMap, moveItem, clearEditorContent, onDialogOpen],
+    ),
 
     showInSidebar: useCallback(
       (ctx: MenuContext) => {
@@ -449,7 +455,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         const fileName = ctx.item.name
         const link = document.createElement('a')
-        link.href = ctx.item.downloadUrl ?? ''
+        link.href = ctx.item.downloadUrl
         link.download = fileName
         document.body.appendChild(link)
         link.click()
@@ -790,9 +796,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         )}
 
         {confirmEmptyTrash && (
-          <ConfirmationDialog
-            key="empty-trash"
-            isOpen={true}
+          <EmptyTrashConfirmDialog
             onClose={() => {
               setConfirmEmptyTrash(false)
               onDialogClose?.()
@@ -810,17 +814,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 onDialogClose?.()
               }
             }}
-            title="Empty Trash"
-            description={`Are you sure you want to permanently delete ${allTrashedItems.length === 1 ? '1 item' : `all ${allTrashedItems.length} items`} in the trash? This action cannot be undone.`}
-            confirmLabel="Empty Trash"
-            confirmVariant="destructive"
           />
         )}
 
         {confirmPermanentDeleteItem && (
-          <ConfirmationDialog
-            key={`permanent-delete-${confirmPermanentDeleteItem._id}`}
-            isOpen={true}
+          <PermanentDeleteConfirmDialog
+            item={confirmPermanentDeleteItem}
             onClose={closeDialog(setConfirmPermanentDeleteItem)}
             onConfirm={async () => {
               try {
@@ -842,23 +841,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 onDialogClose?.()
               }
             }}
-            title="Permanently Delete"
-            description={(() => {
-              const descendantCount = isFolder(confirmPermanentDeleteItem)
-                ? getDescendantCount(
-                    confirmPermanentDeleteItem._id,
-                    trashedParentItemsMap,
-                  )
-                : 0
-              const base = `Are you sure you want to permanently delete "${confirmPermanentDeleteItem.name}"?`
-              const detail =
-                descendantCount > 0
-                  ? ` This will also delete ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'} inside it.`
-                  : ''
-              return `${base}${detail} This action cannot be undone.`
-            })()}
-            confirmLabel="Delete Forever"
-            confirmVariant="destructive"
           />
         )}
       </>
@@ -870,8 +852,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       editSidebarItemDialog,
       confirmPermanentDeleteItem,
       confirmEmptyTrash,
-      allTrashedItems,
-      trashedParentItemsMap,
       campaignId,
       clearEditorContent,
       closeDialog,

@@ -10,6 +10,27 @@ export function slugify(input: string): string {
   return collapsed.replace(/^-+/, '').replace(/-+$/, '')
 }
 
+/**
+ * Validates a slugified username and returns an error message or null.
+ */
+export function validateUsername(
+  slugified: string,
+  raw: string,
+  minLength: number,
+  maxLength: number,
+): string | null {
+  if (slugified.length < minLength) {
+    return `Username must be at least ${minLength} characters`
+  }
+  if (slugified.length > maxLength) {
+    return `Username must be at most ${maxLength} characters`
+  }
+  if (raw.trim().length > 0 && slugified !== raw.trim().toLowerCase()) {
+    return 'Only lowercase letters, numbers, and hyphens are allowed'
+  }
+  return null
+}
+
 export function appendSuffix(base: string, n: number): string {
   return n <= 1 ? base : `${base}-${n}`
 }

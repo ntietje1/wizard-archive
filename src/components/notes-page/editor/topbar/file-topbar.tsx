@@ -15,7 +15,6 @@ import {
   useTrashedSidebarItems,
 } from '~/hooks/useSidebarItems'
 import { Trash2 } from '~/lib/icons'
-import { ThemeToggle } from '~/components/theme-toggle'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
@@ -72,6 +71,7 @@ export function FileTopbar() {
           )}
           {item && (
             <EditableBreadcrumb
+              key={item._id}
               item={item}
               canRename={canRename && !isNotSharedWithPlayer}
               showNotSharedTooltip={!!isNotSharedWithPlayer}
@@ -89,7 +89,6 @@ export function FileTopbar() {
         </div>
 
         {middleContent}
-        <ThemeToggle />
       </div>
     </EditorContextMenu>
   )

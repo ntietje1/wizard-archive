@@ -7,16 +7,14 @@ import type {
   AnySidebarItem,
   AnySidebarItemWithContent,
 } from 'convex/sidebarItems/types/types'
+import type { EditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { cn } from '~/lib/shadcn/utils'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useRenameItem } from '~/hooks/useRenameItem'
 import { useLastEditorItem } from '~/hooks/useLastEditorItem'
 import { useCampaign } from '~/hooks/useCampaign'
 import { NameValidationFeedback } from '~/components/validation/name-validation-feedback'
-import {
-  buildEditorLinkProps,
-  type EditorLinkProps,
-} from '~/hooks/useEditorLinkProps'
+import { buildEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import {
   Tooltip,
   TooltipContent,

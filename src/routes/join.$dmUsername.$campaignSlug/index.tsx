@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SignIn, useUser } from '@clerk/tanstack-react-start'
+import { useConvexAuth } from 'convex/react'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
@@ -18,6 +18,7 @@ import {
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2, Shield, Users } from '~/lib/icons'
 import { Header } from '~/components/Header'
+import { SignInForm } from '~/components/auth/SignInForm'
 
 export const Route = createFileRoute('/join/$dmUsername/$campaignSlug/')({
   component: RouteComponent,
@@ -29,7 +30,6 @@ interface StatusIconProps {
   variant: StatusIconVariant
 }
 
-// TODO: make these have different colors
 function StatusIcon({ variant }: StatusIconProps) {
   const configs = {
     loading: {
@@ -69,14 +69,14 @@ function StatusIcon({ variant }: StatusIconProps) {
 function RouteComponent() {
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = Route.useParams()
-  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser()
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const [showSignIn, setShowSignIn] = useState(false)
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && isUserLoaded && !isSignedIn) {
+    if (typeof window !== 'undefined' && !isAuthLoading && !isAuthenticated) {
       sessionStorage.setItem('joinCampaignRedirectUrl', window.location.href)
     }
-  }, [isUserLoaded, isSignedIn])
+  }, [isAuthLoading, isAuthenticated])
 
   const campaignQuery = useQuery(
     convexQuery(api.campaigns.queries.getCampaignBySlug, {
@@ -120,7 +120,7 @@ function RouteComponent() {
   }
 
   const getCardContent = () => {
-    if (!isUserLoaded) {
+    if (isAuthLoading) {
       return {
         title: 'Loading User...',
         description: 'Please wait a moment.',
@@ -137,11 +137,7 @@ function RouteComponent() {
       }
     }
 
-    if (!user) {
-      if (showSignIn) {
-        return null // don't show anything if we're showing sign-in
-      }
-
+    if (!isAuthenticated) {
       return {
         title: "You've Been Invited!",
         description: campaign ? (
@@ -447,7 +443,7 @@ function RouteComponent() {
 
   const cardContent = getCardContent()
 
-  if (!user && showSignIn) {
+  if (!isAuthenticated && showSignIn) {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center p-4">
         <div className="w-full max-w-md mx-auto">
@@ -460,7 +456,7 @@ function RouteComponent() {
             </h1>
           </div>
           <div className="flex justify-center">
-            <SignIn routing="hash" forceRedirectUrl={window.location.href} />
+            <SignInForm redirectTo={window.location.href} />
           </div>
           <div className="text-center mt-4">
             <Button
@@ -476,14 +472,13 @@ function RouteComponent() {
     )
   }
 
-  // If cardContent is null, don't render the card (this shouldn't happen in normal flow)
   if (!cardContent) {
     return null
   }
 
   return (
     <div className="min-h-screen bg-muted flex flex-col">
-      {user && <Header />}
+      {isAuthenticated && <Header />}
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-lg shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-6 pt-8">

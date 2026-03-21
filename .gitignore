@@ -5,6 +5,7 @@ yarn.lock
 !.env
 .env
 .env.local
+.env.dev
 .DS_Store
 .cache
 .vercel
@@ -30,5 +31,7 @@ yarn.lock
 app.config.timestamp_*.js
 
 
-# Claude Code worktrees
-.claude/worktrees/
+convex/_generated/
+
+.claude/
+

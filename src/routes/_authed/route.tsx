@@ -1,61 +1,35 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
-import {
-  SignIn,
-  SignedIn,
-  SignedOut,
-  useUser,
-} from '@clerk/tanstack-react-start'
-import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import { toast } from 'sonner'
-
-const useEnsureProfile = () => {
-  const { user } = useUser()
-  const ensureProfile = useMutation({
-    mutationFn: useConvexMutation(api.users.mutations.ensureUserProfile),
-  })
-
-  useEffect(() => {
-    if (!user) return
-    ensureProfile.mutate(undefined, {
-      onError: (_) => {
-        toast.error(
-          'An error occured while loading your account. Please try refreshing the page.',
-        )
-      },
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
-}
+import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
+import { useConvexAuth } from 'convex/react'
+import { SignInForm } from '~/components/auth/SignInForm'
+import { Card, CardContent } from '~/components/shadcn/ui/card'
+import { SettingsDialog } from '~/components/settings/SettingsDialog'
 
 function AuthedRouteComponent() {
-  useEnsureProfile()
-  const forceRedirectUrl =
-    typeof window !== 'undefined' ? window.location.href : '/'
+  const { isAuthenticated, isLoading } = useConvexAuth()
+  const location = useLocation()
+
+  // intentionally allow rendering of pages even when loading auth
+  // any sensitive information is behind an authed query anyway, which will show as loading until successfully authed
+  if (!isLoading && !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center p-24">
+        <Card className="w-full max-w-sm">
+          <CardContent className="pt-6">
+            <SignInForm redirectTo={location.href} />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen">
-      <SignedOut>
-        <div className="flex items-center justify-center p-24">
-          <SignIn routing="hash" forceRedirectUrl={forceRedirectUrl} />
-        </div>
-      </SignedOut>
-      <SignedIn>
-        <Outlet />
-      </SignedIn>
+      <Outlet />
+      <SettingsDialog />
     </div>
   )
 }
 
 export const Route = createFileRoute('/_authed')({
-  // beforeLoad: ({ context }) => {
-  //   if (!context.userId) {
-  //     throw new Error('Not authenticated')
-  //   }
-  // },
-  // errorComponent: ({ error }) => {
-  //   return <ErrorPage error={error.message} />
-  // },
   component: AuthedRouteComponent,
 })

@@ -14,7 +14,6 @@ function AuthRedirectPage() {
       const joinUrl = sessionStorage.getItem('joinCampaignRedirectUrl')
 
       if (joinUrl) {
-        // Validate URL is safe (relative or same-origin)
         try {
           const url = new URL(joinUrl, window.location.origin)
           if (url.origin !== window.location.origin) {
@@ -23,16 +22,15 @@ function AuthRedirectPage() {
             navigate({ to: '/', replace: true })
             return
           }
+          sessionStorage.removeItem('joinCampaignRedirectUrl')
+          window.location.href = url.pathname + url.search + url.hash
+          return
         } catch {
           console.error('Invalid redirect URL format:', joinUrl)
           sessionStorage.removeItem('joinCampaignRedirectUrl')
           navigate({ to: '/', replace: true })
           return
         }
-
-        sessionStorage.removeItem('joinCampaignRedirectUrl')
-        window.location.href = joinUrl
-        return
       }
 
       navigate({ to: '/', replace: true })

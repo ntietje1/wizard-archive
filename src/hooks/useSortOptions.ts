@@ -1,9 +1,10 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
+import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 
 const defaultSortOptions: SortOptions = {
@@ -14,13 +15,10 @@ const defaultSortOptions: SortOptions = {
 export const useSortOptions = () => {
   const { campaign } = useCampaign()
   const campaignData = campaign.data
-  const currentEditor = useQuery({
-    ...convexQuery(
-      api.editors.queries.getCurrentEditor,
-      campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-    ),
-    staleTime: Infinity,
-  })
+  const currentEditor = useAuthQuery(
+    api.editors.queries.getCurrentEditor,
+    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
+  )
   const setCurrentEditor = useMutation({
     mutationFn: useConvexMutation(api.editors.mutations.setCurrentEditor),
   })

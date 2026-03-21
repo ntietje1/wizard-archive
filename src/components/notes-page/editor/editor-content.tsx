@@ -51,16 +51,15 @@ export function EditorContent() {
   if (!canView) {
     if (hasRequestedItem) {
       return <NotSharedContent />
-    } else {
-      return <EmptyEditorContent />
     }
+    return <EmptyEditorContent />
   }
 
   return <SidebarItemEditor item={item} search={editorSearch} />
 }
 
 function EmptyEditorContent() {
-  const { isDm } = useCampaign()
+  const { isDm, isCampaignLoaded } = useCampaign()
   const ref = useRef<HTMLDivElement>(null)
 
   const { isDropTarget } = useDndDropTarget({
@@ -90,7 +89,7 @@ function EmptyEditorContent() {
         isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >
-      {isDm ? (
+      {!isCampaignLoaded ? null : isDm ? (
         <CreateNewDashboard parentId={null} />
       ) : (
         <p className="text-muted-foreground">

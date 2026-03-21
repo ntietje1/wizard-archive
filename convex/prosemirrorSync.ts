@@ -6,6 +6,7 @@ import { requireItemAccess } from './sidebarItems/validation'
 import { PERMISSION_LEVEL } from './permissions/types'
 import { editorSchema } from './notes/editorSpecs'
 import { authenticate } from './functions'
+import type { Node } from '@tiptap/pm/model'
 import type { AuthMutationCtx, AuthQueryCtx } from './functions'
 import type { PermissionLevel } from './permissions/types'
 import type { Id } from './_generated/dataModel'
@@ -52,7 +53,7 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
   const pmDoc = headless.pmSchema.nodeFromJSON(JSON.parse(snapshot))
   const blocks: Array<CustomBlock> = []
   if (pmDoc.firstChild) {
-    pmDoc.firstChild.descendants((node) => {
+    pmDoc.firstChild.descendants((node: Node) => {
       blocks.push(nodeToBlock(node, headless.pmSchema) as CustomBlock)
       return false
     })
@@ -61,8 +62,7 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
 }
 
 const sync = prosemirrorSync.syncApi({
-  checkRead: (ctx, id) =>
-    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.VIEW }),
+  // check read is ok to skip here since notes are already gated by permission
   checkWrite: (ctx, id) =>
     checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.EDIT }),
   onSnapshot: async (

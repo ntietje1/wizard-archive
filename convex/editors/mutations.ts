@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import { sortDirectionValidator, sortOrderValidator } from './schema'
+import {
+  editorModeValidator,
+  sortDirectionValidator,
+  sortOrderValidator,
+} from './schema'
 import { setCurrentEditor as setCurrentEditorFn } from './functions/setCurrentEditor'
 import type { Id } from '../_generated/dataModel'
 
@@ -9,16 +13,14 @@ export const setCurrentEditor = authMutation({
     campaignId: v.id('campaigns'),
     sortOrder: v.optional(sortOrderValidator),
     sortDirection: v.optional(sortDirectionValidator),
-    sidebarWidth: v.optional(v.number()),
-    isSidebarExpanded: v.optional(v.boolean()),
+    editorMode: v.optional(editorModeValidator),
   },
   returns: v.id('editor'),
   handler: async (ctx, args): Promise<Id<'editor'>> => {
     return setCurrentEditorFn(ctx, {
       sortOrder: args.sortOrder,
       sortDirection: args.sortDirection,
-      sidebarWidth: args.sidebarWidth,
-      isSidebarExpanded: args.isSidebarExpanded,
+      editorMode: args.editorMode,
       campaignId: args.campaignId,
     })
   },

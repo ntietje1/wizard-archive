@@ -1,7 +1,4 @@
 import { createContext, useContext, useSyncExternalStore } from 'react'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
-import type { QueryClient } from '@tanstack/react-query'
 
 export type Theme = 'dark' | 'light' | 'system'
 
@@ -13,11 +10,6 @@ export type ThemeProviderState = {
 export const ThemeProviderContext = createContext<
   ThemeProviderState | undefined
 >(undefined)
-
-export const profileQueryOptions = convexQuery(
-  api.users.queries.getUserProfile,
-  {},
-)
 
 export function resolveTheme(theme: Theme): 'dark' | 'light' {
   if (theme === 'system') {
@@ -37,23 +29,6 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
     root.classList.add(resolved)
   }
   root.classList.remove(other)
-}
-
-const VALID_THEMES = new Set(['dark', 'light', 'system'])
-
-function isValidTheme(value: unknown): value is Theme {
-  return typeof value === 'string' && VALID_THEMES.has(value)
-}
-
-export async function prefetchTheme(
-  queryClient: QueryClient,
-): Promise<Theme | undefined> {
-  try {
-    const profile = await queryClient.ensureQueryData(profileQueryOptions)
-    return isValidTheme(profile?.theme) ? profile.theme : undefined
-  } catch {
-    return undefined
-  }
 }
 
 export const useTheme = () => {

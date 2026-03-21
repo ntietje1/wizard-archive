@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
+import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { ConfirmationDialog } from '~/components/dialogs/confirmation-dialog'
@@ -11,10 +12,11 @@ import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignMembers } from '~/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/lib/sidebar-item-utils'
-import { permanentDeleteDescription } from '~/lib/trash-utils'
+import {
+  emptyTrashDescription,
+  permanentDeleteDescription,
+} from '~/lib/trash-utils'
 import { RotateCcw, Trash2 } from '~/lib/icons'
-
-const TRASH_RETENTION_DAYS = 30
 
 function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
@@ -167,7 +169,7 @@ function RootTrashBanner() {
 
   return (
     <BannerBar
-      message="Items older than 30 days are automatically deleted"
+      message={`Items older than ${TRASH_RETENTION_DAYS} days are automatically deleted`}
       actions={isDm ? <EmptyTrashButton /> : undefined}
     />
   )
@@ -204,7 +206,7 @@ function EmptyTrashButton() {
           onClose={() => setConfirmEmptyTrash(false)}
           onConfirm={handleEmptyTrash}
           title="Empty Trash"
-          description={`Are you sure you want to permanently delete ${allTrashedItems.length === 1 ? '1 item' : `all ${allTrashedItems.length} items`} in the trash? This action cannot be undone.`}
+          description={emptyTrashDescription(allTrashedItems.length)}
           confirmLabel="Empty Trash"
           confirmVariant="destructive"
         />

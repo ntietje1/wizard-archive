@@ -1,5 +1,6 @@
 import { mutationGeneric, queryGeneric } from 'convex/server'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
+import { ERROR_CODE, throwAppError } from './errors'
 import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
@@ -21,12 +22,13 @@ export async function authenticate(
   ctx: QueryCtx | MutationCtx,
 ): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
-  if (!identity) throw new Error('Not authenticated')
+  if (!identity)
+    throwAppError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
   const profile = await ctx.db
     .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('clerkUserId', identity.subject))
+    .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
-  if (!profile) throw new Error('No profile found')
+  if (!profile) throwAppError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return { identity, profile }
 }
 

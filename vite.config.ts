@@ -15,9 +15,7 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    tanstackStart({
-      customViteReactPlugin: true,
-    }),
+    tanstackStart(),
     react({
       babel: {
         plugins: ['babel-plugin-react-compiler'],
@@ -27,5 +25,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@tanstack/router-devtools-core'],
   },
-  envPrefix: ['VITE_', 'CLERK_'],
+  ssr: {
+    noExternal: ['@convex-dev/better-auth'],
+  },
+  envPrefix: ['VITE_'],
 })

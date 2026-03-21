@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { Button, buttonVariants } from '~/components/shadcn/ui/button'
@@ -11,7 +12,10 @@ import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useTrashedSidebarItems } from '~/hooks/useSidebarItems'
 import { useDraggable } from '~/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/lib/category-icons'
-import { permanentDeleteDescription } from '~/lib/trash-utils'
+import {
+  emptyTrashDescription,
+  permanentDeleteDescription,
+} from '~/lib/trash-utils'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/hooks/useEditorLinkProps'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from '~/lib/icons'
 
@@ -137,7 +141,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       {/* Footer */}
       <div className="border-t mt-1.5 pt-1.5 px-2 flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground leading-tight">
-          Items older than 30 days are automatically deleted.
+          Items older than {TRASH_RETENTION_DAYS} days are automatically
+          deleted.
         </p>
         {isDm && rootTrashedItems.length > 0 && (
           <Button
@@ -172,7 +177,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
           onClose={() => setConfirmEmptyTrash(false)}
           onConfirm={handleEmptyTrash}
           title="Empty Trash"
-          description={`Are you sure you want to permanently delete ${allTrashedItems.length === 1 ? '1 item' : `all ${allTrashedItems.length} items`} in the trash? This action cannot be undone.`}
+          description={emptyTrashDescription(allTrashedItems.length)}
           confirmLabel="Empty Trash"
           confirmVariant="destructive"
         />

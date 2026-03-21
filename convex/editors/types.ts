@@ -34,6 +34,5 @@ export type Editor = CommonValidatorFields<'editor'> & {
   userId: Id<'userProfiles'>
   sortOrder: SortOrder
   sortDirection: SortDirection
-  sidebarWidth?: number
-  isSidebarExpanded?: boolean
+  editorMode: EditorMode
 }

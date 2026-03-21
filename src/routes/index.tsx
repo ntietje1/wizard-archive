@@ -1,12 +1,15 @@
-import { SignedIn, SignedOut } from '@clerk/tanstack-react-start'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { useConvexAuth } from 'convex/react'
 import { Button } from '~/components/shadcn/ui/button'
+import { Loader2 } from '~/lib/icons'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  const { isAuthenticated, isLoading } = useConvexAuth()
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="text-center space-y-8">
@@ -16,20 +19,24 @@ function Home() {
         <p className="text-xl text-muted-foreground">
           Your ultimate companion for building and sharing TTRPG adventures
         </p>
-        <SignedOut>
-          <Link to="/sign-in">
-            <Button size="lg" className="text-lg px-8 min-w-32">
-              Get Started
-            </Button>
-          </Link>
-        </SignedOut>
-        <SignedIn>
+        {isLoading ? (
+          <Button size="lg" className="text-lg px-8 min-w-32" disabled>
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="sr-only">Loading</span>
+          </Button>
+        ) : isAuthenticated ? (
           <Link to="/campaigns">
             <Button size="lg" className="text-lg px-8 min-w-32">
               Continue
             </Button>
           </Link>
-        </SignedIn>
+        ) : (
+          <Link to="/sign-in">
+            <Button size="lg" className="text-lg px-8 min-w-32">
+              Get Started
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ import { fileStorageTables } from './storage/schema'
 import { gameMapsTables } from './gameMaps/baseSchema'
 import { filesTables } from './files/schema'
 import { bookmarkTables } from './bookmarks/schema'
+import { userPreferencesTables } from './userPreferences/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -27,4 +28,5 @@ export default defineSchema({
   ...fileStorageTables,
   ...filesTables,
   ...bookmarkTables,
+  ...userPreferencesTables,
 })

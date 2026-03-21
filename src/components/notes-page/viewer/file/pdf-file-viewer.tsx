@@ -83,7 +83,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
     const viewport = scrollViewportRef.current
     if (!viewport) return
 
-    const visibilityMap = new Map<number, number>()
+    const visibilityMap: Map<number, number> = new Map()
     let rafId: number | null = null
 
     const observer = new IntersectionObserver(
@@ -211,7 +211,11 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
           onZoomReset={handleZoomReset}
         />
       )}
-      <ScrollArea className="flex-1 min-h-0" viewportRef={scrollViewportRef}>
+      <ScrollArea
+        className="flex-1 min-h-0"
+        scrollOrientation="both"
+        viewportRef={scrollViewportRef}
+      >
         <Document
           file={pdfUrl}
           onLoadSuccess={handleDocumentLoadSuccess}

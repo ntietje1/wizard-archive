@@ -20,3 +20,10 @@ export function permanentDeleteDescription(
       : ''
   return `${base}${detail} This action cannot be undone.`
 }
+
+/**
+ * Builds the confirmation description for emptying the entire trash.
+ */
+export function emptyTrashDescription(count: number): string {
+  return `Are you sure you want to permanently delete ${count === 1 ? '1 item' : `all ${count} items`} in the trash? This action cannot be undone.`
+}
