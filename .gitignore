@@ -31,7 +31,5 @@ yarn.lock
 app.config.timestamp_*.js
 
 
-convex/_generated/
-
 .claude/
 

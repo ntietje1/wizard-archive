@@ -21,7 +21,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx convex codegen
       - run: pnpm tsc --noEmit
 
   lint:
@@ -35,7 +34,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx convex codegen
       - run: pnpm lint
 
   format:
@@ -97,5 +95,4 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx convex codegen
       - run: pnpm vite build
