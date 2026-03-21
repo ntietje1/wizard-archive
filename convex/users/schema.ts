@@ -5,11 +5,12 @@ import { convexValidatorFields } from '../common/schema'
 const userProfileTableFields = {
   authUserId: v.string(),
   username: v.string(),
-  email: v.optional(v.string()),
-  emailVerified: v.optional(v.boolean()),
-  name: v.optional(v.string()),
-  imageUrl: v.optional(v.string()),
-  imageStorageId: v.optional(v.id('_storage')),
+  email: v.union(v.string(), v.null()),
+  emailVerified: v.union(v.boolean(), v.null()),
+  name: v.union(v.string(), v.null()),
+  imageUrl: v.union(v.string(), v.null()),
+  imageStorageId: v.union(v.id('_storage'), v.null()),
+  twoFactorEnabled: v.union(v.boolean(), v.null()),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these
@@ -30,20 +31,3 @@ const userProfileValidatorFields = {
 
 export const userProfileValidator = v.object(userProfileValidatorFields)
 
-export const userValidator = v.object({
-  _id: v.id('user'),
-  _creationTime: v.number(),
-  name: v.string(),
-  email: v.string(),
-  emailVerified: v.boolean(),
-  image: v.optional(v.union(v.null(), v.string())),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-  twoFactorEnabled: v.optional(v.union(v.null(), v.boolean())),
-  isAnonymous: v.optional(v.union(v.null(), v.boolean())),
-  username: v.optional(v.union(v.null(), v.string())),
-  displayUsername: v.optional(v.union(v.null(), v.string())),
-  phoneNumber: v.optional(v.union(v.null(), v.string())),
-  phoneNumberVerified: v.optional(v.union(v.null(), v.boolean())),
-  userId: v.optional(v.union(v.null(), v.string())),
-})

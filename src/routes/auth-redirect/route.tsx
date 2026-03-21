@@ -22,16 +22,15 @@ function AuthRedirectPage() {
             navigate({ to: '/', replace: true })
             return
           }
+          sessionStorage.removeItem('joinCampaignRedirectUrl')
+          window.location.href = url.pathname + url.search + url.hash
+          return
         } catch {
           console.error('Invalid redirect URL format:', joinUrl)
           sessionStorage.removeItem('joinCampaignRedirectUrl')
           navigate({ to: '/', replace: true })
           return
         }
-
-        sessionStorage.removeItem('joinCampaignRedirectUrl')
-        window.location.href = joinUrl
-        return
       }
 
       navigate({ to: '/', replace: true })

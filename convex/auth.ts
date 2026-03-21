@@ -13,8 +13,6 @@ import {
   verificationEmail,
 } from './email'
 import { components, internal } from './_generated/api'
-import { query } from './_generated/server'
-import { userValidator } from './users/schema'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from './_generated/dataModel'
 
@@ -53,10 +51,12 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
         await ctx.db.insert('userProfiles', {
           authUserId: String(user._id),
           username,
-          email: user.email,
-          emailVerified: user.emailVerified,
-          name: user.name,
-          imageUrl: user.image ?? undefined,
+          email: user.email ?? null,
+          emailVerified: user.emailVerified ?? null,
+          name: user.name ?? null,
+          imageUrl: user.image ?? null,
+          imageStorageId: null,
+          twoFactorEnabled: user.twoFactorEnabled ?? null,
         })
       },
       onUpdate: async (ctx, newUser, oldUser) => {
@@ -67,17 +67,21 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
         if (!profile) return
 
         const updates: Partial<{
-          name: string | undefined
-          email: string | undefined
-          emailVerified: boolean
-          imageUrl: string | undefined
+          name: string | null
+          email: string | null
+          emailVerified: boolean | null
+          imageUrl: string | null
+          twoFactorEnabled: boolean | null
         }> = {}
-        if (newUser.name !== oldUser.name) updates.name = newUser.name
-        if (newUser.email !== oldUser.email) updates.email = newUser.email
+        if (newUser.name !== oldUser.name) updates.name = newUser.name ?? null
+        if (newUser.email !== oldUser.email)
+          updates.email = newUser.email ?? null
         if (newUser.emailVerified !== oldUser.emailVerified)
-          updates.emailVerified = newUser.emailVerified
+          updates.emailVerified = newUser.emailVerified ?? null
         if (newUser.image !== oldUser.image)
-          updates.imageUrl = newUser.image ?? undefined
+          updates.imageUrl = newUser.image ?? null
+        if (newUser.twoFactorEnabled !== oldUser.twoFactorEnabled)
+          updates.twoFactorEnabled = newUser.twoFactorEnabled ?? null
 
         if (Object.keys(updates).length > 0) {
           await ctx.db.patch(profile._id, updates)
@@ -88,9 +92,75 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
           .query('userProfiles')
           .withIndex('by_user', (q) => q.eq('authUserId', String(user._id)))
           .unique()
-        if (profile) {
-          await ctx.db.delete(profile._id)
+        if (!profile) return
+
+        const profileId = profile._id
+        const now = Date.now()
+
+        // Clean up user-scoped data before deleting the profile
+
+        // 1. Hard delete userPreferences
+        const prefs = await ctx.db
+          .query('userPreferences')
+          .withIndex('by_user', (q) => q.eq('userId', profileId))
+          .collect()
+
+        // 2. Hard delete editor records
+        const editors = await ctx.db
+          .query('editor')
+          .withIndex('by_user', (q) => q.eq('userId', profileId))
+          .collect()
+
+        // 3. Hard delete fileStorage records and underlying storage files
+        const files = await ctx.db
+          .query('fileStorage')
+          .withIndex('by_user_storage', (q) => q.eq('userId', profileId))
+          .collect()
+
+        await Promise.all([
+          ...prefs.map((p) => ctx.db.delete(p._id)),
+          ...editors.map((e) => ctx.db.delete(e._id)),
+          ...files.map(async (f) => {
+            await ctx.storage.delete(f.storageId)
+            await ctx.db.delete(f._id)
+          }),
+        ])
+
+        // 4. Soft-delete campaign memberships and DM-owned campaigns
+        const memberships = await ctx.db
+          .query('campaignMembers')
+          .withIndex('by_user', (q) => q.eq('userId', profileId))
+          .collect()
+
+        for (const member of memberships) {
+          if (member.deletionTime) continue
+
+          // If user is DM, soft-delete the campaign
+          const campaign = await ctx.db.get(member.campaignId)
+          if (
+            campaign &&
+            !campaign.deletionTime &&
+            campaign.dmUserId === profileId
+          ) {
+            await ctx.db.patch(campaign._id, {
+              deletionTime: now,
+              deletedBy: profileId,
+              updatedTime: now,
+              updatedBy: profileId,
+            })
+          }
+
+          // Soft-delete the membership
+          await ctx.db.patch(member._id, {
+            deletionTime: now,
+            deletedBy: profileId,
+            updatedTime: now,
+            updatedBy: profileId,
+          })
         }
+
+        // 5. Delete the profile itself
+        await ctx.db.delete(profileId)
       },
     },
   },
@@ -152,12 +222,3 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
 }
 
 export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi()
-
-// TODO: potentially make this return null if not logged in
-export const getCurrentUser = query({
-  args: {},
-  returns: userValidator,
-  handler: async (ctx) => {
-    return await authComponent.getAuthUser(ctx)
-  },
-})

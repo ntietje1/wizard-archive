@@ -7,7 +7,7 @@ async function resolveProfileImageUrl(
 ): Promise<UserProfile> {
   if (!profile.imageStorageId) return profile
   const url = await ctx.storage.getUrl(profile.imageStorageId)
-  return { ...profile, imageUrl: url ?? undefined }
+  return { ...profile, imageUrl: url ?? null }
 }
 
 export async function getUserProfileByUserId(

@@ -31,7 +31,9 @@ export const editorTables = {
   editor: defineTable({
     ...commonTableFields,
     ...editorTableFields,
-  }).index('by_campaign_user', ['campaignId', 'userId']),
+  })
+    .index('by_campaign_user', ['campaignId', 'userId'])
+    .index('by_user', ['userId']),
 }
 
 const editorValidatorFields = {

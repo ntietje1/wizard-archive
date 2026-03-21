@@ -48,7 +48,7 @@ export const updateProfileImage = authMutation({
     // The URL is resolved at query time via resolveProfileImageUrl.
     await ctx.db.patch(ctx.user.profile._id, {
       imageStorageId: args.storageId,
-      imageUrl: undefined,
+      imageUrl: null,
     })
     return null
   },

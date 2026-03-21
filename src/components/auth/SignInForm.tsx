@@ -25,8 +25,7 @@ export function SignInForm({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleSuccess = () =>
-    navigate({ to: redirectTo, reloadDocument: true })
+  const handleSuccess = () => navigate({ to: redirectTo, reloadDocument: true })
 
   switch (view) {
     case 'two-factor':
@@ -40,8 +39,7 @@ export function SignInForm({
       return (
         <SignInEmailNotVerified
           email={email}
-          password={password}
-          onSuccess={handleSuccess}
+          redirectTo={redirectTo}
           onBack={() => setView('credentials')}
         />
       )

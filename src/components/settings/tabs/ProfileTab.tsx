@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { debounce } from 'lodash-es'
 import { toast } from 'sonner'
@@ -122,7 +122,7 @@ export function ProfileTab() {
             <Separator />
             <PasswordRow />
             <Separator />
-            <TwoFactorRow />
+            <TwoFactorRow profile={profile} />
             <Separator />
             <DeleteAccountRow
               onDeletionEmailSent={() => setDeletionPending(true)}
@@ -400,21 +400,20 @@ function UsernameRow({ profile }: { profile: Profile }) {
 // --- Email ---
 
 function useOAuthProvider() {
-  const [provider, setProvider] = useState<string | null | undefined>(undefined)
-
-  useEffect(() => {
-    authClient
-      .listAccounts()
-      .then(({ data }) => {
-        const oauth = data?.find((a) => a.providerId !== 'credential')
-        setProvider(oauth?.providerId ?? null)
-      })
-      .catch(() => {
-        setProvider(null)
-      })
-  }, [])
-
-  return provider
+  const query = useQuery({
+    queryKey: ['auth', 'oauthProvider'],
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await authClient.listAccounts()
+      if (error || !data) throw new Error('Failed to load accounts')
+      const oauth = data.find(
+        (a: { providerId: string }) => a.providerId !== 'credential',
+      )
+      return oauth?.providerId ?? null
+    },
+    staleTime: Infinity,
+  })
+  if (query.isLoading || query.isError) return undefined
+  return query.data ?? null
 }
 
 // TODO: add email format validation (zod?)
@@ -648,6 +647,7 @@ function PasswordRow() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -660,6 +660,7 @@ function PasswordRow() {
                 disabled={isLoading}
                 minLength={8}
                 placeholder="At least 8 characters"
+                autoComplete="new-password"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -671,6 +672,7 @@ function PasswordRow() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
                 minLength={8}
+                autoComplete="new-password"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -692,9 +694,8 @@ function PasswordRow() {
 
 // --- Two Factor ---
 
-function TwoFactorRow() {
-  const session = authClient.useSession()
-  const isTwoFactorEnabled = session.data?.user?.twoFactorEnabled ?? false
+function TwoFactorRow({ profile }: { profile: Profile }) {
+  const isTwoFactorEnabled = profile.twoFactorEnabled ?? false
 
   const [isDisabling, setIsDisabling] = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
@@ -720,7 +721,6 @@ function TwoFactorRow() {
       setShowDisableDialog(false)
       setDisablePassword('')
       setIsDisabling(false)
-      session.refetch()
     } catch {
       setError('Unable to disable 2FA. Please try again.')
       setIsDisabling(false)

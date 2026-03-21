@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
-import { useAutoSignInOnVerify } from '~/hooks/use-auto-sign-in-on-verify'
 import { Button } from '~/components/shadcn/ui/button'
 import { Loader2 } from '~/lib/icons'
 
@@ -8,17 +11,16 @@ const COOLDOWN_SECONDS = 60
 
 type SignInEmailNotVerifiedProps = {
   email: string
-  password: string
-  onSuccess: () => void
+  redirectTo: string
   onBack: () => void
 }
 
 export function SignInEmailNotVerified({
   email,
-  password,
-  onSuccess,
+  redirectTo,
   onBack,
 }: SignInEmailNotVerifiedProps) {
+  const navigate = useNavigate()
   const [isResending, setIsResending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [error, setError] = useState('')
@@ -31,11 +33,16 @@ export function SignInEmailNotVerified({
     return () => clearTimeout(timer)
   }, [cooldown])
 
-  const { verified, signingIn, autoSignInFailed } = useAutoSignInOnVerify({
-    email,
-    password,
-    onSuccess,
-  })
+  // Poll for email verification — when detected, reload to pick up the session cookie
+  const { data: verified } = useQuery(
+    convexQuery(api.users.queries.isEmailVerified, { email }),
+  )
+
+  useEffect(() => {
+    if (verified) {
+      navigate({ to: redirectTo, reloadDocument: true })
+    }
+  }, [verified, navigate, redirectTo])
 
   const handleResend = async () => {
     setIsResending(true)
@@ -58,31 +65,6 @@ export function SignInEmailNotVerified({
       setError('Unable to send verification email. Please try again.')
       setIsResending(false)
     }
-  }
-
-  if (verified) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">
-            {signingIn ? 'Signing you in...' : 'Email verified!'}
-          </h1>
-          <p className="text-sm text-muted-foreground text-balance">
-            {signingIn
-              ? 'Please wait while we log you in.'
-              : 'Your email has been verified.'}
-          </p>
-          {signingIn && (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
-          )}
-        </div>
-        {autoSignInFailed && (
-          <Button className="w-full" onClick={onBack}>
-            Sign in
-          </Button>
-        )}
-      </div>
-    )
   }
 
   return (

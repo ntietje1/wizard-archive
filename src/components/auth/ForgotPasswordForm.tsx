@@ -69,6 +69,7 @@ export function ForgotPasswordForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
+            autoComplete="email"
           />
         </div>
 

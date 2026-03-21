@@ -7,10 +7,12 @@ export type UserProfile = {
 
   authUserId: string
   username: string
-  email?: string
-  name?: string
-  imageUrl?: string // comes from OAuth if applicable
-  imageStorageId?: Id<'_storage'> // user uploaded value (has priority over imageUrl)
+  email: string | null
+  emailVerified: boolean | null
+  name: string | null
+  imageUrl: string | null // comes from OAuth if applicable
+  imageStorageId: Id<'_storage'> | null // user uploaded value (has priority over imageUrl)
+  twoFactorEnabled: boolean | null
 }
 
 export type AuthUser = { identity: UserIdentity; profile: UserProfile }

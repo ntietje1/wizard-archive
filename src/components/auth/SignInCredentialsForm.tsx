@@ -46,18 +46,6 @@ export function SignInCredentialsForm({
     setIsLoading(true)
 
     try {
-      // If this account already has an active session, switch to it
-      const match = existingSessions.find(
-        (ds) => ds.user.email.toLowerCase() === email.toLowerCase(),
-      )
-      if (match) {
-        await authClient.multiSession.setActive({
-          sessionToken: match.session.token,
-        })
-        onSuccess()
-        return
-      }
-
       await authClient.signIn.email(
         { email, password },
         {
@@ -146,6 +134,7 @@ export function SignInCredentialsForm({
               onChange={(e) => onEmailChange(e.target.value)}
               required
               disabled={isDisabled}
+              autoComplete="email"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -166,6 +155,7 @@ export function SignInCredentialsForm({
               onChange={(e) => onPasswordChange(e.target.value)}
               required
               disabled={isDisabled}
+              autoComplete="current-password"
             />
           </div>
 

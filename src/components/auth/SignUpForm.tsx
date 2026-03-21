@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { api } from 'convex/_generated/api'
 import { authClient } from '~/lib/auth-client'
-import { useAutoSignInOnVerify } from '~/hooks/use-auto-sign-in-on-verify'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
@@ -26,13 +28,6 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
     null,
   )
-
-  const { verified, signingIn, autoSignInFailed } = useAutoSignInOnVerify({
-    email,
-    password,
-    enabled: emailSent,
-    onSuccess: () => navigate({ to: redirectTo, reloadDocument: true }),
-  })
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,48 +73,34 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
 
   const isDisabled = isLoading || !!socialLoading
 
+  // Poll for email verification — when detected, reload to pick up the session cookie
+  const { data: verified } = useQuery({
+    ...convexQuery(api.users.queries.isEmailVerified, { email }),
+    enabled: emailSent,
+  })
+
+  useEffect(() => {
+    if (verified) {
+      navigate({ to: redirectTo, reloadDocument: true })
+    }
+  }, [verified, navigate, redirectTo])
+
   if (emailSent) {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          {verified ? (
-            <>
-              <h1 className="text-2xl font-bold">
-                {signingIn
-                  ? 'Signing you in...'
-                  : autoSignInFailed
-                    ? 'Verification complete'
-                    : 'Email verified!'}
-              </h1>
-              <p className="text-sm text-muted-foreground text-balance">
-                {signingIn
-                  ? 'Please wait while we log you in.'
-                  : autoSignInFailed
-                    ? 'Automatic sign-in failed. Please sign in manually.'
-                    : 'Your account is ready.'}
-              </p>
-              {signingIn && (
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mt-2" />
-              )}
-            </>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold">Check your email</h1>
-              <p className="text-sm text-muted-foreground text-balance">
-                We sent a verification link to <strong>{email}</strong>. Click
-                the link to verify your account.
-              </p>
-            </>
-          )}
+          <h1 className="text-2xl font-bold">Check your email</h1>
+          <p className="text-sm text-muted-foreground text-balance">
+            We sent a verification link to <strong>{email}</strong>. Click the
+            link to verify your account.
+          </p>
         </div>
-        {(!verified || autoSignInFailed) && (
-          <Link
-            to="/sign-in"
-            className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-          >
-            {autoSignInFailed ? 'Sign in' : 'Back to sign in'}
-          </Link>
-        )}
+        <Link
+          to="/sign-in"
+          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
+        >
+          Back to sign in
+        </Link>
       </div>
     )
   }
@@ -166,6 +147,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               onChange={(e) => setName(e.target.value)}
               required
               disabled={isDisabled}
+              autoComplete="name"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -178,6 +160,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isDisabled}
+              autoComplete="email"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -191,6 +174,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               required
               minLength={8}
               disabled={isDisabled}
+              autoComplete="new-password"
             />
             <p className="text-xs text-muted-foreground">
               Must be at least 8 characters
