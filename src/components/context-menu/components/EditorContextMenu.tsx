@@ -129,11 +129,10 @@ const EditorMenuContent = forwardRef<
       await menuItem.action(menuContext)
     } catch (error) {
       console.error('ContextMenu: Error executing action', error)
-    } finally {
-      actionInProgressRef.current = false
-      setIsOpen(false)
-      onClose?.()
     }
+    actionInProgressRef.current = false
+    setIsOpen(false)
+    onClose?.()
   }
 
   const renderMenuItem = (menuItem: MenuItemDef) => {

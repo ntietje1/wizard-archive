@@ -164,8 +164,10 @@ export function useFileDropHandler() {
           return false
         }
 
+        if (!silent) activeUploadsRef.current.delete(uploadId)
         return true
       } catch (error) {
+        if (!silent) activeUploadsRef.current.delete(uploadId)
         if (!silent && toastId) {
           toast.dismiss(toastId)
           toast.error(
@@ -174,8 +176,6 @@ export function useFileDropHandler() {
           )
         }
         throw error
-      } finally {
-        if (!silent) activeUploadsRef.current.delete(uploadId)
       }
     },
     [

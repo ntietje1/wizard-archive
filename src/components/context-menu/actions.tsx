@@ -809,10 +809,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               } catch (error) {
                 console.error(error)
                 toast.error('Failed to empty trash')
-              } finally {
-                setConfirmEmptyTrash(false)
-                onDialogClose?.()
               }
+              setConfirmEmptyTrash(false)
+              onDialogClose?.()
             }}
           />
         )}
@@ -836,10 +835,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               } catch (error) {
                 console.error(error)
                 toast.error('Failed to delete item')
-              } finally {
-                setConfirmPermanentDeleteItem(null)
-                onDialogClose?.()
               }
+              setConfirmPermanentDeleteItem(null)
+              onDialogClose?.()
             }}
           />
         )}

@@ -30,9 +30,8 @@ export function NewNoteButton() {
     } catch (error) {
       console.error(error)
       toast.error('Failed to create note')
-    } finally {
-      setIsPending(false)
     }
+    setIsPending(false)
   }
 
   return (

@@ -37,9 +37,8 @@ export function PlayerDeleteConfirmDialog({
     } catch (error) {
       console.error(error)
       toast.error('Failed to remove player')
-    } finally {
-      onClose()
     }
+    onClose()
   }, [updateMemberStatus, player._id, onConfirm, onClose])
 
   const playerName = player.userProfile.name ?? 'this player'

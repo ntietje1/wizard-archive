@@ -246,7 +246,7 @@ export function WikiLinkAutocomplete({
   }, [noteQuery.data])
 
   // Build filtered items
-  const fileResult = useMemo((): {
+  const fileResult = ((): {
     items: Array<FileItem>
     totalCount: number
   } => {
@@ -290,16 +290,9 @@ export function WikiLinkAutocomplete({
       ? filterSuggestionItems(all, context.fileQuery)
       : all
     return { items: filtered.slice(0, 10), totalCount: filtered.length }
-  }, [
-    sidebarItems,
-    itemsMap,
-    context?.mode,
-    context?.fileQuery,
-    context?.completedFolderPath,
-    context?.resolvedParentFolder,
-  ])
+  })()
 
-  const headingResult = useMemo((): {
+  const headingResult = ((): {
     items: Array<HeadingItem>
     totalCount: number
   } => {
@@ -310,12 +303,7 @@ export function WikiLinkAutocomplete({
       context.headingQuery,
     )
     return { items: all.slice(0, 10), totalCount: all.length }
-  }, [
-    context?.mode,
-    context?.completedHeadingPath,
-    context?.headingQuery,
-    headings,
-  ])
+  })()
 
   const fileItems = fileResult.items
   const headingItems = headingResult.items
@@ -329,9 +317,23 @@ export function WikiLinkAutocomplete({
   // Reset selection on mode/path change
   const completedHeadingPath = context?.completedHeadingPath?.join('#')
   const completedFolderPath = context?.completedFolderPath?.join('/')
-  useEffect(() => {
+  const [prevResetKey, setPrevResetKey] = useState({
+    mode: context?.mode,
+    headingPath: completedHeadingPath,
+    folderPath: completedFolderPath,
+  })
+  if (
+    prevResetKey.mode !== context?.mode ||
+    prevResetKey.headingPath !== completedHeadingPath ||
+    prevResetKey.folderPath !== completedFolderPath
+  ) {
+    setPrevResetKey({
+      mode: context?.mode,
+      headingPath: completedHeadingPath,
+      folderPath: completedFolderPath,
+    })
     setSelectedIndex(0)
-  }, [context?.mode, completedHeadingPath, completedFolderPath])
+  }
 
   // Track dragging to hide menu during text selection
   useEffect(() => {

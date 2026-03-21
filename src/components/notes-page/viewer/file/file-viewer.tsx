@@ -122,6 +122,7 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
     case 'image':
       return (
         <ImageFileViewer
+          key={file._id}
           imageUrl={file.downloadUrl}
           alt={file.name || 'File'}
         />

@@ -30,9 +30,8 @@ export function FolderDeleteConfirmDialog({
     } catch (error) {
       console.error(error)
       toast.error('Failed to move folder to trash')
-    } finally {
-      onClose()
     }
+    onClose()
   }, [moveItem, folder, onConfirm, onClose])
 
   return (

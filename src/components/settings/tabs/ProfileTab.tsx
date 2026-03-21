@@ -270,10 +270,9 @@ function AccountRow({ profile }: { profile: Profile }) {
         toast.success('Profile picture updated')
       } catch {
         toast.error('Failed to upload image')
-      } finally {
-        setIsUploading(false)
-        if (fileInputRef.current) fileInputRef.current.value = ''
       }
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     },
     [uploadFile, commitUpload, updateProfileImage],
   )
@@ -421,9 +420,8 @@ function UsernameRow({ profile }: { profile: Profile }) {
       setSubmitError(
         err instanceof Error ? err.message : 'Failed to update username',
       )
-    } finally {
-      setIsLoading(false)
     }
+    setIsLoading(false)
   }
 
   const displayError = validationError ?? submitError
@@ -546,9 +544,8 @@ function EmailRow({ profile }: { profile: Profile }) {
       setNewEmail('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to change email')
-    } finally {
-      setIsLoading(false)
     }
+    setIsLoading(false)
   }
 
   const handleClose = (open: boolean) => {
@@ -1028,9 +1025,8 @@ function ActiveSessionsSection() {
       await revokeSession(token)
     } catch {
       toast.error('Failed to revoke session')
-    } finally {
-      setRevokingId(null)
     }
+    setRevokingId(null)
   }
 
   const handleRevokeAllOtherSessions = async () => {
@@ -1039,9 +1035,8 @@ function ActiveSessionsSection() {
       await revokeOtherSessions()
     } catch {
       toast.error('Failed to log out other sessions')
-    } finally {
-      setIsRevokingAll(false)
     }
+    setIsRevokingAll(false)
   }
 
   const otherSessionsExist = sessions.some((s) => !s.isCurrent)

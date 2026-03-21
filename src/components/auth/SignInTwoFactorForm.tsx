@@ -42,9 +42,8 @@ export function SignInTwoFactorForm({
     } catch {
       setError('Unable to verify. Please try again.')
       setTotpCode('')
-    } finally {
-      setIsLoading(false)
     }
+    setIsLoading(false)
   }
 
   return (

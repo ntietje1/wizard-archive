@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, m } from 'motion/react'
 import { Eye, X } from 'lucide-react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { useEditorMode } from '~/hooks/useEditorMode'
@@ -29,7 +29,7 @@ export function ViewAsBanner() {
       {/* Screen rim — fixed inset border around entire viewport */}
       <AnimatePresence>
         {isActive && (
-          <motion.div
+          <m.div
             key="view-as-rim"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -43,7 +43,7 @@ export function ViewAsBanner() {
       {/* Bottom banner */}
       <AnimatePresence>
         {isActive && (
-          <motion.div
+          <m.div
             key="view-as-banner"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -69,7 +69,7 @@ export function ViewAsBanner() {
                 Exit
               </Button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>

@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner'
 import { useConvexMutation } from '@convex-dev/react-query'
 import type { CampaignMember } from 'convex/campaigns/types'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,9 @@ import { Badge } from '~/components/shadcn/ui/badge'
 
 type PlayerRequestCardProps = {
   player: CampaignMember
-  updatingId: string | null
+  updatingId: Id<'campaignMembers'> | null
   handleUpdate: (
-    memberId: CampaignMember['_id'],
+    memberId: Id<'campaignMembers'>,
     status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
   ) => Promise<void>
 }
@@ -102,7 +103,9 @@ export function PlayerRequestsDialog({
       api.campaigns.mutations.updateCampaignMemberStatus,
     ),
   })
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
+    null,
+  )
 
   const pending = players.filter(
     (p) =>
@@ -128,9 +131,8 @@ export function PlayerRequestsDialog({
     } catch (e) {
       console.error(e)
       toast.error('Failed to update status')
-    } finally {
-      setUpdatingId(null)
     }
+    setUpdatingId(null)
   }
 
   return (

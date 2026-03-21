@@ -153,9 +153,8 @@ function NotSharedContent() {
       console.error('Failed to create item:', error)
       const typeLabel = requestedType ? getItemTypeLabel(requestedType) : 'item'
       toast.error(`Failed to create ${typeLabel}`)
-    } finally {
-      setIsPending(false)
     }
+    setIsPending(false)
   }
 
   const itemTypeLabel = requestedType ? getItemTypeLabel(requestedType) : 'page'

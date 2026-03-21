@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -43,7 +43,11 @@ function AvatarPlaceholder() {
 }
 
 export function UserMenu() {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
   const openSettings = useSettingsStore((s) => s.open)
@@ -84,10 +88,6 @@ export function UserMenu() {
       window.location.reload()
     }
   }, [queryClient, deviceSessions.currentToken, navigate])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   if (!mounted || !profile) {
     return <AvatarPlaceholder />

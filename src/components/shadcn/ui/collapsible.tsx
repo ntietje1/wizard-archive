@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Collapsible as CollapsiblePrimitive } from '@base-ui/react/collapsible'
-import { AnimatePresence, motion, type HTMLMotionProps } from 'motion/react'
+import { AnimatePresence, m, type HTMLMotionProps } from 'motion/react'
 
 type CollapsibleContextType = {
   isOpen: boolean
@@ -91,6 +91,7 @@ function CollapsibleContent({
   transition = { duration: 0.2, ease: 'linear' },
   hiddenUntilFound,
   keepRendered = true,
+  style,
   ...props
 }: CollapsibleContentProps) {
   const { isOpen } = useCollapsible()
@@ -103,7 +104,7 @@ function CollapsibleContent({
       render={
         <AnimatePresence mode="wait">
           {keepRendered ? (
-            <motion.div
+            <m.div
               key="collapsible-content"
               data-slot="collapsible-content"
               initial={{ height: 0 }}
@@ -111,14 +112,13 @@ function CollapsibleContent({
               transition={transition}
               style={{
                 overflow: 'hidden',
-                willChange: 'height',
-                ...props.style,
+                ...style,
               }}
               {...props}
             />
           ) : (
             isOpen && (
-              <motion.div
+              <m.div
                 key="collapsible-content"
                 data-slot="collapsible-content"
                 initial={{ height: 0 }}
@@ -127,8 +127,7 @@ function CollapsibleContent({
                 transition={transition}
                 style={{
                   overflow: 'hidden',
-                  willChange: 'height',
-                  ...props.style,
+                  ...style,
                 }}
                 {...props}
               />

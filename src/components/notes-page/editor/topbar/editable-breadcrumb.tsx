@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
@@ -45,13 +45,15 @@ export function EditableName({
   showNotSharedTooltip,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
+  const [prevInitialName, setPrevInitialName] = useState(initialName)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  if (prevInitialName !== initialName && !isEditing) {
+    setPrevInitialName(initialName)
     setName(initialName)
-  }, [initialName])
+  }
 
   const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
@@ -91,9 +93,8 @@ export function EditableName({
       console.error(error)
       setName(initialName)
       onChange?.(initialName)
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }, [name, initialName, onRename, onChange, checkNameUnique, isSubmitting])
 
   const handleFocus = useCallback(() => {

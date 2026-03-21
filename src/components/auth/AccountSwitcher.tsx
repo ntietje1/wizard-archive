@@ -30,11 +30,11 @@ export function AccountSwitcher({
       setSwitching(sessionToken)
       try {
         await onSwitch(sessionToken)
+        setSwitching(null)
       } catch (error) {
+        setSwitching(null)
         console.error(error)
         throw error
-      } finally {
-        setSwitching(null)
       }
     },
     [onSwitch],

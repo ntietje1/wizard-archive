@@ -58,9 +58,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       } catch (error) {
         console.error(error)
         toast.error('Failed to delete item')
-      } finally {
-        setConfirmDeleteItem(null)
       }
+      setConfirmDeleteItem(null)
     },
     [permanentlyDeleteItem],
   )
@@ -74,9 +73,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
     } catch (error) {
       console.error(error)
       toast.error('Failed to empty trash')
-    } finally {
-      setConfirmEmptyTrash(false)
     }
+    setConfirmEmptyTrash(false)
   }, [campaignId, emptyTrashBin])
 
   const handleItemClick = useCallback(

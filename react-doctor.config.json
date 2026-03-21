@@ -1,0 +1,10 @@
+{
+  "ignore": {
+    "rules": [
+      "jsx-a11y/no-autofocus",
+      "react/no-prevent-default",
+      "no-prevent-default",
+      "react/prevent-default"
+    ]
+  }
+}

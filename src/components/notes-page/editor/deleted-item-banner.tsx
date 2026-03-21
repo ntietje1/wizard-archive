@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, m } from 'motion/react'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -36,7 +36,7 @@ function useDeletedByName(deletedById: Id<'userProfiles'> | undefined) {
     }
 
     // Check campaign members
-    const member = members?.find((m) => m.userProfile._id === deletedById)
+    const member = members?.find((mem) => mem.userProfile._id === deletedById)
     if (member) {
       return member.userProfile.name || member.userProfile.username
     }
@@ -109,16 +109,15 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
     } catch (error) {
       console.error(error)
       toast.error('Failed to delete item')
-    } finally {
-      setConfirmDelete(false)
     }
+    setConfirmDelete(false)
   }
 
   return (
     <>
       <AnimatePresence>
         {isDeleted && (
-          <motion.div
+          <m.div
             key="deleted-banner"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -141,7 +140,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
                 </>
               }
             />
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -190,9 +189,8 @@ function EmptyTrashButton() {
     } catch (error) {
       console.error(error)
       toast.error('Failed to empty trash')
-    } finally {
-      setConfirmEmptyTrash(false)
     }
+    setConfirmEmptyTrash(false)
   }
 
   return (

@@ -28,56 +28,51 @@ export const ColorPicker = (props: {
 }) => {
   const Components = useComponentsContext()!
   const dict = useDictionary()
-  const TextColorSection = () =>
-    props.text ? (
-      <>
-        <Components.Generic.Menu.Label>
-          {dict.color_picker.text_title}
-        </Components.Generic.Menu.Label>
-        {colors.map((color) => (
-          <Components.Generic.Menu.Item
-            onClick={() => {
-              if (props.onClick) props.onClick()
-              props.text!.setColor(color)
-            }}
-            data-test={`text-color-${color}`}
-            icon={<ColorIcon textColor={color} size={props.iconSize} />}
-            checked={props.text!.color === color}
-            key={`text-color-${color}`}
-          >
-            {dict.color_picker.colors[color]}
-          </Components.Generic.Menu.Item>
-        ))}
-      </>
-    ) : null
-
-  const BackgroundColorSection = () =>
-    props.background ? (
-      <>
-        <Components.Generic.Menu.Label>
-          {'Highlight'}
-        </Components.Generic.Menu.Label>
-        {colors.map((color) => (
-          <Components.Generic.Menu.Item
-            onClick={() => {
-              if (props.onClick) props.onClick()
-              props.background!.setColor(color)
-            }}
-            data-test={`background-color-${color}`}
-            icon={<ColorIcon backgroundColor={color} size={props.iconSize} />}
-            key={`background-color-${color}`}
-            checked={props.background!.color === color}
-          >
-            {dict.color_picker.colors[color]}
-          </Components.Generic.Menu.Item>
-        ))}
-      </>
-    ) : null
 
   return (
     <>
-      <TextColorSection />
-      <BackgroundColorSection />
+      {props.text && (
+        <>
+          <Components.Generic.Menu.Label>
+            {dict.color_picker.text_title}
+          </Components.Generic.Menu.Label>
+          {colors.map((color) => (
+            <Components.Generic.Menu.Item
+              onClick={() => {
+                if (props.onClick) props.onClick()
+                props.text!.setColor(color)
+              }}
+              data-test={`text-color-${color}`}
+              icon={<ColorIcon textColor={color} size={props.iconSize} />}
+              checked={props.text!.color === color}
+              key={`text-color-${color}`}
+            >
+              {dict.color_picker.colors[color]}
+            </Components.Generic.Menu.Item>
+          ))}
+        </>
+      )}
+      {props.background && (
+        <>
+          <Components.Generic.Menu.Label>
+            {'Highlight'}
+          </Components.Generic.Menu.Label>
+          {colors.map((color) => (
+            <Components.Generic.Menu.Item
+              onClick={() => {
+                if (props.onClick) props.onClick()
+                props.background!.setColor(color)
+              }}
+              data-test={`background-color-${color}`}
+              icon={<ColorIcon backgroundColor={color} size={props.iconSize} />}
+              key={`background-color-${color}`}
+              checked={props.background!.color === color}
+            >
+              {dict.color_picker.colors[color]}
+            </Components.Generic.Menu.Item>
+          ))}
+        </>
+      )}
     </>
   )
 }

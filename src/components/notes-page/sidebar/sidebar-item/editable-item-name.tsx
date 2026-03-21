@@ -26,12 +26,17 @@ export function EditableName({
   excludeId,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
+  const [prevKey, setPrevKey] = useState({ isRenaming, initialName })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  if (
+    prevKey.isRenaming !== isRenaming ||
+    prevKey.initialName !== initialName
+  ) {
+    setPrevKey({ isRenaming, initialName })
     setName(initialName)
-  }, [isRenaming, initialName])
+  }
 
   const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
@@ -81,9 +86,8 @@ export function EditableName({
         toast.error('Failed to rename. Please try again.')
         setName(initialName)
         onCancelRename()
-      } finally {
-        setIsSubmitting(false)
       }
+      setIsSubmitting(false)
     }
 
     const handleCancel = () => {

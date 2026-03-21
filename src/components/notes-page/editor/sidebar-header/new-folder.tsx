@@ -30,9 +30,8 @@ export function NewFolderButton() {
     } catch (error) {
       console.error(error)
       toast.error('Failed to create folder')
-    } finally {
-      setIsPending(false)
     }
+    setIsPending(false)
   }
 
   return (

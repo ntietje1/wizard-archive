@@ -85,9 +85,8 @@ export function CreateNewDashboard({
     } catch (error) {
       console.error(error)
       toast.error('Failed to create item')
-    } finally {
-      setCreatingType(null)
     }
+    setCreatingType(null)
   }
 
   return (

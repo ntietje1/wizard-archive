@@ -8,6 +8,7 @@ import {
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
+import { LazyMotion, domAnimation } from 'motion/react'
 import * as React from 'react'
 import { Toaster } from 'sonner'
 import type { ConvexReactClient } from 'convex/react'
@@ -122,11 +123,13 @@ function RootDocument({
         <ThemeScript initialTheme={initialTheme} />
       </head>
       <body className="flex flex-col min-h-screen">
-        <NavigationProgress />
-        {children}
-        <Toaster />
-        <TransitionOverlay />
-        <TanStackRouterDevtools position="bottom-right" />
+        <LazyMotion features={domAnimation}>
+          <NavigationProgress />
+          {children}
+          <Toaster />
+          <TransitionOverlay />
+          <TanStackRouterDevtools position="bottom-right" />
+        </LazyMotion>
         <Scripts />
       </body>
     </html>

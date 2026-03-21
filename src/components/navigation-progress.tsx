@@ -20,20 +20,21 @@ export function NavigationProgress() {
   useEffect(() => {
     if (isLoading && !isSamePage) {
       setState('loading')
-    } else if (state === 'loading') {
+      return
+    }
+    if (state === 'loading' && !isLoading) {
       setState('completing')
+      return
+    }
+    if (state === 'completing') {
+      const t = setTimeout(() => setState('fading'), 500)
+      return () => clearTimeout(t)
+    }
+    if (state === 'fading') {
+      const t = setTimeout(() => setState('idle'), 200)
+      return () => clearTimeout(t)
     }
   }, [isLoading, isSamePage, state])
-
-  useEffect(() => {
-    if (state === 'completing') {
-      const fadeTimeout = setTimeout(() => setState('fading'), 500)
-      return () => clearTimeout(fadeTimeout)
-    } else if (state === 'fading') {
-      const unmountTimeout = setTimeout(() => setState('idle'), 200)
-      return () => clearTimeout(unmountTimeout)
-    }
-  }, [state])
 
   if (state === 'idle') return null
 

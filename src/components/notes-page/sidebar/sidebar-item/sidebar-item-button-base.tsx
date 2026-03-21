@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { motion } from 'motion/react'
+import { m } from 'motion/react'
 import { EditableName } from './editable-item-name'
 import type { SidebarItemButtonProps } from './types'
 import { ChevronRight, MoreHorizontal } from '~/lib/icons'
@@ -66,7 +66,7 @@ function SidebarItemButtonBaseComponent({
                 onToggleExpanded(e)
               }}
             >
-              <motion.div
+              <m.div
                 animate={{ rotate: isExpanded ? 90 : 0 }}
                 transition={{
                   duration: isExpanded ? 0.2 : 0.15,
@@ -75,7 +75,7 @@ function SidebarItemButtonBaseComponent({
                 className="flex items-center justify-center"
               >
                 <ChevronRight className="h-3 w-3" />
-              </motion.div>
+              </m.div>
             </Button>
           ) : (
             <Icon className="h-4 w-4 shrink-0" />
