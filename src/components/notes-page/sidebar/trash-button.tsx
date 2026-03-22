@@ -48,7 +48,7 @@ export function TrashButton() {
             )}
             rightSlot={
               trashCount > 0 ? (
-                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
                   {trashCount}
                 </span>
               ) : undefined

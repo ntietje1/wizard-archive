@@ -157,7 +157,7 @@ export function FileUploadSection({
                     fileUpload.fileInputRef.current?.click()
                   }}
                   disabled={fileUpload.isUploading || isSubmitting}
-                  className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150"
+                  className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-100 ease-out"
                 >
                   Replace
                 </Button>

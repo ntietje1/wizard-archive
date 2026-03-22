@@ -119,7 +119,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
                 <MapPin className="w-12 h-12 text-muted-foreground" />
               </div>
             )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10" />
+            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />
           </div>
         </Card>
       </Link>

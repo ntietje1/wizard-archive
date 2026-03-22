@@ -40,7 +40,7 @@ export function NavigationProgress() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 h-0.5 origin-top transition-transform duration-200 ease-out ${
+      className={`fixed top-0 left-0 right-0 z-50 h-0.5 origin-top transition-transform duration-100 ease-out ${
         state === 'fading' ? 'scale-y-0' : 'scale-y-100'
       }`}
     >

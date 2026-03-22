@@ -166,7 +166,9 @@ function MapPin({
   const visibleItem = ghost ? undefined : pin.item
   const Icon = getSidebarItemIcon(visibleItem)
   const color = ghost
-    ? '#9ca3af'
+    ? getComputedStyle(document.documentElement)
+        .getPropertyValue('--muted-foreground')
+        .trim()
     : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
   const isHidden = pin.visible !== true
   const baseName = ghost ? '???' : (visibleItem?.name ?? '')
@@ -203,7 +205,7 @@ function MapPin({
     >
       {/* Teardrop pin marker */}
       <div
-        className="transition-transform duration-150 ease-out"
+        className="transition-transform duration-100 ease-out"
         style={{
           transform: `scale(${hoverScale})`,
           transformOrigin: 'bottom center',
@@ -215,7 +217,7 @@ function MapPin({
           viewBox="0 0 32 44"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={cn('drop-shadow-lg', isHovered && 'drop-shadow-xl')}
+          className="text-primary-foreground"
         >
           {/* Teardrop path */}
           <path
@@ -225,14 +227,14 @@ function MapPin({
           {/* White border effect */}
           <path
             d="M16 2C8.268 2 2 8.268 2 16C2 22.5 14.5 39 16 41C17.5 39 30 22.5 30 16C30 8.268 23.732 2 16 2Z"
-            stroke="white"
+            stroke="currentColor"
             strokeWidth="2"
             fill="none"
           />
         </svg>
         {/* Icon */}
         <div className="absolute top-[8px] left-1/2 -translate-x-1/2 w-[18px] h-[18px] flex items-center justify-center">
-          <Icon className="w-4 h-4 text-white" />
+          <Icon className="w-4 h-4 text-primary-foreground" />
         </div>
       </div>
 
@@ -242,7 +244,7 @@ function MapPin({
           'absolute left-1/2 -translate-x-1/2 bottom-full mb-1',
           'bg-popover text-popover-foreground px-2 py-1 rounded-md shadow-md',
           'text-xs font-medium whitespace-nowrap',
-          'transition-all duration-150 pointer-events-none',
+          'transition-all duration-100 ease-out pointer-events-none',
           isHovered && !isDragging
             ? 'opacity-100 translate-y-0'
             : 'opacity-0 translate-y-1',

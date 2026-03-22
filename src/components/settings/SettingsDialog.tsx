@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogTitle,
 } from '~/components/shadcn/ui/dialog'
+import { Button } from '~/components/shadcn/ui/button'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 import { cn } from '~/lib/shadcn/utils'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
@@ -141,11 +142,11 @@ export function SettingsDialog() {
               <div className="mt-1.5 flex flex-col gap-0.5">
                 {/* Profile entry under Account */}
                 {group.label === 'Account' && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     onClick={() => setActiveTab('profile')}
                     className={cn(
-                      'flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm cursor-pointer',
+                      'h-auto w-full justify-start gap-2.5 px-2 py-1.5 text-sm font-normal',
                       activeTab === 'profile'
                         ? 'bg-muted text-foreground font-medium'
                         : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
@@ -165,15 +166,15 @@ export function SettingsDialog() {
                     <span className="truncate">
                       {profile?.name ?? profile?.email ?? 'Profile'}
                     </span>
-                  </button>
+                  </Button>
                 )}
                 {group.tabs.map((tab) => (
-                  <button
+                  <Button
                     key={tab.id}
-                    type="button"
+                    variant="ghost"
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer',
+                      'h-auto w-full justify-start gap-2 px-2 py-1.5 text-sm font-normal',
                       activeTab === tab.id
                         ? 'bg-muted text-foreground font-medium'
                         : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
@@ -181,7 +182,7 @@ export function SettingsDialog() {
                   >
                     <tab.icon className="size-4 shrink-0" />
                     {tab.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

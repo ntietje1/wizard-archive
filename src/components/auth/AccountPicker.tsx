@@ -53,10 +53,11 @@ export function AccountPicker({
         {sessions.map((ds) => {
           const isSwitching = switchingToken === ds.session.token
           return (
-            <button
+            <Button
               key={ds.session.token}
               type="button"
-              className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-muted transition-colors disabled:opacity-50"
+              variant="ghost"
+              className="h-auto w-full justify-start gap-3 px-3 py-2.5"
               onClick={() => handleSwitch(ds)}
               disabled={!!switchingToken}
             >
@@ -81,7 +82,7 @@ export function AccountPicker({
               ) : (
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               )}
-            </button>
+            </Button>
           )
         })}
       </div>

@@ -10,8 +10,18 @@ import {
 } from '../../-components/campaign-form-validators'
 import { useCampaign } from '~/hooks/useCampaign'
 import { LoadingPage } from '~/components/loading/loading-page'
+import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/components/shadcn/ui/select'
+import { Switch } from '~/components/shadcn/ui/switch'
+import { Textarea } from '~/components/shadcn/ui/textarea'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 export const Route = createFileRoute(
@@ -107,9 +117,8 @@ function CampaignSettingsPage() {
                   <Label className="block text-sm font-medium text-foreground mb-1">
                     Description
                   </Label>
-                  <textarea
+                  <Textarea
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -159,12 +168,7 @@ function CampaignSettingsPage() {
               )}
             </form.Field>
 
-            <button
-              type="submit"
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90"
-            >
-              Save Changes
-            </button>
+            <Button type="submit">Save Changes</Button>
           </form>
         </div>
 
@@ -179,11 +183,16 @@ function CampaignSettingsPage() {
                   Control who can see your campaign
                 </p>
               </div>
-              <select className="px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="private">Private</option>
-                <option value="friends">Friends Only</option>
-                <option value="public">Public</option>
-              </select>
+              <Select defaultValue="private">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="friends">Friends Only</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -193,9 +202,7 @@ function CampaignSettingsPage() {
                   Let players invite others to join
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" />
-              </label>
+              <Switch />
             </div>
 
             <div className="flex items-center justify-between">
@@ -205,13 +212,7 @@ function CampaignSettingsPage() {
                   Let players create new characters
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  defaultChecked
-                />
-              </label>
+              <Switch defaultChecked />
             </div>
           </div>
         </div>
@@ -221,38 +222,36 @@ function CampaignSettingsPage() {
           <h3 className="text-lg font-semibold mb-4">Game Rules</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label className="block text-sm font-medium text-foreground mb-1">
                 Game System
-              </label>
-              <select className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="5e">D&D 5th Edition</option>
-                <option value="pathfinder">Pathfinder</option>
-                <option value="3.5e">D&D 3.5 Edition</option>
-                <option value="other">Other</option>
-              </select>
+              </Label>
+              <Select defaultValue="5e">
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5e">D&D 5th Edition</SelectItem>
+                  <SelectItem value="pathfinder">Pathfinder</SelectItem>
+                  <SelectItem value="3.5e">D&D 3.5 Edition</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label className="block text-sm font-medium text-foreground mb-1">
                 Starting Level
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="20"
-                defaultValue="1"
-                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              </Label>
+              <Input type="number" min={1} max={20} defaultValue={1} />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <Label className="block text-sm font-medium text-foreground mb-1">
                 House Rules
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 rows={4}
                 placeholder="Any special rules or modifications for this campaign..."
-                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
@@ -273,9 +272,12 @@ function CampaignSettingsPage() {
                   Hide this campaign from active campaigns
                 </p>
               </div>
-              <button className="bg-destructive/15 text-destructive px-4 py-2 rounded-lg hover:bg-destructive/25">
+              <Button
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/15"
+              >
                 Archive
-              </button>
+              </Button>
             </div>
 
             <div className="flex items-center justify-between">
@@ -287,9 +289,7 @@ function CampaignSettingsPage() {
                   Permanently delete this campaign and all its data
                 </p>
               </div>
-              <button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-lg hover:bg-destructive/90">
-                Delete
-              </button>
+              <Button variant="destructive">Delete</Button>
             </div>
           </div>
         </div>

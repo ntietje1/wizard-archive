@@ -410,7 +410,7 @@ function AllPlayersRow({
           {showStack ? (
             <AvatarStack members={inheritingMembers} />
           ) : (
-            <div className="flex items-center justify-center size-6 rounded-full bg-muted">
+            <div className="flex items-center justify-center size-6 rounded-xl bg-muted">
               <Users className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           )}

@@ -10,11 +10,11 @@ export function TransitionOverlay() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-foreground/60 backdrop-blur-sm"
     >
       <div className="flex flex-col items-center gap-3" aria-busy="true">
-        <Loader2 className="size-6 animate-spin text-white" />
-        <p className="text-sm font-medium text-white">{message}</p>
+        <Loader2 className="size-6 animate-spin text-primary-foreground" />
+        <p className="text-sm font-medium text-primary-foreground">{message}</p>
       </div>
     </div>
   )

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { AnimatePresence, m } from 'motion/react'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -115,34 +114,25 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
 
   return (
     <>
-      <AnimatePresence>
-        {isDeleted && (
-          <m.div
-            key="deleted-banner"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', duration: 0.2, bounce: 0 }}
-            className="overflow-hidden"
-          >
-            <BannerBar
-              message={message}
-              actions={
-                <>
-                  <BannerButton onClick={handleRestore}>
-                    <RotateCcw className="h-3 w-3 mr-0.5" />
-                    Restore
-                  </BannerButton>
-                  <BannerButton onClick={() => setConfirmDelete(true)}>
-                    <Trash2 className="h-3 w-3 mr-0.5" />
-                    Delete from Trash
-                  </BannerButton>
-                </>
-              }
-            />
-          </m.div>
-        )}
-      </AnimatePresence>
+      {isDeleted && (
+        <div className="overflow-hidden fade-in-delayed-fast">
+          <BannerBar
+            message={message}
+            actions={
+              <>
+                <BannerButton onClick={handleRestore}>
+                  <RotateCcw className="h-3 w-3 mr-0.5" />
+                  Restore
+                </BannerButton>
+                <BannerButton onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="h-3 w-3 mr-0.5" />
+                  Delete from Trash
+                </BannerButton>
+              </>
+            }
+          />
+        </div>
+      )}
 
       {confirmDelete && (
         <ConfirmationDialog

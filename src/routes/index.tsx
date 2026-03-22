@@ -13,7 +13,7 @@ function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <div className="text-center space-y-8">
-        <h1 className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-foreground">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
           Welcome to {"The Wizard's Archive"}
         </h1>
         <p className="text-xl text-muted-foreground">

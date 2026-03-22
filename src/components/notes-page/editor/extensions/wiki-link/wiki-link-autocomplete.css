@@ -22,14 +22,14 @@
   font-size: 0.6875rem;
   font-weight: 500;
   color: var(--muted-foreground);
-  border-bottom: 1px solid oklch(from var(--border) l c h / 0.5);
+  border-bottom: 1px solid color-mix(in oklch, var(--border), transparent 50%);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .wiki-link-menu-path {
-  color: oklch(from var(--muted-foreground) l c h / 0.7);
+  color: color-mix(in oklch, var(--muted-foreground), transparent 30%);
 }
 
 .wiki-link-menu-scroll-area {
@@ -48,12 +48,12 @@
   align-items: flex-start;
   gap: 0.0625rem;
   padding: 0.25rem 0.5rem;
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   transition:
-    background-color 0.15s,
-    color 0.15s;
+    background-color 0.1s,
+    color 0.1s;
 }
 
 .wiki-link-menu-item.selected,
@@ -82,7 +82,7 @@
   padding: 0 0.375rem;
   font-size: 0.625rem;
   font-weight: 500;
-  border-radius: 9999px;
+  border-radius: var(--radius-sm);
   background-color: var(--muted);
   color: var(--muted-foreground);
   border: 1px solid var(--border);
@@ -113,7 +113,7 @@
   padding: 0.25rem 0.5rem;
   font-size: 0.625rem;
   color: var(--muted-foreground);
-  border-top: 1px solid oklch(from var(--border) l c h / 0.5);
+  border-top: 1px solid color-mix(in oklch, var(--border), transparent 50%);
   display: flex;
   justify-content: space-evenly;
   align-items: center;

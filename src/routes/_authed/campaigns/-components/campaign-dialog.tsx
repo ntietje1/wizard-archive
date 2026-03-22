@@ -13,6 +13,7 @@ import type { Campaign } from 'convex/campaigns/types'
 import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
 import { Input } from '~/components/shadcn/ui/input'
 import { Label } from '~/components/shadcn/ui/label'
+import { Textarea } from '~/components/shadcn/ui/textarea'
 import { Button } from '~/components/shadcn/ui/button'
 import { Link, Sword } from '~/lib/icons'
 import { FormDialog } from '~/components/forms/base-form/form-dialog'
@@ -172,10 +173,10 @@ export function CampaignDialog({
           {(field) => (
             <div className="space-y-2 px-px">
               <Label htmlFor="campaign-description">Description</Label>
-              <textarea
+              <Textarea
                 id="campaign-description"
                 rows={3}
-                className="flex h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-20"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}

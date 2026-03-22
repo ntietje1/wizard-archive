@@ -4,11 +4,11 @@ export function CampaignsHeader() {
   return (
     <div className="text-center mb-12">
       <div className="flex items-center justify-center gap-3 mb-4">
-        <div className="p-3 bg-accent rounded-full">
+        <div className="p-3 bg-accent rounded-xl">
           <Sword className="h-8 w-8 text-primary" />
         </div>
         <h1 className="text-4xl font-bold text-foreground">Campaign Manager</h1>
-        <div className="p-3 bg-accent rounded-full">
+        <div className="p-3 bg-accent rounded-xl">
           <Shield className="h-8 w-8 text-primary" />
         </div>
       </div>

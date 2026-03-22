@@ -184,13 +184,13 @@ export function SignInCredentialsForm({
         <p
           className={`text-center text-sm transition-opacity ${sessionsLoaded && existingSessions.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <button
+          <Button
             type="button"
-            className="text-primary underline-offset-4 hover:underline font-medium"
+            variant="link"
             onClick={() => onPickAccount?.()}
           >
             Switch to an existing account
-          </button>
+          </Button>
         </p>
       </div>
     </div>

@@ -56,7 +56,7 @@ export function NameValidationFeedback({
       className={cn(
         'flex items-center gap-1.5 px-2 py-1',
         'text-xs text-destructive-foreground bg-destructive rounded-md shadow-md',
-        'animate-in fade-in-0 zoom-in-105 duration-100',
+        'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-105 duration-100',
         className,
       )}
       style={{

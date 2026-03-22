@@ -58,10 +58,10 @@ function StatusIcon({ variant }: StatusIconProps) {
 
   return (
     <div
-      className={`relative p-4 ${config.bg} ${config.ring} ring-2 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center shadow-lg hover:scale-102`}
+      className={`relative p-4 ${config.bg} ${config.ring} ring-2 rounded-xl w-20 h-20 mx-auto mb-6 flex items-center justify-center`}
     >
-      <Shield className={`h-10 w-10 ${config.icon} drop-shadow-sm`} />
-      <div className="absolute inset-0 bg-card/20 rounded-2xl" />
+      <Shield className={`h-10 w-10 ${config.icon}`} />
+      <div className="absolute inset-0 bg-card/20 rounded-xl" />
     </div>
   )
 }
@@ -152,8 +152,8 @@ function RouteComponent() {
         titleColor: 'text-foreground',
         children: campaign ? (
           <div className="space-y-6">
-            <div className="relative p-6 bg-muted rounded-2xl border border-border shadow-sm">
-              <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
+            <div className="relative p-6 bg-muted rounded-xl border border-border">
+              <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
               <h3 className="font-bold text-foreground mb-3 text-lg text-left">
                 {campaign.name}
               </h3>
@@ -174,7 +174,7 @@ function RouteComponent() {
             </div>
             <Button
               onClick={() => setShowSignIn(true)}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Sign In to Join
             </Button>
@@ -241,14 +241,14 @@ function RouteComponent() {
           <div className="flex flex-col gap-3">
             <Button
               onClick={goToCampaignHome}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Go to Campaign
             </Button>
             <Button
               onClick={goToPlayers}
               variant="outline"
-              className="w-full h-12 border-2 border-border hover:border-primary/50 bg-card hover:bg-muted text-foreground font-semibold rounded-xl shadow-sm"
+              className="w-full h-12 border border-border hover:border-primary/50 bg-card hover:bg-muted text-foreground font-semibold"
             >
               Manage Players
             </Button>
@@ -278,7 +278,7 @@ function RouteComponent() {
                 </p>
               </div>
               <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                <div className="w-2 h-2 bg-primary/60 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
                 <span>Waiting for DM approval</span>
               </div>
             </div>
@@ -298,7 +298,7 @@ function RouteComponent() {
           children: (
             <Button
               onClick={goToCampaignHome}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Go to Campaign
             </Button>
@@ -319,7 +319,7 @@ function RouteComponent() {
           children: (
             <Button
               onClick={goToHome}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
             >
               Exit
             </Button>
@@ -341,7 +341,7 @@ function RouteComponent() {
           children: (
             <Button
               onClick={goToHome}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
             >
               Exit
             </Button>
@@ -361,7 +361,7 @@ function RouteComponent() {
           children: (
             <Button
               onClick={handleJoinCampaign}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-primary-foreground font-semibold"
             >
               Try Again
             </Button>
@@ -400,8 +400,8 @@ function RouteComponent() {
           titleColor: 'text-foreground',
           children: (
             <div className="space-y-6">
-              <div className="relative p-6 bg-muted rounded-2xl border border-border shadow-sm">
-                <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
+              <div className="relative p-6 bg-muted rounded-xl border border-border">
+                <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
                 <h3 className="font-bold text-foreground mb-3 text-lg text-left">
                   {campaign.name}
                 </h3>
@@ -422,7 +422,7 @@ function RouteComponent() {
               </div>
               <Button
                 onClick={handleJoinCampaign}
-                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -480,7 +480,7 @@ function RouteComponent() {
     <div className="min-h-screen bg-muted flex flex-col">
       {isAuthenticated && <Header />}
       <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
+        <Card className="w-full max-w-lg bg-card">
           <CardHeader className="text-center pb-6 pt-8">
             <StatusIcon variant={cardContent.statusVariant} />
             <CardTitle

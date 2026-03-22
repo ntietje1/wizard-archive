@@ -17,6 +17,7 @@ import { useEditorMode } from '~/hooks/useEditorMode'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/hooks/useExternalDropTarget'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
+import { Button } from '~/components/shadcn/ui/button'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
@@ -176,13 +177,9 @@ function NotSharedContent() {
         <p>{getMessage()}</p>
         {!itemExists && isDm && requestedType && (
           <p className="mt-2">
-            <button
-              onClick={handleCreate}
-              disabled={isPending}
-              className="underline underline-offset-4 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="link" onClick={handleCreate} disabled={isPending}>
               Create it
-            </button>
+            </Button>
           </p>
         )}
       </div>
