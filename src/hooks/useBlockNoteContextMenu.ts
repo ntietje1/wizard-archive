@@ -22,14 +22,16 @@ export const BlockNoteContextMenuContext =
 
 export function useBlockNoteContextMenu(): BlockNoteContextMenuContextType {
   const context = useContext(BlockNoteContextMenuContext)
-  return (
-    context ?? {
-      editor: null,
-      setEditor: () => {},
-      blockId: undefined,
-      setBlockId: () => {},
-    }
-  )
+  if (!context) {
+    throw new Error(
+      'useBlockNoteContextMenu must be used within a BlockNoteContextMenuProvider',
+    )
+  }
+  return context
+}
+
+export function useBlockNoteContextMenuOptional(): BlockNoteContextMenuContextType | null {
+  return useContext(BlockNoteContextMenuContext)
 }
 
 export function openBlockNoteContextMenu(event: BlockNoteContextMenuEvent) {

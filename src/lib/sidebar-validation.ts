@@ -8,9 +8,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
-export type { ValidationResult }
-export { validateItemName, checkNameConflict }
-
 /**
  * Checks if setting a new parent would create a circular reference.
  * Client version using itemsMap for synchronous parent chain lookup.

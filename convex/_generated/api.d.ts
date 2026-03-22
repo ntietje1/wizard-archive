@@ -35,6 +35,7 @@ import type * as bookmarks_functions_getItemBookmark from "../bookmarks/function
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
+import type * as campaigns_constants from "../campaigns/constants.js";
 import type * as campaigns_functions_checkCampaignSlugExists from "../campaigns/functions/checkCampaignSlugExists.js";
 import type * as campaigns_functions_createCampaign from "../campaigns/functions/createCampaign.js";
 import type * as campaigns_functions_deleteCampaign from "../campaigns/functions/deleteCampaign.js";
@@ -47,6 +48,7 @@ import type * as campaigns_functions_updateCampaignMemberStatus from "../campaig
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_types from "../campaigns/types.js";
+import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as common_constants from "../common/constants.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
@@ -208,6 +210,7 @@ declare const fullApi: ApiFromModules<{
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
   "bookmarks/types": typeof bookmarks_types;
+  "campaigns/constants": typeof campaigns_constants;
   "campaigns/functions/checkCampaignSlugExists": typeof campaigns_functions_checkCampaignSlugExists;
   "campaigns/functions/createCampaign": typeof campaigns_functions_createCampaign;
   "campaigns/functions/deleteCampaign": typeof campaigns_functions_deleteCampaign;
@@ -220,6 +223,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/types": typeof campaigns_types;
+  "campaigns/validation": typeof campaigns_validation;
   "common/constants": typeof common_constants;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;

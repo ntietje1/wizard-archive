@@ -1,9 +1,8 @@
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
+import { useAppMutation } from '~/hooks/useAppMutation'
 
 export const useToggleBookmark = () => {
-  return useMutation({
-    mutationFn: useConvexMutation(api.bookmarks.mutations.toggleBookmark),
+  return useAppMutation(api.bookmarks.mutations.toggleBookmark, {
+    errorMessage: 'Failed to toggle bookmark',
   })
 }

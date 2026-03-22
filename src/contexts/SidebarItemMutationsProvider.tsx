@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import {
   checkNameConflict,
@@ -20,6 +20,7 @@ import type {
   CreateItemResult,
   SidebarItemMutationsValue,
 } from '~/hooks/useSidebarItemMutations'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { assertNever } from '~/lib/utils'
 import { isFolder } from '~/lib/sidebar-item-utils'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
@@ -35,23 +36,34 @@ export function SidebarItemMutationsProvider({
   const { campaignId, campaign } = useCampaign()
   const queryClient = useQueryClient()
 
-  const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
-  const createFolderMutation = useConvexMutation(
+  const createNoteMutation = useAppMutation(api.notes.mutations.createNote, {
+    errorMessage: 'Failed to create note',
+  })
+  const createFolderMutation = useAppMutation(
     api.folders.mutations.createFolder,
+    { errorMessage: 'Failed to create folder' },
   )
-  const createMapMutation = useConvexMutation(api.gameMaps.mutations.createMap)
-  const createFileMutation = useConvexMutation(api.files.mutations.createFile)
-  const updateSidebarItemMutation = useConvexMutation(
+  const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap, {
+    errorMessage: 'Failed to create map',
+  })
+  const createFileMutation = useAppMutation(api.files.mutations.createFile, {
+    errorMessage: 'Failed to create file',
+  })
+  const updateSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.updateSidebarItem,
+    { errorMessage: 'Failed to update item' },
   )
-  const moveSidebarItemMutation = useConvexMutation(
+  const moveSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.moveSidebarItem,
+    { errorMessage: 'Failed to move item' },
   )
-  const permanentlyDeleteSidebarItemMutation = useConvexMutation(
+  const permanentlyDeleteSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
+    { errorMessage: 'Failed to delete item' },
   )
-  const emptyTrashBinMutation = useConvexMutation(
+  const emptyTrashBinMutation = useAppMutation(
     api.sidebarItems.mutations.emptyTrashBin,
+    { errorMessage: 'Failed to empty trash' },
   )
 
   // --- Helpers ---
@@ -60,11 +72,9 @@ export function SidebarItemMutationsProvider({
     (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
       if (!campaignId) return
       queryClient.setQueryData<Array<AnySidebarItem>>(
-        [
-          'convexQuery',
-          api.sidebarItems.queries.getAllSidebarItems,
-          { campaignId },
-        ],
+        convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
+          campaignId,
+        }).queryKey,
         (prev) => (prev ? updater(prev) : prev),
       )
     },
@@ -75,11 +85,9 @@ export function SidebarItemMutationsProvider({
     (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
       if (!campaignId) return
       queryClient.setQueryData<Array<AnySidebarItem>>(
-        [
-          'convexQuery',
-          api.sidebarItems.queries.getTrashedSidebarItems,
-          { campaignId },
-        ],
+        convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
+          campaignId,
+        }).queryKey,
         (prev) => (prev ? updater(prev) : prev),
       )
     },
@@ -133,7 +141,7 @@ export function SidebarItemMutationsProvider({
 
       switch (args.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
-          const { noteId, slug } = await createNoteMutation({
+          const { noteId, slug } = await createNoteMutation.mutateAsync({
             campaignId: args.campaignId,
             name: trimmedName,
             parentId: args.parentId,
@@ -144,7 +152,7 @@ export function SidebarItemMutationsProvider({
           return { id: noteId, slug, type: args.type }
         }
         case SIDEBAR_ITEM_TYPES.folders: {
-          const { folderId, slug } = await createFolderMutation({
+          const { folderId, slug } = await createFolderMutation.mutateAsync({
             campaignId: args.campaignId,
             name: trimmedName,
             parentId: args.parentId,
@@ -154,7 +162,7 @@ export function SidebarItemMutationsProvider({
           return { id: folderId, slug, type: args.type }
         }
         case SIDEBAR_ITEM_TYPES.gameMaps: {
-          const { mapId, slug } = await createMapMutation({
+          const { mapId, slug } = await createMapMutation.mutateAsync({
             campaignId: args.campaignId,
             name: trimmedName,
             parentId: args.parentId,
@@ -165,7 +173,7 @@ export function SidebarItemMutationsProvider({
           return { id: mapId, slug, type: args.type }
         }
         case SIDEBAR_ITEM_TYPES.files: {
-          const { fileId, slug } = await createFileMutation({
+          const { fileId, slug } = await createFileMutation.mutateAsync({
             campaignId: args.campaignId,
             name: trimmedName,
             parentId: args.parentId,
@@ -198,11 +206,12 @@ export function SidebarItemMutationsProvider({
         prev.map((i) => (i._id === item._id ? { ...i, name: trimmedName } : i)),
       )
 
-      const promise = updateSidebarItemMutation({
-        itemId: item._id,
-        name: trimmedName,
-      }).then(
-        (res) => {
+      const promise = updateSidebarItemMutation
+        .mutateAsync({
+          itemId: item._id,
+          name: trimmedName,
+        })
+        .then((res) => {
           if (res?.slug) {
             optimisticUpdate((prev) =>
               prev.map((i) =>
@@ -211,8 +220,8 @@ export function SidebarItemMutationsProvider({
             )
           }
           return res
-        },
-        () => {
+        })
+        .catch(() => {
           optimisticUpdate((prev) =>
             prev.map((i) =>
               i._id === item._id
@@ -220,8 +229,7 @@ export function SidebarItemMutationsProvider({
                 : i,
             ),
           )
-        },
-      )
+        })
 
       return { promise }
     },
@@ -233,6 +241,7 @@ export function SidebarItemMutationsProvider({
       item: AnySidebarItem,
       options: { parentId?: Id<'folders'> | null; deleted?: boolean },
     ) => {
+      if (!campaignId) return Promise.resolve()
       const { parentId, deleted } = options
       const isTrashing = deleted === true && !item.deletionTime
       const isRestoring = deleted === false && !!item.deletionTime
@@ -252,11 +261,11 @@ export function SidebarItemMutationsProvider({
         // Collect descendants for folder restores
         const descendantIds = new Set<SidebarItemId>()
         const trashedItems =
-          queryClient.getQueryData<Array<AnySidebarItem>>([
-            'convexQuery',
-            api.sidebarItems.queries.getTrashedSidebarItems,
-            { campaignId },
-          ]) ?? []
+          queryClient.getQueryData<Array<AnySidebarItem>>(
+            convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
+              campaignId,
+            }).queryKey,
+          ) ?? []
         if (isFolder(item)) {
           const collectDescendants = (folderId: Id<'folders'>) => {
             for (const child of trashedItems) {
@@ -365,15 +374,15 @@ export function SidebarItemMutationsProvider({
         }
       }
 
-      const mutation = moveSidebarItemMutation({
-        itemId: item._id,
-        parentId,
-        deleted,
-      })
-
-      mutation.catch(() => undo())
-
-      return mutation
+      return moveSidebarItemMutation
+        .mutateAsync({
+          itemId: item._id,
+          parentId,
+          deleted,
+        })
+        .catch(() => {
+          undo()
+        })
     },
     [
       moveSidebarItemMutation,
@@ -392,15 +401,12 @@ export function SidebarItemMutationsProvider({
     (item: AnySidebarItem) => {
       trashedOptimisticUpdate((prev) => prev.filter((i) => i._id !== item._id))
 
-      const mutation = permanentlyDeleteSidebarItemMutation({
-        itemId: item._id,
-      })
-
-      mutation.catch(() => {
-        trashedOptimisticUpdate((prev) => [...prev, item])
-      })
-
-      return mutation.then(() => {})
+      return permanentlyDeleteSidebarItemMutation
+        .mutateAsync({ itemId: item._id })
+        .then(() => {})
+        .catch(() => {
+          trashedOptimisticUpdate((prev) => [...prev, item])
+        })
     },
     [permanentlyDeleteSidebarItemMutation, trashedOptimisticUpdate],
   )
@@ -408,23 +414,22 @@ export function SidebarItemMutationsProvider({
   const emptyTrashBin = useCallback(() => {
     if (!campaignId) return Promise.resolve()
 
-    const previousItems = queryClient.getQueryData<Array<AnySidebarItem>>([
-      'convexQuery',
-      api.sidebarItems.queries.getTrashedSidebarItems,
-      { campaignId },
-    ])
+    const previousItems = queryClient.getQueryData<Array<AnySidebarItem>>(
+      convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
+        campaignId,
+      }).queryKey,
+    )
 
     trashedOptimisticUpdate(() => [])
 
-    const mutation = emptyTrashBinMutation({ campaignId })
-
-    mutation.catch(() => {
-      if (previousItems) {
-        trashedOptimisticUpdate(() => previousItems)
-      }
-    })
-
-    return mutation.then(() => {})
+    return emptyTrashBinMutation
+      .mutateAsync({ campaignId })
+      .then(() => {})
+      .catch(() => {
+        if (previousItems) {
+          trashedOptimisticUpdate(() => previousItems)
+        }
+      })
   }, [campaignId, queryClient, trashedOptimisticUpdate, emptyTrashBinMutation])
 
   const value: SidebarItemMutationsValue = useMemo(

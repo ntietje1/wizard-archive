@@ -11,11 +11,12 @@ export const MapViewContext = createContext<MapViewContextType | null>(null)
 
 export function useMapView(): MapViewContextType {
   const context = useContext(MapViewContext)
-  return (
-    context ?? {
-      activeMap: null,
-      activePin: null,
-      setActivePinId: () => {},
-    }
-  )
+  if (!context) {
+    throw new Error('useMapView must be used within a MapViewProvider')
+  }
+  return context
+}
+
+export function useMapViewOptional(): MapViewContextType | null {
+  return useContext(MapViewContext)
 }

@@ -1,14 +1,14 @@
 import { useEffect } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { useConvex, useConvexMutation } from '@convex-dev/react-query'
+import { useConvex } from '@convex-dev/react-query'
 import {
   validateCampaignName,
-  validateCampaignSlugAsync,
-  validateCampaignSlugSync,
-} from './campaign-form-validators'
+  validateCampaignSlug,
+} from 'convex/campaigns/validation'
+import type { ConvexReactClient } from 'convex/react'
+import type { Id } from 'convex/_generated/dataModel'
 import type { Campaign } from 'convex/campaigns/types'
 import { UrlPreview } from '~/routes/_authed/campaigns/-components/url-preview'
 import { Input } from '~/components/shadcn/ui/input'
@@ -18,7 +18,23 @@ import { Button } from '~/components/shadcn/ui/button'
 import { Link, Sword } from '~/lib/icons'
 import { FormDialog } from '~/components/forms/base-form/form-dialog'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
+
+async function validateCampaignSlugAsync(
+  convex: ConvexReactClient,
+  normalizedSlug: string,
+  excludeCampaignId?: Id<'campaigns'>,
+): Promise<string | null> {
+  const exists = await convex.query(
+    api.campaigns.queries.checkCampaignSlugExists,
+    {
+      slug: normalizedSlug,
+      excludeCampaignId,
+    },
+  )
+  return exists ? 'This link is already taken.' : null
+}
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string
@@ -45,12 +61,14 @@ export function CampaignDialog({
 }: CampaignDialogProps) {
   const convex = useConvex()
   const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
-  const createCampaign = useMutation({
-    mutationFn: useConvexMutation(api.campaigns.mutations.createCampaign),
-  })
-  const updateCampaign = useMutation({
-    mutationFn: useConvexMutation(api.campaigns.mutations.updateCampaign),
-  })
+  const createCampaign = useAppMutation(
+    api.campaigns.mutations.createCampaign,
+    { errorMessage: 'Failed to create campaign' },
+  )
+  const updateCampaign = useAppMutation(
+    api.campaigns.mutations.updateCampaign,
+    { errorMessage: 'Failed to update campaign' },
+  )
 
   const form = useForm({
     defaultValues: { ...DEFAULT_CAMPAIGN_FORM_VALUES },
@@ -82,7 +100,6 @@ export function CampaignDialog({
         }
       } catch (error) {
         console.error('Failed to save campaign:', error)
-        toast.error(`Failed to ${mode} campaign`)
       }
     },
   })
@@ -191,13 +208,13 @@ export function CampaignDialog({
           name="slug"
           validators={{
             onMount: ({ value }) => {
-              return validateCampaignSlugSync(value)
+              return validateCampaignSlug(value)
             },
             onBlur: ({ value }) => {
-              return validateCampaignSlugSync(value)
+              return validateCampaignSlug(value)
             },
             onChangeAsync: async ({ value }) => {
-              const syncError = validateCampaignSlugSync(value)
+              const syncError = validateCampaignSlug(value)
               if (syncError) return syncError
               return validateCampaignSlugAsync(
                 convex,

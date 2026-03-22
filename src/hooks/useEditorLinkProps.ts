@@ -3,6 +3,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useCampaign } from './useCampaign'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/components/notes-page/validate-search'
+import { assertNever } from '~/lib/utils'
 
 export const EDITOR_ROUTE =
   '/campaigns/$dmUsername/$campaignSlug/editor' as const
@@ -25,6 +26,8 @@ function itemTypeToSearchKey(
       return 'folder'
     case SIDEBAR_ITEM_TYPES.files:
       return 'file'
+    default:
+      return assertNever(type)
   }
 }
 

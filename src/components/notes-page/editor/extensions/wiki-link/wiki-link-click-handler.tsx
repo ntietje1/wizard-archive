@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useEditorMode } from '~/hooks/useEditorMode'
@@ -56,10 +55,10 @@ export function WikiLinkClickHandler({
     null,
   )
 
-  const createNoteMutation = useConvexMutation(api.notes.mutations.createNote)
-  const { mutateAsync: createNote } = useMutation({
-    mutationFn: createNoteMutation,
-  })
+  const { mutateAsync: createNote } = useAppMutation(
+    api.notes.mutations.createNote,
+    { errorMessage: 'Failed to create note' },
+  )
 
   const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
@@ -206,7 +205,6 @@ export function WikiLinkClickHandler({
           if (result) navigateToNote(result.slug)
         } catch (err) {
           console.error('Failed to create note:', err)
-          toast.error('Failed to create note')
         }
       }
     }

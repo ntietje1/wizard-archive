@@ -10,6 +10,7 @@ import type {
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
+import { assertNever } from '~/lib/utils'
 
 // ─── Constants ───────────────────────────────────────────────────────
 
@@ -193,6 +194,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Only the DM can do this'
     case 'trashed_item':
       return 'Cannot link to a trashed item'
+    default:
+      return assertNever(reason)
   }
 }
 

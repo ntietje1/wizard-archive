@@ -4,18 +4,9 @@ import type { LucideIcon } from '~/lib/icons'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import type { VIEW_CONTEXT } from './constants'
 
-export type ViewContext =
-  | 'sidebar'
-  | 'topbar'
-  | 'note-view'
-  | 'folder-view'
-  | 'map-view'
-  | 'canvas-view'
-  | 'search-results'
-  | 'recent-items'
-  | 'favorites'
-  | 'trash-view'
+export type ViewContext = (typeof VIEW_CONTEXT)[keyof typeof VIEW_CONTEXT]
 
 export interface MenuContext {
   // Core data

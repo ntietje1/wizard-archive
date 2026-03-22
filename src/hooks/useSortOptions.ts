@@ -1,9 +1,8 @@
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 
@@ -19,9 +18,10 @@ export const useSortOptions = () => {
     api.editors.queries.getCurrentEditor,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
-  const setCurrentEditor = useMutation({
-    mutationFn: useConvexMutation(api.editors.mutations.setCurrentEditor),
-  })
+  const setCurrentEditor = useAppMutation(
+    api.editors.mutations.setCurrentEditor,
+    { errorMessage: 'Failed to save sort options' },
+  )
 
   const [sortOptions, setSortOptions] = useState(defaultSortOptions)
 

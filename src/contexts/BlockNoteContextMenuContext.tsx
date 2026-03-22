@@ -18,6 +18,11 @@ export function BlockNoteContextMenuProvider({
 }: BlockNoteContextMenuProviderProps) {
   const [editorOverride, setEditorOverride] =
     useState<CustomBlockNoteEditor | null>(null)
+
+  useEffect(() => {
+    setEditorOverride(null)
+  }, [editor])
+
   const currentEditor = editorOverride ?? editor
   const [currentBlockId, setCurrentBlockId] = useState<string | undefined>(
     undefined,

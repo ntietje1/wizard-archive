@@ -2,9 +2,8 @@ import { Suspense, lazy, useCallback } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { validateFileForUpload } from 'convex/storage/validation'
 import { AudioFileViewer } from './audio-file-viewer'
 import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
@@ -12,9 +11,9 @@ import { VideoFileViewer } from './video-file-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'convex/files/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/components/file-upload/file-upload-section'
-import { validateFileForUpload } from '~/lib/file-validation'
 import { assertNever } from '~/lib/utils'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 
@@ -49,8 +48,8 @@ function getFileType(
 }
 
 function FileUpload({ fileId }: { fileId: Id<'files'> }) {
-  const updateFile = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.updateFile),
+  const updateFile = useAppMutation(api.files.mutations.updateFile, {
+    errorMessage: 'Failed to attach file',
   })
 
   const fileUpload = useFileWithPreview({
@@ -62,7 +61,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
         await updateFile.mutateAsync({ fileId, storageId })
         toast.success('File uploaded')
       } catch {
-        toast.error('Failed to attach file. Please try again.')
+        // Error toast handled by useAppMutation
       }
     },
   })

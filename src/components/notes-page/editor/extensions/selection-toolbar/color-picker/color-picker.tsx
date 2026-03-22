@@ -55,7 +55,7 @@ export const ColorPicker = (props: {
       {props.background && (
         <>
           <Components.Generic.Menu.Label>
-            {'Highlight'}
+            {dict.color_picker.background_title}
           </Components.Generic.Menu.Label>
           {colors.map((color) => (
             <Components.Generic.Menu.Item

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash-es'
+import { validateItemName } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
-import { validateItemName } from '~/lib/sidebar-validation'
 
 interface UseNameValidationOptions {
   name: string

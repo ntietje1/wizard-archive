@@ -3,13 +3,14 @@ import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
 import { buildMenu } from '../menu-builder'
 import { EditorContextMenuContext } from '../hooks/useEditorContextMenu'
+import { VIEW_CONTEXT } from '../constants'
 import { PlaceHolderContextMenu } from './EmptyContextMenu'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useSession } from '~/hooks/useGameSession'
-import { useMapView } from '~/hooks/useMapView'
-import { useBlockNoteContextMenu } from '~/hooks/useBlockNoteContextMenu'
+import { useMapViewOptional } from '~/hooks/useMapView'
+import { useBlockNoteContextMenuOptional } from '~/hooks/useBlockNoteContextMenu'
 
 interface ProviderProps {
   viewContext: ViewContext
@@ -31,8 +32,8 @@ export function EditorContextMenuProvider({
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
-  const { activeMap, activePin } = useMapView()
-  const { editor, blockId } = useBlockNoteContextMenu()
+  const mapView = useMapViewOptional()
+  const blockNoteCtx = useBlockNoteContextMenuOptional()
 
   const permissionLevel = item?.myPermissionLevel
   const isItemTrashed = !!item?.deletionTime
@@ -42,15 +43,15 @@ export function EditorContextMenuProvider({
       item,
       viewContext,
       isItemTrashed,
-      isTrashView: isTrashView || viewContext === 'trash-view',
+      isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
       currentUserId: campaign.data?.myMembership?.userId,
       memberRole: campaign.data?.myMembership?.role,
       permissionLevel,
-      activeMap: activeMap ?? undefined,
-      activePin: activePin ?? undefined,
+      activeMap: mapView?.activeMap ?? undefined,
+      activePin: mapView?.activePin ?? undefined,
       hasActiveSession: !!currentSession.data,
-      editor: editor ?? undefined,
-      blockId,
+      editor: blockNoteCtx?.editor ?? undefined,
+      blockId: blockNoteCtx?.blockId,
     }),
     [
       item,
@@ -60,11 +61,11 @@ export function EditorContextMenuProvider({
       campaign.data?.myMembership?.userId,
       campaign.data?.myMembership?.role,
       permissionLevel,
-      activeMap,
-      activePin,
+      mapView?.activeMap,
+      mapView?.activePin,
       currentSession.data,
-      editor,
-      blockId,
+      blockNoteCtx?.editor,
+      blockNoteCtx?.blockId,
     ],
   )
 

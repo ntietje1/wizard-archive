@@ -1,13 +1,9 @@
 import { useCallback, useEffect } from 'react'
-import {
-  keepPreviousData,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
+import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { UserPreferences } from 'convex/userPreferences/types'
 import type { Theme } from '~/hooks/useTheme'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import {
   ThemeProviderContext,
@@ -50,44 +46,43 @@ export function ThemeProvider({
     { placeholderData: keepPreviousData },
   )
 
-  const mutationFn = useConvexMutation(
+  const setThemeMutation = useAppMutation(
     api.userPreferences.mutations.setUserPreferences,
-  )
-
-  const setThemeMutation = useMutation({
-    mutationFn,
-    onMutate: async ({ theme: newTheme }: { theme: Theme }) => {
-      await queryClient.cancelQueries({
-        queryKey: userPreferencesQueryOptions.queryKey,
-      })
-      const previous = queryClient.getQueryData<UserPreferences>(
-        userPreferencesQueryOptions.queryKey,
-      )
-      queryClient.setQueryData(
-        userPreferencesQueryOptions.queryKey,
-        (old: UserPreferences | null | undefined) => {
-          if (!old) return old
-          return { ...old, theme: newTheme }
-        },
-      )
-      applyThemeClass(resolveTheme(newTheme))
-      return { previous }
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
+    {
+      onMutate: async ({ theme: newTheme }) => {
+        if (!newTheme) return
+        await queryClient.cancelQueries({
+          queryKey: userPreferencesQueryOptions.queryKey,
+        })
+        const previous = queryClient.getQueryData<UserPreferences>(
+          userPreferencesQueryOptions.queryKey,
+        )
         queryClient.setQueryData(
           userPreferencesQueryOptions.queryKey,
-          context.previous,
+          (old: UserPreferences | null | undefined) => {
+            if (!old) return old
+            return { ...old, theme: newTheme }
+          },
         )
-        applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
-      }
+        applyThemeClass(resolveTheme(newTheme))
+        return { previous }
+      },
+      onError: (_err, _vars, context) => {
+        if (context?.previous) {
+          queryClient.setQueryData(
+            userPreferencesQueryOptions.queryKey,
+            context.previous,
+          )
+          applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
+        }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({
+          queryKey: userPreferencesQueryOptions.queryKey,
+        })
+      },
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: userPreferencesQueryOptions.queryKey,
-      })
-    },
-  })
+  )
 
   const theme: Theme = prefs?.theme ?? initialTheme ?? 'system'
   const resolved = resolveTheme(theme)

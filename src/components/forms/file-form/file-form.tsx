@@ -1,14 +1,14 @@
 import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
+import { validateFileForUpload } from 'convex/storage/validation'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { Label } from '~/components/shadcn/ui/label'
@@ -19,7 +19,6 @@ import { useOpenParentFolders } from '~/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/components/file-upload/generic-file-upload-section'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
-import { validateFileForUpload } from '~/lib/file-validation'
 import {
   InputGroup,
   InputGroupAddon,
@@ -62,12 +61,12 @@ export function FileForm({
     fileId ? { fileId } : 'skip',
   )
 
-  const createMutation = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.createFile),
+  const createMutation = useAppMutation(api.files.mutations.createFile, {
+    errorMessage: 'Failed to create file',
   })
 
-  const updateMutation = useMutation({
-    mutationFn: useConvexMutation(api.files.mutations.updateFile),
+  const updateMutation = useAppMutation(api.files.mutations.updateFile, {
+    errorMessage: 'Failed to update file',
   })
 
   const fileUpload = useFileWithPreview({
@@ -180,7 +179,6 @@ export function FileForm({
           onSuccess?.(response.slug)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to update file')
           return
         }
       } else if (campaignId) {
@@ -204,7 +202,6 @@ export function FileForm({
       }
     } catch (error) {
       console.error(error)
-      toast.error(fileId ? 'Failed to update file' : 'Failed to create file')
     }
   }
 

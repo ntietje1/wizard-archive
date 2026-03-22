@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
-import { useMutation } from '@tanstack/react-query'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Ban, Image } from 'lucide-react'
@@ -21,6 +19,7 @@ import {
   getDragItemId,
   rejectionReasonMessage,
 } from '~/lib/dnd-registry'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useDndDropTarget } from '~/hooks/useDndDropTarget'
 import { useEditorMode } from '~/hooks/useEditorMode'
 import { useCampaign } from '~/hooks/useCampaign'
@@ -381,13 +380,15 @@ export function MapViewer({
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const createItemPinMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.createItemPin),
-  })
+  const createItemPinMutation = useAppMutation(
+    api.gameMaps.mutations.createItemPin,
+    { errorMessage: 'Failed to place pin' },
+  )
 
-  const updateItemPinMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.updateItemPin),
-  })
+  const updateItemPinMutation = useAppMutation(
+    api.gameMaps.mutations.updateItemPin,
+    { errorMessage: 'Failed to move pin' },
+  )
 
   const handleTransformChange = useCallback(
     (
@@ -526,7 +527,6 @@ export function MapViewer({
           toast.success('Pin moved')
         } catch (error) {
           console.error('Failed to move pin:', error)
-          toast.error('Failed to move pin')
         }
       }
       setDraggingPin(null)
@@ -570,7 +570,6 @@ export function MapViewer({
         toast.success('Pin placed on map')
       } catch (error) {
         console.error('Failed to place pin:', error)
-        toast.error('Failed to place pin')
       }
     },
     [map._id, createItemPinMutation],
@@ -639,7 +638,6 @@ export function MapViewer({
         setPendingPinMove(null)
       } catch (error) {
         console.error('Failed to move pin:', error)
-        toast.error('Failed to move pin')
       }
     },
     [pendingPinMove, updateItemPinMutation],
@@ -963,8 +961,8 @@ export function MapViewer({
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const updateMap = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
+  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap, {
+    errorMessage: 'Failed to update map',
   })
 
   const fileUpload = useFileWithPreview({
@@ -988,7 +986,6 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
         toast.success('Map image uploaded')
       } catch (error) {
         console.error('Failed to set map image:', error)
-        toast.error('Failed to set map image')
       }
     },
   })

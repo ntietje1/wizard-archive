@@ -1,7 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
@@ -9,6 +7,7 @@ import { Loader } from 'lucide-react'
 import { IconPicker } from '../sidebar-item-form/icon-picker'
 import { ColorPicker } from '../sidebar-item-form/color-picker'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { getIconByName } from '~/lib/category-icons'
@@ -61,12 +60,12 @@ export function MapForm({
     mapId ? { mapId } : 'skip',
   )
 
-  const createMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.createMap),
+  const createMutation = useAppMutation(api.gameMaps.mutations.createMap, {
+    errorMessage: 'Failed to create map',
   })
 
-  const updateMutation = useMutation({
-    mutationFn: useConvexMutation(api.gameMaps.mutations.updateMap),
+  const updateMutation = useAppMutation(api.gameMaps.mutations.updateMap, {
+    errorMessage: 'Failed to update map',
   })
 
   const imageUpload = useFileWithPreview({
@@ -176,7 +175,6 @@ export function MapForm({
           onSuccess?.(response.slug)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to update map')
           return
         }
       } else if (campaignId) {
@@ -200,7 +198,6 @@ export function MapForm({
       }
     } catch (error) {
       console.error(error)
-      toast.error(mapId ? 'Failed to update map' : 'Failed to create map')
     }
   }
 

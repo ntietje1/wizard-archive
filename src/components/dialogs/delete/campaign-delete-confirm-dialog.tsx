@@ -1,10 +1,9 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { Campaign } from 'convex/campaigns/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 
 interface CampaignDeleteConfirmDialogProps {
   campaign: Campaign
@@ -19,9 +18,10 @@ export function CampaignDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: CampaignDeleteConfirmDialogProps) {
-  const deleteCampaign = useMutation({
-    mutationFn: useConvexMutation(api.campaigns.mutations.deleteCampaign),
-  })
+  const deleteCampaign = useAppMutation(
+    api.campaigns.mutations.deleteCampaign,
+    { errorMessage: 'Failed to delete campaign' },
+  )
 
   const handleConfirm = useCallback(async () => {
     await deleteCampaign
@@ -31,7 +31,6 @@ export function CampaignDeleteConfirmDialog({
       })
       .catch((error: Error) => {
         console.error(error)
-        toast.error('Failed to delete campaign')
       })
       .finally(() => {
         onConfirm?.()

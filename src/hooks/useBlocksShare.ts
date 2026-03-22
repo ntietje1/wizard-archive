@@ -1,13 +1,11 @@
 import { useCallback, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import { toast } from 'sonner'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { BlockShareInfo } from 'convex/blocks/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
@@ -42,17 +40,17 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       : 'skip',
   )
 
-  const setBlocksShareStatus = useMutation({
-    mutationFn: useConvexMutation(
-      api.blockShares.mutations.setBlocksShareStatus,
-    ),
+  const setBlocksShareStatus = useAppMutation(
+    api.blockShares.mutations.setBlocksShareStatus,
+    { errorMessage: 'Failed to update share' },
+  )
+  const shareBlocks = useAppMutation(api.blockShares.mutations.shareBlocks, {
+    errorMessage: 'Failed to update share',
   })
-  const shareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.blockShares.mutations.shareBlocks),
-  })
-  const unshareBlocks = useMutation({
-    mutationFn: useConvexMutation(api.blockShares.mutations.unshareBlocks),
-  })
+  const unshareBlocks = useAppMutation(
+    api.blockShares.mutations.unshareBlocks,
+    { errorMessage: 'Failed to update share' },
+  )
 
   const isMutating =
     setBlocksShareStatus.isPending ||
@@ -156,7 +154,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       })
     } catch (error) {
       console.error(error)
-      toast.error('Failed to toggle share')
     }
   }
 
@@ -195,7 +192,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       }
     } catch (error) {
       console.error(error)
-      toast.error('Failed to toggle share')
     }
   }
 

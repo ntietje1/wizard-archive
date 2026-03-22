@@ -9,6 +9,8 @@ import { MapViewer } from '~/components/notes-page/viewer/map/map-viewer'
 import { FolderViewer } from '~/components/notes-page/viewer/folder/folder-viewer'
 import { FileViewer } from '~/components/notes-page/viewer/file/file-viewer'
 import { TrashBanner } from '~/components/notes-page/editor/deleted-item-banner'
+import { ErrorBoundary } from '~/shared/components/error-boundary'
+import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export interface EditorViewerProps<T extends AnySidebarItem> {
   item: T
@@ -22,7 +24,11 @@ export function SidebarItemEditor({
   const content = (() => {
     switch (item.type) {
       case SIDEBAR_ITEM_TYPES.notes:
-        return <NoteEditor key={item._id} item={item} search={search} />
+        return (
+          <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
+            <NoteEditor item={item} search={search} />
+          </ErrorBoundary>
+        )
       case SIDEBAR_ITEM_TYPES.gameMaps:
         return <MapViewer key={item._id} item={item} search={search} />
       case SIDEBAR_ITEM_TYPES.folders:

@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
 import { toast } from 'sonner'
-import { useConvexMutation } from '@convex-dev/react-query'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import {
@@ -18,6 +16,7 @@ import {
 } from '~/components/shadcn/ui/dialog'
 import { Button } from '~/components/shadcn/ui/button'
 import { Check, RefreshCw, X } from '~/lib/icons'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { cn } from '~/lib/shadcn/utils'
 import { Badge } from '~/components/shadcn/ui/badge'
 
@@ -98,11 +97,10 @@ export function PlayerRequestsDialog({
   onClose,
   players,
 }: PlayerRequestsDialogProps) {
-  const updateStatus = useMutation({
-    mutationFn: useConvexMutation(
-      api.campaigns.mutations.updateCampaignMemberStatus,
-    ),
-  })
+  const updateStatus = useAppMutation(
+    api.campaigns.mutations.updateCampaignMemberStatus,
+    { errorMessage: 'Failed to update status' },
+  )
   const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
     null,
   )
@@ -130,7 +128,6 @@ export function PlayerRequestsDialog({
       toast.success('Player status updated')
     } catch (e) {
       console.error(e)
-      toast.error('Failed to update status')
     }
     setUpdatingId(null)
   }

@@ -118,7 +118,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           },
           (error) => {
             console.error(error)
-            toast.error('Failed to move to trash')
           },
         )
       },
@@ -154,7 +153,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           navigateToItem(result)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to create note')
         }
       },
       [
@@ -187,7 +185,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           navigateToItem(result)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to create folder')
         }
       },
       [
@@ -220,7 +217,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           navigateToItem(result)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to create map')
         }
       },
       [
@@ -253,7 +249,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           navigateToItem(result)
         } catch (error) {
           console.error(error)
-          toast.error('Failed to create file')
         }
       },
       [
@@ -395,10 +390,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         { campaignId },
         {
           onSuccess: () => toast.success('Session started'),
-          onError: (error: unknown) => {
-            console.error('Failed to start session:', error)
-            toast.error('Failed to start session')
-          },
         },
       )
     }, [campaignId, startNewSession]),
@@ -409,10 +400,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         { campaignId },
         {
           onSuccess: () => toast.success('Session ended'),
-          onError: (error) => {
-            console.error('Failed to end session:', error)
-            toast.error('Failed to end session')
-          },
         },
       )
     }, [campaignId, endCurrentSession]),
@@ -698,7 +685,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.success('Item restored')
         } catch (error) {
           console.error(error)
-          toast.error('Failed to restore item')
         }
       },
       [moveItem],
@@ -725,7 +711,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           })
           .catch((error) => {
             console.error('Failed to toggle bookmark:', error)
-            toast.error('Failed to toggle bookmark')
           })
       },
       [campaignId, toggleBookmarkMutation],
@@ -808,7 +793,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 toast.success('Trash emptied')
               } catch (error) {
                 console.error(error)
-                toast.error('Failed to empty trash')
               }
               setConfirmEmptyTrash(false)
               onDialogClose?.()
@@ -834,7 +818,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 }
               } catch (error) {
                 console.error(error)
-                toast.error('Failed to delete item')
               }
               setConfirmPermanentDeleteItem(null)
               onDialogClose?.()

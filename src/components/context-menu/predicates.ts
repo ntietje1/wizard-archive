@@ -1,4 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { VIEW_CONTEXT } from './constants'
 import type { Predicate, ViewContext } from './types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
@@ -27,18 +29,21 @@ export const notInView =
   (ctx) =>
     !views.includes(ctx.viewContext)
 
-export const inSidebar: Predicate = (ctx) => ctx.viewContext === 'sidebar'
+export const inSidebar: Predicate = (ctx) =>
+  ctx.viewContext === VIEW_CONTEXT.SIDEBAR
 
-export const notInSidebar: Predicate = (ctx) => ctx.viewContext !== 'sidebar'
+export const notInSidebar: Predicate = (ctx) =>
+  ctx.viewContext !== VIEW_CONTEXT.SIDEBAR
 
-export const inNoteView: Predicate = (ctx) => ctx.viewContext === 'note-view'
+export const inNoteView: Predicate = (ctx) =>
+  ctx.viewContext === VIEW_CONTEXT.NOTE_VIEW
 
 export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
 export const hasBlockId: Predicate = (ctx) => ctx.blockId !== undefined
 
 export const viewingCanvas: Predicate = (ctx) =>
-  ctx.viewContext === 'canvas-view'
+  ctx.viewContext === VIEW_CONTEXT.CANVAS_VIEW
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
@@ -84,15 +89,15 @@ export const isPlayer: Predicate = (ctx) => {
 }
 
 export const hasViewAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'view' || hasEditAccess(ctx)
+  return ctx.permissionLevel === PERMISSION_LEVEL.VIEW || hasEditAccess(ctx)
 }
 
 export const hasEditAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'edit' || hasFullAccess(ctx)
+  return ctx.permissionLevel === PERMISSION_LEVEL.EDIT || hasFullAccess(ctx)
 }
 
 export const hasFullAccess: Predicate = (ctx) => {
-  return ctx.permissionLevel === 'full_access'
+  return ctx.permissionLevel === PERMISSION_LEVEL.FULL_ACCESS
 }
 
 export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true

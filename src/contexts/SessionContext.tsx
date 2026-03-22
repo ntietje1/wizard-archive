@@ -1,6 +1,5 @@
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { SessionContext } from '~/hooks/useGameSession'
@@ -18,17 +17,19 @@ function useSessionInternal() {
     campaignId ? { campaignId } : 'skip',
   )
 
-  const startSession = useMutation({
-    mutationFn: useConvexMutation(api.sessions.mutations.startSession),
+  const startSession = useAppMutation(api.sessions.mutations.startSession, {
+    errorMessage: 'Failed to start session',
   })
 
-  const endCurrentSession = useMutation({
-    mutationFn: useConvexMutation(api.sessions.mutations.endCurrentSession),
-  })
+  const endCurrentSession = useAppMutation(
+    api.sessions.mutations.endCurrentSession,
+    { errorMessage: 'Failed to end session' },
+  )
 
-  const setCurrentSession = useMutation({
-    mutationFn: useConvexMutation(api.sessions.mutations.setCurrentSession),
-  })
+  const setCurrentSession = useAppMutation(
+    api.sessions.mutations.setCurrentSession,
+    { errorMessage: 'Failed to set session' },
+  )
 
   const nextSessionNumber = (sessions.data?.length ?? 0) + 1
 

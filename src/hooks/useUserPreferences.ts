@@ -1,9 +1,9 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
+import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { UserPreferences } from 'convex/userPreferences/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 
 const DEFAULT_SIDEBAR_WIDTH = 280
@@ -29,11 +29,10 @@ export const useUserPreferences = () => {
     {},
   )
 
-  const setPrefs = useMutation({
-    mutationFn: useConvexMutation(
-      api.userPreferences.mutations.setUserPreferences,
-    ),
-  })
+  const setPrefs = useAppMutation(
+    api.userPreferences.mutations.setUserPreferences,
+    { errorMessage: 'Failed to save preferences' },
+  )
 
   // Local state for immediate UI updates
   const serverWidth = prefsQuery.data?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH

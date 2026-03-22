@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { debounce } from 'lodash-es'
 import { toast } from 'sonner'
@@ -12,6 +11,7 @@ import {
 import { slugify, validateUsername } from 'convex/common/slug'
 import { validateEmail } from 'convex/users/validation'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/shadcn/ui/button'
 import { Input } from '~/components/shadcn/ui/input'
@@ -213,12 +213,13 @@ function AccountRow({ profile }: { profile: Profile }) {
   const [isUploading, setIsUploading] = useState(false)
   const [name, setName] = useState(profile.name ?? '')
 
-  const updateProfileImage = useMutation({
-    mutationFn: useConvexMutation(api.users.mutations.updateProfileImage),
-  })
+  const updateProfileImage = useAppMutation(
+    api.users.mutations.updateProfileImage,
+    { errorMessage: 'Failed to update profile image' },
+  )
 
-  const updateNameMutation = useMutation({
-    mutationFn: useConvexMutation(api.users.mutations.updateName),
+  const updateNameMutation = useAppMutation(api.users.mutations.updateName, {
+    errorMessage: 'Failed to update name',
   })
 
   const debouncedSaveName = useMemo(
@@ -228,10 +229,8 @@ function AccountRow({ profile }: { profile: Profile }) {
         if (!trimmed) return
         try {
           await updateNameMutation.mutateAsync({ name: trimmed })
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : 'Failed to update name',
-          )
+        } catch {
+          // Error toast handled by useAppMutation
         }
       }, 500),
     [updateNameMutation],
@@ -269,7 +268,7 @@ function AccountRow({ profile }: { profile: Profile }) {
         await updateProfileImage.mutateAsync({ storageId })
         toast.success('Profile picture updated')
       } catch {
-        toast.error('Failed to upload image')
+        // Error toast handled by useAppMutation
       }
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -391,8 +390,8 @@ function UsernameRow({ profile }: { profile: Profile }) {
     isChecking,
   } = useUsernameValidation(username, profile.username)
 
-  const updateUsername = useMutation({
-    mutationFn: useConvexMutation(api.users.mutations.updateUsername),
+  const updateUsername = useAppMutation(api.users.mutations.updateUsername, {
+    errorMessage: 'Failed to update username',
   })
 
   const handleSave = async () => {

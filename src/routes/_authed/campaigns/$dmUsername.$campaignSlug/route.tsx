@@ -10,6 +10,8 @@ import { SessionProvider } from '~/contexts/SessionContext'
 import { EditorNavigationProvider } from '~/contexts/EditorNavigationProvider'
 import { DndProvider } from '~/contexts/DndProvider'
 import { ViewAsBanner } from '~/components/notes-page/editor/view-as-banner'
+import { ErrorBoundary } from '~/shared/components/error-boundary'
+import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug',
@@ -29,10 +31,14 @@ function RouteComponent() {
                   <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex flex-1 min-h-0">
                       <SidebarLayoutProvider>
-                        <NavigationSidebar />
-                        <SidebarLayout>
-                          <Outlet />
-                        </SidebarLayout>
+                        <ErrorBoundary FallbackComponent={ErrorFallback}>
+                          <NavigationSidebar />
+                          <SidebarLayout>
+                            <ErrorBoundary FallbackComponent={ErrorFallback}>
+                              <Outlet />
+                            </ErrorBoundary>
+                          </SidebarLayout>
+                        </ErrorBoundary>
                       </SidebarLayoutProvider>
                     </div>
                     <ViewAsBanner />

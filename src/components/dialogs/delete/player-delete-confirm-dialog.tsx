@@ -1,11 +1,10 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConfirmationDialog } from '../confirmation-dialog'
 import type { CampaignMember } from 'convex/campaigns/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 
 interface PlayerDeleteConfirmDialogProps {
   player: CampaignMember
@@ -20,11 +19,10 @@ export function PlayerDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: PlayerDeleteConfirmDialogProps) {
-  const updateMemberStatus = useMutation({
-    mutationFn: useConvexMutation(
-      api.campaigns.mutations.updateCampaignMemberStatus,
-    ),
-  })
+  const updateMemberStatus = useAppMutation(
+    api.campaigns.mutations.updateCampaignMemberStatus,
+    { errorMessage: 'Failed to remove player' },
+  )
 
   const handleConfirm = useCallback(async () => {
     try {
@@ -36,7 +34,6 @@ export function PlayerDeleteConfirmDialog({
       onConfirm?.()
     } catch (error) {
       console.error(error)
-      toast.error('Failed to remove player')
     }
     onClose()
   }, [updateMemberStatus, player._id, onConfirm, onClose])

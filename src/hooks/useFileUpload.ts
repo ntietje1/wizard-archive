@@ -1,8 +1,8 @@
-import { useConvexMutation } from '@convex-dev/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAppMutation } from '~/hooks/useAppMutation'
 
 export interface UploadProgress {
   loaded: number
@@ -17,16 +17,20 @@ export const useFileUpload = () => {
     percentage: 0,
   })
 
-  const generateUploadUrl = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.generateUploadUrl),
-  })
+  const generateUploadUrl = useAppMutation(
+    api.storage.mutations.generateUploadUrl,
+    { errorMessage: 'Failed to generate upload URL' },
+  )
 
-  const trackUploadMutation = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.trackUpload),
-  })
+  const trackUploadMutation = useAppMutation(
+    api.storage.mutations.trackUpload,
+    {
+      errorMessage: 'Failed to track upload',
+    },
+  )
 
-  const commitUpload = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.commitUpload),
+  const commitUpload = useAppMutation(api.storage.mutations.commitUpload, {
+    errorMessage: 'Failed to commit upload',
   })
 
   // assumes file is already validated

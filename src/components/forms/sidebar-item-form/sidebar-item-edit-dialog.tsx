@@ -1,7 +1,5 @@
 import { useCallback, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation } from '@tanstack/react-query'
-import { useConvexMutation } from '@convex-dev/react-query'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -11,6 +9,7 @@ import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useNameValidation } from '~/hooks/useNameValidation'
 import { useNavigateOnSlugChange } from '~/hooks/useNavigateOnSlugChange'
 import { assertNever } from '~/lib/utils'
@@ -78,9 +77,10 @@ export function SidebarItemEditDialog({
 }: SidebarItemEditDialogProps) {
   const { navigateIfSlugChanged } = useNavigateOnSlugChange()
 
-  const updateMutation = useMutation({
-    mutationFn: useConvexMutation(api.sidebarItems.mutations.updateSidebarItem),
-  })
+  const updateMutation = useAppMutation(
+    api.sidebarItems.mutations.updateSidebarItem,
+    { errorMessage: 'Failed to update item' },
+  )
 
   const getInitialValues = useCallback((): SidebarItemEditFormValues => {
     return {
@@ -118,7 +118,6 @@ export function SidebarItemEditDialog({
         onClose()
       } catch (error) {
         console.error('Failed to update item:', error)
-        toast.error('Failed to update item')
       }
     },
   })

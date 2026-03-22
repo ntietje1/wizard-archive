@@ -1,8 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import { useConvexMutation } from '@convex-dev/react-query'
-import { useMutation } from '@tanstack/react-query'
 import {
   isMediaFile,
   isTextFile,
@@ -14,6 +12,7 @@ import { useEditorNavigation } from './useEditorNavigation'
 import { useCampaign } from './useCampaign'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/lib/folder-reader'
+import { useAppMutation } from '~/hooks/useAppMutation'
 import { useSidebarItemMutations } from '~/hooks/useSidebarItemMutations'
 import { convertTextToBlocks } from '~/lib/text-to-blocks'
 import {
@@ -46,14 +45,15 @@ export function useFileDropHandler() {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
 
-  const generateUploadUrl = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.generateUploadUrl),
+  const generateUploadUrl = useAppMutation(
+    api.storage.mutations.generateUploadUrl,
+    { errorMessage: 'Failed to generate upload URL' },
+  )
+  const trackUpload = useAppMutation(api.storage.mutations.trackUpload, {
+    errorMessage: 'Failed to track upload',
   })
-  const trackUpload = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.trackUpload),
-  })
-  const commitUpload = useMutation({
-    mutationFn: useConvexMutation(api.storage.mutations.commitUpload),
+  const commitUpload = useAppMutation(api.storage.mutations.commitUpload, {
+    errorMessage: 'Failed to commit upload',
   })
 
   const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
