@@ -93,6 +93,7 @@ import type * as gameMaps_functions_updatePinVisibility from "../gameMaps/functi
 import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
+import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_functions_createNote from "../notes/functions/createNote.js";
@@ -268,6 +269,7 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/mutations": typeof gameMaps_mutations;
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/types": typeof gameMaps_types;
+  "gameMaps/validation": typeof gameMaps_validation;
   http: typeof http;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/functions/createNote": typeof notes_functions_createNote;

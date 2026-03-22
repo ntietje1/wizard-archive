@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
+import { validatePinTarget } from 'convex/gameMaps/validation'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
@@ -589,8 +590,14 @@ export function MapViewer({
         const itemId = getDragItemId(source.data)
         if (!itemId) return
 
-        if (mapRef.current.pins.some((pin) => pin.itemId === itemId)) {
-          toast.error('Item is already pinned on this map')
+        const existingPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
+        const pinError = validatePinTarget(
+          mapRef.current._id,
+          itemId,
+          existingPinItemIds,
+        )
+        if (pinError) {
+          toast.error(pinError)
           return
         }
 

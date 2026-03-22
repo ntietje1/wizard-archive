@@ -3,6 +3,7 @@ import {
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { validatePinTarget } from 'convex/gameMaps/validation'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
@@ -218,11 +219,10 @@ const trashConfig: DropZoneConfig = {
 
 const mapConfig = typedConfig<MapDropZoneData>({
   resolve: (item, t) => {
-    if (item.type === SIDEBAR_ITEM_TYPES.gameMaps && item._id === t.mapId) {
-      return rejection('self_pin')
-    }
-    if (t.pinnedItemIds?.includes(item._id)) {
-      return rejection('already_pinned')
+    const error = validatePinTarget(t.mapId, item._id, t.pinnedItemIds ?? [])
+    if (error) {
+      const isSelfPin = (item._id as string) === (t.mapId as string)
+      return rejection(isSelfPin ? 'self_pin' : 'already_pinned')
     }
     return operation('pin', `Pin to "${t.mapName}"`)
   },

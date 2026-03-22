@@ -24,11 +24,7 @@ export function SidebarItemEditor({
   const content = (() => {
     switch (item.type) {
       case SIDEBAR_ITEM_TYPES.notes:
-        return (
-          <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
-            <NoteEditor item={item} search={search} />
-          </ErrorBoundary>
-        )
+        return <NoteEditor item={item} search={search} />
       case SIDEBAR_ITEM_TYPES.gameMaps:
         return <MapViewer key={item._id} item={item} search={search} />
       case SIDEBAR_ITEM_TYPES.folders:
@@ -41,9 +37,9 @@ export function SidebarItemEditor({
   })()
 
   return (
-    <>
+    <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
       <TrashBanner item={item} />
       {content}
-    </>
+    </ErrorBoundary>
   )
 }
