@@ -67,7 +67,7 @@ export function PreferencesTab() {
             >
               <div
                 className={cn(
-                  'flex items-center justify-center rounded-xl p-2.5',
+                  'flex items-center justify-center rounded-lg p-2.5',
                   theme === value
                     ? 'bg-primary/10 text-primary'
                     : 'bg-muted text-muted-foreground',

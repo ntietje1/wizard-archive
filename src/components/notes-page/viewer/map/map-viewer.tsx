@@ -34,7 +34,6 @@ import { getSidebarItemIcon } from '~/lib/category-icons'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { cn } from '~/lib/shadcn/utils'
 import { validateHexColorOrDefault } from '~/lib/sidebar-item-utils'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
 import usePersistedState from '~/hooks/usePersistedState'
 import { useFileWithPreview } from '~/hooks/useFileWithPreview'
@@ -1045,9 +1044,9 @@ function MapViewerSkeleton() {
   return (
     <div className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col">
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <Skeleton className="size-8 rounded-md" />
-        <Skeleton className="size-8 rounded-md" />
-        <Skeleton className="size-8 rounded-md" />
+        <div className="bg-muted rounded-md size-8" />
+        <div className="bg-muted rounded-md size-8" />
+        <div className="bg-muted rounded-md size-8" />
       </div>
     </div>
   )

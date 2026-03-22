@@ -4,7 +4,6 @@ import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-butto
 import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
 import { effectiveHasAtLeastPermission } from '~/lib/permission-utils'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { EditorContextMenu } from '~/components/context-menu/components/EditorContextMenu'
 import { cn } from '~/lib/shadcn/utils'
 import { useEditorMode } from '~/hooks/useEditorMode'
@@ -59,7 +58,7 @@ export function FileTopbar() {
             isNotSharedWithPlayer && 'opacity-50',
           )}
         >
-          {isLoading && <Skeleton className="h-5 w-32 my-0.5" />}
+          {isLoading && <div className="bg-muted rounded-md h-5 w-32 my-0.5" />}
           {isTrashView && (
             <div className="flex items-center gap-2 min-w-0">
               <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />

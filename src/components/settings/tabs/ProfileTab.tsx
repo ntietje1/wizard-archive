@@ -606,7 +606,7 @@ function EmailRow({ profile }: { profile: Profile }) {
           {sentTo ? (
             <>
               <div className="flex flex-col items-center gap-3 py-4 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                   <Mail className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -954,7 +954,7 @@ function DeleteAccountRow({
           {emailSent ? (
             <>
               <div className="flex flex-col items-center gap-3 py-4 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
                   <Mail className="h-6 w-6 text-destructive" />
                 </div>
                 <div className="flex flex-col gap-1">

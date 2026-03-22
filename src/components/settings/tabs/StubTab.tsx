@@ -25,7 +25,7 @@ export function StubTab({
       <Separator />
 
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="flex items-center justify-center rounded-xl bg-muted p-4 mb-4">
+        <div className="flex items-center justify-center rounded-lg bg-muted p-4 mb-4">
           <Icon className="size-8 text-muted-foreground" />
         </div>
         <span className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider">

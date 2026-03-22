@@ -6,7 +6,6 @@ import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/lib/dnd-registry'
 import { CardTitle } from '~/components/shadcn/ui/card'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { MoreVertical } from '~/lib/icons'
 import { useEditorLinkProps } from '~/hooks/useEditorLinkProps'
@@ -131,7 +130,7 @@ function FolderCardSkeleton() {
       <div className="relative block w-full h-full">
         <FolderSvg />
         <div className="relative z-[2] pt-3 px-2">
-          <Skeleton className="h-5 w-32" />
+          <div className="bg-muted rounded-md h-5 w-32" />
         </div>
       </div>
     </div>

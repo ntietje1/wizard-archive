@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import {
   sortItemsByOptions,
   useFilteredSidebarItems,
@@ -55,9 +54,9 @@ function BookmarkedItemsLoading() {
   return (
     <div className="flex-1 p-2">
       <div className="space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="h-4 w-5/6" />
+        <div className="bg-muted rounded-md h-4 w-3/4" />
+        <div className="bg-muted rounded-md h-4 w-1/2" />
+        <div className="bg-muted rounded-md h-4 w-5/6" />
       </div>
     </div>
   )

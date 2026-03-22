@@ -86,9 +86,7 @@ export function JoinCampaignPage() {
         children: (
           <div className="flex flex-col items-center justify-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Loading...
-            </p>
+            <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         ),
       }
@@ -109,7 +107,7 @@ export function JoinCampaignPage() {
         titleColor: 'text-foreground',
         children: campaign ? (
           <div className="space-y-6">
-            <div className="relative p-6 bg-muted rounded-xl border border-border">
+            <div className="relative p-6 bg-muted rounded-lg border border-border">
               <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
               <h3 className="font-bold text-foreground mb-3 text-lg text-left">
                 {campaign.name}
@@ -139,7 +137,7 @@ export function JoinCampaignPage() {
         ) : (
           <Button
             onClick={() => setShowSignIn(true)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             Sign In to Join
           </Button>
@@ -156,9 +154,7 @@ export function JoinCampaignPage() {
         children: (
           <div className="flex flex-col items-center justify-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Loading...
-            </p>
+            <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         ),
       }
@@ -174,7 +170,7 @@ export function JoinCampaignPage() {
         children: (
           <Button
             onClick={goToHome}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             Browse Campaigns
           </Button>
@@ -229,7 +225,7 @@ export function JoinCampaignPage() {
           titleColor: 'text-foreground',
           children: (
             <div className="flex flex-col items-center space-y-4">
-              <div className="p-4 bg-accent rounded-xl border border-primary/30">
+              <div className="p-4 bg-accent rounded-lg border border-primary/30">
                 <p className="text-sm text-accent-foreground font-medium">
                   This page will automatically update when you gain access.
                 </p>
@@ -341,9 +337,7 @@ export function JoinCampaignPage() {
             children: (
               <div className="flex flex-col items-center justify-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  Loading...
-                </p>
+                <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
             ),
           }
@@ -360,7 +354,7 @@ export function JoinCampaignPage() {
           titleColor: 'text-foreground',
           children: (
             <div className="space-y-6">
-              <div className="relative p-6 bg-muted rounded-xl border border-border">
+              <div className="relative p-6 bg-muted rounded-lg border border-border">
                 <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
                 <h3 className="font-bold text-foreground mb-3 text-lg text-left">
                   {campaign.name}

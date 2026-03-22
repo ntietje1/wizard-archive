@@ -7,7 +7,6 @@ import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { MapPin, MoreVertical } from '~/lib/icons'
 import { cn } from '~/lib/shadcn/utils'
@@ -23,11 +22,11 @@ function MapCardSkeleton() {
     <div className="w-full h-[140px]">
       <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
         <div className="flex items-center justify-between mb-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="w-6 h-6 rounded" />
+          <div className="bg-muted rounded-md h-5 w-32" />
+          <div className="bg-muted rounded-md w-6 h-6" />
         </div>
         <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
-          <Skeleton className="w-full h-full" />
+          <div className="bg-muted w-full h-full" />
         </div>
       </Card>
     </div>
@@ -107,7 +106,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           {/* Image Section */}
           <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
             {imageUrlQuery.isLoading && map.imageStorageId ? (
-              <Skeleton className="w-full h-full" />
+              <div className="bg-muted w-full h-full" />
             ) : imageUrl ? (
               <img
                 src={imageUrl}

@@ -1,6 +1,5 @@
 import { ContentGrid } from './content-grid'
 import { Card, CardContent, CardHeader } from '~/components/shadcn/ui/card'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 
 interface CardGridSkeletonProps {
   count?: number
@@ -22,9 +21,9 @@ export function CardGridSkeleton({
       {showCreateCard && (
         <Card className={`${cardHeight} border-2 border-dashed`}>
           <CardContent className="flex flex-col items-center justify-center h-full p-6">
-            <Skeleton className="w-16 h-16 rounded-full mb-4" />
-            <Skeleton className="h-5 w-32 mb-2" />
-            <Skeleton className="h-4 w-48" />
+            <div className="bg-muted w-16 h-16 rounded-full mb-4" />
+            <div className="bg-muted rounded-md h-5 w-32 mb-2" />
+            <div className="bg-muted rounded-md h-4 w-48" />
           </CardContent>
         </Card>
       )}
@@ -35,17 +34,17 @@ export function CardGridSkeleton({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <Skeleton className="w-3 h-3 rounded-full" />
-                  <Skeleton className="h-5 w-32" />
+                  <div className="bg-muted w-3 h-3 rounded-full" />
+                  <div className="bg-muted rounded-md h-5 w-32" />
                 </div>
-                <Skeleton className="h-4 w-16" />
+                <div className="bg-muted rounded-md h-4 w-16" />
               </div>
-              <Skeleton className="w-8 h-8 rounded" />
+              <div className="bg-muted rounded-md w-8 h-8" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-3/4" />
+            <div className="bg-muted rounded-md h-4 w-full mb-2" />
+            <div className="bg-muted rounded-md h-4 w-3/4" />
           </CardContent>
         </Card>
       ))}

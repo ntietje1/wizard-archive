@@ -2,7 +2,6 @@ import { ClientOnly } from '@tanstack/react-router'
 import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
 import { useAllSidebarItems } from '~/hooks/useSidebarItems'
@@ -42,11 +41,11 @@ function SidebarLoading() {
   return (
     <div className="flex-1 p-2">
       <div className="space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="h-4 w-5/6" />
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-4/5" />
+        <div className="bg-muted rounded-md h-4 w-3/4" />
+        <div className="bg-muted rounded-md h-4 w-1/2" />
+        <div className="bg-muted rounded-md h-4 w-5/6" />
+        <div className="bg-muted rounded-md h-4 w-2/3" />
+        <div className="bg-muted rounded-md h-4 w-4/5" />
       </div>
     </div>
   )

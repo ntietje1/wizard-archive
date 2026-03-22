@@ -8,7 +8,6 @@ import type { ItemCardProps } from './item-card'
 import type { SidebarFile } from 'convex/files/types'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import {
   File as FileIconLucide,
@@ -66,11 +65,11 @@ function FileCardSkeleton() {
     <div className="w-full h-[140px]">
       <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
         <div className="flex items-center justify-between mb-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="w-6 h-6 rounded" />
+          <div className="bg-muted rounded-md h-5 w-32" />
+          <div className="bg-muted rounded-md w-6 h-6" />
         </div>
         <div className="flex items-center justify-center flex-1">
-          <Skeleton className="w-12 h-12 rounded" />
+          <div className="bg-muted rounded-md w-12 h-12" />
         </div>
       </Card>
     </div>

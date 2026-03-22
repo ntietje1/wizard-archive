@@ -6,7 +6,6 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/lib/file-url-validation'
 import { LoadingSpinner } from '~/components/loading/loading-spinner'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { ScrollArea } from '~/components/shadcn/ui/scroll-area'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
@@ -51,7 +50,7 @@ function PdfPage({
         renderAnnotationLayer={true}
         renderForms={true}
         renderTextLayer={true}
-        loading={<Skeleton className="w-[612px] h-[792px]" />}
+        loading={<div className="bg-muted w-[612px] h-[792px]" />}
       />
     </div>
   )

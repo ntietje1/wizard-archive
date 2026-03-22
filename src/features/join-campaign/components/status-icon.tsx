@@ -34,10 +34,10 @@ export function StatusIcon({ variant }: StatusIconProps) {
 
   return (
     <div
-      className={`relative p-4 ${config.bg} ${config.ring} ring-2 rounded-xl w-20 h-20 mx-auto mb-6 flex items-center justify-center`}
+      className={`relative p-4 ${config.bg} ${config.ring} ring-2 rounded-lg w-20 h-20 mx-auto mb-6 flex items-center justify-center`}
     >
       <Shield className={`h-10 w-10 ${config.icon}`} />
-      <div className="absolute inset-0 bg-card/20 rounded-xl" />
+      <div className="absolute inset-0 bg-card/20 rounded-lg" />
     </div>
   )
 }

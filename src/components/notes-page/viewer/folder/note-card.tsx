@@ -5,7 +5,6 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import type { ItemCardProps } from './item-card'
 import type { Note } from 'convex/notes/types'
 import { Card, CardTitle } from '~/components/shadcn/ui/card'
-import { Skeleton } from '~/components/shadcn/ui/skeleton'
 import { Button } from '~/components/shadcn/ui/button'
 import { FileText, MoreVertical } from '~/lib/icons'
 import { cn } from '~/lib/shadcn/utils'
@@ -23,11 +22,11 @@ function NoteCardSkeleton() {
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="overflow-hidden">
             <div className="flex items-center gap-2 mb-2 min-w-0">
-              <Skeleton className="h-5 w-32" />
+              <div className="bg-muted rounded-md h-5 w-32" />
             </div>
           </div>
         </div>
-        <Skeleton className="w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
+        <div className="bg-muted w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
       </Card>
     </div>
   )
