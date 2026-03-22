@@ -29,6 +29,7 @@ interface SidebarUIState {
   pendingItemName: string
   selectedType: SidebarItemType | null
   selectedSlug: string | null
+  viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
 interface SidebarUIActions {
@@ -50,6 +51,7 @@ interface SidebarUIActions {
   setIsDraggingElement: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
   setSelected: (type: SidebarItemType | null, slug: string | null) => void
+  setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
 
 const defaultCampaignState: CampaignState = {
@@ -95,6 +97,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       pendingItemName: '',
       selectedType: null,
       selectedSlug: null,
+      viewAsPlayerId: null,
 
       // Actions
       setRenamingId: (id) => set({ renamingId: id }),
@@ -166,6 +169,8 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           }
           return { selectedType: type, selectedSlug: slug }
         }),
+
+      setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),
     }),
     {
       name: 'sidebar-ui',

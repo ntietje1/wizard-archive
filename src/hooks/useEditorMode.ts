@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -10,6 +10,7 @@ import type { Editor, EditorMode } from 'convex/editors/types'
 import { useAuthQuery } from '~/hooks/useAuthQuery'
 import { useCampaign } from '~/hooks/useCampaign'
 import { useCurrentItem } from '~/hooks/useCurrentItem'
+import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 
 export interface EditorModeContextType {
   editorMode: EditorMode
@@ -69,9 +70,8 @@ export function useEditorMode(): EditorModeContextType {
     },
   })
 
-  const [viewAsPlayerId, setViewAsPlayerIdState] = useState<
-    Id<'campaignMembers'> | undefined
-  >(undefined)
+  const viewAsPlayerId = useSidebarUIStore((s) => s.viewAsPlayerId)
+  const setViewAsPlayerIdStore = useSidebarUIStore((s) => s.setViewAsPlayerId)
 
   const rawEditorMode = editorQuery.data?.editorMode ?? EDITOR_MODE.EDITOR
 
@@ -98,14 +98,14 @@ export function useEditorMode(): EditorModeContextType {
 
   const setViewAsPlayerId = useCallback(
     (playerId: Id<'campaignMembers'> | undefined) => {
-      if (isDm) setViewAsPlayerIdState(playerId)
+      if (isDm) setViewAsPlayerIdStore(playerId ?? null)
     },
-    [isDm],
+    [isDm, setViewAsPlayerIdStore],
   )
 
   return {
     editorMode: effectiveEditorMode,
-    viewAsPlayerId: isDm ? viewAsPlayerId : undefined,
+    viewAsPlayerId: isDm && viewAsPlayerId ? viewAsPlayerId : undefined,
     canEdit,
     setEditorMode,
     setViewAsPlayerId,
