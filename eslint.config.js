@@ -22,12 +22,12 @@ export default [
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'off',
       'react-refresh/only-export-components': [
         'error',
         { allowConstantExport: true },
       ],
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      'no-shadow': ['warn', { allow: ['_'] }],
     },
   },
 ]

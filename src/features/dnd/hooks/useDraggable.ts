@@ -40,7 +40,6 @@ export function useDraggable<T extends Record<string, unknown>>({
         el.removeAttribute('data-item-dragging')
       },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref, canDrag])
 
   return { isDraggingRef }

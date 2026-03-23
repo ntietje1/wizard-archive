@@ -88,7 +88,6 @@ export async function moveSidebarItem(
     const deletedBy = ctx.user.profile._id
 
     await applyToTree(ctx, item, async (_, i) => {
-      // eslint-disable-next-line no-shadow
       await applyToDependents(ctx, i, async (_, doc) => {
         await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
       })
@@ -132,7 +131,6 @@ export async function moveSidebarItem(
           if (i._id === freshItem._id) return // root already handled above
           if (!i.deletionTime) return
 
-          // eslint-disable-next-line no-shadow
           await applyToDependents(ctx, i, async (_, doc) => {
             await ctx.db.patch(doc._id, clearDeletion)
           })
