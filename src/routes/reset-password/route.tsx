@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AuthPageLayout } from '~/components/auth/AuthPageLayout'
-import { ResetPasswordForm } from '~/components/auth/ResetPasswordForm'
+import { ResetPasswordPage } from '~/features/auth/pages/reset-password-page'
 
 export const Route = createFileRoute('/reset-password')({
   component: ResetPasswordPage,
@@ -8,11 +7,3 @@ export const Route = createFileRoute('/reset-password')({
     token: typeof search.token === 'string' ? search.token : undefined,
   }),
 })
-
-function ResetPasswordPage() {
-  return (
-    <AuthPageLayout>
-      <ResetPasswordForm />
-    </AuthPageLayout>
-  )
-}

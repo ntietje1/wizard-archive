@@ -14,13 +14,16 @@ import { Toaster } from 'sonner'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import type { Theme } from '~/hooks/useTheme'
-import { TransitionOverlay } from '~/components/auth/TransitionOverlay'
-import { NavigationProgress } from '~/components/navigation-progress'
-import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
-import { prefetchUserPreferences } from '~/hooks/useUserPreferences'
-import { authClient } from '~/lib/auth-client'
-import { getToken } from '~/lib/auth-server'
+import type { Theme } from '~/features/settings/hooks/useTheme'
+import { TransitionOverlay } from '~/features/auth/components/TransitionOverlay'
+import { NavigationProgress } from '~/features/shared/components/navigation-progress'
+import {
+  ThemeProvider,
+  ThemeScript,
+} from '~/features/shared/components/theme-provider'
+import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPreferences'
+import { authClient } from '~/features/auth/utils/auth-client'
+import { getToken } from '~/features/auth/utils/auth-server'
 import appCss from '~/styles/app.css?url'
 
 const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {

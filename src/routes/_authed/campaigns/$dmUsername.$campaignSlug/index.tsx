@@ -1,19 +1,8 @@
-import { Navigate, createFileRoute } from '@tanstack/react-router'
-import { useCampaign } from '~/hooks/useCampaign'
+import { createFileRoute } from '@tanstack/react-router'
+import { CampaignRedirectPage } from '~/features/campaigns/pages/campaign-redirect-page'
 
 export const Route = createFileRoute(
   '/_authed/campaigns/$dmUsername/$campaignSlug/',
 )({
-  component: CampaignsIndexPage,
+  component: CampaignRedirectPage,
 })
-
-function CampaignsIndexPage() {
-  const { dmUsername, campaignSlug } = useCampaign()
-  return (
-    <Navigate
-      to="/campaigns/$dmUsername/$campaignSlug/editor"
-      params={{ dmUsername, campaignSlug }}
-      replace
-    />
-  )
-}

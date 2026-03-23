@@ -1,0 +1,138 @@
+import { useCallback, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
+import {
+  File,
+  FilePlus,
+  FolderPlus,
+  MapPin,
+  Plus,
+} from '~/features/shared/utils/icons'
+import { Card } from '~/features/shadcn/components/card'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '~/features/shadcn/components/context-menu'
+import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+
+interface NewItemCardProps {
+  parentId: Id<'folders'>
+}
+
+export function NewItemCard({ parentId }: NewItemCardProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  const { campaignId } = useCampaign()
+  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { navigateToItem } = useEditorNavigation()
+  const { openParentFolders } = useOpenParentFolders()
+
+  const openMenuAt = useCallback((clientX: number, clientY: number) => {
+    if (triggerRef.current) {
+      triggerRef.current.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX,
+          clientY,
+          button: 2,
+        }),
+      )
+      setIsOpen(true)
+    }
+  }, [])
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      openMenuAt(e.clientX, e.clientY)
+    },
+    [openMenuAt],
+  )
+
+  const handleCreate = useCallback(
+    async (type: SidebarItemType) => {
+      if (!campaignId) return
+      try {
+        const result = await createItem({
+          type,
+          campaignId,
+          parentId,
+          name: getDefaultName(type, parentId),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+        toast.error(`Failed to create item`)
+      }
+    },
+    [
+      campaignId,
+      parentId,
+      createItem,
+      openParentFolders,
+      navigateToItem,
+      getDefaultName,
+    ],
+  )
+
+  return (
+    <ContextMenu open={isOpen} onOpenChange={setIsOpen}>
+      <ContextMenuTrigger
+        render={
+          <div ref={triggerRef} className="h-[140px]">
+            <Card
+              className="w-full h-full cursor-pointer rounded-md border-dashed flex items-center justify-center hover:bg-muted/70 hover:border-solid"
+              onClick={handleClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  openMenuAt(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2,
+                  )
+                }
+              }}
+            >
+              <Plus className="h-6 w-6 text-muted-foreground" />
+            </Card>
+          </div>
+        }
+      />
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}>
+          <FilePlus className="h-4 w-4 mr-2" />
+          New Note
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
+        >
+          <FolderPlus className="h-4 w-4 mr-2" />
+          New Folder
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
+        >
+          <MapPin className="h-4 w-4 mr-2" />
+          New Map
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}>
+          <File className="h-4 w-4 mr-2" />
+          New File
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}

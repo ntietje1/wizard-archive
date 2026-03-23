@@ -6,7 +6,7 @@ import type {
   SidebarItemId,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
-import type { DropOutcome } from '~/lib/dnd-registry'
+import type { DropOutcome } from '~/features/dnd/utils/dnd-registry'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface CampaignState {

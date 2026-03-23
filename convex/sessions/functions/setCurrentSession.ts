@@ -1,6 +1,6 @@
+import { requireDmRole } from '../../functions'
 import { getCurrentSession } from './getCurrentSession'
 import { getSession } from './getSession'
-import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
