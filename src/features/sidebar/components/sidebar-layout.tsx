@@ -8,7 +8,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/features/shadcn/components/resizable'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 

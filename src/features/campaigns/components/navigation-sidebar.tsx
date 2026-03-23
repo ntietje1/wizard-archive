@@ -1,15 +1,14 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { PanelLeft, PanelLeftOpen } from 'lucide-react'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import { FileText, PanelLeft, PanelLeftOpen, Users } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { FileText, Users } from '~/features/shared/utils/icons'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { Button } from '~/features/shadcn/components/button'
-import { TooltipButton } from '~/features/shared/components/tooltip-button'
+import { TooltipButton } from '~/shared/components/tooltip-button'
 import { Separator } from '~/features/shadcn/components/separator'
 import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
-import { UserMenu } from '~/features/auth/components/UserMenu'
+import { UserMenu } from '~/features/auth/components/user-menu'
 
 type NavigationItem = {
   name: string

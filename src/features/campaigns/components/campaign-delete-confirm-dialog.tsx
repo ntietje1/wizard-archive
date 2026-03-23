@@ -2,8 +2,8 @@ import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import type { Campaign } from 'convex/campaigns/types'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 
 interface CampaignDeleteConfirmDialogProps {
   campaign: Campaign

@@ -9,7 +9,7 @@ import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permissi
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 function canViewBlock(
   meta: BlockMeta,

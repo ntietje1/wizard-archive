@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 
 export interface UploadProgress {
   loaded: number

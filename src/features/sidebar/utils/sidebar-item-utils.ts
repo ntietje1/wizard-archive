@@ -12,7 +12,7 @@ import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 // Determine type and slug from search params
 export const getTypeAndSlug = (

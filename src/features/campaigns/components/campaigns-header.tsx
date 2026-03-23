@@ -1,4 +1,4 @@
-import { Shield, Sword } from '~/features/shared/utils/icons'
+import { Shield, Sword } from 'lucide-react'
 
 export function CampaignsHeader() {
   return (

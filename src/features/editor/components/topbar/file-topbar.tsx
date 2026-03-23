@@ -1,10 +1,11 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
-import { EditorViewModeToggleButton } from './topbar-item-content.tsx/note-buttons'
-import { ItemButtonWrapper } from './topbar-item-content.tsx/item-button-wrapper'
+import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
+import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
@@ -13,7 +14,6 @@ import {
   useAllSidebarItems,
   useTrashedSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
-import { Trash2 } from '~/features/shared/utils/icons'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()

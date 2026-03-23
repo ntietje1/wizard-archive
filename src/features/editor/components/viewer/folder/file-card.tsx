@@ -3,12 +3,6 @@ import { ClientOnly, Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import type { LucideIcon } from 'lucide-react'
-import type { ItemCardProps } from './item-card'
-import type { SidebarFile } from 'convex/files/types'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
-import { Card, CardTitle } from '~/features/shadcn/components/card'
-import { Button } from '~/features/shadcn/components/button'
 import {
   File as FileIconLucide,
   FileText,
@@ -16,13 +10,19 @@ import {
   MoreVertical,
   Music,
   Video,
-} from '~/features/shared/utils/icons'
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { ItemCardProps } from './item-card'
+import type { SidebarFile } from 'convex/files/types'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { Card, CardTitle } from '~/features/shadcn/components/card'
+import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 
 function getFileTypeIcon(

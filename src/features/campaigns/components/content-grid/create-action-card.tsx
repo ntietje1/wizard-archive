@@ -1,6 +1,6 @@
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import { Plus } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '~/features/shadcn/components/card'
-import { Plus } from '~/features/shared/utils/icons'
 
 interface CreateActionCardProps {
   onClick: () => void

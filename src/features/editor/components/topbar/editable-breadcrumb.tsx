@@ -9,7 +9,7 @@ import type {
 } from 'convex/sidebarItems/types/types'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useNameValidation } from '~/features/shared/hooks/useNameValidation'
+import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { useRenameItem } from '~/features/sidebar/hooks/useRenameItem'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

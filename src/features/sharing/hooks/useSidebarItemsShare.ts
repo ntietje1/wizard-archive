@@ -12,9 +12,9 @@ import type {
   ShareItem,
 } from '~/features/sharing/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/hooks/useBlocksShare'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 
 export interface ShareItemWithPermission extends ShareItem {

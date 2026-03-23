@@ -1,7 +1,7 @@
+import { MapPin } from 'lucide-react'
 import { MapForm } from './map-form'
 import type { Id } from 'convex/_generated/dataModel'
-import { FormDialog } from '~/features/shared/components/form-dialog'
-import { MapPin } from '~/features/shared/utils/icons'
+import { FormDialog } from '~/shared/components/form-dialog'
 
 interface MapDialogProps {
   isOpen: boolean

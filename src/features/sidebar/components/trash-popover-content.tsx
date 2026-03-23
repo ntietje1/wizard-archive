@@ -2,16 +2,17 @@ import { useCallback, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
+import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
-import { getSidebarItemIcon } from '~/features/shared/utils/category-icons'
+import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import {
   emptyTrashDescription,
   permanentDeleteDescription,
@@ -20,11 +21,6 @@ import {
   EDITOR_ROUTE,
   useEditorLinkProps,
 } from '~/features/sidebar/hooks/useEditorLinkProps'
-import {
-  RotateCcw,
-  SquareArrowOutUpRight,
-  Trash2,
-} from '~/features/shared/utils/icons'
 
 interface TrashPopoverContentProps {
   onClose: () => void

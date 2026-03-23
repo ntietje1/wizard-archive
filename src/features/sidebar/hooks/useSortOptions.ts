@@ -2,8 +2,8 @@ import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useCallback, useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 const defaultSortOptions: SortOptions = {

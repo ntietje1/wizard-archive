@@ -1,9 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
-import { AuthPageLayout } from '../components/AuthPageLayout'
-import { AccountPicker } from '../components/AccountPicker'
-import { SignInForm } from '../components/SignInForm'
+import { Loader2 } from 'lucide-react'
+import { AuthPageLayout } from '../components/auth-page-layout'
+import { AccountPicker } from '../components/account-picker'
+import { SignInForm } from '../components/sign-in-form'
 import { useDeviceSessions } from '../hooks/useAuthSessions'
-import { Loader2 } from '~/features/shared/utils/icons'
 
 export function SignInPage({ view }: { view?: 'form' | 'picker' }) {
   const navigate = useNavigate()

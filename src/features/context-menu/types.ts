@@ -1,6 +1,6 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { PermissionLevel } from 'convex/permissions/types'

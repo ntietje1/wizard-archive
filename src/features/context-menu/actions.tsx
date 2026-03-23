@@ -1,14 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import {
-  EmptyTrashConfirmDialog,
-  PermanentDeleteConfirmDialog,
-} from './hooks/trash-utils'
+import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
@@ -29,11 +26,7 @@ import {
   isGameMap,
   isNote,
 } from '~/features/sidebar/utils/sidebar-item-utils'
-import { assertNever } from '~/features/shared/utils/utils'
-import { MapDialog } from '~/features/editor/components/forms/map-form/map-dialog'
-import { FileDialog } from '~/features/editor/components/forms/file-form/file-dialog'
-import { SidebarItemEditDialog } from '~/features/sidebar/components/forms/sidebar-item-edit-dialog'
-import { FolderDeleteConfirmDialog } from '~/features/sidebar/components/folder-delete-confirm-dialog'
+import { assertNever } from '~/shared/utils/utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -722,8 +715,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     ),
   }
 
-  // Helper to close a dialog and notify the parent
-  const closeDialog = useCallback(
+  const makeCloseHandler = useCallback(
     <T,>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {
       return () => {
         setter(null)
@@ -733,122 +725,30 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     [onDialogClose],
   )
 
-  const dialogsContent = useMemo(
-    () => (
-      <>
-        {deleteFolderDialog && (
-          <FolderDeleteConfirmDialog
-            key={`delete-folder-${deleteFolderDialog._id}`}
-            folder={deleteFolderDialog}
-            isDeleting={true}
-            onConfirm={() => {
-              const current = getSelectedTypeAndSlug()
-              if (
-                current &&
-                deleteFolderDialog.type === current.type &&
-                deleteFolderDialog.slug === current.slug
-              ) {
-                clearEditorContent()
-              }
-            }}
-            onClose={closeDialog(setDeleteFolderDialog)}
-          />
-        )}
-
-        {editMapDialog && campaignId && (
-          <MapDialog
-            key={`edit-map-${editMapDialog}`}
-            mapId={editMapDialog}
-            isOpen={true}
-            onClose={closeDialog(setEditMapDialog)}
-            campaignId={campaignId}
-          />
-        )}
-
-        {editFileDialog && campaignId && (
-          <FileDialog
-            key={`edit-file-${editFileDialog}`}
-            fileId={editFileDialog}
-            isOpen={true}
-            onClose={closeDialog(setEditFileDialog)}
-            campaignId={campaignId}
-            onSuccess={closeDialog(setEditFileDialog)}
-          />
-        )}
-
-        {editSidebarItemDialog && (
-          <SidebarItemEditDialog
-            key={`edit-sidebar-item-${editSidebarItemDialog._id}`}
-            item={editSidebarItemDialog}
-            isOpen={true}
-            onClose={closeDialog(setEditSidebarItemDialog)}
-          />
-        )}
-
-        {confirmEmptyTrash && (
-          <EmptyTrashConfirmDialog
-            onClose={() => {
-              setConfirmEmptyTrash(false)
-              onDialogClose?.()
-            }}
-            onConfirm={async () => {
-              if (!campaignId) return
-              try {
-                await emptyTrashBin()
-                toast.success('Trash emptied')
-              } catch (error) {
-                console.error(error)
-              }
-              setConfirmEmptyTrash(false)
-              onDialogClose?.()
-            }}
-          />
-        )}
-
-        {confirmPermanentDeleteItem && (
-          <PermanentDeleteConfirmDialog
-            item={confirmPermanentDeleteItem}
-            onClose={closeDialog(setConfirmPermanentDeleteItem)}
-            onConfirm={async () => {
-              try {
-                await permanentlyDeleteItem(confirmPermanentDeleteItem)
-                toast.success('Item permanently deleted')
-                const current = getSelectedTypeAndSlug()
-                if (
-                  current &&
-                  confirmPermanentDeleteItem.type === current.type &&
-                  confirmPermanentDeleteItem.slug === current.slug
-                ) {
-                  clearEditorContent()
-                }
-              } catch (error) {
-                console.error(error)
-              }
-              setConfirmPermanentDeleteItem(null)
-              onDialogClose?.()
-            }}
-          />
-        )}
-      </>
-    ),
-    [
-      deleteFolderDialog,
-      editMapDialog,
-      editFileDialog,
-      editSidebarItemDialog,
-      confirmPermanentDeleteItem,
-      confirmEmptyTrash,
-      campaignId,
-      clearEditorContent,
-      closeDialog,
-      permanentlyDeleteItem,
-      onDialogClose,
-      emptyTrashBin,
-    ],
-  )
+  const dialogState: MenuDialogState = {
+    deleteFolderDialog,
+    editMapDialog,
+    editFileDialog,
+    editSidebarItemDialog,
+    confirmPermanentDeleteItem,
+    confirmEmptyTrash,
+    campaignId,
+    closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
+    closeMapDialog: makeCloseHandler(setEditMapDialog),
+    closeFileDialog: makeCloseHandler(setEditFileDialog),
+    closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
+    closePermanentDeleteDialog: makeCloseHandler(setConfirmPermanentDeleteItem),
+    closeEmptyTrashDialog: () => {
+      setConfirmEmptyTrash(false)
+      onDialogClose?.()
+    },
+    clearEditorContent,
+    permanentlyDeleteItem,
+    emptyTrashBin,
+  }
 
   return {
     actions,
-    Dialogs: dialogsContent,
+    dialogState,
   }
 }

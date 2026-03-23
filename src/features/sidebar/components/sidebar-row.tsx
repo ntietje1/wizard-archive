@@ -1,5 +1,5 @@
 import { forwardRef } from 'react'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface SidebarRowProps extends React.ComponentPropsWithoutRef<'div'> {

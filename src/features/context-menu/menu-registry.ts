@@ -23,7 +23,7 @@ import {
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {

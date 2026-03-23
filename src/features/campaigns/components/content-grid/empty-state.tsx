@@ -1,4 +1,4 @@
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 
 interface EmptyStateProps {

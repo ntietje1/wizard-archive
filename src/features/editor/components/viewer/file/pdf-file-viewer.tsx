@@ -5,7 +5,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl

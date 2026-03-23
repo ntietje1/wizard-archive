@@ -13,8 +13,8 @@ import { useSidebarUIStore } from '~/stores/sidebarUIStore'
 import { useRenameItem } from '~/features/sidebar/hooks/useRenameItem'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { getSidebarItemIcon } from '~/features/shared/utils/category-icons'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { getSidebarItemIcon } from '~/shared/utils/category-icons'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import {
   Collapsible,
   CollapsibleContent,

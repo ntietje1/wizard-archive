@@ -11,10 +11,10 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 export interface AllSidebarItemsValue {
   data: Array<AnySidebarItem>

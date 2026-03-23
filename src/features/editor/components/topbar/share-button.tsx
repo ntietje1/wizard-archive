@@ -1,10 +1,5 @@
 import { useMemo, useState } from 'react'
-import {
-  ChevronDown,
-  ChevronUp,
-  Lock,
-  Users,
-} from '~/features/shared/utils/icons'
+import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import {
   Popover,

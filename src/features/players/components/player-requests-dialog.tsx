@@ -5,6 +5,7 @@ import {
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
 import { toast } from 'sonner'
+import { Check, RefreshCw, X } from 'lucide-react'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import {
@@ -15,8 +16,7 @@ import {
   DialogTitle,
 } from '~/features/shadcn/components/dialog'
 import { Button } from '~/features/shadcn/components/button'
-import { Check, RefreshCw, X } from '~/features/shared/utils/icons'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { cn } from '~/features/shadcn/lib/utils'
 import { Badge } from '~/features/shadcn/components/badge'
 

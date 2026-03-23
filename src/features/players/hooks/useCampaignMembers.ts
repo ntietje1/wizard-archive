@@ -1,6 +1,6 @@
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function useCampaignMembers() {
   const { campaignId } = useCampaign()

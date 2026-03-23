@@ -15,7 +15,7 @@ import type {
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 import { convertTextToBlocks } from '~/features/editor/utils/text-to-blocks'
 import {

@@ -7,7 +7,7 @@ import type {
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 interface NavigateOnSlugChangeParams {
   itemId: SidebarItemId

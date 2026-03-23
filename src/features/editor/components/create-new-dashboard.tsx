@@ -1,18 +1,11 @@
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { File, FileText, Folder, Loader2, MapPin, Plus } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  File,
-  FileText,
-  Folder,
-  Loader2,
-  MapPin,
-  Plus,
-} from '~/features/shared/utils/icons'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'

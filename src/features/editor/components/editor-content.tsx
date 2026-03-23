@@ -4,7 +4,7 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SidebarItemEditor } from './viewer/sidebar-item-editor'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
 import {
   getItemTypeLabel,

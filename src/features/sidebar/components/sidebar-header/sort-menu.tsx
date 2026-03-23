@@ -1,4 +1,14 @@
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  CalendarArrowDown,
+  CalendarArrowUp,
+  ClockArrowDown,
+  ClockArrowUp,
+  SortAsc,
+  SortDesc,
+} from 'lucide-react'
 import type { SortDirection, SortOrder } from 'convex/editors/types'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import {
@@ -9,18 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/features/shadcn/components/dropdown-menu'
-import {
-  ArrowDownAZ,
-  ArrowUpAZ,
-  CalendarArrowDown,
-  CalendarArrowUp,
-  ClockArrowDown,
-  ClockArrowUp,
-  SortAsc,
-  SortDesc,
-} from '~/features/shared/utils/icons'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
-import { EmptyContextMenu } from '~/features/context-menu/components/EmptyContextMenu'
+import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 
 export function SortMenu() {
   const { sortOptions, setSortOptions } = useSortOptions()

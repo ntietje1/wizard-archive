@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import usePersistedState from '~/features/shared/hooks/usePersistedState'
+import usePersistedState from '~/shared/hooks/usePersistedState'
 
 const SCROLL_POSITIONS_KEY = 'note-scroll-positions'
 

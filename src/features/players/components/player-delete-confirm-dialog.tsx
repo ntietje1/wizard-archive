@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
 import type { CampaignMember } from 'convex/campaigns/types'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 
 interface PlayerDeleteConfirmDialogProps {
   player: CampaignMember

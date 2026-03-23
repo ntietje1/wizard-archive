@@ -1,7 +1,7 @@
 import { File } from 'lucide-react'
 import { FileForm } from './file-form'
 import type { Id } from 'convex/_generated/dataModel'
-import { FormDialog } from '~/features/shared/components/form-dialog'
+import { FormDialog } from '~/shared/components/form-dialog'
 
 interface FileDialogProps {
   isOpen: boolean

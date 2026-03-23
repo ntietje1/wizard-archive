@@ -21,9 +21,9 @@ import type {
   CustomBlockNoteEditor,
 } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
-import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/BlockNoteContextMenuContext'
+import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFilteredNoteContent } from '~/features/editor/hooks/useFilteredNoteContent'

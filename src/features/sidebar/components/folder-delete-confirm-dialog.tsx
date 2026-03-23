@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import type { Folder } from 'convex/folders/types'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 import {
   getDescendantCount,

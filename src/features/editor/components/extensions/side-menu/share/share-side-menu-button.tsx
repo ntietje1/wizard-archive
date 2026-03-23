@@ -6,17 +6,17 @@ import {
   useExtensionState,
 } from '@blocknote/react'
 import { toast } from 'sonner'
+import { Share2 } from 'lucide-react'
 import type {
   CustomBlock,
   CustomBlockNoteEditor,
 } from 'convex/notes/editorSpecs'
 import type { AggregateShareStatus } from '~/features/sharing/hooks/useBlocksShare'
-import { Share2 } from '~/features/shared/utils/icons'
 import {
   AGGREGATE_SHARE_STATUS,
   useBlocksShare,
 } from '~/features/sharing/hooks/useBlocksShare'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 import {
   ContextMenu,
   ContextMenuContent,

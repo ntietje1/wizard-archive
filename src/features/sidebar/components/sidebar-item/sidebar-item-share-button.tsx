@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Share2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { Share2 } from '~/features/shared/utils/icons'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import {

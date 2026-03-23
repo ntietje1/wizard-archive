@@ -1,15 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { File, FilePlus, FolderPlus, MapPin, Plus } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-  File,
-  FilePlus,
-  FolderPlus,
-  MapPin,
-  Plus,
-} from '~/features/shared/utils/icons'
 import { Card } from '~/features/shadcn/components/card'
 import {
   ContextMenu,

@@ -9,8 +9,8 @@ import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
-import { getSidebarItemIcon } from '~/features/shared/utils/category-icons'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { getSidebarItemIcon } from '~/shared/utils/category-icons'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 
 interface FlatSidebarItemProps {
   item: AnySidebarItem

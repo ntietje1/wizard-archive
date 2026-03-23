@@ -1,25 +1,18 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
+import { Edit, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
-import {
-  Edit,
-  Plus,
-  Sword,
-  Trash2,
-  User,
-  Users,
-} from '~/features/shared/utils/icons'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
 import { CreateActionCard } from '~/features/campaigns/components/content-grid/create-action-card'
 import { ContentCard } from '~/features/campaigns/components/content-grid/content-card'
 import { CampaignDeleteConfirmDialog } from '~/features/campaigns/components/campaign-delete-confirm-dialog'
 import { CardGridSkeleton } from '~/features/campaigns/components/content-grid/card-grid-skeleton'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function CampaignsContent() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)

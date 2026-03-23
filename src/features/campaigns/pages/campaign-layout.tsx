@@ -1,17 +1,17 @@
 import { Outlet } from '@tanstack/react-router'
 import { NavigationSidebar } from '../components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from '../components/campaign-not-found'
-import { CampaignProvider } from '~/features/campaigns/contexts/CampaignContext'
-import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/AllSidebarItemsProvider'
-import { SidebarItemMutationsProvider } from '~/features/sidebar/contexts/SidebarItemMutationsProvider'
+import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
+import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
+import { SidebarItemMutationsProvider } from '~/features/sidebar/contexts/sidebar-item-mutations-provider'
 import { SidebarLayout } from '~/features/sidebar/components/sidebar-layout'
-import { SidebarLayoutProvider } from '~/features/sidebar/contexts/SidebarLayoutContext'
-import { SessionProvider } from '~/features/sidebar/contexts/SessionContext'
-import { EditorNavigationProvider } from '~/features/sidebar/contexts/EditorNavigationProvider'
-import { DndProvider } from '~/features/dnd/contexts/DndProvider'
+import { SidebarLayoutProvider } from '~/features/sidebar/contexts/sidebar-layout-context'
+import { SessionProvider } from '~/features/sidebar/contexts/session-context'
+import { EditorNavigationProvider } from '~/features/sidebar/contexts/editor-navigation-provider'
+import { DndProvider } from '~/features/dnd/contexts/dnd-provider'
 import { ViewAsBanner } from '~/features/editor/components/view-as-banner'
-import { ErrorBoundary } from '~/features/shared/components/error-boundary'
-import { ErrorFallback } from '~/features/shared/components/error-fallback'
+import { ErrorBoundary } from '~/shared/components/error-boundary'
+import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export function CampaignLayout() {
   return (
@@ -27,12 +27,12 @@ export function CampaignLayout() {
                       <SidebarLayoutProvider>
                         <ErrorBoundary FallbackComponent={ErrorFallback}>
                           <NavigationSidebar />
-                          <SidebarLayout>
-                            <ErrorBoundary FallbackComponent={ErrorFallback}>
-                              <Outlet />
-                            </ErrorBoundary>
-                          </SidebarLayout>
                         </ErrorBoundary>
+                        <SidebarLayout>
+                          <ErrorBoundary FallbackComponent={ErrorFallback}>
+                            <Outlet />
+                          </ErrorBoundary>
+                        </SidebarLayout>
                       </SidebarLayoutProvider>
                     </div>
                     <ViewAsBanner />

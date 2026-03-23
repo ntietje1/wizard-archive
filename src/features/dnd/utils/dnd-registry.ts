@@ -11,7 +11,7 @@ import type {
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 // ─── Constants ───────────────────────────────────────────────────────
 

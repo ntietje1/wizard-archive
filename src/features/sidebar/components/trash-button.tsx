@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { TrashPopoverContent } from './trash-popover-content'
 import { SidebarRow } from './sidebar-row'
 import {
@@ -11,7 +12,6 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
-import { Trash2 } from '~/features/shared/utils/icons'
 
 export function TrashButton() {
   const [open, setOpen] = useState(false)

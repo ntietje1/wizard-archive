@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
 import { SidebarRow } from './sidebar-row'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { EDITOR_ROUTE } from '~/features/sidebar/hooks/useEditorLinkProps'
-import { Plus } from '~/features/shared/utils/icons'
 
 export function NewButton() {
   const { dmUsername, campaignSlug } = useCampaign()

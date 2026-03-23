@@ -3,8 +3,8 @@ import { api } from 'convex/_generated/api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { UserPreferences } from 'convex/userPreferences/types'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const DEFAULT_SIDEBAR_WIDTH = 280
 const DEFAULT_SIDEBAR_EXPANDED = true

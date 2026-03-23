@@ -1,4 +1,4 @@
-import { Shield } from '~/features/shared/utils/icons'
+import { Shield } from 'lucide-react'
 
 type StatusIconVariant = 'loading' | 'success' | 'error' | 'warning'
 

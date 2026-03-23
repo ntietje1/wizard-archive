@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import {
   Card,
   CardContent,

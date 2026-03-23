@@ -8,6 +8,7 @@ import {
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
 import { useEffect, useState } from 'react'
+import { Loader2, Users } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -16,10 +17,9 @@ import {
   CardTitle,
 } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
-import { Loader2, Users } from '~/features/shared/utils/icons'
-import { Header } from '~/features/shared/components/Header'
-import { SignInForm } from '~/features/auth/components/SignInForm'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { Header } from '~/shared/components/header'
+import { SignInForm } from '~/features/auth/components/sign-in-form'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { Route } from '~/routes/join.$dmUsername.$campaignSlug'
 

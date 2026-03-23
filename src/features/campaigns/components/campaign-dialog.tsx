@@ -7,6 +7,7 @@ import {
   validateCampaignName,
   validateCampaignSlug,
 } from 'convex/campaigns/validation'
+import { Link, Sword } from 'lucide-react'
 import type { ConvexReactClient } from 'convex/react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Campaign } from 'convex/campaigns/types'
@@ -15,11 +16,10 @@ import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 import { Textarea } from '~/features/shadcn/components/textarea'
 import { Button } from '~/features/shadcn/components/button'
-import { Link, Sword } from '~/features/shared/utils/icons'
-import { FormDialog } from '~/features/shared/components/form-dialog'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { FormDialog } from '~/shared/components/form-dialog'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 async function validateCampaignSlugAsync(
   convex: ConvexReactClient,

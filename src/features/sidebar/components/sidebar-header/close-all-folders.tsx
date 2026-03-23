@@ -1,5 +1,5 @@
+import { FolderDot, FolderOpenDot } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import { FolderDot, FolderOpenDot } from '~/features/shared/utils/icons'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useCampaignSidebarActions,

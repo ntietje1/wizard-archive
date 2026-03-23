@@ -10,7 +10,7 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import type { ConvexReactClient } from 'convex/react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { LoadingPage } from '~/features/shared/components/loading-page'
+import { LoadingPage } from '~/shared/components/loading-page'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'

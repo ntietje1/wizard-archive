@@ -5,13 +5,13 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
+import { Link, Trash2, User, Users } from 'lucide-react'
 import { PlayerRequestsDialog } from './player-requests-dialog'
 import PlayersDmControls from './players-dm-controls'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { Link, Trash2, User, Users } from '~/features/shared/utils/icons'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ContentCard } from '~/features/campaigns/components/content-grid/content-card'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'

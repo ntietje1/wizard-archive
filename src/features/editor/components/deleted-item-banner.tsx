@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
+import { RotateCcw, Trash2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
@@ -15,7 +16,6 @@ import {
   emptyTrashDescription,
   permanentDeleteDescription,
 } from '~/features/sidebar/utils/trash-utils'
-import { RotateCcw, Trash2 } from '~/features/shared/utils/icons'
 
 function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))

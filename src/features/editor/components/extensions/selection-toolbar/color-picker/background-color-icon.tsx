@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Highlighter } from '~/features/shared/utils/icons'
+import { Highlighter } from 'lucide-react'
 
 export const BackgroundColorIcon = (
   props: Partial<{

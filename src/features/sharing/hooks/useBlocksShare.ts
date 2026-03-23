@@ -5,10 +5,10 @@ import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { BlockShareInfo } from 'convex/blocks/types'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export interface ShareItem {

@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
-import type { LucideIcon } from '~/features/shared/utils/icons'
+import type { LucideIcon } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'

@@ -1,16 +1,16 @@
 import { useRef } from 'react'
+import { Trash2 } from 'lucide-react'
 import { ItemCard } from '../folder/item-card'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarUIStore } from '~/stores/sidebarUIStore'
-import { Trash2 } from '~/features/shared/utils/icons'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)

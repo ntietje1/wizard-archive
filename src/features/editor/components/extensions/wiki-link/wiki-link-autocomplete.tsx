@@ -13,7 +13,7 @@ import {
 } from '~/features/sidebar/utils/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import {
   getItemPath,

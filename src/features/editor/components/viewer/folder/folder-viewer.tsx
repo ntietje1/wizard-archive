@@ -12,8 +12,8 @@ import {
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
-import { EditorContextMenu } from '~/features/context-menu/components/EditorContextMenu'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 
 export function FolderViewer({
   item: folder,

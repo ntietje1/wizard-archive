@@ -8,7 +8,7 @@ import {
 import {
   getAvailableIconNames,
   getIconByName,
-} from '~/features/shared/utils/category-icons'
+} from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface IconPickerProps {

@@ -3,7 +3,7 @@ import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
 import { ZoomControls } from '~/features/editor/components/viewer/zoom-controls'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 interface ImageFileViewerProps {
   imageUrl: string

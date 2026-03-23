@@ -1,5 +1,5 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { ConfirmationDialog } from '~/features/shared/components/confirmation-dialog'
+import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   emptyTrashDescription,

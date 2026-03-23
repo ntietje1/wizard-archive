@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import { Loader2 } from '~/features/shared/utils/icons'
 
 export function HomePage() {
   const { isAuthenticated, isLoading } = useConvexAuth()

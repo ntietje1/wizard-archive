@@ -3,14 +3,14 @@ import type {
   AnySidebarItem,
   AnySidebarItemWithContent,
 } from 'convex/sidebarItems/types/types'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
 import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-viewer'
 import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
-import { ErrorBoundary } from '~/features/shared/components/error-boundary'
-import { ErrorFallback } from '~/features/shared/components/error-fallback'
+import { ErrorBoundary } from '~/shared/components/error-boundary'
+import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export interface EditorViewerProps<T extends AnySidebarItem> {
   item: T

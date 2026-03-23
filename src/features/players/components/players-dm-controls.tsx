@@ -4,10 +4,10 @@ import {
 } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
 import { Button } from '~/features/shadcn/components/button'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { CopyField } from '~/features/shared/components/copy-field'
-import { getOrigin } from '~/features/shared/utils/origin'
+import { CopyField } from '~/shared/components/copy-field'
+import { getOrigin } from '~/shared/utils/origin'
 
 type PlayersDmControlsProps = {
   onOpenRequests?: () => void

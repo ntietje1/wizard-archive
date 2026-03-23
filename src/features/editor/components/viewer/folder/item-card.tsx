@@ -5,7 +5,7 @@ import { MapCard } from './map-card'
 import { FileCard } from './file-card'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { assertNever } from '~/features/shared/utils/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 export interface ItemCardProps<T extends AnySidebarItem> {
   item: T

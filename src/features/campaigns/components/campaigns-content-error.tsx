@@ -1,4 +1,4 @@
-import { AlertTriangle } from '~/features/shared/utils/icons'
+import { AlertTriangle } from 'lucide-react'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
 

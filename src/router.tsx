@@ -4,8 +4,8 @@ import { ConvexQueryClient } from '@convex-dev/react-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { routeTree } from './routeTree.gen'
-import ErrorPage from '~/features/shared/components/error-page'
-import NotFoundPage from '~/features/shared/components/not-found'
+import ErrorPage from '~/shared/components/error-page'
+import NotFoundPage from '~/shared/components/not-found'
 
 export function getRouter() {
   const CONVEX_URL = import.meta.env.VITE_CONVEX_URL

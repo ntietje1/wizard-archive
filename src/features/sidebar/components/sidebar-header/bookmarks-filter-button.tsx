@@ -1,5 +1,5 @@
+import { Bookmark, BookmarkCheck } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import { Bookmark, BookmarkCheck } from '~/features/shared/utils/icons'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useCampaignSidebarActions,

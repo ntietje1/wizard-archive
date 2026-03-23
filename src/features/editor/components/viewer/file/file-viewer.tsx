@@ -11,11 +11,11 @@ import { VideoFileViewer } from './video-file-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'convex/files/types'
-import { useAppMutation } from '~/features/shared/hooks/useAppMutation'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
-import { assertNever } from '~/features/shared/utils/utils'
-import { LoadingSpinner } from '~/features/shared/components/loading-spinner'
+import { assertNever } from '~/shared/utils/utils'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 const PdfFileViewer = lazy(() =>
   import('./pdf-file-viewer').then((m) => ({ default: m.PdfFileViewer })),

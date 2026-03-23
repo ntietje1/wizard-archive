@@ -3,7 +3,7 @@ import { NewFolderButton } from './new-folder'
 import { NewNoteButton } from './new-note'
 import { SortMenu } from './sort-menu'
 import { BookmarksFilterButton } from './bookmarks-filter-button'
-import { TooltipButton } from '~/features/shared/components/tooltip-button'
+import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
 

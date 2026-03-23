@@ -1,7 +1,7 @@
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import usePersistedState from '~/features/shared/hooks/usePersistedState'
+import usePersistedState from '~/shared/hooks/usePersistedState'
 
 export function useLastEditorItem() {
   const { campaignId } = useCampaign()

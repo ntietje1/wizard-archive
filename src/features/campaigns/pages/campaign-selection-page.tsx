@@ -1,7 +1,7 @@
 import { CampaignsContent } from '../components/campaigns-content'
 import { CampaignsFooter } from '../components/campaigns-footer'
 import { CampaignsHeader } from '../components/campaigns-header'
-import { UserMenu } from '~/features/auth/components/UserMenu'
+import { UserMenu } from '~/features/auth/components/user-menu'
 
 export function CampaignSelectionPage() {
   return (

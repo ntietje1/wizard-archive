@@ -3,7 +3,7 @@ import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/features/shared/hooks/useAuthQuery'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getTypeAndSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export function useCurrentItem() {

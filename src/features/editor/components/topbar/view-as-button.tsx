@@ -1,7 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
-import { EmptyContextMenu } from '~/features/context-menu/components/EmptyContextMenu'
+import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/features/shadcn/components/dropdown-menu'
-import { TooltipButton } from '~/features/shared/components/tooltip-button'
+import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'

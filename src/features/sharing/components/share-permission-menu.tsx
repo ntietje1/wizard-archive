@@ -1,11 +1,11 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { UserProfile } from 'convex/users/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ShareItemWithPermission } from '~/features/sharing/hooks/useSidebarItemsShare'
-import { ChevronDown, ChevronUp, Users } from '~/features/shared/utils/icons'
-import usePersistedState from '~/features/shared/hooks/usePersistedState'
+import usePersistedState from '~/shared/hooks/usePersistedState'
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
   TooltipTrigger,
 } from '~/features/shadcn/components/tooltip'
 import { Switch } from '~/features/shadcn/components/switch'
-import { getInitials } from '~/features/shared/utils/get-initials'
+import { getInitials } from '~/shared/utils/get-initials'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
 
