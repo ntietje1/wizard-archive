@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -55,20 +55,17 @@ export function UserMenu() {
   const queryClient = useQueryClient()
   const deviceSessions = useDeviceSessions()
 
-  const handleSwitchAccount = useCallback(
-    async (sessionToken: string) => {
-      try {
-        await authClient.multiSession.setActive({ sessionToken })
-        navigate({ to: '/campaigns', reloadDocument: true })
-      } catch (error) {
-        console.error('Failed to switch account:', error)
-        deviceSessions.refresh()
-      }
-    },
-    [deviceSessions, navigate],
-  )
+  const handleSwitchAccount = async (sessionToken: string) => {
+    try {
+      await authClient.multiSession.setActive({ sessionToken })
+      navigate({ to: '/campaigns', reloadDocument: true })
+    } catch (error) {
+      console.error('Failed to switch account:', error)
+      deviceSessions.refresh()
+    }
+  }
 
-  const handleSignOut = useCallback(async () => {
+  const handleSignOut = async () => {
     try {
       const token = deviceSessions.currentToken
       if (token) {
@@ -87,7 +84,7 @@ export function UserMenu() {
       console.error('Failed to sign out:', error)
       window.location.reload()
     }
-  }, [queryClient, deviceSessions.currentToken, navigate])
+  }
 
   if (!mounted || !profile) {
     return <AvatarPlaceholder />

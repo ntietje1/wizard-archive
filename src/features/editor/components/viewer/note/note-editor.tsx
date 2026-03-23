@@ -1,7 +1,7 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import { useBlockNoteSync } from '@convex-dev/prosemirror-sync/blocknote'
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { editorSchema } from 'convex/notes/editorSpecs'
@@ -174,7 +174,7 @@ const CollaborativeNoteReady = ({
   const editorDropRef = useRef<HTMLDivElement>(null)
   useNoteEditorDropTarget({ ref: editorDropRef, editor, noteId: note._id })
 
-  const handleWrapperContextMenu = useCallback((e: React.MouseEvent) => {
+  const handleWrapperContextMenu = (e: React.MouseEvent) => {
     if (!e.isTrusted) return
 
     const target = e.target as HTMLElement
@@ -189,7 +189,7 @@ const CollaborativeNoteReady = ({
       item: undefined,
       blockId: undefined,
     })
-  }, [])
+  }
 
   return (
     <BlockNoteContextMenuProvider editor={editor}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { resolveItemByPath } from './useWikiLinkExtension'
@@ -94,27 +94,23 @@ export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
   const pluginRef = useRef<Plugin | null>(null)
   const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
 
-  const resolver = useMemo((): MdLinkResolver => {
-    const allItems = sidebarItems || []
+  const allItems = sidebarItems || []
 
-    const resolve = (
-      pathSegments: Array<string>,
-    ): MdLinkItemInfo | undefined => {
-      if (!dmUsername || !campaignSlug || pathSegments.length === 0)
-        return undefined
+  const resolve = (pathSegments: Array<string>): MdLinkItemInfo | undefined => {
+    if (!dmUsername || !campaignSlug || pathSegments.length === 0)
+      return undefined
 
-      const item = resolveItemByPath(pathSegments, allItems, itemsMap)
-      if (!item) return undefined
+    const item = resolveItemByPath(pathSegments, allItems, itemsMap)
+    if (!item) return undefined
 
-      const urlParam = TYPE_TO_URL_PARAM[item.type]
-      if (!urlParam) return undefined
+    const urlParam = TYPE_TO_URL_PARAM[item.type]
+    if (!urlParam) return undefined
 
-      const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
-      return { item, href }
-    }
+    const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
+    return { item, href }
+  }
 
-    return { resolve, allItems, itemsMap }
-  }, [sidebarItems, itemsMap, dmUsername, campaignSlug])
+  const resolver: MdLinkResolver = { resolve, allItems, itemsMap }
 
   useEffect(() => {
     const tiptapEditor = editor?._tiptapEditor

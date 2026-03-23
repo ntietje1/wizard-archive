@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const isBrowser = typeof window !== 'undefined'
 
@@ -22,32 +22,28 @@ function usePersistedState<T>(
     }
   }, [key])
 
-  const setValue = useCallback(
-    (value: T | ((prev: T) => T)) => {
-      if (!key) return
-      try {
-        setStoredValue((prev) => {
-          const valueToStore =
-            value instanceof Function ? (value as (prev: T) => T)(prev) : value
-          if (isBrowser) {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore))
-            // Dispatch custom event for same-window updates (deferred to avoid setState during render)
-            queueMicrotask(() => {
-              window.dispatchEvent(
-                new CustomEvent('localStorageChange', {
-                  detail: { key, newValue: JSON.stringify(valueToStore) },
-                }),
-              )
-            })
-          }
-          return valueToStore
-        })
-      } catch (error) {
-        console.log(error)
-      }
-    },
-    [key],
-  )
+  const setValue = (value: T | ((prev: T) => T)) => {
+    if (!key) return
+    try {
+      setStoredValue((prev) => {
+        const valueToStore =
+          value instanceof Function ? (value as (prev: T) => T)(prev) : value
+        if (isBrowser) {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore))
+          queueMicrotask(() => {
+            window.dispatchEvent(
+              new CustomEvent('localStorageChange', {
+                detail: { key, newValue: JSON.stringify(valueToStore) },
+              }),
+            )
+          })
+        }
+        return valueToStore
+      })
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
   useEffect(() => {
     if (!isBrowser) return

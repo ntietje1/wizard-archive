@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
@@ -58,10 +58,10 @@ export function BlockNoteContextMenuProvider({
     }
   }, [menuState])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setMenuState(null)
     setCurrentBlockId(undefined)
-  }, [])
+  }
 
   return (
     <BlockNoteContextMenuContext.Provider

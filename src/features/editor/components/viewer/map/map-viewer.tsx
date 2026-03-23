@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { ClientOnly } from '@tanstack/react-router'
@@ -73,22 +73,22 @@ function MapPinContextMenuWrapper({
     }
   }, [pin, pinId, position, setActivePinId])
 
-  const handleDialogOpen = useCallback(() => {
+  const handleDialogOpen = () => {
     dialogOpenRef.current = true
-  }, [])
+  }
 
-  const handleMenuClose = useCallback(() => {
+  const handleMenuClose = () => {
     setActivePinId(null)
     // Only clean up if no dialog was opened
     if (!dialogOpenRef.current) {
       onClose()
     }
-  }, [setActivePinId, onClose])
+  }
 
-  const handleDialogClose = useCallback(() => {
+  const handleDialogClose = () => {
     dialogOpenRef.current = false
     onClose()
-  }, [onClose])
+  }
 
   if (!pin) return null
 
@@ -291,15 +291,12 @@ export function MapViewer({
   const { itemsMap: allItemsMap } = useAllSidebarItems()
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
-  const mapDropData = useMemo(
-    () => ({
-      type: MAP_DROP_ZONE_TYPE,
-      mapId: map._id,
-      mapName: map.name,
-      pinnedItemIds: map.pins.map((p) => p.itemId),
-    }),
-    [map._id, map.name, map.pins],
-  )
+  const mapDropData = {
+    type: MAP_DROP_ZONE_TYPE,
+    mapId: map._id,
+    mapName: map.name,
+    pinnedItemIds: map.pins.map((p) => p.itemId),
+  }
   const { isDropTarget: isMapDropTarget } = useDndDropTarget({
     ref: mapContainerRef,
     data: mapDropData,
@@ -309,10 +306,7 @@ export function MapViewer({
     isMapDropTarget ? s.dragOutcome : null,
   )
 
-  const permOpts = useMemo(
-    () => ({ isDm, viewAsPlayerId, allItemsMap }),
-    [isDm, viewAsPlayerId, allItemsMap],
-  )
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap }
 
   // Users with edit access see all pins (hidden ones are dimmed); view-only users only see visible pins
   const canEditMap = effectiveHasAtLeastPermission(
@@ -321,23 +315,18 @@ export function MapViewer({
     permOpts,
   )
 
-  const pins = useMemo(
-    () =>
-      canEditMap ? map.pins : map.pins.filter((pin) => pin.visible === true),
-    [map.pins, canEditMap],
-  )
+  const pins = canEditMap
+    ? map.pins
+    : map.pins.filter((pin) => pin.visible === true)
 
-  const isPinGhost = useCallback(
-    (pin: MapPinWithItem): boolean => {
-      if (!pin.item) return true
-      return !effectiveHasAtLeastPermission(
-        pin.item,
-        PERMISSION_LEVEL.VIEW,
-        permOpts,
-      )
-    },
-    [permOpts],
-  )
+  const isPinGhost = (pin: MapPinWithItem): boolean => {
+    if (!pin.item) return true
+    return !effectiveHasAtLeastPermission(
+      pin.item,
+      PERMISSION_LEVEL.VIEW,
+      permOpts,
+    )
+  }
 
   const [savedTransform, setSavedTransform] =
     usePersistedState<MapTransformState>(
@@ -390,31 +379,28 @@ export function MapViewer({
     { errorMessage: 'Failed to move pin' },
   )
 
-  const handleTransformChange = useCallback(
-    (
-      _: unknown,
-      state: { scale: number; positionX: number; positionY: number },
-    ) => {
-      if (pinsContainerRef.current) {
-        pinsContainerRef.current.style.setProperty(
-          '--pin-scale',
-          String(1 / state.scale),
-        )
-      }
+  const handleTransformChange = (
+    _: unknown,
+    state: { scale: number; positionX: number; positionY: number },
+  ) => {
+    if (pinsContainerRef.current) {
+      pinsContainerRef.current.style.setProperty(
+        '--pin-scale',
+        String(1 / state.scale),
+      )
+    }
 
-      if (transformDebounceRef.current) {
-        clearTimeout(transformDebounceRef.current)
-      }
-      transformDebounceRef.current = setTimeout(() => {
-        setSavedTransform({
-          scale: state.scale,
-          positionX: state.positionX,
-          positionY: state.positionY,
-        })
-      }, 300)
-    },
-    [setSavedTransform],
-  )
+    if (transformDebounceRef.current) {
+      clearTimeout(transformDebounceRef.current)
+    }
+    transformDebounceRef.current = setTimeout(() => {
+      setSavedTransform({
+        scale: state.scale,
+        positionX: state.positionX,
+        positionY: state.positionY,
+      })
+    }, 300)
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -542,38 +528,35 @@ export function MapViewer({
     }
   }, [draggingPin, updateItemPinMutation])
 
-  const getPercentageFromClick = useCallback(
-    (e: React.MouseEvent): PinPosition => {
-      if (!imageRef.current) return { x: 0, y: 0 }
+  const getPercentageFromClick = (e: React.MouseEvent): PinPosition => {
+    if (!imageRef.current) return { x: 0, y: 0 }
 
-      const rect = imageRef.current.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width) * 100
-      const y = ((e.clientY - rect.top) / rect.height) * 100
+    const rect = imageRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
 
-      return {
-        x: Math.max(0, Math.min(100, x)),
-        y: Math.max(0, Math.min(100, y)),
-      }
-    },
-    [],
-  )
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    }
+  }
 
-  const createPinAtPosition = useCallback(
-    async (itemId: SidebarItemId, position: PinPosition) => {
-      try {
-        await createItemPinMutation.mutateAsync({
-          mapId: map._id,
-          x: position.x,
-          y: position.y,
-          itemId,
-        })
-        toast.success('Pin placed on map')
-      } catch (error) {
-        console.error('Failed to place pin:', error)
-      }
-    },
-    [map._id, createItemPinMutation],
-  )
+  const createPinAtPosition = async (
+    itemId: SidebarItemId,
+    position: PinPosition,
+  ) => {
+    try {
+      await createItemPinMutation.mutateAsync({
+        mapId: map._id,
+        x: position.x,
+        y: position.y,
+        itemId,
+      })
+      toast.success('Pin placed on map')
+    } catch (error) {
+      console.error('Failed to place pin:', error)
+    }
+  }
   const createPinAtPositionRef = useRef(createPinAtPosition)
   createPinAtPositionRef.current = createPinAtPosition
 
@@ -620,149 +603,122 @@ export function MapViewer({
     })
   }, [])
 
-  const handlePlacePin = useCallback(
-    async (position: PinPosition) => {
-      if (!pendingPinItem || !map._id) return
+  const handlePlacePin = async (position: PinPosition) => {
+    if (!pendingPinItem || !map._id) return
 
-      await createPinAtPosition(pendingPinItem.itemId, position)
-      setPendingPinItem(null)
-    },
-    [pendingPinItem, map._id, createPinAtPosition],
-  )
+    await createPinAtPosition(pendingPinItem.itemId, position)
+    setPendingPinItem(null)
+  }
 
-  const handleMovePin = useCallback(
-    async (position: PinPosition) => {
-      if (!pendingPinMove) return
+  const handleMovePin = async (position: PinPosition) => {
+    if (!pendingPinMove) return
 
-      try {
-        await updateItemPinMutation.mutateAsync({
-          mapPinId: pendingPinMove.pinId,
-          x: position.x,
-          y: position.y,
-        })
-        toast.success('Pin moved')
-        setPendingPinMove(null)
-      } catch (error) {
-        console.error('Failed to move pin:', error)
-      }
-    },
-    [pendingPinMove, updateItemPinMutation],
-  )
-
-  const handleMapClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!pendingPinItem && !pendingPinMove) return
-
-      e.preventDefault()
-      e.stopPropagation()
-      const position = getPercentageFromClick(e)
-
-      if (pendingPinItem) {
-        handlePlacePin(position)
-      } else if (pendingPinMove) {
-        handleMovePin(position)
-      }
-    },
-    [
-      pendingPinItem,
-      pendingPinMove,
-      getPercentageFromClick,
-      handlePlacePin,
-      handleMovePin,
-    ],
-  )
-
-  const handlePinClick = useCallback(
-    (e: React.MouseEvent, pin: MapPinWithItem) => {
-      e.preventDefault()
-      e.stopPropagation()
-      if (justFinishedDraggingRef.current === pin._id) {
-        return
-      }
-      const canView = pin.item
-        ? hasAtLeastPermissionLevel(
-            pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-            PERMISSION_LEVEL.VIEW,
-          )
-        : false
-      if (!pin.item || !canView) {
-        toast.error('You do not have permission to view this item')
-        return
-      }
-      toast.info(`Pin clicked: ${pin.item.name}`)
-      // TODO: add action here
-    },
-    [],
-  )
-
-  const handlePinContextMenu = useCallback(
-    (e: React.MouseEvent, pin: MapPinWithItem) => {
-      e.preventDefault()
-      e.stopPropagation()
-      e.nativeEvent.stopPropagation()
-      e.nativeEvent.stopImmediatePropagation()
-
-      setPinContextMenu({
-        pinId: pin._id,
-        position: {
-          x: e.clientX,
-          y: e.clientY,
-        },
+    try {
+      await updateItemPinMutation.mutateAsync({
+        mapPinId: pendingPinMove.pinId,
+        x: position.x,
+        y: position.y,
       })
-    },
-    [],
-  )
+      toast.success('Pin moved')
+      setPendingPinMove(null)
+    } catch (error) {
+      console.error('Failed to move pin:', error)
+    }
+  }
 
-  const handlePinDragStart = useCallback(
-    (e: React.MouseEvent, pin: MapPinWithItem) => {
-      if (pendingPinMove?.pinId === pin._id) {
-        setPendingPinMove(null)
-      }
-      setDraggingPin({
-        pin,
-        startX: e.clientX,
-        startY: e.clientY,
-      })
-      draggedPinPositionRef.current = { x: pin.x, y: pin.y }
-    },
-    [pendingPinMove],
-  )
+  const handleMapClick = (e: React.MouseEvent) => {
+    if (!pendingPinItem && !pendingPinMove) return
 
-  const handleZoomIn = useCallback(() => {
+    e.preventDefault()
+    e.stopPropagation()
+    const position = getPercentageFromClick(e)
+
+    if (pendingPinItem) {
+      handlePlacePin(position)
+    } else if (pendingPinMove) {
+      handleMovePin(position)
+    }
+  }
+
+  const handlePinClick = (e: React.MouseEvent, pin: MapPinWithItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (justFinishedDraggingRef.current === pin._id) {
+      return
+    }
+    const canView = pin.item
+      ? hasAtLeastPermissionLevel(
+          pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
+          PERMISSION_LEVEL.VIEW,
+        )
+      : false
+    if (!pin.item || !canView) {
+      toast.error('You do not have permission to view this item')
+      return
+    }
+    toast.info(`Pin clicked: ${pin.item.name}`)
+    // TODO: add action here
+  }
+
+  const handlePinContextMenu = (e: React.MouseEvent, pin: MapPinWithItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.nativeEvent.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
+
+    setPinContextMenu({
+      pinId: pin._id,
+      position: {
+        x: e.clientX,
+        y: e.clientY,
+      },
+    })
+  }
+
+  const handlePinDragStart = (e: React.MouseEvent, pin: MapPinWithItem) => {
+    if (pendingPinMove?.pinId === pin._id) {
+      setPendingPinMove(null)
+    }
+    setDraggingPin({
+      pin,
+      startX: e.clientX,
+      startY: e.clientY,
+    })
+    draggedPinPositionRef.current = { x: pin.x, y: pin.y }
+  }
+
+  const handleZoomIn = () => {
     transformWrapperRef.current?.zoomIn()
-  }, [])
+  }
 
-  const handleZoomOut = useCallback(() => {
+  const handleZoomOut = () => {
     transformWrapperRef.current?.zoomOut()
-  }, [])
+  }
 
-  const handleResetTransform = useCallback(() => {
+  const handleResetTransform = () => {
     transformWrapperRef.current?.resetTransform()
     setSavedTransform(DEFAULT_TRANSFORM)
-  }, [setSavedTransform])
+  }
 
   const mapImageContextMenuRef = useRef<EditorContextMenuRef>(null)
 
-  const handleMapImageContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (pendingPinItem) return
+  const handleMapImageContextMenu = (e: React.MouseEvent) => {
+    if (pendingPinItem) return
 
-      e.preventDefault()
-      e.stopPropagation()
-      e.nativeEvent.stopPropagation()
-      e.nativeEvent.stopImmediatePropagation()
+    e.preventDefault()
+    e.stopPropagation()
+    e.nativeEvent.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
 
-      mapImageContextMenuRef.current?.open({
-        x: e.clientX,
-        y: e.clientY,
-      })
-    },
-    [pendingPinItem],
-  )
+    mapImageContextMenuRef.current?.open({
+      x: e.clientX,
+      y: e.clientY,
+    })
+  }
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent) => {
     lastMousePositionRef.current = { clientX: e.clientX, clientY: e.clientY }
-  }, [])
+  }
 
   const shouldDisablePanning =
     !!pendingPinItem || !!pendingPinMove || !!draggingPin
@@ -996,12 +952,9 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     },
   })
 
-  const handleFileSelected = useCallback(
-    (file: globalThis.File) => {
-      fileUpload.handleFileSelect(file)
-    },
-    [fileUpload],
-  )
+  const handleFileSelected = (file: globalThis.File) => {
+    fileUpload.handleFileSelect(file)
+  }
 
   return (
     <div

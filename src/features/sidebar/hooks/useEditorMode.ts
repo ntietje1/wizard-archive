@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { convexQuery } from '@convex-dev/react-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
@@ -87,23 +86,17 @@ export function useEditorMode(): EditorModeContextType {
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
   const mutate = setEditorMutation.mutate
 
-  const setEditorMode = useCallback(
-    (mode: EditorMode) => {
-      if (!canEdit || !campaignData?._id) return
-      mutate({
-        campaignId: campaignData._id,
-        editorMode: mode,
-      })
-    },
-    [canEdit, campaignData?._id, mutate],
-  )
+  const setEditorMode = (mode: EditorMode) => {
+    if (!canEdit || !campaignData?._id) return
+    mutate({
+      campaignId: campaignData._id,
+      editorMode: mode,
+    })
+  }
 
-  const setViewAsPlayerId = useCallback(
-    (playerId: Id<'campaignMembers'> | undefined) => {
-      if (isDm) setViewAsPlayerIdStore(playerId ?? null)
-    },
-    [isDm, setViewAsPlayerIdStore],
-  )
+  const setViewAsPlayerId = (playerId: Id<'campaignMembers'> | undefined) => {
+    if (isDm) setViewAsPlayerIdStore(playerId ?? null)
+  }
 
   return {
     editorMode: effectiveEditorMode,

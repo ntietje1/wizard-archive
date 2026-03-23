@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
@@ -64,7 +64,7 @@ export function EditableName({
     excludeId,
   })
 
-  const handleBlur = useCallback(async () => {
+  const handleBlur = async () => {
     if (isSubmitting) return
     const trimmedName = name.trim()
     const isNameChanged = trimmedName !== initialName.trim()
@@ -95,20 +95,20 @@ export function EditableName({
       onChange?.(initialName)
     }
     setIsSubmitting(false)
-  }, [name, initialName, onRename, onChange, checkNameUnique, isSubmitting])
+  }
 
-  const handleFocus = useCallback(() => {
+  const handleFocus = () => {
     if (!isEditing && !disabled) {
       setIsEditing(true)
     }
-  }, [isEditing, disabled])
+  }
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setName(initialName)
     onChange?.(initialName)
     setIsEditing(false)
     inputRef.current?.blur()
-  }, [initialName, onChange])
+  }
 
   const innerContent = (
     <>
@@ -222,12 +222,9 @@ export function EditableBreadcrumb({
   const { dmUsername, campaignSlug } = useCampaign()
   const routeParams = { dmUsername, campaignSlug }
 
-  const handleRename = useCallback(
-    async (newName: string) => {
-      await rename(item, newName)
-    },
-    [rename, item],
-  )
+  const handleRename = async (newName: string) => {
+    await rename(item, newName)
+  }
 
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">

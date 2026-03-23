@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from 'lucide-react'
@@ -25,23 +25,19 @@ function useDeletedByName(deletedById: Id<'userProfiles'> | undefined) {
   const { campaign } = useCampaign()
   const { data: members } = useCampaignMembers()
 
-  return useMemo(() => {
-    if (!deletedById) return undefined
+  if (!deletedById) return undefined
 
-    // Check DM profile
-    const dmProfile = campaign.data?.dmUserProfile
-    if (dmProfile && dmProfile._id === deletedById) {
-      return dmProfile.name || dmProfile.username
-    }
+  const dmProfile = campaign.data?.dmUserProfile
+  if (dmProfile && dmProfile._id === deletedById) {
+    return dmProfile.name || dmProfile.username
+  }
 
-    // Check campaign members
-    const member = members?.find((mem) => mem.userProfile._id === deletedById)
-    if (member) {
-      return member.userProfile.name || member.userProfile.username
-    }
+  const member = members?.find((mem) => mem.userProfile._id === deletedById)
+  if (member) {
+    return member.userProfile.name || member.userProfile.username
+  }
 
-    return 'Someone'
-  }, [deletedById, campaign.data?.dmUserProfile, members])
+  return 'Someone'
 }
 
 interface TrashBannerProps {
@@ -70,7 +66,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   const deletedById = item.deletedBy
   const deletedByName = useDeletedByName(deletedById)
 
-  const message = useMemo(() => {
+  const message = (() => {
     if (!deletionTime) return 'This item is in the trash'
 
     const days = daysAgo(deletionTime)
@@ -88,7 +84,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
           : `It will be automatically deleted in ${daysLeft} days.`
 
     return `${who} moved this ${typeLabel} to the Trash ${when}. ${autoDelete}`
-  }, [deletionTime, deletedByName, item.type])
+  })()
 
   const handleRestore = async () => {
     try {

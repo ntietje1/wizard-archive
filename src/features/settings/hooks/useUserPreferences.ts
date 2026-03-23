@@ -1,6 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { UserPreferences } from 'convex/userPreferences/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -52,21 +52,15 @@ export const useUserPreferences = () => {
     }
   }, [prefsQuery.isFetched, serverWidth, serverExpanded])
 
-  const setSidebarWidth = useCallback(
-    (width: number) => {
-      setLocalWidth(width)
-      setPrefs.mutate({ sidebarWidth: width })
-    },
-    [setPrefs],
-  )
+  const setSidebarWidth = (width: number) => {
+    setLocalWidth(width)
+    setPrefs.mutate({ sidebarWidth: width })
+  }
 
-  const setIsSidebarExpanded = useCallback(
-    (expanded: boolean) => {
-      setLocalExpanded(expanded)
-      setPrefs.mutate({ isSidebarExpanded: expanded })
-    },
-    [setPrefs],
-  )
+  const setIsSidebarExpanded = (expanded: boolean) => {
+    setLocalExpanded(expanded)
+    setPrefs.mutate({ isSidebarExpanded: expanded })
+  }
 
   const isLoaded = prefsQuery.isSuccess
 

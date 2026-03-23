@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
 import {
@@ -25,20 +25,17 @@ export function AccountSwitcher({
 }: AccountSwitcherProps) {
   const [switching, setSwitching] = useState<string | null>(null)
 
-  const handleSwitch = useCallback(
-    async (sessionToken: string) => {
-      setSwitching(sessionToken)
-      try {
-        await onSwitch(sessionToken)
-        setSwitching(null)
-      } catch (error) {
-        setSwitching(null)
-        console.error(error)
-        throw error
-      }
-    },
-    [onSwitch],
-  )
+  const handleSwitch = async (sessionToken: string) => {
+    setSwitching(sessionToken)
+    try {
+      await onSwitch(sessionToken)
+      setSwitching(null)
+    } catch (error) {
+      setSwitching(null)
+      console.error(error)
+      throw error
+    }
+  }
 
   if (otherAccounts.length === 0) {
     return (

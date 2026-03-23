@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { EllipsisIcon } from 'lucide-react'
 import type { Session } from 'convex/sessions/types'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
@@ -27,11 +26,11 @@ export function SessionPanel() {
   } = useSession()
 
   const hasActiveSession = !!currentSession.data
-  const previousSessions: Array<Session> = useMemo(() => {
-    const sortedSessions: Array<Session> = sessions.data ?? []
-    const currentId = currentSession.data?._id
-    return sortedSessions.filter((s) => s._id !== currentId)
-  }, [sessions.data, currentSession.data?._id])
+  const allSessions: Array<Session> = sessions.data ?? []
+  const currentId = currentSession.data?._id
+  const previousSessions: Array<Session> = allSessions.filter(
+    (s) => s._id !== currentId,
+  )
 
   const formatSessionDate = (s: Session): string => {
     const date = new Date(s.startedAt)

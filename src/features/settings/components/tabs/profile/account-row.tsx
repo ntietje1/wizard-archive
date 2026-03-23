@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { debounce } from 'lodash-es'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
@@ -30,19 +30,15 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
     errorMessage: 'Failed to update name',
   })
 
-  const debouncedSaveName = useMemo(
-    () =>
-      debounce(async (value: string) => {
-        const trimmed = value.trim()
-        if (!trimmed) return
-        try {
-          await updateNameMutation.mutateAsync({ name: trimmed })
-        } catch {
-          // Error toast handled by useAppMutation
-        }
-      }, 500),
-    [updateNameMutation],
-  )
+  const debouncedSaveName = debounce(async (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    try {
+      await updateNameMutation.mutateAsync({ name: trimmed })
+    } catch {
+      // Error toast handled by useAppMutation
+    }
+  }, 500)
 
   useEffect(() => {
     return () => {
@@ -55,34 +51,31 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
     debouncedSaveName(e.target.value)
   }
 
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file')
-        return
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB')
-        return
-      }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
 
-      setIsUploading(true)
-      try {
-        const storageId = await uploadFile.mutateAsync(file)
-        await commitUpload.mutateAsync({ storageId })
-        await updateProfileImage.mutateAsync({ storageId })
-        toast.success('Profile picture updated')
-      } catch {
-        // Error toast handled by useAppMutation
-      }
-      setIsUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    },
-    [uploadFile, commitUpload, updateProfileImage],
-  )
+    setIsUploading(true)
+    try {
+      const storageId = await uploadFile.mutateAsync(file)
+      await commitUpload.mutateAsync({ storageId })
+      await updateProfileImage.mutateAsync({ storageId })
+      toast.success('Profile picture updated')
+    } catch {
+      // Error toast handled by useAppMutation
+    }
+    setIsUploading(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   return (
     <div className="flex items-center gap-4">

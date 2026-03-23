@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from 'lucide-react'
@@ -29,7 +29,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 
-  const openMenuAt = useCallback((clientX: number, clientY: number) => {
+  const openMenuAt = (clientX: number, clientY: number) => {
     if (triggerRef.current) {
       triggerRef.current.dispatchEvent(
         new MouseEvent('contextmenu', {
@@ -42,42 +42,29 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
       )
       setIsOpen(true)
     }
-  }, [])
+  }
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      openMenuAt(e.clientX, e.clientY)
-    },
-    [openMenuAt],
-  )
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    openMenuAt(e.clientX, e.clientY)
+  }
 
-  const handleCreate = useCallback(
-    async (type: SidebarItemType) => {
-      if (!campaignId) return
-      try {
-        const result = await createItem({
-          type,
-          campaignId,
-          parentId,
-          name: getDefaultName(type, parentId),
-        })
-        openParentFolders(result.id)
-        navigateToItem(result)
-      } catch (error) {
-        console.error(error)
-        toast.error(`Failed to create item`)
-      }
-    },
-    [
-      campaignId,
-      parentId,
-      createItem,
-      openParentFolders,
-      navigateToItem,
-      getDefaultName,
-    ],
-  )
+  const handleCreate = async (type: SidebarItemType) => {
+    if (!campaignId) return
+    try {
+      const result = await createItem({
+        type,
+        campaignId,
+        parentId,
+        name: getDefaultName(type, parentId),
+      })
+      openParentFolders(result.id)
+      navigateToItem(result)
+    } catch (error) {
+      console.error(error)
+      toast.error(`Failed to create item`)
+    }
+  }
 
   return (
     <ContextMenu open={isOpen} onOpenChange={setIsOpen}>

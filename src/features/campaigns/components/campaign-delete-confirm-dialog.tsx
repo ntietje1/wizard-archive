@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import type { Campaign } from 'convex/campaigns/types'
@@ -23,7 +22,7 @@ export function CampaignDeleteConfirmDialog({
     { errorMessage: 'Failed to delete campaign' },
   )
 
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = async () => {
     await deleteCampaign
       .mutateAsync({ campaignId: campaign._id })
       .then(() => {
@@ -36,7 +35,7 @@ export function CampaignDeleteConfirmDialog({
         onConfirm?.()
         onClose()
       })
-  }, [deleteCampaign, campaign._id, onConfirm, onClose])
+  }
 
   return (
     <ConfirmationDialog

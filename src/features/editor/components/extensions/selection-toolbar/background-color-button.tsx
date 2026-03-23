@@ -4,7 +4,7 @@ import {
   useEditorSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { BackgroundColorIcon } from './color-picker/background-color-icon'
 import { ColorPicker } from './color-picker/color-picker'
 import type {
@@ -33,25 +33,20 @@ export const BackgroundColorButton = () => {
     )
   }, editor)
 
-  const setBackgroundColor = useCallback(
-    (color: string) => {
-      if (color === 'default') {
-        editor.removeStyles({ backgroundColor: 'default' })
-      } else {
-        editor.addStyles({ backgroundColor: color })
-      }
+  const setBackgroundColor = (color: string) => {
+    if (color === 'default') {
+      editor.removeStyles({ backgroundColor: 'default' })
+    } else {
+      editor.addStyles({ backgroundColor: color })
+    }
 
-      setTimeout(() => {
-        // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap
-        editor.focus()
-      })
-    },
-    [editor],
-  )
+    setTimeout(() => {
+      // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap
+      editor.focus()
+    })
+  }
 
-  const show = useMemo(() => {
-    return selectedBlocks.length > 0
-  }, [selectedBlocks])
+  const show = selectedBlocks.length > 0
 
   if (!show || !editor.isEditable) {
     return null

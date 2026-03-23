@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useRef, useState } from 'react'
 import { FileSidebar } from './sidebar'
 import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
@@ -62,56 +62,47 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const dragWidthRef = useRef(sidebarWidth)
   const [dragDisplayWidth, setDragDisplayWidth] = useState<number | null>(null)
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (!isSidebarExpanded || !isUserPreferencesLoaded) return
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isSidebarExpanded || !isUserPreferencesLoaded) return
 
-      e.preventDefault()
-      const startX = e.clientX
-      const startWidth = sidebarWidth
-      dragWidthRef.current = startWidth
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = sidebarWidth
+    dragWidthRef.current = startWidth
 
-      handleRef.current?.classList.add('bg-primary/30')
+    handleRef.current?.classList.add('bg-primary/30')
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const delta = moveEvent.clientX - startX
-        const rawWidth = startWidth + delta
-        dragWidthRef.current = rawWidth
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX
+      const rawWidth = startWidth + delta
+      dragWidthRef.current = rawWidth
 
-        if (rawWidth < SNAP_CLOSED_THRESHOLD) {
-          setDragDisplayWidth(0)
-        } else {
-          setDragDisplayWidth(Math.max(SIDEBAR_MIN_WIDTH, rawWidth))
-        }
+      if (rawWidth < SNAP_CLOSED_THRESHOLD) {
+        setDragDisplayWidth(0)
+      } else {
+        setDragDisplayWidth(Math.max(SIDEBAR_MIN_WIDTH, rawWidth))
+      }
+    }
+
+    const handleMouseUp = () => {
+      handleRef.current?.classList.remove('bg-primary/30')
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+
+      const finalWidth = dragWidthRef.current
+
+      if (finalWidth < SNAP_CLOSED_THRESHOLD) {
+        setIsSidebarExpanded(false)
+      } else {
+        setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
       }
 
-      const handleMouseUp = () => {
-        handleRef.current?.classList.remove('bg-primary/30')
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
+      setDragDisplayWidth(null)
+    }
 
-        const finalWidth = dragWidthRef.current
-
-        if (finalWidth < SNAP_CLOSED_THRESHOLD) {
-          setIsSidebarExpanded(false)
-        } else {
-          setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
-        }
-
-        setDragDisplayWidth(null)
-      }
-
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-    },
-    [
-      isSidebarExpanded,
-      isUserPreferencesLoaded,
-      sidebarWidth,
-      setSidebarWidth,
-      setIsSidebarExpanded,
-    ],
-  )
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
 
   // During drag, use dragDisplayWidth; otherwise use actual state
   const displayWidth =

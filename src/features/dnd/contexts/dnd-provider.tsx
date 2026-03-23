@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ClientOnly } from '@tanstack/react-router'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -131,70 +131,44 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
   // setFolderOpen for DndContext — bakes in campaignId
-  const setFolderOpen = useCallback(
-    (folderId: Id<'folders'>) => {
-      if (campaignId) setFolderState(campaignId, folderId, true)
-    },
-    [campaignId, setFolderState],
-  )
+  const setFolderOpen = (folderId: Id<'folders'>) => {
+    if (campaignId) setFolderState(campaignId, folderId, true)
+  }
 
   // Name conflict check for DndContext
-  const hasSiblingNameConflict = useCallback(
-    (
-      name: string,
-      parentId: Id<'folders'> | null,
-      excludeId?: SidebarItemId,
-    ): boolean => {
-      const siblings = parentItemsMap.get(parentId) ?? []
-      const normalized = name.trim().toLowerCase()
-      return siblings.some(
-        (s) =>
-          s.name.trim().toLowerCase() === normalized && s._id !== excludeId,
-      )
-    },
-    [parentItemsMap],
-  )
+  const hasSiblingNameConflict = (
+    name: string,
+    parentId: Id<'folders'> | null,
+    excludeId?: SidebarItemId,
+  ): boolean => {
+    const siblings = parentItemsMap.get(parentId) ?? []
+    const normalized = name.trim().toLowerCase()
+    return siblings.some(
+      (s) => s.name.trim().toLowerCase() === normalized && s._id !== excludeId,
+    )
+  }
 
   // DndContext for registry resolve functions
-  const dndContext: DndContext = useMemo(
-    () => ({
-      moveItem,
-      navigateToItem,
-      campaignId: campaignId ?? null,
-      campaignName,
-      isDm: isDm ?? false,
-      setFolderOpen,
-      hasSiblingNameConflict,
-    }),
-    [
-      moveItem,
-      navigateToItem,
-      campaignId,
-      campaignName,
-      isDm,
-      setFolderOpen,
-      hasSiblingNameConflict,
-    ],
-  )
+  const dndContext: DndContext = {
+    moveItem,
+    navigateToItem,
+    campaignId: campaignId ?? null,
+    campaignName,
+    isDm: isDm ?? false,
+    setFolderOpen,
+    hasSiblingNameConflict,
+  }
 
   // Resolve helper exposed via context
-  const resolveItem = useCallback(
-    (id: SidebarItemId): AnySidebarItem | null =>
-      itemsMap.get(id) ?? trashedItemsMap.get(id) ?? null,
-    [itemsMap, trashedItemsMap],
-  )
+  const resolveItem = (id: SidebarItemId): AnySidebarItem | null =>
+    itemsMap.get(id) ?? trashedItemsMap.get(id) ?? null
 
   // Wrapped resolveDropTarget with maps baked in
-  const getAncestorIds = useCallback(
-    (id: SidebarItemId) => getAncestorSidebarItems(id).map((a) => a._id),
-    [getAncestorSidebarItems],
-  )
+  const getAncestorIds = (id: SidebarItemId) =>
+    getAncestorSidebarItems(id).map((a) => a._id)
 
-  const resolveDropTargetWrapped = useCallback(
-    (rawData: Record<string, unknown>) =>
-      resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds),
-    [itemsMap, trashedItemsMap, getAncestorIds],
-  )
+  const resolveDropTargetWrapped = (rawData: Record<string, unknown>) =>
+    resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds)
 
   // Single ref for all monitor closures — one ref instead of 6+
   const ctxRef = useRef<InternalCtx>({
@@ -424,13 +398,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   }, [setIsDraggingFiles, setFileDragHoveredId])
 
   // Context value
-  const value: DndValue = useMemo(
-    () => ({
-      resolveItem,
-      resolveDropTarget: resolveDropTargetWrapped,
-    }),
-    [resolveItem, resolveDropTargetWrapped],
-  )
+  const value: DndValue = {
+    resolveItem,
+    resolveDropTarget: resolveDropTargetWrapped,
+  }
 
   return (
     <DndProviderContext.Provider value={value}>

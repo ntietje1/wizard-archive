@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
@@ -69,194 +69,140 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const actions: ActionHandlers = {
-    open: useCallback(
-      (ctx: MenuContext) => {
-        if (!ctx.item) return
-        navigateToItem(ctx.item)
-      },
-      [navigateToItem],
-    ),
+    open: (ctx: MenuContext) => {
+      if (!ctx.item) return
+      navigateToItem(ctx.item)
+    },
 
-    rename: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item) return
-        await openParentFolders(ctx.item._id)
-        setRenamingId(ctx.item._id)
-      },
-      [openParentFolders, setRenamingId],
-    ),
+    rename: async (ctx: MenuContext) => {
+      if (!ctx.item) return
+      await openParentFolders(ctx.item._id)
+      setRenamingId(ctx.item._id)
+    },
 
-    delete: useCallback(
-      (ctx: MenuContext) => {
-        if (!ctx.item) return
-        const item = ctx.item
+    delete: (ctx: MenuContext) => {
+      if (!ctx.item) return
+      const item = ctx.item
 
-        // Non-empty folders: show confirmation dialog
-        if (isFolder(item)) {
-          const children = parentItemsMap.get(item._id)
-          if (children && children.length > 0) {
-            setDeleteFolderDialog(item)
-            onDialogOpen?.()
-            return
+      // Non-empty folders: show confirmation dialog
+      if (isFolder(item)) {
+        const children = parentItemsMap.get(item._id)
+        if (children && children.length > 0) {
+          setDeleteFolderDialog(item)
+          onDialogOpen?.()
+          return
+        }
+      }
+
+      // Everything else (including empty folders): trash immediately
+      moveItem(item, { deleted: true }).then(
+        () => {
+          const current = getSelectedTypeAndSlug()
+          if (
+            current &&
+            item.type === current.type &&
+            item.slug === current.slug
+          ) {
+            clearEditorContent()
           }
-        }
-
-        // Everything else (including empty folders): trash immediately
-        moveItem(item, { deleted: true }).then(
-          () => {
-            const current = getSelectedTypeAndSlug()
-            if (
-              current &&
-              item.type === current.type &&
-              item.slug === current.slug
-            ) {
-              clearEditorContent()
-            }
-            toast.success('Moved to trash')
-          },
-          (error) => {
-            console.error(error)
-          },
-        )
-      },
-      [parentItemsMap, moveItem, clearEditorContent, onDialogOpen],
-    ),
-
-    showInSidebar: useCallback(
-      (ctx: MenuContext) => {
-        if (!ctx.item) return
-        openParentFolders(ctx.item._id)
-      },
-      [openParentFolders],
-    ),
-
-    createNote: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId) return
-        if (ctx.item && !isFolder(ctx.item)) {
-          console.error('Invalid parent type')
-          return
-        }
-        try {
-          const result = await createItem({
-            type: SIDEBAR_ITEM_TYPES.notes,
-            campaignId,
-            parentId: ctx.item?._id ?? null,
-            name: getDefaultName(
-              SIDEBAR_ITEM_TYPES.notes,
-              ctx.item?._id ?? null,
-            ),
-          })
-          openParentFolders(result.id)
-          navigateToItem(result)
-        } catch (error) {
+          toast.success('Moved to trash')
+        },
+        (error) => {
           console.error(error)
-        }
-      },
-      [
-        campaignId,
-        createItem,
-        getDefaultName,
-        openParentFolders,
-        navigateToItem,
-      ],
-    ),
+        },
+      )
+    },
 
-    createFolder: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId) return
-        if (ctx.item && !isFolder(ctx.item)) {
-          console.error('Invalid parent type')
-          return
-        }
-        try {
-          const result = await createItem({
-            type: SIDEBAR_ITEM_TYPES.folders,
-            campaignId,
-            parentId: ctx.item?._id ?? null,
-            name: getDefaultName(
-              SIDEBAR_ITEM_TYPES.folders,
-              ctx.item?._id ?? null,
-            ),
-          })
-          openParentFolders(result.id)
-          navigateToItem(result)
-        } catch (error) {
-          console.error(error)
-        }
-      },
-      [
-        campaignId,
-        createItem,
-        getDefaultName,
-        openParentFolders,
-        navigateToItem,
-      ],
-    ),
+    showInSidebar: (ctx: MenuContext) => {
+      if (!ctx.item) return
+      openParentFolders(ctx.item._id)
+    },
 
-    createMap: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId) return
-        if (ctx.item && !isFolder(ctx.item)) {
-          console.error('Invalid parent type')
-          return
-        }
-        try {
-          const result = await createItem({
-            type: SIDEBAR_ITEM_TYPES.gameMaps,
-            campaignId,
-            parentId: ctx.item?._id ?? null,
-            name: getDefaultName(
-              SIDEBAR_ITEM_TYPES.gameMaps,
-              ctx.item?._id ?? null,
-            ),
-          })
-          openParentFolders(result.id)
-          navigateToItem(result)
-        } catch (error) {
-          console.error(error)
-        }
-      },
-      [
-        campaignId,
-        createItem,
-        getDefaultName,
-        openParentFolders,
-        navigateToItem,
-      ],
-    ),
+    createNote: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.notes,
+          campaignId,
+          parentId: ctx.item?._id ?? null,
+          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+      }
+    },
 
-    createFile: useCallback(
-      async (ctx: MenuContext) => {
-        if (!campaignId) return
-        if (ctx.item && !isFolder(ctx.item)) {
-          console.error('Invalid parent type')
-          return
-        }
-        try {
-          const result = await createItem({
-            type: SIDEBAR_ITEM_TYPES.files,
-            campaignId,
-            parentId: ctx.item?._id ?? null,
-            name: getDefaultName(
-              SIDEBAR_ITEM_TYPES.files,
-              ctx.item?._id ?? null,
-            ),
-          })
-          openParentFolders(result.id)
-          navigateToItem(result)
-        } catch (error) {
-          console.error(error)
-        }
-      },
-      [
-        campaignId,
-        createItem,
-        getDefaultName,
-        openParentFolders,
-        navigateToItem,
-      ],
-    ),
+    createFolder: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.folders,
+          campaignId,
+          parentId: ctx.item?._id ?? null,
+          name: getDefaultName(
+            SIDEBAR_ITEM_TYPES.folders,
+            ctx.item?._id ?? null,
+          ),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+    createMap: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.gameMaps,
+          campaignId,
+          parentId: ctx.item?._id ?? null,
+          name: getDefaultName(
+            SIDEBAR_ITEM_TYPES.gameMaps,
+            ctx.item?._id ?? null,
+          ),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+    createFile: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      if (ctx.item && !isFolder(ctx.item)) {
+        console.error('Invalid parent type')
+        return
+      }
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.files,
+          campaignId,
+          parentId: ctx.item?._id ?? null,
+          name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result)
+      } catch (error) {
+        console.error(error)
+      }
+    },
 
     createCanvas: () => {
       toast.error('Canvas not implemented')
@@ -283,7 +229,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
     },
 
-    pinToMap: useCallback((ctx: MenuContext) => {
+    pinToMap: (ctx: MenuContext) => {
       if (!ctx.item || !ctx.activeMap) return
 
       if (ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)) {
@@ -300,77 +246,66 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       })
       window.dispatchEvent(event)
       toast.info('Click on the map to place the pin')
-    }, []),
+    },
 
-    goToMapPin: useCallback(
-      (ctx: MenuContext) => {
-        if (!ctx.item || !ctx.activeMap) return
+    goToMapPin: (ctx: MenuContext) => {
+      if (!ctx.item || !ctx.activeMap) return
 
-        if (
-          !ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)
-        ) {
-          toast.error('Item is not pinned on this map')
-          return
-        }
+      if (!ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)) {
+        toast.error('Item is not pinned on this map')
+        return
+      }
 
-        try {
-          // Navigate to the map
-          const map = ctx.activeMap
-          navigateToMap(map.slug)
-          toast.info('Highlighting map pin... (coming soon)')
-        } catch (error) {
-          console.error('Failed to navigate to map pin:', error)
-          toast.error('Failed to navigate to map pin')
-        }
-      },
-      [navigateToMap],
-    ),
+      try {
+        // Navigate to the map
+        const map = ctx.activeMap
+        navigateToMap(map.slug)
+        toast.info('Highlighting map pin... (coming soon)')
+      } catch (error) {
+        console.error('Failed to navigate to map pin:', error)
+        toast.error('Failed to navigate to map pin')
+      }
+    },
 
-    createMapPin: useCallback((ctx: MenuContext) => {
+    createMapPin: (ctx: MenuContext) => {
       if (!ctx.item || !ctx.activeMap) return
 
       toast.info('Create Pin Here... (coming soon)')
-    }, []),
+    },
 
-    removeMapPin: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.activePin) return
+    removeMapPin: async (ctx: MenuContext) => {
+      if (!ctx.activePin) return
 
-        try {
-          if (!campaignId) return
-          await convex.mutation(api.gameMaps.mutations.removeItemPin, {
-            mapPinId: ctx.activePin._id,
-          })
-          toast.success('Pin removed')
-        } catch (error) {
-          console.error('Failed to remove pin:', error)
-          toast.error('Failed to remove pin')
-        }
-      },
-      [convex, campaignId],
-    ),
+      try {
+        if (!campaignId) return
+        await convex.mutation(api.gameMaps.mutations.removeItemPin, {
+          mapPinId: ctx.activePin._id,
+        })
+        toast.success('Pin removed')
+      } catch (error) {
+        console.error('Failed to remove pin:', error)
+        toast.error('Failed to remove pin')
+      }
+    },
 
-    togglePinVisibility: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.activePin) return
+    togglePinVisibility: async (ctx: MenuContext) => {
+      if (!ctx.activePin) return
 
-        const newVisible = ctx.activePin.visible !== true
-        try {
-          if (!campaignId) return
-          await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
-            mapPinId: ctx.activePin._id,
-            visible: newVisible,
-          })
-          toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
-        } catch (error) {
-          console.error('Failed to toggle pin visibility:', error)
-          toast.error('Failed to toggle pin visibility')
-        }
-      },
-      [convex, campaignId],
-    ),
+      const newVisible = ctx.activePin.visible !== true
+      try {
+        if (!campaignId) return
+        await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
+          mapPinId: ctx.activePin._id,
+          visible: newVisible,
+        })
+        toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
+      } catch (error) {
+        console.error('Failed to toggle pin visibility:', error)
+        toast.error('Failed to toggle pin visibility')
+      }
+    },
 
-    moveMapPin: useCallback((ctx: MenuContext) => {
+    moveMapPin: (ctx: MenuContext) => {
       if (!ctx.activePin) return
 
       // Dispatch event to map viewer to enter pin move mode
@@ -380,9 +315,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         },
       })
       window.dispatchEvent(event)
-    }, []),
+    },
 
-    startSession: useCallback(() => {
+    startSession: () => {
       if (!campaignId) return
       startNewSession.mutate(
         { campaignId },
@@ -390,9 +325,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           onSuccess: () => toast.success('Session started'),
         },
       )
-    }, [campaignId, startNewSession]),
+    },
 
-    endSession: useCallback(() => {
+    endSession: () => {
       if (!campaignId) return
       endCurrentSession.mutate(
         { campaignId },
@@ -400,36 +335,36 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           onSuccess: () => toast.success('Session ended'),
         },
       )
-    }, [campaignId, endCurrentSession]),
+    },
 
-    setGeneralAccessLevel: useCallback(
-      async (ctx: MenuContext, level: PermissionLevel | null) => {
-        if (!campaignId || !ctx.item) return
+    setGeneralAccessLevel: async (
+      ctx: MenuContext,
+      level: PermissionLevel | null,
+    ) => {
+      if (!campaignId || !ctx.item) return
 
-        try {
-          await convex.mutation(
-            api.sidebarShares.mutations.setAllPlayersPermission,
-            {
-              sidebarItemId: ctx.item._id,
-              permissionLevel: level,
-            },
-          )
-          if (level === null) {
-            toast.success('Reset to default access')
-          } else if (level === PERMISSION_LEVEL.NONE) {
-            toast.success('Access set to none')
-          } else {
-            toast.success(`Access set to ${level}`)
-          }
-        } catch (error) {
-          console.error('Failed to set general access level:', error)
-          toast.error('Failed to update access level')
+      try {
+        await convex.mutation(
+          api.sidebarShares.mutations.setAllPlayersPermission,
+          {
+            sidebarItemId: ctx.item._id,
+            permissionLevel: level,
+          },
+        )
+        if (level === null) {
+          toast.success('Reset to default access')
+        } else if (level === PERMISSION_LEVEL.NONE) {
+          toast.success('Access set to none')
+        } else {
+          toast.success(`Access set to ${level}`)
         }
-      },
-      [campaignId, convex],
-    ),
+      } catch (error) {
+        console.error('Failed to set general access level:', error)
+        toast.error('Failed to update access level')
+      }
+    },
 
-    downloadFile: useCallback((ctx: MenuContext) => {
+    downloadFile: (ctx: MenuContext) => {
       if (!ctx.item || !isFile(ctx.item)) return
 
       if (!ctx.item.downloadUrl) {
@@ -450,52 +385,47 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         console.error('Failed to download file:', error)
         toast.error('Failed to download file')
       }
-    }, []),
+    },
 
-    downloadNote: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !isNote(ctx.item)) return
+    downloadNote: async (ctx: MenuContext) => {
+      if (!ctx.item || !isNote(ctx.item)) return
 
-        try {
-          const fullItem = await convex.query(
-            api.sidebarItems.queries.getSidebarItem,
-            { id: ctx.item._id },
-          )
-          if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
-            toast.error('Failed to load note content')
-            return
-          }
-
-          const visibleContent = fullItem.content.filter((block) => {
-            const meta = fullItem.blockMeta[block.id]
-            if (!meta) return true
-            return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
-          })
-          const markdown = convertBlocksToMarkdown(visibleContent)
-          const baseName = ctx.item.name
-          const fileName = baseName.endsWith('.md')
-            ? baseName
-            : `${baseName}.md`
-
-          const blob = new Blob([markdown], { type: 'text/markdown' })
-          const link = document.createElement('a')
-          link.href = URL.createObjectURL(blob)
-          link.download = fileName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          URL.revokeObjectURL(link.href)
-
-          toast.success('Download started')
-        } catch (error) {
-          console.error('Failed to download note:', error)
-          toast.error('Failed to download note')
+      try {
+        const fullItem = await convex.query(
+          api.sidebarItems.queries.getSidebarItem,
+          { id: ctx.item._id },
+        )
+        if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+          toast.error('Failed to load note content')
+          return
         }
-      },
-      [convex],
-    ),
 
-    downloadMap: useCallback((ctx: MenuContext) => {
+        const visibleContent = fullItem.content.filter((block) => {
+          const meta = fullItem.blockMeta[block.id]
+          if (!meta) return true
+          return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
+        })
+        const markdown = convertBlocksToMarkdown(visibleContent)
+        const baseName = ctx.item.name
+        const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
+
+        const blob = new Blob([markdown], { type: 'text/markdown' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+
+        toast.success('Download started')
+      } catch (error) {
+        console.error('Failed to download note:', error)
+        toast.error('Failed to download note')
+      }
+    },
+
+    downloadMap: (ctx: MenuContext) => {
       if (!ctx.item || !isGameMap(ctx.item)) return
 
       if (!ctx.item.imageUrl) {
@@ -516,90 +446,87 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         console.error('Failed to download map:', error)
         toast.error('Failed to download map')
       }
-    }, []),
+    },
 
-    downloadFolder: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item || !isFolder(ctx.item)) return
+    downloadFolder: async (ctx: MenuContext) => {
+      if (!ctx.item || !isFolder(ctx.item)) return
 
-        const toastId = toast.loading('Preparing download...')
+      const toastId = toast.loading('Preparing download...')
 
-        try {
-          const { folderName, items } = await convex.query(
-            api.folders.queries.getFolderContentsForDownload,
-            { folderId: ctx.item._id },
-          )
+      try {
+        const { folderName, items } = await convex.query(
+          api.folders.queries.getFolderContentsForDownload,
+          { folderId: ctx.item._id },
+        )
 
-          if (items.length === 0) {
-            toast.dismiss(toastId)
-            toast.info('Folder is empty')
-            return
-          }
-
-          toast.loading('Downloading items...', { id: toastId })
-
-          const zip = new JSZip()
-
-          const downloadPromises: Array<Promise<void>> = items.map(
-            async (item) => {
-              try {
-                switch (item.type) {
-                  case SIDEBAR_ITEM_TYPES.files:
-                  case SIDEBAR_ITEM_TYPES.gameMaps: {
-                    if (!item.downloadUrl) {
-                      console.warn(`No download URL for: ${item.path}`)
-                      return
-                    }
-                    const response = await fetch(item.downloadUrl)
-                    if (!response.ok) {
-                      console.warn(`Failed to fetch: ${item.path}`)
-                      return
-                    }
-                    const blob = await response.blob()
-                    zip.file(item.path, blob)
-                    break
-                  }
-                  case SIDEBAR_ITEM_TYPES.notes: {
-                    const markdown = convertBlocksToMarkdown(item.content)
-                    zip.file(item.path, markdown)
-                    break
-                  }
-                  default:
-                    assertNever(item)
-                }
-              } catch (error) {
-                console.warn(`Failed to process: ${item.path}`, error)
-              }
-            },
-          )
-
-          await Promise.all(downloadPromises)
-
-          toast.loading('Creating zip file...', { id: toastId })
-
-          const zipBlob = await zip.generateAsync({ type: 'blob' })
-          const zipFileName = `${folderName}.zip`
-
-          const link = document.createElement('a')
-          link.href = URL.createObjectURL(zipBlob)
-          link.download = zipFileName
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          URL.revokeObjectURL(link.href)
-
+        if (items.length === 0) {
           toast.dismiss(toastId)
-          toast.success(`Downloaded ${items.length} item(s)`)
-        } catch (error) {
-          console.error('Failed to download folder:', error)
-          toast.dismiss(toastId)
-          toast.error('Failed to download folder')
+          toast.info('Folder is empty')
+          return
         }
-      },
-      [convex],
-    ),
 
-    downloadAll: useCallback(async () => {
+        toast.loading('Downloading items...', { id: toastId })
+
+        const zip = new JSZip()
+
+        const downloadPromises: Array<Promise<void>> = items.map(
+          async (item) => {
+            try {
+              switch (item.type) {
+                case SIDEBAR_ITEM_TYPES.files:
+                case SIDEBAR_ITEM_TYPES.gameMaps: {
+                  if (!item.downloadUrl) {
+                    console.warn(`No download URL for: ${item.path}`)
+                    return
+                  }
+                  const response = await fetch(item.downloadUrl)
+                  if (!response.ok) {
+                    console.warn(`Failed to fetch: ${item.path}`)
+                    return
+                  }
+                  const blob = await response.blob()
+                  zip.file(item.path, blob)
+                  break
+                }
+                case SIDEBAR_ITEM_TYPES.notes: {
+                  const markdown = convertBlocksToMarkdown(item.content)
+                  zip.file(item.path, markdown)
+                  break
+                }
+                default:
+                  assertNever(item)
+              }
+            } catch (error) {
+              console.warn(`Failed to process: ${item.path}`, error)
+            }
+          },
+        )
+
+        await Promise.all(downloadPromises)
+
+        toast.loading('Creating zip file...', { id: toastId })
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        const zipFileName = `${folderName}.zip`
+
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(zipBlob)
+        link.download = zipFileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+
+        toast.dismiss(toastId)
+        toast.success(`Downloaded ${items.length} item(s)`)
+      } catch (error) {
+        console.error('Failed to download folder:', error)
+        toast.dismiss(toastId)
+        toast.error('Failed to download folder')
+      }
+    },
+
+    downloadAll: async () => {
       if (!campaignId) return
 
       const toastId = toast.loading('Preparing download...')
@@ -673,20 +600,17 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.dismiss(toastId)
         toast.error('Failed to download')
       }
-    }, [convex, campaignId]),
+    },
 
-    restore: useCallback(
-      async (ctx: MenuContext) => {
-        if (!ctx.item) return
-        try {
-          await moveItem(ctx.item, { deleted: false })
-          toast.success('Item restored')
-        } catch (error) {
-          console.error(error)
-        }
-      },
-      [moveItem],
-    ),
+    restore: async (ctx: MenuContext) => {
+      if (!ctx.item) return
+      try {
+        await moveItem(ctx.item, { deleted: false })
+        toast.success('Item restored')
+      } catch (error) {
+        console.error(error)
+      }
+    },
 
     permanentlyDelete: (ctx: MenuContext) => {
       if (!ctx.item) return
@@ -699,31 +623,27 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       onDialogOpen?.()
     },
 
-    toggleBookmark: useCallback(
-      (ctx: MenuContext) => {
-        if (!campaignId || !ctx.item) return
+    toggleBookmark: (ctx: MenuContext) => {
+      if (!campaignId || !ctx.item) return
 
-        toggleBookmarkMutation
-          .mutateAsync({
-            sidebarItemId: ctx.item._id,
-          })
-          .catch((error) => {
-            console.error('Failed to toggle bookmark:', error)
-          })
-      },
-      [campaignId, toggleBookmarkMutation],
-    ),
+      toggleBookmarkMutation
+        .mutateAsync({
+          sidebarItemId: ctx.item._id,
+        })
+        .catch((error) => {
+          console.error('Failed to toggle bookmark:', error)
+        })
+    },
   }
 
-  const makeCloseHandler = useCallback(
-    <T,>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {
-      return () => {
-        setter(null)
-        onDialogClose?.()
-      }
-    },
-    [onDialogClose],
-  )
+  const makeCloseHandler = <T,>(
+    setter: React.Dispatch<React.SetStateAction<T | null>>,
+  ) => {
+    return () => {
+      setter(null)
+      onDialogClose?.()
+    }
+  }
 
   const dialogState: MenuDialogState = {
     deleteFolderDialog,

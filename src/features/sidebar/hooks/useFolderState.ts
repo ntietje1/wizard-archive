@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useCampaignSidebarActions,
@@ -20,7 +19,7 @@ export function useFolderState(folderId: string) {
 
   const isExpanded = !closeAllFoldersMode && (folderStates[folderId] ?? false)
 
-  const toggleExpanded = useCallback(() => {
+  const toggleExpanded = () => {
     if (closeAllFoldersMode) {
       exitCloseAllMode()
       clearAllFolderStates()
@@ -28,29 +27,19 @@ export function useFolderState(folderId: string) {
     } else {
       toggleFolderState(folderId)
     }
-  }, [
-    folderId,
-    toggleFolderState,
-    setFolderState,
-    closeAllFoldersMode,
-    exitCloseAllMode,
-    clearAllFolderStates,
-  ])
+  }
 
-  const setExpanded = useCallback(
-    (expanded: boolean) => {
-      setFolderState(folderId, expanded)
-    },
-    [folderId, setFolderState],
-  )
+  const setExpanded = (expanded: boolean) => {
+    setFolderState(folderId, expanded)
+  }
 
-  const openFolder = useCallback(() => {
+  const openFolder = () => {
     setFolderState(folderId, true)
-  }, [folderId, setFolderState])
+  }
 
-  const closeFolder = useCallback(() => {
+  const closeFolder = () => {
     setFolderState(folderId, false)
-  }, [folderId, setFolderState])
+  }
 
   return {
     isExpanded,

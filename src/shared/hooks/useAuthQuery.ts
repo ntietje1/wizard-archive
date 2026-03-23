@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
@@ -43,20 +42,18 @@ export function useAuthQuery<
   const isAuthError =
     result.error && isAppError(result.error, ERROR_CODE.NOT_AUTHENTICATED)
 
-  return useMemo(() => {
-    if (!isAuthError) return result
-    return {
-      ...result,
-      status: 'pending',
-      error: null,
-      isError: false,
-      isPending: true,
-      isSuccess: false,
-      isLoading: true,
-      isLoadingError: false,
-      isRefetchError: false,
-      data: undefined,
-      failureReason: null,
-    }
-  }, [result, isAuthError])
+  if (!isAuthError) return result
+  return {
+    ...result,
+    status: 'pending' as const,
+    error: null,
+    isError: false,
+    isPending: true,
+    isSuccess: false,
+    isLoading: true,
+    isLoadingError: false,
+    isRefetchError: false,
+    data: undefined,
+    failureReason: null,
+  }
 }

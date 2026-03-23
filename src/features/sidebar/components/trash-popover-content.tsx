@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
@@ -40,34 +40,28 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
     useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
-  const handleRestore = useCallback(
-    async (item: AnySidebarItem) => {
-      try {
-        await moveItem(item, { deleted: false })
-        toast.success('Item restored')
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to restore item')
-      }
-    },
-    [moveItem],
-  )
+  const handleRestore = async (item: AnySidebarItem) => {
+    try {
+      await moveItem(item, { deleted: false })
+      toast.success('Item restored')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to restore item')
+    }
+  }
 
-  const handlePermanentDelete = useCallback(
-    async (item: AnySidebarItem) => {
-      try {
-        await permanentlyDeleteItem(item)
-        toast.success('Item permanently deleted')
-      } catch (error) {
-        console.error(error)
-        toast.error('Failed to delete item')
-      }
-      setConfirmDeleteItem(null)
-    },
-    [permanentlyDeleteItem],
-  )
+  const handlePermanentDelete = async (item: AnySidebarItem) => {
+    try {
+      await permanentlyDeleteItem(item)
+      toast.success('Item permanently deleted')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to delete item')
+    }
+    setConfirmDeleteItem(null)
+  }
 
-  const handleEmptyTrash = useCallback(async () => {
+  const handleEmptyTrash = async () => {
     if (!campaignId) return
 
     try {
@@ -78,15 +72,12 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       toast.error('Failed to empty trash')
     }
     setConfirmEmptyTrash(false)
-  }, [campaignId, emptyTrashBin])
+  }
 
-  const handleItemClick = useCallback(
-    (item: AnySidebarItem) => {
-      setLastSelectedItem({ type: item.type, slug: item.slug })
-      onClose()
-    },
-    [setLastSelectedItem, onClose],
-  )
+  const handleItemClick = (item: AnySidebarItem) => {
+    setLastSelectedItem({ type: item.type, slug: item.slug })
+    onClose()
+  }
 
   const getDeletionTimeLabel = (item: AnySidebarItem) => {
     const dt = item.deletionTime

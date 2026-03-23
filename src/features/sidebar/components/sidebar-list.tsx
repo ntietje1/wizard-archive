@@ -1,6 +1,4 @@
-import { useMemo } from 'react'
 import { SidebarItem } from './sidebar-item/sidebar-item'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   sortItemsByOptions,
   useFilteredSidebarItems,
@@ -12,9 +10,8 @@ export function SidebarList() {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
 
-  const rootItems: Array<AnySidebarItem> = useMemo(() => {
-    return sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
-  }, [parentItemsMap, sortOptions])
+  const rootItems =
+    sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
 
   if (status !== 'success') {
     return null

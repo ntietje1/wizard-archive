@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -97,7 +97,7 @@ export function FileForm({
   }, [fileUpload])
 
   // Get initial values based on current props
-  const defaultValues = useMemo((): FileFormValues => {
+  const defaultValues: FileFormValues = (() => {
     if (fileId && file.data) {
       return {
         name: file.data.name || '',
@@ -106,7 +106,7 @@ export function FileForm({
       }
     }
     return defaultFileFormValues
-  }, [fileId, file.data])
+  })()
 
   const form = useForm({
     defaultValues,

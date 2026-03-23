@@ -4,7 +4,7 @@ import {
   useEditorSelectionChange,
   useSelectedBlocks,
 } from '@blocknote/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ColorIcon } from './color-picker/color-icon'
 import { ColorPicker } from './color-picker/color-picker'
 import type {
@@ -31,25 +31,20 @@ export const TextColorButton = () => {
     setCurrentTextColor(editor.getActiveStyles().textColor || 'default')
   }, editor)
 
-  const setTextColor = useCallback(
-    (color: string) => {
-      if (color === 'default') {
-        editor.removeStyles({ textColor: 'default' })
-      } else {
-        editor.addStyles({ textColor: color })
-      }
+  const setTextColor = (color: string) => {
+    if (color === 'default') {
+      editor.removeStyles({ textColor: 'default' })
+    } else {
+      editor.addStyles({ textColor: color })
+    }
 
-      setTimeout(() => {
-        // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap
-        editor.focus()
-      })
-    },
-    [editor],
-  )
+    setTimeout(() => {
+      // timeout needed to ensure compatibility with Mantine Toolbar useFocusTrap
+      editor.focus()
+    })
+  }
 
-  const show = useMemo(() => {
-    return selectedBlocks.length > 0
-  }, [selectedBlocks])
+  const show = selectedBlocks.length > 0
 
   if (!show || !editor.isEditable) {
     return null

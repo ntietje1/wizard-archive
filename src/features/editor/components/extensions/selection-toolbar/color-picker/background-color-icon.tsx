@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Highlighter } from 'lucide-react'
 
 export const BackgroundColorIcon = (
@@ -10,15 +9,11 @@ export const BackgroundColorIcon = (
   const backgroundColor = props.backgroundColor || 'default'
   const size = props.size || 16
 
-  const style = useMemo(
-    () =>
-      ({
-        pointerEvents: 'none',
-        height: `${size}px`,
-        width: `${size}px`,
-      }) as const,
-    [size],
-  )
+  const style = {
+    pointerEvents: 'none',
+    height: `${size}px`,
+    width: `${size}px`,
+  } as const
 
   return (
     <div

@@ -1,10 +1,4 @@
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { CheckIcon } from 'lucide-react'
 import { groupConfig } from '../menu-registry'
 import { useEditorContextMenu } from '../hooks/useEditorContextMenu'
@@ -57,9 +51,12 @@ const EditorMenuContent = forwardRef<
   const actionInProgressRef = useRef(false)
 
   // Group menuItems
-  const groupedMenu = useMemo(() => {
+  const groupedMenu = (() => {
     if (menuItems.length === 0) {
-      return { groups: [], isEmpty: true }
+      return {
+        groups: [] as Array<{ id: string; items: Array<MenuItemDef> }>,
+        isEmpty: true,
+      }
     }
 
     const groupMap = menuItems.reduce((map, menuItem) => {
@@ -86,7 +83,7 @@ const EditorMenuContent = forwardRef<
       })),
       isEmpty: false,
     }
-  }, [menuItems])
+  })()
 
   useImperativeHandle(ref, () => ({
     open: (position?: { x: number; y: number }) => {

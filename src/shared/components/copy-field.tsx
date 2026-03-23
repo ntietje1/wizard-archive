@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { Link } from 'lucide-react'
 import { Separator } from '~/features/shadcn/components/separator'
@@ -33,7 +32,7 @@ export function CopyField({
   buttonLabel = 'Copy',
   disabled,
 }: CopyFieldProps) {
-  const handleCopy = useCallback(async () => {
+  const handleCopy = async () => {
     if (!text) return
     try {
       await navigator.clipboard.writeText(text)
@@ -41,7 +40,7 @@ export function CopyField({
     } catch {
       toast.error('Copy failed')
     }
-  }, [text, onCopy])
+  }
 
   const handleFocusSelectAll: React.FocusEventHandler<HTMLInputElement> = (
     e,

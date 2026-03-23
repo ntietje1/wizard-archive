@@ -1,5 +1,4 @@
 import { BookOpen, Pencil } from 'lucide-react'
-import { useCallback } from 'react'
 import { EDITOR_MODE } from 'convex/editors/types'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { Button } from '~/features/shadcn/components/button'
@@ -12,13 +11,13 @@ export const EditorViewModeToggleButton = ({
   disabled?: boolean
 }) => {
   const { editorMode, canEdit, setEditorMode } = useEditorMode()
-  const handleEditorModeToggle = useCallback(() => {
+  const handleEditorModeToggle = () => {
     setEditorMode(
       editorMode === EDITOR_MODE.EDITOR
         ? EDITOR_MODE.VIEWER
         : EDITOR_MODE.EDITOR,
     )
-  }, [editorMode, setEditorMode])
+  }
   const label =
     editorMode === EDITOR_MODE.EDITOR
       ? 'Switch to viewer mode'

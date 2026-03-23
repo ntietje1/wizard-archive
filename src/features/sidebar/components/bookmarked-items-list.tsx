@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import {
@@ -14,12 +13,8 @@ export function BookmarkedItemsList() {
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
 
-  const bookmarkedItems = useMemo(() => {
-    const bookmarked = filteredItems.filter(
-      (item) => item.isBookmarked === true,
-    )
-    return sortItemsByOptions(sortOptions, bookmarked) ?? []
-  }, [filteredItems, sortOptions])
+  const bookmarked = filteredItems.filter((item) => item.isBookmarked === true)
+  const bookmarkedItems = sortItemsByOptions(sortOptions, bookmarked) ?? []
 
   if (status !== 'success') {
     return <BookmarkedItemsLoading />

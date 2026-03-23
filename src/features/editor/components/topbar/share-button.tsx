@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import {
@@ -17,7 +17,7 @@ export function ShareButton() {
   const { isDm, campaign } = useCampaign()
   const [open, setOpen] = useState(false)
 
-  const items = useMemo(() => (item ? [item] : []), [item])
+  const items = item ? [item] : []
 
   const {
     isPending,

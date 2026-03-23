@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -27,16 +27,13 @@ function PdfPage({
   scale: number
   pageRefs: Map<number, HTMLDivElement>
 }) {
-  const setRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      if (el) {
-        pageRefs.set(pageNumber, el)
-      } else {
-        pageRefs.delete(pageNumber)
-      }
-    },
-    [pageNumber, pageRefs],
-  )
+  const setRef = (el: HTMLDivElement | null) => {
+    if (el) {
+      pageRefs.set(pageNumber, el)
+    } else {
+      pageRefs.delete(pageNumber)
+    }
+  }
 
   return (
     <div
@@ -65,12 +62,13 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
 
   const isValid = isValidFileUrl(pdfUrl)
 
-  const handleDocumentLoadSuccess = useCallback(
-    ({ numPages: pages }: { numPages: number }) => {
-      setNumPages(pages)
-    },
-    [],
-  )
+  const handleDocumentLoadSuccess = ({
+    numPages: pages,
+  }: {
+    numPages: number
+  }) => {
+    setNumPages(pages)
+  }
 
   // Track the current visible page via IntersectionObserver.
   // Uses a persistent visibility map so every callback considers ALL pages,
@@ -126,36 +124,36 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
     }
   }, [numPages])
 
-  const scrollToPage = useCallback((pageNumber: number) => {
+  const scrollToPage = (pageNumber: number) => {
     const el = pageRefs.current.get(pageNumber)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }, [])
+  }
 
-  const handlePrevPage = useCallback(() => {
+  const handlePrevPage = () => {
     if (currentPage > 1) {
       scrollToPage(currentPage - 1)
     }
-  }, [currentPage, scrollToPage])
+  }
 
-  const handleNextPage = useCallback(() => {
+  const handleNextPage = () => {
     if (currentPage < numPages) {
       scrollToPage(currentPage + 1)
     }
-  }, [currentPage, numPages, scrollToPage])
+  }
 
-  const handleZoomIn = useCallback(() => {
+  const handleZoomIn = () => {
     setScale((s) => Math.min(MAX_SCALE, s + SCALE_STEP))
-  }, [])
+  }
 
-  const handleZoomOut = useCallback(() => {
+  const handleZoomOut = () => {
     setScale((s) => Math.max(MIN_SCALE, s - SCALE_STEP))
-  }, [])
+  }
 
-  const handleZoomReset = useCallback(() => {
+  const handleZoomReset = () => {
     setScale(1)
-  }, [])
+  }
 
   // Ctrl+wheel / pinch-to-zoom on the PDF viewer
   const containerRef = useRef<HTMLDivElement | null>(null)

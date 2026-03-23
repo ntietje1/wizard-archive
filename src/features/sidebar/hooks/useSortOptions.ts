@@ -1,6 +1,6 @@
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -42,18 +42,15 @@ export const useSortOptions = () => {
     )
   }, [currentEditor.data])
 
-  const setSortOptionsAction = useCallback(
-    async (options: SortOptions) => {
-      setSortOptions(options)
-      if (!campaignData?._id) return
-      await setCurrentEditor.mutateAsync({
-        campaignId: campaignData._id,
-        sortOrder: options.order,
-        sortDirection: options.direction,
-      })
-    },
-    [campaignData?._id, setCurrentEditor],
-  )
+  const setSortOptionsAction = async (options: SortOptions) => {
+    setSortOptions(options)
+    if (!campaignData?._id) return
+    await setCurrentEditor.mutateAsync({
+      campaignId: campaignData._id,
+      sortOrder: options.order,
+      sortDirection: options.direction,
+    })
+  }
 
   return {
     currentEditor,

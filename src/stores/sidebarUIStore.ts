@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
@@ -197,33 +196,29 @@ export function useCampaignSidebarState(campaignId: string | undefined) {
 }
 
 export function useCampaignSidebarActions(campaignId: string | undefined) {
-  return useMemo(() => {
-    if (!campaignId) {
-      const noop = () => {}
-      return {
-        setFolderState: noop as (folderId: string, isOpen: boolean) => void,
-        toggleFolderState: noop as (folderId: string) => void,
-        clearAllFolderStates: noop,
-        toggleCloseAllFoldersMode: noop,
-        exitCloseAllMode: noop,
-        toggleBookmarksOnlyMode: noop,
-      }
-    }
+  if (!campaignId) {
+    const noop = () => {}
     return {
-      setFolderState: (folderId: string, isOpen: boolean) =>
-        useSidebarUIStore
-          .getState()
-          .setFolderState(campaignId, folderId, isOpen),
-      toggleFolderState: (folderId: string) =>
-        useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
-      clearAllFolderStates: () =>
-        useSidebarUIStore.getState().clearAllFolderStates(campaignId),
-      toggleCloseAllFoldersMode: () =>
-        useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId),
-      exitCloseAllMode: () =>
-        useSidebarUIStore.getState().exitCloseAllMode(campaignId),
-      toggleBookmarksOnlyMode: () =>
-        useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
+      setFolderState: noop as (folderId: string, isOpen: boolean) => void,
+      toggleFolderState: noop as (folderId: string) => void,
+      clearAllFolderStates: noop,
+      toggleCloseAllFoldersMode: noop,
+      exitCloseAllMode: noop,
+      toggleBookmarksOnlyMode: noop,
     }
-  }, [campaignId])
+  }
+  return {
+    setFolderState: (folderId: string, isOpen: boolean) =>
+      useSidebarUIStore.getState().setFolderState(campaignId, folderId, isOpen),
+    toggleFolderState: (folderId: string) =>
+      useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
+    clearAllFolderStates: () =>
+      useSidebarUIStore.getState().clearAllFolderStates(campaignId),
+    toggleCloseAllFoldersMode: () =>
+      useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId),
+    exitCloseAllMode: () =>
+      useSidebarUIStore.getState().exitCloseAllMode(campaignId),
+    toggleBookmarksOnlyMode: () =>
+      useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
+  }
 }

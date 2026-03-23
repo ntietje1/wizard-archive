@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
@@ -31,7 +30,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const { item } = useCurrentItem()
   const { campaign } = useCampaign()
   const campaignData = campaign.data
-  const blockIds = useMemo(() => blocks.map((b) => b.id), [blocks])
+  const blockIds = blocks.map((b) => b.id)
 
   const query = useAuthQuery(
     api.blocks.queries.getBlocksWithShares,
@@ -57,25 +56,22 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     shareBlocks.isPending ||
     unshareBlocks.isPending
 
-  const blockInfoMap = useMemo(() => {
+  const blockInfoMap = (() => {
     const map = new Map<string, BlockShareInfo>()
     for (const block of query.data?.blocks ?? []) {
       map.set(block.blockNoteId, block)
     }
     return map
-  }, [query.data?.blocks])
+  })()
 
-  const hasCompleteData = useMemo(
-    () => query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id)),
-    [query.data?.blocks, blockIds, blockInfoMap],
+  const hasCompleteData =
+    query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id))
+
+  const topLevelBlocks = blocks.filter(
+    (b) => blockInfoMap.get(b.id)?.isTopLevel !== false,
   )
 
-  const topLevelBlocks = useMemo(
-    () => blocks.filter((b) => blockInfoMap.get(b.id)?.isTopLevel !== false),
-    [blocks, blockInfoMap],
-  )
-
-  const aggregateShareStatus: AggregateShareStatus = useMemo(() => {
+  const aggregateShareStatus: AggregateShareStatus = (() => {
     if (!hasCompleteData || topLevelBlocks.length === 0)
       return AGGREGATE_SHARE_STATUS.NOT_SHARED
 
@@ -92,44 +88,36 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     } else {
       return AGGREGATE_SHARE_STATUS.MIXED_SHARED
     }
-  }, [topLevelBlocks, blockInfoMap, hasCompleteData])
+  })()
 
-  const unsharedBlocks = useMemo(
-    () =>
-      topLevelBlocks.filter(
-        (b) =>
-          (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) ===
-          SHARE_STATUS.NOT_SHARED,
-      ),
-    [topLevelBlocks, blockInfoMap],
+  const unsharedBlocks = topLevelBlocks.filter(
+    (b) =>
+      (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) ===
+      SHARE_STATUS.NOT_SHARED,
   )
 
-  const playerMembers = useMemo(
-    () => query.data?.playerMembers ?? [],
-    [query.data?.playerMembers],
-  )
+  const playerMembers = query.data?.playerMembers ?? []
 
-  const getShareState = useCallback(
-    (memberId: Id<'campaignMembers'>): 'all' | 'some' | 'none' => {
-      if (topLevelBlocks.length === 0) return 'none'
-      let count = 0
-      for (const block of topLevelBlocks) {
-        const info = blockInfoMap.get(block.id)
-        const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
-        if (
-          status === SHARE_STATUS.ALL_SHARED ||
-          (status === SHARE_STATUS.INDIVIDUALLY_SHARED &&
-            info?.sharedMemberIds.includes(memberId))
-        ) {
-          count++
-        }
+  const getShareState = (
+    memberId: Id<'campaignMembers'>,
+  ): 'all' | 'some' | 'none' => {
+    if (topLevelBlocks.length === 0) return 'none'
+    let count = 0
+    for (const block of topLevelBlocks) {
+      const info = blockInfoMap.get(block.id)
+      const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
+      if (
+        status === SHARE_STATUS.ALL_SHARED ||
+        (status === SHARE_STATUS.INDIVIDUALLY_SHARED &&
+          info?.sharedMemberIds.includes(memberId))
+      ) {
+        count++
       }
-      if (count === 0) return 'none'
-      if (count === topLevelBlocks.length) return 'all'
-      return 'some'
-    },
-    [topLevelBlocks, blockInfoMap],
-  )
+    }
+    if (count === 0) return 'none'
+    if (count === topLevelBlocks.length) return 'all'
+    return 'some'
+  }
 
   const toggleShareStatus = async () => {
     if (
@@ -195,15 +183,11 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     }
   }
 
-  const shareItems: Array<ShareItem> = useMemo(
-    () =>
-      playerMembers.map((member) => ({
-        key: `share-${member._id}`,
-        member,
-        shareState: getShareState(member._id),
-      })),
-    [playerMembers, getShareState],
-  )
+  const shareItems: Array<ShareItem> = playerMembers.map((member) => ({
+    key: `share-${member._id}`,
+    member,
+    shareState: getShareState(member._id),
+  }))
 
   return {
     query,

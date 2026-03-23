@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useCurrentItem } from './useCurrentItem'
 import { useEditorNavigation } from './useEditorNavigation'
@@ -28,55 +27,45 @@ export function useNavigateOnSlugChange() {
     navigateToFile,
   } = useEditorNavigation()
 
-  const navigateIfSlugChanged = useCallback(
-    ({
-      itemId,
-      itemType,
-      previousSlug,
-      newSlug,
-      updatedItem,
-    }: NavigateOnSlugChangeParams) => {
-      if (
-        !newSlug ||
-        !previousSlug ||
-        newSlug === previousSlug ||
-        !currentItem ||
-        currentItem._id !== itemId
-      ) {
-        return
-      }
+  const navigateIfSlugChanged = ({
+    itemId,
+    itemType,
+    previousSlug,
+    newSlug,
+    updatedItem,
+  }: NavigateOnSlugChangeParams) => {
+    if (
+      !newSlug ||
+      !previousSlug ||
+      newSlug === previousSlug ||
+      !currentItem ||
+      currentItem._id !== itemId
+    ) {
+      return
+    }
 
-      if (updatedItem) {
-        navigateToItem(updatedItem, true)
-        return
-      }
+    if (updatedItem) {
+      navigateToItem(updatedItem, true)
+      return
+    }
 
-      switch (itemType) {
-        case SIDEBAR_ITEM_TYPES.notes:
-          navigateToNote(newSlug, true)
-          break
-        case SIDEBAR_ITEM_TYPES.gameMaps:
-          navigateToMap(newSlug, true)
-          break
-        case SIDEBAR_ITEM_TYPES.folders:
-          navigateToFolder(newSlug, true)
-          break
-        case SIDEBAR_ITEM_TYPES.files:
-          navigateToFile(newSlug, true)
-          break
-        default:
-          assertNever(itemType)
-      }
-    },
-    [
-      currentItem,
-      navigateToItem,
-      navigateToNote,
-      navigateToMap,
-      navigateToFolder,
-      navigateToFile,
-    ],
-  )
+    switch (itemType) {
+      case SIDEBAR_ITEM_TYPES.notes:
+        navigateToNote(newSlug, true)
+        break
+      case SIDEBAR_ITEM_TYPES.gameMaps:
+        navigateToMap(newSlug, true)
+        break
+      case SIDEBAR_ITEM_TYPES.folders:
+        navigateToFolder(newSlug, true)
+        break
+      case SIDEBAR_ITEM_TYPES.files:
+        navigateToFile(newSlug, true)
+        break
+      default:
+        assertNever(itemType)
+    }
+  }
 
   return { navigateIfSlugChanged }
 }

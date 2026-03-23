@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
@@ -22,21 +22,21 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
     setImageError(false)
   }, [imageUrl])
 
-  const handleZoomIn = useCallback(() => {
+  const handleZoomIn = () => {
     transformWrapperRef.current?.zoomIn()
-  }, [])
+  }
 
-  const handleZoomOut = useCallback(() => {
+  const handleZoomOut = () => {
     transformWrapperRef.current?.zoomOut()
-  }, [])
+  }
 
-  const handleResetTransform = useCallback(() => {
+  const handleResetTransform = () => {
     transformWrapperRef.current?.resetTransform()
-  }, [])
+  }
 
-  const handleImageError = useCallback(() => {
+  const handleImageError = () => {
     setImageError(true)
-  }, [])
+  }
 
   if (!isValid) {
     return (

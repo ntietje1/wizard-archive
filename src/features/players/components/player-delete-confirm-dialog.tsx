@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
@@ -24,7 +23,7 @@ export function PlayerDeleteConfirmDialog({
     { errorMessage: 'Failed to remove player' },
   )
 
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = async () => {
     try {
       await updateMemberStatus.mutateAsync({
         memberId: player._id,
@@ -36,7 +35,7 @@ export function PlayerDeleteConfirmDialog({
       console.error(error)
     }
     onClose()
-  }, [updateMemberStatus, player._id, onConfirm, onClose])
+  }
 
   const playerName = player.userProfile.name ?? 'this player'
 

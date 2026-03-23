@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { toast } from 'sonner'
 import type { Folder } from 'convex/folders/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
@@ -25,7 +24,7 @@ export function FolderDeleteConfirmDialog({
 
   const descendantCount = getDescendantCount(folder._id, parentItemsMap)
 
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = async () => {
     try {
       await moveItem(folder, { deleted: true })
       onConfirm?.()
@@ -35,7 +34,7 @@ export function FolderDeleteConfirmDialog({
       toast.error('Failed to move folder to trash')
     }
     onClose()
-  }, [moveItem, folder, onConfirm, onClose])
+  }
 
   return (
     <ConfirmationDialog

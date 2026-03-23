@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { MAX_FILE_SIZE } from 'convex/storage/validation'
@@ -130,133 +130,123 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     }
   }, [isOpen])
 
-  const verifyFile = useCallback(
-    (fileToVerify: File): { success: boolean; error?: string } => {
-      if (fileTypeValidator) {
-        return fileTypeValidator(fileToVerify)
-      }
+  const verifyFile = (
+    fileToVerify: File,
+  ): { success: boolean; error?: string } => {
+    if (fileTypeValidator) {
+      return fileTypeValidator(fileToVerify)
+    }
 
-      if (fileToVerify.size > maxFileSize) {
-        const maxSizeMB = maxFileSize / (1024 * 1024)
-        return {
-          success: false,
-          error: `File must be less than ${maxSizeMB}MB`,
-        }
+    if (fileToVerify.size > maxFileSize) {
+      const maxSizeMB = maxFileSize / (1024 * 1024)
+      return {
+        success: false,
+        error: `File must be less than ${maxSizeMB}MB`,
       }
-      return { success: true }
-    },
-    [fileTypeValidator, maxFileSize],
-  )
+    }
+    return { success: true }
+  }
 
   // assumes file is already validated
-  const handleUpload = useCallback(
-    async (fileToUpload: File) => {
+  const handleUpload = async (fileToUpload: File) => {
+    setIsUploading(true)
+    setUploadError('')
+
+    try {
+      const storageIdResult = await uploadFile.mutateAsync(fileToUpload)
+      return storageIdResult
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to upload file'
+      setUploadError(errorMessage)
+      throw error
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileSelect = (selectedFile: File) => {
+    const { error: verifyError } = verifyFile(selectedFile)
+    if (verifyError) {
+      setUploadError(verifyError)
+      return { success: false, error: verifyError }
+    }
+
+    setFile(selectedFile)
+    setUploadError('')
+
+    // Store file metadata
+    setFileMetadata({
+      name: selectedFile.name,
+      type: selectedFile.type || 'application/octet-stream',
+      size: selectedFile.size,
+    })
+
+    // Clean up previous object URL
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
+    }
+
+    // Create preview based on file type
+    const fileType = getFileType(selectedFile)
+    if (fileType === 'image') {
+      // Use data URL for images (works well for previews)
+      const reader = new FileReader()
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        setPreview(event.target?.result as string)
+      }
+      reader.readAsDataURL(selectedFile)
+    } else {
+      // Use object URL for videos, audio, PDFs, and other files
+      const objectUrl = URL.createObjectURL(selectedFile)
+      objectUrlRef.current = objectUrl
+      setPreview(objectUrl)
+    }
+
+    if (uploadOnSelect) {
       setIsUploading(true)
-      setUploadError('')
+      uploadFile
+        .mutateAsync(selectedFile)
+        .then(async (uploadedStorageId) => {
+          setStorageId(uploadedStorageId)
+          if (onUploadComplete) {
+            await commitUpload.mutateAsync({ storageId: uploadedStorageId })
+            await onUploadComplete(uploadedStorageId)
+          }
+          setIsUploading(false)
+        })
+        .catch((error) => {
+          console.error('Failed to upload file:', error)
+          setUploadError(
+            error instanceof Error ? error.message : 'Upload failed',
+          )
+          setIsUploading(false)
+        })
+    }
 
-      try {
-        const storageIdResult = await uploadFile.mutateAsync(fileToUpload)
-        return storageIdResult
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Failed to upload file'
-        setUploadError(errorMessage)
-        throw error
-      } finally {
-        setIsUploading(false)
-      }
-    },
-    [uploadFile],
-  )
+    return { success: true }
+  }
 
-  const handleFileSelect = useCallback(
-    (selectedFile: File) => {
-      const { error: verifyError } = verifyFile(selectedFile)
-      if (verifyError) {
-        setUploadError(verifyError)
-        return { success: false, error: verifyError }
-      }
-
-      setFile(selectedFile)
-      setUploadError('')
-
-      // Store file metadata
-      setFileMetadata({
-        name: selectedFile.name,
-        type: selectedFile.type || 'application/octet-stream',
-        size: selectedFile.size,
-      })
-
-      // Clean up previous object URL
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current)
-        objectUrlRef.current = null
-      }
-
-      // Create preview based on file type
-      const fileType = getFileType(selectedFile)
-      if (fileType === 'image') {
-        // Use data URL for images (works well for previews)
-        const reader = new FileReader()
-        reader.onload = (event: ProgressEvent<FileReader>) => {
-          setPreview(event.target?.result as string)
-        }
-        reader.readAsDataURL(selectedFile)
-      } else {
-        // Use object URL for videos, audio, PDFs, and other files
-        const objectUrl = URL.createObjectURL(selectedFile)
-        objectUrlRef.current = objectUrl
-        setPreview(objectUrl)
-      }
-
-      if (uploadOnSelect) {
-        setIsUploading(true)
-        uploadFile
-          .mutateAsync(selectedFile)
-          .then(async (uploadedStorageId) => {
-            setStorageId(uploadedStorageId)
-            if (onUploadComplete) {
-              await commitUpload.mutateAsync({ storageId: uploadedStorageId })
-              await onUploadComplete(uploadedStorageId)
-            }
-            setIsUploading(false)
-          })
-          .catch((error) => {
-            console.error('Failed to upload file:', error)
-            setUploadError(
-              error instanceof Error ? error.message : 'Upload failed',
-            )
-            setIsUploading(false)
-          })
-      }
-
-      return { success: true }
-    },
-    [verifyFile, uploadOnSelect, uploadFile, onUploadComplete, commitUpload],
-  )
-
-  const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragActive(e.type === 'dragenter' || e.type === 'dragover')
-  }, [])
+  }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragActive(false)
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(false)
 
-      const files = e.dataTransfer.files
-      if (files.length > 0) {
-        const firstFile = files[0]
-        handleFileSelect(firstFile)
-      }
-    },
-    [handleFileSelect],
-  )
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      const firstFile = files[0]
+      handleFileSelect(firstFile)
+    }
+  }
 
-  const removeFile = useCallback(() => {
+  const removeFile = () => {
     setFile(null)
     setPreview('')
     setFileMetadata(null)
@@ -270,9 +260,9 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [])
+  }
 
-  const handleSubmit = useCallback(async (): Promise<Id<'_storage'>> => {
+  const handleSubmit = async (): Promise<Id<'_storage'>> => {
     if (uploadOnSelect) {
       // File should already have been uploaded, just commit
       if (isUploading) {
@@ -299,15 +289,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       setStorageId(uploadedStorageId)
       return uploadedStorageId
     }
-  }, [
-    file,
-    handleUpload,
-    uploadOnSelect,
-    storageId,
-    commitUpload,
-    isUploading,
-    verifyFile,
-  ])
+  }
 
   return {
     file,

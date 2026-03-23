@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { getWikiLinkContext } from './wiki-link-utils'
@@ -228,13 +228,9 @@ export function WikiLinkAutocomplete({
   const [isDragging, setIsDragging] = useState(false)
   const hasEditedRef = useRef(false)
 
-  const context = useMemo(
-    () =>
-      menu.show
-        ? getAutocompleteContext(menu.query, sidebarItems, itemsMap)
-        : null,
-    [menu, sidebarItems, itemsMap],
-  )
+  const context = menu.show
+    ? getAutocompleteContext(menu.query, sidebarItems, itemsMap)
+    : null
 
   const noteQuery = useAuthQuery(
     api.notes.queries.getNote,
@@ -243,10 +239,9 @@ export function WikiLinkAutocomplete({
       : 'skip',
   )
 
-  const headings = useMemo(() => {
-    if (!noteQuery.data) return []
-    return extractHeadingsFromContent(noteQuery.data.content)
-  }, [noteQuery.data])
+  const headings = noteQuery.data
+    ? extractHeadingsFromContent(noteQuery.data.content)
+    : []
 
   // Build filtered items
   const fileResult = ((): {
@@ -387,104 +382,100 @@ export function WikiLinkAutocomplete({
     }
   }, [editor, isDragging])
 
-  const insertLink = useCallback(
-    (item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
-      if (!editor || !ctx) return
-      const wikiCtx = getWikiLinkContext(editor)
-      if (!wikiCtx) return
-      const tiptap = editor._tiptapEditor
-      if (!tiptap) return
+  const insertLink = (
+    item: FileItem | HeadingItem,
+    ctx: AutocompleteContext | null,
+  ) => {
+    if (!editor || !ctx) return
+    const wikiCtx = getWikiLinkContext(editor)
+    if (!wikiCtx) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
 
-      const from = wikiCtx.startPos
-      const to = wikiCtx.endPos
+    const from = wikiCtx.startPos
+    const to = wikiCtx.endPos
 
-      // Build link text
-      let linkText: string
-      if (ctx.mode === 'file') {
-        const fileItem = item as FileItem
-        // Preserve the user's typed folder path + item name, or use min disambiguation path
-        const pathParts =
-          ctx.completedFolderPath.length > 0
-            ? [...ctx.completedFolderPath, fileItem.title]
-            : fileItem.linkPath
-        const path = pathParts.join('/')
-        // Add display name if path includes folders
-        linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
-      } else {
-        const headingPath = [
-          ...ctx.completedHeadingPath,
-          ...(item as HeadingItem).fullPath,
-        ].join('#')
-        linkText = `${ctx.fileQuery}#${headingPath}`
-      }
+    // Build link text
+    let linkText: string
+    if (ctx.mode === 'file') {
+      const fileItem = item as FileItem
+      // Preserve the user's typed folder path + item name, or use min disambiguation path
+      const pathParts =
+        ctx.completedFolderPath.length > 0
+          ? [...ctx.completedFolderPath, fileItem.title]
+          : fileItem.linkPath
+      const path = pathParts.join('/')
+      // Add display name if path includes folders
+      linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
+    } else {
+      const headingPath = [
+        ...ctx.completedHeadingPath,
+        ...(item as HeadingItem).fullPath,
+      ].join('#')
+      linkText = `${ctx.fileQuery}#${headingPath}`
+    }
 
-      tiptap
-        .chain()
-        .focus()
-        .insertContentAt({ from, to }, `[[${linkText}]]`)
-        .run()
-      setMenu({ show: false, query: '', pos: null })
-    },
-    [editor],
-  )
+    tiptap
+      .chain()
+      .focus()
+      .insertContentAt({ from, to }, `[[${linkText}]]`)
+      .run()
+    setMenu({ show: false, query: '', pos: null })
+  }
 
-  const continueLink = useCallback(
-    (item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
-      if (!editor || !ctx) return
-      const wikiCtx = getWikiLinkContext(editor)
-      if (!wikiCtx) return
-      const tiptap = editor._tiptapEditor
-      if (!tiptap) return
+  const continueLink = (
+    item: FileItem | HeadingItem,
+    ctx: AutocompleteContext | null,
+  ) => {
+    if (!editor || !ctx) return
+    const wikiCtx = getWikiLinkContext(editor)
+    if (!wikiCtx) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
 
-      const from = wikiCtx.startPos
-      const to = wikiCtx.endPos
+    const from = wikiCtx.startPos
+    const to = wikiCtx.endPos
 
-      // Build link text with trailing # to continue
-      let linkText: string
-      if (ctx.mode === 'file') {
-        const fileItem = item as FileItem
-        // Preserve the user's typed folder path + item name
-        const pathParts = [...ctx.completedFolderPath, fileItem.title]
-        linkText = pathParts.join('/')
-      } else {
-        const headingPath = [
-          ...ctx.completedHeadingPath,
-          ...(item as HeadingItem).fullPath,
-        ].join('#')
-        linkText = `${ctx.fileQuery}#${headingPath}`
-      }
+    // Build link text with trailing # to continue
+    let linkText: string
+    if (ctx.mode === 'file') {
+      const fileItem = item as FileItem
+      // Preserve the user's typed folder path + item name
+      const pathParts = [...ctx.completedFolderPath, fileItem.title]
+      linkText = pathParts.join('/')
+    } else {
+      const headingPath = [
+        ...ctx.completedHeadingPath,
+        ...(item as HeadingItem).fullPath,
+      ].join('#')
+      linkText = `${ctx.fileQuery}#${headingPath}`
+    }
 
-      tiptap
-        .chain()
-        .focus()
-        .insertContentAt({ from, to }, `[[${linkText}#`)
-        .run()
-    },
-    [editor],
-  )
+    tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}#`).run()
+  }
 
-  const continueFolderPath = useCallback(
-    (item: FileItem, ctx: AutocompleteContext | null) => {
-      if (!editor || !ctx) return
-      const wikiCtx = getWikiLinkContext(editor)
-      if (!wikiCtx) return
-      const tiptap = editor._tiptapEditor
-      if (!tiptap) return
+  const continueFolderPath = (
+    item: FileItem,
+    ctx: AutocompleteContext | null,
+  ) => {
+    if (!editor || !ctx) return
+    const wikiCtx = getWikiLinkContext(editor)
+    if (!wikiCtx) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
 
-      const from = wikiCtx.startPos
-      const to = wikiCtx.endPos
+    const from = wikiCtx.startPos
+    const to = wikiCtx.endPos
 
-      // Build folder path with trailing / to continue
-      const folderPath = item.linkPath.join('/')
+    // Build folder path with trailing / to continue
+    const folderPath = item.linkPath.join('/')
 
-      tiptap
-        .chain()
-        .focus()
-        .insertContentAt({ from, to }, `[[${folderPath}/`)
-        .run()
-    },
-    [editor],
-  )
+    tiptap
+      .chain()
+      .focus()
+      .insertContentAt({ from, to }, `[[${folderPath}/`)
+      .run()
+  }
 
   // Keyboard navigation
   useEffect(() => {

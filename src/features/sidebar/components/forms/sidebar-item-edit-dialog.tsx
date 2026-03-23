@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
@@ -81,13 +81,11 @@ export function SidebarItemEditDialog({
     { errorMessage: 'Failed to update item' },
   )
 
-  const getInitialValues = useCallback((): SidebarItemEditFormValues => {
-    return {
-      name: item.name ?? '',
-      iconName: item.iconName ?? null,
-      color: item.color ?? null,
-    }
-  }, [item])
+  const getInitialValues = (): SidebarItemEditFormValues => ({
+    name: item.name ?? '',
+    iconName: item.iconName ?? null,
+    color: item.color ?? null,
+  })
 
   const form = useForm({
     defaultValues: getInitialValues(),

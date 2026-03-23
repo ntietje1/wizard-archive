@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Share2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { buttonVariants } from '~/features/shadcn/components/button'
@@ -14,7 +14,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 function SharePopoverContent({ item }: { item: AnySidebarItem }) {
   const { campaign } = useCampaign()
-  const items = useMemo(() => [item], [item])
+  const items = [item]
 
   const {
     isPending,

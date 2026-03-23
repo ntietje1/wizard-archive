@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
@@ -68,350 +67,311 @@ export function SidebarItemMutationsProvider({
 
   // --- Helpers ---
 
-  const optimisticUpdate = useCallback(
-    (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
-      if (!campaignId) return
-      queryClient.setQueryData<Array<AnySidebarItem>>(
-        convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
-          campaignId,
-        }).queryKey,
-        (prev) => (prev ? updater(prev) : prev),
-      )
-    },
-    [campaignId, queryClient],
-  )
+  const optimisticUpdate = (
+    updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,
+  ) => {
+    if (!campaignId) return
+    queryClient.setQueryData<Array<AnySidebarItem>>(
+      convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
+        campaignId,
+      }).queryKey,
+      (prev) => (prev ? updater(prev) : prev),
+    )
+  }
 
-  const trashedOptimisticUpdate = useCallback(
-    (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
-      if (!campaignId) return
-      queryClient.setQueryData<Array<AnySidebarItem>>(
-        convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
-          campaignId,
-        }).queryKey,
-        (prev) => (prev ? updater(prev) : prev),
-      )
-    },
-    [campaignId, queryClient],
-  )
+  const trashedOptimisticUpdate = (
+    updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,
+  ) => {
+    if (!campaignId) return
+    queryClient.setQueryData<Array<AnySidebarItem>>(
+      convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
+        campaignId,
+      }).queryKey,
+      (prev) => (prev ? updater(prev) : prev),
+    )
+  }
 
-  const getSiblings = useCallback(
-    (parentId: Id<'folders'> | null) => {
-      return parentItemsMap.get(parentId) ?? []
-    },
-    [parentItemsMap],
-  )
+  const getSiblings = (parentId: Id<'folders'> | null) => {
+    return parentItemsMap.get(parentId) ?? []
+  }
 
-  const validateName = useCallback(
-    (
-      name: string,
-      parentId: Id<'folders'> | null,
-      excludeId?: SidebarItemId,
-    ) => {
-      const trimmed = name.trim()
-      const nameResult = validateItemName(trimmed)
-      if (!nameResult.valid) return nameResult
-      return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
-    },
-    [getSiblings],
-  )
+  const validateName = (
+    name: string,
+    parentId: Id<'folders'> | null,
+    excludeId?: SidebarItemId,
+  ) => {
+    const trimmed = name.trim()
+    const nameResult = validateItemName(trimmed)
+    if (!nameResult.valid) return nameResult
+    return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
+  }
 
-  const canMoveToParent = useCallback(
-    (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => {
-      return validateNoCircularParent(itemId, newParentId, (id) =>
-        itemsMap.get(id),
-      ).valid
-    },
-    [itemsMap],
-  )
+  const canMoveToParent = (
+    itemId: SidebarItemId,
+    newParentId: Id<'folders'> | null,
+  ) => {
+    return validateNoCircularParent(itemId, newParentId, (id) =>
+      itemsMap.get(id),
+    ).valid
+  }
 
-  const getDefaultName = useCallback(
-    (type: SidebarItemType, parentId: Id<'folders'> | null) => {
-      return findUniqueDefaultName(type, getSiblings(parentId))
-    },
-    [getSiblings],
-  )
+  const getDefaultName = (
+    type: SidebarItemType,
+    parentId: Id<'folders'> | null,
+  ) => {
+    return findUniqueDefaultName(type, getSiblings(parentId))
+  }
 
   // --- Mutations ---
 
-  const createItem = useCallback(
-    async (args: CreateItemArgs): Promise<CreateItemResult> => {
-      const trimmedName = args.name.trim()
-      const nameResult = validateName(trimmedName, args.parentId)
-      if (!nameResult.valid) throw new Error(nameResult.error)
+  const createItem = async (
+    args: CreateItemArgs,
+  ): Promise<CreateItemResult> => {
+    const trimmedName = args.name.trim()
+    const nameResult = validateName(trimmedName, args.parentId)
+    if (!nameResult.valid) throw new Error(nameResult.error)
 
-      switch (args.type) {
-        case SIDEBAR_ITEM_TYPES.notes: {
-          const { noteId, slug } = await createNoteMutation.mutateAsync({
-            campaignId: args.campaignId,
-            name: trimmedName,
-            parentId: args.parentId,
-            iconName: args.iconName,
-            color: args.color,
-            content: args.content,
-          })
-          return { id: noteId, slug, type: args.type }
-        }
-        case SIDEBAR_ITEM_TYPES.folders: {
-          const { folderId, slug } = await createFolderMutation.mutateAsync({
-            campaignId: args.campaignId,
-            name: trimmedName,
-            parentId: args.parentId,
-            iconName: args.iconName,
-            color: args.color,
-          })
-          return { id: folderId, slug, type: args.type }
-        }
-        case SIDEBAR_ITEM_TYPES.gameMaps: {
-          const { mapId, slug } = await createMapMutation.mutateAsync({
-            campaignId: args.campaignId,
-            name: trimmedName,
-            parentId: args.parentId,
-            imageStorageId: args.imageStorageId,
-            iconName: args.iconName,
-            color: args.color,
-          })
-          return { id: mapId, slug, type: args.type }
-        }
-        case SIDEBAR_ITEM_TYPES.files: {
-          const { fileId, slug } = await createFileMutation.mutateAsync({
-            campaignId: args.campaignId,
-            name: trimmedName,
-            parentId: args.parentId,
-            storageId: args.storageId,
-            iconName: args.iconName,
-            color: args.color,
-          })
-          return { id: fileId, slug, type: args.type }
-        }
-        default:
-          return assertNever(args)
-      }
-    },
-    [
-      validateName,
-      createNoteMutation,
-      createFolderMutation,
-      createMapMutation,
-      createFileMutation,
-    ],
-  )
-
-  const rename = useCallback(
-    (item: AnySidebarItem, newName: string) => {
-      const trimmedName = newName.trim()
-      const result = validateName(trimmedName, item.parentId, item._id)
-      if (!result.valid) throw new Error(result.error)
-
-      optimisticUpdate((prev) =>
-        prev.map((i) => (i._id === item._id ? { ...i, name: trimmedName } : i)),
-      )
-
-      const promise = updateSidebarItemMutation
-        .mutateAsync({
-          itemId: item._id,
+    switch (args.type) {
+      case SIDEBAR_ITEM_TYPES.notes: {
+        const { noteId, slug } = await createNoteMutation.mutateAsync({
+          campaignId: args.campaignId,
           name: trimmedName,
+          parentId: args.parentId,
+          iconName: args.iconName,
+          color: args.color,
+          content: args.content,
         })
-        .then((res) => {
-          if (res?.slug) {
-            optimisticUpdate((prev) =>
-              prev.map((i) =>
-                i._id === item._id ? { ...i, slug: res.slug } : i,
-              ),
-            )
-          }
-          return res
+        return { id: noteId, slug, type: args.type }
+      }
+      case SIDEBAR_ITEM_TYPES.folders: {
+        const { folderId, slug } = await createFolderMutation.mutateAsync({
+          campaignId: args.campaignId,
+          name: trimmedName,
+          parentId: args.parentId,
+          iconName: args.iconName,
+          color: args.color,
         })
-        .catch(() => {
+        return { id: folderId, slug, type: args.type }
+      }
+      case SIDEBAR_ITEM_TYPES.gameMaps: {
+        const { mapId, slug } = await createMapMutation.mutateAsync({
+          campaignId: args.campaignId,
+          name: trimmedName,
+          parentId: args.parentId,
+          imageStorageId: args.imageStorageId,
+          iconName: args.iconName,
+          color: args.color,
+        })
+        return { id: mapId, slug, type: args.type }
+      }
+      case SIDEBAR_ITEM_TYPES.files: {
+        const { fileId, slug } = await createFileMutation.mutateAsync({
+          campaignId: args.campaignId,
+          name: trimmedName,
+          parentId: args.parentId,
+          storageId: args.storageId,
+          iconName: args.iconName,
+          color: args.color,
+        })
+        return { id: fileId, slug, type: args.type }
+      }
+      default:
+        return assertNever(args)
+    }
+  }
+
+  const rename = (item: AnySidebarItem, newName: string) => {
+    const trimmedName = newName.trim()
+    const result = validateName(trimmedName, item.parentId, item._id)
+    if (!result.valid) throw new Error(result.error)
+
+    optimisticUpdate((prev) =>
+      prev.map((i) => (i._id === item._id ? { ...i, name: trimmedName } : i)),
+    )
+
+    const promise = updateSidebarItemMutation
+      .mutateAsync({
+        itemId: item._id,
+        name: trimmedName,
+      })
+      .then((res) => {
+        if (res?.slug) {
           optimisticUpdate((prev) =>
             prev.map((i) =>
-              i._id === item._id
-                ? { ...i, name: item.name, slug: item.slug }
-                : i,
+              i._id === item._id ? { ...i, slug: res.slug } : i,
             ),
           )
-        })
-
-      return { promise }
-    },
-    [validateName, optimisticUpdate, updateSidebarItemMutation],
-  )
-
-  const moveItem = useCallback(
-    (
-      item: AnySidebarItem,
-      options: { parentId?: Id<'folders'> | null; deleted?: boolean },
-    ) => {
-      if (!campaignId) return Promise.resolve()
-      const { parentId, deleted } = options
-      const isTrashing = deleted === true && !item.deletionTime
-      const isRestoring = deleted === false && !!item.deletionTime
-
-      if (parentId !== undefined && !isTrashing && !isRestoring) {
-        if (!canMoveToParent(item._id, parentId)) {
-          throw new Error('Cannot move item: circular reference detected')
         }
-        const nameResult = validateName(item.name, parentId, item._id)
-        if (!nameResult.valid) throw new Error(nameResult.error)
+        return res
+      })
+      .catch(() => {
+        optimisticUpdate((prev) =>
+          prev.map((i) =>
+            i._id === item._id ? { ...i, name: item.name, slug: item.slug } : i,
+          ),
+        )
+      })
+
+    return { promise }
+  }
+
+  const moveItem = (
+    item: AnySidebarItem,
+    options: { parentId?: Id<'folders'> | null; deleted?: boolean },
+  ) => {
+    if (!campaignId) return Promise.resolve()
+    const { parentId, deleted } = options
+    const isTrashing = deleted === true && !item.deletionTime
+    const isRestoring = deleted === false && !!item.deletionTime
+
+    if (parentId !== undefined && !isTrashing && !isRestoring) {
+      if (!canMoveToParent(item._id, parentId)) {
+        throw new Error('Cannot move item: circular reference detected')
       }
+      const nameResult = validateName(item.name, parentId, item._id)
+      if (!nameResult.valid) throw new Error(nameResult.error)
+    }
 
-      // Optimistic update
-      let undo: () => void = () => {}
+    // Optimistic update
+    let undo: () => void = () => {}
 
-      if (isRestoring) {
-        // Collect descendants for folder restores
-        const descendantIds = new Set<SidebarItemId>()
-        const trashedItems =
-          queryClient.getQueryData<Array<AnySidebarItem>>(
-            convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
-              campaignId,
-            }).queryKey,
-          ) ?? []
-        if (isFolder(item)) {
-          const collectDescendants = (folderId: Id<'folders'>) => {
-            for (const child of trashedItems) {
-              if (
-                child.parentId === folderId &&
-                !descendantIds.has(child._id)
-              ) {
-                descendantIds.add(child._id)
-                if (isFolder(child)) collectDescendants(child._id)
-              }
-            }
-          }
-          collectDescendants(item._id)
-        }
-
-        // Capture original trashed descendants before filtering them out
-        const trashedDescendants = trashedItems.filter((i) =>
-          descendantIds.has(i._id),
-        )
-
-        trashedOptimisticUpdate((prev) =>
-          prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
-        )
-        optimisticUpdate((prev) => [
-          ...prev,
-          {
-            ...item,
-            parentId: parentId ?? item.parentId ?? null,
-            deletionTime: undefined,
-            deletedBy: undefined,
-          },
-          ...trashedDescendants.map((i) => ({
-            ...i,
-            deletionTime: undefined,
-            deletedBy: undefined,
-          })),
-        ])
-        undo = () => {
-          optimisticUpdate((prev) =>
-            prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
-          )
-          trashedOptimisticUpdate((prev) => [
-            ...prev,
-            item,
-            ...trashedDescendants,
-          ])
-        }
-      } else if (isTrashing) {
-        const deletedBy = campaign.data?.myMembership?.userId
-        const now = Date.now()
-
-        // Collect descendants for folder trashes
-        const descendants: Array<AnySidebarItem> = []
-        if (isFolder(item)) {
-          const collectDescendants = (folderId: Id<'folders'>) => {
-            const folderChildren = parentItemsMap.get(folderId) ?? []
-            for (const child of folderChildren) {
-              descendants.push(child)
+    if (isRestoring) {
+      // Collect descendants for folder restores
+      const descendantIds = new Set<SidebarItemId>()
+      const trashedItems =
+        queryClient.getQueryData<Array<AnySidebarItem>>(
+          convexQuery(api.sidebarItems.queries.getTrashedSidebarItems, {
+            campaignId,
+          }).queryKey,
+        ) ?? []
+      if (isFolder(item)) {
+        const collectDescendants = (folderId: Id<'folders'>) => {
+          for (const child of trashedItems) {
+            if (child.parentId === folderId && !descendantIds.has(child._id)) {
+              descendantIds.add(child._id)
               if (isFolder(child)) collectDescendants(child._id)
             }
           }
-          collectDescendants(item._id)
         }
+        collectDescendants(item._id)
+      }
 
-        const descendantIds = new Set(descendants.map((d) => d._id))
+      // Capture original trashed descendants before filtering them out
+      const trashedDescendants = trashedItems.filter((i) =>
+        descendantIds.has(i._id),
+      )
 
+      trashedOptimisticUpdate((prev) =>
+        prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
+      )
+      optimisticUpdate((prev) => [
+        ...prev,
+        {
+          ...item,
+          parentId: parentId ?? item.parentId ?? null,
+          deletionTime: undefined,
+          deletedBy: undefined,
+        },
+        ...trashedDescendants.map((i) => ({
+          ...i,
+          deletionTime: undefined,
+          deletedBy: undefined,
+        })),
+      ])
+      undo = () => {
         optimisticUpdate((prev) =>
           prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
         )
         trashedOptimisticUpdate((prev) => [
-          {
-            ...item,
-            parentId: parentId ?? item.parentId ?? null,
-            deletionTime: now,
-            deletedBy,
-          },
-          ...descendants.map((d) => ({
-            ...d,
-            deletionTime: now,
-            deletedBy,
-          })),
           ...prev,
+          item,
+          ...trashedDescendants,
         ])
-        undo = () => {
-          trashedOptimisticUpdate((prev) =>
-            prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
-          )
-          optimisticUpdate((prev) => [...prev, item, ...descendants])
+      }
+    } else if (isTrashing) {
+      const deletedBy = campaign.data?.myMembership?.userId
+      const now = Date.now()
+
+      // Collect descendants for folder trashes
+      const descendants: Array<AnySidebarItem> = []
+      if (isFolder(item)) {
+        const collectDescendants = (folderId: Id<'folders'>) => {
+          const folderChildren = parentItemsMap.get(folderId) ?? []
+          for (const child of folderChildren) {
+            descendants.push(child)
+            if (isFolder(child)) collectDescendants(child._id)
+          }
         }
-      } else {
-        const previousParentId = item.parentId
-        const targetUpdate = item.deletionTime
-          ? trashedOptimisticUpdate
-          : optimisticUpdate
-        targetUpdate((prev) =>
-          prev.map((i) =>
-            i._id === item._id ? { ...i, parentId: parentId ?? null } : i,
-          ),
-        )
-        undo = () => {
-          targetUpdate((prev) =>
-            prev.map((i) =>
-              i._id === item._id ? { ...i, parentId: previousParentId } : i,
-            ),
-          )
-        }
+        collectDescendants(item._id)
       }
 
-      return moveSidebarItemMutation
-        .mutateAsync({
-          itemId: item._id,
-          parentId,
-          deleted,
-        })
-        .catch(() => {
-          undo()
-        })
-    },
-    [
-      moveSidebarItemMutation,
-      canMoveToParent,
-      validateName,
-      queryClient,
-      campaignId,
-      trashedOptimisticUpdate,
-      optimisticUpdate,
-      campaign.data?.myMembership?.userId,
-      parentItemsMap,
-    ],
-  )
+      const descendantIds = new Set(descendants.map((d) => d._id))
 
-  const permanentlyDeleteItem = useCallback(
-    (item: AnySidebarItem) => {
-      trashedOptimisticUpdate((prev) => prev.filter((i) => i._id !== item._id))
+      optimisticUpdate((prev) =>
+        prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
+      )
+      trashedOptimisticUpdate((prev) => [
+        {
+          ...item,
+          parentId: parentId ?? item.parentId ?? null,
+          deletionTime: now,
+          deletedBy,
+        },
+        ...descendants.map((d) => ({
+          ...d,
+          deletionTime: now,
+          deletedBy,
+        })),
+        ...prev,
+      ])
+      undo = () => {
+        trashedOptimisticUpdate((prev) =>
+          prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
+        )
+        optimisticUpdate((prev) => [...prev, item, ...descendants])
+      }
+    } else {
+      const previousParentId = item.parentId
+      const targetUpdate = item.deletionTime
+        ? trashedOptimisticUpdate
+        : optimisticUpdate
+      targetUpdate((prev) =>
+        prev.map((i) =>
+          i._id === item._id ? { ...i, parentId: parentId ?? null } : i,
+        ),
+      )
+      undo = () => {
+        targetUpdate((prev) =>
+          prev.map((i) =>
+            i._id === item._id ? { ...i, parentId: previousParentId } : i,
+          ),
+        )
+      }
+    }
 
-      return permanentlyDeleteSidebarItemMutation
-        .mutateAsync({ itemId: item._id })
-        .then(() => {})
-        .catch(() => {
-          trashedOptimisticUpdate((prev) => [...prev, item])
-        })
-    },
-    [permanentlyDeleteSidebarItemMutation, trashedOptimisticUpdate],
-  )
+    return moveSidebarItemMutation
+      .mutateAsync({
+        itemId: item._id,
+        parentId,
+        deleted,
+      })
+      .catch(() => {
+        undo()
+      })
+  }
 
-  const emptyTrashBin = useCallback(() => {
+  const permanentlyDeleteItem = (item: AnySidebarItem) => {
+    trashedOptimisticUpdate((prev) => prev.filter((i) => i._id !== item._id))
+
+    return permanentlyDeleteSidebarItemMutation
+      .mutateAsync({ itemId: item._id })
+      .then(() => {})
+      .catch(() => {
+        trashedOptimisticUpdate((prev) => [...prev, item])
+      })
+  }
+
+  const emptyTrashBin = () => {
     if (!campaignId) return Promise.resolve()
 
     const previousItems = queryClient.getQueryData<Array<AnySidebarItem>>(
@@ -430,32 +390,19 @@ export function SidebarItemMutationsProvider({
           trashedOptimisticUpdate(() => previousItems)
         }
       })
-  }, [campaignId, queryClient, trashedOptimisticUpdate, emptyTrashBinMutation])
+  }
 
-  const value: SidebarItemMutationsValue = useMemo(
-    () => ({
-      createItem,
-      getDefaultName,
-      rename,
-      moveItem,
-      permanentlyDeleteItem,
-      emptyTrashBin,
-      validateName,
-      canMoveToParent,
-      getSiblings,
-    }),
-    [
-      createItem,
-      getDefaultName,
-      rename,
-      moveItem,
-      permanentlyDeleteItem,
-      emptyTrashBin,
-      validateName,
-      canMoveToParent,
-      getSiblings,
-    ],
-  )
+  const value: SidebarItemMutationsValue = {
+    createItem,
+    getDefaultName,
+    rename,
+    moveItem,
+    permanentlyDeleteItem,
+    emptyTrashBin,
+    validateName,
+    canMoveToParent,
+    getSiblings,
+  }
 
   return (
     <SidebarItemMutationsContext.Provider value={value}>

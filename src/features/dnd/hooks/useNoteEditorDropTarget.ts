@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
@@ -24,10 +24,7 @@ export function useNoteEditorDropTarget({
   editor: CustomBlockNoteEditor
   noteId: Id<'notes'>
 }) {
-  const dropData = useMemo(
-    () => ({ type: NOTE_EDITOR_DROP_TYPE, noteId }),
-    [noteId],
-  )
+  const dropData = { type: NOTE_EDITOR_DROP_TYPE, noteId }
   useDndDropTarget({
     ref,
     data: dropData,

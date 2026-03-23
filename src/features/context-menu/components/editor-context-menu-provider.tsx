@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
 import { MenuDialogs } from '../menu-dialogs'
@@ -39,46 +39,25 @@ export function EditorContextMenuProvider({
   const permissionLevel = item?.myPermissionLevel
   const isItemTrashed = !!item?.deletionTime
 
-  const menuContext = useMemo(
-    () => ({
-      item,
-      viewContext,
-      isItemTrashed,
-      isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
-      currentUserId: campaign.data?.myMembership?.userId,
-      memberRole: campaign.data?.myMembership?.role,
-      permissionLevel,
-      activeMap: mapView?.activeMap ?? undefined,
-      activePin: mapView?.activePin ?? undefined,
-      hasActiveSession: !!currentSession.data,
-      editor: blockNoteCtx?.editor ?? undefined,
-      blockId: blockNoteCtx?.blockId,
-    }),
-    [
-      item,
-      viewContext,
-      isItemTrashed,
-      isTrashView,
-      campaign.data?.myMembership?.userId,
-      campaign.data?.myMembership?.role,
-      permissionLevel,
-      mapView?.activeMap,
-      mapView?.activePin,
-      currentSession.data,
-      blockNoteCtx?.editor,
-      blockNoteCtx?.blockId,
-    ],
-  )
+  const menuContext = {
+    item,
+    viewContext,
+    isItemTrashed,
+    isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
+    currentUserId: campaign.data?.myMembership?.userId,
+    memberRole: campaign.data?.myMembership?.role,
+    permissionLevel,
+    activeMap: mapView?.activeMap ?? undefined,
+    activePin: mapView?.activePin ?? undefined,
+    hasActiveSession: !!currentSession.data,
+    editor: blockNoteCtx?.editor ?? undefined,
+    blockId: blockNoteCtx?.blockId,
+  }
 
-  const menuItems = useMemo(() => {
-    const allMenuItems = createMenuItems(menuActions.actions)
-    return buildMenu(allMenuItems, menuContext).flatItems
-  }, [menuActions.actions, menuContext])
+  const allMenuItems = createMenuItems(menuActions.actions)
+  const menuItems = buildMenu(allMenuItems, menuContext).flatItems
 
-  const contextValue = useMemo(
-    () => ({ menuItems, menuContext }),
-    [menuItems, menuContext],
-  )
+  const contextValue = { menuItems, menuContext }
 
   return (
     <EditorContextMenuContext.Provider value={contextValue}>

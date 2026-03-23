@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { SidebarRow } from './sidebar-row'
@@ -10,9 +9,9 @@ export function NewButton() {
   const { dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const handleNewClick = useCallback(() => {
+  const handleNewClick = () => {
     setLastSelectedItem(null)
-  }, [setLastSelectedItem])
+  }
 
   return (
     <Link

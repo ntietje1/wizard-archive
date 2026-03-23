@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react'
+import { memo } from 'react'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -34,22 +34,17 @@ function FlatSidebarItemComponent({
 
   const icon = getSidebarItemIcon(item)
 
-  const handleClick = useCallback(
-    () => setLastSelectedItem({ type: item.type, slug: item.slug }),
-    [setLastSelectedItem, item.type, item.slug],
-  )
+  const handleClick = () =>
+    setLastSelectedItem({ type: item.type, slug: item.slug })
 
-  const handleFinishRename = useCallback(
-    async (name: string) => {
-      await rename(item, name)
-      setRenamingId(null)
-    },
-    [item, rename, setRenamingId],
-  )
-
-  const handleCancelRename = useCallback(() => {
+  const handleFinishRename = async (name: string) => {
+    await rename(item, name)
     setRenamingId(null)
-  }, [setRenamingId])
+  }
+
+  const handleCancelRename = () => {
+    setRenamingId(null)
+  }
 
   return (
     <DraggableSidebarItem item={item}>

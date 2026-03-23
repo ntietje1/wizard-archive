@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
@@ -43,26 +43,19 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
 
   const children = isFolder ? parentItemsMap.get(item._id) : undefined
 
-  const sortedChildren = useMemo(() => {
-    return sortItemsByOptions(sortOptions, children) ?? []
-  }, [sortOptions, children])
+  const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
-  const handleClick = useCallback(
-    () => setLastSelectedItem({ type: item.type, slug: item.slug }),
-    [setLastSelectedItem, item.type, item.slug],
-  )
+  const handleClick = () =>
+    setLastSelectedItem({ type: item.type, slug: item.slug })
 
-  const handleFinishRename = useCallback(
-    async (name: string) => {
-      await rename(item, name)
-      setRenamingId(null)
-    },
-    [item, rename, setRenamingId],
-  )
-
-  const handleCancelRename = useCallback(() => {
+  const handleFinishRename = async (name: string) => {
+    await rename(item, name)
     setRenamingId(null)
-  }, [setRenamingId])
+  }
+
+  const handleCancelRename = () => {
+    setRenamingId(null)
+  }
 
   const itemButton = (
     <DraggableSidebarItem item={item}>

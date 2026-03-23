@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo } from 'react'
+import { createContext, useContext } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
@@ -40,23 +40,19 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
     { placeholderData: keepPreviousData },
   )
 
-  const data: Array<AnySidebarItem> = useMemo(
-    () => query.data ?? [],
-    [query.data],
-  )
+  const data: Array<AnySidebarItem> = query.data ?? []
 
-  const sidebarItemIdMap = useMemo(() => {
+  const sidebarItemIdMap = (() => {
     const map = new Map<SidebarItemId, AnySidebarItem>()
     data.forEach((item) => {
       map.set(item._id, item)
     })
     return map
-  }, [data])
+  })()
 
-  const sidebarItemParentIdMap = useMemo(() => {
+  const sidebarItemParentIdMap = (() => {
     const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
-      // If the item's parent folder isn't in our permitted set, show at root
       const effectiveParentId =
         item.parentId && !sidebarItemIdMap.has(item.parentId)
           ? null
@@ -68,27 +64,24 @@ export const useSidebarItemsQuery = (): AllSidebarItemsValue => {
       }
     })
     return map
-  }, [data, sidebarItemIdMap])
+  })()
 
-  const getAncestorSidebarItems = useCallback(
-    (itemId: SidebarItemId) => {
-      const item = sidebarItemIdMap.get(itemId)
-      if (!item) return []
-      let currAncestorId = item.parentId
-      const seen = new Set<Id<'folders'>>()
-      const ancestorItems: Array<Folder> = []
-      while (currAncestorId && !seen.has(currAncestorId)) {
-        seen.add(currAncestorId)
-        const currAncestor = sidebarItemIdMap.get(currAncestorId)
-        if (currAncestor && isFolder(currAncestor)) {
-          ancestorItems.push(currAncestor)
-          currAncestorId = currAncestor.parentId
-        }
+  const getAncestorSidebarItems = (itemId: SidebarItemId) => {
+    const item = sidebarItemIdMap.get(itemId)
+    if (!item) return []
+    let currAncestorId = item.parentId
+    const seen = new Set<Id<'folders'>>()
+    const ancestorItems: Array<Folder> = []
+    while (currAncestorId && !seen.has(currAncestorId)) {
+      seen.add(currAncestorId)
+      const currAncestor = sidebarItemIdMap.get(currAncestorId)
+      if (currAncestor && isFolder(currAncestor)) {
+        ancestorItems.push(currAncestor)
+        currAncestorId = currAncestor.parentId
       }
-      return ancestorItems
-    },
-    [sidebarItemIdMap],
-  )
+    }
+    return ancestorItems
+  }
 
   return {
     data,
@@ -140,18 +133,15 @@ export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
     { placeholderData: keepPreviousData },
   )
 
-  const data: Array<AnySidebarItem> = useMemo(
-    () => query.data ?? [],
-    [query.data],
-  )
+  const data: Array<AnySidebarItem> = query.data ?? []
 
-  const itemsMap = useMemo(() => {
+  const itemsMap = (() => {
     const map = new Map<SidebarItemId, AnySidebarItem>()
     data.forEach((item) => map.set(item._id, item))
     return map
-  }, [data])
+  })()
 
-  const parentItemsMap = useMemo(() => {
+  const parentItemsMap = (() => {
     const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     data.forEach((item) => {
       const effectiveParentId =
@@ -163,7 +153,7 @@ export const useTrashedSidebarItemsQuery = (): TrashedSidebarItemsValue => {
       }
     })
     return map
-  }, [data, itemsMap])
+  })()
 
   return { data, status: query.status, itemsMap, parentItemsMap }
 }
@@ -241,20 +231,18 @@ export const useFilteredSidebarItems = () => {
   const { viewAsPlayerId } = useEditorMode()
   const allItems = useAllSidebarItems()
 
-  const filteredData = useMemo(() => {
-    const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
-    return allItems.data.filter((item) =>
-      effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
-    )
-  }, [allItems.data, allItems.itemsMap, isDm, viewAsPlayerId])
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
+  const filteredData = allItems.data.filter((item) =>
+    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
+  )
 
-  const filteredItemsMap = useMemo(() => {
+  const filteredItemsMap = (() => {
     const map = new Map<SidebarItemId, AnySidebarItem>()
     filteredData.forEach((item) => map.set(item._id, item))
     return map
-  }, [filteredData])
+  })()
 
-  const filteredParentItemsMap = useMemo(() => {
+  const filteredParentItemsMap = (() => {
     const map = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
     filteredData.forEach((item) => {
       const effectiveParentId =
@@ -268,27 +256,24 @@ export const useFilteredSidebarItems = () => {
       }
     })
     return map
-  }, [filteredData, filteredItemsMap])
+  })()
 
-  const getAncestorSidebarItems = useCallback(
-    (itemId: SidebarItemId) => {
-      const item = filteredItemsMap.get(itemId)
-      if (!item) return []
-      let currAncestorId = item.parentId
-      const seen = new Set<Id<'folders'>>()
-      const ancestorItems: Array<Folder> = []
-      while (currAncestorId && !seen.has(currAncestorId)) {
-        seen.add(currAncestorId)
-        const currAncestor = filteredItemsMap.get(currAncestorId)
-        if (currAncestor && isFolder(currAncestor)) {
-          ancestorItems.push(currAncestor)
-          currAncestorId = currAncestor.parentId
-        }
+  const getAncestorSidebarItems = (itemId: SidebarItemId) => {
+    const item = filteredItemsMap.get(itemId)
+    if (!item) return []
+    let currAncestorId = item.parentId
+    const seen = new Set<Id<'folders'>>()
+    const ancestorItems: Array<Folder> = []
+    while (currAncestorId && !seen.has(currAncestorId)) {
+      seen.add(currAncestorId)
+      const currAncestor = filteredItemsMap.get(currAncestorId)
+      if (currAncestor && isFolder(currAncestor)) {
+        ancestorItems.push(currAncestor)
+        currAncestorId = currAncestor.parentId
       }
-      return ancestorItems
-    },
-    [filteredItemsMap],
-  )
+    }
+    return ancestorItems
+  }
 
   return {
     data: filteredData,

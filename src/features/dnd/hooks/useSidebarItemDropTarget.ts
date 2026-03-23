@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { Folder } from 'convex/folders/types'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 
@@ -13,10 +12,7 @@ export function useSidebarItemDropTarget({
   ref: React.RefObject<HTMLElement | null>
   item: Folder
 }) {
-  const dropData = useMemo(
-    () => ({ type: item.type, sidebarItemId: item._id }),
-    [item.type, item._id],
-  )
+  const dropData = { type: item.type, sidebarItemId: item._id }
 
   useDndDropTarget({ ref, data: dropData, highlightId: item._id })
 }

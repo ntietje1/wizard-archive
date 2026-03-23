@@ -1,5 +1,4 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useCallback, useMemo } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useLastEditorItem } from './useLastEditorItem'
 import { EDITOR_ROUTE } from './useEditorLinkProps'
@@ -25,115 +24,88 @@ export const useEditorNavigation = () => {
   const { dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const routeParams = useMemo(
-    () => ({ dmUsername, campaignSlug }),
-    [dmUsername, campaignSlug],
-  )
+  const routeParams = { dmUsername, campaignSlug }
 
-  const navigateToEditor = useCallback(
-    async (
-      search: EditorSearch | ((prev: EditorSearch) => EditorSearch),
-      replace?: boolean,
-    ) => {
-      await navigate({
-        to: EDITOR_ROUTE,
-        params: routeParams,
-        search,
-        replace,
-      })
-    },
-    [navigate, routeParams],
-  )
+  const navigateToEditor = async (
+    search: EditorSearch | ((prev: EditorSearch) => EditorSearch),
+    replace?: boolean,
+  ) => {
+    await navigate({
+      to: EDITOR_ROUTE,
+      params: routeParams,
+      search,
+      replace,
+    })
+  }
 
-  const navigateToNote = useCallback(
-    async (slug: string, replace?: boolean) => {
-      await navigateToEditor(
-        createContentSearch({
-          note: slug,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
+  const navigateToNote = async (slug: string, replace?: boolean) => {
+    await navigateToEditor(
+      createContentSearch({
+        note: slug,
+      }),
+      replace,
+    )
+  }
 
-  const navigateToMap = useCallback(
-    async (slug: string, replace?: boolean) => {
-      await navigateToEditor(
-        createContentSearch({
-          map: slug,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
+  const navigateToMap = async (slug: string, replace?: boolean) => {
+    await navigateToEditor(
+      createContentSearch({
+        map: slug,
+      }),
+      replace,
+    )
+  }
 
-  const navigateToFolder = useCallback(
-    async (slug: string, replace?: boolean) => {
-      await navigateToEditor(
-        createContentSearch({
-          folder: slug,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
+  const navigateToFolder = async (slug: string, replace?: boolean) => {
+    await navigateToEditor(
+      createContentSearch({
+        folder: slug,
+      }),
+      replace,
+    )
+  }
 
-  const navigateToFile = useCallback(
-    async (slug: string, replace?: boolean) => {
-      await navigateToEditor(
-        createContentSearch({
-          file: slug,
-        }),
-        replace,
-      )
-    },
-    [navigateToEditor],
-  )
+  const navigateToFile = async (slug: string, replace?: boolean) => {
+    await navigateToEditor(
+      createContentSearch({
+        file: slug,
+      }),
+      replace,
+    )
+  }
 
-  const navigateToItem = useCallback(
-    async (
-      item: { type: SidebarItemType; slug: string },
-      replace?: boolean,
-    ) => {
-      setLastSelectedItem({ type: item.type, slug: item.slug })
+  const navigateToItem = async (
+    item: { type: SidebarItemType; slug: string },
+    replace?: boolean,
+  ) => {
+    setLastSelectedItem({ type: item.type, slug: item.slug })
 
-      switch (item.type) {
-        case SIDEBAR_ITEM_TYPES.notes:
-          await navigateToNote(item.slug, replace)
-          break
-        case SIDEBAR_ITEM_TYPES.gameMaps:
-          await navigateToMap(item.slug, replace)
-          break
-        case SIDEBAR_ITEM_TYPES.folders:
-          await navigateToFolder(item.slug, replace)
-          break
-        case SIDEBAR_ITEM_TYPES.files:
-          await navigateToFile(item.slug, replace)
-          break
-        default:
-          assertNever(item.type)
-      }
-    },
-    [
-      navigateToNote,
-      navigateToMap,
-      navigateToFolder,
-      navigateToFile,
-      setLastSelectedItem,
-    ],
-  )
+    switch (item.type) {
+      case SIDEBAR_ITEM_TYPES.notes:
+        await navigateToNote(item.slug, replace)
+        break
+      case SIDEBAR_ITEM_TYPES.gameMaps:
+        await navigateToMap(item.slug, replace)
+        break
+      case SIDEBAR_ITEM_TYPES.folders:
+        await navigateToFolder(item.slug, replace)
+        break
+      case SIDEBAR_ITEM_TYPES.files:
+        await navigateToFile(item.slug, replace)
+        break
+      default:
+        assertNever(item.type)
+    }
+  }
 
-  const clearEditorContent = useCallback(async () => {
+  const clearEditorContent = async () => {
     await navigateToEditor(createContentSearch({}))
     setLastSelectedItem(null)
-  }, [navigateToEditor, setLastSelectedItem])
+  }
 
-  const navigateToTrash = useCallback(async () => {
+  const navigateToTrash = async () => {
     await navigateToEditor(createContentSearch({ trash: true }))
-  }, [navigateToEditor])
+  }
 
   return {
     navigateToNote,

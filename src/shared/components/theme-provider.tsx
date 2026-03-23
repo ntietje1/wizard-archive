@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { UserPreferences } from 'convex/userPreferences/types'
@@ -87,12 +87,9 @@ export function ThemeProvider({
   const theme: Theme = prefs?.theme ?? initialTheme ?? 'system'
   const resolved = resolveTheme(theme)
 
-  const setTheme = useCallback(
-    (newTheme: Theme) => {
-      setThemeMutation.mutate({ theme: newTheme })
-    },
-    [setThemeMutation],
-  )
+  const setTheme = (newTheme: Theme) => {
+    setThemeMutation.mutate({ theme: newTheme })
+  }
 
   useEffect(() => {
     applyThemeClass(resolved)

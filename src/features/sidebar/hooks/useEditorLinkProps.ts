@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
@@ -49,8 +48,5 @@ export function useEditorLinkProps(item: {
 }): EditorLinkProps {
   const { dmUsername, campaignSlug } = useCampaign()
 
-  return useMemo(
-    () => buildEditorLinkProps(item, { dmUsername, campaignSlug }),
-    [item, dmUsername, campaignSlug],
-  )
+  return buildEditorLinkProps(item, { dmUsername, campaignSlug })
 }

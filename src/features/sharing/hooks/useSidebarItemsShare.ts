@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -44,13 +43,10 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const { campaign, isDm } = useCampaign()
   const campaignData = campaign.data
   const campaignMembersQuery = useCampaignMembers()
-  const playerMembers = useMemo(
-    () =>
-      campaignMembersQuery.data?.filter(
-        (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
-      ) ?? [],
-    [campaignMembersQuery.data],
-  )
+  const playerMembers =
+    campaignMembersQuery.data?.filter(
+      (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
+    ) ?? []
 
   // For now, we only support single item selection
   const singleItem = items.length === 1 ? items[0] : undefined
@@ -90,7 +86,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     setFolderInheritSharesMutation.isPending
 
   // Build share info map for each item
-  const itemShareInfoMap = useMemo(() => {
+  const itemShareInfoMap = (() => {
     const map = new Map<string, SidebarItemShareInfo>()
 
     if (singleItem && query.data) {
@@ -128,18 +124,15 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     }
 
     return map
-  }, [singleItem, query.data])
+  })()
 
-  const hasCompleteData = useMemo(
-    () =>
-      items.length > 0 &&
-      campaignMembersQuery.isSuccess &&
-      items.every((item) => itemShareInfoMap.has(item._id)),
-    [items, itemShareInfoMap, campaignMembersQuery.isSuccess],
-  )
+  const hasCompleteData =
+    items.length > 0 &&
+    campaignMembersQuery.isSuccess &&
+    items.every((item) => itemShareInfoMap.has(item._id))
 
   // Derive aggregate share status from allPermissionLevel, inherited values, and individual shares
-  const aggregateShareStatus: AggregateShareStatus = useMemo(() => {
+  const aggregateShareStatus: AggregateShareStatus = (() => {
     if (!hasCompleteData || items.length === 0)
       return AGGREGATE_SHARE_STATUS.NOT_SHARED
 
@@ -168,41 +161,39 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     if (hasAnyShares) return AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED
 
     return AGGREGATE_SHARE_STATUS.NOT_SHARED
-  }, [items, itemShareInfoMap, hasCompleteData])
+  })()
 
   // Get share state for a specific member across all items
-  const getShareState = useCallback(
-    (memberId: Id<'campaignMembers'>): 'all' | 'some' | 'none' => {
-      if (items.length === 0) return 'none'
+  const getShareState = (
+    memberId: Id<'campaignMembers'>,
+  ): 'all' | 'some' | 'none' => {
+    if (items.length === 0) return 'none'
 
-      let sharedCount = 0
-      for (const item of items) {
-        const info = itemShareInfoMap.get(item._id)
-        // Member has access if they have an individual share, inherited share, or allPermissionLevel >= view
-        const hasIndividualShare = info?.sharedMemberIds.has(memberId) ?? false
-        const resolvedPerm =
-          info?.allPermissionLevel ?? info?.inheritedAllPermissionLevel
-        const hasAllPermission =
-          resolvedPerm !== undefined && resolvedPerm !== PERMISSION_LEVEL.NONE
-        const inheritedMemberPerm =
-          info?.memberInheritedPermissions.get(memberId)
-        const hasInheritedMemberPerm =
-          inheritedMemberPerm !== undefined &&
-          inheritedMemberPerm !== PERMISSION_LEVEL.NONE
-        if (hasIndividualShare || hasAllPermission || hasInheritedMemberPerm) {
-          sharedCount++
-        }
+    let sharedCount = 0
+    for (const item of items) {
+      const info = itemShareInfoMap.get(item._id)
+      // Member has access if they have an individual share, inherited share, or allPermissionLevel >= view
+      const hasIndividualShare = info?.sharedMemberIds.has(memberId) ?? false
+      const resolvedPerm =
+        info?.allPermissionLevel ?? info?.inheritedAllPermissionLevel
+      const hasAllPermission =
+        resolvedPerm !== undefined && resolvedPerm !== PERMISSION_LEVEL.NONE
+      const inheritedMemberPerm = info?.memberInheritedPermissions.get(memberId)
+      const hasInheritedMemberPerm =
+        inheritedMemberPerm !== undefined &&
+        inheritedMemberPerm !== PERMISSION_LEVEL.NONE
+      if (hasIndividualShare || hasAllPermission || hasInheritedMemberPerm) {
+        sharedCount++
       }
+    }
 
-      if (sharedCount === 0) return 'none'
-      if (sharedCount === items.length) return 'all'
-      return 'some'
-    },
-    [items, itemShareInfoMap],
-  )
+    if (sharedCount === 0) return 'none'
+    if (sharedCount === items.length) return 'all'
+    return 'some'
+  }
 
   // Toggle allPermissionLevel between 'none' and 'view'
-  const toggleShareStatus = useCallback(async () => {
+  const toggleShareStatus = async () => {
     if (
       !campaignData?._id ||
       isMutating ||
@@ -239,216 +230,23 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     } catch (error) {
       console.error(error)
     }
-  }, [
-    campaignData?._id,
-    isMutating,
-    items,
-    hasCompleteData,
-    aggregateShareStatus,
-    setAllPlayersPermissionMutation,
-    playerMembers.length,
-  ])
+  }
 
   // Toggle share with a specific member for all items
-  const toggleShareWithMember = useCallback(
-    async (memberId: Id<'campaignMembers'>) => {
-      if (
-        !campaignData?._id ||
-        isMutating ||
-        items.length === 0 ||
-        !hasCompleteData
-      )
-        return
+  const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
+    if (
+      !campaignData?._id ||
+      isMutating ||
+      items.length === 0 ||
+      !hasCompleteData
+    )
+      return
 
-      try {
-        const currentState = getShareState(memberId)
+    try {
+      const currentState = getShareState(memberId)
 
-        if (currentState === 'all') {
-          // Unshare from all items
-          await Promise.all(
-            items.map((item) =>
-              unshareSidebarItem.mutateAsync({
-                sidebarItemId: item._id,
-                campaignMemberId: memberId,
-              }),
-            ),
-          )
-          toast.success('Unshared from player')
-        } else {
-          // Share items that aren't already individually shared with this member
-          const itemsToShare = items.filter((item) => {
-            const info = itemShareInfoMap.get(item._id)
-            return !info?.sharedMemberIds.has(memberId)
-          })
-
-          if (itemsToShare.length === 0) return
-
-          await Promise.all(
-            itemsToShare.map((item) =>
-              shareSidebarItem.mutateAsync({
-                sidebarItemId: item._id,
-                sidebarItemType: item.type,
-                campaignMemberId: memberId,
-              }),
-            ),
-          )
-          toast.success('Shared with player')
-        }
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    [
-      campaignData?._id,
-      isMutating,
-      items,
-      hasCompleteData,
-      getShareState,
-      itemShareInfoMap,
-      unshareSidebarItem,
-      shareSidebarItem,
-    ],
-  )
-
-  // Get the permission level for a specific member
-  // Check individual share first, fall back to allPermissionLevel, then inherited
-  const getMemberPermissionLevel = useCallback(
-    (memberId: Id<'campaignMembers'>): PermissionLevel => {
-      if (items.length === 0) return PERMISSION_LEVEL.NONE
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return PERMISSION_LEVEL.NONE
-
-      // Individual share takes precedence
-      if (info.sharedMemberIds.has(memberId)) {
-        return info.memberPermissions.get(memberId) ?? PERMISSION_LEVEL.VIEW
-      }
-      // Fall back to allPermissionLevel
-      if (info.allPermissionLevel !== null) {
-        return info.allPermissionLevel
-      }
-      // Fall back to pre-computed inherited permission for this member
-      return (
-        info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
-      )
-    },
-    [items, itemShareInfoMap],
-  )
-
-  // Get the explicit "all players" permission level (null = inheriting)
-  const allPlayersPermissionLevel: PermissionLevel | null = useMemo(() => {
-    if (items.length === 0) return null
-    const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return null
-    return info.allPermissionLevel
-  }, [items, itemShareInfoMap])
-
-  // Get the inherited permission level from ancestor folder (if any)
-  const inheritedAllPermissionLevel: PermissionLevel | null = useMemo(() => {
-    if (items.length === 0) return null
-    const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return null
-    return info.inheritedAllPermissionLevel
-  }, [items, itemShareInfoMap])
-
-  // Get the name of the folder providing inherited all-players permission
-  const inheritedFromFolderName: string | null = useMemo(() => {
-    if (items.length === 0) return null
-    const info = itemShareInfoMap.get(items[0]._id)
-    if (!info) return null
-    return info.inheritedFromFolderName
-  }, [items, itemShareInfoMap])
-
-  // Folder-specific: whether shares are inherited by new child items
-  const isFolder = singleItem?.type === SIDEBAR_ITEM_TYPES.folders
-  const inheritShares = useMemo(() => {
-    if (!isFolder) return false
-    return query.data?.inheritShares ?? false
-  }, [isFolder, query.data?.inheritShares])
-
-  // Toggle inheritShares on a folder
-  const setInheritShares = useCallback(
-    async (enabled: boolean) => {
-      if (!campaignData?._id || isMutating || !singleItem || !isFolder) return
-
-      try {
-        await setFolderInheritSharesMutation.mutateAsync({
-          folderId: singleItem._id,
-          inheritShares: enabled,
-        })
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    [
-      campaignData?._id,
-      isMutating,
-      singleItem,
-      isFolder,
-      setFolderInheritSharesMutation,
-    ],
-  )
-
-  // Set a specific member's permission level
-  const setMemberPermission = useCallback(
-    async (memberId: Id<'campaignMembers'>, level: PermissionLevel) => {
-      if (!campaignData?._id || isMutating || items.length === 0) return
-
-      try {
-        await Promise.all(
-          items.map((item) =>
-            updateSharePermission.mutateAsync({
-              sidebarItemId: item._id,
-              sidebarItemType: item.type,
-              campaignMemberId: memberId,
-              permissionLevel: level,
-            }),
-          ),
-        )
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    [campaignData?._id, isMutating, items, updateSharePermission],
-  )
-
-  // Set all players' permission level
-  const setAllPlayersPermission = useCallback(
-    async (level: PermissionLevel | null) => {
-      if (!campaignData?._id || isMutating || items.length === 0) return
-
-      try {
-        await Promise.all(
-          items.map((item) =>
-            setAllPlayersPermissionMutation.mutateAsync({
-              sidebarItemId: item._id,
-              permissionLevel: level,
-            }),
-          ),
-        )
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    [campaignData?._id, isMutating, items, setAllPlayersPermissionMutation],
-  )
-
-  // Check if a specific member has an explicit share override
-  const getMemberHasExplicitShare = useCallback(
-    (memberId: Id<'campaignMembers'>): boolean => {
-      if (items.length === 0) return false
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return false
-      return info.sharedMemberIds.has(memberId)
-    },
-    [items, itemShareInfoMap],
-  )
-
-  // Clear a specific member's explicit share override (revert to default)
-  const clearMemberPermission = useCallback(
-    async (memberId: Id<'campaignMembers'>) => {
-      if (!campaignData?._id || isMutating || items.length === 0) return
-
-      try {
+      if (currentState === 'all') {
+        // Unshare from all items
         await Promise.all(
           items.map((item) =>
             unshareSidebarItem.mutateAsync({
@@ -457,60 +255,202 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
             }),
           ),
         )
-      } catch (error) {
-        console.error(error)
+        toast.success('Unshared from player')
+      } else {
+        // Share items that aren't already individually shared with this member
+        const itemsToShare = items.filter((item) => {
+          const info = itemShareInfoMap.get(item._id)
+          return !info?.sharedMemberIds.has(memberId)
+        })
+
+        if (itemsToShare.length === 0) return
+
+        await Promise.all(
+          itemsToShare.map((item) =>
+            shareSidebarItem.mutateAsync({
+              sidebarItemId: item._id,
+              sidebarItemType: item.type,
+              campaignMemberId: memberId,
+            }),
+          ),
+        )
+        toast.success('Shared with player')
       }
-    },
-    [campaignData?._id, isMutating, items, unshareSidebarItem],
-  )
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // Get the permission level for a specific member
+  // Check individual share first, fall back to allPermissionLevel, then inherited
+  const getMemberPermissionLevel = (
+    memberId: Id<'campaignMembers'>,
+  ): PermissionLevel => {
+    if (items.length === 0) return PERMISSION_LEVEL.NONE
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return PERMISSION_LEVEL.NONE
+
+    // Individual share takes precedence
+    if (info.sharedMemberIds.has(memberId)) {
+      return info.memberPermissions.get(memberId) ?? PERMISSION_LEVEL.VIEW
+    }
+    // Fall back to allPermissionLevel
+    if (info.allPermissionLevel !== null) {
+      return info.allPermissionLevel
+    }
+    // Fall back to pre-computed inherited permission for this member
+    return (
+      info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
+    )
+  }
+
+  // Get the explicit "all players" permission level (null = inheriting)
+  const allPlayersPermissionLevel: PermissionLevel | null = (() => {
+    if (items.length === 0) return null
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return null
+    return info.allPermissionLevel
+  })()
+
+  // Get the inherited permission level from ancestor folder (if any)
+  const inheritedAllPermissionLevel: PermissionLevel | null = (() => {
+    if (items.length === 0) return null
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return null
+    return info.inheritedAllPermissionLevel
+  })()
+
+  // Get the name of the folder providing inherited all-players permission
+  const inheritedFromFolderName: string | null = (() => {
+    if (items.length === 0) return null
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return null
+    return info.inheritedFromFolderName
+  })()
+
+  // Folder-specific: whether shares are inherited by new child items
+  const isFolder = singleItem?.type === SIDEBAR_ITEM_TYPES.folders
+  const inheritShares = !isFolder ? false : (query.data?.inheritShares ?? false)
+
+  // Toggle inheritShares on a folder
+  const setInheritShares = async (enabled: boolean) => {
+    if (!campaignData?._id || isMutating || !singleItem || !isFolder) return
+
+    try {
+      await setFolderInheritSharesMutation.mutateAsync({
+        folderId: singleItem._id,
+        inheritShares: enabled,
+      })
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // Set a specific member's permission level
+  const setMemberPermission = async (
+    memberId: Id<'campaignMembers'>,
+    level: PermissionLevel,
+  ) => {
+    if (!campaignData?._id || isMutating || items.length === 0) return
+
+    try {
+      await Promise.all(
+        items.map((item) =>
+          updateSharePermission.mutateAsync({
+            sidebarItemId: item._id,
+            sidebarItemType: item.type,
+            campaignMemberId: memberId,
+            permissionLevel: level,
+          }),
+        ),
+      )
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // Set all players' permission level
+  const setAllPlayersPermission = async (level: PermissionLevel | null) => {
+    if (!campaignData?._id || isMutating || items.length === 0) return
+
+    try {
+      await Promise.all(
+        items.map((item) =>
+          setAllPlayersPermissionMutation.mutateAsync({
+            sidebarItemId: item._id,
+            permissionLevel: level,
+          }),
+        ),
+      )
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // Check if a specific member has an explicit share override
+  const getMemberHasExplicitShare = (
+    memberId: Id<'campaignMembers'>,
+  ): boolean => {
+    if (items.length === 0) return false
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return false
+    return info.sharedMemberIds.has(memberId)
+  }
+
+  // Clear a specific member's explicit share override (revert to default)
+  const clearMemberPermission = async (memberId: Id<'campaignMembers'>) => {
+    if (!campaignData?._id || isMutating || items.length === 0) return
+
+    try {
+      await Promise.all(
+        items.map((item) =>
+          unshareSidebarItem.mutateAsync({
+            sidebarItemId: item._id,
+            campaignMemberId: memberId,
+          }),
+        ),
+      )
+    } catch (error) {
+      console.error(error)
+    }
+  }
 
   // Get what a player would resolve to if their explicit share is removed.
   // This determines the "Default (X)" label in the dropdown.
-  const getMemberDefaultPermissionLevel = useCallback(
-    (memberId: Id<'campaignMembers'>): PermissionLevel => {
-      if (items.length === 0) return PERMISSION_LEVEL.NONE
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return PERMISSION_LEVEL.NONE
-      // If item has explicit allPermissionLevel, that takes effect
-      if (info.allPermissionLevel !== null) return info.allPermissionLevel
-      // Otherwise, fall back to the per-member inherited level from ancestors
-      return (
-        info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
-      )
-    },
-    [items, itemShareInfoMap],
-  )
+  const getMemberDefaultPermissionLevel = (
+    memberId: Id<'campaignMembers'>,
+  ): PermissionLevel => {
+    if (items.length === 0) return PERMISSION_LEVEL.NONE
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return PERMISSION_LEVEL.NONE
+    // If item has explicit allPermissionLevel, that takes effect
+    if (info.allPermissionLevel !== null) return info.allPermissionLevel
+    // Otherwise, fall back to the per-member inherited level from ancestors
+    return (
+      info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
+    )
+  }
 
   // Get the folder name a player's permission is inherited from (if any)
-  const getMemberInheritedFromFolderName = useCallback(
-    (memberId: Id<'campaignMembers'>): string | undefined => {
-      if (items.length === 0) return undefined
-      const info = itemShareInfoMap.get(items[0]._id)
-      if (!info) return undefined
-      return info.memberInheritedFromFolderNames.get(memberId)
-    },
-    [items, itemShareInfoMap],
-  )
+  const getMemberInheritedFromFolderName = (
+    memberId: Id<'campaignMembers'>,
+  ): string | undefined => {
+    if (items.length === 0) return undefined
+    const info = itemShareInfoMap.get(items[0]._id)
+    if (!info) return undefined
+    return info.memberInheritedFromFolderNames.get(memberId)
+  }
 
-  const shareItems: Array<ShareItemWithPermission> = useMemo(
-    () =>
-      playerMembers.map((member) => ({
-        key: `share-${member._id}`,
-        member,
-        shareState: getShareState(member._id),
-        permissionLevel: getMemberPermissionLevel(member._id),
-        hasExplicitShare: getMemberHasExplicitShare(member._id),
-        inheritedPermissionLevel: getMemberDefaultPermissionLevel(member._id),
-        inheritedFromFolderName: getMemberInheritedFromFolderName(member._id),
-      })),
-    [
-      playerMembers,
-      getShareState,
-      getMemberPermissionLevel,
-      getMemberHasExplicitShare,
-      getMemberDefaultPermissionLevel,
-      getMemberInheritedFromFolderName,
-    ],
+  const shareItems: Array<ShareItemWithPermission> = playerMembers.map(
+    (member) => ({
+      key: `share-${member._id}`,
+      member,
+      shareState: getShareState(member._id),
+      permissionLevel: getMemberPermissionLevel(member._id),
+      hasExplicitShare: getMemberHasExplicitShare(member._id),
+      inheritedPermissionLevel: getMemberDefaultPermissionLevel(member._id),
+      inheritedFromFolderName: getMemberInheritedFromFolderName(member._id),
+    }),
   )
 
   // Check if sharing is available (is DM and has items)

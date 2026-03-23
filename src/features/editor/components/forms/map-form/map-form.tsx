@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -101,7 +101,7 @@ export function MapForm({
   }, [imageUpload])
 
   // Get initial values based on current props
-  const defaultValues = useMemo((): MapFormValues => {
+  const defaultValues: MapFormValues = (() => {
     if (mapId && map.data) {
       return {
         name: map.data.name || '',
@@ -110,7 +110,7 @@ export function MapForm({
       }
     }
     return defaultMapFormValues
-  }, [mapId, map.data])
+  })()
 
   const form = useForm({
     defaultValues,

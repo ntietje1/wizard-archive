@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -60,21 +60,18 @@ export function WikiLinkClickHandler({
     { errorMessage: 'Failed to create note' },
   )
 
-  const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
+  const hideTooltip = () => setTooltip(HIDDEN_TOOLTIP)
 
-  const showTooltipFor = useCallback(
-    (link: ReturnType<typeof getWikiLinkAt>) => {
-      if (!link || link.exists || !link.itemName) return
-      const rect = link.element.getBoundingClientRect()
-      setTooltip({
-        show: true,
-        text: link.itemName,
-        x: rect.left,
-        y: rect.bottom + 4,
-      })
-    },
-    [],
-  )
+  const showTooltipFor = (link: ReturnType<typeof getWikiLinkAt>) => {
+    if (!link || link.exists || !link.itemName) return
+    const rect = link.element.getBoundingClientRect()
+    setTooltip({
+      show: true,
+      text: link.itemName,
+      x: rect.left,
+      y: rect.bottom + 4,
+    })
+  }
 
   // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {

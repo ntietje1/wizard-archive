@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SHARE_STATUS } from 'convex/blockShares/types'
 
@@ -42,34 +41,32 @@ export function useFilteredNoteContent(note: NoteWithContent): {
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useAllSidebarItems()
 
-  return useMemo(() => {
-    const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 
-    if (effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, permOpts)) {
-      return { content: note.content, isViewOnly: false }
-    }
+  if (effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, permOpts)) {
+    return { content: note.content, isViewOnly: false }
+  }
 
-    // View-only: filter blocks based on context
-    if (isDm && viewAsPlayerId) {
-      // DM view-as: use block shareStatus to determine visibility for viewed player
-      return {
-        content: note.content.filter((block) => {
-          const meta = note.blockMeta[block.id]
-          if (!meta) return true
-          return canViewBlock(meta, viewAsPlayerId)
-        }),
-        isViewOnly: true,
-      }
-    }
-
-    // Regular player: use backend-computed myPermissionLevel per block
+  // View-only: filter blocks based on context
+  if (isDm && viewAsPlayerId) {
+    // DM view-as: use block shareStatus to determine visibility for viewed player
     return {
       content: note.content.filter((block) => {
         const meta = note.blockMeta[block.id]
         if (!meta) return true
-        return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
+        return canViewBlock(meta, viewAsPlayerId)
       }),
       isViewOnly: true,
     }
-  }, [note, isDm, viewAsPlayerId, itemsMap])
+  }
+
+  // Regular player: use backend-computed myPermissionLevel per block
+  return {
+    content: note.content.filter((block) => {
+      const meta = note.blockMeta[block.id]
+      if (!meta) return true
+      return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
+    }),
+    isViewOnly: true,
+  }
 }
