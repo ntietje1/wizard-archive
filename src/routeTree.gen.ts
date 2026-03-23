@@ -24,7 +24,6 @@ import { Route as AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from '
 import { Route as AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/route'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/settings/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/$playerId'
@@ -108,12 +107,6 @@ const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
     path: '/editor',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute =
-  AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRouteImport.update({
-    id: '/settings/',
-    path: '/settings/',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
-  } as any)
 const AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute =
   AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport.update({
     id: '/',
@@ -153,7 +146,6 @@ export interface FileRoutesByFullPath {
   '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
   '/campaigns/$dmUsername/$campaignSlug/players/': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/settings/': typeof AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -169,7 +161,6 @@ export interface FileRoutesByTo {
   '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
   '/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/settings': typeof AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -191,7 +182,6 @@ export interface FileRoutesById {
   '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/players/': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/settings/': typeof AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -213,7 +203,6 @@ export interface FileRouteTypes {
     | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/editor/'
     | '/campaigns/$dmUsername/$campaignSlug/players/'
-    | '/campaigns/$dmUsername/$campaignSlug/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -229,7 +218,6 @@ export interface FileRouteTypes {
     | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/editor'
     | '/campaigns/$dmUsername/$campaignSlug/players'
-    | '/campaigns/$dmUsername/$campaignSlug/settings'
   id:
     | '__root__'
     | '/'
@@ -250,7 +238,6 @@ export interface FileRouteTypes {
     | '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/players/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -372,13 +359,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/settings/': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/settings/'
-      path: '/settings'
-      fullPath: '/campaigns/$dmUsername/$campaignSlug/settings/'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
-    }
     '/_authed/campaigns/$dmUsername/$campaignSlug/players/': {
       id: '/_authed/campaigns/$dmUsername/$campaignSlug/players/'
       path: '/'
@@ -440,7 +420,6 @@ interface AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
   AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute
 }
 
 const AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren =
@@ -451,8 +430,6 @@ const AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AuthedCampaignsDm
       AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren,
     AuthedCampaignsDmUsernameCampaignSlugIndexRoute:
       AuthedCampaignsDmUsernameCampaignSlugIndexRoute,
-    AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute:
-      AuthedCampaignsDmUsernameCampaignSlugSettingsIndexRoute,
   }
 
 const AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren =
