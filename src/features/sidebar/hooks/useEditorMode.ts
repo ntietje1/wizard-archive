@@ -10,7 +10,7 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
 export interface EditorModeContextType {
   editorMode: EditorMode

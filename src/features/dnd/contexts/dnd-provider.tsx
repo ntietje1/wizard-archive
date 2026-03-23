@@ -29,7 +29,8 @@ import {
   useAllSidebarItems,
   useTrashedSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { processDataTransferItems } from '~/features/file-upload/utils/folder-reader'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 
@@ -120,13 +121,11 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     useAllSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashedSidebarItems()
 
-  const setSidebarDragTargetId = useSidebarUIStore(
-    (s) => s.setSidebarDragTargetId,
-  )
-  const setDragOutcome = useSidebarUIStore((s) => s.setDragOutcome)
-  const setFileDragHoveredId = useSidebarUIStore((s) => s.setFileDragHoveredId)
-  const setIsDraggingFiles = useSidebarUIStore((s) => s.setIsDraggingFiles)
-  const setIsDraggingElement = useSidebarUIStore((s) => s.setIsDraggingElement)
+  const setSidebarDragTargetId = useDndStore((s) => s.setSidebarDragTargetId)
+  const setDragOutcome = useDndStore((s) => s.setDragOutcome)
+  const setFileDragHoveredId = useDndStore((s) => s.setFileDragHoveredId)
+  const setIsDraggingFiles = useDndStore((s) => s.setIsDraggingFiles)
+  const setIsDraggingElement = useDndStore((s) => s.setIsDraggingElement)
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 

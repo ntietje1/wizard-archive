@@ -21,7 +21,7 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { Button } from '~/features/shadcn/components/button'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 
@@ -78,8 +78,8 @@ function EmptyEditorContent() {
     canAcceptFiles: true,
   })
 
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
 
   return (

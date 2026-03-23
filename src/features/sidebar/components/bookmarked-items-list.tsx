@@ -5,7 +5,7 @@ import {
   useFilteredSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
 export function BookmarkedItemsList() {
   const { data: filteredItems, status } = useFilteredSidebarItems()

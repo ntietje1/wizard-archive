@@ -8,7 +8,7 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useAllSidebarItems,

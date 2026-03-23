@@ -3,7 +3,7 @@ import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -18,14 +18,12 @@ export function DroppableSidebarItem({
 
   useSidebarItemDropTarget({ ref, item })
 
-  const isDirectTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === item._id,
-  )
-  const isTrashAction = useSidebarUIStore(
+  const isDirectTarget = useDndStore((s) => s.sidebarDragTargetId === item._id)
+  const isTrashAction = useDndStore(
     (s) =>
       s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
+  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
 
   useExternalDropTarget({
     ref,
@@ -33,7 +31,7 @@ export function DroppableSidebarItem({
     canAcceptFiles: canDropFilesOnTarget(item),
   })
 
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDirectTarget = isDraggingFiles && fileDragHoveredId === item._id
 
   const isHighlighted = isDirectTarget || isFileDirectTarget

@@ -10,7 +10,7 @@ import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItem
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
 interface CreateNewButtonProps {
   icon: LucideIcon

@@ -4,7 +4,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useCampaignSidebarActions,
   useCampaignSidebarState,
-} from '~/stores/sidebarUIStore'
+} from '~/features/sidebar/stores/sidebar-ui-store'
 
 export function BookmarksFilterButton() {
   const { campaignId } = useCampaign()

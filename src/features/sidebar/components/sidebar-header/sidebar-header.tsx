@@ -5,7 +5,7 @@ import { SortMenu } from './sort-menu'
 import { BookmarksFilterButton } from './bookmarks-filter-button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
+import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-store'
 
 export function SidebarHeader() {
   const { campaignId } = useCampaign()

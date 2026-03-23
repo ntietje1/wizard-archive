@@ -4,7 +4,7 @@ import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 interface DroppableFolderZoneProps {
   folder: Folder
@@ -21,10 +21,8 @@ export function DroppableFolderZone({
 
   useSidebarItemDropTarget({ ref, item: folder })
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === folder._id,
-  )
-  const isTrashAction = useSidebarUIStore(
+  const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
+  const isTrashAction = useDndStore(
     (s) =>
       s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
@@ -35,8 +33,8 @@ export function DroppableFolderZone({
     canAcceptFiles: canDropFilesOnTarget(folder),
   })
 
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
   const activeHighlight =

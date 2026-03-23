@@ -3,7 +3,7 @@ import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignSidebarState } from '~/stores/sidebarUIStore'
+import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export function FileSidebar() {

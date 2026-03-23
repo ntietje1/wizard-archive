@@ -14,7 +14,7 @@ import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useEditorNavigationContext } from '~/features/sidebar/hooks/useEditorNavigationContext'
 import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
 

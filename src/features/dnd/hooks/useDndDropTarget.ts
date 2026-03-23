@@ -1,5 +1,5 @@
 import { useDroppable } from '~/features/dnd/hooks/useDroppable'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 /**
  * Unified drop target hook for all DnD zones.
@@ -24,9 +24,7 @@ export function useDndDropTarget<T extends Record<string, unknown>>({
     data,
   })
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === highlightId,
-  )
+  const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === highlightId)
 
   return { isDropTarget }
 }

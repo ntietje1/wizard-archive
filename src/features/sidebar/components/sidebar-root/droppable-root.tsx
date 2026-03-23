@@ -4,7 +4,7 @@ import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 interface DroppableRootProps {
   children: React.ReactNode
@@ -28,8 +28,8 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
     canAcceptFiles: canDropFilesOnTarget(rootTargetData),
   })
 
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
 
   return (

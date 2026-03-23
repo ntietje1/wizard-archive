@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { getTypeAndSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 
 interface TypeAndSlug {

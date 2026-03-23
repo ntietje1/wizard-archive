@@ -10,7 +10,7 @@ import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
@@ -23,7 +23,7 @@ export function TrashPageViewer() {
     data: { type: TRASH_DROP_ZONE_TYPE },
     highlightId: TRASH_DROP_ZONE_TYPE,
   })
-  const isTrashDrag = useSidebarUIStore(
+  const isTrashDrag = useDndStore(
     (s) =>
       isDropTarget &&
       s.dragOutcome?.type === 'operation' &&

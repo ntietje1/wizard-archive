@@ -16,7 +16,7 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 
 const H = 140
@@ -144,10 +144,8 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   const isSelected = useIsSelectedItem(folder)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const isDropTarget = useSidebarUIStore(
-    (s) => s.sidebarDragTargetId === folder._id,
-  )
-  const isTrashAction = useSidebarUIStore(
+  const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
+  const isTrashAction = useDndStore(
     (s) =>
       s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
@@ -172,8 +170,8 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
     canAcceptFiles: canDropFilesOnTarget(folder),
   })
 
-  const isDraggingFiles = useSidebarUIStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useSidebarUIStore((s) => s.fileDragHoveredId)
+  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
+  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
   const dropState: DropState =

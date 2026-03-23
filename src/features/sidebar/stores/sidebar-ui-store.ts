@@ -6,7 +6,6 @@ import type {
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import type { DropOutcome } from '~/features/dnd/utils/dnd-registry'
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -15,16 +14,8 @@ interface CampaignState {
 }
 
 interface SidebarUIState {
-  // Campaign-scoped (persisted)
   campaignStates: Record<string, CampaignState>
-
-  // Transient
   renamingId: SidebarItemId | null
-  sidebarDragTargetId: string | null
-  dragOutcome: DropOutcome | null
-  fileDragHoveredId: Id<'folders'> | null
-  isDraggingFiles: boolean
-  isDraggingElement: boolean
   pendingItemName: string
   selectedType: SidebarItemType | null
   selectedSlug: string | null
@@ -43,11 +34,6 @@ interface SidebarUIActions {
   toggleCloseAllFoldersMode: (campaignId: string) => void
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
-  setSidebarDragTargetId: (id: string | null) => void
-  setDragOutcome: (outcome: DropOutcome | null) => void
-  setFileDragHoveredId: (id: Id<'folders'> | null) => void
-  setIsDraggingFiles: (isDragging: boolean) => void
-  setIsDraggingElement: (isDragging: boolean) => void
   setPendingItemName: (name: string) => void
   setSelected: (type: SidebarItemType | null, slug: string | null) => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
@@ -83,22 +69,13 @@ function updateCampaignState(
 export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
   persist(
     (set) => ({
-      // Campaign-scoped (persisted)
       campaignStates: {},
-
-      // Transient
       renamingId: null,
-      sidebarDragTargetId: null,
-      dragOutcome: null,
-      fileDragHoveredId: null,
-      isDraggingFiles: false,
-      isDraggingElement: false,
       pendingItemName: '',
       selectedType: null,
       selectedSlug: null,
       viewAsPlayerId: null,
 
-      // Actions
       setRenamingId: (id) => set({ renamingId: id }),
 
       setFolderState: (campaignId, folderId, isOpen) =>
@@ -149,16 +126,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           }))
         }),
 
-      setSidebarDragTargetId: (id) =>
-        set((state) => {
-          if (state.sidebarDragTargetId === id) return state
-          return { sidebarDragTargetId: id }
-        }),
-      setDragOutcome: (outcome) => set({ dragOutcome: outcome }),
-      setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
-      setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
-      setIsDraggingElement: (isDragging) =>
-        set({ isDraggingElement: isDragging }),
       setPendingItemName: (name) => set({ pendingItemName: name }),
 
       setSelected: (type, slug) =>

@@ -31,7 +31,7 @@ import { useMapView } from '~/features/editor/hooks/useMapView'
 import { MapViewProvider } from '~/features/editor/contexts/map-view-context'
 import { ZoomControls } from '~/features/editor/components/viewer/zoom-controls'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import { useSidebarUIStore } from '~/stores/sidebarUIStore'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -302,7 +302,7 @@ export function MapViewer({
     data: mapDropData,
     highlightId: `map:${map._id}`,
   })
-  const mapDragOutcome = useSidebarUIStore((s) =>
+  const mapDragOutcome = useDndStore((s) =>
     isMapDropTarget ? s.dragOutcome : null,
   )
 
