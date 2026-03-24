@@ -17,7 +17,7 @@ import {
  */
 function SettingsBackdrop() {
   return (
-    <div className="fixed inset-0 z-50 bg-foreground/70 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in-0 duration-100" />
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in-0 duration-100" />
   )
 }
 

@@ -67,7 +67,7 @@ export function MembersSection({
                     <DropdownMenuContent>
                       <DropdownMenuItem
                         variant="destructive"
-                        onSelect={() => onRemovePlayer(player._id)}
+                        onClick={() => onRemovePlayer(player._id)}
                       >
                         <Trash2 />
                         Remove

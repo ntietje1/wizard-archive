@@ -11,10 +11,10 @@ import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
+import { RemovePlayerDialog } from './components/remove-player-dialog'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { PlayerDeleteConfirmDialog } from '~/features/players/components/player-delete-confirm-dialog'
 import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
@@ -144,13 +144,11 @@ export function PeopleTab() {
         </>
       )}
 
-      {deletingPlayer && (
-        <PlayerDeleteConfirmDialog
-          player={deletingPlayer}
-          isDeleting={!!deletingMemberId}
-          onClose={() => setDeletingMemberId(null)}
-        />
-      )}
+      <RemovePlayerDialog
+        player={deletingPlayer}
+        isOpen={!!deletingMemberId}
+        onClose={() => setDeletingMemberId(null)}
+      />
     </div>
   )
 }
