@@ -100,7 +100,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="px-3 pt-3 pb-2">
+      <div className="px-3 py-2">
         <div className="text-sm font-medium truncate">
           {campaign.data?.name ?? 'Campaign'}
         </div>

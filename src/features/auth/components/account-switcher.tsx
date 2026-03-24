@@ -6,16 +6,45 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '~/features/shadcn/components/avatar'
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '~/features/shadcn/components/dropdown-menu'
 import { getInitials } from '~/shared/utils/get-initials'
 
 type AccountSwitcherProps = {
   otherAccounts: Array<DeviceSession>
   onAddAccount: () => void
   onSwitch: (sessionToken: string) => Promise<void>
+}
+
+const menuItemClass =
+  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer hover:bg-muted/70'
+
+export function AccountRow({
+  name,
+  subtitle,
+  imageUrl,
+  fallback,
+  rightSlot,
+}: {
+  name?: string | null
+  subtitle: string
+  imageUrl?: string | null
+  fallback: string
+  rightSlot?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2.5 w-full">
+      <Avatar size="default">
+        {imageUrl && <AvatarImage src={imageUrl} alt={name ?? ''} />}
+        <AvatarFallback>{fallback}</AvatarFallback>
+      </Avatar>
+      <div className="flex flex-col min-w-0 flex-1">
+        {name && <span className="text-sm font-medium truncate">{name}</span>}
+        <span className="text-xs text-muted-foreground truncate">
+          {subtitle}
+        </span>
+      </div>
+      {rightSlot}
+    </div>
+  )
 }
 
 export function AccountSwitcher({
@@ -40,64 +69,46 @@ export function AccountSwitcher({
   if (otherAccounts.length === 0) {
     return (
       <>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.preventDefault()
-            onAddAccount()
-          }}
-        >
+        <div className="border-t my-1" />
+        <button type="button" className={menuItemClass} onClick={onAddAccount}>
           <Plus className="size-4" />
           Add another account
-        </DropdownMenuItem>
+        </button>
       </>
     )
   }
 
   return (
     <>
-      <DropdownMenuSeparator />
+      <div className="border-t my-1" />
       {otherAccounts.map((ds) => {
         const isSwitching = switching === ds.session.token
         return (
-          <DropdownMenuItem
+          <button
             key={ds.session.token}
+            type="button"
+            className={menuItemClass}
             onClick={() => handleSwitch(ds.session.token)}
             disabled={switching !== null}
           >
-            <div className="flex items-center gap-2.5 w-full">
-              <Avatar size="sm">
-                {ds.user.image && (
-                  <AvatarImage src={ds.user.image} alt={ds.user.name} />
-                )}
-                <AvatarFallback>
-                  {getInitials(ds.user.name, ds.user.email)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-medium truncate">
-                  {ds.user.name}
-                </span>
-                <span className="text-xs text-muted-foreground truncate">
-                  {ds.user.email}
-                </span>
-              </div>
-              {isSwitching && (
-                <Loader2 className="size-3.5 animate-spin shrink-0" />
-              )}
-            </div>
-          </DropdownMenuItem>
+            <AccountRow
+              name={ds.user.name}
+              subtitle={ds.user.email}
+              imageUrl={ds.user.image}
+              fallback={getInitials(ds.user.name, ds.user.email)}
+              rightSlot={
+                isSwitching ? (
+                  <Loader2 className="size-3.5 animate-spin shrink-0" />
+                ) : undefined
+              }
+            />
+          </button>
         )
       })}
-      <DropdownMenuItem
-        onClick={(e) => {
-          e.preventDefault()
-          onAddAccount()
-        }}
-      >
+      <button type="button" className={menuItemClass} onClick={onAddAccount}>
         <Plus className="size-4" />
         Add another account
-      </DropdownMenuItem>
+      </button>
     </>
   )
 }
