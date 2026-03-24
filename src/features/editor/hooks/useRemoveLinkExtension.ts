@@ -30,10 +30,6 @@ export function useRemoveLinkExtension(
 
       if (linkExtension) {
         // Get all plugins from the Link extension
-        const linkPluginKeys = linkExtension.storage?.linkPluginKey
-          ? [linkExtension.storage.linkPluginKey]
-          : []
-
         // Try to find link-related plugins by name pattern
         const state = tiptapEditor.view.state
         const linkPlugins = state.plugins.filter((plugin) => {

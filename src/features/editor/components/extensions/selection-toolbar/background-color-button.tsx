@@ -35,7 +35,7 @@ export const BackgroundColorButton = () => {
 
   const setBackgroundColor = (color: string) => {
     if (color === 'default') {
-      editor.removeStyles({ backgroundColor: 'default' })
+      editor.removeStyles({ backgroundColor: undefined })
     } else {
       editor.addStyles({ backgroundColor: color })
     }

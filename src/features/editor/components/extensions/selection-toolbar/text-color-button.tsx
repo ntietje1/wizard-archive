@@ -33,7 +33,7 @@ export const TextColorButton = () => {
 
   const setTextColor = (color: string) => {
     if (color === 'default') {
-      editor.removeStyles({ textColor: 'default' })
+      editor.removeStyles({ textColor: undefined })
     } else {
       editor.addStyles({ textColor: color })
     }
