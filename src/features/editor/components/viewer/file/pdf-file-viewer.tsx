@@ -168,7 +168,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
       setScale((s) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s + delta)))
     }
 
-    el.addEventListener('wheel', handleWheel, { passive: false })
+    el.addEventListener('wheel', handleWheel, { passive: true })
     return () => el.removeEventListener('wheel', handleWheel)
   }, [])
 
