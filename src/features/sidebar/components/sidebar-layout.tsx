@@ -4,7 +4,7 @@ import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
 import { SidebarWrapper } from './sidebar-toolbar/sidebar-toolbar'
 import { NAV_COLUMN_WIDTH } from './sidebar-toolbar/constants'
-import { SessionPanel } from '~/features/sidebar/components/session-panel/session-panel'
+import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
 import {
   ResizablePanel,
   ResizablePanelGroup,
@@ -42,7 +42,7 @@ const SidebarContent = memo(function SidebarContent() {
             <TrashButton />
           </div>
           <div className="shrink-0 border-t" />
-          <SessionPanel />
+          <CampaignPanel />
         </ResizablePanelGroup>
       </EditorContextMenu>
     </div>

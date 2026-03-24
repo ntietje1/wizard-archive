@@ -76,7 +76,6 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
 
   const handleItemClick = (item: AnySidebarItem) => {
     setLastSelectedItem({ type: item.type, slug: item.slug })
-    onClose()
   }
 
   const getDeletionTimeLabel = (item: AnySidebarItem) => {
