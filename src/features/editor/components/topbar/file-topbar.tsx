@@ -51,7 +51,7 @@ export function FileTopbar() {
       item={item ?? undefined}
       isTrashView={isTrashView}
     >
-      <div className="flex items-center px-4 pt-1 h-10 shrink-0 w-full min-w-0 overflow-hidden gap-4">
+      <div className="flex items-center py-0.5 px-2 shrink-0 w-full min-w-0 overflow-hidden gap-4">
         <div
           className={cn(
             'flex-1 min-w-0',
