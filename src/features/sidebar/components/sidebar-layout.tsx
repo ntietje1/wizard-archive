@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from 'react'
+import { memo, useRef } from 'react'
 import { FileSidebar } from './sidebar'
 import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
@@ -59,8 +59,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   } = useSidebarLayout()
 
   const handleRef = useRef<HTMLDivElement>(null)
+  const outerRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
   const dragWidthRef = useRef(sidebarWidth)
-  const [dragDisplayWidth, setDragDisplayWidth] = useState<number | null>(null)
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isSidebarExpanded || !isUserPreferencesLoaded) return
@@ -78,11 +79,18 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       const rawWidth = startWidth + delta
       dragWidthRef.current = rawWidth
 
-      if (rawWidth < SNAP_CLOSED_THRESHOLD) {
-        setDragDisplayWidth(0)
-      } else {
-        setDragDisplayWidth(Math.max(SIDEBAR_MIN_WIDTH, rawWidth))
-      }
+      const displayWidth =
+        rawWidth < SNAP_CLOSED_THRESHOLD
+          ? 0
+          : Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
+      const contentWidth = displayWidth > 0 ? displayWidth : startWidth
+
+      const totalDisplay = displayWidth + NAV_COLUMN_WIDTH
+      const totalContent = contentWidth + NAV_COLUMN_WIDTH
+
+      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
+      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
+      if (handleRef.current) handleRef.current.style.left = `${totalDisplay}px`
     }
 
     const handleMouseUp = () => {
@@ -99,30 +107,31 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
       }
 
-      setDragDisplayWidth(null)
+      outerRef.current?.style.removeProperty('width')
+      innerRef.current?.style.removeProperty('width')
+      handleRef.current?.style.removeProperty('left')
     }
 
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  const contentPanelWidth =
-    dragDisplayWidth ?? (isSidebarExpanded ? sidebarWidth : 0)
-  const innerContentWidth =
-    dragDisplayWidth !== null && dragDisplayWidth > 0
-      ? dragDisplayWidth
-      : sidebarWidth
-
+  const contentPanelWidth = isSidebarExpanded ? sidebarWidth : 0
   const totalDisplayWidth = contentPanelWidth + NAV_COLUMN_WIDTH
-  const totalContentWidth = innerContentWidth + NAV_COLUMN_WIDTH
+  const totalContentWidth = sidebarWidth + NAV_COLUMN_WIDTH
 
   return (
     <div className="relative flex flex-1 min-h-0 min-w-0">
       <div
+        ref={outerRef}
         className="shrink-0 overflow-hidden border-r"
         style={{ width: totalDisplayWidth }}
       >
-        <div className="h-full" style={{ width: totalContentWidth }}>
+        <div
+          ref={innerRef}
+          className="h-full"
+          style={{ width: totalContentWidth }}
+        >
           <SidebarWrapper>
             <SidebarContent />
           </SidebarWrapper>
