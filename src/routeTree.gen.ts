@@ -22,11 +22,10 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as JoinDmUsernameCampaignSlugIndexRouteImport } from './routes/join.$dmUsername.$campaignSlug/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/index'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/route'
+import { Route as AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/scene/route'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/route'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/index'
+import { Route as AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/scene/index'
 import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/players/$playerId'
 
 const SignUpRouteRoute = SignUpRouteRouteImport.update({
   id: '/sign-up',
@@ -95,10 +94,10 @@ const AuthedCampaignsDmUsernameCampaignSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute =
-  AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteImport.update({
-    id: '/players',
-    path: '/players',
+const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute =
+  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport.update({
+    id: '/scene',
+    path: '/scene',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
 const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
@@ -107,25 +106,17 @@ const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
     path: '/editor',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute =
-  AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport.update({
+const AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute =
+  AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () =>
-      AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute,
+    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute,
   } as any)
 const AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
   AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute,
-  } as any)
-const AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute =
-  AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRouteImport.update({
-    id: '/$playerId',
-    path: '/$playerId',
-    getParentRoute: () =>
-      AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -141,11 +132,10 @@ export interface FileRoutesByFullPath {
   '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
   '/join/$dmUsername/$campaignSlug/': typeof JoinDmUsernameCampaignSlugIndexRoute
   '/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  '/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
+  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
   '/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/players/': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/scene/': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,9 +148,8 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AuthedCampaignsIndexRoute
   '/join/$dmUsername/$campaignSlug': typeof JoinDmUsernameCampaignSlugIndexRoute
   '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,11 +166,10 @@ export interface FileRoutesById {
   '/_authed/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
   '/join/$dmUsername/$campaignSlug/': typeof JoinDmUsernameCampaignSlugIndexRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  '/_authed/campaigns/$dmUsername/$campaignSlug/players': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
+  '/_authed/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
   '/_authed/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
   '/_authed/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/players/': typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
+  '/_authed/campaigns/$dmUsername/$campaignSlug/scene/': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,11 +186,10 @@ export interface FileRouteTypes {
     | '/campaigns/$dmUsername/$campaignSlug'
     | '/join/$dmUsername/$campaignSlug/'
     | '/campaigns/$dmUsername/$campaignSlug/editor'
-    | '/campaigns/$dmUsername/$campaignSlug/players'
+    | '/campaigns/$dmUsername/$campaignSlug/scene'
     | '/campaigns/$dmUsername/$campaignSlug/'
-    | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/editor/'
-    | '/campaigns/$dmUsername/$campaignSlug/players/'
+    | '/campaigns/$dmUsername/$campaignSlug/scene/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -215,9 +202,8 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/join/$dmUsername/$campaignSlug'
     | '/campaigns/$dmUsername/$campaignSlug'
-    | '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/campaigns/$dmUsername/$campaignSlug/editor'
-    | '/campaigns/$dmUsername/$campaignSlug/players'
+    | '/campaigns/$dmUsername/$campaignSlug/scene'
   id:
     | '__root__'
     | '/'
@@ -233,11 +219,10 @@ export interface FileRouteTypes {
     | '/_authed/campaigns/$dmUsername/$campaignSlug'
     | '/join/$dmUsername/$campaignSlug/'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/editor'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/players'
+    | '/_authed/campaigns/$dmUsername/$campaignSlug/scene'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId'
     | '/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/players/'
+    | '/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -345,11 +330,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/players': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/players'
-      path: '/players'
-      fullPath: '/campaigns/$dmUsername/$campaignSlug/players'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteImport
+    '/_authed/campaigns/$dmUsername/$campaignSlug/scene': {
+      id: '/_authed/campaigns/$dmUsername/$campaignSlug/scene'
+      path: '/scene'
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/scene'
+      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
     '/_authed/campaigns/$dmUsername/$campaignSlug/editor': {
@@ -359,12 +344,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/players/': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/players/'
+    '/_authed/campaigns/$dmUsername/$campaignSlug/scene/': {
+      id: '/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
       path: '/'
-      fullPath: '/campaigns/$dmUsername/$campaignSlug/players/'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute
+      fullPath: '/campaigns/$dmUsername/$campaignSlug/scene/'
+      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport
+      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute
     }
     '/_authed/campaigns/$dmUsername/$campaignSlug/editor/': {
       id: '/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
@@ -372,13 +357,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/campaigns/$dmUsername/$campaignSlug/editor/'
       preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport
       parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute
-    }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/players/$playerId'
-      path: '/$playerId'
-      fullPath: '/campaigns/$dmUsername/$campaignSlug/players/$playerId'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute
     }
   }
 }
@@ -398,27 +376,24 @@ const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren =
     AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren,
   )
 
-interface AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteChildren {
-  AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute
-  AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute
+interface AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren {
+  AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 
-const AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteChildren =
+const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren =
   {
-    AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute:
-      AuthedCampaignsDmUsernameCampaignSlugPlayersPlayerIdRoute,
-    AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute:
-      AuthedCampaignsDmUsernameCampaignSlugPlayersIndexRoute,
+    AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute:
+      AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute,
   }
 
-const AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren =
-  AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute._addFileChildren(
-    AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteChildren,
+const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren =
+  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute._addFileChildren(
+    AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren,
   )
 
 interface AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
   AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren
+  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
   AuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
 }
 
@@ -426,8 +401,8 @@ const AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AuthedCampaignsDm
   {
     AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute:
       AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren,
-    AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRoute:
-      AuthedCampaignsDmUsernameCampaignSlugPlayersRouteRouteWithChildren,
+    AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute:
+      AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren,
     AuthedCampaignsDmUsernameCampaignSlugIndexRoute:
       AuthedCampaignsDmUsernameCampaignSlugIndexRoute,
   }

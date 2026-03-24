@@ -71,7 +71,7 @@ export function JoinCampaignPage() {
 
   const goToPlayers = () => {
     navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug/players',
+      to: '/campaigns/$dmUsername/$campaignSlug',
       params: { dmUsername, campaignSlug },
     })
   }

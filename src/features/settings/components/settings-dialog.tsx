@@ -8,9 +8,11 @@ import {
   Smile,
   Users,
 } from 'lucide-react'
+import { useMatch } from '@tanstack/react-router'
 import { useSettingsStore } from '../hooks/settings-store'
-import { ProfileTab } from './tabs/profile-tab'
-import { PreferencesTab } from './tabs/preferences-tab'
+import { ProfileTab } from './tabs/account-profile/profile-tab'
+import { PreferencesTab } from './tabs/account-preferences/preferences-tab'
+import { PeopleTab } from './tabs/campaign-people/people-tab'
 import { StubTab } from './tabs/stub-tab'
 import type { SettingsTab } from '../hooks/settings-store'
 import type { LucideIcon } from 'lucide-react'
@@ -43,30 +45,30 @@ type TabGroup = {
   tabs: Array<TabDefinition>
 }
 
-const tabGroups: Array<TabGroup> = [
-  {
-    label: 'Account',
-    tabs: [
-      { id: 'preferences', label: 'Preferences', icon: Paintbrush },
-      { id: 'billing', label: 'Billing', icon: CreditCard },
-    ],
-  },
-  {
-    label: 'Campaign',
-    tabs: [
-      { id: 'campaign-general', label: 'General', icon: Settings },
-      { id: 'campaign-people', label: 'People', icon: Users },
-      { id: 'campaign-import', label: 'Import', icon: Import },
-    ],
-  },
-  {
-    label: 'Features',
-    tabs: [
-      { id: 'emoji', label: 'Emoji', icon: Smile },
-      { id: 'connections', label: 'Connections', icon: Cable },
-    ],
-  },
-]
+const accountGroup: TabGroup = {
+  label: 'Account',
+  tabs: [
+    { id: 'preferences', label: 'Preferences', icon: Paintbrush },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
+  ],
+}
+
+const campaignGroup: TabGroup = {
+  label: 'Campaign',
+  tabs: [
+    { id: 'campaign-general', label: 'General', icon: Settings },
+    { id: 'campaign-people', label: 'People', icon: Users },
+    { id: 'campaign-import', label: 'Import', icon: Import },
+  ],
+}
+
+const featuresGroup: TabGroup = {
+  label: 'Features',
+  tabs: [
+    { id: 'emoji', label: 'Emoji', icon: Smile },
+    { id: 'connections', label: 'Connections', icon: Cable },
+  ],
+}
 
 const tabContent: Record<SettingsTab, React.ReactNode> = {
   profile: <ProfileTab />,
@@ -87,14 +89,7 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
       icon={Settings}
     />
   ),
-  'campaign-people': (
-    <StubTab
-      category="Campaign"
-      title="People"
-      description="Manage players, invitations, and role assignments"
-      icon={Users}
-    />
-  ),
+  'campaign-people': <PeopleTab />,
   'campaign-import': (
     <StubTab
       category="Campaign"
@@ -124,6 +119,21 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
 export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsStore()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const campaignMatch = useMatch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug',
+    shouldThrow: false,
+  })
+  const isInCampaign = !!campaignMatch
+
+  const tabGroups: Array<TabGroup> = [
+    accountGroup,
+    ...(isInCampaign ? [campaignGroup] : []),
+    featuresGroup,
+  ]
+
+  const isCampaignTab = activeTab.startsWith('campaign-')
+  const resolvedTab = isCampaignTab && !isInCampaign ? 'profile' : activeTab
+
   const profile = profileQuery.data
 
   return (
@@ -193,8 +203,8 @@ export function SettingsDialog() {
 
         {/* Right content */}
         <ScrollArea className="flex-1 min-h-0">
-          <ErrorBoundary FallbackComponent={ErrorFallback} key={activeTab}>
-            <div className="p-6">{tabContent[activeTab]}</div>
+          <ErrorBoundary FallbackComponent={ErrorFallback} key={resolvedTab}>
+            <div className="p-6">{tabContent[resolvedTab]}</div>
           </ErrorBoundary>
         </ScrollArea>
       </DialogContent>
