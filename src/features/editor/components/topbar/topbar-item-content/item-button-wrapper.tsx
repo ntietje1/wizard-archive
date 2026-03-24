@@ -13,8 +13,8 @@ export const ItemButtonWrapper = ({
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
       {children}
-      {!isTrashView && <ShareButton />}
-      {!isTrashView && <ViewAsPlayerButton />}
+      <ShareButton />
+      <ViewAsPlayerButton />
       <ContextMenuButton isTrashView={isTrashView} />
     </div>
   )

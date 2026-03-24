@@ -91,6 +91,7 @@ function UserMenuBase() {
 
   return (
     <DropdownMenu
+      modal={false}
       onOpenChange={(open) => {
         if (open) deviceSessions.refresh()
       }}
@@ -109,7 +110,12 @@ function UserMenuBase() {
           </button>
         }
       />
-      <DropdownMenuContent align="end" sideOffset={8} className="min-w-56">
+      <DropdownMenuContent
+        side="right"
+        align="end"
+        sideOffset={8}
+        className="min-w-56"
+      >
         <DropdownMenuGroup>
           <DropdownMenuLabel>
             <div className="flex items-center gap-3">

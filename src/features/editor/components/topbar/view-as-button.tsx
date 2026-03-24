@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
-import { Button, buttonVariants } from '~/features/shadcn/components/button'
+import { buttonVariants } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -15,7 +15,6 @@ import {
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -24,7 +23,6 @@ const label = 'View as player'
 export const ViewAsPlayerButton = () => {
   const campaignMembersQuery = useCampaignMembers()
   const { isDm } = useCampaign()
-  const { item } = useCurrentItem()
   const playerMembers =
     campaignMembersQuery.data?.filter(
       (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
@@ -36,24 +34,6 @@ export const ViewAsPlayerButton = () => {
 
   if (!isDm) {
     return null
-  }
-
-  if (!item) {
-    return (
-      <EmptyContextMenu>
-        <TooltipButton tooltip={label} side="bottom">
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled
-            aria-label={label}
-            title={label}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </TooltipButton>
-      </EmptyContextMenu>
-    )
   }
 
   return (

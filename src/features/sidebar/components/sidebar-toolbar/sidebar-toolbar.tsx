@@ -29,7 +29,9 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
           <SceneNavButton />
           <CampaignPlayersButton />
           <div className="flex-1" />
-          <UserMenu />
+          <div className="shrink-0">
+            <UserMenu />
+          </div>
         </div>
         {isSidebarExpanded && <div className="w-[1px] bg-border" />}
         <div className={`flex-1 flex flex-col min-h-0 min-w-0 border-t`}>

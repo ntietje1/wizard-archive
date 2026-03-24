@@ -1,12 +1,11 @@
 import { useRef } from 'react'
-import { MoreVertical, X } from 'lucide-react'
+import { MoreVertical } from 'lucide-react'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 
 export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
   const { item } = useCurrentItem()
@@ -48,14 +47,5 @@ export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
     >
       {baseButton}
     </EditorContextMenu>
-  )
-}
-
-export function CloseButton() {
-  const { clearEditorContent } = useEditorNavigation()
-  return (
-    <Button variant="ghost" size="icon" onClick={clearEditorContent}>
-      <X className="h-4 w-4" />
-    </Button>
   )
 }
