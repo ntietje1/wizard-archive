@@ -11,6 +11,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { LazyMotion, domAnimation } from 'motion/react'
 import * as React from 'react'
 import { Toaster } from 'sonner'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
@@ -126,6 +127,10 @@ function RootDocument({
           <NavigationProgress />
           {children}
           <Toaster />
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-right"
+          />
           <TanStackRouterDevtools position="bottom-right" />
         </LazyMotion>
         <Scripts />
