@@ -22,10 +22,7 @@ export default [
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
-      'react-refresh/only-export-components': [
-        'error',
-        { allowConstantExport: true },
-      ],
+      'react-refresh/only-export-components': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       'no-shadow': ['warn', { allow: ['_'] }],
     },

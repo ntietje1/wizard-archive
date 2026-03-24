@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { ClientOnly, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { LogOut, Settings } from 'lucide-react'
@@ -42,12 +42,7 @@ function AvatarPlaceholder() {
   )
 }
 
-export function UserMenu() {
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  )
+function UserMenuBase() {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
   const openSettings = useSettingsStore((s) => s.open)
@@ -86,7 +81,7 @@ export function UserMenu() {
     }
   }
 
-  if (!mounted || !profile) {
+  if (!profile) {
     return <AvatarPlaceholder />
   }
 
@@ -161,5 +156,21 @@ export function UserMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+export function UserMenu() {
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
+  if (!mounted) {
+    return <AvatarPlaceholder />
+  }
+  return (
+    <ClientOnly>
+      <UserMenuBase />
+    </ClientOnly>
   )
 }

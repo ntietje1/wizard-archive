@@ -1,5 +1,4 @@
 import { Outlet } from '@tanstack/react-router'
-import { NavigationSidebar } from '../components/navigation-sidebar'
 import { CampaignNotFoundWrapper } from '../components/campaign-not-found'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
@@ -25,9 +24,6 @@ export function CampaignLayout() {
                   <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex flex-1 min-h-0">
                       <SidebarLayoutProvider>
-                        <ErrorBoundary FallbackComponent={ErrorFallback}>
-                          <NavigationSidebar />
-                        </ErrorBoundary>
                         <SidebarLayout>
                           <ErrorBoundary FallbackComponent={ErrorFallback}>
                             <Outlet />

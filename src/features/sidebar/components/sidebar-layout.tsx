@@ -2,7 +2,8 @@ import { memo, useRef, useState } from 'react'
 import { FileSidebar } from './sidebar'
 import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
-import { SidebarHeader } from '~/features/sidebar/components/sidebar-header/sidebar-header'
+import { SidebarWrapper } from './sidebar-toolbar/sidebar-toolbar'
+import { NAV_COLUMN_WIDTH } from './sidebar-toolbar/constants'
 import { SessionPanel } from '~/features/sidebar/components/session-panel/session-panel'
 import {
   ResizablePanel,
@@ -12,7 +13,7 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
-const SIDEBAR_MIN_WIDTH = 160
+const SIDEBAR_MIN_WIDTH = 164
 const SNAP_CLOSED_THRESHOLD = 50
 
 const SidebarContent = memo(function SidebarContent() {
@@ -24,7 +25,6 @@ const SidebarContent = memo(function SidebarContent() {
         viewContext="sidebar"
         className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden"
       >
-        <SidebarHeader />
         <ResizablePanelGroup
           direction="vertical"
           className="flex-1"
@@ -70,7 +70,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     const startWidth = sidebarWidth
     dragWidthRef.current = startWidth
 
-    handleRef.current?.classList.add('bg-primary/30')
+    handleRef.current?.classList.add('bg-primary')
+    handleRef.current?.classList.remove('hover:bg-border')
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX
@@ -85,7 +86,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     }
 
     const handleMouseUp = () => {
-      handleRef.current?.classList.remove('bg-primary/30')
+      handleRef.current?.classList.remove('bg-primary')
+      handleRef.current?.classList.add('hover:bg-border')
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
 
@@ -104,29 +106,32 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     document.addEventListener('mouseup', handleMouseUp)
   }
 
-  // During drag, use dragDisplayWidth; otherwise use actual state
-  const displayWidth =
+  const contentPanelWidth =
     dragDisplayWidth ?? (isSidebarExpanded ? sidebarWidth : 0)
-  const contentWidth =
+  const innerContentWidth =
     dragDisplayWidth !== null && dragDisplayWidth > 0
       ? dragDisplayWidth
       : sidebarWidth
 
+  const totalDisplayWidth = contentPanelWidth + NAV_COLUMN_WIDTH
+  const totalContentWidth = innerContentWidth + NAV_COLUMN_WIDTH
+
   return (
-    <div className="flex flex-1 min-h-0 min-w-0">
-      <div className="shrink-0 overflow-hidden" style={{ width: displayWidth }}>
-        <div
-          className="h-full flex flex-col border-r bg-background"
-          style={{ width: contentWidth }}
-        >
-          <SidebarContent />
+    <div className="relative flex flex-1 min-h-0 min-w-0">
+      <div
+        className="shrink-0 overflow-hidden border-r"
+        style={{ width: totalDisplayWidth }}
+      >
+        <div className="h-full" style={{ width: totalContentWidth }}>
+          <SidebarWrapper>
+            <SidebarContent />
+          </SidebarWrapper>
         </div>
       </div>
-
-      {/* Resize handle */}
       <div
         ref={handleRef}
-        className="w-1 shrink-0 cursor-col-resize hover:bg-primary/20 active:bg-primary/30"
+        className={`absolute top-0 h-full w-1 -ml-0.5 z-10 ${isSidebarExpanded ? 'cursor-col-resize hover:bg-border hover:transition-colors hover:duration-100 ease-out' : ''}`}
+        style={{ left: totalDisplayWidth }}
         onMouseDown={handleMouseDown}
       />
 
