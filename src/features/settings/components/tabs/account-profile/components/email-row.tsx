@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { validateEmail } from 'convex/users/validation'
 import { Loader2, Mail } from 'lucide-react'
@@ -38,26 +38,32 @@ function useOAuthProvider() {
   return query.data ?? null
 }
 
-export function EmailRow({ profile }: { profile: UserProfile }) {
-  const [isEditing, setIsEditing] = useState(false)
+function EmailChangeDialog({
+  profile,
+  onClose,
+}: {
+  profile: UserProfile
+  onClose: () => void
+}) {
   const [newEmail, setNewEmail] = useState('')
   const [sentTo, setSentTo] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const oauthProvider = useOAuthProvider()
 
   const trimmedEmail = newEmail.trim()
   const emailError = trimmedEmail ? validateEmail(trimmedEmail) : null
   const isUnchanged = trimmedEmail === profile.email
   const canSubmit = !emailError && !isUnchanged && !!trimmedEmail && !isLoading
 
-  useEffect(() => {
+  const [prevProfileEmail, setPrevProfileEmail] = useState(profile.email)
+  if (profile.email !== prevProfileEmail) {
+    setPrevProfileEmail(profile.email)
     if (sentTo && profile.email === sentTo) {
       toast.success('Email changed successfully')
-      setSentTo('')
-      setIsEditing(false)
+      onClose()
+      return null
     }
-  }, [profile.email, sentTo])
+  }
 
   const handleSave = async () => {
     if (!canSubmit) return
@@ -76,14 +82,64 @@ export function EmailRow({ profile }: { profile: UserProfile }) {
     setIsLoading(false)
   }
 
-  const handleClose = (open: boolean) => {
-    if (!open) {
-      setIsEditing(false)
-      setSentTo('')
-      setNewEmail('')
-      setError('')
-    }
+  if (sentTo) {
+    return (
+      <>
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <Mail className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">Check your new email inbox</p>
+            <p className="text-sm text-muted-foreground">
+              We sent a verification link to{' '}
+              <strong className="text-foreground">{sentTo}</strong>. Click the
+              link to complete the change.
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Done
+          </Button>
+        </DialogFooter>
+      </>
+    )
   }
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Change email</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="edit-email">New email address</Label>
+        <Input
+          id="edit-email"
+          type="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          disabled={isLoading}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+        />
+        {newEmail.trim() && emailError ? (
+          <p className="text-xs text-destructive">{emailError}</p>
+        ) : error ? (
+          <p className="text-xs text-destructive">{error}</p>
+        ) : null}
+      </div>
+      <DialogFooter showCloseButton>
+        <Button onClick={handleSave} disabled={!canSubmit}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+        </Button>
+      </DialogFooter>
+    </>
+  )
+}
+
+export function EmailRow({ profile }: { profile: UserProfile }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const oauthProvider = useOAuthProvider()
 
   const isLoaded = oauthProvider !== undefined
   const isManagedByOAuth = !!oauthProvider
@@ -120,72 +176,21 @@ export function EmailRow({ profile }: { profile: UserProfile }) {
           size="sm"
           className="shrink-0"
           disabled={!isLoaded}
-          onClick={() => {
-            setNewEmail('')
-            setSentTo('')
-            setError('')
-            setIsEditing(true)
-          }}
+          onClick={() => setIsEditing(true)}
         >
           Change email
         </Button>
       )}
-      <Dialog open={isEditing} onOpenChange={handleClose}>
+      <Dialog
+        open={isEditing}
+        onOpenChange={(open) => !open && setIsEditing(false)}
+      >
         <SettingsSubDialogContent>
-          {sentTo ? (
-            <>
-              <div className="flex flex-col items-center gap-3 py-4 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">
-                    Check your new email inbox
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    We sent a verification link to{' '}
-                    <strong className="text-foreground">{sentTo}</strong>. Click
-                    the link to complete the change.
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => handleClose(false)}>
-                  Done
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Change email</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="edit-email">New email address</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  disabled={isLoading}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                />
-                {newEmail.trim() && emailError ? (
-                  <p className="text-xs text-destructive">{emailError}</p>
-                ) : error ? (
-                  <p className="text-xs text-destructive">{error}</p>
-                ) : null}
-              </div>
-              <DialogFooter showCloseButton>
-                <Button onClick={handleSave} disabled={!canSubmit}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Save'
-                  )}
-                </Button>
-              </DialogFooter>
-            </>
+          {isEditing && (
+            <EmailChangeDialog
+              profile={profile}
+              onClose={() => setIsEditing(false)}
+            />
           )}
         </SettingsSubDialogContent>
       </Dialog>

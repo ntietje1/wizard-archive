@@ -14,9 +14,11 @@ type SignInFormProps = {
 
 type View = 'credentials' | 'two-factor' | 'email-not-verified'
 
+const EMPTY_SESSIONS: Array<DeviceSession> = []
+
 export function SignInForm({
   redirectTo = '/campaigns',
-  existingSessions = [],
+  existingSessions = EMPTY_SESSIONS,
   sessionsLoaded = false,
   onPickAccount,
 }: SignInFormProps) {

@@ -78,9 +78,9 @@ export function ContentCard({
               </CardTitle>
             </div>
             {badges &&
-              badges.map((badge, index) => (
+              badges.map((badge) => (
                 <Badge
-                  key={index}
+                  key={badge.text}
                   variant={badge.variant || 'secondary'}
                   className="w-fit text-xs"
                 >
@@ -113,10 +113,10 @@ export function ContentCard({
       {actionButtons && (
         <div className="absolute top-4 right-4 flex gap-1 z-10">
           {actionButtons.map(
-            (button, index) =>
+            (button) =>
               !button.disabled && (
                 <Button
-                  key={index}
+                  key={button['aria-label']}
                   variant={button.variant || 'ghost'}
                   size="sm"
                   onClick={button.onClick}

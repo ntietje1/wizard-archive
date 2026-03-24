@@ -32,7 +32,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - run: pnpm lint --format compact
 
   format:
     name: Format Check
@@ -76,9 +76,9 @@ jobs:
       - name: Run React Doctor (full scan on main, diff on PRs)
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx -y react-doctor@latest . --verbose --diff ${{ github.event.pull_request.base.sha }}
+            npx -y react-doctor@latest . --verbose --fail-on error --diff ${{ github.event.pull_request.base.sha }}
           else
-            npx -y react-doctor@latest . --verbose
+            npx -y react-doctor@latest . --verbose --fail-on error
           fi
 
   build:

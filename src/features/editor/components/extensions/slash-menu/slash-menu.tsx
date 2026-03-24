@@ -49,12 +49,20 @@ function CustomSlashMenu(
   return (
     <div className="slash-menu">
       <ScrollArea className="slash-menu-scroll-area" type="always">
-        <div className="slash-menu-items">
+        <div className="slash-menu-items" role="listbox">
           {items.map((item, index) => (
             <div
               key={item.title}
+              role="option"
+              aria-selected={index === selectedIndex}
               className={`slash-menu-item${index === selectedIndex ? ' selected' : ''}`}
               onClick={() => onItemClick?.(item)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onItemClick?.(item)
+                }
+              }}
             >
               {item.icon && (
                 <div className="slash-menu-item-icon">{item.icon}</div>

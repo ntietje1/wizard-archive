@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { debounce } from 'lodash-es'
+import debounce from 'lodash-es/debounce'
 import { validateItemName } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'

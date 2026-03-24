@@ -26,15 +26,15 @@ export function EditableName({
   excludeId,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
-  const [prevKey, setPrevKey] = useState({ isRenaming, initialName })
+  const prevKeyRef = useRef({ isRenaming, initialName })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   if (
-    prevKey.isRenaming !== isRenaming ||
-    prevKey.initialName !== initialName
+    prevKeyRef.current.isRenaming !== isRenaming ||
+    prevKeyRef.current.initialName !== initialName
   ) {
-    setPrevKey({ isRenaming, initialName })
+    prevKeyRef.current = { isRenaming, initialName }
     setName(initialName)
   }
 

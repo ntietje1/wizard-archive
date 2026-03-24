@@ -1,20 +1,15 @@
-import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { api } from 'convex/_generated/api'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
 } from 'convex/campaigns/types'
-import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
 import { useParams } from '@tanstack/react-router'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
-import { RemovePlayerDialog } from './components/remove-player-dialog'
-import type { Id } from 'convex/_generated/dataModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
@@ -35,33 +30,6 @@ export function PeopleTab() {
     api.campaigns.queries.getPlayersByCampaign,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
-
-  const updateStatus = useAppMutation(
-    api.campaigns.mutations.updateCampaignMemberStatus,
-    { errorMessage: 'Failed to update status' },
-  )
-
-  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
-    null,
-  )
-  const [deletingMemberId, setDeletingMemberId] =
-    useState<Id<'campaignMembers'> | null>(null)
-
-  const deletingPlayer = players.data?.find((p) => p._id === deletingMemberId)
-
-  const handleStatusUpdate = async (
-    memberId: Id<'campaignMembers'>,
-    status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
-  ) => {
-    try {
-      setUpdatingId(memberId)
-      await updateStatus.mutateAsync({ memberId, status })
-      toast.success('Player status updated')
-    } catch (e) {
-      console.error(e)
-    }
-    setUpdatingId(null)
-  }
 
   const dmMember = players.data?.find(
     (p) =>
@@ -123,32 +91,13 @@ export function PeopleTab() {
             dmMember={dmMember}
             acceptedPlayers={acceptedPlayers}
             isDm={isDm === true}
-            onRemovePlayer={(id) => setDeletingMemberId(id)}
           />
 
-          {isDm && (
-            <PendingRequestsSection
-              pendingPlayers={pendingPlayers}
-              updatingId={updatingId}
-              onStatusUpdate={handleStatusUpdate}
-            />
-          )}
+          {isDm && <PendingRequestsSection pendingPlayers={pendingPlayers} />}
 
-          {isDm && (
-            <RejectedRemovedSection
-              players={rejectedOrRemoved}
-              updatingId={updatingId}
-              onStatusUpdate={handleStatusUpdate}
-            />
-          )}
+          {isDm && <RejectedRemovedSection players={rejectedOrRemoved} />}
         </>
       )}
-
-      <RemovePlayerDialog
-        player={deletingPlayer}
-        isOpen={!!deletingMemberId}
-        onClose={() => setDeletingMemberId(null)}
-      />
     </div>
   )
 }

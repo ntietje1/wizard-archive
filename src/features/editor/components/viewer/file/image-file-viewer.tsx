@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
@@ -15,12 +15,14 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [prevImageUrl, setPrevImageUrl] = useState(imageUrl)
   const isValid = isValidFileUrl(imageUrl)
 
-  useEffect(() => {
+  if (imageUrl !== prevImageUrl) {
+    setPrevImageUrl(imageUrl)
     setImageLoaded(false)
     setImageError(false)
-  }, [imageUrl])
+  }
 
   const handleZoomIn = () => {
     transformWrapperRef.current?.zoomIn()

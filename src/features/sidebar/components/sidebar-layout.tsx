@@ -130,6 +130,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </div>
       <div
         ref={handleRef}
+        role="separator"
         className={`absolute top-0 h-full w-1 -ml-0.5 z-10 ${isSidebarExpanded ? 'cursor-col-resize hover:bg-border hover:transition-colors hover:duration-100 ease-out' : ''}`}
         style={{ left: totalDisplayWidth }}
         onMouseDown={handleMouseDown}

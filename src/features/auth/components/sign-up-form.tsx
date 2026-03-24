@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
@@ -14,20 +14,59 @@ type SignUpFormProps = {
 
 type SocialProvider = 'google'
 
+type SignUpState = {
+  email: string
+  password: string
+  error: string
+  isLoading: boolean
+  emailSent: boolean
+  socialLoading: SocialProvider | null
+}
+
+type SignUpAction =
+  | { type: 'SET_FIELD'; field: 'email' | 'password'; value: string }
+  | { type: 'SUBMIT' }
+  | { type: 'EMAIL_SENT' }
+  | { type: 'ERROR'; error: string }
+  | { type: 'DONE' }
+  | { type: 'SOCIAL_START'; provider: SocialProvider }
+  | { type: 'SOCIAL_ERROR'; error: string }
+
+function signUpReducer(state: SignUpState, action: SignUpAction): SignUpState {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value }
+    case 'SUBMIT':
+      return { ...state, error: '', isLoading: true }
+    case 'EMAIL_SENT':
+      return { ...state, emailSent: true }
+    case 'ERROR':
+      return { ...state, error: action.error }
+    case 'DONE':
+      return { ...state, isLoading: false }
+    case 'SOCIAL_START':
+      return { ...state, socialLoading: action.provider, error: '' }
+    case 'SOCIAL_ERROR':
+      return { ...state, error: action.error, socialLoading: null }
+  }
+}
+
+const initialState: SignUpState = {
+  email: '',
+  password: '',
+  error: '',
+  isLoading: false,
+  emailSent: false,
+  socialLoading: null,
+}
+
 export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
-    null,
-  )
+  const [state, dispatch] = useReducer(signUpReducer, initialState)
+  const { email, password, error, isLoading, emailSent, socialLoading } = state
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    dispatch({ type: 'SUBMIT' })
 
     let handled = false
     await authClient.signUp
@@ -44,33 +83,40 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
         {
           onSuccess: () => {
             handled = true
-            setEmailSent(true)
+            dispatch({ type: 'EMAIL_SENT' })
           },
           onError: (ctx) => {
             handled = true
-            setError(ctx.error.message || 'Failed to create account')
+            dispatch({
+              type: 'ERROR',
+              error: ctx.error.message || 'Failed to create account',
+            })
           },
         },
       )
       .catch(() => {
-        if (!handled) setError('Failed to create account')
+        if (!handled)
+          dispatch({ type: 'ERROR', error: 'Failed to create account' })
       })
       .finally(() => {
-        setIsLoading(false)
+        dispatch({ type: 'DONE' })
       })
   }
 
   const handleSocialSignIn = async (provider: SocialProvider) => {
-    setSocialLoading(provider)
-    setError('')
+    dispatch({ type: 'SOCIAL_START', provider })
     try {
       await authClient.signIn.social({
         provider,
         callbackURL: redirectTo,
       })
+      // If we reach here without redirect, reset loading state
+      dispatch({ type: 'SOCIAL_ERROR', error: '' })
     } catch {
-      setError('Failed to sign in with social provider')
-      setSocialLoading(null)
+      dispatch({
+        type: 'SOCIAL_ERROR',
+        error: 'Failed to sign in with social provider',
+      })
     }
   }
 
@@ -135,7 +181,13 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               type="email"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                dispatch({
+                  type: 'SET_FIELD',
+                  field: 'email',
+                  value: e.target.value,
+                })
+              }
               required
               disabled={isDisabled}
               autoComplete="email"
@@ -148,7 +200,13 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               type="password"
               placeholder="Create a password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                dispatch({
+                  type: 'SET_FIELD',
+                  field: 'password',
+                  value: e.target.value,
+                })
+              }
               required
               minLength={8}
               disabled={isDisabled}

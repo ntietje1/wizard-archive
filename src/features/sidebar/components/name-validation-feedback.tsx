@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -17,21 +17,24 @@ export function NameValidationFeedback({
     top: number
     left: number
   } | null>(null)
+  const positionRef = useRef(position)
+  positionRef.current = position
 
   const hasError = !!errorMessage
 
+  if (!hasError && positionRef.current !== null) {
+    setPosition(null)
+  }
+
   useEffect(() => {
-    if (!anchorRef.current || !hasError) {
-      setPosition(null)
-      return
-    }
+    if (!anchorRef.current || !hasError) return
 
     const updatePosition = () => {
       if (!anchorRef.current) return
 
       const rect = anchorRef.current.getBoundingClientRect()
       setPosition({
-        top: rect.bottom + 4, // mt-1 = 4px
+        top: rect.bottom + 4,
         left: rect.left,
       })
     }

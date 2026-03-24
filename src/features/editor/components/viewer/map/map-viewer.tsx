@@ -145,7 +145,10 @@ interface MapPinProps {
   isDragging: boolean
   isInMoveMode: boolean
   onHover: (pinId: Id<'mapPins'> | null) => void
-  onClick: (e: React.MouseEvent, pin: MapPinWithItem) => void
+  onClick: (
+    e: React.MouseEvent | React.KeyboardEvent,
+    pin: MapPinWithItem,
+  ) => void
   onContextMenu: (e: React.MouseEvent, pin: MapPinWithItem) => void
   onDragStart: (e: React.MouseEvent, pin: MapPinWithItem) => void
 }
@@ -178,6 +181,9 @@ function MapPin({
   return (
     <div
       data-pin-id={pin._id}
+      role="button"
+      tabIndex={0}
+      aria-label={itemName}
       className={cn(
         'absolute pointer-events-auto cursor-pointer',
         isHovered && !isDragging && 'z-20',
@@ -193,6 +199,12 @@ function MapPin({
       onMouseEnter={() => onHover(pin._id)}
       onMouseLeave={() => onHover(null)}
       onClick={(e) => onClick(e, pin)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick(e, pin)
+        }
+      }}
       onContextMenu={(e) => onContextMenu(e, pin)}
       onMouseDown={(e) => {
         if (e.ctrlKey || e.metaKey || isInMoveMode) {
@@ -640,7 +652,10 @@ export function MapViewer({
     }
   }
 
-  const handlePinClick = (e: React.MouseEvent, pin: MapPinWithItem) => {
+  const handlePinClick = (
+    e: React.MouseEvent | React.KeyboardEvent,
+    pin: MapPinWithItem,
+  ) => {
     e.preventDefault()
     e.stopPropagation()
     if (justFinishedDraggingRef.current === pin._id) {
@@ -727,6 +742,7 @@ export function MapViewer({
     <ClientOnly fallback={<MapViewerSkeleton />}>
       <MapViewProvider map={map} pins={pins}>
         <div
+          role="presentation"
           className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col"
           onMouseDown={() => {
             // Blur any focused element (e.g. breadcrumb input) since
@@ -800,6 +816,8 @@ export function MapViewer({
                   contentClass="!w-full !h-full flex items-center justify-center"
                 >
                   <div
+                    role="application"
+                    aria-label="Map canvas"
                     className="relative"
                     onClick={
                       pendingPinItem || pendingPinMove

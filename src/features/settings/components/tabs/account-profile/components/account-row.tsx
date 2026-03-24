@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { debounce } from 'lodash-es'
+import debounce from 'lodash-es/debounce'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { Camera, Loader2 } from 'lucide-react'
@@ -67,8 +67,10 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
     setIsUploading(true)
     try {
       const storageId = await uploadFile.mutateAsync(file)
-      await commitUpload.mutateAsync({ storageId })
-      await updateProfileImage.mutateAsync({ storageId })
+      await Promise.all([
+        commitUpload.mutateAsync({ storageId }),
+        updateProfileImage.mutateAsync({ storageId }),
+      ])
       toast.success('Profile picture updated')
     } catch {
       // Error toast handled by useAppMutation

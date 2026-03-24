@@ -45,13 +45,13 @@ export function EditableName({
   showNotSharedTooltip,
 }: EditableNameProps) {
   const [name, setName] = useState(initialName)
-  const [prevInitialName, setPrevInitialName] = useState(initialName)
+  const prevInitialNameRef = useRef(initialName)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  if (prevInitialName !== initialName && !isEditing) {
-    setPrevInitialName(initialName)
+  if (prevInitialNameRef.current !== initialName && !isEditing) {
+    prevInitialNameRef.current = initialName
     setName(initialName)
   }
 

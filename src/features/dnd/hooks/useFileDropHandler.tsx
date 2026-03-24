@@ -199,7 +199,7 @@ export function useFileDropHandler() {
     const folderId = result.id as Id<'folders'>
 
     progress.processedFolders++
-    toast.loading(<FolderProgressContent progress={progress} />, {
+    toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
       id: progress.toastId,
       duration: Infinity,
       style: TOAST_STYLE,
@@ -217,12 +217,16 @@ export function useFileDropHandler() {
         if (!success && validation.success) {
           console.warn(`${file.name}: unsupported file type`)
         }
-        progress[success ? 'processedFiles' : 'skippedFiles']++
+        if (success) {
+          progress.processedFiles++
+        } else {
+          progress.skippedFiles++
+        }
       } catch (error) {
         console.error(`Failed to process ${relativePath}:`, error)
         progress.skippedFiles++
       }
-      toast.loading(<FolderProgressContent progress={progress} />, {
+      toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
         id: progress.toastId,
         duration: Infinity,
         style: TOAST_STYLE,
@@ -314,14 +318,18 @@ export function useFileDropHandler() {
           if (!success && validation.success) {
             console.warn(`${file.name}: unsupported file type`)
           }
-          progress[success ? 'processedFiles' : 'skippedFiles']++
+          if (success) {
+            progress.processedFiles++
+          } else {
+            progress.skippedFiles++
+          }
         } catch (error) {
           console.error(`Failed to process ${relativePath}:`, error)
           progress.skippedFiles++
         }
         toast.loading(
           hasFolders ? (
-            <FolderProgressContent progress={progress} />
+            <FolderProgressContent progress={{ ...progress }} />
           ) : (
             <FileProgressContent
               totalFiles={stats.totalFiles}

@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Crown, Ellipsis, Trash2 } from 'lucide-react'
 import { SettingsSection } from '../../account-profile/components/settings-section'
 import { MemberRow } from './member-row'
+import { RemovePlayerDialog } from './remove-player-dialog'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Badge } from '~/features/shadcn/components/badge'
@@ -17,13 +19,16 @@ export function MembersSection({
   dmMember,
   acceptedPlayers,
   isDm,
-  onRemovePlayer,
 }: {
   dmMember: CampaignMember | undefined
   acceptedPlayers: Array<CampaignMember>
   isDm: boolean
-  onRemovePlayer: (memberId: Id<'campaignMembers'>) => void
 }) {
+  const [deletingMemberId, setDeletingMemberId] =
+    useState<Id<'campaignMembers'> | null>(null)
+
+  const deletingPlayer = acceptedPlayers.find((p) => p._id === deletingMemberId)
+
   return (
     <SettingsSection title="Members">
       {dmMember && (
@@ -67,7 +72,7 @@ export function MembersSection({
                     <DropdownMenuContent>
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => onRemovePlayer(player._id)}
+                        onClick={() => setDeletingMemberId(player._id)}
                       >
                         <Trash2 />
                         Remove
@@ -80,6 +85,12 @@ export function MembersSection({
           </div>
         ))
       )}
+
+      <RemovePlayerDialog
+        player={deletingPlayer}
+        isOpen={!!deletingMemberId}
+        onClose={() => setDeletingMemberId(null)}
+      />
     </SettingsSection>
   )
 }

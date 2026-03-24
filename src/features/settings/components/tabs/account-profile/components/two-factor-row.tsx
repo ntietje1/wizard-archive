@@ -15,12 +15,9 @@ import {
 } from '~/features/shadcn/components/dialog'
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
-export function TwoFactorRow({ profile }: { profile: UserProfile }) {
-  const isTwoFactorEnabled = profile.twoFactorEnabled ?? false
-
+function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {
+  const [password, setPassword] = useState('')
   const [isDisabling, setIsDisabling] = useState(false)
-  const [showDisableDialog, setShowDisableDialog] = useState(false)
-  const [disablePassword, setDisablePassword] = useState('')
   const [error, setError] = useState('')
 
   const handleDisable = async () => {
@@ -29,7 +26,7 @@ export function TwoFactorRow({ profile }: { profile: UserProfile }) {
 
     try {
       const { error: err } = await authClient.twoFactor.disable({
-        password: disablePassword,
+        password,
       })
 
       if (err) {
@@ -39,14 +36,52 @@ export function TwoFactorRow({ profile }: { profile: UserProfile }) {
       }
 
       toast.success('Two-factor authentication disabled')
-      setShowDisableDialog(false)
-      setDisablePassword('')
-      setIsDisabling(false)
+      onClose()
     } catch {
       setError('Unable to disable 2FA. Please try again.')
       setIsDisabling(false)
     }
   }
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Disable two-factor authentication</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="disable-2fa-password">
+          Enter your password to confirm
+        </Label>
+        <Input
+          id="disable-2fa-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={isDisabling}
+          onKeyDown={(e) => e.key === 'Enter' && handleDisable()}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+      <DialogFooter showCloseButton>
+        <Button
+          variant="destructive"
+          onClick={handleDisable}
+          disabled={isDisabling}
+        >
+          {isDisabling ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            'Disable 2FA'
+          )}
+        </Button>
+      </DialogFooter>
+    </>
+  )
+}
+
+export function TwoFactorRow({ profile }: { profile: UserProfile }) {
+  const isTwoFactorEnabled = profile.twoFactorEnabled ?? false
+  const [showDisableDialog, setShowDisableDialog] = useState(false)
 
   return (
     <SettingsRow
@@ -60,8 +95,6 @@ export function TwoFactorRow({ profile }: { profile: UserProfile }) {
       buttonVariant={isTwoFactorEnabled ? 'destructive' : 'default'}
       onAction={() => {
         if (isTwoFactorEnabled) {
-          setDisablePassword('')
-          setError('')
           setShowDisableDialog(true)
         } else {
           toast.info('2FA setup coming soon')
@@ -70,36 +103,11 @@ export function TwoFactorRow({ profile }: { profile: UserProfile }) {
     >
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <SettingsSubDialogContent>
-          <DialogHeader>
-            <DialogTitle>Disable two-factor authentication</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="disable-2fa-password">
-              Enter your password to confirm
-            </Label>
-            <Input
-              id="disable-2fa-password"
-              type="password"
-              value={disablePassword}
-              onChange={(e) => setDisablePassword(e.target.value)}
-              disabled={isDisabling}
-              onKeyDown={(e) => e.key === 'Enter' && handleDisable()}
+          {showDisableDialog && (
+            <DisableTwoFactorDialog
+              onClose={() => setShowDisableDialog(false)}
             />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </div>
-          <DialogFooter showCloseButton>
-            <Button
-              variant="destructive"
-              onClick={handleDisable}
-              disabled={isDisabling}
-            >
-              {isDisabling ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Disable 2FA'
-              )}
-            </Button>
-          </DialogFooter>
+          )}
         </SettingsSubDialogContent>
       </Dialog>
     </SettingsRow>

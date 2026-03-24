@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
+import { api } from 'convex/_generated/api'
 import { MemberRow } from './member-row'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
@@ -11,17 +14,32 @@ import { cn } from '~/features/shadcn/lib/utils'
 
 export function RejectedRemovedSection({
   players,
-  updatingId,
-  onStatusUpdate,
 }: {
   players: Array<CampaignMember>
-  updatingId: Id<'campaignMembers'> | null
-  onStatusUpdate: (
-    memberId: Id<'campaignMembers'>,
-    status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
-  ) => void
 }) {
   const [showRejected, setShowRejected] = useState(false)
+  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
+    null,
+  )
+
+  const updateStatus = useAppMutation(
+    api.campaigns.mutations.updateCampaignMemberStatus,
+    { errorMessage: 'Failed to update status' },
+  )
+
+  const handleStatusUpdate = async (
+    memberId: Id<'campaignMembers'>,
+    status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
+  ) => {
+    try {
+      setUpdatingId(memberId)
+      await updateStatus.mutateAsync({ memberId, status })
+      toast.success('Player status updated')
+    } catch (e) {
+      console.error(e)
+    }
+    setUpdatingId(null)
+  }
 
   if (players.length === 0) return null
 
@@ -66,7 +84,7 @@ export function RejectedRemovedSection({
                     className="shrink-0"
                     disabled={updatingId === player._id}
                     onClick={() =>
-                      onStatusUpdate(
+                      handleStatusUpdate(
                         player._id,
                         player.status === CAMPAIGN_MEMBER_STATUS.Rejected
                           ? CAMPAIGN_MEMBER_STATUS.Pending

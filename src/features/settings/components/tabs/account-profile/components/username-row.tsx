@@ -70,10 +70,15 @@ function useUsernameValidation(raw: string, currentUsername: string) {
   return { slugified, error, canSubmit, isChecking }
 }
 
-export function UsernameRow({ profile }: { profile: UserProfile }) {
+function UsernameChangeDialog({
+  profile,
+  onClose,
+}: {
+  profile: UserProfile
+  onClose: () => void
+}) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isEditing, setIsEditing] = useState(false)
   const [username, setUsername] = useState(profile.username)
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -98,7 +103,7 @@ export function UsernameRow({ profile }: { profile: UserProfile }) {
         username: slugified,
       })
       toast.success('Username updated')
-      setIsEditing(false)
+      onClose()
 
       const oldPrefix = `/campaigns/${profile.username}/`
       if (location.pathname.startsWith(oldPrefix)) {
@@ -119,62 +124,69 @@ export function UsernameRow({ profile }: { profile: UserProfile }) {
   const displayError = validationError ?? submitError
 
   return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Change username</DialogTitle>
+      </DialogHeader>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="edit-username">Username</Label>
+        <div className="relative">
+          <Input
+            id="edit-username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={isLoading}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            className="pr-8"
+          />
+          {isChecking && (
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        {displayError ? (
+          <p className="text-xs text-destructive">{displayError}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Lowercase letters, numbers, and hyphens only. Must be unique.
+          </p>
+        )}
+      </div>
+      <div className="flex items-start gap-2 rounded-md bg-accent p-3">
+        <AlertTriangle className="size-4 shrink-0 text-muted-foreground mt-0.5" />
+        <p className="text-xs text-muted-foreground">
+          Changing your username will update the URL for all campaigns you own.
+          Any shared links using your old username will stop working.
+        </p>
+      </div>
+      <DialogFooter showCloseButton>
+        <Button onClick={handleSave} disabled={!canSubmit || isLoading}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+        </Button>
+      </DialogFooter>
+    </>
+  )
+}
+
+export function UsernameRow({ profile }: { profile: UserProfile }) {
+  const [isEditing, setIsEditing] = useState(false)
+
+  return (
     <SettingsRow
       label="Username"
       value={`@${profile.username}`}
       buttonLabel="Change username"
-      onAction={() => {
-        setUsername(profile.username)
-        setSubmitError('')
-        setIsEditing(true)
-      }}
+      onAction={() => setIsEditing(true)}
     >
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <SettingsSubDialogContent>
-          <DialogHeader>
-            <DialogTitle>Change username</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-username">Username</Label>
-            <div className="relative">
-              <Input
-                id="edit-username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isLoading}
-                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                className="pr-8"
-              />
-              {isChecking && (
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                  <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-                </div>
-              )}
-            </div>
-            {displayError ? (
-              <p className="text-xs text-destructive">{displayError}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Lowercase letters, numbers, and hyphens only. Must be unique.
-              </p>
-            )}
-          </div>
-          <div className="flex items-start gap-2 rounded-md bg-accent p-3">
-            <AlertTriangle className="size-4 shrink-0 text-muted-foreground mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              Changing your username will update the URL for all campaigns you
-              own. Any shared links using your old username will stop working.
-            </p>
-          </div>
-          <DialogFooter showCloseButton>
-            <Button onClick={handleSave} disabled={!canSubmit || isLoading}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'Save'
-              )}
-            </Button>
-          </DialogFooter>
+          {isEditing && (
+            <UsernameChangeDialog
+              profile={profile}
+              onClose={() => setIsEditing(false)}
+            />
+          )}
         </SettingsSubDialogContent>
       </Dialog>
     </SettingsRow>

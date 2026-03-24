@@ -163,12 +163,14 @@ export function FileUploadSection({
                 </Button>
               </div>
               {fileUpload.preview && (
-                <div
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     window.open(fileUpload.preview, '_blank')
                   }}
-                  className="absolute inset-0 w-full h-full z-10 cursor-pointer"
+                  className="absolute inset-0 w-full h-full z-10 cursor-pointer bg-transparent border-none"
+                  aria-label="Open file preview"
                 />
               )}
               <input

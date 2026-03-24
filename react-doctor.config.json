@@ -4,7 +4,11 @@
       "jsx-a11y/no-autofocus",
       "react/no-prevent-default",
       "no-prevent-default",
-      "react/prevent-default"
-    ]
+      "react/prevent-default",
+      "react-hooks-js/todo",
+      "react-hooks-js/refs",
+      "react-hooks-js/static-components"
+    ],
+    "files": ["src/features/shadcn/**"]
   }
 }

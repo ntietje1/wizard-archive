@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
@@ -6,13 +6,52 @@ import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 
+type ResetState = {
+  newPassword: string
+  confirmPassword: string
+  isLoading: boolean
+  error: string
+  success: boolean
+}
+
+type ResetAction =
+  | {
+      type: 'SET_FIELD'
+      field: 'newPassword' | 'confirmPassword'
+      value: string
+    }
+  | { type: 'SUBMIT' }
+  | { type: 'ERROR'; error: string }
+  | { type: 'SUCCESS' }
+  | { type: 'DONE' }
+
+function resetReducer(state: ResetState, action: ResetAction): ResetState {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value }
+    case 'SUBMIT':
+      return { ...state, error: '', isLoading: true }
+    case 'ERROR':
+      return { ...state, error: action.error }
+    case 'SUCCESS':
+      return { ...state, newPassword: '', confirmPassword: '', success: true }
+    case 'DONE':
+      return { ...state, isLoading: false }
+  }
+}
+
+const initialResetState: ResetState = {
+  newPassword: '',
+  confirmPassword: '',
+  isLoading: false,
+  error: '',
+  success: false,
+}
+
 export function ResetPasswordForm() {
   const { token } = useSearch({ strict: false })
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [state, dispatch] = useReducer(resetReducer, initialResetState)
+  const { newPassword, confirmPassword, isLoading, error, success } = state
 
   if (!token) {
     return (
@@ -35,39 +74,45 @@ export function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match')
+      dispatch({ type: 'ERROR', error: 'Passwords do not match' })
       return
     }
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters')
+      dispatch({
+        type: 'ERROR',
+        error: 'Password must be at least 8 characters',
+      })
       return
     }
 
-    setIsLoading(true)
+    dispatch({ type: 'SUBMIT' })
 
     await authClient
       .resetPassword(
         { newPassword, token },
         {
           onSuccess: () => {
-            setNewPassword('')
-            setConfirmPassword('')
-            setSuccess(true)
+            dispatch({ type: 'SUCCESS' })
           },
           onError: (ctx) => {
-            setError(ctx.error.message || 'Failed to reset password')
+            dispatch({
+              type: 'ERROR',
+              error: ctx.error.message || 'Failed to reset password',
+            })
           },
         },
       )
       .catch(() => {
-        setError('An unexpected error occurred. Please try again.')
+        dispatch({
+          type: 'ERROR',
+          error: 'An unexpected error occurred. Please try again.',
+        })
       })
       .finally(() => {
-        setIsLoading(false)
+        dispatch({ type: 'DONE' })
       })
   }
 
@@ -106,7 +151,13 @@ export function ResetPasswordForm() {
             type="password"
             placeholder="Enter new password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) =>
+              dispatch({
+                type: 'SET_FIELD',
+                field: 'newPassword',
+                value: e.target.value,
+              })
+            }
             required
             disabled={isLoading}
             minLength={8}
@@ -120,7 +171,13 @@ export function ResetPasswordForm() {
             type="password"
             placeholder="Confirm new password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) =>
+              dispatch({
+                type: 'SET_FIELD',
+                field: 'confirmPassword',
+                value: e.target.value,
+              })
+            }
             required
             disabled={isLoading}
             minLength={8}

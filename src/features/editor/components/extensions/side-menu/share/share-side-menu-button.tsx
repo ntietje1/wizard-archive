@@ -80,7 +80,7 @@ export default function ShareSideMenuButton() {
   const blockCount = topLevelBlocks.length
   const skippedCount = blocks.length - topLevelBlocks.length
 
-  const handleButtonClick = (e: React.MouseEvent) => {
+  const handleButtonClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     if (!item || isMutating || isPending) return
     if (e.ctrlKey || e.metaKey) return
 
@@ -94,6 +94,13 @@ export default function ShareSideMenuButton() {
     toggleShareStatus()
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault() // Prevent scroll on space
+      handleButtonClick(e)
+    }
+  }
+
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
   const isDisabled = topLevelBlocks.length === 0
 
@@ -105,7 +112,12 @@ export default function ShareSideMenuButton() {
         open ? sideMenuExtension.freezeMenu() : sideMenuExtension.unfreezeMenu()
       }
     >
-      <div onClick={handleButtonClick}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleButtonClick}
+        onKeyDown={handleKeyDown}
+      >
         <ContextMenuTrigger
           render={
             <Components.SideMenu.Button

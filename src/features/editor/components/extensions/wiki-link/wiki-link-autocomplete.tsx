@@ -315,21 +315,21 @@ export function WikiLinkAutocomplete({
   // Reset selection on mode/path change
   const completedHeadingPath = context?.completedHeadingPath?.join('#')
   const completedFolderPath = context?.completedFolderPath?.join('/')
-  const [prevResetKey, setPrevResetKey] = useState({
+  const prevResetKeyRef = useRef({
     mode: context?.mode,
     headingPath: completedHeadingPath,
     folderPath: completedFolderPath,
   })
   if (
-    prevResetKey.mode !== context?.mode ||
-    prevResetKey.headingPath !== completedHeadingPath ||
-    prevResetKey.folderPath !== completedFolderPath
+    prevResetKeyRef.current.mode !== context?.mode ||
+    prevResetKeyRef.current.headingPath !== completedHeadingPath ||
+    prevResetKeyRef.current.folderPath !== completedFolderPath
   ) {
-    setPrevResetKey({
+    prevResetKeyRef.current = {
       mode: context?.mode,
       headingPath: completedHeadingPath,
       folderPath: completedFolderPath,
-    })
+    }
     setSelectedIndex(0)
   }
 
@@ -577,11 +577,19 @@ export function WikiLinkAutocomplete({
               {isHeading ? 'No headings found' : 'No matches found'}
             </div>
           ) : isHeading ? (
-            <div className="wiki-link-menu-items">
+            <div className="wiki-link-menu-items" role="listbox">
               {headingItems.map((item, i) => (
                 <div
                   key={item.key}
+                  role="option"
+                  aria-selected={i === selectedIndex}
                   onClick={() => insertLink(item, context)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      insertLink(item, context)
+                    }
+                  }}
                   onMouseEnter={() => setSelectedIndex(i)}
                   className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
                 >
@@ -598,11 +606,19 @@ export function WikiLinkAutocomplete({
               ))}
             </div>
           ) : (
-            <div className="wiki-link-menu-items">
+            <div className="wiki-link-menu-items" role="listbox">
               {fileItems.map((item, i) => (
                 <div
                   key={item.key}
+                  role="option"
+                  aria-selected={i === selectedIndex}
                   onClick={() => insertLink(item, context)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      insertLink(item, context)
+                    }
+                  }}
                   onMouseEnter={() => setSelectedIndex(i)}
                   className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
                 >

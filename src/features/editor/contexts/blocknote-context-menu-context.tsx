@@ -18,10 +18,12 @@ export function BlockNoteContextMenuProvider({
 }: BlockNoteContextMenuProviderProps) {
   const [editorOverride, setEditorOverride] =
     useState<CustomBlockNoteEditor | null>(null)
+  const prevEditorRef = useRef(editor)
 
-  useEffect(() => {
+  if (editor !== prevEditorRef.current) {
+    prevEditorRef.current = editor
     setEditorOverride(null)
-  }, [editor])
+  }
 
   const currentEditor = editorOverride ?? editor
   const [currentBlockId, setCurrentBlockId] = useState<string | undefined>(
@@ -36,6 +38,9 @@ export function BlockNoteContextMenuProvider({
     const handleOpenRequest = (e: CustomEvent<BlockNoteContextMenuEvent>) => {
       setMenuState(e.detail)
       setCurrentBlockId(e.detail.blockId)
+      requestAnimationFrame(() => {
+        contextMenuRef.current?.open(e.detail.position)
+      })
     }
 
     window.addEventListener(
@@ -49,14 +54,6 @@ export function BlockNoteContextMenuProvider({
       )
     }
   }, [])
-
-  useEffect(() => {
-    if (menuState) {
-      requestAnimationFrame(() => {
-        contextMenuRef.current?.open(menuState.position)
-      })
-    }
-  }, [menuState])
 
   const handleClose = () => {
     setMenuState(null)

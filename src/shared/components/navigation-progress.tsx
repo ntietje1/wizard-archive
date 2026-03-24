@@ -1,5 +1,24 @@
 import { useRouterState } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
+
+type ProgressState = 'idle' | 'loading' | 'completing' | 'fading'
+type ProgressAction = 'start' | 'loaded' | 'fade' | 'reset'
+
+function progressReducer(
+  state: ProgressState,
+  action: ProgressAction,
+): ProgressState {
+  switch (action) {
+    case 'start':
+      return 'loading'
+    case 'loaded':
+      return state === 'loading' ? 'completing' : state
+    case 'fade':
+      return 'fading'
+    case 'reset':
+      return 'idle'
+  }
+}
 
 export function NavigationProgress() {
   const { isLoading, location, resolvedLocation } = useRouterState({
@@ -13,25 +32,23 @@ export function NavigationProgress() {
   const isSamePage =
     location.pathname === resolvedLocation?.pathname &&
     location.searchStr === resolvedLocation?.searchStr
-  const [state, setState] = useState<
-    'idle' | 'loading' | 'completing' | 'fading'
-  >('idle')
+  const [state, dispatch] = useReducer(progressReducer, 'idle')
 
   useEffect(() => {
     if (isLoading && !isSamePage) {
-      setState('loading')
+      dispatch('start')
       return
     }
     if (state === 'loading' && !isLoading) {
-      setState('completing')
+      dispatch('loaded')
       return
     }
     if (state === 'completing') {
-      const t = setTimeout(() => setState('fading'), 500)
+      const t = setTimeout(() => dispatch('fade'), 500)
       return () => clearTimeout(t)
     }
     if (state === 'fading') {
-      const t = setTimeout(() => setState('idle'), 200)
+      const t = setTimeout(() => dispatch('reset'), 200)
       return () => clearTimeout(t)
     }
   }, [isLoading, isSamePage, state])
