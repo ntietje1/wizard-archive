@@ -36,7 +36,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
   const allSessions: Array<Session> = sessions.data ?? []
   const currentId = currentSession.data?._id
   const previousSessions = allSessions.filter((s) => s._id !== currentId)
-  const memberCount = (campaign.data?.playerCount ?? 0) + 1
+  const memberCount = campaign.data?.playerCount
 
   const handleStart = () => {
     if (!campaignId) return
@@ -113,7 +113,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
       <div className="border-t" />
 
       {/* Current session */}
-      <div className="px-3 py-2">
+      <div className="px-3 pt-2">
         <div className="flex items-center gap-2">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-primary' : 'bg-muted-foreground/30'}`}
@@ -123,8 +123,6 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
           </span>
         </div>
       </div>
-
-      <div className="border-t" />
 
       {/* Menu items */}
       <div className="p-1">
@@ -162,6 +160,8 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
             </button>
           </>
         )}
+
+        <div className="border-t my-1" />
 
         <button
           type="button"
