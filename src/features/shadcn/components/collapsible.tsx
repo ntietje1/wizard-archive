@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Collapsible as CollapsiblePrimitive } from '@base-ui/react/collapsible'
-import { AnimatePresence, m } from 'motion/react'
+import { AnimatePresence, m, useReducedMotion } from 'motion/react'
 import type { HTMLMotionProps } from 'motion/react'
 
 type CollapsibleContextType = {
@@ -96,6 +96,8 @@ function CollapsibleContent({
   ...props
 }: CollapsibleContentProps) {
   const { isOpen } = useCollapsible()
+  const prefersReducedMotion = useReducedMotion()
+  const resolvedTransition = prefersReducedMotion ? { duration: 0 } : transition
 
   return (
     <CollapsiblePrimitive.Panel
@@ -110,7 +112,7 @@ function CollapsibleContent({
               data-slot="collapsible-content"
               initial={{ height: 0 }}
               animate={isOpen ? { height: 'auto' } : { height: 0 }}
-              transition={transition}
+              transition={resolvedTransition}
               style={{
                 overflow: 'hidden',
                 ...style,
@@ -125,7 +127,7 @@ function CollapsibleContent({
                 initial={{ height: 0 }}
                 animate={{ height: 'auto' }}
                 exit={{ height: 0 }}
-                transition={transition}
+                transition={resolvedTransition}
                 style={{
                   overflow: 'hidden',
                   ...style,
