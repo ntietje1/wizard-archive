@@ -177,6 +177,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
         enabled: true,
         maxAge: 60 * 10, // cache session for 10 minutes before re-checking DB
       },
+      deferSessionRefresh: true, // GET is read-only, POST does the write
     },
     emailAndPassword: {
       enabled: true,
