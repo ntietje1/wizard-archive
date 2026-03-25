@@ -229,9 +229,30 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
       }
       if (isFileDrag(e)) e.preventDefault()
     }
+    // ProseMirror's contenteditable fires bogus dragleave events during
+    // external file drags. On Firefox the relatedTarget points to an element
+    // with a foreign ownerDocument; on other browsers it can be null.
+    // pragmatic-dnd treats both as "cursor left the window" and cancels the
+    // external drag lifecycle. Suppress these before the lifecycle sees them.
+    const isBogusLeave = (e: DragEvent) => {
+      if (e.relatedTarget == null) return true
+      const rt = e.relatedTarget as Node
+      if ('ownerDocument' in rt && rt.ownerDocument !== document) return true
+      return false
+    }
+    const handleDragLeave = (e: DragEvent) => {
+      if (
+        isBogusLeave(e) &&
+        (e.target as Element)?.closest?.('.bn-editor,.tiptap')
+      ) {
+        e.stopImmediatePropagation()
+      }
+    }
+    window.addEventListener('dragleave', handleDragLeave, true)
     document.addEventListener('dragover', handleDragOver, true)
     document.addEventListener('drop', handleDrop, true)
     return () => {
+      window.removeEventListener('dragleave', handleDragLeave, true)
       document.removeEventListener('dragover', handleDragOver, true)
       document.removeEventListener('drop', handleDrop, true)
     }

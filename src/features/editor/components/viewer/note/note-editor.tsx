@@ -10,6 +10,7 @@ import { WikiLinkAutocomplete } from '../../extensions/wiki-link/wiki-link-autoc
 import { WikiLinkClickHandler } from '../../extensions/wiki-link/wiki-link-click-handler'
 import { MdLinkClickHandler } from '../../extensions/md-link/md-link-click-handler'
 import { BlockNoteContextMenuHandler } from '../../extensions/blocknote-context-menu/blocknote-context-menu-handler'
+import { PreventExternalDrop } from '../../extensions/prevent-external-drop/prevent-external-drop'
 import { SideMenuRenderer } from '../../extensions/side-menu/side-menu'
 import { SlashMenu } from '../../extensions/slash-menu/slash-menu'
 import '../../extensions/wiki-link/wiki-link.css'
@@ -106,6 +107,7 @@ const ReadOnlyNote = ({
         formattingToolbar={false}
         slashMenu={false}
       >
+        <PreventExternalDrop />
         <WikiLinkClickHandler editor={editor} />
         <MdLinkClickHandler editor={editor} />
         <SideMenuController sideMenu={SideMenuRenderer} />
@@ -210,6 +212,7 @@ const CollaborativeNoteReady = ({
               slashMenu={false}
               editable={editorMode === 'editor'}
             >
+              <PreventExternalDrop />
               <BlockNoteContextMenuHandler />
               <WikiLinkAutocomplete editor={editor} />
               <WikiLinkClickHandler editor={editor} />
