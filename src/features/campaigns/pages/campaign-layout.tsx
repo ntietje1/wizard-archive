@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router'
+import { Outlet, useRouteContext } from '@tanstack/react-router'
 import { CampaignNotFoundWrapper } from '../components/campaign-not-found'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
@@ -13,6 +13,10 @@ import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export function CampaignLayout() {
+  const { initialSidebarWidth, initialSidebarExpanded } = useRouteContext({
+    from: '__root__',
+  })
+
   return (
     <CampaignProvider>
       <CampaignNotFoundWrapper>
@@ -23,7 +27,10 @@ export function CampaignLayout() {
                 <DndProvider>
                   <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex flex-1 min-h-0">
-                      <SidebarLayoutProvider>
+                      <SidebarLayoutProvider
+                        initialSidebarWidth={initialSidebarWidth}
+                        initialSidebarExpanded={initialSidebarExpanded}
+                      >
                         <SidebarLayout>
                           <ErrorBoundary FallbackComponent={ErrorFallback}>
                             <Outlet />

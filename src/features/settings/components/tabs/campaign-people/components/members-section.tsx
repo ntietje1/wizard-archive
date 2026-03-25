@@ -88,7 +88,7 @@ export function MembersSection({
 
       <RemovePlayerDialog
         player={deletingPlayer}
-        isOpen={!!deletingMemberId}
+        isOpen={!!deletingPlayer}
         onClose={() => setDeletingMemberId(null)}
       />
     </SettingsSection>

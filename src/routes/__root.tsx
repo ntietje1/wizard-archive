@@ -73,19 +73,27 @@ export const Route = createRootRouteWithContext<{
       return {
         token: null,
         initialTheme: undefined,
+        initialSidebarWidth: undefined,
+        initialSidebarExpanded: undefined,
       }
     }
 
     const token = await fetchAuthToken()
     let initialTheme: Theme | undefined
+    let initialSidebarWidth: number | undefined
+    let initialSidebarExpanded: boolean | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
       const prefs = await prefetchUserPreferences(ctx.context.queryClient)
       initialTheme = prefs?.theme
+      initialSidebarWidth = prefs?.sidebarWidth
+      initialSidebarExpanded = prefs?.isSidebarExpanded
     }
     return {
       token,
       initialTheme,
+      initialSidebarWidth,
+      initialSidebarExpanded,
     }
   },
   component: RootComponent,

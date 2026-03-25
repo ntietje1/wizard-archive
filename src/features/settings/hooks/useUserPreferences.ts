@@ -23,7 +23,10 @@ export async function prefetchUserPreferences(
     .then((data) => data ?? undefined)
 }
 
-export const useUserPreferences = () => {
+export const useUserPreferences = (initial?: {
+  sidebarWidth?: number
+  isSidebarExpanded?: boolean
+}) => {
   const prefsQuery = useAuthQuery(
     api.userPreferences.queries.getUserPreferences,
     {},
@@ -34,16 +37,18 @@ export const useUserPreferences = () => {
     { errorMessage: 'Failed to save preferences' },
   )
 
-  // Local state for immediate UI updates
   const serverWidth = prefsQuery.data?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH
   const serverExpanded =
     prefsQuery.data?.isSidebarExpanded ?? DEFAULT_SIDEBAR_EXPANDED
 
-  const [localWidth, setLocalWidth] = useState(serverWidth)
-  const [localExpanded, setLocalExpanded] = useState(serverExpanded)
+  const [localWidth, setLocalWidth] = useState(
+    initial?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
+  )
+  const [localExpanded, setLocalExpanded] = useState(
+    initial?.isSidebarExpanded ?? DEFAULT_SIDEBAR_EXPANDED,
+  )
   const hasInitialized = useRef(false)
 
-  // Sync server values to local state on initial load only
   useEffect(() => {
     if (prefsQuery.isFetched && !hasInitialized.current) {
       setLocalWidth(serverWidth)

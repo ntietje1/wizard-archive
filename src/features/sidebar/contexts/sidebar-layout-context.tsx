@@ -3,8 +3,12 @@ import { SidebarLayoutContext } from '~/features/sidebar/hooks/useSidebarLayout'
 
 export function SidebarLayoutProvider({
   children,
+  initialSidebarWidth,
+  initialSidebarExpanded,
 }: {
   children: React.ReactNode
+  initialSidebarWidth?: number
+  initialSidebarExpanded?: boolean
 }) {
   const {
     isSidebarExpanded,
@@ -12,7 +16,10 @@ export function SidebarLayoutProvider({
     sidebarWidth,
     setSidebarWidth,
     isLoaded: isUserPreferencesLoaded,
-  } = useUserPreferences()
+  } = useUserPreferences({
+    sidebarWidth: initialSidebarWidth,
+    isSidebarExpanded: initialSidebarExpanded,
+  })
 
   const value = {
     isSidebarExpanded,
