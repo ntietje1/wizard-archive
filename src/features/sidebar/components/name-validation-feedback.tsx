@@ -73,5 +73,6 @@ export function NameValidationFeedback({
     </div>
   )
 
+  if (typeof document === 'undefined') return null
   return createPortal(content, document.body)
 }

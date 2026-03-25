@@ -96,6 +96,7 @@ function DragOverlayPortal({
     outcome: DropOutcome | null
   } | null
 }) {
+  if (typeof document === 'undefined') return null
   return createPortal(
     <div
       ref={overlayRef}

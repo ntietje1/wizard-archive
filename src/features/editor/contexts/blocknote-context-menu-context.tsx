@@ -71,6 +71,7 @@ export function BlockNoteContextMenuProvider({
     >
       {children}
       {menuState &&
+        typeof document !== 'undefined' &&
         createPortal(
           <EditorContextMenu
             ref={contextMenuRef}
