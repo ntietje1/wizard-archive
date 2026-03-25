@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 import {
   Popover,
   PopoverContent,
@@ -10,7 +10,6 @@ import { SharePermissionMenu } from '~/features/sharing/components/share-permiss
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
-import { cn } from '~/features/shadcn/lib/utils'
 
 export function ShareButton() {
   const { item, isLoading: isItemLoading } = useCurrentItem()
@@ -59,18 +58,14 @@ export function ShareButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        nativeButton
         disabled={isDisabled}
         render={
-          <button
-            className={cn(
-              buttonVariants({ variant: 'outline', size: 'sm' }),
-              'gap-1.5',
-            )}
-          >
+          <Button variant="outline" size="sm" className="gap-1.5">
             <StatusIcon className="h-3.5 w-3.5" />
             <span className="text-xs">{label}</span>
             <Chevron className="h-3 w-3 text-muted-foreground" />
-          </button>
+          </Button>
         }
       />
       {hasShareData && (

@@ -2,7 +2,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog'
 import { XIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 import {
   DialogOverlay,
   DialogPortal,
@@ -48,13 +48,12 @@ export function SettingsSubDialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
+            nativeButton
             render={
-              <button
-                type="button"
-                className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-                  'absolute top-2 right-2',
-                )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-2 right-2"
               />
             }
           >

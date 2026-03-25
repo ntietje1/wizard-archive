@@ -10,7 +10,7 @@ import {
   SortDesc,
 } from 'lucide-react'
 import type { SortDirection, SortOrder } from 'convex/editors/types'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,14 +39,11 @@ export function SortMenu() {
       <EmptyContextMenu>
         <DropdownMenu>
           <DropdownMenuTrigger
+            nativeButton
             render={
-              <button
-                type="button"
-                aria-label="Sort options"
-                className={buttonVariants({ variant: 'ghost', size: 'icon' })}
-              >
+              <Button variant="ghost" size="icon" aria-label="Sort options">
                 <SortDesc className="h-4 w-4" />
-              </button>
+              </Button>
             }
           />
           <DropdownMenuContent align="start" className="min-w-48">

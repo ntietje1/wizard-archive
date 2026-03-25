@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Palette } from 'lucide-react'
 import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 import {
   Popover,
   PopoverContent,
@@ -35,14 +35,9 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
     <div className="h-9 w-9 flex-shrink-0">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
+          nativeButton
           render={
-            <button
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'sm' }),
-                'h-9 w-9 p-0 min-w-9',
-              )}
-              type="button"
-            >
+            <Button variant="outline" size="sm" className="h-9 w-9 p-0 min-w-9">
               <div className="relative flex items-center justify-center w-full h-full">
                 <Palette className="h-4 w-4" />
                 <div
@@ -50,7 +45,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                   style={{ backgroundColor: currentColorHex }}
                 />
               </div>
-            </button>
+            </Button>
           }
         />
         <PopoverContent className="w-48 p-2" align="start" sideOffset={4}>

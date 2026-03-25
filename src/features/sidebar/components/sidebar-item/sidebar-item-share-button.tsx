@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { buttonVariants } from '~/features/shadcn/components/button'
-import { cn } from '~/features/shadcn/lib/utils'
+import { Button } from '~/features/shadcn/components/button'
 import {
   Popover,
   PopoverContent,
@@ -65,18 +64,17 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
+          nativeButton
           render={
-            <button
-              className={cn(
-                buttonVariants({ variant: 'ghost', size: 'sm' }),
-                'h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm',
-              )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
               onClick={(e) => e.stopPropagation()}
               aria-label="Share"
-              type="button"
             >
               <Share2 className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           }
         />
         <PopoverContent

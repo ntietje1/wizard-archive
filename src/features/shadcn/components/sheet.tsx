@@ -3,7 +3,7 @@ import { Dialog as SheetPrimitive } from '@base-ui/react/dialog'
 
 import { XIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -60,12 +60,12 @@ function SheetContent({
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
+            nativeButton
             render={
-              <button
-                className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-                  'absolute top-3 right-3',
-                )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-3 right-3"
               />
             }
           >

@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -16,7 +16,6 @@ import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { cn } from '~/features/shadcn/lib/utils'
 
 const label = 'View as player'
 
@@ -41,21 +40,22 @@ export const ViewAsPlayerButton = () => {
       <TooltipButton tooltip={label} side="bottom">
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger
+            nativeButton
             render={
-              <button
-                type="button"
-                className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+              <Button
+                variant="ghost"
+                size="icon"
+                className={
                   viewAsPlayerId
                     ? 'text-primary hover:text-primary aria-expanded:text-primary'
-                    : '',
-                )}
+                    : ''
+                }
                 disabled={isPending}
                 aria-label={label}
                 title={label}
               >
                 <Eye className="h-4 w-4" />
-              </button>
+              </Button>
             }
           />
           <DropdownMenuContent className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto z-[9999]">

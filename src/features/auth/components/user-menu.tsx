@@ -52,7 +52,7 @@ function UserMenuBase() {
       }}
     >
       <PopoverTrigger
-        nativeButton={false}
+        nativeButton
         render={
           <button className={avatarButtonClassName}>
             <Avatar size="sm">

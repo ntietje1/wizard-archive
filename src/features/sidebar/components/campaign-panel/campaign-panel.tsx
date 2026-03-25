@@ -20,7 +20,7 @@ export function CampaignPanel() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        nativeButton={false}
+        nativeButton
         render={
           <button
             type="button"

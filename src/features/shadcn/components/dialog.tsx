@@ -5,7 +5,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 
 import { XIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { Button } from '~/features/shadcn/components/button'
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -62,13 +62,12 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
+            nativeButton
             render={
-              <button
-                type="button"
-                className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-                  'absolute top-2 right-2',
-                )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-2 right-2"
               />
             }
           >
@@ -112,12 +111,8 @@ function DialogFooter({
       {showCloseButton && (
         <DialogPrimitive.Close
           data-slot="dialog-close"
-          render={
-            <button
-              type="button"
-              className={buttonVariants({ variant: 'outline' })}
-            />
-          }
+          nativeButton
+          render={<Button variant="outline" />}
         >
           Close
         </DialogPrimitive.Close>
