@@ -1,18 +1,14 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { FileEdit, Loader } from 'lucide-react'
+import { getDefaultIconName, getTypeName } from '../../utils/sidebar-item-utils'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { FormDialog } from '~/shared/components/form-dialog'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useNavigateOnSlugChange } from '~/features/sidebar/hooks/useNavigateOnSlugChange'
-import { assertNever } from '~/shared/utils/utils'
+import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { getIconByName } from '~/shared/utils/category-icons'
@@ -35,51 +31,12 @@ interface SidebarItemEditDialogProps {
   onClose: () => void
 }
 
-// TODO: move this to a shared utility file
-// Get a human-readable type name for the dialog title
-function getTypeName(type: SidebarItemType): string {
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return 'Note'
-    case SIDEBAR_ITEM_TYPES.folders:
-      return 'Folder'
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return 'Map'
-    case SIDEBAR_ITEM_TYPES.files:
-      return 'File'
-    default:
-      return assertNever(type)
-  }
-}
-
-// TODO: move this to a shared utility file
-// Get the default icon name for an item type
-function getDefaultIconName(type: SidebarItemType): string {
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return 'FileText'
-    case SIDEBAR_ITEM_TYPES.folders:
-      return 'Folder'
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return 'MapPin'
-    case SIDEBAR_ITEM_TYPES.files:
-      return 'File'
-    default:
-      return assertNever(type)
-  }
-}
-
 export function SidebarItemEditDialog({
   item,
   isOpen,
   onClose,
 }: SidebarItemEditDialogProps) {
-  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
-
-  const updateMutation = useAppMutation(
-    api.sidebarItems.mutations.updateSidebarItem,
-    { errorMessage: 'Failed to update item' },
-  )
+  const { editItem } = useEditSidebarItem()
 
   const getInitialValues = (): SidebarItemEditFormValues => ({
     name: item.name ?? '',
@@ -91,24 +48,11 @@ export function SidebarItemEditDialog({
     defaultValues: getInitialValues(),
     onSubmit: async ({ value }) => {
       try {
-        const previousSlug = item.slug
-        const response = await updateMutation.mutateAsync({
-          itemId: item._id,
+        await editItem({
+          item,
           name: value.name || undefined,
           iconName: value.iconName,
           color: value.color,
-        })
-
-        navigateIfSlugChanged({
-          itemId: item._id,
-          itemType: item.type,
-          previousSlug,
-          newSlug: response.slug,
-          updatedItem: {
-            ...item,
-            slug: response.slug,
-            name: value.name || item.name,
-          },
         })
 
         toast.success(`${getTypeName(item.type)} updated`)
@@ -236,7 +180,10 @@ export function SidebarItemEditDialog({
                 )
                 return (
                   <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-                    <PreviewIcon className="h-4 w-4 flex-shrink-0" />
+                    <PreviewIcon
+                      className="h-4 w-4 flex-shrink-0"
+                      style={values.color ? { color: values.color } : undefined}
+                    />
                     <span className="truncate text-sm">
                       {values.name || `Untitled ${typeName}`}
                     </span>

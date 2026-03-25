@@ -9,6 +9,8 @@ export const updateFolder = authMutation({
   args: {
     folderId: v.id('folders'),
     name: v.optional(v.string()),
+    iconName: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     folderId: v.id('folders'),
@@ -21,6 +23,8 @@ export const updateFolder = authMutation({
     return await updateFolderFn(ctx, {
       folderId: args.folderId,
       name: args.name,
+      iconName: args.iconName,
+      color: args.color,
     })
   },
 })

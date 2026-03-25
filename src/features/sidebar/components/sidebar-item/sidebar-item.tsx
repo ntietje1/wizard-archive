@@ -10,7 +10,7 @@ import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useRenameSidebarItem } from '~/features/sidebar/hooks/useRenameSidebarItem'
+import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
@@ -28,7 +28,7 @@ interface SidebarItemProps {
 }
 
 function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
-  const { rename } = useRenameSidebarItem()
+  const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
@@ -49,7 +49,7 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
     setLastSelectedItem({ type: item.type, slug: item.slug })
 
   const handleFinishRename = async (name: string) => {
-    await rename(item, name)
+    await editItem({ item, name })
     setRenamingId(null)
   }
 

@@ -7,9 +7,9 @@ import { Loader } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useNavigateOnSlugChange } from '~/features/sidebar/hooks/useNavigateOnSlugChange'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { getIconByName } from '~/shared/utils/category-icons'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
@@ -54,19 +54,12 @@ export function MapForm({
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToMap } = useEditorNavigation()
-  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
+  const { editItem } = useEditSidebarItem()
+  const { createItem } = useCreateSidebarItem()
   const map = useAuthQuery(
     api.gameMaps.queries.getMap,
     mapId ? { mapId } : 'skip',
   )
-
-  const createMutation = useAppMutation(api.gameMaps.mutations.createMap, {
-    errorMessage: 'Failed to create map',
-  })
-
-  const updateMutation = useAppMutation(api.gameMaps.mutations.updateMap, {
-    errorMessage: 'Failed to update map',
-  })
 
   const imageUpload = useFileWithPreview({
     isOpen: true,
@@ -152,42 +145,31 @@ export function MapForm({
         return
       }
 
-      if (mapId) {
-        // Update existing map
+      if (mapId && map.data) {
         try {
-          const previousSlug = map.data?.slug
-          const response = await updateMutation.mutateAsync({
-            mapId,
+          const { slug } = await editItem({
+            item: map.data,
             name: values.name,
             imageStorageId: finalImageStorageId,
-            iconName: values.iconName ?? undefined,
-            color: values.color ?? undefined,
-          })
-
-          navigateIfSlugChanged({
-            itemId: mapId,
-            itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-            previousSlug,
-            newSlug: response.slug,
+            iconName: values.iconName,
+            color: values.color,
           })
 
           toast.success('Map updated')
-          onSuccess?.(response.slug)
+          onSuccess?.(slug)
         } catch (error) {
           console.error(error)
           return
         }
       } else if (campaignId) {
-        // Create new map - require image
-        const { mapId: newMapId, slug: newMapSlug } =
-          await createMutation.mutateAsync({
-            campaignId,
-            name: values.name,
-            imageStorageId: finalImageStorageId,
-            parentId: parentId ?? null,
-          })
+        const { id: newMapId, slug: newMapSlug } = await createItem({
+          type: SIDEBAR_ITEM_TYPES.gameMaps,
+          campaignId,
+          name: values.name,
+          imageStorageId: finalImageStorageId,
+          parentId: parentId ?? null,
+        })
         await openParentFolders(newMapId)
-        // Get the created map's slug for onSuccess callback
         navigateToMap(newMapSlug)
         toast.success('Map created')
         onSuccess?.(newMapSlug)
@@ -201,20 +183,16 @@ export function MapForm({
     }
   }
 
-  const isSubmitting =
-    createMutation.isPending ||
-    updateMutation.isPending ||
-    imageUpload.isUploading
-
   const hasImage = !!(
     imageUpload.file ||
     (map.data?.imageStorageId && !imageUpload.removed)
   )
 
-  const isLoadingFile =
+  const isLoadingMap =
     mapId !== undefined && map.data === undefined && map.isPending
 
-  const isDisabled = isSubmitting || isLoadingFile
+  const isDisabled =
+    form.state.isSubmitting || imageUpload.isUploading || isLoadingMap
 
   return (
     <form
@@ -323,7 +301,7 @@ export function MapForm({
           label=""
           fileUpload={imageUpload}
           handleFileSelect={imageUpload.handleFileSelect}
-          isSubmitting={isSubmitting}
+          isSubmitting={isDisabled}
         />
         {!hasImage && (
           <p className="text-sm text-destructive">Map image is required</p>
@@ -338,19 +316,25 @@ export function MapForm({
       >
         {({ name, canSubmit }) => {
           const isSubmitDisabled =
-            !name || !hasImage || isSubmitting || (mapId && !canSubmit)
+            !name || !hasImage || isDisabled || (mapId && !canSubmit)
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={isSubmitting}
+                disabled={isDisabled}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>
-                {mapId ? 'Update' : 'Create'}
+                {form.state.isSubmitting
+                  ? mapId
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : mapId
+                    ? 'Update'
+                    : 'Create'}
               </Button>
             </div>
           )

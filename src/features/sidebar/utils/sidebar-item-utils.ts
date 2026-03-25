@@ -141,3 +141,33 @@ export function buildBreadcrumbs(
   }
   return ''
 }
+
+export function getTypeName(type: SidebarItemType): string {
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      return 'Note'
+    case SIDEBAR_ITEM_TYPES.folders:
+      return 'Folder'
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return 'Map'
+    case SIDEBAR_ITEM_TYPES.files:
+      return 'File'
+    default:
+      return assertNever(type)
+  }
+}
+
+export function getDefaultIconName(type: SidebarItemType): string {
+  switch (type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      return 'FileText'
+    case SIDEBAR_ITEM_TYPES.folders:
+      return 'Folder'
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return 'MapPin'
+    case SIDEBAR_ITEM_TYPES.files:
+      return 'File'
+    default:
+      return assertNever(type)
+  }
+}

@@ -3,7 +3,7 @@ import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import { useRenameSidebarItem } from '~/features/sidebar/hooks/useRenameSidebarItem'
+import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -25,7 +25,7 @@ function FlatSidebarItemComponent({
   renamingId,
   setRenamingId,
 }: FlatSidebarItemProps) {
-  const { rename } = useRenameSidebarItem()
+  const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
@@ -38,7 +38,7 @@ function FlatSidebarItemComponent({
     setLastSelectedItem({ type: item.type, slug: item.slug })
 
   const handleFinishRename = async (name: string) => {
-    await rename(item, name)
+    await editItem({ item, name })
     setRenamingId(null)
   }
 

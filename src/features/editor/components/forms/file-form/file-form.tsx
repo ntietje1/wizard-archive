@@ -8,9 +8,9 @@ import { validateFileForUpload } from 'convex/storage/validation'
 import type { Id } from 'convex/_generated/dataModel'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useNavigateOnSlugChange } from '~/features/sidebar/hooks/useNavigateOnSlugChange'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { getIconByName } from '~/shared/utils/category-icons'
@@ -55,19 +55,12 @@ export function FileForm({
 }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToFile } = useEditorNavigation()
-  const { navigateIfSlugChanged } = useNavigateOnSlugChange()
+  const { editItem } = useEditSidebarItem()
+  const { createItem } = useCreateSidebarItem()
   const file = useAuthQuery(
     api.files.queries.getFile,
     fileId ? { fileId } : 'skip',
   )
-
-  const createMutation = useAppMutation(api.files.mutations.createFile, {
-    errorMessage: 'Failed to create file',
-  })
-
-  const updateMutation = useAppMutation(api.files.mutations.updateFile, {
-    errorMessage: 'Failed to update file',
-  })
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -156,42 +149,31 @@ export function FileForm({
         file.data?.name ||
         ''
 
-      if (fileId) {
-        // Update existing file
+      if (fileId && file.data) {
         try {
-          const previousSlug = file.data?.slug
-          const response = await updateMutation.mutateAsync({
-            fileId,
+          const { slug } = await editItem({
+            item: file.data,
             name: finalName,
             storageId: finalStorageId,
-            iconName: values.iconName ?? undefined,
-            color: values.color ?? undefined,
-          })
-
-          navigateIfSlugChanged({
-            itemId: fileId,
-            itemType: SIDEBAR_ITEM_TYPES.files,
-            previousSlug,
-            newSlug: response.slug,
+            iconName: values.iconName,
+            color: values.color,
           })
 
           toast.success('File updated')
-          onSuccess?.(response.slug)
+          onSuccess?.(slug)
         } catch (error) {
           console.error(error)
           return
         }
       } else if (campaignId) {
-        // Create new file - require file
-        const { fileId: newFileId, slug: newFileSlug } =
-          await createMutation.mutateAsync({
-            campaignId,
-            name: finalName,
-            storageId: finalStorageId,
-            parentId: parentId ?? null,
-          })
+        const { id: newFileId, slug: newFileSlug } = await createItem({
+          type: SIDEBAR_ITEM_TYPES.files,
+          campaignId,
+          name: finalName,
+          storageId: finalStorageId,
+          parentId: parentId ?? null,
+        })
         await openParentFolders(newFileId)
-        // Get the created file's slug for onSuccess callback
         navigateToFile(newFileSlug)
         toast.success('File created')
         onSuccess?.(newFileSlug)
@@ -205,20 +187,16 @@ export function FileForm({
     }
   }
 
-  const isSubmitting =
-    createMutation.isPending ||
-    updateMutation.isPending ||
-    fileUpload.isUploading
-
   const isLoadingFile =
     fileId !== undefined && file.data === undefined && file.isPending
-
-  const isDisabled = isSubmitting || isLoadingFile
 
   const hasFile = !!(
     fileUpload.file ||
     (file.data?.storageId && !fileUpload.removed)
   )
+
+  const isDisabled =
+    form.state.isSubmitting || fileUpload.isUploading || isLoadingFile
 
   return (
     <form
@@ -267,9 +245,7 @@ export function FileForm({
         )}
       </form.Field>
 
-      {/* Icon and Color Row */}
       <div className="flex items-end gap-4">
-        {/* Icon Field */}
         <form.Field name="iconName">
           {(field) => (
             <div className="space-y-2">
@@ -283,7 +259,6 @@ export function FileForm({
           )}
         </form.Field>
 
-        {/* Color Field */}
         <form.Field name="color">
           {(field) => (
             <div className="space-y-2">
@@ -296,7 +271,6 @@ export function FileForm({
           )}
         </form.Field>
 
-        {/* Preview */}
         <div className="flex-1">
           <Label className="text-muted-foreground text-xs">Preview</Label>
           <form.Subscribe selector={(s) => s.values}>
@@ -345,7 +319,13 @@ export function FileForm({
               type="submit"
               disabled={!hasFile || isDisabled || (fileId && !canSubmit)}
             >
-              {fileId ? 'Update' : 'Create'}
+              {form.state.isSubmitting
+                ? fileId
+                  ? 'Updating...'
+                  : 'Creating...'
+                : fileId
+                  ? 'Update'
+                  : 'Create'}
             </Button>
           </div>
         )}

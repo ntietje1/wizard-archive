@@ -10,7 +10,17 @@ import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateFolder(
   ctx: AuthMutationCtx,
-  { folderId, name }: { folderId: Id<'folders'>; name?: string },
+  {
+    folderId,
+    name,
+    iconName,
+    color,
+  }: {
+    folderId: Id<'folders'>
+    name?: string
+    iconName?: string | null
+    color?: string | null
+  },
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
   const folderFromDb = await ctx.db.get(folderId)
   if (!folderFromDb) throw new Error('Folder not found')
@@ -31,6 +41,14 @@ export async function updateFolder(
       newName: trimmedName,
     })
     updates.slug = newSlug
+  }
+
+  if (iconName !== undefined) {
+    updates.iconName = iconName
+  }
+
+  if (color !== undefined) {
+    updates.color = color
   }
 
   if (Object.keys(updates).length === 0) {
