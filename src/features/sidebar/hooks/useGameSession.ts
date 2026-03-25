@@ -1,7 +1,10 @@
-import { createContext, useContext } from 'react'
+import { api } from 'convex/_generated/api'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Session } from 'convex/sessions/types'
+import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export type SessionContextValue = {
   currentSession: UseQueryResult<Session | null, Error>
@@ -24,12 +27,41 @@ export type SessionContextValue = {
   nextSessionNumber: number
 }
 
-export const SessionContext = createContext<SessionContextValue | null>(null)
+export function useSession(): SessionContextValue {
+  const { campaignId } = useCampaign()
 
-export const useSession = () => {
-  const context = useContext(SessionContext)
-  if (!context) {
-    throw new Error('useSession must be used within a SessionProvider')
+  const currentSession = useAuthQuery(
+    api.sessions.queries.getCurrentSession,
+    campaignId ? { campaignId } : 'skip',
+  )
+
+  const sessions = useAuthQuery(
+    api.sessions.queries.getSessionsByCampaign,
+    campaignId ? { campaignId } : 'skip',
+  )
+
+  const startSession = useAppMutation(api.sessions.mutations.startSession, {
+    errorMessage: 'Failed to start session',
+  })
+
+  const endCurrentSession = useAppMutation(
+    api.sessions.mutations.endCurrentSession,
+    { errorMessage: 'Failed to end session' },
+  )
+
+  const setCurrentSession = useAppMutation(
+    api.sessions.mutations.setCurrentSession,
+    { errorMessage: 'Failed to set session' },
+  )
+
+  const nextSessionNumber = (sessions.data?.length ?? 0) + 1
+
+  return {
+    currentSession,
+    sessions,
+    startSession,
+    endCurrentSession,
+    setCurrentSession,
+    nextSessionNumber,
   }
-  return context
 }

@@ -4,7 +4,6 @@ import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context
 import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
 import { SidebarLayout } from '~/features/sidebar/components/sidebar-layout'
 import { SidebarLayoutProvider } from '~/features/sidebar/contexts/sidebar-layout-context'
-import { SessionProvider } from '~/features/sidebar/contexts/session-context'
 import { DndProvider } from '~/features/dnd/contexts/dnd-provider'
 import { ViewAsBanner } from '~/features/editor/components/view-as-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
@@ -18,27 +17,25 @@ export function CampaignLayout() {
   return (
     <CampaignProvider>
       <CampaignNotFoundWrapper>
-        <SessionProvider>
-          <AllSidebarItemsProvider>
-            <DndProvider>
-              <div className="flex flex-col flex-1 min-h-0">
-                <div className="flex flex-1 min-h-0">
-                  <SidebarLayoutProvider
-                    initialSidebarWidth={initialSidebarWidth}
-                    initialSidebarExpanded={initialSidebarExpanded}
-                  >
-                    <SidebarLayout>
-                      <ErrorBoundary FallbackComponent={ErrorFallback}>
-                        <Outlet />
-                      </ErrorBoundary>
-                    </SidebarLayout>
-                  </SidebarLayoutProvider>
-                </div>
-                <ViewAsBanner />
+        <AllSidebarItemsProvider>
+          <DndProvider>
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex flex-1 min-h-0">
+                <SidebarLayoutProvider
+                  initialSidebarWidth={initialSidebarWidth}
+                  initialSidebarExpanded={initialSidebarExpanded}
+                >
+                  <SidebarLayout>
+                    <ErrorBoundary FallbackComponent={ErrorFallback}>
+                      <Outlet />
+                    </ErrorBoundary>
+                  </SidebarLayout>
+                </SidebarLayoutProvider>
               </div>
-            </DndProvider>
-          </AllSidebarItemsProvider>
-        </SessionProvider>
+              <ViewAsBanner />
+            </div>
+          </DndProvider>
+        </AllSidebarItemsProvider>
       </CampaignNotFoundWrapper>
     </CampaignProvider>
   )
