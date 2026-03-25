@@ -17,7 +17,8 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import type { Theme } from '~/features/settings/hooks/useTheme'
 import { NavigationProgress } from '~/shared/components/navigation-progress'
-import { ThemeProvider, ThemeScript } from '~/shared/components/theme-provider'
+import { ThemeProvider } from '~/shared/components/theme-provider'
+import { resolveTheme } from '~/features/settings/hooks/useTheme'
 import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPreferences'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { getToken } from '~/features/auth/utils/auth-server'
@@ -122,13 +123,12 @@ function RootDocument({
   initialTheme,
 }: {
   children: React.ReactNode
-  initialTheme?: string
+  initialTheme?: Theme
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={resolveTheme(initialTheme ?? 'system')}>
       <head>
         <HeadContent />
-        <ThemeScript initialTheme={initialTheme} />
       </head>
       <body className="flex flex-col min-h-screen">
         <LazyMotion features={domAnimation}>

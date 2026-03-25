@@ -139,6 +139,12 @@
   }
 }
 
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition-duration: 0s !important;
+}
+
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;

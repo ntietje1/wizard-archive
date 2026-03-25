@@ -12,25 +12,6 @@ import {
 } from '~/features/settings/hooks/useTheme'
 import { userPreferencesQueryOptions } from '~/features/settings/hooks/useUserPreferences'
 
-const FOUC_SCRIPT = `(function(){try{var t=window.__INITIAL_THEME__;var r=(t==='dark'||t==='light')?t:(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.classList.add(r)}catch(e){}})();`
-
-const escapeScriptContent = (str: string) =>
-  str.replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
-
-/**
- * Blocking inline script that sets the theme class on `<html>` before paint.
- * Render this inside `<head>`.
- */
-export function ThemeScript({ initialTheme }: { initialTheme?: string }) {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `window.__INITIAL_THEME__=${escapeScriptContent(JSON.stringify(initialTheme ?? null))};${FOUC_SCRIPT}`,
-      }}
-    />
-  )
-}
-
 export function ThemeProvider({
   children,
   initialTheme,

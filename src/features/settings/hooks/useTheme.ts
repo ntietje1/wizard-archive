@@ -25,10 +25,12 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   const other = resolved === 'dark' ? 'light' : 'dark'
-  if (!root.classList.contains(resolved)) {
-    root.classList.add(resolved)
-  }
+
+  root.classList.add('no-transitions', resolved)
   root.classList.remove(other)
+  // Force a reflow so the class change paints without transitions, then re-enable
+  root.offsetHeight
+  root.classList.remove('no-transitions')
 }
 
 export const useTheme = () => {
