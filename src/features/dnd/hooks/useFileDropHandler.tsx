@@ -30,7 +30,6 @@ import {
 } from '~/features/file-upload/utils/file-upload'
 
 interface DropOptions {
-  campaignId: Id<'campaigns'>
   parentId: Id<'folders'> | null
 }
 
@@ -68,7 +67,6 @@ export function useFileDropHandler() {
 
   const uploadSingleFile = async (
     file: File,
-    targetCampaignId: Id<'campaigns'>,
     parentId: Id<'folders'> | null,
     silent = false,
   ): Promise<boolean> => {
@@ -102,7 +100,7 @@ export function useFileDropHandler() {
         const blocks = await convertTextToBlocks(file)
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.notes,
-          campaignId: targetCampaignId,
+          campaignId: campaignId!,
           name: fileName,
           parentId,
           content: blocks,
@@ -147,7 +145,7 @@ export function useFileDropHandler() {
         await commitUpload.mutateAsync({ storageId })
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.files,
-          campaignId: targetCampaignId,
+          campaignId: campaignId!,
           name: fileName,
           storageId,
           parentId,
@@ -186,13 +184,12 @@ export function useFileDropHandler() {
 
   const uploadFolderRecursive = async (
     folder: FolderStructure,
-    targetCampaignId: Id<'campaigns'>,
     parentId: Id<'folders'> | null,
     progress: UploadProgress,
   ): Promise<Id<'folders'>> => {
     const result = await createItem({
       type: SIDEBAR_ITEM_TYPES.folders,
-      campaignId: targetCampaignId,
+      campaignId: campaignId!,
       name: folder.name,
       parentId,
     })
@@ -208,12 +205,7 @@ export function useFileDropHandler() {
     for (const { file, relativePath } of folder.files) {
       try {
         const validation = validateFileForUpload(file)
-        const success = await uploadSingleFile(
-          file,
-          targetCampaignId,
-          folderId,
-          true,
-        )
+        const success = await uploadSingleFile(file, folderId, true)
         if (!success && validation.success) {
           console.warn(`${file.name}: unsupported file type`)
         }
@@ -234,12 +226,7 @@ export function useFileDropHandler() {
     }
 
     for (const subfolder of folder.subfolders) {
-      await uploadFolderRecursive(
-        subfolder,
-        targetCampaignId,
-        folderId,
-        progress,
-      )
+      await uploadFolderRecursive(subfolder, folderId, progress)
     }
 
     return folderId
@@ -249,8 +236,7 @@ export function useFileDropHandler() {
     dropResult: DropResult,
     options?: DropOptions,
   ): Promise<void> => {
-    const targetCampaignId = options?.campaignId || campaignId
-    if (!targetCampaignId) {
+    if (!campaignId) {
       toast.error('No campaign selected')
       return
     }
@@ -262,12 +248,7 @@ export function useFileDropHandler() {
     // Single file: individual toast with navigation
     if (isSingleFile) {
       // uploadSingleFile handles all toasts when silent=false
-      await uploadSingleFile(
-        files[0].file,
-        targetCampaignId,
-        options?.parentId ?? null,
-        false,
-      )
+      await uploadSingleFile(files[0].file, options?.parentId ?? null, false)
       return
     }
 
@@ -311,7 +292,6 @@ export function useFileDropHandler() {
           const validation = validateFileForUpload(file)
           const success = await uploadSingleFile(
             file,
-            targetCampaignId,
             options?.parentId ?? null,
             true,
           )
@@ -346,7 +326,6 @@ export function useFileDropHandler() {
       for (const folder of rootFolders) {
         lastFolderId = await uploadFolderRecursive(
           folder,
-          targetCampaignId,
           options?.parentId ?? null,
           progress,
         )
