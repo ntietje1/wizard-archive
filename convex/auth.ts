@@ -170,6 +170,14 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
+    session: {
+      expiresIn: 60 * 60 * 24 * 30, // 30 days (default: 7 days)
+      updateAge: 60 * 60 * 24 * 7, // refresh every 7 days (default: 1 day)
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 10, // cache session for 10 minutes before re-checking DB
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
