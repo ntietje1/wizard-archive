@@ -12,7 +12,7 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { useEditorNavigationContext } from '~/features/sidebar/hooks/useEditorNavigationContext'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
@@ -42,7 +42,7 @@ interface UseMenuActionsOptions {
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
   const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigationContext()
+    useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateSidebarItem()

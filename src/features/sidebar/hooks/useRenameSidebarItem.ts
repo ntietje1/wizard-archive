@@ -3,7 +3,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
-import { useEditorNavigationContext } from '~/features/sidebar/hooks/useEditorNavigationContext'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -12,7 +12,7 @@ export function useRenameSidebarItem() {
   const validation = useSidebarValidation()
   const { campaignId } = useCampaign()
   const queryClient = useQueryClient()
-  const { navigateToItem } = useEditorNavigationContext()
+  const { navigateToItem } = useEditorNavigation()
 
   const updateSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.updateSidebarItem,
