@@ -10,7 +10,7 @@ import type {
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useRenameItem } from '~/features/sidebar/hooks/useRenameItem'
+import { useRenameSidebarItem } from '~/features/sidebar/hooks/useRenameSidebarItem'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
@@ -217,7 +217,7 @@ export function EditableBreadcrumb({
   canRename,
   showNotSharedTooltip,
 }: EditableBreadcrumbProps) {
-  const { rename } = useRenameItem()
+  const { rename } = useRenameSidebarItem()
   const { setLastSelectedItem } = useLastEditorItem()
   const { dmUsername, campaignSlug } = useCampaign()
   const routeParams = { dmUsername, campaignSlug }

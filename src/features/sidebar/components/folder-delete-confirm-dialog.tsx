@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import type { Folder } from 'convex/folders/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import {
   getDescendantCount,
   useAllSidebarItems,
@@ -19,7 +19,7 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { moveItem } = useSidebarItemMutations()
+  const { moveItem } = useMoveSidebarItem()
   const { parentItemsMap } = useAllSidebarItems()
 
   const descendantCount = getDescendantCount(folder._id, parentItemsMap)

@@ -9,7 +9,8 @@ import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
+import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
@@ -33,8 +34,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { data: allTrashedItems, parentItemsMap } = useTrashedSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
 
-  const { moveItem, permanentlyDeleteItem, emptyTrashBin } =
-    useSidebarItemMutations()
+  const { moveItem } = useMoveSidebarItem()
+  const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
 
   const [confirmDeleteItem, setConfirmDeleteItem] =
     useState<AnySidebarItem | null>(null)

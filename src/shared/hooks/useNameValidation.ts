@@ -3,7 +3,7 @@ import debounce from 'lodash-es/debounce'
 import { validateItemName } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 interface UseNameValidationOptions {
   name: string
@@ -22,7 +22,7 @@ export function useNameValidation({
   parentId,
   excludeId,
 }: UseNameValidationOptions) {
-  const { validateName } = useSidebarItemMutations()
+  const { validateName } = useSidebarValidation()
   const [debouncedName, setDebouncedName] = useState(name)
   const debouncedSetNameRef = useRef(
     debounce((value: string) => {
@@ -42,20 +42,27 @@ export function useNameValidation({
   const trimmedDebouncedName = debouncedName.trim()
   const trimmedInitialName = initialName.trim()
 
+  const checkFormat = (trimmed: string) => {
+    if (trimmed === trimmedInitialName)
+      return { valid: true as const, error: undefined }
+    return validateItemName(trimmed)
+  }
+
+  const checkUniqueness = (trimmed: string) => {
+    if (!campaignId || trimmed === trimmedInitialName)
+      return { valid: true as const, error: undefined }
+    return validateName(trimmed, parentId, excludeId)
+  }
+
   const isPendingDebounce = trimmedName !== trimmedDebouncedName
 
-  const nameValidation = (() => {
-    if (!isActive) return { valid: true, error: undefined }
-    if (trimmedName === trimmedInitialName)
-      return { valid: true, error: undefined }
-    return validateItemName(trimmedName)
-  })()
+  const nameValidation = isActive
+    ? checkFormat(trimmedName)
+    : { valid: true as const, error: undefined }
 
-  const uniquenessValidation = (() => {
-    if (!isActive || !campaignId) return { valid: true }
-    if (trimmedDebouncedName === trimmedInitialName) return { valid: true }
-    return validateName(trimmedDebouncedName, parentId, excludeId)
-  })()
+  const uniquenessValidation = isActive
+    ? checkUniqueness(trimmedDebouncedName)
+    : { valid: true as const, error: undefined }
 
   const isResultValid = !isPendingDebounce
   const isUnique = isResultValid && uniquenessValidation.valid
@@ -71,18 +78,12 @@ export function useNameValidation({
 
   const checkNameUnique = (nameToCheck: string): string | undefined => {
     const trimmed = nameToCheck.trim()
-
-    const nameResult = validateItemName(trimmed)
-    if (!nameResult.valid) {
-      return nameResult.error ?? 'Invalid name'
-    }
-
-    if (!campaignId || trimmed === trimmedInitialName) {
-      return undefined
-    }
-
-    const result = validateName(trimmed, parentId, excludeId)
-    return result.valid ? undefined : result.error
+    const formatResult = checkFormat(trimmed)
+    if (!formatResult.valid) return formatResult.error ?? 'Invalid name'
+    const uniqueResult = checkUniqueness(trimmed)
+    return uniqueResult.valid
+      ? undefined
+      : (uniqueResult.error ?? 'Name is already in use')
   }
 
   return {

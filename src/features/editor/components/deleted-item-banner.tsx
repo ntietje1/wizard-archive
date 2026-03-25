@@ -7,7 +7,8 @@ import type { Id } from 'convex/_generated/dataModel'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
+import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
@@ -57,7 +58,8 @@ export function TrashBanner({ item }: TrashBannerProps) {
  */
 function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   const isDeleted = !!item.deletionTime
-  const { moveItem, permanentlyDeleteItem } = useSidebarItemMutations()
+  const { moveItem } = useMoveSidebarItem()
+  const { permanentlyDeleteItem } = useDeleteSidebarItem()
   const { clearEditorContent } = useEditorNavigation()
   const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -162,7 +164,7 @@ function RootTrashBanner() {
 
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
-  const { emptyTrashBin } = useSidebarItemMutations()
+  const { emptyTrashBin } = useDeleteSidebarItem()
   const { data: allTrashedItems = [] } = useTrashedSidebarItems()
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 

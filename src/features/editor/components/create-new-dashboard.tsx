@@ -6,7 +6,8 @@ import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
@@ -64,7 +65,8 @@ export function CreateNewDashboard({
   folderPath,
 }: CreateNewDashboardProps) {
   const { campaignId } = useCampaign()
-  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)

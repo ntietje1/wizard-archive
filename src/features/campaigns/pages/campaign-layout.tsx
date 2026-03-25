@@ -2,7 +2,6 @@ import { Outlet, useRouteContext } from '@tanstack/react-router'
 import { CampaignNotFoundWrapper } from '../components/campaign-not-found'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
-import { SidebarItemMutationsProvider } from '~/features/sidebar/contexts/sidebar-item-mutations-provider'
 import { SidebarLayout } from '~/features/sidebar/components/sidebar-layout'
 import { SidebarLayoutProvider } from '~/features/sidebar/contexts/sidebar-layout-context'
 import { SessionProvider } from '~/features/sidebar/contexts/session-context'
@@ -22,27 +21,25 @@ export function CampaignLayout() {
       <CampaignNotFoundWrapper>
         <SessionProvider>
           <AllSidebarItemsProvider>
-            <SidebarItemMutationsProvider>
-              <EditorNavigationProvider>
-                <DndProvider>
-                  <div className="flex flex-col flex-1 min-h-0">
-                    <div className="flex flex-1 min-h-0">
-                      <SidebarLayoutProvider
-                        initialSidebarWidth={initialSidebarWidth}
-                        initialSidebarExpanded={initialSidebarExpanded}
-                      >
-                        <SidebarLayout>
-                          <ErrorBoundary FallbackComponent={ErrorFallback}>
-                            <Outlet />
-                          </ErrorBoundary>
-                        </SidebarLayout>
-                      </SidebarLayoutProvider>
-                    </div>
-                    <ViewAsBanner />
+            <EditorNavigationProvider>
+              <DndProvider>
+                <div className="flex flex-col flex-1 min-h-0">
+                  <div className="flex flex-1 min-h-0">
+                    <SidebarLayoutProvider
+                      initialSidebarWidth={initialSidebarWidth}
+                      initialSidebarExpanded={initialSidebarExpanded}
+                    >
+                      <SidebarLayout>
+                        <ErrorBoundary FallbackComponent={ErrorFallback}>
+                          <Outlet />
+                        </ErrorBoundary>
+                      </SidebarLayout>
+                    </SidebarLayoutProvider>
                   </div>
-                </DndProvider>
-              </EditorNavigationProvider>
-            </SidebarItemMutationsProvider>
+                  <ViewAsBanner />
+                </div>
+              </DndProvider>
+            </EditorNavigationProvider>
           </AllSidebarItemsProvider>
         </SessionProvider>
       </CampaignNotFoundWrapper>

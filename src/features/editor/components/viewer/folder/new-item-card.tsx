@@ -11,7 +11,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '~/features/shadcn/components/context-menu'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
@@ -25,7 +26,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const triggerRef = useRef<HTMLDivElement>(null)
 
   const { campaignId } = useCampaign()
-  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
 

@@ -4,13 +4,15 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { FolderPlus, Loader2 } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 
 export function NewFolderButton() {
-  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()

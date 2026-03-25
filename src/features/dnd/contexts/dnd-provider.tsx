@@ -10,7 +10,7 @@ import { resolveDropTarget } from '~/features/dnd/utils/dnd-registry'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigationContext } from '~/features/sidebar/hooks/useEditorNavigationContext'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import {
   useAllSidebarItems,
   useTrashedSidebarItems,
@@ -25,7 +25,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
   const campaignName = campaign.data?.name
   const { navigateToItem } = useEditorNavigationContext()
-  const { moveItem } = useSidebarItemMutations()
+  const { moveItem } = useMoveSidebarItem()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, parentItemsMap, getAncestorSidebarItems } =
     useAllSidebarItems()

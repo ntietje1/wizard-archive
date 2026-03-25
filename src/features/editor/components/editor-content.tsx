@@ -22,7 +22,8 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 
 export function EditorContent() {
@@ -110,7 +111,8 @@ function NotSharedContent() {
   const { viewAsPlayerId } = useEditorMode()
   const { data: allItems } = useAllSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
-  const { createItem, getDefaultName } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const [isPending, setIsPending] = useState(false)

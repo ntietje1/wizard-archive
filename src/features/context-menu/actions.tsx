@@ -16,7 +16,10 @@ import { useEditorNavigationContext } from '~/features/sidebar/hooks/useEditorNa
 import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
+import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
@@ -42,13 +45,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     useEditorNavigationContext()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const {
-    createItem,
-    getDefaultName,
-    moveItem,
-    permanentlyDeleteItem,
-    emptyTrashBin,
-  } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
+  const { moveItem } = useMoveSidebarItem()
+  const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()

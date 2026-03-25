@@ -16,7 +16,7 @@ import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFold
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { useSidebarItemMutations } from '~/features/sidebar/hooks/useSidebarItemMutations'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { convertTextToBlocks } from '~/features/editor/utils/text-to-blocks'
 import {
   FileProgressContent,
@@ -46,7 +46,7 @@ const TOAST_STYLE = { width: '100%', maxWidth: '100%' } as const
 
 export function useFileDropHandler() {
   const { campaignId } = useCampaign()
-  const { createItem } = useSidebarItemMutations()
+  const { createItem } = useCreateSidebarItem()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
 
@@ -70,6 +70,11 @@ export function useFileDropHandler() {
     parentId: Id<'folders'> | null,
     silent = false,
   ): Promise<boolean> => {
+    if (!campaignId) {
+      toast.error('No campaign selected')
+      return false
+    }
+
     const fileName = file.name
     const uploadId = crypto.randomUUID()
     const validation = validateFileForUpload(file)
@@ -100,7 +105,7 @@ export function useFileDropHandler() {
         const blocks = await convertTextToBlocks(file)
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.notes,
-          campaignId: campaignId!,
+          campaignId,
           name: fileName,
           parentId,
           content: blocks,
@@ -112,7 +117,7 @@ export function useFileDropHandler() {
             <ToastContent title={fileName} message="Note created" />,
             { duration: 3000, style: TOAST_STYLE },
           )
-          await openParentFolders(result.id)
+          openParentFolders(result.id)
           navigateToItem(result, true)
         }
       } else if (isMediaFile(file.type)) {
@@ -145,7 +150,7 @@ export function useFileDropHandler() {
         await commitUpload.mutateAsync({ storageId })
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.files,
-          campaignId: campaignId!,
+          campaignId,
           name: fileName,
           storageId,
           parentId,
@@ -157,7 +162,7 @@ export function useFileDropHandler() {
             <ToastContent title={fileName} message="File created" />,
             { duration: 3000, style: TOAST_STYLE },
           )
-          await openParentFolders(result.id)
+          openParentFolders(result.id)
           navigateToItem(result)
         }
       } else {
@@ -187,9 +192,12 @@ export function useFileDropHandler() {
     parentId: Id<'folders'> | null,
     progress: UploadProgress,
   ): Promise<Id<'folders'>> => {
+    if (!campaignId) {
+      throw new Error('Campaign data missing')
+    }
     const result = await createItem({
       type: SIDEBAR_ITEM_TYPES.folders,
-      campaignId: campaignId!,
+      campaignId,
       name: folder.name,
       parentId,
     })

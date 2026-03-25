@@ -10,7 +10,7 @@ import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useRenameItem } from '~/features/sidebar/hooks/useRenameItem'
+import { useRenameSidebarItem } from '~/features/sidebar/hooks/useRenameSidebarItem'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
@@ -28,7 +28,7 @@ interface SidebarItemProps {
 }
 
 function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
-  const { rename } = useRenameItem()
+  const { rename } = useRenameSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
