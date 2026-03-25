@@ -10,8 +10,12 @@ import {
   ResizablePanelGroup,
 } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
+import {
+  SidebarLayoutContext,
+  useSidebarLayout,
+} from '~/features/sidebar/hooks/useSidebarLayout'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useUserPreferences } from '~/features/settings/hooks/useUserPreferences'
 
 const SIDEBAR_MIN_WIDTH = 164
 const SNAP_CLOSED_THRESHOLD = 50
@@ -49,7 +53,42 @@ const SidebarContent = memo(function SidebarContent() {
   )
 })
 
-export function SidebarLayout({ children }: { children: React.ReactNode }) {
+export function SidebarLayout({
+  children,
+  initialSidebarWidth,
+  initialSidebarExpanded,
+}: {
+  children: React.ReactNode
+  initialSidebarWidth?: number
+  initialSidebarExpanded?: boolean
+}) {
+  const {
+    isSidebarExpanded,
+    setIsSidebarExpanded,
+    sidebarWidth,
+    setSidebarWidth,
+    isLoaded: isUserPreferencesLoaded,
+  } = useUserPreferences({
+    sidebarWidth: initialSidebarWidth,
+    isSidebarExpanded: initialSidebarExpanded,
+  })
+
+  const contextValue = {
+    isSidebarExpanded,
+    setIsSidebarExpanded,
+    sidebarWidth,
+    setSidebarWidth,
+    isUserPreferencesLoaded,
+  }
+
+  return (
+    <SidebarLayoutContext.Provider value={contextValue}>
+      <SidebarLayoutInner>{children}</SidebarLayoutInner>
+    </SidebarLayoutContext.Provider>
+  )
+}
+
+function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
   const {
     isSidebarExpanded,
     setIsSidebarExpanded,
@@ -145,7 +184,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         onMouseDown={handleMouseDown}
       />
 
-      {/* Main content */}
       <div className="flex flex-col flex-1 min-h-0 min-w-0">{children}</div>
     </div>
   )

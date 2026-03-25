@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 export function CampaignNotFound() {
   return (
@@ -20,20 +19,4 @@ export function CampaignNotFound() {
       </div>
     </div>
   )
-}
-
-export function CampaignNotFoundWrapper({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const { campaign } = useCampaign()
-
-  const hasData = !!campaign.data
-  const isError = campaign.status === 'error'
-
-  if (!hasData && isError) {
-    return <CampaignNotFound />
-  }
-  return children
 }

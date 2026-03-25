@@ -3,6 +3,7 @@ import { api } from 'convex/_generated/api'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
 import { CampaignContext } from '~/features/campaigns/hooks/useCampaign'
+import { CampaignNotFound } from '~/features/campaigns/components/campaign-not-found'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,10 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     dmUsername,
     slug: campaignSlug,
   })
+
+  if (!campaign.data && campaign.status === 'error') {
+    return <CampaignNotFound />
+  }
 
   const value: CampaignContextType = {
     dmUsername,
