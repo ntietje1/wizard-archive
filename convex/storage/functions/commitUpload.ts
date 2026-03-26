@@ -1,4 +1,4 @@
-import { ERROR_CODE, throwClientError, throwServerError } from '../../errors'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
 import { validateFileUpload } from '../validation'
 import type { Id } from '../../_generated/dataModel'
@@ -24,7 +24,7 @@ export async function commitUpload(
   // Validate file before committing
   const storageMetadata = await ctx.db.system.get(storageId)
   if (!storageMetadata) {
-    throwServerError('Storage metadata not found')
+    throw new Error('Storage metadata not found')
   }
 
   const validation = validateFileUpload(
@@ -32,8 +32,8 @@ export async function commitUpload(
     storageMetadata.size,
     fileStorage.originalFileName,
   )
-  if (!validation.success) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error!)
+  if (!validation.valid) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error)
   }
 
   const now = Date.now()

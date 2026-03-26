@@ -1,4 +1,3 @@
-import { throwServerError } from '../../errors'
 import { enhanceFile } from '../../files/functions/enhanceFile'
 import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMap } from '../../gameMaps/functions/enhanceMap'
@@ -51,7 +50,7 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>
     default:
-      throwServerError('Unknown item type')
+      throw new Error('Unknown item type')
   }
 }
 

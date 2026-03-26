@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
+import { handleError } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
 import {
@@ -35,7 +36,7 @@ export function AccountPicker({
       })
       navigate({ to: redirectTo, reloadDocument: true })
     } catch (err) {
-      console.error('Failed to switch account:', err)
+      handleError(err, 'Failed to switch account')
       setError('Failed to switch account. Please try signing in again.')
       setSwitchingToken(null)
     }

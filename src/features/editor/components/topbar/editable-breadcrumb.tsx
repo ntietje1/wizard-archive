@@ -15,6 +15,7 @@ import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
 import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
+import { logger } from '~/shared/utils/logger'
 import {
   Tooltip,
   TooltipContent,
@@ -89,8 +90,7 @@ export function EditableName({
       await onRename?.(trimmedName)
       setIsEditing(false)
     } catch (error) {
-      toast.error('Failed to rename. Please try again.')
-      console.error(error)
+      logger.error(error)
       setName(initialName)
       onChange?.(initialName)
     }

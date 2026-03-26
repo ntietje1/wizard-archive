@@ -1,4 +1,4 @@
-import { ERROR_CODE, throwClientError, throwServerError } from '../../errors'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import {
   getUserProfileByUserId,
@@ -34,14 +34,14 @@ async function enhanceCampaign(
     ctx.db.get(campaign.dmUserId),
     countAcceptedPlayers(ctx, { campaignId: campaign._id }),
   ])
-  if (!dmUserProfile) throwServerError('DM user profile not found')
+  if (!dmUserProfile) throw new Error('DM user profile not found')
   const identity = await ctx.auth.getUserIdentity()
   let myMembership: CampaignMember | null = null
   if (identity) {
     const profile = await getUserProfileByUserId(ctx, {
       userId: identity.subject,
     })
-    if (!profile) throwServerError('User profile not found')
+    if (!profile) throw new Error('User profile not found')
     const member: CampaignMemberFromDb | null = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) =>

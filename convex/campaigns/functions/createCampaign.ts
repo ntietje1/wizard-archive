@@ -1,4 +1,5 @@
-import { findUniqueSlug } from '../../common/slug'
+import { slugify } from '../../common/slug'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
@@ -20,26 +21,30 @@ export async function createCampaign(
   },
 ): Promise<Id<'campaigns'>> {
   name = name.trim()
-  slug = slug.trim()
+  slug = slugify(slug.trim())
   description = description?.trim()
 
   const profile = ctx.user.profile
 
-  const uniqueSlug = await findUniqueSlug(slug, async (s) => {
-    const conflict = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', s).eq('dmUserId', profile._id),
-      )
-      .unique()
-    return conflict !== null
-  })
+  const conflict = await ctx.db
+    .query('campaigns')
+    .withIndex('by_slug_dm', (q) =>
+      q.eq('slug', slug).eq('dmUserId', profile._id),
+    )
+    .unique()
+
+  if (conflict) {
+    throwClientError(
+      ERROR_CODE.CONFLICT,
+      'A campaign with this slug already exists',
+    )
+  }
 
   const campaignId = await ctx.db.insert('campaigns', {
     name,
     description: description ?? '',
     dmUserId: profile._id,
-    slug: uniqueSlug,
+    slug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
     deletionTime: null,

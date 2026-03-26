@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
+import { logger } from '~/shared/utils/logger'
 import {
   Avatar,
   AvatarFallback,
@@ -61,7 +62,7 @@ export function AccountSwitcher({
       setSwitching(null)
     } catch (error) {
       setSwitching(null)
-      console.error(error)
+      logger.error(error)
       throw error
     }
   }

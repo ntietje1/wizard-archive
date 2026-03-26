@@ -7,6 +7,7 @@ import { MemberRow } from './member-row'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { logger } from '~/shared/utils/logger'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
@@ -35,8 +36,8 @@ export function RejectedRemovedSection({
       setUpdatingId(memberId)
       await updateStatus.mutateAsync({ memberId, status })
       toast.success('Player status updated')
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      logger.error(error)
     }
     setUpdatingId(null)
   }

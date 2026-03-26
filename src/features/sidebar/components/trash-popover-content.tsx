@@ -5,6 +5,7 @@ import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { logger } from '~/shared/utils/logger'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
@@ -49,8 +50,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
       toast.success('Item restored')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to restore item')
+      logger.error(error)
     }
   }
 
@@ -59,8 +59,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       await permanentlyDeleteItem(item)
       toast.success('Item permanently deleted')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to delete item')
+      logger.error(error)
     }
     setConfirmDeleteItem(null)
   }
@@ -72,8 +71,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       await emptyTrashBin()
       toast.success('Trash emptied')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to empty trash')
+      logger.error(error)
     }
     setConfirmEmptyTrash(false)
   }

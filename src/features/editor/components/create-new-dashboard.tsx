@@ -1,10 +1,10 @@
-import { toast } from 'sonner'
 import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { File, FileText, Folder, Loader2, MapPin, Plus } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
+import { logger } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -85,8 +85,7 @@ export function CreateNewDashboard({
       openParentFolders(result.id)
       await navigateToItem(result.slug)
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to create item')
+      logger.error(error)
     }
     setCreatingType(null)
   }

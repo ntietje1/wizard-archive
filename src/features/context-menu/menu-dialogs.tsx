@@ -6,6 +6,7 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { logger } from '~/shared/utils/logger'
 import { MapDialog } from '~/features/editor/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/features/editor/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/features/sidebar/components/forms/sidebar-item-edit-dialog'
@@ -105,7 +106,7 @@ export function MenuDialogs({
               await emptyTrashBin()
               toast.success('Trash emptied')
             } catch (error) {
-              console.error(error)
+              logger.error(error)
             }
             closeEmptyTrashDialog()
           }}
@@ -125,7 +126,7 @@ export function MenuDialogs({
                 clearEditorContent()
               }
             } catch (error) {
-              console.error(error)
+              logger.error(error)
             }
             closePermanentDeleteDialog()
           }}

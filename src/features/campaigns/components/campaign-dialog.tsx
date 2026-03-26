@@ -2,14 +2,11 @@ import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { useConvex } from '@convex-dev/react-query'
 import {
   validateCampaignName,
   validateCampaignSlug,
 } from 'convex/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
-import type { ConvexReactClient } from 'convex/react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { Campaign } from 'convex/campaigns/types'
 import { UrlPreview } from '~/features/campaigns/components/url-preview'
 import { Input } from '~/features/shadcn/components/input'
@@ -17,24 +14,9 @@ import { Label } from '~/features/shadcn/components/label'
 import { Textarea } from '~/features/shadcn/components/textarea'
 import { Button } from '~/features/shadcn/components/button'
 import { FormDialog } from '~/shared/components/form-dialog'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-
-async function validateCampaignSlugAsync(
-  convex: ConvexReactClient,
-  normalizedSlug: string,
-  excludeCampaignId?: Id<'campaigns'>,
-): Promise<string | null> {
-  const exists = await convex.query(
-    api.campaigns.queries.checkCampaignSlugExists,
-    {
-      slug: normalizedSlug,
-      excludeCampaignId,
-    },
-  )
-  return exists ? 'This link is already taken.' : null
-}
+import { logger } from '~/shared/utils/logger'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string
@@ -51,6 +33,7 @@ interface CampaignDialogProps {
   isOpen: boolean
   onClose: () => void
   campaign?: Campaign // Required for edit mode
+  campaigns: Array<Campaign>
 }
 
 export function CampaignDialog({
@@ -58,8 +41,8 @@ export function CampaignDialog({
   isOpen,
   onClose,
   campaign,
+  campaigns,
 }: CampaignDialogProps) {
-  const convex = useConvex()
   const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
   const createCampaign = useAppMutation(
     api.campaigns.mutations.createCampaign,
@@ -99,7 +82,7 @@ export function CampaignDialog({
           return
         }
       } catch (error) {
-        console.error('Failed to save campaign:', error)
+        logger.error(error)
       }
     },
   })

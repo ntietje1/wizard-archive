@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemEditor } from './viewer/sidebar-item-editor'
@@ -23,6 +22,7 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { logger } from '~/shared/utils/logger'
 
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
@@ -150,8 +150,7 @@ function NotSharedContent() {
       openParentFolders(result.id)
       navigateToItem(result.slug)
     } catch (error) {
-      console.error('Failed to create item:', error)
-      toast.error('Failed to create page')
+      logger.error(error)
     }
     setIsPending(false)
   }

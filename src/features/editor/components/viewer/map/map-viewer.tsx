@@ -20,6 +20,7 @@ import {
   getDragItemId,
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
+import { logger } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
@@ -524,7 +525,7 @@ export function MapViewer({
           })
           toast.success('Pin moved')
         } catch (error) {
-          console.error('Failed to move pin:', error)
+          logger.error(error)
         }
       }
       setDraggingPin(null)
@@ -566,7 +567,7 @@ export function MapViewer({
       })
       toast.success('Pin placed on map')
     } catch (error) {
-      console.error('Failed to place pin:', error)
+      logger.error(error)
     }
   }
   const createPinAtPositionRef = useRef(createPinAtPosition)
@@ -634,7 +635,7 @@ export function MapViewer({
       toast.success('Pin moved')
       setPendingPinMove(null)
     } catch (error) {
-      console.error('Failed to move pin:', error)
+      logger.error(error)
     }
   }
 
@@ -951,11 +952,11 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     fileTypeValidator: (file: globalThis.File) => {
       if (!file.type.startsWith('image/')) {
         return {
-          success: false,
+          valid: false,
           error: 'Only image files are allowed for maps',
         }
       }
-      return { success: true }
+      return { valid: true }
     },
     onUploadComplete: async (storageId) => {
       try {
@@ -965,7 +966,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
         })
         toast.success('Map image uploaded')
       } catch (error) {
-        console.error('Failed to set map image:', error)
+        logger.error(error)
       }
     },
   })

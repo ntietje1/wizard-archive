@@ -10,6 +10,7 @@ import type {
   AggregateShareStatus,
   ShareItem,
 } from '~/features/sharing/hooks/useBlocksShare'
+import { logger } from '~/shared/utils/logger'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/hooks/useBlocksShare'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -228,7 +229,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.success('Unshared from all players')
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 
@@ -277,7 +278,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.success('Shared with player')
       }
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 
@@ -342,7 +343,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         inheritShares: enabled,
       })
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 
@@ -365,7 +366,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 
@@ -383,7 +384,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 
@@ -411,7 +412,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      logger.error(error)
     }
   }
 

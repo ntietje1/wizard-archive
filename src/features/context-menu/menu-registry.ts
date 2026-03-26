@@ -23,6 +23,7 @@ import {
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 
 // Helper to get a friendly type name for the item
@@ -102,7 +103,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 0,
       shouldShow: (ctx) => p.hasBlockNoteEditor(ctx),
       action: (ctx) => {
-        console.log('test-editor', ctx)
+        logger.debug('test-editor', ctx)
       },
     },
     {
@@ -113,10 +114,10 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       priority: 0,
       shouldShow: (ctx) => p.hasBlockId(ctx),
       action: (ctx) => {
-        console.log('test-block', ctx.blockId)
+        logger.debug('test-block', ctx.blockId)
         if (!ctx.blockId) return
         const block = ctx.editor?.getBlock(ctx.blockId)
-        console.log(block?.content)
+        logger.debug(block?.content)
       },
     },
     {

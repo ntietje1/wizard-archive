@@ -12,6 +12,7 @@ import type {
   DropResult,
   FolderStructure,
 } from '~/features/file-upload/utils/folder-reader'
+import { logger } from '~/shared/utils/logger'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -78,7 +79,7 @@ export function useFileDropHandler() {
     const fileName = file.name
     const uploadId = crypto.randomUUID()
     const validation = validateFileForUpload(file)
-    if (!validation.success) {
+    if (!validation.valid) {
       if (!silent) toast.error(`${fileName}: ${validation.error}`)
       return false
     }
@@ -167,7 +168,7 @@ export function useFileDropHandler() {
         }
       } else {
         if (silent) {
-          console.warn(`${fileName}: unsupported file type`)
+          logger.warn(`${fileName}: unsupported file type`)
         }
         return false
       }
@@ -210,12 +211,12 @@ export function useFileDropHandler() {
       style: TOAST_STYLE,
     })
 
-    for (const { file, relativePath } of folder.files) {
+    for (const { file } of folder.files) {
       try {
         const validation = validateFileForUpload(file)
         const success = await uploadSingleFile(file, folderId, true)
-        if (!success && validation.success) {
-          console.warn(`${file.name}: unsupported file type`)
+        if (!success && validation.valid) {
+          logger.warn(`${file.name}: unsupported file type`)
         }
         if (success) {
           progress.processedFiles++
@@ -223,7 +224,7 @@ export function useFileDropHandler() {
           progress.skippedFiles++
         }
       } catch (error) {
-        console.error(`Failed to process ${relativePath}:`, error)
+        logger.error(error)
         progress.skippedFiles++
       }
       toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
@@ -295,7 +296,7 @@ export function useFileDropHandler() {
 
     try {
       // Process root-level files
-      for (const { file, relativePath } of files) {
+      for (const { file } of files) {
         try {
           const validation = validateFileForUpload(file)
           const success = await uploadSingleFile(
@@ -303,8 +304,8 @@ export function useFileDropHandler() {
             options?.parentId ?? null,
             true,
           )
-          if (!success && validation.success) {
-            console.warn(`${file.name}: unsupported file type`)
+          if (!success && validation.valid) {
+            logger.warn(`${file.name}: unsupported file type`)
           }
           if (success) {
             progress.processedFiles++
@@ -312,7 +313,7 @@ export function useFileDropHandler() {
             progress.skippedFiles++
           }
         } catch (error) {
-          console.error(`Failed to process ${relativePath}:`, error)
+          logger.error(error)
           progress.skippedFiles++
         }
         toast.loading(
@@ -358,7 +359,7 @@ export function useFileDropHandler() {
         await openParentFolders(options.parentId)
       }
     } catch (error) {
-      console.error('Failed to process drop:', error)
+      logger.error(error)
       toast.dismiss(toastId)
       toast.error(
         <ToastContent title="Upload failed" message={getErrorMessage(error)} />,

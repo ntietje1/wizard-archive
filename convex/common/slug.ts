@@ -1,5 +1,3 @@
-import { throwServerError } from '../errors'
-
 export function slugify(input: string): string {
   const lower = input.toLowerCase().trim()
   // Replace whitespace/underscores with hyphen
@@ -53,7 +51,7 @@ export async function findUniqueSlug(
   }
   const finalConflict = await checkFn(uniqueSlug)
   if (finalConflict) {
-    throwServerError(`Failed to find unique slug for: ${name}`)
+    throw new Error(`Failed to find unique slug for: ${name}`)
   }
   return uniqueSlug
 }

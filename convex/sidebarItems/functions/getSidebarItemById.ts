@@ -1,4 +1,4 @@
-import { ERROR_CODE, throwClientError, throwServerError } from '../../errors'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { getNote } from '../../notes/functions/getNote'
 import { getMap } from '../../gameMaps/functions/getMap'
 import { getFolder } from '../../folders/functions/getFolder'
@@ -48,7 +48,7 @@ export const getSidebarItemById = async (
       result = await getFile(ctx, { fileId: id as Id<'files'> })
       break
     default:
-      throwServerError('Unknown item type')
+      throw new Error('Unknown item type')
   }
 
   return result

@@ -5,6 +5,7 @@ import { RotateCcw, Trash2 } from 'lucide-react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { logger } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -96,8 +97,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
       await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
       toast.success('Item restored')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to restore item')
+      logger.error(error)
     }
   }
 
@@ -107,8 +107,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
       toast.success('Item permanently deleted')
       clearEditorContent()
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to delete item')
+      logger.error(error)
     }
     setConfirmDelete(false)
   }
@@ -180,8 +179,7 @@ function EmptyTrashButton() {
       await emptyTrashBin()
       toast.success('Trash emptied')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to empty trash')
+      logger.error(error)
     }
     setConfirmEmptyTrash(false)
   }

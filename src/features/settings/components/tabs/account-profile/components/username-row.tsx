@@ -6,6 +6,7 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
 } from 'convex/users/constants'
+import { getClientErrorMessage } from 'convex/errors'
 import { slugify, validateUsername } from 'convex/common/slug'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
@@ -113,9 +114,12 @@ function UsernameChangeDialog({
           replace: true,
         })
       }
-    } catch (err) {
+    } catch (error) {
       setSubmitError(
-        err instanceof Error ? err.message : 'Failed to update username',
+        getClientErrorMessage(error) ??
+          (error instanceof Error
+            ? error.message
+            : 'Failed to update username'),
       )
     }
     setIsLoading(false)

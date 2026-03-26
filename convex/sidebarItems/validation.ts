@@ -9,6 +9,7 @@ import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
+import type { ValidationResult } from './sharedValidation'
 import type { SidebarItemId } from './types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
@@ -37,7 +38,7 @@ export async function checkUniqueNameUnderParent(
     name: string
     excludeId?: SidebarItemId
   },
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<ValidationResult> {
   await requireCampaignMembership(ctx, campaignId)
   const siblings = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   return checkNameConflict(name, siblings, excludeId)
@@ -58,7 +59,7 @@ export async function validateNoCircularParent(
     itemId: SidebarItemId
     newParentId: Id<'folders'> | null
   },
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<ValidationResult> {
   await requireCampaignMembership(ctx, campaignId)
   if (!newParentId) {
     return { valid: true }
@@ -116,13 +117,13 @@ export async function validateSidebarItemName(
   await requireCampaignMembership(ctx, campaignId)
   const nameResult = validateItemName(name)
   if (!nameResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error!)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
   }
 
   const siblings = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error!)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error)
   }
 
   return { siblings }
@@ -150,7 +151,7 @@ export async function validateSidebarParentChange(
     newParentId,
   })
   if (!result.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error!)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get(newParentId)

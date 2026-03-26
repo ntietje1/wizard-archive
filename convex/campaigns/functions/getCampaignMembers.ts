@@ -1,4 +1,5 @@
 import { requireCampaignMembership } from '../../functions'
+import { logger } from '../../common/logger'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { UserProfile } from '../../users/types'
@@ -24,7 +25,7 @@ export async function getCampaignMembers(
   return members.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
     if (!profile) {
-      console.warn(`User profile not found for userId: ${member.userId}`)
+      logger.warn(`User profile not found for userId: ${member.userId}`)
       return []
     }
     return [

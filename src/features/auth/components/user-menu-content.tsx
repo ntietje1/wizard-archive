@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getInitials } from '~/shared/utils/get-initials'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
@@ -29,7 +30,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
       await authClient.multiSession.setActive({ sessionToken })
       navigate({ to: '/campaigns', reloadDocument: true })
     } catch (error) {
-      console.error('Failed to switch account:', error)
+      handleError(error, 'Failed to switch account')
       deviceSessions.refresh()
     }
   }
@@ -50,7 +51,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
         search: remaining.length > 0 ? { view: 'picker' } : {},
       })
     } catch (error) {
-      console.error('Failed to sign out:', error)
+      handleError(error, 'Failed to sign out')
       window.location.reload()
     }
   }

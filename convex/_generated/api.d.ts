@@ -55,6 +55,7 @@ import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_types from "../campaigns/types.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as common_constants from "../common/constants.js";
+import type * as common_logger from "../common/logger.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
 import type * as crons from "../crons.js";
@@ -233,6 +234,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/types": typeof campaigns_types;
   "campaigns/validation": typeof campaigns_validation;
   "common/constants": typeof common_constants;
+  "common/logger": typeof common_logger;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;
   crons: typeof crons;

@@ -15,6 +15,7 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { handleError, logger } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
@@ -106,7 +107,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.success('Moved to trash')
         },
         (error) => {
-          console.error(error)
+          handleError(error, 'Failed to move item to trash')
         },
       )
     },
@@ -119,7 +120,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     createNote: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -132,14 +133,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         openParentFolders(result.id)
         navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create note')
       }
     },
 
     createFolder: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -155,14 +156,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         openParentFolders(result.id)
         navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create folder')
       }
     },
 
     createMap: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -178,14 +179,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         openParentFolders(result.id)
         navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create map')
       }
     },
 
     createFile: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -198,7 +199,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         openParentFolders(result.id)
         navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create file')
       }
     },
 
@@ -260,8 +261,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         navigateToItem(map.slug)
         toast.info('Highlighting map pin... (coming soon)')
       } catch (error) {
-        console.error('Failed to navigate to map pin:', error)
-        toast.error('Failed to navigate to map pin')
+        handleError(error, 'Failed to navigate to map pin')
       }
     },
 
@@ -281,8 +281,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         })
         toast.success('Pin removed')
       } catch (error) {
-        console.error('Failed to remove pin:', error)
-        toast.error('Failed to remove pin')
+        handleError(error, 'Failed to remove pin')
       }
     },
 
@@ -298,8 +297,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         })
         toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
       } catch (error) {
-        console.error('Failed to toggle pin visibility:', error)
-        toast.error('Failed to toggle pin visibility')
+        handleError(error, 'Failed to toggle pin visibility')
       }
     },
 
@@ -357,8 +355,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.success(`Access set to ${level}`)
         }
       } catch (error) {
-        console.error('Failed to set general access level:', error)
-        toast.error('Failed to update access level')
+        handleError(error, 'Failed to update access level')
       }
     },
 
@@ -380,8 +377,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         document.body.removeChild(link)
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download file:', error)
-        toast.error('Failed to download file')
+        handleError(error, 'Failed to download file')
       }
     },
 
@@ -418,8 +414,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download note:', error)
-        toast.error('Failed to download note')
+        handleError(error, 'Failed to download note')
       }
     },
 
@@ -441,8 +436,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         document.body.removeChild(link)
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download map:', error)
-        toast.error('Failed to download map')
+        handleError(error, 'Failed to download map')
       }
     },
 
@@ -474,12 +468,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 case SIDEBAR_ITEM_TYPES.files:
                 case SIDEBAR_ITEM_TYPES.gameMaps: {
                   if (!item.downloadUrl) {
-                    console.warn(`No download URL for: ${item.path}`)
+                    logger.warn(`No download URL for: ${item.path}`)
                     return
                   }
                   const response = await fetch(item.downloadUrl)
                   if (!response.ok) {
-                    console.warn(`Failed to fetch: ${item.path}`)
+                    logger.warn(`Failed to fetch: ${item.path}`)
                     return
                   }
                   const blob = await response.blob()
@@ -495,7 +489,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                   assertNever(item)
               }
             } catch (error) {
-              console.warn(`Failed to process: ${item.path}`, error)
+              logger.warn(`Failed to process: ${item.path}`, error)
             }
           },
         )
@@ -518,9 +512,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.dismiss(toastId)
         toast.success(`Downloaded ${items.length} item(s)`)
       } catch (error) {
-        console.error('Failed to download folder:', error)
         toast.dismiss(toastId)
-        toast.error('Failed to download folder')
+        handleError(error, 'Failed to download folder')
       }
     },
 
@@ -551,12 +544,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               case SIDEBAR_ITEM_TYPES.files:
               case SIDEBAR_ITEM_TYPES.gameMaps: {
                 if (!item.downloadUrl) {
-                  console.warn(`No download URL for: ${item.path}`)
+                  logger.warn(`No download URL for: ${item.path}`)
                   return
                 }
                 const response = await fetch(item.downloadUrl)
                 if (!response.ok) {
-                  console.warn(`Failed to fetch: ${item.path}`)
+                  logger.warn(`Failed to fetch: ${item.path}`)
                   return
                 }
                 const blob = await response.blob()
@@ -572,7 +565,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 assertNever(item)
             }
           } catch (error) {
-            console.warn(`Failed to process: ${item.path}`, error)
+            logger.warn(`Failed to process: ${item.path}`, error)
           }
         })
 
@@ -594,9 +587,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.dismiss(toastId)
         toast.success(`Downloaded ${items.length} item(s)`)
       } catch (error) {
-        console.error('Failed to download all items:', error)
         toast.dismiss(toastId)
-        toast.error('Failed to download')
+        handleError(error, 'Failed to download')
       }
     },
 
@@ -606,7 +598,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         await moveItem(ctx.item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
         toast.success('Item restored')
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to restore item')
       }
     },
 
@@ -629,7 +621,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           sidebarItemId: ctx.item._id,
         })
         .catch((error) => {
-          console.error('Failed to toggle bookmark:', error)
+          handleError(error, 'Failed to toggle bookmark')
         })
     },
   }

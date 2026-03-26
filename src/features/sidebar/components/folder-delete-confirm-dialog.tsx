@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
+import { logger } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -29,8 +30,7 @@ export function FolderDeleteConfirmDialog({
       onConfirm?.()
       toast.success('Moved to trash')
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to move folder to trash')
+      logger.error(error)
     }
     onClose()
   }

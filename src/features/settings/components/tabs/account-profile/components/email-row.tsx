@@ -4,6 +4,7 @@ import { validateEmail } from 'convex/users/validation'
 import { Loader2, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import type { UserProfile } from 'convex/users/types'
+import { logger } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
@@ -48,7 +49,7 @@ function EmailChangeDialog({
   const [newEmail, setNewEmail] = useState('')
   const [sentTo, setSentTo] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
 
   const trimmedEmail = newEmail.trim()
   const emailError = trimmedEmail ? validateEmail(trimmedEmail) : null
@@ -67,7 +68,7 @@ function EmailChangeDialog({
 
   const handleSave = async () => {
     if (!canSubmit) return
-    setError('')
+    setFormError('')
     setIsLoading(true)
     try {
       await authClient.changeEmail({
@@ -76,8 +77,11 @@ function EmailChangeDialog({
       })
       setSentTo(newEmail.trim())
       setNewEmail('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change email')
+    } catch (error) {
+      logger.error(error)
+      setFormError(
+        error instanceof Error ? error.message : 'Failed to change email',
+      )
     }
     setIsLoading(false)
   }
@@ -124,8 +128,8 @@ function EmailChangeDialog({
         />
         {newEmail.trim() && emailError ? (
           <p className="text-xs text-destructive">{emailError}</p>
-        ) : error ? (
-          <p className="text-xs text-destructive">{error}</p>
+        ) : formError ? (
+          <p className="text-xs text-destructive">{formError}</p>
         ) : null}
       </div>
       <DialogFooter showCloseButton>

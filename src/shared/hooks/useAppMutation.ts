@@ -25,6 +25,7 @@ type UseAppMutationOptions<
   'mutationFn'
 > & {
   errorMessage?: string
+  suppressToast?: boolean
 }
 
 export function useAppMutation<
@@ -35,16 +36,17 @@ export function useAppMutation<
   options?: UseAppMutationOptions<TMutation, TContext>,
 ): UseMutationResult<TData<TMutation>, Error, TArgs<TMutation>, TContext> {
   const convexMutation = useConvexMutation(mutation)
-  const { errorMessage, onError, ...rest } = options ?? {}
+  const { errorMessage, suppressToast, onError, ...rest } = options ?? {}
 
   return useMutation({
     mutationFn: (args: TArgs<TMutation>) => convexMutation(args),
-    onError: onError
-      ? onError
-      : (error) => {
-          const clientMessage = getClientErrorMessage(error)
-          toast.error(clientMessage ?? errorMessage ?? 'Something went wrong')
-        },
+    onError: (error, variables, onMutateResult, context) => {
+      if (!suppressToast) {
+        const clientMessage = getClientErrorMessage(error)
+        toast.error(clientMessage ?? errorMessage ?? 'Something went wrong')
+      }
+      onError?.(error, variables, onMutateResult, context)
+    },
     ...rest,
   } as UseMutationOptions<TData<TMutation>, Error, TArgs<TMutation>, TContext>)
 }

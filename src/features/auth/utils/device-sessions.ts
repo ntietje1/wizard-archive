@@ -1,3 +1,4 @@
+import { logger } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
 
 export type DeviceSession = {
@@ -19,7 +20,7 @@ export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
     }
     return Array.from(byEmail.values())
   } catch (error) {
-    console.error('Failed to fetch device sessions:', error)
+    logger.debug(error)
     return []
   }
 }

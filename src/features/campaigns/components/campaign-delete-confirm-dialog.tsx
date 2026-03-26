@@ -3,6 +3,7 @@ import { api } from 'convex/_generated/api'
 import type { Campaign } from 'convex/campaigns/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { logger } from '~/shared/utils/logger'
 
 interface CampaignDeleteConfirmDialogProps {
   campaign: Campaign
@@ -28,8 +29,8 @@ export function CampaignDeleteConfirmDialog({
       .then(() => {
         toast.success('Campaign deleted successfully')
       })
-      .catch((error: Error) => {
-        console.error(error)
+      .catch((error: unknown) => {
+        logger.error(error)
       })
       .finally(() => {
         onConfirm?.()
