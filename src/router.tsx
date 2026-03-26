@@ -2,10 +2,9 @@ import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { ConvexReactClient } from 'convex/react'
 import { ConvexQueryClient } from '@convex-dev/react-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { routeTree } from './routeTree.gen'
-import ErrorPage from './components/error/error-page'
-import NotFoundPage from './components/not-found/not-found'
+import ErrorPage from '~/shared/components/error-page'
+import NotFoundPage from '~/shared/components/not-found'
 
 export function getRouter() {
   const CONVEX_URL = import.meta.env.VITE_CONVEX_URL
@@ -39,13 +38,7 @@ export function getRouter() {
     defaultNotFoundComponent: () => <NotFoundPage />,
     context: { queryClient, convexClient: convex, convexQueryClient },
     Wrap: ({ children }) => (
-      <QueryClientProvider client={queryClient}>
-        <ReactQueryDevtools
-          initialIsOpen={false}
-          buttonPosition="bottom-left"
-        />
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     ),
   })
 

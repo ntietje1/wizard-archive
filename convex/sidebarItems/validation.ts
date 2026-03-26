@@ -20,9 +20,6 @@ import type {
   EnhancedSidebarItem,
 } from './types/types'
 
-export type { ValidationResult } from './sharedValidation'
-export { validateItemName } from './sharedValidation'
-
 /**
  * Checks if a name is unique under a parent (case-insensitive).
  * Fetches all siblings and delegates to shared checkNameConflict.

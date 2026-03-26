@@ -1,31 +1,10 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { sidebarItemIdValidator } from './schema/baseValidators'
-import { updateSidebarItem as updateSidebarItemFn } from './functions/updateSidebarItem'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import type { SidebarItemId } from './types/baseTypes'
-
-export const updateSidebarItem = authMutation({
-  args: {
-    itemId: sidebarItemIdValidator,
-    name: v.optional(v.string()),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
-  },
-  returns: v.object({
-    slug: v.string(),
-  }),
-  handler: async (ctx, args): Promise<{ slug: string }> => {
-    return await updateSidebarItemFn(ctx, {
-      itemId: args.itemId,
-      name: args.name,
-      iconName: args.iconName,
-      color: args.color,
-    })
-  },
-})
 
 export const moveSidebarItem = authMutation({
   args: {

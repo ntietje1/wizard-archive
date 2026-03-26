@@ -35,6 +35,7 @@ import type * as bookmarks_functions_getItemBookmark from "../bookmarks/function
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
+import type * as campaigns_constants from "../campaigns/constants.js";
 import type * as campaigns_functions_checkCampaignSlugExists from "../campaigns/functions/checkCampaignSlugExists.js";
 import type * as campaigns_functions_createCampaign from "../campaigns/functions/createCampaign.js";
 import type * as campaigns_functions_deleteCampaign from "../campaigns/functions/deleteCampaign.js";
@@ -47,6 +48,7 @@ import type * as campaigns_functions_updateCampaignMemberStatus from "../campaig
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_types from "../campaigns/types.js";
+import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as common_constants from "../common/constants.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
@@ -91,6 +93,7 @@ import type * as gameMaps_functions_updatePinVisibility from "../gameMaps/functi
 import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
+import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_functions_createNote from "../notes/functions/createNote.js";
@@ -131,7 +134,6 @@ import type * as sidebarItems_functions_hardDeleteItem from "../sidebarItems/fun
 import type * as sidebarItems_functions_moveSidebarItem from "../sidebarItems/functions/moveSidebarItem.js";
 import type * as sidebarItems_functions_permanentlyDeleteSidebarItem from "../sidebarItems/functions/permanentlyDeleteSidebarItem.js";
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
-import type * as sidebarItems_functions_updateSidebarItem from "../sidebarItems/functions/updateSidebarItem.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
@@ -208,6 +210,7 @@ declare const fullApi: ApiFromModules<{
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
   "bookmarks/types": typeof bookmarks_types;
+  "campaigns/constants": typeof campaigns_constants;
   "campaigns/functions/checkCampaignSlugExists": typeof campaigns_functions_checkCampaignSlugExists;
   "campaigns/functions/createCampaign": typeof campaigns_functions_createCampaign;
   "campaigns/functions/deleteCampaign": typeof campaigns_functions_deleteCampaign;
@@ -220,6 +223,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/types": typeof campaigns_types;
+  "campaigns/validation": typeof campaigns_validation;
   "common/constants": typeof common_constants;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;
@@ -264,6 +268,7 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/mutations": typeof gameMaps_mutations;
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/types": typeof gameMaps_types;
+  "gameMaps/validation": typeof gameMaps_validation;
   http: typeof http;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/functions/createNote": typeof notes_functions_createNote;
@@ -304,7 +309,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/moveSidebarItem": typeof sidebarItems_functions_moveSidebarItem;
   "sidebarItems/functions/permanentlyDeleteSidebarItem": typeof sidebarItems_functions_permanentlyDeleteSidebarItem;
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
-  "sidebarItems/functions/updateSidebarItem": typeof sidebarItems_functions_updateSidebarItem;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;

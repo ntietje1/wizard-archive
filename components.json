@@ -14,11 +14,11 @@
   "menuColor": "default",
   "menuAccent": "bold",
   "aliases": {
-    "components": "~/components/shadcn",
-    "utils": "~/lib/shadcn/utils",
-    "ui": "~/components/shadcn/ui",
-    "lib": "~/lib/shadcn",
-    "hooks": "~/hooks/shadcn"
+    "components": "~/features/shadcn",
+    "utils": "~/features/shadcn/lib/utils",
+    "ui": "~/features/shadcn/components",
+    "lib": "~/features/shadcn/lib",
+    "hooks": "~/features/shadcn/hooks"
   },
   "registries": {}
 }

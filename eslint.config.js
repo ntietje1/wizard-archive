@@ -11,8 +11,7 @@ export default [
       '.nitro/**',
       'convex/_generated/**',
       'src/routeTree.gen.ts',
-      'src/components/shadcn/**',
-      'src/hooks/shadcn/**',
+      'src/features/shadcn/**',
     ],
   },
   ...tanstackConfig,
@@ -23,12 +22,9 @@ export default [
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': [
-        'error',
-        { allowConstantExport: true },
-      ],
+      'react-refresh/only-export-components': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      'no-shadow': ['warn', { allow: ['_'] }],
     },
   },
 ]

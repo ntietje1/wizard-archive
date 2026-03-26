@@ -1,6 +1,7 @@
+import { requireDmRole } from '../../functions'
+import { ERROR_CODE, throwAppError } from '../../errors'
 import { getCurrentSession } from './getCurrentSession'
 import { getSession } from './getSession'
-import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -15,16 +16,16 @@ export async function setCurrentSession(
 
   const campaignId = session.campaignId
   await requireDmRole(ctx, campaignId)
-  const now = Date.now()
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
-  if (currentSession && currentSession._id !== sessionId) {
-    await ctx.db.patch(currentSession._id, {
-      endedAt: now,
-      updatedTime: now,
-      updatedBy: ctx.user.profile._id,
-    })
+  if (currentSession) {
+    throwAppError(
+      ERROR_CODE.CONFLICT_SESSION_ACTIVE,
+      'Cannot resume a session while another session is active',
+    )
   }
+
+  const now = Date.now()
 
   // Remove endedAt to mark session as active (undefined removes the optional field)
   await ctx.db.patch(sessionId, {

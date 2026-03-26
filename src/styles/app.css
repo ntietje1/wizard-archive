@@ -128,6 +128,23 @@
   --sidebar-ring: oklch(0.57 0.16 285.99);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition-duration: 0s !important;
+}
+
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;

@@ -8,18 +8,20 @@ import {
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
+import { LazyMotion, domAnimation } from 'motion/react'
 import * as React from 'react'
 import { Toaster } from 'sonner'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import type { Theme } from '~/hooks/useTheme'
-import { TransitionOverlay } from '~/components/auth/TransitionOverlay'
-import { NavigationProgress } from '~/components/navigation-progress'
-import { ThemeProvider, ThemeScript } from '~/components/theme-provider'
-import { prefetchUserPreferences } from '~/hooks/useUserPreferences'
-import { authClient } from '~/lib/auth-client'
-import { getToken } from '~/lib/auth-server'
+import type { Theme } from '~/features/settings/hooks/useTheme'
+import { NavigationProgress } from '~/shared/components/navigation-progress'
+import { ThemeProvider } from '~/shared/components/theme-provider'
+import { resolveTheme } from '~/features/settings/hooks/useTheme'
+import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPreferences'
+import { authClient } from '~/features/auth/utils/auth-client'
+import { getToken } from '~/features/auth/utils/auth-server'
 import appCss from '~/styles/app.css?url'
 
 const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
@@ -63,7 +65,7 @@ export const Route = createRootRouteWithContext<{
         sizes: '16x16',
         href: '/favicon-16x16.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
+      { rel: 'manifest', href: '/site.webmanifest', color: '#ffffff' },
       { rel: 'icon', href: '/favicon.ico' },
     ],
   }),
@@ -72,19 +74,27 @@ export const Route = createRootRouteWithContext<{
       return {
         token: null,
         initialTheme: undefined,
+        initialSidebarWidth: undefined,
+        initialSidebarExpanded: undefined,
       }
     }
 
     const token = await fetchAuthToken()
     let initialTheme: Theme | undefined
+    let initialSidebarWidth: number | undefined
+    let initialSidebarExpanded: boolean | undefined
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
       const prefs = await prefetchUserPreferences(ctx.context.queryClient)
       initialTheme = prefs?.theme
+      initialSidebarWidth = prefs?.sidebarWidth
+      initialSidebarExpanded = prefs?.isSidebarExpanded
     }
     return {
       token,
       initialTheme,
+      initialSidebarWidth,
+      initialSidebarExpanded,
     }
   },
   component: RootComponent,
@@ -113,20 +123,24 @@ function RootDocument({
   initialTheme,
 }: {
   children: React.ReactNode
-  initialTheme?: string
+  initialTheme?: Theme
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={resolveTheme(initialTheme ?? 'system')}>
       <head>
         <HeadContent />
-        <ThemeScript initialTheme={initialTheme} />
       </head>
       <body className="flex flex-col min-h-screen">
-        <NavigationProgress />
-        {children}
-        <Toaster />
-        <TransitionOverlay />
-        <TanStackRouterDevtools position="bottom-right" />
+        <LazyMotion features={domAnimation}>
+          <NavigationProgress />
+          {children}
+          <Toaster />
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            buttonPosition="bottom-right"
+          />
+          <TanStackRouterDevtools position="bottom-right" />
+        </LazyMotion>
         <Scripts />
       </body>
     </html>

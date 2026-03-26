@@ -24,7 +24,7 @@ export const customInlineContentSpecs = {
 
 export const customStyleSpecs = {
   ...defaultStyleSpecs,
-} as StyleSpecs
+} satisfies StyleSpecs
 
 export const customBlockSpecs = {
   ...defaultBlockSpecs,
