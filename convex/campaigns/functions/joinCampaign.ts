@@ -21,15 +21,15 @@ export async function joinCampaign(
     return existingMember.status
   }
 
-  const now = Date.now()
-
   await ctx.db.insert('campaignMembers', {
     userId: profile._id,
     campaignId: campaign._id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Pending,
-    updatedTime: now,
-    updatedBy: profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profile._id,
   })
 

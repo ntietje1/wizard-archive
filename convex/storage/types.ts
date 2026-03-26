@@ -13,5 +13,5 @@ export type FileStorage = CommonValidatorFields<'fileStorage'> & {
   userId: Id<'userProfiles'>
   storageId: Id<'_storage'>
   status: FileStorageStatus
-  originalFileName?: string
+  originalFileName: string | null
 }

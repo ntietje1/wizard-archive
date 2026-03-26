@@ -35,7 +35,7 @@ async function enhanceCampaign(
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
   const identity = await ctx.auth.getUserIdentity()
-  let myMembership: CampaignMember | undefined = undefined
+  let myMembership: CampaignMember | null = null
   if (identity) {
     const profile = await getUserProfileByUserId(ctx, {
       userId: identity.subject,

@@ -49,7 +49,6 @@ export async function createItemPin(
     throwAppError(code, validationError)
   }
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   return await ctx.db.insert('mapPins', {
@@ -58,8 +57,10 @@ export async function createItemPin(
     x,
     y,
     visible: false,
-    updatedTime: now,
-    updatedBy: profileId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 }

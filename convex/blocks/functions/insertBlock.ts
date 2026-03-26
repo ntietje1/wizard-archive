@@ -16,17 +16,18 @@ export async function insertBlock(
     shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {
-  const now = Date.now()
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
     campaignId: params.campaignId,
     blockId: params.blockId,
-    position: params.position ?? undefined,
+    position: params.position,
     content: params.content,
     isTopLevel: params.isTopLevel,
     shareStatus: params.shareStatus ?? SHARE_STATUS.NOT_SHARED,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: ctx.user.profile._id,
   })
 }

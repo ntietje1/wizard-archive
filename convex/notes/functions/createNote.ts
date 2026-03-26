@@ -45,7 +45,6 @@ export async function createNote(
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const noteId = await ctx.db.insert('notes', {
@@ -58,8 +57,10 @@ export async function createNote(
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
-    updatedTime: now,
-    updatedBy: profileId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

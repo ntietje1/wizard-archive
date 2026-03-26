@@ -35,8 +35,10 @@ export async function setCurrentEditor(
       sortOrder: sortOrder ?? SORT_ORDERS.DateCreated,
       sortDirection: sortDirection ?? SORT_DIRECTIONS.Ascending,
       editorMode: editorMode ?? EDITOR_MODE.EDITOR,
-      updatedTime: now,
-      updatedBy: ctx.user.profile._id,
+      deletionTime: null,
+      deletedBy: null,
+      updatedTime: null,
+      updatedBy: null,
       createdBy: ctx.user.profile._id,
     })
   }

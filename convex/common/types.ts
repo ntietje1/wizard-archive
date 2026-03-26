@@ -1,11 +1,11 @@
 import type { Id, TableNames } from '../_generated/dataModel'
 
 export type CommonTableFields = {
-  updatedTime: number
-  updatedBy: Id<'userProfiles'>
+  updatedTime: number | null
+  updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
-  deletionTime?: number
-  deletedBy?: Id<'userProfiles'>
+  deletionTime: number | null
+  deletedBy: Id<'userProfiles'> | null
 }
 
 export type ConvexValidatorFields<T extends TableNames> = {

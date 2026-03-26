@@ -8,9 +8,9 @@ export type BlockShare = {
   noteId: Id<'notes'>
   blockId: Id<'blocks'>
   campaignMemberId: Id<'campaignMembers'>
-  sessionId?: Id<'sessions'>
-  updatedTime: number
-  updatedBy: Id<'userProfiles'>
+  sessionId: Id<'sessions'> | null
+  updatedTime: number | null
+  updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
 }
 

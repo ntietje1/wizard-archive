@@ -103,7 +103,7 @@ function MapPinContextMenuWrapper({
     <EditorContextMenu
       ref={contextMenuRef}
       viewContext="map-view"
-      item={canViewItem ? pin.item : undefined}
+      item={canViewItem ? (pin.item ?? undefined) : undefined}
       className="absolute inset-0 pointer-events-none"
       onClose={handleMenuClose}
       onDialogOpen={handleDialogOpen}
@@ -165,7 +165,7 @@ function MapPin({
   onDragStart,
 }: MapPinProps) {
   const ghost = isGhost
-  const visibleItem = ghost ? undefined : pin.item
+  const visibleItem = ghost ? undefined : (pin.item ?? undefined)
   const Icon = getSidebarItemIcon(visibleItem)
   const color = ghost
     ? getComputedStyle(document.documentElement)

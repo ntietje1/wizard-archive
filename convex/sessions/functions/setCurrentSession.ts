@@ -27,9 +27,8 @@ export async function setCurrentSession(
 
   const now = Date.now()
 
-  // Remove endedAt to mark session as active (undefined removes the optional field)
   await ctx.db.patch(sessionId, {
-    endedAt: undefined,
+    endedAt: null,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })

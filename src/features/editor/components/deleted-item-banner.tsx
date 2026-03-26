@@ -23,7 +23,7 @@ function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
 }
 
-function useDeletedByName(deletedById: Id<'userProfiles'> | undefined) {
+function useDeletedByName(deletedById: Id<'userProfiles'> | null) {
   const { campaign } = useCampaign()
   const { data: members } = useCampaignMembers()
 

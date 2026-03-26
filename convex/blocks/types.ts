@@ -14,12 +14,12 @@ export type Block = {
   _creationTime: number
   noteId: Id<'notes'>
   blockId: string
-  position?: number
+  position: number | null
   content: CustomBlock
   isTopLevel: boolean
   campaignId: Id<'campaigns'>
-  shareStatus?: ShareStatus
-  updatedTime: number
-  updatedBy: Id<'userProfiles'>
+  shareStatus: ShareStatus | null
+  updatedTime: number | null
+  updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
 }

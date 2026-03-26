@@ -11,7 +11,7 @@ const fileStorageTableFields = {
   storageId: v.id('_storage'),
   userId: v.id('userProfiles'),
   status: fileStorageStatusValidator,
-  originalFileName: v.optional(v.string()),
+  originalFileName: v.union(v.string(), v.null()),
 }
 
 export const fileStorageTables = {

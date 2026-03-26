@@ -59,8 +59,8 @@ export function SidebarLayout({
   initialSidebarExpanded,
 }: {
   children: React.ReactNode
-  initialSidebarWidth?: number
-  initialSidebarExpanded?: boolean
+  initialSidebarWidth: number | null
+  initialSidebarExpanded: boolean | null
 }) {
   const {
     isSidebarExpanded,

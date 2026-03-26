@@ -40,7 +40,6 @@ export async function createFolder(
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const folderId = await ctx.db.insert('folders', {
@@ -54,8 +53,10 @@ export async function createFolder(
     campaignId,
     type: SIDEBAR_ITEM_TYPES.folders,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
-    updatedTime: now,
-    updatedBy: profileId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

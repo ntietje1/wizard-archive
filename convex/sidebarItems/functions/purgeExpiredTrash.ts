@@ -50,9 +50,9 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
       deleted++
     }
 
-    for (const items of expiredLeafItems) {
+    leafLoop: for (const items of expiredLeafItems) {
       for (const item of items) {
-        if (deleted >= BATCH_SIZE) break
+        if (deleted >= BATCH_SIZE) break leafLoop
         const current = await ctx.db.get(item._id)
         if (!current) continue
         await hardDeleteItem(ctx, current)

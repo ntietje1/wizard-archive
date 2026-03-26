@@ -15,11 +15,11 @@ export const blockShareStatusValidator = v.union(
 const blockTableFields = {
   noteId: v.id('notes'),
   blockId: v.string(),
-  position: v.optional(v.number()),
+  position: v.union(v.number(), v.null()),
   content: customBlockValidator,
   isTopLevel: v.boolean(),
   campaignId: v.id('campaigns'),
-  shareStatus: v.optional(blockShareStatusValidator),
+  shareStatus: v.union(blockShareStatusValidator, v.null()),
   ...commonTableFields,
 }
 

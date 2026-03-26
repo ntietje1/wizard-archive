@@ -42,7 +42,6 @@ export async function createFile(
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const fileId = await ctx.db.insert('files', {
@@ -56,8 +55,10 @@ export async function createFile(
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
-    updatedTime: now,
-    updatedBy: profileId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

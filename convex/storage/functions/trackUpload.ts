@@ -9,15 +9,15 @@ export async function trackUpload(
     originalFileName,
   }: { storageId: Id<'_storage'>; originalFileName?: string },
 ): Promise<Id<'fileStorage'>> {
-  const now = Date.now()
-
   return await ctx.db.insert('fileStorage', {
     status: FILE_STORAGE_STATUS.Uncommitted,
     userId: ctx.user.profile._id,
     storageId,
-    originalFileName,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    originalFileName: originalFileName ?? null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: ctx.user.profile._id,
   })
 }

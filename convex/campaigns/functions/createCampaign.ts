@@ -24,7 +24,6 @@ export async function createCampaign(
   description = description?.trim()
 
   const profile = ctx.user.profile
-  const now = Date.now()
 
   const uniqueSlug = await findUniqueSlug(slug, async (s) => {
     const conflict = await ctx.db
@@ -43,8 +42,10 @@ export async function createCampaign(
     slug: uniqueSlug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
-    updatedTime: now,
-    updatedBy: profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profile._id,
   })
 
@@ -53,8 +54,10 @@ export async function createCampaign(
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
-    updatedTime: now,
-    updatedBy: profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profile._id,
   })
 

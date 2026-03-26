@@ -17,7 +17,7 @@ export function ThemeProvider({
   initialTheme,
 }: {
   children: React.ReactNode
-  initialTheme?: Theme
+  initialTheme: Theme | null
 }) {
   const queryClient = useQueryClient()
 

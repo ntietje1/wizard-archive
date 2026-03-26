@@ -42,7 +42,6 @@ export async function createMap(
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const mapId = await ctx.db.insert('gameMaps', {
@@ -56,8 +55,10 @@ export async function createMap(
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
-    updatedTime: now,
-    updatedBy: profileId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

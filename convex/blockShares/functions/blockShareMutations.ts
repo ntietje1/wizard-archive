@@ -81,16 +81,17 @@ async function addBlockShare(
   }
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
-  const now = Date.now()
 
   return await ctx.db.insert('blockShares', {
     campaignId,
     noteId,
     blockId,
     campaignMemberId,
-    sessionId: currentSession?._id,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    sessionId: currentSession?._id ?? null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: ctx.user.profile._id,
   })
 }

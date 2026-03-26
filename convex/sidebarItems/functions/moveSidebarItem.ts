@@ -17,7 +17,7 @@ import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
-const clearDeletion = { deletionTime: undefined, deletedBy: undefined }
+const clearDeletion = { deletionTime: null, deletedBy: null }
 
 /**
  * Resolves name/slug conflicts for an item being restored.

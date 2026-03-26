@@ -7,7 +7,7 @@ const blockShareTableFields = {
   noteId: v.id('notes'),
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
-  sessionId: v.optional(v.id('sessions')),
+  sessionId: v.union(v.id('sessions'), v.null()),
   ...commonTableFields,
 }
 

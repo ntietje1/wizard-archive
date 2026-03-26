@@ -61,10 +61,12 @@ export async function shareSidebarItemWithMember(
     sidebarItemId,
     sidebarItemType,
     campaignMemberId,
-    sessionId: currentSession?._id,
-    permissionLevel: permissionLevel ?? undefined,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    sessionId: currentSession?._id ?? null,
+    permissionLevel: permissionLevel ?? null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: ctx.user.profile._id,
   })
 }

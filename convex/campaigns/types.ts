@@ -39,7 +39,7 @@ export type CampaignFromDb = CommonValidatorFields<'campaigns'> & {
 
 export type Campaign = CampaignFromDb & {
   dmUserProfile: UserProfile
-  myMembership?: CampaignMember
+  myMembership: CampaignMember | null
   playerCount: number
 }
 

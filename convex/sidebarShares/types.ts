@@ -12,9 +12,9 @@ export type SidebarItemShare = {
   sidebarItemId: SidebarItemId
   sidebarItemType: SidebarItemType
   campaignMemberId: Id<'campaignMembers'>
-  sessionId?: Id<'sessions'>
-  permissionLevel?: PermissionLevel
-  updatedTime: number
-  updatedBy: Id<'userProfiles'>
+  sessionId: Id<'sessions'> | null
+  permissionLevel: PermissionLevel | null
+  updatedTime: number | null
+  updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
 }

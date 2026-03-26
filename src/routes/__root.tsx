@@ -73,22 +73,22 @@ export const Route = createRootRouteWithContext<{
     if (typeof window !== 'undefined') {
       return {
         token: null,
-        initialTheme: undefined,
-        initialSidebarWidth: undefined,
-        initialSidebarExpanded: undefined,
+        initialTheme: null,
+        initialSidebarWidth: null,
+        initialSidebarExpanded: null,
       }
     }
 
     const token = await fetchAuthToken()
-    let initialTheme: Theme | undefined
-    let initialSidebarWidth: number | undefined
-    let initialSidebarExpanded: boolean | undefined
+    let initialTheme: Theme | null = null
+    let initialSidebarWidth: number | null = null
+    let initialSidebarExpanded: boolean | null = null
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
       const prefs = await prefetchUserPreferences(ctx.context.queryClient)
-      initialTheme = prefs?.theme
-      initialSidebarWidth = prefs?.sidebarWidth
-      initialSidebarExpanded = prefs?.isSidebarExpanded
+      initialTheme = prefs?.theme ?? null
+      initialSidebarWidth = prefs?.sidebarWidth ?? null
+      initialSidebarExpanded = prefs?.isSidebarExpanded ?? null
     }
     return {
       token,
@@ -123,7 +123,7 @@ function RootDocument({
   initialTheme,
 }: {
   children: React.ReactNode
-  initialTheme?: Theme
+  initialTheme: Theme | null
 }) {
   return (
     <html lang="en" className={resolveTheme(initialTheme ?? 'system')}>

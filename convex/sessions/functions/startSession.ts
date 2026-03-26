@@ -23,10 +23,13 @@ export async function startSession(
 
   const sessionId = await ctx.db.insert('sessions', {
     campaignId,
-    name,
+    name: name ?? null,
     startedAt: now,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    endedAt: null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: ctx.user.profile._id,
   })
 

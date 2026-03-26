@@ -121,10 +121,13 @@ export const sortItemsByOptions = (
         return options.direction === SORT_DIRECTIONS.Ascending
           ? a._creationTime - b._creationTime
           : b._creationTime - a._creationTime
-      case SORT_ORDERS.DateModified:
+      case SORT_ORDERS.DateModified: {
+        const aTime = a.updatedTime ?? a._creationTime
+        const bTime = b.updatedTime ?? b._creationTime
         return options.direction === SORT_DIRECTIONS.Ascending
-          ? a.updatedTime - b.updatedTime
-          : b.updatedTime - a.updatedTime
+          ? aTime - bTime
+          : bTime - aTime
+      }
       default:
         return assertNever(options.order)
     }

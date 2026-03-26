@@ -40,10 +40,12 @@ export async function toggleItemBookmark(
     // Add bookmark
     await ctx.db.insert('bookmarks', {
       campaignId,
-      sidebarItemId: sidebarItemId,
+      sidebarItemId,
       campaignMemberId,
-      updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
+      deletionTime: null,
+      deletedBy: null,
+      updatedTime: null,
+      updatedBy: null,
       createdBy: ctx.user.profile._id,
     })
     return { isBookmarked: true }

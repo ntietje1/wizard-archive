@@ -72,14 +72,14 @@ export function useMoveSidebarItem() {
           ...item,
           parentId: parentId ?? item.parentId ?? null,
           location: location,
-          deletionTime: undefined,
-          deletedBy: undefined,
+          deletionTime: null,
+          deletedBy: null,
         },
         ...trashedDescendants.map((i) => ({
           ...i,
           location: location,
-          deletionTime: undefined,
-          deletedBy: undefined,
+          deletionTime: null,
+          deletedBy: null,
         })),
       ])
     } else if (isTrashing) {
