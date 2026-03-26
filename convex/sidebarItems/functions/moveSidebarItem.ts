@@ -5,6 +5,7 @@ import {
   findUniqueSidebarItemSlug,
   requireItemAccess,
   validateSidebarMove,
+  validateSidebarParentChange,
 } from '../validation'
 import { requireCampaignMembership } from '../../functions'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
@@ -118,7 +119,13 @@ export async function moveSidebarItem(
 
     const restoreParentId = parentId ?? null
 
-    // Resolve name/slug conflicts for the root item at its restore destination
+    if (restoreParentId) {
+      await validateSidebarParentChange(ctx, {
+        item: { ...item, location },
+        newParentId: restoreParentId,
+      })
+    }
+
     const itemForRestore = { ...item, parentId: restoreParentId }
     const conflictPatch = await resolveRestoreConflicts(ctx, itemForRestore)
 

@@ -56,7 +56,9 @@ export function PermanentDeleteConfirmDialog({
       onClose={onClose}
       onConfirm={onConfirm}
       title="Permanently Delete"
-      description={permanentDeleteDescription(item, trashedItems)}
+      description={
+        trashedItems ? permanentDeleteDescription(item, trashedItems) : ''
+      }
       confirmLabel="Delete Forever"
       confirmVariant="destructive"
     />
