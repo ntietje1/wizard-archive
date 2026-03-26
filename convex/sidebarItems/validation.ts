@@ -298,6 +298,7 @@ async function checkSlugConflict(
       .withIndex('by_campaign_slug', (q) =>
         q.eq('campaignId', campaignId).eq('slug', slug),
       )
+      .filter((q) => q.eq(q.field('deletionTime'), null))
       .unique()
 
   const [note, folder, map, file] = await Promise.all([

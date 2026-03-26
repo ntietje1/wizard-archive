@@ -57,6 +57,7 @@ export async function saveTopLevelBlocksForNote(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
   for (const block of remainingBlocks) {
+    await ctx.db.patch(block._id, { isTopLevel: false })
     await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
 }

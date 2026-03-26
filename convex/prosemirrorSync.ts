@@ -63,7 +63,8 @@ function pmSnapshotToBlocks(snapshot: string): Array<CustomBlock> {
 }
 
 const sync = prosemirrorSync.syncApi({
-  // check read is ok to skip here since notes are already gated by permission
+  checkRead: (ctx, id) =>
+    checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.VIEW }),
   checkWrite: (ctx, id) =>
     checkAccess(ctx, { documentId: id, level: PERMISSION_LEVEL.EDIT }),
   onSnapshot: async (

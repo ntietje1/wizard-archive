@@ -27,6 +27,13 @@ export async function shareSidebarItemWithMember(
     throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
+  const member = await ctx.db.get(campaignMemberId)
+  if (!member || member.campaignId !== campaignId)
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Member does not belong to this campaign',
+    )
+
   // Check if share already exists
   const existingShare = await ctx.db
     .query('sidebarItemShares')

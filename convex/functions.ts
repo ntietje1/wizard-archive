@@ -49,7 +49,9 @@ async function checkMembership(
     options?.allowedRoles ?? Object.values(CAMPAIGN_MEMBER_ROLE)
   if (
     !campaign ||
+    campaign.deletionTime !== null ||
     !member ||
+    member.deletionTime !== null ||
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted ||
     !allowedRoles.includes(member.role)
   )

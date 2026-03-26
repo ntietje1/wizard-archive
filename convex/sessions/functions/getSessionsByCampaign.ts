@@ -15,5 +15,5 @@ export async function getSessionsByCampaign(
     .order('desc')
     .collect()
 
-  return sessions
+  return sessions.filter((s) => s.deletionTime === null)
 }

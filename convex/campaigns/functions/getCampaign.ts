@@ -65,7 +65,7 @@ export async function getCampaign(
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get(campaignId)
-  if (!campaign) return null
+  if (!campaign || campaign.deletionTime !== null) return null
   return enhanceCampaign(ctx, { campaign })
 }
 
@@ -85,6 +85,7 @@ export async function getCampaignBySlug(
       q.eq('slug', slug).eq('dmUserId', dmUserProfile._id),
     )
     .unique()
-  if (!campaign) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
+  if (!campaign || campaign.deletionTime !== null)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   return enhanceCampaign(ctx, { campaign })
 }

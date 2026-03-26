@@ -34,6 +34,13 @@ export async function createItemPin(
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }
 
+  if (item.campaignId !== mapFromDb.campaignId) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Item must belong to the same campaign as the map',
+    )
+  }
+
   const existingPins = await ctx.db
     .query('mapPins')
     .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
