@@ -1,4 +1,5 @@
 import React from 'react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { createMenuItems } from '../menu-registry'
 import { useMenuActions } from '../actions'
 import { MenuDialogs } from '../menu-dialogs'
@@ -37,7 +38,7 @@ export function EditorContextMenuProvider({
   const blockNoteCtx = useBlockNoteContextMenuOptional()
 
   const permissionLevel = item?.myPermissionLevel
-  const isItemTrashed = !!item?.deletionTime
+  const isItemTrashed = item?.location === SIDEBAR_ITEM_LOCATION.trash
 
   const menuContext = {
     item,

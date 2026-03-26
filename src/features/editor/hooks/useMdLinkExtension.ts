@@ -8,7 +8,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
 import {
   TYPE_TO_URL_PARAM,
@@ -88,7 +88,7 @@ export interface MdLinkResolver {
 }
 
 export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
-  const { data: sidebarItems, itemsMap } = useAllSidebarItems()
+  const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode, viewAsPlayerId } = useEditorMode()
   const pluginRef = useRef<Plugin | null>(null)

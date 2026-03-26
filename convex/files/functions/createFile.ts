@@ -3,7 +3,10 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -35,7 +38,6 @@ export async function createFile(
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
-    type: SIDEBAR_ITEM_TYPES.files,
     name,
     campaignId,
   })
@@ -53,6 +55,7 @@ export async function createFile(
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
     updatedTime: now,
     updatedBy: profileId,
     createdBy: profileId,

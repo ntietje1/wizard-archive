@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import {
   findUniqueSidebarItemSlug,
   requireItemAccess,
@@ -11,10 +11,9 @@ import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
 import { applyToDependents } from './applyToDependents'
-import type { SidebarItemId } from '../types/baseTypes'
+import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
-import type { FolderFromDb } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 
 const clearDeletion = { deletionTime: undefined, deletedBy: undefined }
@@ -38,7 +37,6 @@ async function resolveRestoreConflicts(
 
   const uniqueName = deduplicateName(item.name, otherNames)
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    type: item.type,
     name: uniqueName,
     itemId: item._id,
     campaignId,
@@ -54,12 +52,12 @@ export async function moveSidebarItem(
   ctx: AuthMutationCtx,
   {
     itemId,
+    location,
     parentId,
-    deleted,
   }: {
     itemId: SidebarItemId
+    location?: SidebarItemLocation
     parentId?: Id<'folders'> | null
-    deleted?: boolean
   },
 ): Promise<SidebarItemId> {
   const itemFromDb = await ctx.db.get(itemId)
@@ -71,11 +69,19 @@ export async function moveSidebarItem(
   const campaignId = item.campaignId
   const { membership } = await requireCampaignMembership(ctx, campaignId)
 
-  const isTrashing = deleted === true && !item.deletionTime
-  const isRestoring = deleted === false && !!item.deletionTime
+  const isRelocating = location !== undefined && location !== item.location
+  const isTrashing = isRelocating && location === SIDEBAR_ITEM_LOCATION.trash
+  const isRestoring =
+    isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
   const isMoving = parentId !== undefined
 
-  // --- Trash ---
+  if (isRelocating && !isTrashing && !isRestoring) {
+    throw new Error(
+      `Unsupported location transition: ${item.location} -> ${location}`,
+    )
+  }
+
+  // --- Relocate: entering trash ---
   if (isTrashing) {
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
@@ -91,11 +97,17 @@ export async function moveSidebarItem(
       await applyToDependents(ctx, i, async (_, doc) => {
         await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
       })
-      await ctx.db.patch(i._id, { deletionTime: now, deletedBy })
+      const isRoot = i._id === item._id
+      await ctx.db.patch(i._id, {
+        location: SIDEBAR_ITEM_LOCATION.trash,
+        deletionTime: now,
+        deletedBy,
+        ...(isRoot ? { parentId: null } : {}),
+      })
     })
   }
 
-  // --- Restore ---
+  // --- Relocate: leaving trash ---
   if (isRestoring) {
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
@@ -104,66 +116,55 @@ export async function moveSidebarItem(
       throw new Error('Only the DM can restore folders')
     }
 
-    // If original parent is trashed, reparent to root
-    if (item.parentId) {
-      const parent = (await ctx.db.get(item.parentId)) as FolderFromDb | null
-      if (parent?.deletionTime) {
-        await ctx.db.patch(itemId, { parentId: null })
-      }
-    }
+    const restoreParentId = parentId ?? null
 
-    // Resolve name/slug conflicts for the root item
-    const freshItem = (await ctx.db.get(itemId)) as AnySidebarItemFromDb
-    const conflictPatch = await resolveRestoreConflicts(ctx, freshItem)
+    // Resolve name/slug conflicts for the root item at its restore destination
+    const itemForRestore = { ...item, parentId: restoreParentId }
+    const conflictPatch = await resolveRestoreConflicts(ctx, itemForRestore)
 
     // Restore root item + its dependents
-    await applyToDependents(ctx, freshItem, async (_, doc) => {
+    await applyToDependents(ctx, item, async (_, doc) => {
       await ctx.db.patch(doc._id, clearDeletion)
     })
-    await ctx.db.patch(itemId, { ...clearDeletion, ...conflictPatch })
+    await ctx.db.patch(itemId, {
+      ...clearDeletion,
+      ...conflictPatch,
+      location: location,
+      parentId: restoreParentId,
+    })
 
     // Restore all descendants if folder
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
       await applyToTree(
         ctx,
-        freshItem,
+        item,
         async (_, i) => {
-          if (i._id === freshItem._id) return // root already handled above
-          if (!i.deletionTime) return
+          if (i._id === item._id) return
+          if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
           await applyToDependents(ctx, i, async (_, doc) => {
             await ctx.db.patch(doc._id, clearDeletion)
           })
 
-          // Slugs are campaign-global, so descendants need deduplication too
           const descSlug = await findUniqueSidebarItemSlug(ctx, {
-            type: i.type,
             name: i.name,
             itemId: i._id,
             campaignId,
           })
           await ctx.db.patch(i._id, {
             ...clearDeletion,
+            location: location,
             ...(descSlug !== i.slug ? { slug: descSlug } : {}),
           })
         },
-        { trashed: true },
+        { location: SIDEBAR_ITEM_LOCATION.trash },
       )
     }
   }
 
-  // --- Move ---
-  if (isMoving) {
-    // Re-fetch after potential trash/restore to get current state for validation
-    const currentItem =
-      isTrashing || isRestoring
-        ? await requireItemAccess(ctx, {
-            rawItem: await ctx.db.get(itemId),
-            requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
-          })
-        : item
-
-    await validateSidebarMove(ctx, { item: currentItem, newParentId: parentId })
+  // --- Move (within same location) ---
+  if (isMoving && !isRelocating) {
+    await validateSidebarMove(ctx, { item, newParentId: parentId })
 
     await ctx.db.patch(itemId, {
       parentId: parentId,

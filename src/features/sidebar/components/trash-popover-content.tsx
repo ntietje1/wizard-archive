@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
@@ -11,7 +12,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
-import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import {
@@ -31,7 +32,9 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const { data: allTrashedItems, parentItemsMap } = useTrashedSidebarItems()
+  const { data: allTrashedItems, parentItemsMap } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
   const rootTrashedItems = parentItemsMap.get(null) ?? []
 
   const { moveItem } = useMoveSidebarItem()
@@ -43,7 +46,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
 
   const handleRestore = async (item: AnySidebarItem) => {
     try {
-      await moveItem(item, { deleted: false })
+      await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
       toast.success('Item restored')
     } catch (error) {
       console.error(error)
@@ -76,7 +79,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   }
 
   const handleItemClick = (item: AnySidebarItem) => {
-    setLastSelectedItem({ type: item.type, slug: item.slug })
+    setLastSelectedItem(item.slug)
   }
 
   const getDeletionTimeLabel = (item: AnySidebarItem) => {
@@ -156,7 +159,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
           title="Permanently Delete"
           description={permanentDeleteDescription(
             confirmDeleteItem,
-            parentItemsMap,
+            allTrashedItems,
           )}
           confirmLabel="Delete Forever"
           confirmVariant="destructive"

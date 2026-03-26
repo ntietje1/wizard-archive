@@ -1,6 +1,6 @@
 import { Outlet, useRouteContext } from '@tanstack/react-router'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
-import { AllSidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
+import { SidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
 import { SidebarLayout } from '~/features/sidebar/components/sidebar-layout'
 import { DndProvider } from '~/features/dnd/contexts/dnd-provider'
 import { ViewAsBanner } from '~/features/editor/components/view-as-banner'
@@ -14,7 +14,7 @@ export function CampaignLayout() {
 
   return (
     <CampaignProvider>
-      <AllSidebarItemsProvider>
+      <SidebarItemsProvider>
         <DndProvider>
           <div className="flex flex-col flex-1 min-h-0">
             <SidebarLayout
@@ -28,7 +28,7 @@ export function CampaignLayout() {
             <ViewAsBanner />
           </div>
         </DndProvider>
-      </AllSidebarItemsProvider>
+      </SidebarItemsProvider>
     </CampaignProvider>
   )
 }

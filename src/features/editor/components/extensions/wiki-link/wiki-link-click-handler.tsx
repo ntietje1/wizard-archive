@@ -9,7 +9,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { validateSidebarItemName } from '~/features/sidebar/utils/sidebar-validation'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import './wiki-link.css'
 
 interface TooltipState {
@@ -42,11 +42,11 @@ export function WikiLinkClickHandler({
   editor: CustomBlockNoteEditor | undefined
 }) {
   const navigate = useNavigate()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
-  const { parentItemsMap } = useAllSidebarItems()
+  const { parentItemsMap } = useActiveSidebarItems()
   const editorEl = useEditorDomElement(editor)
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
@@ -199,7 +199,7 @@ export function WikiLinkClickHandler({
             name: link.itemName,
             parentId: null,
           })
-          if (result) navigateToNote(result.slug)
+          if (result) navigateToItem(result.slug)
         } catch (err) {
           console.error('Failed to create note:', err)
         }
@@ -213,7 +213,7 @@ export function WikiLinkClickHandler({
     navigate,
     campaignData?._id,
     createNote,
-    navigateToNote,
+    navigateToItem,
     editorMode,
     parentItemsMap,
     hideTooltip,

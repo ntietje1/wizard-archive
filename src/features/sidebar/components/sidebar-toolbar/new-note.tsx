@@ -29,7 +29,7 @@ export function NewNoteButton() {
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
       openParentFolders(result.id)
-      navigateToItem(result)
+      navigateToItem(result.slug)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create note')

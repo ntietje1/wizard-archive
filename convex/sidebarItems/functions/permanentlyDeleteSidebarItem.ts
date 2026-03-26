@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireItemAccess } from '../validation'
 import { requireCampaignMembership } from '../../functions'
 import { applyToTree } from './applyToTree'
@@ -17,7 +17,7 @@ export async function permanentlyDeleteSidebarItem(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  if (!item.deletionTime) {
+  if (item.location !== SIDEBAR_ITEM_LOCATION.trash) {
     throw new Error('Item not found in trash')
   }
 
@@ -29,5 +29,7 @@ export async function permanentlyDeleteSidebarItem(
     throw new Error('Only the DM can permanently delete folders')
   }
 
-  await applyToTree(ctx, item, hardDeleteItem, { trashed: true })
+  await applyToTree(ctx, item, hardDeleteItem, {
+    location: SIDEBAR_ITEM_LOCATION.trash,
+  })
 }

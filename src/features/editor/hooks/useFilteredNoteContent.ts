@@ -7,7 +7,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { assertNever } from '~/shared/utils/utils'
 
 function canViewBlock(
@@ -39,7 +39,7 @@ export function useFilteredNoteContent(note: NoteWithContent): {
 } {
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap } = useAllSidebarItems()
+  const { itemsMap } = useActiveSidebarItems()
 
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 

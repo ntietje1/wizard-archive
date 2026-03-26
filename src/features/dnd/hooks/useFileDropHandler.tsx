@@ -118,7 +118,7 @@ export function useFileDropHandler() {
             { duration: 3000, style: TOAST_STYLE },
           )
           openParentFolders(result.id)
-          navigateToItem(result, true)
+          navigateToItem(result.slug, true)
         }
       } else if (isMediaFile(file.type)) {
         const uploadUrl = await generateUploadUrl.mutateAsync({})
@@ -163,7 +163,7 @@ export function useFileDropHandler() {
             { duration: 3000, style: TOAST_STYLE },
           )
           openParentFolders(result.id)
-          navigateToItem(result)
+          navigateToItem(result.slug)
         }
       } else {
         if (silent) {

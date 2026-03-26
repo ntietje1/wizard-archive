@@ -3,6 +3,7 @@ import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { commonTableFields } from '../../common/schema'
 import {
   permissionLevelValidator,
+  sidebarItemLocationValidator,
   sidebarItemTypeValidator,
 } from './baseValidators'
 
@@ -15,6 +16,7 @@ export const commonSidebarItemTableFields = {
   type: sidebarItemTypeValidator,
   parentId: v.union(v.id('folders'), v.null()),
   allPermissionLevel: v.union(permissionLevelValidator, v.null()),
+  location: sidebarItemLocationValidator,
   ...commonTableFields,
 }
 

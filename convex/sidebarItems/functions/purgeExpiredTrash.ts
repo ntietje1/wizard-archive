@@ -1,4 +1,5 @@
 import { TRASH_RETENTION_DAYS } from '../../common/constants'
+import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { hardDeleteItem } from './hardDeleteItem'
 import { applyToTree } from './applyToTree'
 import type { MutationCtx } from '../../_generated/server'
@@ -42,7 +43,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
         if (parent?.deletionTime && parent.deletionTime < cutoff) continue
       }
       await applyToTree(ctx, currentFolder, hardDeleteItem, {
-        trashed: true,
+        location: SIDEBAR_ITEM_LOCATION.trash,
       })
     }
 

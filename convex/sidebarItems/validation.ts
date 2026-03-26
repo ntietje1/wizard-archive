@@ -8,8 +8,7 @@ import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
-import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
-import type { SidebarItemId, SidebarItemType } from './types/baseTypes'
+import type { SidebarItemId } from './types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
 import type { AuthQueryCtx } from '../functions'
@@ -154,8 +153,8 @@ export async function validateSidebarParentChange(
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get(newParentId)
-    if (parentFromDb?.deletionTime) {
-      throw new Error('Cannot move items into a trashed folder')
+    if (parentFromDb && parentFromDb.location !== item.location) {
+      throw new Error('Cannot move items into a folder in a different location')
     }
     await requireItemAccess(ctx, {
       rawItem: parentFromDb,
@@ -270,58 +269,42 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
 async function checkSlugConflict(
   ctx: AuthQueryCtx,
   {
-    type,
     slug,
     excludeId,
     campaignId,
   }: {
-    type: SidebarItemType
     slug: string
     excludeId?: SidebarItemId
     campaignId: Id<'campaigns'>
   },
 ): Promise<boolean> {
-  let query
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      query = ctx.db.query('notes')
-      break
-    case SIDEBAR_ITEM_TYPES.folders:
-      query = ctx.db.query('folders')
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      query = ctx.db.query('gameMaps')
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      query = ctx.db.query('files')
-      break
-    default:
-      throw new Error(`Invalid sidebar item type: ${type satisfies never}`)
-  }
-  return query
-    .withIndex('by_campaign_slug', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('slug', slug)
-        .eq('deletionTime', undefined),
-    )
-    .unique()
-    .then((conflict) =>
-      excludeId
-        ? conflict !== null && conflict._id !== excludeId
-        : conflict !== null,
-    )
+  const queryTable = (table: 'notes' | 'folders' | 'gameMaps' | 'files') =>
+    ctx.db
+      .query(table)
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
+
+  const [note, folder, map, file] = await Promise.all([
+    queryTable('notes'),
+    queryTable('folders'),
+    queryTable('gameMaps'),
+    queryTable('files'),
+  ])
+
+  const conflict = note ?? folder ?? map ?? file
+  if (!conflict) return false
+  return excludeId ? conflict._id !== excludeId : true
 }
 
 export async function findUniqueSidebarItemSlug(
   ctx: AuthQueryCtx,
   {
-    type,
     name,
     itemId,
     campaignId,
   }: {
-    type: SidebarItemType
     name: string
     itemId: SidebarItemId
     campaignId: Id<'campaigns'>
@@ -329,25 +312,23 @@ export async function findUniqueSidebarItemSlug(
 ): Promise<string> {
   await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { type, slug, excludeId: itemId, campaignId }),
+    checkSlugConflict(ctx, { slug, excludeId: itemId, campaignId }),
   )
 }
 
 export async function findNewSidebarItemSlug(
   ctx: AuthQueryCtx,
   {
-    type,
     name,
     campaignId,
   }: {
-    type: SidebarItemType
     name: string
     campaignId: Id<'campaigns'>
   },
 ): Promise<string> {
   await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { type, slug, campaignId }),
+    checkSlugConflict(ctx, { slug, campaignId }),
   )
 }
 
@@ -377,7 +358,6 @@ export async function validateSidebarItemRename(
   })
 
   return findUniqueSidebarItemSlug(ctx, {
-    type: item.type,
     name: trimmedName,
     itemId: item._id,
     campaignId,

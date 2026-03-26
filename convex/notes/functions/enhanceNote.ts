@@ -2,6 +2,7 @@ import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlock
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -34,7 +35,7 @@ export const enhanceNoteWithContent = async (
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
-      isTrashed: !!note.deletionTime,
+      isTrashed: note.location === SIDEBAR_ITEM_LOCATION.trash,
     }),
     getTopLevelBlocksByNote(ctx, { noteId: note._id }),
   ])

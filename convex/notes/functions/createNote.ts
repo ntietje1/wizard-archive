@@ -4,7 +4,10 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../../sidebarItems/types/baseTypes'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../../prosemirrorSync'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -38,7 +41,6 @@ export async function createNote(
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
-    type: SIDEBAR_ITEM_TYPES.notes,
     name,
     campaignId,
   })
@@ -55,6 +57,7 @@ export async function createNote(
     allPermissionLevel: null,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
     updatedTime: now,
     updatedBy: profileId,
     createdBy: profileId,

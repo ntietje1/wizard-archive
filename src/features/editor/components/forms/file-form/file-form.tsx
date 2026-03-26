@@ -54,7 +54,7 @@ export function FileForm({
   onSuccess,
 }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
-  const { navigateToFile } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const file = useAuthQuery(
@@ -174,7 +174,7 @@ export function FileForm({
           parentId: parentId ?? null,
         })
         await openParentFolders(newFileId)
-        navigateToFile(newFileSlug)
+        navigateToItem(newFileSlug)
         toast.success('File created')
         onSuccess?.(newFileSlug)
         onClose()

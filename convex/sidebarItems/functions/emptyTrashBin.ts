@@ -1,4 +1,5 @@
 import { requireDmRole } from '../../functions'
+import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
 import type { AnySidebarItemFromDb } from '../types/types'
@@ -19,26 +20,34 @@ export async function emptyTrashBin(
   const [folders, notes, maps, files] = await Promise.all([
     ctx.db
       .query('folders')
-      .withIndex('by_campaign_deletionTime', (q) =>
-        q.eq('campaignId', campaignId).gt('deletionTime', 0),
+      .withIndex('by_campaign_location_parent_name', (q) =>
+        q
+          .eq('campaignId', campaignId)
+          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('notes')
-      .withIndex('by_campaign_deletionTime', (q) =>
-        q.eq('campaignId', campaignId).gt('deletionTime', 0),
+      .withIndex('by_campaign_location_parent_name', (q) =>
+        q
+          .eq('campaignId', campaignId)
+          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('gameMaps')
-      .withIndex('by_campaign_deletionTime', (q) =>
-        q.eq('campaignId', campaignId).gt('deletionTime', 0),
+      .withIndex('by_campaign_location_parent_name', (q) =>
+        q
+          .eq('campaignId', campaignId)
+          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('files')
-      .withIndex('by_campaign_deletionTime', (q) =>
-        q.eq('campaignId', campaignId).gt('deletionTime', 0),
+      .withIndex('by_campaign_location_parent_name', (q) =>
+        q
+          .eq('campaignId', campaignId)
+          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
   ])
@@ -56,7 +65,9 @@ export async function emptyTrashBin(
 
   // Delete root folders (applyToTree handles their descendants)
   for (const folder of rootFolders) {
-    await applyToTree(ctx, folder, hardDeleteItem, { trashed: true })
+    await applyToTree(ctx, folder, hardDeleteItem, {
+      location: SIDEBAR_ITEM_LOCATION.trash,
+    })
   }
 
   // Delete root non-folder items directly

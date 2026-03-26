@@ -1,4 +1,5 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
@@ -11,21 +12,23 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
-  useAllSidebarItems,
-  useTrashedSidebarItems,
+  useActiveSidebarItems,
+  useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
-  const { itemsMap } = useAllSidebarItems()
+  const { itemsMap } = useActiveSidebarItems()
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const { isDm, campaignId } = useCampaign()
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
 
   const isTrashView = editorSearch.trash === true && !item
 
-  const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
+  const { parentItemsMap: trashedParentItemsMap } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
   const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
 
   const canRename =

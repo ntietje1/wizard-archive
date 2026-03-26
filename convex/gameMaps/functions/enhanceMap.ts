@@ -1,3 +1,4 @@
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import {
   enhanceBase,
@@ -84,7 +85,7 @@ export const enhanceGameMapWithContent = async (
   const [ancestors, rawPins, bookmarkIds, sharesMap] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: gameMap.parentId,
-      isTrashed: !!gameMap.deletionTime,
+      isTrashed: gameMap.location === SIDEBAR_ITEM_LOCATION.trash,
     }),
     ctx.db
       .query('mapPins')

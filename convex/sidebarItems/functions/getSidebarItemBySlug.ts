@@ -1,121 +1,32 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
 import { getSidebarItemById } from './getSidebarItemById'
-import type {
-  AnySidebarItemFromDb,
-  AnySidebarItemWithContent,
-} from '../types/types'
-import type { SidebarItemType } from '../types/baseTypes'
+import type { AnySidebarItemWithContent } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemBySlug = async (
   ctx: AuthQueryCtx,
-  {
-    type,
-    slug,
-    campaignId,
-  }: { type: SidebarItemType; slug: string; campaignId: Id<'campaigns'> },
+  { slug, campaignId }: { slug: string; campaignId: Id<'campaigns'> },
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(ctx, campaignId)
-  let item: AnySidebarItemFromDb | null = null
 
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.folders:
-      item = await ctx.db
-        .query('folders')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('folders')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.notes:
-      item = await ctx.db
-        .query('notes')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('notes')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      item = await ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('gameMaps')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      item = await ctx.db
-        .query('files')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('files')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    default:
-      throw new Error(`Unknown item type, ${type}`)
-  }
+  const queryTable = (table: 'notes' | 'folders' | 'gameMaps' | 'files') =>
+    ctx.db
+      .query(table)
+      .withIndex('by_campaign_slug', (q) =>
+        q.eq('campaignId', campaignId).eq('slug', slug),
+      )
+      .unique()
 
-  if (!item) {
-    return null
-  }
+  const [note, folder, map, file] = await Promise.all([
+    queryTable('notes'),
+    queryTable('folders'),
+    queryTable('gameMaps'),
+    queryTable('files'),
+  ])
+
+  const item = note ?? folder ?? map ?? file
+  if (!item) return null
 
   return await getSidebarItemById(ctx, { id: item._id })
 }

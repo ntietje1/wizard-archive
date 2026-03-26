@@ -1,6 +1,7 @@
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   emptyTrashDescription,
   permanentDeleteDescription,
@@ -13,7 +14,9 @@ export function EmptyTrashConfirmDialog({
   onClose: () => void
   onConfirm: () => Promise<void>
 }) {
-  const { data: allTrashedItems, status } = useTrashedSidebarItems()
+  const { data: allTrashedItems, status } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
 
   if (status === 'pending' || !allTrashedItems) {
     return null // Or a loading skeleton
@@ -41,8 +44,9 @@ export function PermanentDeleteConfirmDialog({
   onClose: () => void
   onConfirm: () => Promise<void>
 }) {
-  const { parentItemsMap: trashedParentItemsMap, status } =
-    useTrashedSidebarItems()
+  const { data: trashedItems, status } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
 
   return (
     <ConfirmationDialog
@@ -52,7 +56,7 @@ export function PermanentDeleteConfirmDialog({
       onClose={onClose}
       onConfirm={onConfirm}
       title="Permanently Delete"
-      description={permanentDeleteDescription(item, trashedParentItemsMap)}
+      description={permanentDeleteDescription(item, trashedItems)}
       confirmLabel="Delete Forever"
       confirmVariant="destructive"
     />

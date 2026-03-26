@@ -1,4 +1,5 @@
 import {
+  SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
   SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
@@ -8,6 +9,7 @@ import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   SidebarItemId,
+  SidebarItemLocation,
   SidebarItemType,
 } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
@@ -134,12 +136,12 @@ function rejection(reason: DropRejectionReason): RejectionOutcome {
 export interface DndContext {
   moveItem: (
     item: AnySidebarItem,
-    options: { parentId?: Id<'folders'> | null; deleted?: boolean },
+    options: {
+      parentId?: Id<'folders'> | null
+      location?: SidebarItemLocation
+    },
   ) => Promise<unknown>
-  navigateToItem: (
-    item: { type: SidebarItemType; slug: string },
-    replace?: boolean,
-  ) => Promise<void>
+  navigateToItem: (slug: string, replace?: boolean) => Promise<void>
   campaignId: Id<'campaigns'> | null
   campaignName: string | undefined
   isDm: boolean
@@ -207,9 +209,9 @@ const trashConfig: DropZoneConfig = {
     if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
       return rejection('dm_only')
     }
-    if (item.deletionTime) return null
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) return null
     return operation('trash', 'Move to "Trash"', async () => {
-      await ctx.moveItem(item, { deleted: true })
+      await ctx.moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash })
       toast.success('Moved to trash')
     })
   },
@@ -234,7 +236,7 @@ const mapConfig = typedConfig<MapDropZoneData>({
 const emptyEditorConfig: DropZoneConfig = {
   resolve: (item, _target, ctx) =>
     operation('open', 'Open in editor', async () => {
-      await ctx.navigateToItem(item, true)
+      await ctx.navigateToItem(item.slug, true)
     }),
   canAcceptFiles: true,
   getHighlightId: () => EMPTY_EDITOR_DROP_TYPE,
@@ -244,7 +246,7 @@ const rootConfig: DropZoneConfig = {
   resolve: (item, _target, ctx) => {
     const name = ctx.campaignName || 'Root'
 
-    if (item.deletionTime) {
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
         return rejection('dm_only')
       }
@@ -252,7 +254,10 @@ const rootConfig: DropZoneConfig = {
         return rejection('name_conflict')
       }
       return operation('restore', `Restore to "${name}"`, async () => {
-        await ctx.moveItem(item, { parentId: null, deleted: false })
+        await ctx.moveItem(item, {
+          parentId: null,
+          location: SIDEBAR_ITEM_LOCATION.sidebar,
+        })
         toast.success('Item restored')
       })
     }
@@ -273,7 +278,8 @@ const rootConfig: DropZoneConfig = {
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
   resolve: (item, t, ctx) => {
     if (item._id === t._id) return null
-    if (t.deletionTime) return rejection('trashed_folder')
+    if (t.location === SIDEBAR_ITEM_LOCATION.trash)
+      return rejection('trashed_folder')
     if (
       item.type === SIDEBAR_ITEM_TYPES.folders &&
       t.ancestorIds?.includes(item._id)
@@ -286,7 +292,7 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 
     const folderId = t._id as Id<'folders'>
 
-    if (item.deletionTime && !t.deletionTime) {
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
         return rejection('dm_only')
       }
@@ -294,7 +300,10 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
         return rejection('name_conflict')
       }
       return operation('restore', `Restore to "${t.name}"`, async () => {
-        await ctx.moveItem(item, { parentId: folderId, deleted: false })
+        await ctx.moveItem(item, {
+          parentId: folderId,
+          location: SIDEBAR_ITEM_LOCATION.sidebar,
+        })
         toast.success('Item restored')
         ctx.setFolderOpen(folderId)
       })
@@ -310,14 +319,15 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       ctx.setFolderOpen(folderId)
     })
   },
-  canAcceptFiles: (t) => !t.deletionTime,
+  canAcceptFiles: (t) => t.location !== SIDEBAR_ITEM_LOCATION.trash,
   getHighlightId: (t) => t._id,
   getTargetKey: (raw) => raw.sidebarItemId as string,
 })
 
 const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
   resolve: (item) => {
-    if (item.deletionTime) return rejection('trashed_item')
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash)
+      return rejection('trashed_item')
     return operation('link', 'Add link here')
   },
   canAcceptFiles: false,

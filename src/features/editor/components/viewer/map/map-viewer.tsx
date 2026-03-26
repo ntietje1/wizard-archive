@@ -24,7 +24,7 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
@@ -300,7 +300,7 @@ export function MapViewer({
 
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap: allItemsMap } = useAllSidebarItems()
+  const { itemsMap: allItemsMap } = useActiveSidebarItems()
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapDropData = {

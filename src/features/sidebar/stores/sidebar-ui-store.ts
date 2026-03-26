@@ -1,10 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface CampaignState {
@@ -17,7 +14,6 @@ interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
   renamingId: SidebarItemId | null
   pendingItemName: string
-  selectedType: SidebarItemType | null
   selectedSlug: string | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
@@ -35,7 +31,7 @@ interface SidebarUIActions {
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setPendingItemName: (name: string) => void
-  setSelected: (type: SidebarItemType | null, slug: string | null) => void
+  setSelected: (slug: string | null) => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
 
@@ -72,7 +68,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       campaignStates: {},
       renamingId: null,
       pendingItemName: '',
-      selectedType: null,
       selectedSlug: null,
       viewAsPlayerId: null,
 
@@ -128,12 +123,10 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       setPendingItemName: (name) => set({ pendingItemName: name }),
 
-      setSelected: (type, slug) =>
+      setSelected: (slug) =>
         set((state) => {
-          if (state.selectedType === type && state.selectedSlug === slug) {
-            return state
-          }
-          return { selectedType: type, selectedSlug: slug }
+          if (state.selectedSlug === slug) return state
+          return { selectedSlug: slug }
         }),
 
       setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),

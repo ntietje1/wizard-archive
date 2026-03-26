@@ -53,7 +53,7 @@ export function MapForm({
   onSuccess,
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
-  const { navigateToMap } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const map = useAuthQuery(
@@ -170,7 +170,7 @@ export function MapForm({
           parentId: parentId ?? null,
         })
         await openParentFolders(newMapId)
-        navigateToMap(newMapSlug)
+        navigateToItem(newMapSlug)
         toast.success('Map created')
         onSuccess?.(newMapSlug)
         onClose()

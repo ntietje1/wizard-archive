@@ -3,7 +3,10 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
@@ -13,7 +16,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
+import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
@@ -32,7 +35,7 @@ import {
 import { assertNever } from '~/shared/utils/utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -41,8 +44,7 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigation()
+  const { navigateToItem, clearEditorContent } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateSidebarItem()
@@ -53,7 +55,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
-  const { parentItemsMap } = useAllSidebarItems()
+  const { parentItemsMap } = useActiveSidebarItems()
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
     null,
@@ -71,7 +73,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
       if (!ctx.item) return
-      navigateToItem(ctx.item)
+      navigateToItem(ctx.item.slug)
     },
 
     rename: async (ctx: MenuContext) => {
@@ -95,14 +97,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
 
       // Everything else (including empty folders): trash immediately
-      moveItem(item, { deleted: true }).then(
+      moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash }).then(
         () => {
-          const current = getSelectedTypeAndSlug()
-          if (
-            current &&
-            item.type === current.type &&
-            item.slug === current.slug
-          ) {
+          const currentSlug = getSelectedSlug()
+          if (item.slug === currentSlug) {
             clearEditorContent()
           }
           toast.success('Moved to trash')
@@ -132,7 +130,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
         console.error(error)
       }
@@ -155,7 +153,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           ),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
         console.error(error)
       }
@@ -178,7 +176,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           ),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
         console.error(error)
       }
@@ -198,7 +196,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
         console.error(error)
       }
@@ -259,7 +257,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         // Navigate to the map
         const map = ctx.activeMap
-        navigateToMap(map.slug)
+        navigateToItem(map.slug)
         toast.info('Highlighting map pin... (coming soon)')
       } catch (error) {
         console.error('Failed to navigate to map pin:', error)
@@ -605,7 +603,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     restore: async (ctx: MenuContext) => {
       if (!ctx.item) return
       try {
-        await moveItem(ctx.item, { deleted: false })
+        await moveItem(ctx.item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
         toast.success('Item restored')
       } catch (error) {
         console.error(error)

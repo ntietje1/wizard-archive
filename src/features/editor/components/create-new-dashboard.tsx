@@ -83,7 +83,7 @@ export function CreateNewDashboard({
       const name = pendingItemName.trim() || getDefaultName(type, parentId)
       const result = await createItem({ type, campaignId, parentId, name })
       openParentFolders(result.id)
-      await navigateToItem(result)
+      await navigateToItem(result.slug)
     } catch (error) {
       console.error(error)
       toast.error('Failed to create item')

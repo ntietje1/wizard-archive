@@ -11,7 +11,7 @@ import type {
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {
   getSiblings: (parentId: Id<'folders'> | null) => Array<AnySidebarItem>
@@ -31,7 +31,7 @@ export interface SidebarValidation {
 }
 
 export function useSidebarValidation(): SidebarValidation {
-  const { itemsMap, parentItemsMap } = useAllSidebarItems()
+  const { itemsMap, parentItemsMap } = useActiveSidebarItems()
 
   const getSiblings = (parentId: Id<'folders'> | null) => {
     return parentItemsMap.get(parentId) ?? []

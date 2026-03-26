@@ -1,5 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { collectDescendants } from './collectDescendants'
+import type { SidebarItemLocation } from '../types/baseTypes'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
 
@@ -19,23 +20,16 @@ export async function applyToTree(
   ctx: MutationCtx,
   item: AnySidebarItemFromDb,
   operation: ItemOperation,
-  opts?: { trashed?: boolean },
+  opts?: { location?: SidebarItemLocation },
 ): Promise<void> {
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     const descendants = await collectDescendants(ctx, {
       folderId: item._id,
       campaignId: item.campaignId,
-      trashed: opts?.trashed,
+      location: opts?.location ?? item.location,
     })
 
-    const allDescendants: Array<AnySidebarItemFromDb> = [
-      ...descendants.notes,
-      ...descendants.maps,
-      ...descendants.files,
-      ...descendants.folders,
-    ] as Array<AnySidebarItemFromDb>
-
-    for (const descendant of allDescendants) {
+    for (const descendant of descendants) {
       await operation(ctx, descendant)
     }
   }

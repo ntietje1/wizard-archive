@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import {
@@ -7,7 +8,7 @@ import {
   getDragItemId,
 } from '~/features/dnd/utils/dnd-registry'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from '~/features/editor/hooks/useWikiLinkExtension'
 
 /**
@@ -31,7 +32,7 @@ export function useNoteEditorDropTarget({
     highlightId: `note:${noteId}`,
   })
 
-  const { data: allItems, itemsMap } = useAllSidebarItems()
+  const { data: allItems, itemsMap } = useActiveSidebarItems()
   const editorRef = useRef(editor)
   editorRef.current = editor
   const allItemsRef = useRef(allItems)
@@ -50,7 +51,7 @@ export function useNoteEditorDropTarget({
         const sid = getDragItemId(source.data)
         if (!sid) return
         const item = itemsMapRef.current.get(sid)
-        if (!item || item.deletionTime) return
+        if (!item || item.location === SIDEBAR_ITEM_LOCATION.trash) return
 
         const { clientX, clientY } = location.current.input
         const tiptap = editorRef.current._tiptapEditor

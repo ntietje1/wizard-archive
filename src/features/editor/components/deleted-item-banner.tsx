@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from 'lucide-react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
@@ -9,7 +10,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
-import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
@@ -57,11 +58,13 @@ export function TrashBanner({ item }: TrashBannerProps) {
  * Shows who deleted it, when, and how long until auto-deletion.
  */
 function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
-  const isDeleted = !!item.deletionTime
+  const isDeleted = item.location === SIDEBAR_ITEM_LOCATION.trash
   const { moveItem } = useMoveSidebarItem()
   const { permanentlyDeleteItem } = useDeleteSidebarItem()
   const { clearEditorContent } = useEditorNavigation()
-  const { parentItemsMap: trashedParentItemsMap } = useTrashedSidebarItems()
+  const { data: trashedItems = [] } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const deletionTime = item.deletionTime
@@ -90,7 +93,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
 
   const handleRestore = async () => {
     try {
-      await moveItem(item, { deleted: false })
+      await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
       toast.success('Item restored')
     } catch (error) {
       console.error(error)
@@ -138,7 +141,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
           onClose={() => setConfirmDelete(false)}
           onConfirm={handlePermanentDelete}
           title="Permanently Delete"
-          description={permanentDeleteDescription(item, trashedParentItemsMap)}
+          description={permanentDeleteDescription(item, trashedItems)}
           confirmLabel="Delete Forever"
           confirmVariant="destructive"
         />
@@ -165,7 +168,9 @@ function RootTrashBanner() {
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
   const { emptyTrashBin } = useDeleteSidebarItem()
-  const { data: allTrashedItems = [] } = useTrashedSidebarItems()
+  const { data: allTrashedItems = [] } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const handleEmptyTrash = async () => {

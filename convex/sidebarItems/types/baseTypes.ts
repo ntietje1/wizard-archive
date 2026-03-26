@@ -6,6 +6,14 @@ import type { SidebarItemShare } from '../../sidebarShares/types'
 
 export const SIDEBAR_ROOT_TYPE = 'root' as const
 
+export const SIDEBAR_ITEM_LOCATION = {
+  sidebar: 'sidebar',
+  trash: 'trash',
+} as const
+
+export type SidebarItemLocation =
+  (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
+
 export const SIDEBAR_ITEM_TYPES = {
   notes: 'note',
   folders: 'folder',
@@ -47,6 +55,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   parentId: Id<'folders'> | null
   type: T
   allPermissionLevel: PermissionLevel | null
+  location: SidebarItemLocation
 } & CommonTableFields
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {

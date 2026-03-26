@@ -1,6 +1,9 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import { sidebarItemIdValidator } from './schema/baseValidators'
+import {
+  sidebarItemIdValidator,
+  sidebarItemLocationValidator,
+} from './schema/baseValidators'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
@@ -10,14 +13,14 @@ export const moveSidebarItem = authMutation({
   args: {
     itemId: sidebarItemIdValidator,
     parentId: v.optional(v.union(v.id('folders'), v.null())),
-    deleted: v.optional(v.boolean()),
+    location: v.optional(sidebarItemLocationValidator),
   },
   returns: sidebarItemIdValidator,
   handler: async (ctx, args): Promise<SidebarItemId> => {
     return await moveSidebarItemFn(ctx, {
       itemId: args.itemId,
       parentId: args.parentId,
-      deleted: args.deleted,
+      location: args.location,
     })
   },
 })

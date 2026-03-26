@@ -1,23 +1,18 @@
 import {
-  AllSidebarItemsContext,
-  TrashedSidebarItemsContext,
-  useSidebarItemsQuery,
-  useTrashedSidebarItemsQuery,
+  SidebarItemsContext,
+  useSidebarItemsQueries,
 } from '~/features/sidebar/hooks/useSidebarItems'
 
-export function AllSidebarItemsProvider({
+export function SidebarItemsProvider({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const value = useSidebarItemsQuery()
-  const trashedValue = useTrashedSidebarItemsQuery()
+  const value = useSidebarItemsQueries()
 
   return (
-    <AllSidebarItemsContext.Provider value={value}>
-      <TrashedSidebarItemsContext.Provider value={trashedValue}>
-        {children}
-      </TrashedSidebarItemsContext.Provider>
-    </AllSidebarItemsContext.Provider>
+    <SidebarItemsContext.Provider value={value}>
+      {children}
+    </SidebarItemsContext.Provider>
   )
 }

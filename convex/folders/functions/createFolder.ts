@@ -3,7 +3,10 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -33,7 +36,6 @@ export async function createFolder(
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {
-    type: SIDEBAR_ITEM_TYPES.folders,
     name,
     campaignId,
   })
@@ -51,6 +53,7 @@ export async function createFolder(
     inheritShares: false,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.folders,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
     updatedTime: now,
     updatedBy: profileId,
     createdBy: profileId,

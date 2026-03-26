@@ -234,9 +234,7 @@ export function EditableBreadcrumb({
             key={ancestor._id}
             ancestor={ancestor}
             linkProps={buildEditorLinkProps(ancestor, routeParams)}
-            onClick={() =>
-              setLastSelectedItem({ type: ancestor.type, slug: ancestor.slug })
-            }
+            onClick={() => setLastSelectedItem(ancestor.slug)}
           />
         ))}
       </div>
