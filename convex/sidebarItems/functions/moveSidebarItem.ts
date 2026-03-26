@@ -135,30 +135,25 @@ export async function moveSidebarItem(
 
     // Restore all descendants if folder
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      await applyToTree(
-        ctx,
-        item,
-        async (_, i) => {
-          if (i._id === item._id) return
-          if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
+      await applyToTree(ctx, item, async (_, i) => {
+        if (i._id === item._id) return
+        if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
-          await applyToDependents(ctx, i, async (_, doc) => {
-            await ctx.db.patch(doc._id, clearDeletion)
-          })
+        await applyToDependents(ctx, i, async (_, doc) => {
+          await ctx.db.patch(doc._id, clearDeletion)
+        })
 
-          const descSlug = await findUniqueSidebarItemSlug(ctx, {
-            campaignId,
-            itemId: i._id,
-            name: i.name,
-          })
-          await ctx.db.patch(i._id, {
-            ...clearDeletion,
-            location: location,
-            ...(descSlug !== i.slug ? { slug: descSlug } : {}),
-          })
-        },
-        { location: SIDEBAR_ITEM_LOCATION.trash },
-      )
+        const descSlug = await findUniqueSidebarItemSlug(ctx, {
+          campaignId,
+          itemId: i._id,
+          name: i.name,
+        })
+        await ctx.db.patch(i._id, {
+          ...clearDeletion,
+          location: location,
+          ...(descSlug !== i.slug ? { slug: descSlug } : {}),
+        })
+      })
     }
   }
 

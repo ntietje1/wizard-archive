@@ -29,7 +29,5 @@ export async function permanentlyDeleteSidebarItem(
     throw new Error('Only the DM can permanently delete folders')
   }
 
-  await applyToTree(ctx, item, hardDeleteItem, {
-    location: SIDEBAR_ITEM_LOCATION.trash,
-  })
+  await applyToTree(ctx, item, hardDeleteItem)
 }

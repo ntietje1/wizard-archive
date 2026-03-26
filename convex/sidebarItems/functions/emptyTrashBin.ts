@@ -65,9 +65,7 @@ export async function emptyTrashBin(
 
   // Delete root folders (applyToTree handles their descendants)
   for (const folder of rootFolders) {
-    await applyToTree(ctx, folder, hardDeleteItem, {
-      location: SIDEBAR_ITEM_LOCATION.trash,
-    })
+    await applyToTree(ctx, folder, hardDeleteItem)
   }
 
   // Delete root non-folder items directly
