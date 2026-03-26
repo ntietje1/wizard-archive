@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -128,7 +129,7 @@ export async function getFolderContentsForDownload(
   folderId: Id<'folders'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
   const folderFromDb = await ctx.db.get(folderId)
-  if (!folderFromDb) throw new Error('Folder not found')
+  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const campaignId = folderFromDb.campaignId
   await requireCampaignMembership(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {

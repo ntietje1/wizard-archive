@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../types'
 import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -13,13 +14,16 @@ export async function updateCampaignMemberStatus(
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get(memberId)
   if (!member) {
-    throw new Error('Member not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Member not found')
   }
 
   await requireDmRole(ctx, member.campaignId)
 
   if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) {
-    throw new Error('Only player membership status can be changed')
+    throwClientError(
+      ERROR_CODE.PERMISSION_DENIED,
+      'Only player membership status can be changed',
+    )
   }
 
   const now = Date.now()

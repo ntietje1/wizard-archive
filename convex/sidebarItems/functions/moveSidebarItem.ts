@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
@@ -77,9 +78,7 @@ export async function moveSidebarItem(
   const isMoving = parentId !== undefined
 
   if (isRelocating && !isTrashing && !isRestoring) {
-    throw new Error(
-      `Unsupported location transition: ${item.location} -> ${location}`,
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'This move is not supported')
   }
 
   // --- Relocate: entering trash ---
@@ -88,7 +87,10 @@ export async function moveSidebarItem(
       item.type === SIDEBAR_ITEM_TYPES.folders &&
       membership.role !== CAMPAIGN_MEMBER_ROLE.DM
     ) {
-      throw new Error('Only the DM can trash folders')
+      throwClientError(
+        ERROR_CODE.PERMISSION_DENIED,
+        'Only the DM can trash folders',
+      )
     }
 
     const now = Date.now()
@@ -114,7 +116,10 @@ export async function moveSidebarItem(
       item.type === SIDEBAR_ITEM_TYPES.folders &&
       membership.role !== CAMPAIGN_MEMBER_ROLE.DM
     ) {
-      throw new Error('Only the DM can restore folders')
+      throwClientError(
+        ERROR_CODE.PERMISSION_DENIED,
+        'Only the DM can restore folders',
+      )
     }
 
     const restoreParentId = parentId ?? null

@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
@@ -10,7 +11,7 @@ export async function toggleItemBookmark(
 ) {
   const item = await ctx.db.get(sidebarItemId)
   if (!item) {
-    throw new Error('Sidebar item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
   await checkItemAccess(ctx, {
     rawItem: item,

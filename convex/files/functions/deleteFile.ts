@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarItemShareMutations'
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -10,7 +11,7 @@ export async function deleteFile(
   { fileId }: { fileId: Id<'files'> },
 ): Promise<Id<'files'>> {
   const fileFromDb = await ctx.db.get(fileId)
-  if (!fileFromDb) throw new Error('File not found')
+  if (!fileFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
   const file = await requireItemAccess(ctx, {
     rawItem: fileFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

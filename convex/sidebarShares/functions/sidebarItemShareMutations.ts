@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -22,7 +23,8 @@ export async function shareSidebarItemWithMember(
   },
 ): Promise<Id<'sidebarItemShares'>> {
   const item = await ctx.db.get(sidebarItemId)
-  if (!item) throw new Error('Sidebar item not found')
+  if (!item)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
   // Check if share already exists

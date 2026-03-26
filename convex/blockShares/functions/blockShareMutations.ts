@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { insertBlock } from '../../blocks/functions/insertBlock'
 import { updateBlock } from '../../blocks/functions/updateBlock'
@@ -63,7 +64,8 @@ async function addBlockShare(
   },
 ): Promise<Id<'blockShares'>> {
   const block = await ctx.db.get(blockId)
-  if (!block) throw new Error('Block not found')
+  if (!block)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
   const existingShare = await ctx.db
@@ -153,7 +155,8 @@ export async function shareBlockWithMemberHelper(
   },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
   await requireDmRole(ctx, note.campaignId)
 
   const blockId = await upsertBlockForSharing(ctx, {
@@ -178,7 +181,8 @@ export async function unshareBlockFromMemberHelper(
   },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
   await requireDmRole(ctx, note.campaignId)
 
   const block = await findBlockByBlockNoteId(ctx, {
@@ -217,7 +221,8 @@ export async function setBlockShareStatusHelper(
   }: { noteId: Id<'notes'>; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
   await requireDmRole(ctx, note.campaignId)
 
   const blockId = await upsertBlockForSharing(ctx, {

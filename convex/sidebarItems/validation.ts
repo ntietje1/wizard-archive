@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../errors'
 import { getSidebarItemPermissionLevel } from '../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../permissions/types'
@@ -115,13 +116,13 @@ export async function validateSidebarItemName(
   await requireCampaignMembership(ctx, campaignId)
   const nameResult = validateItemName(name)
   if (!nameResult.valid) {
-    throw new Error(nameResult.error)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error!)
   }
 
   const siblings = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
-    throw new Error(uniqueResult.error)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error!)
   }
 
   return { siblings }
@@ -149,12 +150,15 @@ export async function validateSidebarParentChange(
     newParentId,
   })
   if (!result.valid) {
-    throw new Error(result.error)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error!)
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get(newParentId)
     if (parentFromDb && parentFromDb.location !== item.location) {
-      throw new Error('Cannot move items into a folder in a different location')
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        'Cannot move items into a folder in a different location',
+      )
     }
     await requireItemAccess(ctx, {
       rawItem: parentFromDb,
@@ -179,15 +183,21 @@ export async function validateSidebarCreateParent(
   if (parentId) {
     const parentItem = await getSidebarItemById(ctx, { id: parentId })
     if (!parentItem) {
-      throw new Error('Parent not found')
+      throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
     const level = await getSidebarItemPermissionLevel(ctx, { item: parentItem })
     if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)) {
-      throw new Error('You do not have sufficient permission for this item')
+      throwClientError(
+        ERROR_CODE.PERMISSION_DENIED,
+        'You do not have sufficient permission for this item',
+      )
     }
   } else {
     if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-      throw new Error('Only the DM can create items at the root level')
+      throwClientError(
+        ERROR_CODE.PERMISSION_DENIED,
+        'Only the DM can create items at the root level',
+      )
     }
   }
 }
@@ -257,11 +267,14 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
   },
 ): Promise<EnhancedSidebarItem<T>> {
   if (!rawItem) {
-    throw new Error('Item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }
   const item = await checkItemAccess(ctx, { rawItem, requiredLevel })
   if (!item) {
-    throw new Error('You do not have sufficient permission for this item')
+    throwClientError(
+      ERROR_CODE.PERMISSION_DENIED,
+      'You do not have sufficient permission for this item',
+    )
   }
   return item
 }

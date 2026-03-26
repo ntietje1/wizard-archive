@@ -1,42 +1,108 @@
 import { ConvexError } from 'convex/values'
 
-// Error code enum — single source of truth
-export const ERROR_CODE = {
+const CLIENT_ERROR_CODE = {
   NOT_AUTHENTICATED: 'NOT_AUTHENTICATED',
-  VALIDATION_USERNAME_TOO_SHORT: 'VALIDATION_USERNAME_TOO_SHORT',
-  VALIDATION_USERNAME_TOO_LONG: 'VALIDATION_USERNAME_TOO_LONG',
-  CONFLICT_USERNAME_TAKEN: 'CONFLICT_USERNAME_TAKEN',
-  VALIDATION_SELF_PIN: 'VALIDATION_SELF_PIN',
-  VALIDATION_DUPLICATE_PIN: 'VALIDATION_DUPLICATE_PIN',
-  CONFLICT_SESSION_ACTIVE: 'CONFLICT_SESSION_ACTIVE',
+  NOT_FOUND: 'NOT_FOUND',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  CONFLICT: 'CONFLICT',
 } as const
 
-export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE]
+const SERVER_ERROR_CODE = {
+  INTERNAL: 'INTERNAL',
+} as const
 
-// Structured error data shape used with ConvexError
-export type AppErrorData = {
-  code: ErrorCode
+export const ERROR_CODE = {
+  ...CLIENT_ERROR_CODE,
+  ...SERVER_ERROR_CODE,
+} as const
+
+export type ClientErrorCode =
+  (typeof CLIENT_ERROR_CODE)[keyof typeof CLIENT_ERROR_CODE]
+
+export type ServerErrorCode =
+  (typeof SERVER_ERROR_CODE)[keyof typeof SERVER_ERROR_CODE]
+
+export type ClientErrorData = {
+  kind: 'client'
+  code: ClientErrorCode
   message: string
 }
 
-// Server-side: throw a structured ConvexError
-export function throwAppError(code: ErrorCode, message: string): never {
-  throw new ConvexError<AppErrorData>({ code, message })
+export type ServerErrorData = {
+  kind: 'server'
+  code: ServerErrorCode
+  message: string
 }
 
-// Client-side: detect a structured error by code
-export function isAppError(error: unknown, code: ErrorCode): boolean {
-  // Direct ConvexError instance
-  if (
-    error instanceof ConvexError &&
-    typeof error.data === 'object' &&
-    error.data !== null &&
-    'code' in error.data &&
-    error.data.code === code
+type AppErrorData = ClientErrorData | ServerErrorData
+
+type AppConvexError = ConvexError<AppErrorData> & { data: AppErrorData }
+
+export function throwClientError(
+  code: ClientErrorCode,
+  message: string,
+): never {
+  throw new ConvexError<ClientErrorData>({ kind: 'client', code, message })
+}
+
+export function throwServerError(message: string): never {
+  throw new ConvexError<ServerErrorData>({
+    kind: 'server',
+    code: 'INTERNAL',
+    message,
+  })
+}
+
+function isConvexErrorData(data: unknown): data is AppErrorData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'kind' in data &&
+    'code' in data &&
+    'message' in data &&
+    (data.kind === 'client' || data.kind === 'server')
   )
-    return true
-  // Convex WebSocket errors wrap the message as a string
-  if (error instanceof Error && error.message.includes(`"code":"${code}"`))
-    return true
-  return false
+}
+
+function parseWebSocketError(error: Error): AppErrorData | null {
+  const match = error.message.match(
+    /\{"kind":"(client|server)","code":"(\w+)","message":"([^"]+)"\}/,
+  )
+  if (!match) return null
+  const [, kind, code, message] = match
+  return { kind, code, message } as AppErrorData
+}
+
+function toAppError(error: unknown): AppConvexError | null {
+  if (error instanceof ConvexError && isConvexErrorData(error.data)) {
+    return error as AppConvexError
+  }
+  if (error instanceof Error) {
+    const parsed = parseWebSocketError(error)
+    if (parsed) return { data: parsed } as AppConvexError
+  }
+  return null
+}
+
+export function isClientError(
+  error: unknown,
+): error is AppConvexError & { data: ClientErrorData }
+export function isClientError(
+  error: unknown,
+  code: ClientErrorCode,
+): error is AppConvexError & { data: ClientErrorData & { code: typeof code } }
+export function isClientError(
+  error: unknown,
+  code?: ClientErrorCode,
+): error is AppConvexError & { data: ClientErrorData } {
+  const appError = toAppError(error)
+  if (!appError || appError.data.kind !== 'client') return false
+  return code === undefined || appError.data.code === code
+}
+
+export function getClientErrorMessage(error: unknown): string | null {
+  const appError = toAppError(error)
+  if (!appError || appError.data.kind !== 'client') return null
+  return appError.data.message
 }

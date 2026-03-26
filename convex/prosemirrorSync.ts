@@ -3,6 +3,7 @@ import { ProsemirrorSync } from '@convex-dev/prosemirror-sync'
 import { components } from './_generated/api'
 import { saveTopLevelBlocksForNote } from './blocks/functions/saveTopLevelBlocksForNote'
 import { requireItemAccess } from './sidebarItems/validation'
+import { ERROR_CODE, throwClientError } from './errors'
 import { PERMISSION_LEVEL } from './permissions/types'
 import { editorSchema } from './notes/editorSpecs'
 import { authenticate } from './functions'
@@ -36,7 +37,7 @@ async function checkAccess(
 ) {
   const noteId = documentId as Id<'notes'>
   const noteFromDb = await ctx.db.get(noteId)
-  if (!noteFromDb) throw new Error('Note not found')
+  if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const user = await authenticate(ctx)
   const authCtx: AuthQueryCtx = { ...ctx, user }
   await requireItemAccess(authCtx, {
@@ -72,7 +73,7 @@ const sync = prosemirrorSync.syncApi({
   ) => {
     const noteId = documentId as Id<'notes'>
     const noteFromDb = await ctx.db.get(noteId)
-    if (!noteFromDb) throw new Error('Note not found')
+    if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
     const user = await authenticate(ctx) // TODO: see if this can be de-duplicated with checkWrite auth
     const authCtx: AuthMutationCtx = { ...ctx, user }
     const blocks = pmSnapshotToBlocks(snapshot)

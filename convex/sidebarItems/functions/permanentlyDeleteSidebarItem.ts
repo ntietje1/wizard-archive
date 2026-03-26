@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
@@ -18,7 +19,10 @@ export async function permanentlyDeleteSidebarItem(
   })
 
   if (item.location !== SIDEBAR_ITEM_LOCATION.trash) {
-    throw new Error('Item not found in trash')
+    throwClientError(
+      ERROR_CODE.NOT_FOUND,
+      'This item is no longer in the trash',
+    )
   }
 
   const { membership } = await requireCampaignMembership(ctx, item.campaignId)
@@ -26,7 +30,10 @@ export async function permanentlyDeleteSidebarItem(
     item.type === SIDEBAR_ITEM_TYPES.folders &&
     membership.role !== CAMPAIGN_MEMBER_ROLE.DM
   ) {
-    throw new Error('Only the DM can permanently delete folders')
+    throwClientError(
+      ERROR_CODE.PERMISSION_DENIED,
+      'Only the DM can permanently delete folders',
+    )
   }
 
   await applyToTree(ctx, item, hardDeleteItem)

@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -6,7 +7,7 @@ export async function deleteBlocksByNote(
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
 
   const blocks = await ctx.db
     .query('blocks')

@@ -1,3 +1,4 @@
+import { throwServerError } from '../errors'
 import type { Id, TableNames } from '../_generated/dataModel'
 
 export type CommonTableFields = {
@@ -17,7 +18,7 @@ export type CommonValidatorFields<T extends TableNames> = CommonTableFields &
   ConvexValidatorFields<T>
 
 export function assertNever(value: never): never {
-  throw new Error(
+  throwServerError(
     `Unhandled discriminated union member: ${JSON.stringify(value)}`,
   )
 }

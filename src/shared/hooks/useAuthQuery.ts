@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
-import { ERROR_CODE, isAppError } from 'convex/errors'
+import { ERROR_CODE, isClientError } from 'convex/errors'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
 import type {
   FunctionArgs,
@@ -40,7 +40,7 @@ export function useAuthQuery<
   } as UseQueryOptions<TData<TQuery>>)
 
   const isAuthError =
-    result.error && isAppError(result.error, ERROR_CODE.NOT_AUTHENTICATED)
+    result.error && isClientError(result.error, ERROR_CODE.NOT_AUTHENTICATED)
 
   if (!isAuthError) return result
   return {

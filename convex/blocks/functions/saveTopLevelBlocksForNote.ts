@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { insertBlock } from './insertBlock'
 import { updateBlock } from './updateBlock'
@@ -11,7 +12,7 @@ export async function saveTopLevelBlocksForNote(
   { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const campaignId = note.campaignId
 
   const existingTopLevelBlocks = await ctx.db

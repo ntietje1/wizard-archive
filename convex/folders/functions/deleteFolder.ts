@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { deleteFile } from '../../files/functions/deleteFile'
 import { deleteMap } from '../../gameMaps/functions/deleteMap'
 import { deleteNote } from '../../notes/functions/deleteNote'
@@ -14,7 +15,7 @@ export async function deleteFolder(
   { folderId }: { folderId: Id<'folders'> },
 ): Promise<Id<'folders'>> {
   const folderFromDb = await ctx.db.get(folderId)
-  if (!folderFromDb) throw new Error('Folder not found')
+  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const campaignId = folderFromDb.campaignId
   await requireDmRole(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {

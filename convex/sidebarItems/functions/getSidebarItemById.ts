@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError, throwServerError } from '../../errors'
 import { getNote } from '../../notes/functions/getNote'
 import { getMap } from '../../gameMaps/functions/getMap'
 import { getFolder } from '../../folders/functions/getFolder'
@@ -15,7 +16,7 @@ export const requireSidebarItemById = async (
 ): Promise<AnySidebarItemWithContent> => {
   const result = await getSidebarItemById(ctx, { id })
   if (!result) {
-    throw new Error('Sidebar item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
   return result
 }
@@ -47,7 +48,7 @@ export const getSidebarItemById = async (
       result = await getFile(ctx, { fileId: id as Id<'files'> })
       break
     default:
-      throw new Error(`Unknown item type`)
+      throwServerError('Unknown item type')
   }
 
   return result

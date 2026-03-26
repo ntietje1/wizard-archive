@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
 import { toast } from 'sonner'
+import { getClientErrorMessage } from 'convex/errors'
 import type {
   UseMutationOptions,
   UseMutationResult,
@@ -40,8 +41,9 @@ export function useAppMutation<
     mutationFn: (args: TArgs<TMutation>) => convexMutation(args),
     onError: onError
       ? onError
-      : (_error) => {
-          toast.error(errorMessage ?? 'Something went wrong')
+      : (error) => {
+          const clientMessage = getClientErrorMessage(error)
+          toast.error(clientMessage ?? errorMessage ?? 'Something went wrong')
         },
     ...rest,
   } as UseMutationOptions<TData<TMutation>, Error, TArgs<TMutation>, TContext>)

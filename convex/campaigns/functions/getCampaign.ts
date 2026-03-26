@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError, throwServerError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import {
   getUserProfileByUserId,
@@ -33,14 +34,14 @@ async function enhanceCampaign(
     ctx.db.get(campaign.dmUserId),
     countAcceptedPlayers(ctx, { campaignId: campaign._id }),
   ])
-  if (!dmUserProfile) throw new Error('DM user profile not found')
+  if (!dmUserProfile) throwServerError('DM user profile not found')
   const identity = await ctx.auth.getUserIdentity()
   let myMembership: CampaignMember | null = null
   if (identity) {
     const profile = await getUserProfileByUserId(ctx, {
       userId: identity.subject,
     })
-    if (!profile) throw new Error('User Profile not found')
+    if (!profile) throwServerError('User profile not found')
     const member: CampaignMemberFromDb | null = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) =>
@@ -76,13 +77,14 @@ export async function getCampaignBySlug(
   const dmUserProfile = await getUserProfileByUsername(ctx, {
     username: dmUsername,
   })
-  if (!dmUserProfile) throw new Error('DM user not found')
+  if (!dmUserProfile)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
     .withIndex('by_slug_dm', (q) =>
       q.eq('slug', slug).eq('dmUserId', dmUserProfile._id),
     )
     .unique()
-  if (!campaign) throw new Error('Campaign not found')
+  if (!campaign) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   return enhanceCampaign(ctx, { campaign })
 }

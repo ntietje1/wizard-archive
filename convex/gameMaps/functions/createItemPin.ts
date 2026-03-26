@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
-import { ERROR_CODE, throwAppError } from '../../errors'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { validatePinTarget } from '../validation'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -22,7 +22,7 @@ export async function createItemPin(
   },
 ): Promise<Id<'mapPins'>> {
   const mapFromDb = await ctx.db.get(mapId)
-  if (!mapFromDb) throw new Error('Map not found')
+  if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, mapFromDb.campaignId)
   await requireItemAccess(ctx, {
     rawItem: mapFromDb,
@@ -31,7 +31,7 @@ export async function createItemPin(
 
   const item = await ctx.db.get(itemId)
   if (!item) {
-    throw new Error('Item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }
 
   const existingPins = await ctx.db
@@ -42,11 +42,7 @@ export async function createItemPin(
 
   const validationError = validatePinTarget(mapId, itemId, existingPinItemIds)
   if (validationError) {
-    const code =
-      (itemId as string) === (mapId as string)
-        ? ERROR_CODE.VALIDATION_SELF_PIN
-        : ERROR_CODE.VALIDATION_DUPLICATE_PIN
-    throwAppError(code, validationError)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, validationError)
   }
 
   const profileId = ctx.user.profile._id

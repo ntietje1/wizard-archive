@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireDmRole } from '../../functions'
 import { getCurrentSession } from './getCurrentSession'
 import type { Id } from '../../_generated/dataModel'
@@ -11,7 +12,7 @@ export async function endCurrentSession(
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
   if (!currentSession) {
-    throw new Error('No active session')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'No active session')
   }
 
   const now = Date.now()

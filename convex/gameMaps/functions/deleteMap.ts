@@ -1,6 +1,7 @@
 import { deleteSidebarItemShares } from '../../sidebarShares/functions/sidebarItemShareMutations'
 import { deleteItemBookmarks } from '../../bookmarks/functions/deleteItemBookmarks'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -10,7 +11,7 @@ export async function deleteMap(
   { mapId }: { mapId: Id<'gameMaps'> },
 ): Promise<Id<'gameMaps'>> {
   const mapFromDb = await ctx.db.get(mapId)
-  if (!mapFromDb) throw new Error('Map not found')
+  if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   const map = await requireItemAccess(ctx, {
     rawItem: mapFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
