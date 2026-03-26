@@ -190,22 +190,18 @@ export function CampaignDialog({
         <form.Field
           name="slug"
           validators={{
-            onMount: ({ value }) => {
-              return validateCampaignSlug(value)
-            },
-            onBlur: ({ value }) => {
-              return validateCampaignSlug(value)
-            },
-            onChangeAsync: async ({ value }) => {
+            onMount: ({ value }) => validateCampaignSlug(value),
+            onBlur: ({ value }) => validateCampaignSlug(value),
+            onChange: ({ value }) => {
               const syncError = validateCampaignSlug(value)
               if (syncError) return syncError
-              return validateCampaignSlugAsync(
-                convex,
-                value,
-                mode === 'edit' && campaign ? campaign._id : undefined,
+              const excludeId =
+                mode === 'edit' && campaign ? campaign._id : undefined
+              const slugTaken = campaigns.some(
+                (c) => c.slug === value && c._id !== excludeId,
               )
+              return slugTaken ? 'This link is already taken.' : null
             },
-            onChangeAsyncDebounceMs: 300,
           }}
         >
           {(field) => (
@@ -217,27 +213,17 @@ export function CampaignDialog({
                 <Link className="h-4 w-4" />
                 Custom Link*
               </Label>
-              <div className="relative">
-                <Input
-                  id="campaign-slug"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={() => field.handleBlur()}
-                  placeholder="campaign-link"
-                  minLength={3}
-                  maxLength={30}
-                  disabled={form.state.isSubmitting}
-                  required
-                  className="pr-8"
-                />
-                {field.state.meta.isValidating && (
-                  <LoadingSpinner
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    aria-label="Validating slug"
-                  />
-                )}
-              </div>
+              <Input
+                id="campaign-slug"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={() => field.handleBlur()}
+                placeholder="campaign-link"
+                minLength={3}
+                maxLength={30}
+                disabled={form.state.isSubmitting}
+                required
+              />
               {field.state.meta.errors.length > 0 &&
               field.state.meta.isTouched ? (
                 <p className="text-sm text-destructive">

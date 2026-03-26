@@ -41,7 +41,6 @@ import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/funct
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
 import type * as campaigns_constants from "../campaigns/constants.js";
-import type * as campaigns_functions_checkCampaignSlugExists from "../campaigns/functions/checkCampaignSlugExists.js";
 import type * as campaigns_functions_createCampaign from "../campaigns/functions/createCampaign.js";
 import type * as campaigns_functions_deleteCampaign from "../campaigns/functions/deleteCampaign.js";
 import type * as campaigns_functions_getCampaign from "../campaigns/functions/getCampaign.js";
@@ -220,7 +219,6 @@ declare const fullApi: ApiFromModules<{
   "bookmarks/mutations": typeof bookmarks_mutations;
   "bookmarks/types": typeof bookmarks_types;
   "campaigns/constants": typeof campaigns_constants;
-  "campaigns/functions/checkCampaignSlugExists": typeof campaigns_functions_checkCampaignSlugExists;
   "campaigns/functions/createCampaign": typeof campaigns_functions_createCampaign;
   "campaigns/functions/deleteCampaign": typeof campaigns_functions_deleteCampaign;
   "campaigns/functions/getCampaign": typeof campaigns_functions_getCampaign;

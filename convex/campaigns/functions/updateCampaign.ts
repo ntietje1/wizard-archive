@@ -1,4 +1,5 @@
-import { findUniqueSlug } from '../../common/slug'
+import { slugify } from '../../common/slug'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireDmRole } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -35,17 +36,20 @@ export async function updateCampaign(
     slug.trim().length > 0 &&
     slug.trim() !== campaign.slug
   ) {
-    slug = slug.trim()
-    const uniqueSlug = await findUniqueSlug(slug, async (s) => {
-      const conflict = await ctx.db
-        .query('campaigns')
-        .withIndex('by_slug_dm', (q) =>
-          q.eq('slug', s).eq('dmUserId', profile._id),
-        )
-        .unique()
-      return conflict !== null && conflict._id !== campaign._id
-    })
-    updates.slug = uniqueSlug
+    const normalizedSlug = slugify(slug.trim())
+    const conflict = await ctx.db
+      .query('campaigns')
+      .withIndex('by_slug_dm', (q) =>
+        q.eq('slug', normalizedSlug).eq('dmUserId', profile._id),
+      )
+      .unique()
+    if (conflict && conflict._id !== campaign._id) {
+      throwClientError(
+        ERROR_CODE.CONFLICT,
+        'A campaign with this slug already exists',
+      )
+    }
+    updates.slug = normalizedSlug
   }
 
   if (Object.keys(updates).length === 0) {
