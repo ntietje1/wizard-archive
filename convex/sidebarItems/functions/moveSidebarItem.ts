@@ -28,8 +28,8 @@ async function resolveRestoreConflicts(
 ): Promise<Record<string, unknown>> {
   const campaignId = item.campaignId
   const siblings = await getSidebarItemsByParent(ctx, {
-    parentId: item.parentId,
     campaignId,
+    parentId: item.parentId,
   })
   const otherNames = siblings
     .filter((s) => s._id !== item._id)
@@ -37,9 +37,9 @@ async function resolveRestoreConflicts(
 
   const uniqueName = deduplicateName(item.name, otherNames)
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: uniqueName,
-    itemId: item._id,
     campaignId,
+    itemId: item._id,
+    name: uniqueName,
   })
 
   const patch: Record<string, unknown> = {}
@@ -147,9 +147,9 @@ export async function moveSidebarItem(
           })
 
           const descSlug = await findUniqueSidebarItemSlug(ctx, {
-            name: i.name,
-            itemId: i._id,
             campaignId,
+            itemId: i._id,
+            name: i.name,
           })
           await ctx.db.patch(i._id, {
             ...clearDeletion,

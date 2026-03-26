@@ -28,11 +28,11 @@ export async function createFolder(
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId, campaignId })
+  await validateSidebarCreateParent(ctx, { campaignId, parentId })
   await validateSidebarItemName(ctx, {
+    campaignId,
     parentId,
     name,
-    campaignId,
   })
 
   const uniqueSlug = await findNewSidebarItemSlug(ctx, {

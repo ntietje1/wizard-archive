@@ -26,19 +26,19 @@ import type {
 export async function checkUniqueNameUnderParent(
   ctx: AuthQueryCtx,
   {
+    campaignId,
     parentId,
     name,
     excludeId,
-    campaignId,
   }: {
+    campaignId: Id<'campaigns'>
     parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
-    campaignId: Id<'campaigns'>
   },
 ): Promise<{ valid: boolean; error?: string }> {
   await requireCampaignMembership(ctx, campaignId)
-  const siblings = await getSidebarItemsByParent(ctx, { parentId, campaignId })
+  const siblings = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   return checkNameConflict(name, siblings, excludeId)
 }
 
@@ -101,15 +101,15 @@ export async function validateNoCircularParent(
 export async function validateSidebarItemName(
   ctx: AuthQueryCtx,
   {
+    campaignId,
     parentId,
     name,
     excludeId,
-    campaignId,
   }: {
+    campaignId: Id<'campaigns'>
     parentId: Id<'folders'> | null
     name: string
     excludeId?: SidebarItemId
-    campaignId: Id<'campaigns'>
   },
 ): Promise<{ siblings: Array<AnySidebarItem> }> {
   await requireCampaignMembership(ctx, campaignId)
@@ -118,7 +118,7 @@ export async function validateSidebarItemName(
     throw new Error(nameResult.error)
   }
 
-  const siblings = await getSidebarItemsByParent(ctx, { parentId, campaignId })
+  const siblings = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
     throw new Error(uniqueResult.error)
@@ -171,9 +171,9 @@ export async function validateSidebarParentChange(
 export async function validateSidebarCreateParent(
   ctx: AuthQueryCtx,
   {
-    parentId,
     campaignId,
-  }: { parentId: Id<'folders'> | null; campaignId: Id<'campaigns'> },
+    parentId,
+  }: { campaignId: Id<'campaigns'>; parentId: Id<'folders'> | null },
 ): Promise<void> {
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   if (parentId) {
@@ -211,10 +211,10 @@ export async function validateSidebarMove(
   await validateSidebarParentChange(ctx, { item, newParentId })
 
   await validateSidebarItemName(ctx, {
+    campaignId: item.campaignId,
     parentId: newParentId,
     name: item.name,
     excludeId: item._id,
-    campaignId: item.campaignId,
   })
 }
 
@@ -269,13 +269,13 @@ export async function requireItemAccess<T extends AnySidebarItemFromDb>(
 async function checkSlugConflict(
   ctx: AuthQueryCtx,
   {
+    campaignId,
     slug,
     excludeId,
-    campaignId,
   }: {
+    campaignId: Id<'campaigns'>
     slug: string
     excludeId?: SidebarItemId
-    campaignId: Id<'campaigns'>
   },
 ): Promise<boolean> {
   const queryTable = (table: 'notes' | 'folders' | 'gameMaps' | 'files') =>
@@ -301,34 +301,34 @@ async function checkSlugConflict(
 export async function findUniqueSidebarItemSlug(
   ctx: AuthQueryCtx,
   {
-    name,
-    itemId,
     campaignId,
+    itemId,
+    name,
   }: {
-    name: string
-    itemId: SidebarItemId
     campaignId: Id<'campaigns'>
+    itemId: SidebarItemId
+    name: string
   },
 ): Promise<string> {
   await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { slug, excludeId: itemId, campaignId }),
+    checkSlugConflict(ctx, { campaignId, slug, excludeId: itemId }),
   )
 }
 
 export async function findNewSidebarItemSlug(
   ctx: AuthQueryCtx,
   {
-    name,
     campaignId,
+    name,
   }: {
-    name: string
     campaignId: Id<'campaigns'>
+    name: string
   },
 ): Promise<string> {
   await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { slug, campaignId }),
+    checkSlugConflict(ctx, { campaignId, slug }),
   )
 }
 
@@ -351,15 +351,15 @@ export async function validateSidebarItemRename(
   const trimmedName = newName.trim()
   const campaignId = item.campaignId
   await validateSidebarItemName(ctx, {
+    campaignId,
     parentId: item.parentId,
     name: trimmedName,
     excludeId: item._id,
-    campaignId,
   })
 
   return findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
-    itemId: item._id,
     campaignId,
+    itemId: item._id,
+    name: trimmedName,
   })
 }

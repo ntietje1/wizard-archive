@@ -6,13 +6,13 @@ import type { AnySidebarItemFromDb } from '../types/types'
 export async function collectDescendants(
   ctx: QueryCtx,
   {
-    folderId,
     campaignId,
     location,
+    folderId,
   }: {
-    folderId: Id<'folders'>
     campaignId: Id<'campaigns'>
     location: SidebarItemLocation
+    folderId: Id<'folders'>
   },
 ): Promise<Array<AnySidebarItemFromDb>> {
   const result: Array<AnySidebarItemFromDb> = []

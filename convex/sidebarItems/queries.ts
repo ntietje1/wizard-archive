@@ -39,8 +39,8 @@ export const getSidebarItemsByParent = authQuery({
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     return await getSidebarItemsByParentFn(ctx, {
-      parentId: args.parentId,
       campaignId: args.campaignId,
+      parentId: args.parentId,
     })
   },
 })

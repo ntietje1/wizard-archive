@@ -29,16 +29,16 @@ export type DownloadItem =
 async function collectItemsRecursively(
   ctx: AuthQueryCtx,
   {
+    campaignId,
     parentId,
     currentPath,
-    campaignId,
   }: {
+    campaignId: Id<'campaigns'>
     parentId: Id<'folders'> | null
     currentPath: string
-    campaignId: Id<'campaigns'>
   },
 ): Promise<Array<DownloadItem>> {
-  const children = await getSidebarItemsByParent(ctx, { parentId, campaignId })
+  const children = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const items: Array<DownloadItem> = []
   const permissionLevels = await Promise.all(
     children.map((child) =>
@@ -108,9 +108,9 @@ async function collectItemsRecursively(
           ? `${currentPath}/${folderName}`
           : folderName
         const nestedItems = await collectItemsRecursively(ctx, {
+          campaignId,
           parentId: child._id,
           currentPath: nestedPath,
-          campaignId,
         })
         items.push(...nestedItems)
         break
@@ -138,9 +138,9 @@ export async function getFolderContentsForDownload(
 
   const folderName = folder.name
   const items = await collectItemsRecursively(ctx, {
+    campaignId,
     parentId: folderId,
     currentPath: '',
-    campaignId,
   })
 
   return { folderName, items }
@@ -152,9 +152,9 @@ export async function getRootContentsForDownload(
 ): Promise<{ items: Array<DownloadItem> }> {
   await requireCampaignMembership(ctx, campaignId)
   const items = await collectItemsRecursively(ctx, {
+    campaignId,
     parentId: null,
     currentPath: '',
-    campaignId,
   })
   return { items }
 }

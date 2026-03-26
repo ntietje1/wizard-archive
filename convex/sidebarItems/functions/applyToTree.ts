@@ -24,9 +24,9 @@ export async function applyToTree(
 ): Promise<void> {
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     const descendants = await collectDescendants(ctx, {
-      folderId: item._id,
       campaignId: item.campaignId,
       location: opts?.location ?? item.location,
+      folderId: item._id,
     })
 
     for (const descendant of descendants) {
