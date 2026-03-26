@@ -3,7 +3,6 @@ import { authMutation } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
-import { deleteMap as deleteMapFn } from './functions/deleteMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
 import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
 import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
@@ -61,16 +60,6 @@ export const updateMap = authMutation({
       iconName: args.iconName,
       color: args.color,
     })
-  },
-})
-
-export const deleteMap = authMutation({
-  args: {
-    mapId: v.id('gameMaps'),
-  },
-  returns: v.id('gameMaps'),
-  handler: async (ctx, args): Promise<Id<'gameMaps'>> => {
-    return await deleteMapFn(ctx, { mapId: args.mapId })
   },
 })
 

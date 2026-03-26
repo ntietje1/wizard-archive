@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
-import { deleteFolder as deleteFolderFn } from './functions/deleteFolder'
 import type { Id } from '../_generated/dataModel'
 
 export const updateFolder = authMutation({
@@ -26,16 +25,6 @@ export const updateFolder = authMutation({
       iconName: args.iconName,
       color: args.color,
     })
-  },
-})
-
-export const deleteFolder = authMutation({
-  args: {
-    folderId: v.id('folders'),
-  },
-  returns: v.id('folders'),
-  handler: async (ctx, args): Promise<Id<'folders'>> => {
-    return await deleteFolderFn(ctx, { folderId: args.folderId })
   },
 })
 

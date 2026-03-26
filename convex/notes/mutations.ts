@@ -3,7 +3,6 @@ import { authMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
-import { deleteNote as deleteNoteFn } from './functions/deleteNote'
 import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
 import type { Id } from '../_generated/dataModel'
 
@@ -28,16 +27,6 @@ export const updateNote = authMutation({
       iconName: args.iconName,
       color: args.color,
     })
-  },
-})
-
-export const deleteNote = authMutation({
-  args: {
-    noteId: v.id('notes'),
-  },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
-    return await deleteNoteFn(ctx, { noteId: args.noteId })
   },
 })
 
