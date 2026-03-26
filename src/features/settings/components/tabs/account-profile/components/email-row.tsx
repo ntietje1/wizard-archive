@@ -122,7 +122,10 @@ function EmailChangeDialog({
           id="edit-email"
           type="email"
           value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
+          onChange={(e) => {
+            if (formError) setFormError('')
+            setNewEmail(e.target.value)
+          }}
           disabled={isLoading}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
         />

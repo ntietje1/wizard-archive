@@ -20,7 +20,5 @@ export const logger = createLogger()
 export function handleError(error: unknown, fallbackMessage?: string): void {
   const clientMessage = getClientErrorMessage(error)
   toast.error(clientMessage ?? fallbackMessage ?? 'Something went wrong')
-  if (import.meta.env.DEV) {
-    logger.error(error)
-  }
+  logger.error(error)
 }

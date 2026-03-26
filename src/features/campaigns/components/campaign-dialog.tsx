@@ -195,8 +195,7 @@ export function CampaignDialog({
             onChange: ({ value }) => {
               const syncError = validateCampaignSlug(value)
               if (syncError) return syncError
-              const excludeId =
-                mode === 'edit' && campaign ? campaign._id : undefined
+              const excludeId = mode === 'edit' ? campaign?._id : undefined
               const slugTaken = campaigns.some(
                 (c) => c.slug === value && c._id !== excludeId,
               )

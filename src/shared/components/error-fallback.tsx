@@ -26,6 +26,7 @@ export function ErrorFallback({
                   type="button"
                   className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => setShowDetails(!showDetails)}
+                  aria-expanded={showDetails}
                 >
                   {showDetails ? (
                     <ChevronDown className="size-3" />

@@ -39,7 +39,6 @@ async function checkMembership(
   options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
   const campaign = await ctx.db.get(campaignId)
-  if (!campaign) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const member = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) =>
@@ -49,6 +48,7 @@ async function checkMembership(
   const allowedRoles =
     options?.allowedRoles ?? Object.values(CAMPAIGN_MEMBER_ROLE)
   if (
+    !campaign ||
     !member ||
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted ||
     !allowedRoles.includes(member.role)

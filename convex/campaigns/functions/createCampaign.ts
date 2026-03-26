@@ -1,10 +1,10 @@
-import { slugify } from '../../common/slug'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
 } from '../types'
+import { validateCampaignName, validateCampaignSlug } from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -21,8 +21,14 @@ export async function createCampaign(
   },
 ): Promise<Id<'campaigns'>> {
   name = name.trim()
-  slug = slugify(slug.trim())
+  slug = slug.trim()
   description = description?.trim()
+
+  const nameError = validateCampaignName(name)
+  if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
+
+  const slugError = validateCampaignSlug(slug)
+  if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
 
   const profile = ctx.user.profile
 

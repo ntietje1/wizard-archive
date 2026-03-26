@@ -47,11 +47,12 @@ export const updateProfileImage = authMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId)
-    if (!url)
+    if (!url) {
       throwClientError(
         ERROR_CODE.NOT_FOUND,
         'The uploaded file could not be found',
       )
+    }
 
     // Clear external imageUrl (e.g. from OAuth) in favor of the storage file.
     // The URL is resolved at query time via resolveProfileImageUrl.

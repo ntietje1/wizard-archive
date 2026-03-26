@@ -1,6 +1,6 @@
-import { slugify } from '../../common/slug'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireDmRole } from '../../functions'
+import { validateCampaignName, validateCampaignSlug } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
@@ -25,6 +25,8 @@ export async function updateCampaign(
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
   if (name !== undefined && name.trim().length > 0) {
+    const nameError = validateCampaignName(name.trim())
+    if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
     updates.name = name.trim()
   }
   if (description !== undefined) {
@@ -36,11 +38,13 @@ export async function updateCampaign(
     slug.trim().length > 0 &&
     slug.trim() !== campaign.slug
   ) {
-    const normalizedSlug = slugify(slug.trim())
+    const trimmedSlug = slug.trim()
+    const slugError = validateCampaignSlug(trimmedSlug)
+    if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
     const conflict = await ctx.db
       .query('campaigns')
       .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', normalizedSlug).eq('dmUserId', profile._id),
+        q.eq('slug', trimmedSlug).eq('dmUserId', profile._id),
       )
       .unique()
     if (conflict && conflict._id !== campaign._id) {
@@ -49,7 +53,7 @@ export async function updateCampaign(
         'A campaign with this slug already exists',
       )
     }
-    updates.slug = normalizedSlug
+    updates.slug = trimmedSlug
   }
 
   if (Object.keys(updates).length === 0) {

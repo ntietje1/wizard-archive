@@ -27,6 +27,8 @@ export function throwClientError(
   throw new ConvexError<ClientErrorData>({ kind: 'client', code, message })
 }
 
+const ERROR_CODE_VALUES = Object.values(ERROR_CODE) as Array<string>
+
 function isClientErrorData(data: unknown): data is ClientErrorData {
   return (
     typeof data === 'object' &&
@@ -34,7 +36,9 @@ function isClientErrorData(data: unknown): data is ClientErrorData {
     'kind' in data &&
     'code' in data &&
     'message' in data &&
-    data.kind === 'client'
+    data.kind === 'client' &&
+    typeof data.code === 'string' &&
+    ERROR_CODE_VALUES.includes(data.code)
   )
 }
 
@@ -52,11 +56,11 @@ function parseWebSocketError(error: Error): ClientErrorData | null {
 
 function toClientError(error: unknown): ClientConvexError | null {
   if (error instanceof ConvexError && isClientErrorData(error.data)) {
-    return error as ClientConvexError
+    return error
   }
   if (error instanceof Error) {
     const parsed = parseWebSocketError(error)
-    if (parsed) return { data: parsed } as ClientConvexError
+    if (parsed) return new ConvexError(parsed)
   }
   return null
 }
