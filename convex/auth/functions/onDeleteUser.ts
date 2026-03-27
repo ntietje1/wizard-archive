@@ -50,7 +50,9 @@ export async function onDeleteUser(
   for (const member of memberships) {
     if (member.deletionTime) continue
 
-    const campaign = await ctx.db.get(member.campaignId)
+    const campaignId = member.campaignId
+
+    const campaign = await ctx.db.get(campaignId)
     if (campaign && !campaign.deletionTime && campaign.dmUserId === profileId) {
       await ctx.db.patch(campaign._id, {
         deletionTime: now,
@@ -60,12 +62,35 @@ export async function onDeleteUser(
       })
     }
 
-    await ctx.db.patch(member._id, {
+    const [sidebarShares, blockShares] = await Promise.all([
+      ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_member', (q) =>
+          q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .collect(),
+      ctx.db
+        .query('blockShares')
+        .withIndex('by_campaign_member', (q) =>
+          q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .collect(),
+    ])
+
+    const softDelete = {
       deletionTime: now,
       deletedBy: profileId,
       updatedTime: now,
       updatedBy: profileId,
-    })
+    }
+
+    await Promise.all([
+      ...sidebarShares.map((s) => ctx.db.patch(s._id, softDelete)),
+      ...blockShares.map((s) => ctx.db.patch(s._id, softDelete)),
+      ctx.db.patch(member._id, softDelete),
+    ])
   }
 
   await ctx.db.delete(profileId)

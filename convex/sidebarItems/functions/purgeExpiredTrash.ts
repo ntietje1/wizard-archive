@@ -13,50 +13,58 @@ const BATCH_SIZE = 50
 export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
   const cutoff = Date.now() - TRASH_RETENTION_MS
 
-  const campaigns = await ctx.db.query('campaigns').collect()
-
   let deleted = 0
+  let paginationCursor: string | null = null
+  let hasMore = true
 
-  for (const campaign of campaigns) {
-    if (deleted >= BATCH_SIZE) break
+  while (hasMore && deleted < BATCH_SIZE) {
+    const page = await ctx.db
+      .query('campaigns')
+      .paginate({ numItems: 10, cursor: paginationCursor })
+    hasMore = !page.isDone
+    paginationCursor = page.continueCursor
 
-    const campaignId = campaign._id
-
-    const results = await Promise.all(
-      TRASHED_TABLES.map((table) =>
-        ctx.db
-          .query(table)
-          .withIndex('by_campaign_deletionTime', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .gt('deletionTime', 0)
-              .lt('deletionTime', cutoff),
-          )
-          .collect(),
-      ),
-    )
-
-    const [expiredFolders, ...expiredLeafItems] = results
-
-    for (const folder of expiredFolders) {
+    for (const campaign of page.page) {
       if (deleted >= BATCH_SIZE) break
-      const currentFolder = await ctx.db.get(folder._id)
-      if (!currentFolder) continue
-      if (currentFolder.parentId) {
-        const parent = await ctx.db.get(currentFolder.parentId)
-        if (parent?.deletionTime && parent.deletionTime < cutoff) continue
-      }
-      await applyToTree(ctx, currentFolder, hardDeleteItem)
-      deleted++
-    }
 
-    leafLoop: for (const items of expiredLeafItems) {
-      for (const item of items) {
-        if (deleted >= BATCH_SIZE) break leafLoop
-        const current = await ctx.db.get(item._id)
-        if (!current) continue
-        await hardDeleteItem(ctx, current)
-        deleted++
+      const campaignId = campaign._id
+
+      const results = await Promise.all(
+        TRASHED_TABLES.map((table) =>
+          ctx.db
+            .query(table)
+            .withIndex('by_campaign_deletionTime', (q) =>
+              q
+                .eq('campaignId', campaignId)
+                .gt('deletionTime', 0)
+                .lt('deletionTime', cutoff),
+            )
+            .collect(),
+        ),
+      )
+
+      const [expiredFolders, ...expiredLeafItems] = results
+
+      for (const folder of expiredFolders) {
+        if (deleted >= BATCH_SIZE) break
+        const currentFolder = await ctx.db.get(folder._id)
+        if (!currentFolder) continue
+        if (currentFolder.parentId) {
+          const parent = await ctx.db.get(currentFolder.parentId)
+          if (parent?.deletionTime && parent.deletionTime < cutoff) continue
+        }
+        const count = await applyToTree(ctx, currentFolder, hardDeleteItem)
+        deleted += count
+      }
+
+      leafLoop: for (const items of expiredLeafItems) {
+        for (const item of items) {
+          if (deleted >= BATCH_SIZE) break leafLoop
+          const current = await ctx.db.get(item._id)
+          if (!current) continue
+          await hardDeleteItem(ctx, current)
+          deleted++
+        }
       }
     }
   }

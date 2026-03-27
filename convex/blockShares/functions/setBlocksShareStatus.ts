@@ -18,19 +18,18 @@ export const setBlocksShareStatus = async (
     status: ShareStatus
   },
 ): Promise<null> => {
-  const note = await ctx.db.get(noteId)
-  const item = await requireItemAccess(ctx, {
-    rawItem: note,
+  const rawNote = await ctx.db.get(noteId)
+  const note = await requireItemAccess(ctx, {
+    rawItem: rawNote,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const campaignId = item.campaignId
-  await requireDmRole(ctx, campaignId)
+  await requireDmRole(ctx, note.campaignId)
 
   await Promise.all(
     blocks.map((blockItem) =>
       setBlockShareStatusHelper(ctx, {
-        noteId,
+        note,
         blockItem,
         status,
       }),

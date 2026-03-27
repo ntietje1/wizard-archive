@@ -48,7 +48,11 @@ export async function shareSidebarItemWithMember(
   const now = Date.now()
 
   if (existingShare) {
-    const updates: Record<string, unknown> = {}
+    const updates: Partial<{
+      deletionTime: number | null
+      deletedBy: Id<'userProfiles'> | null
+      permissionLevel: PermissionLevel | null
+    }> = {}
     if (existingShare.deletionTime !== null) {
       updates.deletionTime = null
       updates.deletedBy = null
@@ -98,8 +102,16 @@ export async function unshareSidebarItemFromMember(
   },
 ): Promise<void> {
   const item = await ctx.db.get(sidebarItemId)
-  if (!item) return
+  if (!item)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
+
+  const member = await ctx.db.get(campaignMemberId)
+  if (!member || member.campaignId !== campaignId)
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Member does not belong to this campaign',
+    )
 
   const share = await ctx.db
     .query('sidebarItemShares')

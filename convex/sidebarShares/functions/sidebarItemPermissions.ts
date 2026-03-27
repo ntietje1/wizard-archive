@@ -179,7 +179,7 @@ export async function getSidebarItemPermissionLevel(
         .eq('campaignMemberId', checkId),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
-    .first()
+    .unique()
   if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
 
   if (item.allPermissionLevel !== null) return item.allPermissionLevel

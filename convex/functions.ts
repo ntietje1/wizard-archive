@@ -5,11 +5,7 @@ import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
 import type { AuthUser } from './users/types'
-import type {
-  CampaignFromDb,
-  CampaignMember,
-  CampaignMemberRole,
-} from './campaigns/types'
+import type { CampaignFromDb, CampaignMember } from './campaigns/types'
 
 // --- Context types ---
 
@@ -36,7 +32,6 @@ export async function authenticate(
 async function checkMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
-  options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
   const campaign = await ctx.db.get(campaignId)
   const member = await ctx.db
@@ -45,15 +40,12 @@ async function checkMembership(
       q.eq('campaignId', campaignId).eq('userId', ctx.user.profile._id),
     )
     .unique()
-  const allowedRoles =
-    options?.allowedRoles ?? Object.values(CAMPAIGN_MEMBER_ROLE)
   if (
     !campaign ||
     campaign.deletionTime !== null ||
     !member ||
     member.deletionTime !== null ||
-    member.status !== CAMPAIGN_MEMBER_STATUS.Accepted ||
-    !allowedRoles.includes(member.role)
+    member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   )
     throwClientError(
       ERROR_CODE.PERMISSION_DENIED,

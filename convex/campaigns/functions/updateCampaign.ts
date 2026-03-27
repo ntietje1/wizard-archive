@@ -24,10 +24,17 @@ export async function updateCampaign(
 
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
-  if (name !== undefined && name.trim().length > 0) {
-    const nameError = validateCampaignName(name.trim())
+  if (name !== undefined) {
+    const trimmedName = name.trim()
+    if (trimmedName.length === 0) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        'Campaign name cannot be empty',
+      )
+    }
+    const nameError = validateCampaignName(trimmedName)
     if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
-    updates.name = name.trim()
+    updates.name = trimmedName
   }
   if (description !== undefined) {
     updates.description = description.trim()

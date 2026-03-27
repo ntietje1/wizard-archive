@@ -27,7 +27,7 @@ const clearDeletion = { deletionTime: null, deletedBy: null }
 async function resolveRestoreConflicts(
   ctx: AuthMutationCtx,
   item: AnySidebarItemFromDb,
-): Promise<Record<string, unknown>> {
+): Promise<{ name?: string; slug?: string }> {
   const campaignId = item.campaignId
   const siblings = await getSidebarItemsByParent(ctx, {
     campaignId,
@@ -44,7 +44,7 @@ async function resolveRestoreConflicts(
     name: uniqueName,
   })
 
-  const patch: Record<string, unknown> = {}
+  const patch: { name?: string; slug?: string } = {}
   if (uniqueName !== item.name) patch.name = uniqueName
   if (uniqueSlug !== item.slug) patch.slug = uniqueSlug
   return patch

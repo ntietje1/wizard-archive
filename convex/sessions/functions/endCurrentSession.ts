@@ -17,15 +17,17 @@ export async function endCurrentSession(
 
   const now = Date.now()
 
-  await ctx.db.patch(currentSession._id, {
-    endedAt: now,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
-  await ctx.db.patch(campaignId, {
-    currentSessionId: null,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
+  await Promise.all([
+    ctx.db.patch(currentSession._id, {
+      endedAt: now,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+    ctx.db.patch(campaignId, {
+      currentSessionId: null,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+  ])
   return currentSession._id
 }

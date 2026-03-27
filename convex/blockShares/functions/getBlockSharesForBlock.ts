@@ -1,5 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireCampaignMembership, requireDmRole } from '../../functions'
+import { requireDmRole } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { BlockShare } from '../types'
@@ -12,17 +12,6 @@ export async function getBlockSharesDm(
   if (!block)
     throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   await requireDmRole(ctx, block.campaignId)
-  return await getBlockSharesByBlock(ctx, { block })
-}
-
-export async function getBlockSharesForBlock(
-  ctx: AuthQueryCtx,
-  { blockId }: { blockId: Id<'blocks'> },
-): Promise<Array<BlockShare>> {
-  const block = await ctx.db.get(blockId)
-  if (!block)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
-  await requireCampaignMembership(ctx, block.campaignId)
   return await getBlockSharesByBlock(ctx, { block })
 }
 

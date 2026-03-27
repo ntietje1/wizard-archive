@@ -43,15 +43,10 @@ export async function findUniqueSlug(
   let uniqueSlug = normalized
   let suffix = 1
   for (let i = 0; i < 100; i++) {
-    // 100 max checks
     const conflict = await checkFn(uniqueSlug)
-    if (!conflict) break
+    if (!conflict) return uniqueSlug
     suffix += 1
     uniqueSlug = appendSuffix(normalized, suffix)
   }
-  const finalConflict = await checkFn(uniqueSlug)
-  if (finalConflict) {
-    throw new Error(`Failed to find unique slug for: ${name}`)
-  }
-  return uniqueSlug
+  throw new Error(`Failed to find unique slug for: ${name}`)
 }

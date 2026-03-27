@@ -23,25 +23,24 @@ export async function applyToDependents(
   // Type-specific dependents
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes: {
-      const blocks = await ctx.db
-        .query('blocks')
-        .withIndex('by_campaign_note_block', (q) =>
-          q.eq('campaignId', campaignId).eq('noteId', item._id),
-        )
-        .collect()
-      for (const block of blocks) {
-        await operation(ctx, block)
-      }
-
-      const blockShares = await ctx.db
-        .query('blockShares')
-        .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', campaignId).eq('noteId', item._id),
-        )
-        .collect()
-      for (const blockShare of blockShares) {
-        await operation(ctx, blockShare)
-      }
+      const [blocks, blockShares] = await Promise.all([
+        ctx.db
+          .query('blocks')
+          .withIndex('by_campaign_note_block', (q) =>
+            q.eq('campaignId', campaignId).eq('noteId', item._id),
+          )
+          .collect(),
+        ctx.db
+          .query('blockShares')
+          .withIndex('by_campaign_note', (q) =>
+            q.eq('campaignId', campaignId).eq('noteId', item._id),
+          )
+          .collect(),
+      ])
+      await Promise.all([
+        ...blocks.map((block) => operation(ctx, block)),
+        ...blockShares.map((share) => operation(ctx, share)),
+      ])
       break
     }
     case SIDEBAR_ITEM_TYPES.gameMaps: {
@@ -49,31 +48,28 @@ export async function applyToDependents(
         .query('mapPins')
         .withIndex('by_map_item', (q) => q.eq('mapId', item._id))
         .collect()
-      for (const pin of pins) {
-        await operation(ctx, pin)
-      }
+      await Promise.all(pins.map((pin) => operation(ctx, pin)))
       break
     }
   }
 
   // Shared dependents (all item types have shares and bookmarks)
-  const shares = await ctx.db
-    .query('sidebarItemShares')
-    .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', campaignId).eq('sidebarItemId', item._id),
-    )
-    .collect()
-  for (const share of shares) {
-    await operation(ctx, share)
-  }
-
-  const bookmarks = await ctx.db
-    .query('bookmarks')
-    .withIndex('by_campaign_item', (q) =>
-      q.eq('campaignId', campaignId).eq('sidebarItemId', item._id),
-    )
-    .collect()
-  for (const bookmark of bookmarks) {
-    await operation(ctx, bookmark)
-  }
+  const [shares, bookmarks] = await Promise.all([
+    ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q.eq('campaignId', campaignId).eq('sidebarItemId', item._id),
+      )
+      .collect(),
+    ctx.db
+      .query('bookmarks')
+      .withIndex('by_campaign_item', (q) =>
+        q.eq('campaignId', campaignId).eq('sidebarItemId', item._id),
+      )
+      .collect(),
+  ])
+  await Promise.all([
+    ...shares.map((share) => operation(ctx, share)),
+    ...bookmarks.map((bookmark) => operation(ctx, bookmark)),
+  ])
 }

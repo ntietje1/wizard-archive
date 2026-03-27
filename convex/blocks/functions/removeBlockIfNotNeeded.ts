@@ -10,7 +10,8 @@ export async function removeBlockIfNotNeeded(
   if (
     !block ||
     block.isTopLevel ||
-    block.shareStatus !== SHARE_STATUS.NOT_SHARED
+    block.shareStatus !== SHARE_STATUS.NOT_SHARED ||
+    block.deletionTime
   ) {
     return
   }

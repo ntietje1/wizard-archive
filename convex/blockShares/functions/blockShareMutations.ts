@@ -5,7 +5,6 @@ import { updateBlock } from '../../blocks/functions/updateBlock'
 import { removeBlockIfNotNeeded } from '../../blocks/functions/removeBlockIfNotNeeded'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import { SHARE_STATUS } from '../types'
-import { requireDmRole } from '../../functions'
 import type { NoteFromDb } from '../../notes/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -155,33 +154,30 @@ async function clearBlockShares(
 
   const now = Date.now()
   const profileId = ctx.user.profile._id
-  for (const share of shares) {
-    await ctx.db.patch(share._id, {
-      deletionTime: now,
-      deletedBy: profileId,
-      updatedTime: now,
-      updatedBy: profileId,
-    })
-  }
+  await Promise.all(
+    shares.map((share) =>
+      ctx.db.patch(share._id, {
+        deletionTime: now,
+        deletedBy: profileId,
+        updatedTime: now,
+        updatedBy: profileId,
+      }),
+    ),
+  )
 }
 
 export async function shareBlockWithMemberHelper(
   ctx: AuthMutationCtx,
   {
-    noteId,
+    note,
     blockItem,
     campaignMemberId,
   }: {
-    noteId: Id<'notes'>
+    note: NoteFromDb
     blockItem: BlockItem
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const note = await ctx.db.get(noteId)
-  if (!note)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
-  await requireDmRole(ctx, note.campaignId)
-
   const blockId = await upsertBlockForSharing(ctx, {
     note,
     blockItem,
@@ -194,29 +190,23 @@ export async function shareBlockWithMemberHelper(
 export async function unshareBlockFromMemberHelper(
   ctx: AuthMutationCtx,
   {
-    noteId,
+    note,
     blockNoteId,
     campaignMemberId,
   }: {
-    noteId: Id<'notes'>
+    note: NoteFromDb
     blockNoteId: string
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const note = await ctx.db.get(noteId)
-  if (!note)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
-  await requireDmRole(ctx, note.campaignId)
-
   const block = await findBlockByBlockNoteId(ctx, {
-    noteId,
+    noteId: note._id,
     blockId: blockNoteId,
   })
   if (!block) return
 
   await removeBlockShare(ctx, { blockId: block._id, campaignMemberId })
 
-  // Check if any shares remain
   const remainingShares = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
@@ -225,7 +215,6 @@ export async function unshareBlockFromMemberHelper(
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()
 
-  // If no shares remain, set status to not_shared
   if (!remainingShares) {
     await ctx.db.patch(block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
@@ -239,23 +228,17 @@ export async function unshareBlockFromMemberHelper(
 export async function setBlockShareStatusHelper(
   ctx: AuthMutationCtx,
   {
-    noteId,
+    note,
     blockItem,
     status,
-  }: { noteId: Id<'notes'>; blockItem: BlockItem; status: ShareStatus },
+  }: { note: NoteFromDb; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
-  const note = await ctx.db.get(noteId)
-  if (!note)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This note could not be found')
-  await requireDmRole(ctx, note.campaignId)
-
   const blockId = await upsertBlockForSharing(ctx, {
     note,
     blockItem,
     shareStatus: status,
   })
 
-  // If setting to not_shared, clear any individual shares
   if (status === SHARE_STATUS.NOT_SHARED) {
     await clearBlockShares(ctx, { blockId })
     await removeBlockIfNotNeeded(ctx, { blockId })

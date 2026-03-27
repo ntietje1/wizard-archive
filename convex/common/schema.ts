@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import type { TableNames } from '../_generated/dataModel'
 
 export const commonTableFields = {
   updatedTime: v.union(v.number(), v.null()),
@@ -8,12 +9,12 @@ export const commonTableFields = {
   deletedBy: v.union(v.id('userProfiles'), v.null()),
 }
 
-export const convexValidatorFields = (tableName: string) => ({
+export const convexValidatorFields = (tableName: TableNames) => ({
   _id: v.id(tableName),
   _creationTime: v.number(),
 })
 
-export const commonValidatorFields = (tableName: string) => ({
+export const commonValidatorFields = (tableName: TableNames) => ({
   ...convexValidatorFields(tableName),
   ...commonTableFields,
 })

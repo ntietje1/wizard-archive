@@ -90,7 +90,7 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
         q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
       )
       .filter((q) => q.eq(q.field('deletionTime'), null))
-      .collect() as Promise<Array<SidebarItemShare>>,
+      .collect(),
     ctx.db
       .query('bookmarks')
       .withIndex('by_campaign_member_item', (q) =>
@@ -100,7 +100,7 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
           .eq('sidebarItemId', item._id),
       )
       .filter((q) => q.eq(q.field('deletionTime'), null))
-      .first(),
+      .unique(),
     getSidebarItemPermissionLevel(ctx, { item }),
   ])
 
