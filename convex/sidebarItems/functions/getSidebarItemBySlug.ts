@@ -15,30 +15,14 @@ export const getSidebarItemBySlug = async (
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(ctx, campaignId)
 
-  const filter = (q: any) => q.eq(q.field('deletionTime'), null)
   const idx = (q: any) => q.eq('campaignId', campaignId).eq('slug', slug)
 
+  // specifically don't filter out deleted items, as they are still viewable in this context
   const [note, folder, map, file] = await Promise.all([
-    ctx.db
-      .query('notes')
-      .withIndex('by_campaign_slug', idx)
-      .filter(filter)
-      .unique(),
-    ctx.db
-      .query('folders')
-      .withIndex('by_campaign_slug', idx)
-      .filter(filter)
-      .unique(),
-    ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_slug', idx)
-      .filter(filter)
-      .unique(),
-    ctx.db
-      .query('files')
-      .withIndex('by_campaign_slug', idx)
-      .filter(filter)
-      .unique(),
+    ctx.db.query('notes').withIndex('by_campaign_slug', idx).unique(),
+    ctx.db.query('folders').withIndex('by_campaign_slug', idx).unique(),
+    ctx.db.query('gameMaps').withIndex('by_campaign_slug', idx).unique(),
+    ctx.db.query('files').withIndex('by_campaign_slug', idx).unique(),
   ])
 
   if (note) {
