@@ -1,5 +1,5 @@
 import {
-  findNewSidebarItemSlug,
+  findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
@@ -37,7 +37,7 @@ export async function createMap(
     name,
   })
 
-  const uniqueSlug = await findNewSidebarItemSlug(ctx, {
+  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
     campaignId,
   })

@@ -21,6 +21,13 @@ export async function commitUpload(
     )
   }
 
+  if (fileStorage.status === FILE_STORAGE_STATUS.Committed) {
+    throwClientError(
+      ERROR_CODE.CONFLICT,
+      'This file has already been committed',
+    )
+  }
+
   // Validate file before committing
   const storageMetadata = await ctx.db.system.get(storageId)
   if (!storageMetadata) {

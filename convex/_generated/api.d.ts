@@ -87,6 +87,7 @@ import type * as gameMaps_functions_createMap from "../gameMaps/functions/create
 import type * as gameMaps_functions_enhanceMap from "../gameMaps/functions/enhanceMap.js";
 import type * as gameMaps_functions_getMap from "../gameMaps/functions/getMap.js";
 import type * as gameMaps_functions_removeItemPin from "../gameMaps/functions/removeItemPin.js";
+import type * as gameMaps_functions_requirePinAccess from "../gameMaps/functions/requirePinAccess.js";
 import type * as gameMaps_functions_updateItemPin from "../gameMaps/functions/updateItemPin.js";
 import type * as gameMaps_functions_updateMap from "../gameMaps/functions/updateMap.js";
 import type * as gameMaps_functions_updatePinVisibility from "../gameMaps/functions/updatePinVisibility.js";
@@ -259,6 +260,7 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/functions/enhanceMap": typeof gameMaps_functions_enhanceMap;
   "gameMaps/functions/getMap": typeof gameMaps_functions_getMap;
   "gameMaps/functions/removeItemPin": typeof gameMaps_functions_removeItemPin;
+  "gameMaps/functions/requirePinAccess": typeof gameMaps_functions_requirePinAccess;
   "gameMaps/functions/updateItemPin": typeof gameMaps_functions_updateItemPin;
   "gameMaps/functions/updateMap": typeof gameMaps_functions_updateMap;
   "gameMaps/functions/updatePinVisibility": typeof gameMaps_functions_updatePinVisibility;

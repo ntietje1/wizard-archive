@@ -20,10 +20,12 @@ export const setAllPlayersPermission = async (
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  await requireDmRole(ctx, item.campaignId)
+  const { membership } = await requireDmRole(ctx, item.campaignId)
 
   await ctx.db.patch(sidebarItemId, {
     allPermissionLevel: permissionLevel,
+    updatedBy: membership.userId,
+    updatedTime: Date.now(),
   })
 
   return null

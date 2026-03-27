@@ -321,29 +321,13 @@ export async function findUniqueSidebarItemSlug(
     name,
   }: {
     campaignId: Id<'campaigns'>
-    itemId: SidebarItemId
+    itemId?: SidebarItemId
     name: string
   },
 ): Promise<string> {
   await requireCampaignMembership(ctx, campaignId)
   return findUniqueSlug(name, (slug) =>
     checkSlugConflict(ctx, { campaignId, slug, excludeId: itemId }),
-  )
-}
-
-export async function findNewSidebarItemSlug(
-  ctx: AuthQueryCtx,
-  {
-    campaignId,
-    name,
-  }: {
-    campaignId: Id<'campaigns'>
-    name: string
-  },
-): Promise<string> {
-  await requireCampaignMembership(ctx, campaignId)
-  return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { campaignId, slug }),
   )
 }
 

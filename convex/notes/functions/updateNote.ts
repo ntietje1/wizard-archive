@@ -3,8 +3,10 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { WithoutSystemFields } from 'convex/server'
+import { requireCampaignMembership } from '../../functions'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { AuthMutationCtx } from '../../functions'
+import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateNote(
@@ -22,6 +24,8 @@ export async function updateNote(
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
   const noteFromDb = await ctx.db.get(noteId)
+  if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  await requireCampaignMembership(ctx, noteFromDb.campaignId)
   const note = await requireItemAccess(ctx, {
     rawItem: noteFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

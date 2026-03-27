@@ -1,6 +1,6 @@
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
-  findNewSidebarItemSlug,
+  findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
@@ -40,7 +40,7 @@ export async function createNote(
     name,
   })
 
-  const uniqueSlug = await findNewSidebarItemSlug(ctx, {
+  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
     campaignId,
   })

@@ -67,6 +67,13 @@ async function addBlockShare(
     throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
+  const member = await ctx.db.get(campaignMemberId)
+  if (!member || member.campaignId !== campaignId)
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Member does not belong to this campaign',
+    )
+
   const existingShare = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>

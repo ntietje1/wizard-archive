@@ -124,12 +124,10 @@ export async function moveSidebarItem(
 
     const restoreParentId = parentId ?? null
 
-    if (restoreParentId) {
-      await validateSidebarParentChange(ctx, {
-        item: { ...item, location },
-        newParentId: restoreParentId,
-      })
-    }
+    await validateSidebarParentChange(ctx, {
+      item: { ...item, location },
+      newParentId: restoreParentId,
+    })
 
     const itemForRestore = { ...item, parentId: restoreParentId }
     const conflictPatch = await resolveRestoreConflicts(ctx, itemForRestore)

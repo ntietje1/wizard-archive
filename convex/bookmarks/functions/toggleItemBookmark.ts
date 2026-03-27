@@ -13,13 +13,14 @@ export async function toggleItemBookmark(
   if (!item) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
+
+  const campaignId = item.campaignId
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
+
   await checkItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-
-  const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
   const campaignMemberId = membership._id
 
   // Check if bookmark already exists

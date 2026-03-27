@@ -1,7 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
@@ -34,12 +33,27 @@ export const getBlocksWithShares = async (
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
-  const allMembers = await getCampaignMembers(ctx, {
-    campaignId: note.campaignId,
-  })
+  const [allMembers, allNoteShares] = await Promise.all([
+    getCampaignMembers(ctx, { campaignId: note.campaignId }),
+    ctx.db
+      .query('blockShares')
+      .withIndex('by_campaign_note', (q) =>
+        q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+      )
+      .filter((q) => q.eq(q.field('deletionTime'), null))
+      .collect(),
+  ])
+
   const playerMembers = allMembers.filter(
     (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
   )
+
+  const sharesByBlockId = new Map<Id<'blocks'>, Array<Id<'campaignMembers'>>>()
+  for (const share of allNoteShares) {
+    const list = sharesByBlockId.get(share.blockId)
+    if (list) list.push(share.campaignMemberId)
+    else sharesByBlockId.set(share.blockId, [share.campaignMemberId])
+  }
 
   const blocks = await Promise.all(
     blockIds.map(async (blockId): Promise<BlockShareInfo> => {
@@ -57,11 +71,10 @@ export const getBlocksWithShares = async (
       const shareStatus: ShareStatus =
         block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
-      let sharedMemberIds: Array<Id<'campaignMembers'>> = []
-      if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-        const shares = await getBlockSharesByBlock(ctx, { block })
-        sharedMemberIds = shares.map((s) => s.campaignMemberId)
-      }
+      const sharedMemberIds =
+        shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
+          ? (sharesByBlockId.get(block._id) ?? [])
+          : []
 
       return {
         blockNoteId: blockId,
