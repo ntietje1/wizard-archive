@@ -17,7 +17,6 @@ export function useMoveSidebarItem() {
 
   const moveSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.moveSidebarItem,
-    { errorMessage: 'Failed to move item' },
   )
 
   const moveItem = async (

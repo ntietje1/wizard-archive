@@ -16,7 +16,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { FormDialog } from '~/shared/components/form-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 
 const DEFAULT_CAMPAIGN_FORM_VALUES: {
   name: string
@@ -44,14 +44,8 @@ export function CampaignDialog({
   campaigns,
 }: CampaignDialogProps) {
   const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
-  const createCampaign = useAppMutation(
-    api.campaigns.mutations.createCampaign,
-    { errorMessage: 'Failed to create campaign' },
-  )
-  const updateCampaign = useAppMutation(
-    api.campaigns.mutations.updateCampaign,
-    { errorMessage: 'Failed to update campaign' },
-  )
+  const createCampaign = useAppMutation(api.campaigns.mutations.createCampaign)
+  const updateCampaign = useAppMutation(api.campaigns.mutations.updateCampaign)
 
   const form = useForm({
     defaultValues: { ...DEFAULT_CAMPAIGN_FORM_VALUES },
@@ -82,7 +76,7 @@ export function CampaignDialog({
           return
         }
       } catch (error) {
-        logger.error(error)
+        handleError(error, 'Failed to save campaign')
       }
     },
   })

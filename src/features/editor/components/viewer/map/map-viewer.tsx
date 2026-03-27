@@ -20,7 +20,7 @@ import {
   getDragItemId,
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
@@ -384,12 +384,10 @@ export function MapViewer({
 
   const createItemPinMutation = useAppMutation(
     api.gameMaps.mutations.createItemPin,
-    { errorMessage: 'Failed to place pin' },
   )
 
   const updateItemPinMutation = useAppMutation(
     api.gameMaps.mutations.updateItemPin,
-    { errorMessage: 'Failed to move pin' },
   )
 
   const handleTransformChange = (
@@ -525,7 +523,7 @@ export function MapViewer({
           })
           toast.success('Pin moved')
         } catch (error) {
-          logger.error(error)
+          handleError(error, 'Failed to move pin')
         }
       }
       setDraggingPin(null)
@@ -567,7 +565,7 @@ export function MapViewer({
       })
       toast.success('Pin placed on map')
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to place pin')
     }
   }
   const createPinAtPositionRef = useRef(createPinAtPosition)
@@ -635,7 +633,7 @@ export function MapViewer({
       toast.success('Pin moved')
       setPendingPinMove(null)
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to move pin')
     }
   }
 
@@ -942,9 +940,7 @@ export function MapViewer({
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap, {
-    errorMessage: 'Failed to update map',
-  })
+  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -966,7 +962,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
         })
         toast.success('Map image uploaded')
       } catch (error) {
-        logger.error(error)
+        handleError(error, 'Failed to update map')
       }
     },
   })

@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { monitorForExternal } from '@atlaskit/pragmatic-drag-and-drop/external/adapter'
 import { containsFiles } from '@atlaskit/pragmatic-drag-and-drop/external/file'
-import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DndMonitorCtx } from '~/features/dnd/types'
+import { handleError } from '~/shared/utils/logger'
 import { processDataTransferItems } from '~/features/file-upload/utils/folder-reader'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
@@ -43,9 +43,7 @@ export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
             await ctx.handleDropFiles(dropResult, { parentId })
           }
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to upload files'
-          toast.error(message)
+          handleError(error, 'Failed to upload files')
         }
       },
     })

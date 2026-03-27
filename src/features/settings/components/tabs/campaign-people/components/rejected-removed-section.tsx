@@ -7,7 +7,7 @@ import { MemberRow } from './member-row'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
@@ -25,7 +25,6 @@ export function RejectedRemovedSection({
 
   const updateStatus = useAppMutation(
     api.campaigns.mutations.updateCampaignMemberStatus,
-    { errorMessage: 'Failed to update status' },
   )
 
   const handleStatusUpdate = async (
@@ -37,7 +36,7 @@ export function RejectedRemovedSection({
       await updateStatus.mutateAsync({ memberId, status })
       toast.success('Player status updated')
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to update status')
     }
     setUpdatingId(null)
   }

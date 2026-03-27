@@ -64,19 +64,12 @@ export function useEditSidebarItem() {
   const queryClient = useQueryClient()
   const { navigateToItem } = useEditorNavigation()
 
-  const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote, {
-    errorMessage: 'Failed to update note',
-  })
+  const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote)
   const updateFolderMutation = useAppMutation(
     api.folders.mutations.updateFolder,
-    { errorMessage: 'Failed to update folder' },
   )
-  const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap, {
-    errorMessage: 'Failed to update map',
-  })
-  const updateFileMutation = useAppMutation(api.files.mutations.updateFile, {
-    errorMessage: 'Failed to update file',
-  })
+  const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap)
+  const updateFileMutation = useAppMutation(api.files.mutations.updateFile)
 
   const optimisticUpdate = (
     updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,

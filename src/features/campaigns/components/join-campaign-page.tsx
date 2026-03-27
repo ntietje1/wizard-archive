@@ -45,17 +45,19 @@ export function JoinCampaignPage() {
   const campaign = campaignQuery.data
   const campaignMember = campaign?.myMembership
 
-  const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign, {
-    errorMessage: 'Failed to join campaign',
-  })
+  const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign)
 
   const handleJoinCampaign = async () => {
     if (!campaign) return
 
-    await joinCampaign.mutateAsync({
-      slug: campaignSlug,
-      dmUsername,
-    })
+    try {
+      await joinCampaign.mutateAsync({
+        slug: campaignSlug,
+        dmUsername,
+      })
+    } catch {
+      // Error UI rendered via joinCampaign.status === 'error'
+    }
   }
 
   const goToHome = () => {

@@ -13,11 +13,9 @@ export function useDeleteSidebarItem() {
 
   const permanentlyDeleteSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-    { errorMessage: 'Failed to delete item' },
   )
   const emptyTrashBinMutation = useAppMutation(
     api.sidebarItems.mutations.emptyTrashBin,
-    { errorMessage: 'Failed to empty trash' },
   )
 
   const permanentlyDeleteItem = async (item: AnySidebarItem) => {

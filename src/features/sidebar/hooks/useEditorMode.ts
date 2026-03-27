@@ -8,6 +8,7 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import type { Id } from 'convex/_generated/dataModel'
 import type { Editor, EditorMode } from 'convex/editors/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
@@ -35,7 +36,6 @@ export function useEditorMode(): EditorModeContextType {
   const setEditorMutation = useAppMutation(
     api.editors.mutations.setCurrentEditor,
     {
-      errorMessage: 'Failed to update editor',
       onMutate: async ({ editorMode: newMode }) => {
         if (!campaignData?._id || !newMode) return
 
@@ -57,10 +57,11 @@ export function useEditorMode(): EditorModeContextType {
 
         return { previous, queryKey: queryOptions.queryKey }
       },
-      onError: (_err, _vars, context) => {
+      onError: (err, _vars, context) => {
         if (context?.previous) {
           queryClient.setQueryData(context.queryKey, context.previous)
         }
+        handleError(err, 'Failed to update editor mode')
       },
       onSettled: () => {
         if (!campaignData?._id) return

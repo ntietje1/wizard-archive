@@ -5,6 +5,7 @@ import { api } from 'convex/_generated/api'
 import { Camera, Loader2 } from 'lucide-react'
 import type { UserProfile } from 'convex/users/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useFileUpload } from '~/features/file-upload/hooks/useFileUpload'
 import {
   Avatar,
@@ -23,20 +24,17 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
 
   const updateProfileImage = useAppMutation(
     api.users.mutations.updateProfileImage,
-    { errorMessage: 'Failed to update profile image' },
   )
 
-  const updateNameMutation = useAppMutation(api.users.mutations.updateName, {
-    errorMessage: 'Failed to update name',
-  })
+  const updateNameMutation = useAppMutation(api.users.mutations.updateName)
 
   const debouncedSaveName = debounce(async (value: string) => {
     const trimmed = value.trim()
     if (!trimmed) return
     try {
       await updateNameMutation.mutateAsync({ name: trimmed })
-    } catch {
-      // Error toast handled by useAppMutation
+    } catch (error) {
+      handleError(error, 'Failed to update name')
     }
   }, 500)
 
@@ -72,8 +70,8 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
         updateProfileImage.mutateAsync({ storageId }),
       ])
       toast.success('Profile picture updated')
-    } catch {
-      // Error toast handled by useAppMutation
+    } catch (error) {
+      handleError(error, 'Failed to update profile image')
     }
     setIsUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''

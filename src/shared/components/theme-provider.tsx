@@ -4,6 +4,7 @@ import { api } from 'convex/_generated/api'
 import type { UserPreferences } from 'convex/userPreferences/types'
 import type { Theme } from '~/features/settings/hooks/useTheme'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import {
   ThemeProviderContext,
@@ -48,7 +49,7 @@ export function ThemeProvider({
         applyThemeClass(resolveTheme(newTheme))
         return { previous }
       },
-      onError: (_err, _vars, context) => {
+      onError: (err, _vars, context) => {
         if (context?.previous) {
           queryClient.setQueryData(
             userPreferencesQueryOptions.queryKey,
@@ -56,6 +57,7 @@ export function ThemeProvider({
           )
           applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
         }
+        handleError(err, 'Failed to update theme')
       },
       onSettled: () => {
         queryClient.invalidateQueries({

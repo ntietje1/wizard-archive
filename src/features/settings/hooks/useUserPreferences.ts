@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import type { UserPreferences } from 'convex/userPreferences/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const DEFAULT_SIDEBAR_WIDTH = 280
@@ -34,7 +35,11 @@ export const useUserPreferences = (initial: {
 
   const setPrefs = useAppMutation(
     api.userPreferences.mutations.setUserPreferences,
-    { errorMessage: 'Failed to save preferences' },
+    {
+      onError: (error) => {
+        handleError(error, 'Failed to save preferences')
+      },
+    },
   )
 
   const serverWidth = prefsQuery.data?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH

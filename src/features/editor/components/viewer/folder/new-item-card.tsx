@@ -15,7 +15,7 @@ import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidat
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 
 interface NewItemCardProps {
   parentId: Id<'folders'>
@@ -63,7 +63,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
       openParentFolders(result.id)
       navigateToItem(result.slug)
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to create item')
     }
   }
 

@@ -22,7 +22,7 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
@@ -150,7 +150,7 @@ function NotSharedContent() {
       openParentFolders(result.id)
       navigateToItem(result.slug)
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to create note')
     }
     setIsPending(false)
   }

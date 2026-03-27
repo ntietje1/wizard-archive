@@ -5,7 +5,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import { handleError, logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -158,7 +158,7 @@ export function MapForm({
           toast.success('Map updated')
           onSuccess?.(slug)
         } catch (error) {
-          logger.error(error)
+          handleError(error, 'Failed to save map')
           return
         }
       } else if (campaignId) {
@@ -179,7 +179,7 @@ export function MapForm({
         return
       }
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to save map')
     }
   }
 

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { toast } from 'sonner'
 import type { DragOverlayState } from '~/features/dnd/components/drag-overlay'
 import type { DndMonitorCtx } from '~/features/dnd/types'
+import { handleError } from '~/shared/utils/logger'
 import {
   getDragItemId,
   getDropTargetKey,
@@ -188,9 +188,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         try {
           await outcome.execute()
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to move item'
-          toast.error(message)
+          handleError(error, 'Failed to move item')
         }
       },
     })

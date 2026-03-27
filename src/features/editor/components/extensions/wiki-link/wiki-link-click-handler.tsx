@@ -4,7 +4,7 @@ import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
@@ -58,7 +58,6 @@ export function WikiLinkClickHandler({
 
   const { mutateAsync: createNote } = useAppMutation(
     api.notes.mutations.createNote,
-    { errorMessage: 'Failed to create note' },
   )
 
   const hideTooltip = () => setTooltip(HIDDEN_TOOLTIP)
@@ -202,7 +201,7 @@ export function WikiLinkClickHandler({
           })
           if (result) navigateToItem(result.slug)
         } catch (error) {
-          logger.error(error)
+          handleError(error, 'Failed to create note')
         }
       }
     }

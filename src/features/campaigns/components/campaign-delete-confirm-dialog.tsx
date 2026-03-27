@@ -3,7 +3,7 @@ import { api } from 'convex/_generated/api'
 import type { Campaign } from 'convex/campaigns/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDeleteConfirmDialogProps {
   campaign: Campaign
@@ -18,10 +18,7 @@ export function CampaignDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: CampaignDeleteConfirmDialogProps) {
-  const deleteCampaign = useAppMutation(
-    api.campaigns.mutations.deleteCampaign,
-    { errorMessage: 'Failed to delete campaign' },
-  )
+  const deleteCampaign = useAppMutation(api.campaigns.mutations.deleteCampaign)
 
   const handleConfirm = async () => {
     await deleteCampaign
@@ -30,7 +27,7 @@ export function CampaignDeleteConfirmDialog({
         toast.success('Campaign deleted successfully')
       })
       .catch((error: unknown) => {
-        logger.error(error)
+        handleError(error, 'Failed to delete campaign')
       })
       .finally(() => {
         onConfirm?.()

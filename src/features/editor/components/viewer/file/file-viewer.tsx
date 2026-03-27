@@ -12,6 +12,7 @@ import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'convex/files/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
 import { assertNever } from '~/shared/utils/utils'
@@ -48,9 +49,7 @@ function getFileType(
 }
 
 function FileUpload({ fileId }: { fileId: Id<'files'> }) {
-  const updateFile = useAppMutation(api.files.mutations.updateFile, {
-    errorMessage: 'Failed to attach file',
-  })
+  const updateFile = useAppMutation(api.files.mutations.updateFile)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -60,8 +59,8 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
       try {
         await updateFile.mutateAsync({ fileId, storageId })
         toast.success('File uploaded')
-      } catch {
-        // Error toast handled by useAppMutation
+      } catch (error) {
+        handleError(error, 'Failed to attach file')
       }
     },
   })

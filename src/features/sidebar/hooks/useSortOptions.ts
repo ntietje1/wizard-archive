@@ -3,6 +3,7 @@ import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
@@ -20,7 +21,6 @@ export const useSortOptions = () => {
   )
   const setCurrentEditor = useAppMutation(
     api.editors.mutations.setCurrentEditor,
-    { errorMessage: 'Failed to save sort options' },
   )
 
   const [sortOptions, setSortOptions] = useState(defaultSortOptions)
@@ -45,11 +45,15 @@ export const useSortOptions = () => {
   const setSortOptionsAction = async (options: SortOptions) => {
     setSortOptions(options)
     if (!campaignData?._id) return
-    await setCurrentEditor.mutateAsync({
-      campaignId: campaignData._id,
-      sortOrder: options.order,
-      sortDirection: options.direction,
-    })
+    try {
+      await setCurrentEditor.mutateAsync({
+        campaignId: campaignData._id,
+        sortOrder: options.order,
+        sortDirection: options.direction,
+      })
+    } catch (error) {
+      handleError(error, 'Failed to save sort options')
+    }
   }
 
   return {

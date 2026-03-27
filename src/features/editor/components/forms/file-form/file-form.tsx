@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { validateFileForUpload } from 'convex/storage/validation'
 import type { Id } from 'convex/_generated/dataModel'
-import { handleError, logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -162,7 +162,7 @@ export function FileForm({
           toast.success('File updated')
           onSuccess?.(slug)
         } catch (error) {
-          logger.error(error)
+          handleError(error, 'Failed to save file')
           return
         }
       } else if (campaignId) {
@@ -183,7 +183,7 @@ export function FileForm({
         return
       }
     } catch (error) {
-      logger.error(error)
+      handleError(error, 'Failed to save file')
     }
   }
 

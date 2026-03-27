@@ -6,7 +6,7 @@ import { getDefaultIconName, getTypeName } from '../../utils/sidebar-item-utils'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { FormDialog } from '~/shared/components/form-dialog'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
@@ -59,7 +59,7 @@ export function SidebarItemEditDialog({
         toast.success(`${getTypeName(item.type)} updated`)
         onClose()
       } catch (error) {
-        logger.error(error)
+        handleError(error, 'Failed to save changes')
       }
     },
   })

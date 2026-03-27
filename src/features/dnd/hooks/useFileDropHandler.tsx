@@ -53,14 +53,9 @@ export function useFileDropHandler() {
 
   const generateUploadUrl = useAppMutation(
     api.storage.mutations.generateUploadUrl,
-    { errorMessage: 'Failed to generate upload URL' },
   )
-  const trackUpload = useAppMutation(api.storage.mutations.trackUpload, {
-    errorMessage: 'Failed to track upload',
-  })
-  const commitUpload = useAppMutation(api.storage.mutations.commitUpload, {
-    errorMessage: 'Failed to commit upload',
-  })
+  const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
+  const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
 
   const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
     new Map(),

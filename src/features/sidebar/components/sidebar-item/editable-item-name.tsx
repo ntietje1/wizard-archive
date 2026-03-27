@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import { handleError } from '~/shared/utils/logger'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -82,8 +83,8 @@ export function EditableName({
           return
         }
         await onFinishRename(trimmedName)
-      } catch {
-        toast.error('Failed to rename. Please try again.')
+      } catch (error) {
+        handleError(error, 'Failed to rename')
         setName(initialName)
         onCancelRename()
       }

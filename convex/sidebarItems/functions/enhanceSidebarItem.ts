@@ -7,7 +7,6 @@ import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sid
 import { requireCampaignMembership } from '../../functions'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { SidebarItemId } from '../types/baseTypes'
-import type { SidebarItemShare } from '../../sidebarShares/types'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 

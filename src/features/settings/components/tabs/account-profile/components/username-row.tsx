@@ -91,9 +91,7 @@ function UsernameChangeDialog({
     isChecking,
   } = useUsernameValidation(username, profile.username)
 
-  const updateUsername = useAppMutation(api.users.mutations.updateUsername, {
-    errorMessage: 'Failed to update username',
-  })
+  const updateUsername = useAppMutation(api.users.mutations.updateUsername)
 
   const handleSave = async () => {
     if (!canSubmit) return
