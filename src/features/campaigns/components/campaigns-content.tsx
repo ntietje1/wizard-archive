@@ -65,6 +65,7 @@ export function CampaignsContent() {
           mode="create"
           isOpen={creatingCampaign}
           onClose={() => setCreatingCampaign(false)}
+          campaigns={campaigns.data}
         />
       </>
     )
@@ -151,6 +152,7 @@ export function CampaignsContent() {
         mode="create"
         isOpen={creatingCampaign}
         onClose={() => setCreatingCampaign(false)}
+        campaigns={campaigns.data}
       />
 
       <CampaignDialog
@@ -158,6 +160,7 @@ export function CampaignsContent() {
         isOpen={editingCampaignId !== null}
         onClose={() => setEditingCampaignId(null)}
         campaign={currentlyEditingCampaign ?? undefined}
+        campaigns={campaigns.data}
       />
 
       {currentlyDeletingCampaign && (

@@ -1,9 +1,10 @@
-import { findUniqueSlug } from '../../common/slug'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
 } from '../types'
+import { validateCampaignName, validateCampaignSlug } from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -23,28 +24,39 @@ export async function createCampaign(
   slug = slug.trim()
   description = description?.trim()
 
-  const profile = ctx.user.profile
-  const now = Date.now()
+  const nameError = validateCampaignName(name)
+  if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
 
-  const uniqueSlug = await findUniqueSlug(slug, async (s) => {
-    const conflict = await ctx.db
-      .query('campaigns')
-      .withIndex('by_slug_dm', (q) =>
-        q.eq('slug', s).eq('dmUserId', profile._id),
-      )
-      .unique()
-    return conflict !== null
-  })
+  const slugError = validateCampaignSlug(slug)
+  if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
+
+  const profile = ctx.user.profile
+
+  const conflict = await ctx.db
+    .query('campaigns')
+    .withIndex('by_slug_dm', (q) =>
+      q.eq('slug', slug).eq('dmUserId', profile._id),
+    )
+    .unique()
+
+  if (conflict) {
+    throwClientError(
+      ERROR_CODE.CONFLICT,
+      'A campaign with this slug already exists',
+    )
+  }
 
   const campaignId = await ctx.db.insert('campaigns', {
     name,
     description: description ?? '',
     dmUserId: profile._id,
-    slug: uniqueSlug,
+    slug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
-    updatedTime: now,
-    updatedBy: profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profile._id,
   })
 
@@ -53,8 +65,10 @@ export async function createCampaign(
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
-    updatedTime: now,
-    updatedBy: profile._id,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profile._id,
   })
 

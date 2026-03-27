@@ -12,6 +12,7 @@ export async function getCampaignBookmarks(
     .withIndex('by_campaign_member_item', (q) =>
       q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
   return new Set(bookmarks.map((b) => b.sidebarItemId))
 }

@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
 import { useConvexMutation } from '@convex-dev/react-query'
-import { toast } from 'sonner'
 import type {
   UseMutationOptions,
   UseMutationResult,
@@ -22,9 +21,7 @@ type UseAppMutationOptions<
 > = Omit<
   UseMutationOptions<TData<TMutation>, Error, TArgs<TMutation>, TContext>,
   'mutationFn'
-> & {
-  errorMessage?: string
-}
+>
 
 export function useAppMutation<
   TMutation extends MutationRef,
@@ -34,15 +31,9 @@ export function useAppMutation<
   options?: UseAppMutationOptions<TMutation, TContext>,
 ): UseMutationResult<TData<TMutation>, Error, TArgs<TMutation>, TContext> {
   const convexMutation = useConvexMutation(mutation)
-  const { errorMessage, onError, ...rest } = options ?? {}
 
   return useMutation({
     mutationFn: (args: TArgs<TMutation>) => convexMutation(args),
-    onError: onError
-      ? onError
-      : (_error) => {
-          toast.error(errorMessage ?? 'Something went wrong')
-        },
-    ...rest,
+    ...options,
   } as UseMutationOptions<TData<TMutation>, Error, TArgs<TMutation>, TContext>)
 }

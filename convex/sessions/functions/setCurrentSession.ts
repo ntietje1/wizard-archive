@@ -1,5 +1,5 @@
 import { requireDmRole } from '../../functions'
-import { ERROR_CODE, throwAppError } from '../../errors'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCurrentSession } from './getCurrentSession'
 import { getSession } from './getSession'
 import type { Id } from '../../_generated/dataModel'
@@ -11,7 +11,7 @@ export async function setCurrentSession(
 ): Promise<Id<'sessions'>> {
   const session = await getSession(ctx, { sessionId })
   if (!session) {
-    throw new Error('Session not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Session not found')
   }
 
   const campaignId = session.campaignId
@@ -19,25 +19,25 @@ export async function setCurrentSession(
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
   if (currentSession) {
-    throwAppError(
-      ERROR_CODE.CONFLICT_SESSION_ACTIVE,
+    throwClientError(
+      ERROR_CODE.CONFLICT,
       'Cannot resume a session while another session is active',
     )
   }
 
   const now = Date.now()
 
-  // Remove endedAt to mark session as active (undefined removes the optional field)
-  await ctx.db.patch(sessionId, {
-    endedAt: undefined,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
-
-  await ctx.db.patch(campaignId, {
-    currentSessionId: sessionId,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
+  await Promise.all([
+    ctx.db.patch(sessionId, {
+      endedAt: null,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+    ctx.db.patch(campaignId, {
+      currentSessionId: sessionId,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+  ])
   return sessionId
 }

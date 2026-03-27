@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
@@ -28,7 +29,7 @@ export const getBlockWithShares = async (
   playerMembers: Array<CampaignMember>
 } | null> => {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireDmRole(ctx, note.campaignId)
   await checkItemAccess(ctx, {
     rawItem: note,

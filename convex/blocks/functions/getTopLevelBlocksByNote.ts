@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireCampaignMembership } from '../../functions'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
@@ -8,7 +9,7 @@ export async function getTopLevelBlocksByNote(
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<Array<Block>> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireCampaignMembership(ctx, note.campaignId)
 
   const blocks = await ctx.db
@@ -19,6 +20,7 @@ export async function getTopLevelBlocksByNote(
         .eq('noteId', noteId)
         .eq('isTopLevel', true),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
   return blocks.sort((a, b) => (a.position || 0) - (b.position || 0))

@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -47,8 +48,10 @@ export function DroppableFolderZone({
       ref={ref}
       className={cn(
         className,
-        !folder.deletionTime && isDropTarget && activeHighlight,
-        !folder.deletionTime &&
+        folder.location !== SIDEBAR_ITEM_LOCATION.trash &&
+          isDropTarget &&
+          activeHighlight,
+        folder.location !== SIDEBAR_ITEM_LOCATION.trash &&
           isFileDragTarget &&
           'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}

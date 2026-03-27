@@ -1,9 +1,12 @@
 import {
-  findNewSidebarItemSlug,
+  findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -27,20 +30,18 @@ export async function createFile(
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId, campaignId })
+  await validateSidebarCreateParent(ctx, { campaignId, parentId })
   await validateSidebarItemName(ctx, {
+    campaignId,
     parentId,
     name,
-    campaignId,
   })
 
-  const uniqueSlug = await findNewSidebarItemSlug(ctx, {
-    type: SIDEBAR_ITEM_TYPES.files,
+  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const fileId = await ctx.db.insert('files', {
@@ -53,8 +54,11 @@ export async function createFile(
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
-    updatedTime: now,
-    updatedBy: profileId,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

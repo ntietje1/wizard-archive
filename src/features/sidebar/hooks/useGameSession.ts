@@ -3,6 +3,7 @@ import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Session } from 'convex/sessions/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
@@ -41,17 +42,17 @@ export function useSession(): SessionContextValue {
   )
 
   const startSession = useAppMutation(api.sessions.mutations.startSession, {
-    errorMessage: 'Failed to start session',
+    onError: (error) => handleError(error, 'Failed to start session'),
   })
 
   const endCurrentSession = useAppMutation(
     api.sessions.mutations.endCurrentSession,
-    { errorMessage: 'Failed to end session' },
+    { onError: (error) => handleError(error, 'Failed to end session') },
   )
 
   const setCurrentSession = useAppMutation(
     api.sessions.mutations.setCurrentSession,
-    { errorMessage: 'Failed to set session' },
+    { onError: (error) => handleError(error, 'Failed to set session') },
   )
 
   const nextSessionNumber = (sessions.data?.length ?? 0) + 1

@@ -1,12 +1,15 @@
-import { getNote } from '../../notes/functions/getNote'
-import { getMap } from '../../gameMaps/functions/getMap'
-import { getFolder } from '../../folders/functions/getFolder'
-import { getFile } from '../../files/functions/getFile'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { checkItemAccess } from '../validation'
+import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
+import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
+import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
+import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
+import { assertNever } from '../../common/types'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { SidebarItemId } from '../types/baseTypes'
-import type { Id } from '../../_generated/dataModel'
 import type { AuthQueryCtx } from '../../functions'
 
 export const requireSidebarItemById = async (
@@ -15,7 +18,7 @@ export const requireSidebarItemById = async (
 ): Promise<AnySidebarItemWithContent> => {
   const result = await getSidebarItemById(ctx, { id })
   if (!result) {
-    throw new Error('Sidebar item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
   return result
 }
@@ -25,30 +28,44 @@ export const getSidebarItemById = async (
   { id }: { id: SidebarItemId },
 ): Promise<AnySidebarItemWithContent | null> => {
   const item = await ctx.db.get(id)
-  if (!item) {
-    return null
-  }
+  if (!item) return null
 
   await requireCampaignMembership(ctx, item.campaignId)
 
-  let result: AnySidebarItemWithContent | null = null
-
   switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.folders:
-      result = await getFolder(ctx, { folderId: id as Id<'folders'> })
-      break
-    case SIDEBAR_ITEM_TYPES.notes:
-      result = await getNote(ctx, { noteId: id as Id<'notes'> })
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      result = await getMap(ctx, { mapId: id as Id<'gameMaps'> })
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      result = await getFile(ctx, { fileId: id as Id<'files'> })
-      break
+    case SIDEBAR_ITEM_TYPES.notes: {
+      const enhanced = await checkItemAccess(ctx, {
+        rawItem: item,
+        requiredLevel: PERMISSION_LEVEL.VIEW,
+      })
+      if (!enhanced) return null
+      return enhanceNoteWithContent(ctx, { note: enhanced })
+    }
+    case SIDEBAR_ITEM_TYPES.folders: {
+      const enhanced = await checkItemAccess(ctx, {
+        rawItem: item,
+        requiredLevel: PERMISSION_LEVEL.VIEW,
+      })
+      if (!enhanced) return null
+      return enhanceFolderWithContent(ctx, { folder: enhanced })
+    }
+    case SIDEBAR_ITEM_TYPES.gameMaps: {
+      const enhanced = await checkItemAccess(ctx, {
+        rawItem: item,
+        requiredLevel: PERMISSION_LEVEL.VIEW,
+      })
+      if (!enhanced) return null
+      return enhanceGameMapWithContent(ctx, { gameMap: enhanced })
+    }
+    case SIDEBAR_ITEM_TYPES.files: {
+      const enhanced = await checkItemAccess(ctx, {
+        rawItem: item,
+        requiredLevel: PERMISSION_LEVEL.VIEW,
+      })
+      if (!enhanced) return null
+      return enhanceFileWithContent(ctx, { file: enhanced })
+    }
     default:
-      throw new Error(`Unknown item type`)
+      assertNever(item)
   }
-
-  return result
 }

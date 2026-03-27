@@ -22,9 +22,13 @@ export const setUserPreferences = authMutation({
     if (!existing) {
       return await ctx.db.insert('userPreferences', {
         userId,
-        ...args,
-        updatedTime: now,
-        updatedBy: userId,
+        sidebarWidth: args.sidebarWidth ?? null,
+        isSidebarExpanded: args.isSidebarExpanded ?? null,
+        theme: args.theme ?? null,
+        deletionTime: null,
+        deletedBy: null,
+        updatedTime: null,
+        updatedBy: null,
         createdBy: userId,
       })
     } else {

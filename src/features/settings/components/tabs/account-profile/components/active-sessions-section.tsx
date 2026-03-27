@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Loader2, Monitor, Smartphone, Tablet } from 'lucide-react'
 import { SettingsSection } from './settings-section'
 import { useActiveSessions } from '~/features/auth/hooks/useAuthSessions'
@@ -29,21 +28,13 @@ export function ActiveSessionsSection() {
 
   const handleRevokeSession = async (token: string) => {
     setRevokingId(token)
-    try {
-      await revokeSession(token)
-    } catch {
-      toast.error('Failed to revoke session')
-    }
+    await revokeSession(token).catch()
     setRevokingId(null)
   }
 
   const handleRevokeAllOtherSessions = async () => {
     setIsRevokingAll(true)
-    try {
-      await revokeOtherSessions()
-    } catch {
-      toast.error('Failed to log out other sessions')
-    }
+    await revokeOtherSessions().catch()
     setIsRevokingAll(false)
   }
 

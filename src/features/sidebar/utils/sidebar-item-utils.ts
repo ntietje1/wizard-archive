@@ -14,23 +14,8 @@ import type { SidebarFile } from 'convex/files/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
 
-// Determine type and slug from search params
-export const getTypeAndSlug = (
-  search: EditorSearch,
-): { type: SidebarItemType; slug: string } | null => {
-  if (search.note) {
-    return { type: SIDEBAR_ITEM_TYPES.notes, slug: search.note }
-  }
-  if (search.map) {
-    return { type: SIDEBAR_ITEM_TYPES.gameMaps, slug: search.map }
-  }
-  if (search.folder) {
-    return { type: SIDEBAR_ITEM_TYPES.folders, slug: search.folder }
-  }
-  if (search.file) {
-    return { type: SIDEBAR_ITEM_TYPES.files, slug: search.file }
-  }
-  return null
+export const getSlug = (search: EditorSearch): string | null => {
+  return search.item ?? null
 }
 
 /**

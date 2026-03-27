@@ -10,6 +10,7 @@ import type {
   AggregateShareStatus,
   ShareItem,
 } from '~/features/sharing/hooks/useBlocksShare'
+import { handleError } from '~/shared/utils/logger'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/hooks/useBlocksShare'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -60,23 +61,18 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
   const shareSidebarItem = useAppMutation(
     api.sidebarShares.mutations.shareSidebarItem,
-    { errorMessage: 'Failed to update share' },
   )
   const unshareSidebarItem = useAppMutation(
     api.sidebarShares.mutations.unshareSidebarItem,
-    { errorMessage: 'Failed to update share' },
   )
   const updateSharePermission = useAppMutation(
     api.sidebarShares.mutations.updateSidebarItemSharePermission,
-    { errorMessage: 'Failed to update share' },
   )
   const setAllPlayersPermissionMutation = useAppMutation(
     api.sidebarShares.mutations.setAllPlayersPermission,
-    { errorMessage: 'Failed to update share' },
   )
   const setFolderInheritSharesMutation = useAppMutation(
     api.sidebarShares.mutations.setFolderInheritShares,
-    { errorMessage: 'Failed to update share' },
   )
   const isMutating =
     shareSidebarItem.isPending ||
@@ -228,7 +224,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.success('Unshared from all players')
       }
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -277,7 +273,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         toast.success('Shared with player')
       }
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -342,7 +338,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         inheritShares: enabled,
       })
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -365,7 +361,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -383,7 +379,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -411,7 +407,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
         ),
       )
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 

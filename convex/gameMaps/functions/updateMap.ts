@@ -2,6 +2,7 @@ import {
   requireItemAccess,
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
@@ -25,7 +26,7 @@ export async function updateMap(
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
   const mapFromDb = await ctx.db.get(mapId)
-  if (!mapFromDb) throw new Error('Map not found')
+  if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, mapFromDb.campaignId)
   const map = await requireItemAccess(ctx, {
     rawItem: mapFromDb,

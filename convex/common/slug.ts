@@ -26,7 +26,7 @@ export function validateUsername(
     return `Username must be at most ${maxLength} characters`
   }
   if (raw.trim().length > 0 && slugified !== raw.trim().toLowerCase()) {
-    return 'Only lowercase letters, numbers, and hyphens are allowed'
+    return 'Username can only contain letters, numbers, and hyphens'
   }
   return null
 }
@@ -40,18 +40,10 @@ export async function findUniqueSlug(
   checkFn: (slug: string) => Promise<boolean>,
 ): Promise<string> {
   const normalized = slugify(name)
-  let uniqueSlug = normalized
-  let suffix = 1
-  for (let i = 0; i < 100; i++) {
-    // 100 max checks
-    const conflict = await checkFn(uniqueSlug)
-    if (!conflict) break
-    suffix += 1
-    uniqueSlug = appendSuffix(normalized, suffix)
+  for (let suffix = 1; suffix <= 100; suffix++) {
+    const candidate = appendSuffix(normalized, suffix)
+    const conflict = await checkFn(candidate)
+    if (!conflict) return candidate
   }
-  const finalConflict = await checkFn(uniqueSlug)
-  if (finalConflict) {
-    throw new Error(`Failed to find unique slug for: ${name}`)
-  }
-  return uniqueSlug
+  throw new Error(`Failed to find unique slug for: ${name}`)
 }

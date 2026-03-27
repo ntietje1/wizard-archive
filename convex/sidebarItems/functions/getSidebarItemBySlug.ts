@@ -1,121 +1,76 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
-import { getSidebarItemById } from './getSidebarItemById'
-import type {
-  AnySidebarItemFromDb,
-  AnySidebarItemWithContent,
-} from '../types/types'
-import type { SidebarItemType } from '../types/baseTypes'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { checkItemAccess } from '../validation'
+import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
+import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
+import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
+import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
+import type { AnySidebarItemWithContent } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemBySlug = async (
   ctx: AuthQueryCtx,
-  {
-    type,
-    slug,
-    campaignId,
-  }: { type: SidebarItemType; slug: string; campaignId: Id<'campaigns'> },
+  { slug, campaignId }: { slug: string; campaignId: Id<'campaigns'> },
 ): Promise<AnySidebarItemWithContent | null> => {
   await requireCampaignMembership(ctx, campaignId)
-  let item: AnySidebarItemFromDb | null = null
 
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.folders:
-      item = await ctx.db
-        .query('folders')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('folders')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.notes:
-      item = await ctx.db
-        .query('notes')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('notes')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      item = await ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('gameMaps')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    case SIDEBAR_ITEM_TYPES.files:
-      item = await ctx.db
-        .query('files')
-        .withIndex('by_campaign_slug', (q) =>
-          q
-            .eq('campaignId', campaignId)
-            .eq('slug', slug)
-            .eq('deletionTime', undefined),
-        )
-        .first()
-      if (!item) {
-        item = await ctx.db
-          .query('files')
-          .withIndex('by_campaign_slug', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('slug', slug)
-              .gt('deletionTime', 0),
-          )
-          .first()
-      }
-      break
-    default:
-      throw new Error(`Unknown item type, ${type}`)
+  const filter = (q: any) => q.eq(q.field('deletionTime'), null)
+  const idx = (q: any) => q.eq('campaignId', campaignId).eq('slug', slug)
+
+  const [note, folder, map, file] = await Promise.all([
+    ctx.db
+      .query('notes')
+      .withIndex('by_campaign_slug', idx)
+      .filter(filter)
+      .unique(),
+    ctx.db
+      .query('folders')
+      .withIndex('by_campaign_slug', idx)
+      .filter(filter)
+      .unique(),
+    ctx.db
+      .query('gameMaps')
+      .withIndex('by_campaign_slug', idx)
+      .filter(filter)
+      .unique(),
+    ctx.db
+      .query('files')
+      .withIndex('by_campaign_slug', idx)
+      .filter(filter)
+      .unique(),
+  ])
+
+  if (note) {
+    const enhanced = await checkItemAccess(ctx, {
+      rawItem: note,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return enhanced ? enhanceNoteWithContent(ctx, { note: enhanced }) : null
+  }
+  if (folder) {
+    const enhanced = await checkItemAccess(ctx, {
+      rawItem: folder,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return enhanced ? enhanceFolderWithContent(ctx, { folder: enhanced }) : null
+  }
+  if (map) {
+    const enhanced = await checkItemAccess(ctx, {
+      rawItem: map,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return enhanced
+      ? enhanceGameMapWithContent(ctx, { gameMap: enhanced })
+      : null
+  }
+  if (file) {
+    const enhanced = await checkItemAccess(ctx, {
+      rawItem: file,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return enhanced ? enhanceFileWithContent(ctx, { file: enhanced }) : null
   }
 
-  if (!item) {
-    return null
-  }
-
-  return await getSidebarItemById(ctx, { id: item._id })
+  return null
 }

@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   requireItemAccess,
   validateSidebarItemRename,
@@ -23,7 +24,7 @@ export async function updateFolder(
   },
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
   const folderFromDb = await ctx.db.get(folderId)
-  if (!folderFromDb) throw new Error('Folder not found')
+  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   await requireCampaignMembership(ctx, folderFromDb.campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,

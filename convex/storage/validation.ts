@@ -1,7 +1,6 @@
-export interface FileValidationResult {
-  success: boolean
-  error?: string
-}
+export type FileValidationResult =
+  | { valid: true }
+  | { valid: false; error: string }
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
@@ -65,11 +64,11 @@ export function validateFileSize(
   if (size > maxSize) {
     const maxSizeMB = maxSize / (1024 * 1024)
     return {
-      success: false,
+      valid: false,
       error: `File must be less than ${maxSizeMB}MB`,
     }
   }
-  return { success: true }
+  return { valid: true }
 }
 
 /**
@@ -84,12 +83,12 @@ export function validateFileType(
 
   if (!isMedia && !isText) {
     return {
-      success: false,
+      valid: false,
       error:
         'Please upload a valid file type (image, video, audio, PDF, or text file)',
     }
   }
-  return { success: true }
+  return { valid: true }
 }
 
 /**
@@ -104,7 +103,7 @@ export function validateFileUpload(
 ): FileValidationResult {
   // Check type first
   const typeResult = validateFileType(contentType, fileName)
-  if (!typeResult.success) {
+  if (!typeResult.valid) {
     return typeResult
   }
 

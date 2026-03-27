@@ -1,15 +1,11 @@
 import { mutationGeneric, queryGeneric } from 'convex/server'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
-import { ERROR_CODE, throwAppError } from './errors'
+import { ERROR_CODE, throwClientError } from './errors'
 import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
 import type { AuthUser } from './users/types'
-import type {
-  CampaignFromDb,
-  CampaignMember,
-  CampaignMemberRole,
-} from './campaigns/types'
+import type { CampaignFromDb, CampaignMember } from './campaigns/types'
 
 // --- Context types ---
 
@@ -23,36 +19,38 @@ export async function authenticate(
 ): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity)
-    throwAppError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
+    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
   const profile = await ctx.db
     .query('userProfiles')
     .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
-  if (!profile) throwAppError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
+  if (!profile)
+    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return { identity, profile }
 }
 
 async function checkMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
-  options?: { allowedRoles?: ReadonlyArray<CampaignMemberRole> },
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
   const campaign = await ctx.db.get(campaignId)
-  if (!campaign) throw new Error('Campaign not found')
   const member = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) =>
       q.eq('campaignId', campaignId).eq('userId', ctx.user.profile._id),
     )
     .unique()
-  const allowedRoles =
-    options?.allowedRoles ?? Object.values(CAMPAIGN_MEMBER_ROLE)
   if (
+    !campaign ||
+    campaign.deletionTime !== null ||
     !member ||
-    member.status !== CAMPAIGN_MEMBER_STATUS.Accepted ||
-    !allowedRoles.includes(member.role)
+    member.deletionTime !== null ||
+    member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   )
-    throw new Error('Not a campaign member')
+    throwClientError(
+      ERROR_CODE.PERMISSION_DENIED,
+      "You don't have access to this campaign",
+    )
   return {
     campaign,
     membership: { ...member, userProfile: ctx.user.profile },
@@ -87,7 +85,10 @@ export async function requireDmRole(
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
   const result = await requireCampaignMembership(ctx, campaignId)
   if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    throw new Error('Not a DM')
+    throwClientError(
+      ERROR_CODE.PERMISSION_DENIED,
+      'Only the DM can perform this action',
+    )
   }
   return result
 }

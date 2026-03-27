@@ -1,10 +1,13 @@
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
-  findNewSidebarItemSlug,
+  findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../../sidebarItems/types/baseTypes'
 import { EMPTY_PM_DOC, prosemirrorSync } from '../../prosemirrorSync'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -30,20 +33,18 @@ export async function createNote(
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { parentId, campaignId })
+  await validateSidebarCreateParent(ctx, { campaignId, parentId })
   await validateSidebarItemName(ctx, {
+    campaignId,
     parentId,
     name,
-    campaignId,
   })
 
-  const uniqueSlug = await findNewSidebarItemSlug(ctx, {
-    type: SIDEBAR_ITEM_TYPES.notes,
+  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
     campaignId,
   })
 
-  const now = Date.now()
   const profileId = ctx.user.profile._id
 
   const noteId = await ctx.db.insert('notes', {
@@ -55,8 +56,11 @@ export async function createNote(
     allPermissionLevel: null,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
-    updatedTime: now,
-    updatedBy: profileId,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
     createdBy: profileId,
   })
 

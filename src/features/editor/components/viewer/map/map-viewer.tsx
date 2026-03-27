@@ -20,11 +20,12 @@ import {
   getDragItemId,
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
+import { handleError } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
@@ -103,7 +104,7 @@ function MapPinContextMenuWrapper({
     <EditorContextMenu
       ref={contextMenuRef}
       viewContext="map-view"
-      item={canViewItem ? pin.item : undefined}
+      item={canViewItem ? (pin.item ?? undefined) : undefined}
       className="absolute inset-0 pointer-events-none"
       onClose={handleMenuClose}
       onDialogOpen={handleDialogOpen}
@@ -165,7 +166,7 @@ function MapPin({
   onDragStart,
 }: MapPinProps) {
   const ghost = isGhost
-  const visibleItem = ghost ? undefined : pin.item
+  const visibleItem = ghost ? undefined : (pin.item ?? undefined)
   const Icon = getSidebarItemIcon(visibleItem)
   const color = ghost
     ? getComputedStyle(document.documentElement)
@@ -300,7 +301,7 @@ export function MapViewer({
 
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap: allItemsMap } = useAllSidebarItems()
+  const { itemsMap: allItemsMap } = useActiveSidebarItems()
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapDropData = {
@@ -383,12 +384,10 @@ export function MapViewer({
 
   const createItemPinMutation = useAppMutation(
     api.gameMaps.mutations.createItemPin,
-    { errorMessage: 'Failed to place pin' },
   )
 
   const updateItemPinMutation = useAppMutation(
     api.gameMaps.mutations.updateItemPin,
-    { errorMessage: 'Failed to move pin' },
   )
 
   const handleTransformChange = (
@@ -524,7 +523,7 @@ export function MapViewer({
           })
           toast.success('Pin moved')
         } catch (error) {
-          console.error('Failed to move pin:', error)
+          handleError(error, 'Failed to move pin')
         }
       }
       setDraggingPin(null)
@@ -566,7 +565,7 @@ export function MapViewer({
       })
       toast.success('Pin placed on map')
     } catch (error) {
-      console.error('Failed to place pin:', error)
+      handleError(error, 'Failed to place pin')
     }
   }
   const createPinAtPositionRef = useRef(createPinAtPosition)
@@ -634,7 +633,7 @@ export function MapViewer({
       toast.success('Pin moved')
       setPendingPinMove(null)
     } catch (error) {
-      console.error('Failed to move pin:', error)
+      handleError(error, 'Failed to move pin')
     }
   }
 
@@ -941,9 +940,7 @@ export function MapViewer({
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap, {
-    errorMessage: 'Failed to update map',
-  })
+  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -951,11 +948,11 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
     fileTypeValidator: (file: globalThis.File) => {
       if (!file.type.startsWith('image/')) {
         return {
-          success: false,
+          valid: false,
           error: 'Only image files are allowed for maps',
         }
       }
-      return { success: true }
+      return { valid: true }
     },
     onUploadComplete: async (storageId) => {
       try {
@@ -965,7 +962,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
         })
         toast.success('Map image uploaded')
       } catch (error) {
-        console.error('Failed to set map image:', error)
+        handleError(error, 'Failed to update map')
       }
     },
   })

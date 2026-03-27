@@ -1,5 +1,6 @@
 import { requireCampaignMembership } from '../../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { getCampaignBookmarks } from '../../bookmarks/functions/getCampaignBookmarks'
 import {
   getAllCampaignShares,
@@ -13,9 +14,9 @@ import type { AuthQueryCtx } from '../../functions'
 export const getSidebarItemsByParent = async (
   ctx: AuthQueryCtx,
   {
-    parentId,
     campaignId,
-  }: { parentId: Id<'folders'> | null; campaignId: Id<'campaigns'> },
+    parentId,
+  }: { campaignId: Id<'campaigns'>; parentId: Id<'folders'> | null },
 ): Promise<Array<AnySidebarItem>> => {
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
@@ -24,37 +25,37 @@ export const getSidebarItemsByParent = async (
     await Promise.all([
       ctx.db
         .query('folders')
-        .withIndex('by_campaign_parent_name', (q) =>
+        .withIndex('by_campaign_location_parent_name', (q) =>
           q
             .eq('campaignId', campaignId)
-            .eq('deletionTime', undefined)
+            .eq('location', SIDEBAR_ITEM_LOCATION.sidebar)
             .eq('parentId', parentId),
         )
         .collect(),
       ctx.db
         .query('notes')
-        .withIndex('by_campaign_parent_name', (q) =>
+        .withIndex('by_campaign_location_parent_name', (q) =>
           q
             .eq('campaignId', campaignId)
-            .eq('deletionTime', undefined)
+            .eq('location', SIDEBAR_ITEM_LOCATION.sidebar)
             .eq('parentId', parentId),
         )
         .collect(),
       ctx.db
         .query('gameMaps')
-        .withIndex('by_campaign_parent_name', (q) =>
+        .withIndex('by_campaign_location_parent_name', (q) =>
           q
             .eq('campaignId', campaignId)
-            .eq('deletionTime', undefined)
+            .eq('location', SIDEBAR_ITEM_LOCATION.sidebar)
             .eq('parentId', parentId),
         )
         .collect(),
       ctx.db
         .query('files')
-        .withIndex('by_campaign_parent_name', (q) =>
+        .withIndex('by_campaign_location_parent_name', (q) =>
           q
             .eq('campaignId', campaignId)
-            .eq('deletionTime', undefined)
+            .eq('location', SIDEBAR_ITEM_LOCATION.sidebar)
             .eq('parentId', parentId),
         )
         .collect(),

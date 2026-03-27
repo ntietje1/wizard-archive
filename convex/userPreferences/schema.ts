@@ -4,10 +4,13 @@ import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 const userPreferencesTableFields = {
   userId: v.id('userProfiles'),
-  sidebarWidth: v.optional(v.number()),
-  isSidebarExpanded: v.optional(v.boolean()),
-  theme: v.optional(
-    v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
+  sidebarWidth: v.union(v.number(), v.null()),
+  isSidebarExpanded: v.union(v.boolean(), v.null()),
+  theme: v.union(
+    v.literal('light'),
+    v.literal('dark'),
+    v.literal('system'),
+    v.null(),
   ),
 }
 

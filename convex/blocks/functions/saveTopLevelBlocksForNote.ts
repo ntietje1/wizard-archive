@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { insertBlock } from './insertBlock'
 import { updateBlock } from './updateBlock'
@@ -11,7 +12,7 @@ export async function saveTopLevelBlocksForNote(
   { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
 ): Promise<void> {
   const note = await ctx.db.get(noteId)
-  if (!note) throw new Error('Note not found')
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const campaignId = note.campaignId
 
   const existingTopLevelBlocks = await ctx.db
@@ -22,6 +23,7 @@ export async function saveTopLevelBlocksForNote(
         .eq('noteId', noteId)
         .eq('isTopLevel', true),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
   const existingBlocksMap = new Map(
@@ -31,17 +33,18 @@ export async function saveTopLevelBlocksForNote(
   const positions = new Map<string, number>()
   content.forEach((block, index) => positions.set(block.id, index))
 
-  for (const block of content) {
-    const existingBlock = existingBlocksMap.get(block.id)
-    if (existingBlock) {
-      await updateBlock(ctx, {
-        blockDbId: existingBlock._id,
-        position: positions.get(block.id),
-        content: block,
-        isTopLevel: existingBlock.isTopLevel,
-      })
-    } else {
-      await insertBlock(ctx, {
+  await Promise.all(
+    content.map((block) => {
+      const existingBlock = existingBlocksMap.get(block.id)
+      if (existingBlock) {
+        return updateBlock(ctx, {
+          blockDbId: existingBlock._id,
+          position: positions.get(block.id),
+          content: block,
+          isTopLevel: existingBlock.isTopLevel,
+        })
+      }
+      return insertBlock(ctx, {
         noteId,
         campaignId,
         blockId: block.id,
@@ -50,12 +53,15 @@ export async function saveTopLevelBlocksForNote(
         content: block,
         shareStatus: SHARE_STATUS.NOT_SHARED,
       })
-    }
-  }
+    }),
+  )
   const remainingBlocks = existingTopLevelBlocks.filter(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
-  for (const block of remainingBlocks) {
-    await removeBlockIfNotNeeded(ctx, { blockId: block._id })
-  }
+  await Promise.all(
+    remainingBlocks.map(async (block) => {
+      await ctx.db.patch(block._id, { isTopLevel: false })
+      await removeBlockIfNotNeeded(ctx, { blockId: block._id })
+    }),
+  )
 }

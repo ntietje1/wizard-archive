@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import {
@@ -40,7 +41,7 @@ export function ShareButton() {
   }
 
   const dmUserProfile = campaign.data?.dmUserProfile
-  const isItemTrashed = !!item?.deletionTime
+  const isItemTrashed = item?.location === SIDEBAR_ITEM_LOCATION.trash
   const isDisabled =
     isItemLoading ||
     !item ||

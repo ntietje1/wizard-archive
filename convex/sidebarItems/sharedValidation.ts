@@ -1,10 +1,7 @@
 import type { Id } from '../_generated/dataModel'
 import type { SidebarItemId } from './types/baseTypes'
 
-export interface ValidationResult {
-  valid: boolean
-  error?: string
-}
+export type ValidationResult = { valid: true } | { valid: false; error: string }
 
 const FORBIDDEN_CHARS = /[/\\:*?"<>[\]#|]/
 const FORBIDDEN_CHARS_DISPLAY = '/ \\ : * ? " < > [ ] # |'

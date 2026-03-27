@@ -17,8 +17,7 @@ const mapWithContentValidatorFields = {
 const mapPinWithItemValidatorFields = {
   ...commonValidatorFields('mapPins'),
   ...mapPinTableFields,
-  visible: v.optional(v.boolean()),
-  item: v.optional(anySidebarItemValidator),
+  item: v.union(anySidebarItemValidator, v.null()),
 }
 
 export const mapWithContentValidator = v.object({

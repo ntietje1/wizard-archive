@@ -1,4 +1,5 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
@@ -8,7 +9,7 @@ import type { FolderWithContent } from 'convex/folders/types'
 import { CreateNewDashboard } from '~/features/editor/components/create-new-dashboard'
 import {
   useFilteredSidebarItems,
-  useTrashedSidebarItems,
+  useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -20,9 +21,9 @@ export function FolderViewer({
 }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } =
-    useTrashedSidebarItems()
+    useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
 
-  const isDeleted = !!folder.deletionTime
+  const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
   const effectiveStatus = isDeleted ? trashedStatus : status
   const children = isDeleted
     ? (trashedParentItemsMap.get(folder._id) ?? [])

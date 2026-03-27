@@ -4,9 +4,9 @@ import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 const sessionTableFields = {
   campaignId: v.id('campaigns'),
-  name: v.optional(v.string()),
+  name: v.union(v.string(), v.null()),
   startedAt: v.number(),
-  endedAt: v.optional(v.number()),
+  endedAt: v.union(v.number(), v.null()),
 }
 
 export const sessionTables = {

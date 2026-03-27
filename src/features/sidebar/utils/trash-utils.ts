@@ -1,17 +1,13 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { Id } from 'convex/_generated/dataModel'
-import { getDescendantCount } from '~/features/sidebar/hooks/useSidebarItems'
+import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 
-/**
- * Builds the confirmation description for permanently deleting a single item.
- */
 export function permanentDeleteDescription(
   item: AnySidebarItem,
-  trashedParentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>,
+  allTrashedItems: Array<AnySidebarItem>,
 ): string {
   const descendantCount = isFolder(item)
-    ? getDescendantCount(item._id, trashedParentItemsMap)
+    ? collectDescendantIds(item._id, allTrashedItems).size
     : 0
   const base = `Are you sure you want to permanently delete "${item.name}"?`
   const detail =

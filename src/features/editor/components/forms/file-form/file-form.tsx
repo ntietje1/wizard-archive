@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { validateFileForUpload } from 'convex/storage/validation'
 import type { Id } from 'convex/_generated/dataModel'
+import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -54,7 +55,7 @@ export function FileForm({
   onSuccess,
 }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
-  const { navigateToFile } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const file = useAuthQuery(
@@ -126,8 +127,7 @@ export function FileForm({
         try {
           finalStorageId = await fileUpload.handleSubmit()
         } catch (error) {
-          console.error('Failed to commit file upload:', error)
-          toast.error('Failed to save file')
+          handleError(error, 'Failed to save file')
           return
         }
       } else if (file.data?.storageId && !fileUpload.removed) {
@@ -162,7 +162,7 @@ export function FileForm({
           toast.success('File updated')
           onSuccess?.(slug)
         } catch (error) {
-          console.error(error)
+          handleError(error, 'Failed to save file')
           return
         }
       } else if (campaignId) {
@@ -174,7 +174,7 @@ export function FileForm({
           parentId: parentId ?? null,
         })
         await openParentFolders(newFileId)
-        navigateToFile(newFileSlug)
+        navigateToItem(newFileSlug)
         toast.success('File created')
         onSuccess?.(newFileSlug)
         onClose()
@@ -183,7 +183,7 @@ export function FileForm({
         return
       }
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to save file')
     }
   }
 

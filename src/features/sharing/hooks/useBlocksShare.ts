@@ -4,6 +4,7 @@ import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { BlockShareInfo } from 'convex/blocks/types'
+import { handleError } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
@@ -41,15 +42,9 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const setBlocksShareStatus = useAppMutation(
     api.blockShares.mutations.setBlocksShareStatus,
-    { errorMessage: 'Failed to update share' },
   )
-  const shareBlocks = useAppMutation(api.blockShares.mutations.shareBlocks, {
-    errorMessage: 'Failed to update share',
-  })
-  const unshareBlocks = useAppMutation(
-    api.blockShares.mutations.unshareBlocks,
-    { errorMessage: 'Failed to update share' },
-  )
+  const shareBlocks = useAppMutation(api.blockShares.mutations.shareBlocks)
+  const unshareBlocks = useAppMutation(api.blockShares.mutations.unshareBlocks)
 
   const isMutating =
     setBlocksShareStatus.isPending ||
@@ -141,7 +136,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         status: newStatus,
       })
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 
@@ -179,7 +174,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
         })
       }
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to update share')
     }
   }
 

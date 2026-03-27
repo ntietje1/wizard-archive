@@ -1,4 +1,5 @@
 import { requireCampaignMembership } from '../../functions'
+import { logger } from '../../common/logger'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { UserProfile } from '../../users/types'
@@ -21,17 +22,19 @@ export async function getCampaignMembers(
       if (profile) profilesByUserId.set(member.userId, profile)
     }),
   )
-  return members.flatMap((member) => {
-    const profile = profilesByUserId.get(member.userId)
-    if (!profile) {
-      console.warn(`User profile not found for userId: ${member.userId}`)
-      return []
-    }
-    return [
-      {
-        ...member,
-        userProfile: profile,
-      },
-    ]
-  })
+  return members
+    .filter((m) => m.deletionTime === null)
+    .flatMap((member) => {
+      const profile = profilesByUserId.get(member.userId)
+      if (!profile) {
+        logger.warn(`User profile not found for userId: ${member.userId}`)
+        return []
+      }
+      return [
+        {
+          ...member,
+          userProfile: profile,
+        },
+      ]
+    })
 }

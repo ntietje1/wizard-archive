@@ -51,19 +51,12 @@ export type CreateItemResult = {
 
 export function useCreateSidebarItem() {
   const validation = useSidebarValidation()
-  const createNoteMutation = useAppMutation(api.notes.mutations.createNote, {
-    errorMessage: 'Failed to create note',
-  })
+  const createNoteMutation = useAppMutation(api.notes.mutations.createNote)
   const createFolderMutation = useAppMutation(
     api.folders.mutations.createFolder,
-    { errorMessage: 'Failed to create folder' },
   )
-  const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap, {
-    errorMessage: 'Failed to create map',
-  })
-  const createFileMutation = useAppMutation(api.files.mutations.createFile, {
-    errorMessage: 'Failed to create file',
-  })
+  const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap)
+  const createFileMutation = useAppMutation(api.files.mutations.createFile)
 
   const createItem = async (
     args: CreateItemArgs,

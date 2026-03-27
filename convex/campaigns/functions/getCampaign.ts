@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import {
   getUserProfileByUserId,
@@ -21,8 +22,10 @@ async function countAcceptedPlayers(
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
-  return members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted)
-    .length
+  return members.filter(
+    (m) =>
+      m.deletionTime === null && m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+  ).length
 }
 
 async function enhanceCampaign(
@@ -35,12 +38,12 @@ async function enhanceCampaign(
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
   const identity = await ctx.auth.getUserIdentity()
-  let myMembership: CampaignMember | undefined = undefined
+  let myMembership: CampaignMember | null = null
   if (identity) {
     const profile = await getUserProfileByUserId(ctx, {
       userId: identity.subject,
     })
-    if (!profile) throw new Error('User Profile not found')
+    if (!profile) throw new Error('User profile not found')
     const member: CampaignMemberFromDb | null = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) =>
@@ -48,7 +51,7 @@ async function enhanceCampaign(
       )
       .unique()
 
-    if (member) {
+    if (member && member.deletionTime === null) {
       myMembership = {
         ...member,
         userProfile: profile,
@@ -64,7 +67,7 @@ export async function getCampaign(
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get(campaignId)
-  if (!campaign) return null
+  if (!campaign || campaign.deletionTime !== null) return null
   return enhanceCampaign(ctx, { campaign })
 }
 
@@ -76,13 +79,15 @@ export async function getCampaignBySlug(
   const dmUserProfile = await getUserProfileByUsername(ctx, {
     username: dmUsername,
   })
-  if (!dmUserProfile) throw new Error('DM user not found')
+  if (!dmUserProfile)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
     .withIndex('by_slug_dm', (q) =>
       q.eq('slug', slug).eq('dmUserId', dmUserProfile._id),
     )
     .unique()
-  if (!campaign) throw new Error('Campaign not found')
+  if (!campaign || campaign.deletionTime !== null)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   return enhanceCampaign(ctx, { campaign })
 }

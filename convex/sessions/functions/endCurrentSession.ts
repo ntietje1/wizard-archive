@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireDmRole } from '../../functions'
 import { getCurrentSession } from './getCurrentSession'
 import type { Id } from '../../_generated/dataModel'
@@ -11,20 +12,22 @@ export async function endCurrentSession(
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
   if (!currentSession) {
-    throw new Error('No active session')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'No active session')
   }
 
   const now = Date.now()
 
-  await ctx.db.patch(currentSession._id, {
-    endedAt: now,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
-  await ctx.db.patch(campaignId, {
-    currentSessionId: null,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-  })
+  await Promise.all([
+    ctx.db.patch(currentSession._id, {
+      endedAt: now,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+    ctx.db.patch(campaignId, {
+      currentSessionId: null,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    }),
+  ])
   return currentSession._id
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { TrashPopoverContent } from './trash-popover-content'
 import { SidebarRow } from './sidebar-row'
 import {
@@ -9,7 +10,7 @@ import {
 } from '~/features/shadcn/components/popover'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useTrashedSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -17,7 +18,7 @@ export function TrashButton() {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLDivElement>(null)
 
-  const { parentItemsMap } = useTrashedSidebarItems()
+  const { parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const trashCount = rootTrashedItems.length
 

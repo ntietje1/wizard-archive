@@ -45,8 +45,7 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
 
   const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
-  const handleClick = () =>
-    setLastSelectedItem({ type: item.type, slug: item.slug })
+  const handleClick = () => setLastSelectedItem(item.slug)
 
   const handleFinishRename = async (name: string) => {
     await editItem({ item, name })

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { FolderPlus, Loader2 } from 'lucide-react'
+import { handleError } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
@@ -29,10 +29,9 @@ export function NewFolderButton() {
         name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, null),
       })
       openParentFolders(result.id)
-      navigateToItem(result)
+      navigateToItem(result.slug)
     } catch (error) {
-      console.error(error)
-      toast.error('Failed to create folder')
+      handleError(error, 'Failed to create folder')
     }
     setIsPending(false)
   }

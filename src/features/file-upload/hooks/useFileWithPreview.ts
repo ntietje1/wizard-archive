@@ -4,12 +4,15 @@ import { api } from 'convex/_generated/api'
 import { MAX_FILE_SIZE } from 'convex/storage/validation'
 import { useFileUpload } from './useFileUpload'
 import type { Id } from 'convex/_generated/dataModel'
+import { logger } from '~/shared/utils/logger'
 
 export interface FileWithPreviewOptions {
   isOpen: boolean
   fileStorageId?: Id<'_storage'>
   uploadOnSelect?: boolean
-  fileTypeValidator?: (file: File) => { success: boolean; error?: string }
+  fileTypeValidator?: (
+    file: File,
+  ) => { valid: true } | { valid: false; error: string }
   maxFileSize?: number
   onUploadComplete?: (storageId: Id<'_storage'>) => void | Promise<void>
 }
@@ -113,7 +116,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
               })
           }
         })
-        .catch(console.error)
+        .catch((error) => logger.error(error))
     }
   }, [isOpen, fileStorageId, isFileRemoved, convex])
 
@@ -132,7 +135,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
 
   const verifyFile = (
     fileToVerify: File,
-  ): { success: boolean; error?: string } => {
+  ): { valid: true } | { valid: false; error: string } => {
     if (fileTypeValidator) {
       return fileTypeValidator(fileToVerify)
     }
@@ -140,11 +143,11 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     if (fileToVerify.size > maxFileSize) {
       const maxSizeMB = maxFileSize / (1024 * 1024)
       return {
-        success: false,
+        valid: false,
         error: `File must be less than ${maxSizeMB}MB`,
       }
     }
-    return { success: true }
+    return { valid: true }
   }
 
   // assumes file is already validated
@@ -156,9 +159,10 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       const storageIdResult = await uploadFile.mutateAsync(fileToUpload)
       return storageIdResult
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to upload file'
-      setUploadError(errorMessage)
+      logger.error(error)
+      setUploadError(
+        error instanceof Error ? error.message : 'Failed to upload file',
+      )
       throw error
     } finally {
       setIsUploading(false)
@@ -166,10 +170,10 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
   }
 
   const handleFileSelect = (selectedFile: File) => {
-    const { error: verifyError } = verifyFile(selectedFile)
-    if (verifyError) {
-      setUploadError(verifyError)
-      return { success: false, error: verifyError }
+    const result = verifyFile(selectedFile)
+    if (!result.valid) {
+      setUploadError(result.error)
+      return { valid: false, error: result.error }
     }
 
     setFile(selectedFile)
@@ -217,7 +221,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
           setIsUploading(false)
         })
         .catch((error) => {
-          console.error('Failed to upload file:', error)
+          logger.error(error)
           setUploadError(
             error instanceof Error ? error.message : 'Upload failed',
           )
@@ -278,10 +282,10 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       if (!file) {
         throw new Error('No file selected')
       }
-      const { error } = verifyFile(file)
-      if (error) {
-        setUploadError(error)
-        throw new Error(error)
+      const result = verifyFile(file)
+      if (!result.valid) {
+        setUploadError(result.error)
+        throw new Error(result.error)
       }
 
       const uploadedStorageId = await handleUpload(file)

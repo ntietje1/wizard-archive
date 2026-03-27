@@ -4,7 +4,7 @@ import { getCampaignMembers } from './functions/getCampaignMembers'
 import { campaignMemberValidator, campaignValidator } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
 import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
-import { checkCampaignSlugExists as checkCampaignSlugExistsFn } from './functions/checkCampaignSlugExists'
+
 import type { Campaign, CampaignMember } from './types'
 
 export const getUserCampaigns = authQuery({
@@ -25,20 +25,6 @@ export const getCampaignBySlug = authQuery({
     return await getCampaignBySlugFn(ctx, {
       dmUsername: args.dmUsername,
       slug: args.slug,
-    })
-  },
-})
-
-export const checkCampaignSlugExists = authQuery({
-  args: {
-    slug: v.string(),
-    excludeCampaignId: v.optional(v.id('campaigns')),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args): Promise<boolean> => {
-    return await checkCampaignSlugExistsFn(ctx, {
-      slug: args.slug,
-      excludeCampaignId: args.excludeCampaignId,
     })
   },
 })

@@ -12,7 +12,7 @@ import {
   getItemTypeLabel,
 } from '~/features/sidebar/utils/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import {
@@ -213,7 +213,7 @@ export function WikiLinkAutocomplete({
 }: {
   editor: CustomBlockNoteEditor | undefined
 }) {
-  const { data: sidebarItems, itemsMap } = useAllSidebarItems()
+  const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
 
   const [menu, setMenu] = useState<{
     show: boolean

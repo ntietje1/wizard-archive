@@ -7,7 +7,6 @@ import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sid
 import { requireCampaignMembership } from '../../functions'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { SidebarItemId } from '../types/baseTypes'
-import type { SidebarItemShare } from '../../sidebarShares/types'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 
@@ -89,7 +88,8 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
       .withIndex('by_campaign_item_member', (q) =>
         q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
       )
-      .collect() as Promise<Array<SidebarItemShare>>,
+      .filter((q) => q.eq(q.field('deletionTime'), null))
+      .collect(),
     ctx.db
       .query('bookmarks')
       .withIndex('by_campaign_member_item', (q) =>
@@ -98,6 +98,7 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
           .eq('campaignMemberId', membership._id)
           .eq('sidebarItemId', item._id),
       )
+      .filter((q) => q.eq(q.field('deletionTime'), null))
       .unique(),
     getSidebarItemPermissionLevel(ctx, { item }),
   ])

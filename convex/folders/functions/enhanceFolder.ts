@@ -1,3 +1,4 @@
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { getSidebarItemAncestors } from './getSidebarItemAncestors'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
@@ -26,7 +27,7 @@ export const enhanceFolderWithContent = async (
 ): Promise<FolderWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: folder.parentId,
-    isTrashed: !!folder.deletionTime,
+    isTrashed: folder.location === SIDEBAR_ITEM_LOCATION.trash,
   })
   return {
     ...folder,

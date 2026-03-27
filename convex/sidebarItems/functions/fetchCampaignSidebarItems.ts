@@ -6,13 +6,17 @@ import {
   getMemberShares,
 } from '../../sidebarShares/functions/getCampaignShares'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
+import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItem, AnySidebarItemFromDb } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
-export const getAllSidebarItems = async (
+export const fetchCampaignSidebarItems = async (
   ctx: AuthQueryCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
+  {
+    campaignId,
+    location,
+  }: { campaignId: Id<'campaigns'>; location: SidebarItemLocation },
 ): Promise<Array<AnySidebarItem>> => {
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
@@ -21,26 +25,26 @@ export const getAllSidebarItems = async (
     await Promise.all([
       ctx.db
         .query('folders')
-        .withIndex('by_campaign_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('deletionTime', undefined),
+        .withIndex('by_campaign_location_parent_name', (q) =>
+          q.eq('campaignId', campaignId).eq('location', location),
         )
         .collect(),
       ctx.db
         .query('notes')
-        .withIndex('by_campaign_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('deletionTime', undefined),
+        .withIndex('by_campaign_location_parent_name', (q) =>
+          q.eq('campaignId', campaignId).eq('location', location),
         )
         .collect(),
       ctx.db
         .query('gameMaps')
-        .withIndex('by_campaign_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('deletionTime', undefined),
+        .withIndex('by_campaign_location_parent_name', (q) =>
+          q.eq('campaignId', campaignId).eq('location', location),
         )
         .collect(),
       ctx.db
         .query('files')
-        .withIndex('by_campaign_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('deletionTime', undefined),
+        .withIndex('by_campaign_location_parent_name', (q) =>
+          q.eq('campaignId', campaignId).eq('location', location),
         )
         .collect(),
       getCampaignBookmarks(ctx, campaignId, membership._id),

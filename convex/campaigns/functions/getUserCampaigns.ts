@@ -14,7 +14,9 @@ export async function getUserCampaigns(
     .collect()
     .then((memberships) =>
       memberships.filter(
-        (membership) => membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+        (membership) =>
+          membership.deletionTime === null &&
+          membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
       ),
     )
 

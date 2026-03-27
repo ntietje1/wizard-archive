@@ -4,12 +4,13 @@ import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { validateSidebarItemName } from '~/features/sidebar/utils/sidebar-validation'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import './md-link.css'
 
 interface TooltipState {
@@ -47,11 +48,11 @@ export function MdLinkClickHandler({
   editor: CustomBlockNoteEditor | undefined
 }) {
   const navigate = useNavigate()
-  const { navigateToNote } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
-  const { parentItemsMap } = useAllSidebarItems()
+  const { parentItemsMap } = useActiveSidebarItems()
   const editorEl = useEditorDomElement(editor)
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
@@ -62,7 +63,6 @@ export function MdLinkClickHandler({
 
   const { mutateAsync: createNote } = useAppMutation(
     api.notes.mutations.createNote,
-    { errorMessage: 'Failed to create note' },
   )
 
   const hideTooltip = () => setTooltip(HIDDEN_TOOLTIP)
@@ -223,9 +223,9 @@ export function MdLinkClickHandler({
             name: mdLink.itemName,
             parentId: null,
           })
-          if (result) navigateToNote(result.slug)
-        } catch (err) {
-          console.error('Failed to create note:', err)
+          if (result) navigateToItem(result.slug)
+        } catch (error) {
+          handleError(error, 'Failed to create note')
         }
       }
     }
@@ -237,7 +237,7 @@ export function MdLinkClickHandler({
     navigate,
     campaignData?._id,
     createNote,
-    navigateToNote,
+    navigateToItem,
     editorMode,
     parentItemsMap,
     hideTooltip,

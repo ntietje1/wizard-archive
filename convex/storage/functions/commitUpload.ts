@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
 import { validateFileUpload } from '../validation'
 import type { Id } from '../../_generated/dataModel'
@@ -14,7 +15,17 @@ export async function commitUpload(
     )
     .unique()
   if (!fileStorage) {
-    throw new Error('File storage not found')
+    throwClientError(
+      ERROR_CODE.NOT_FOUND,
+      'The uploaded file could not be found',
+    )
+  }
+
+  if (fileStorage.status === FILE_STORAGE_STATUS.Committed) {
+    throwClientError(
+      ERROR_CODE.CONFLICT,
+      'This file has already been committed',
+    )
   }
 
   // Validate file before committing
@@ -28,8 +39,8 @@ export async function commitUpload(
     storageMetadata.size,
     fileStorage.originalFileName,
   )
-  if (!validation.success) {
-    throw new Error(validation.error)
+  if (!validation.valid) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error)
   }
 
   const now = Date.now()

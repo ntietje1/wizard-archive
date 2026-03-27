@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireDmRole } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
@@ -8,7 +9,7 @@ export async function updateSession(
 ): Promise<null> {
   const session = await ctx.db.get(sessionId)
   if (!session) {
-    throw new Error('Session not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Session not found')
   }
 
   await requireDmRole(ctx, session.campaignId)

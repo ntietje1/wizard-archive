@@ -75,7 +75,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
             onClick()
             return
           }
-          setLastSelectedItem({ type: map.type, slug: map.slug })
+          setLastSelectedItem(map.slug)
         }}
       >
         <Card

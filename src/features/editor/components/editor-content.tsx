@@ -1,15 +1,12 @@
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemEditor } from './viewer/sidebar-item-editor'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
-import {
-  getItemTypeLabel,
-  getTypeAndSlug,
-} from '~/features/sidebar/utils/sidebar-item-utils'
+import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { cn } from '~/features/shadcn/lib/utils'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -19,18 +16,19 @@ import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { handleError } from '~/shared/utils/logger'
 
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap } = useAllSidebarItems()
+  const { itemsMap } = useActiveSidebarItems()
 
   const canView =
     !!item &&
@@ -109,7 +107,7 @@ function NotSharedContent() {
   const { isDm, campaignId } = useCampaign()
   const { editorSearch } = useCurrentItem()
   const { viewAsPlayerId } = useEditorMode()
-  const { data: allItems } = useAllSidebarItems()
+  const { data: allItems } = useActiveSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
   const { createItem } = useCreateSidebarItem()
   const { getDefaultName } = useSidebarValidation()
@@ -117,15 +115,11 @@ function NotSharedContent() {
   const { openParentFolders } = useOpenParentFolders()
   const [isPending, setIsPending] = useState(false)
 
-  const typeAndSlug = getTypeAndSlug(editorSearch)
-  const requestedType = typeAndSlug?.type
+  const requestedSlug = getSlug(editorSearch)
 
   // Check if the item exists in the full sidebar list (DM sees all items)
   const itemExists =
-    typeAndSlug &&
-    allItems.some(
-      (i) => i.type === typeAndSlug.type && i.slug === typeAndSlug.slug,
-    )
+    requestedSlug && allItems.some((i) => i.slug === requestedSlug)
 
   // Resolve the viewed player's display name
   const viewAsPlayerName = (() => {
@@ -143,44 +137,40 @@ function NotSharedContent() {
   })()
 
   const handleCreate = async () => {
-    if (!campaignId || !requestedType || isPending) return
+    if (!campaignId || !requestedSlug || isPending) return
 
     setIsPending(true)
     try {
       const result = await createItem({
-        type: requestedType,
+        type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
         parentId: null,
-        name: getDefaultName(requestedType, null),
+        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
       openParentFolders(result.id)
-      navigateToItem(result)
+      navigateToItem(result.slug)
     } catch (error) {
-      console.error('Failed to create item:', error)
-      const typeLabel = requestedType ? getItemTypeLabel(requestedType) : 'item'
-      toast.error(`Failed to create ${typeLabel}`)
+      handleError(error, 'Failed to create note')
     }
     setIsPending(false)
   }
 
-  const itemTypeLabel = requestedType ? getItemTypeLabel(requestedType) : 'page'
-
   const getMessage = () => {
     if (itemExists) {
       const target = viewAsPlayerName ?? 'you'
-      return `This ${itemTypeLabel.toLowerCase()} isn't shared with ${target}.`
+      return `This page isn't shared with ${target}.`
     }
     if (isDm) {
-      return `This ${itemTypeLabel.toLowerCase()} doesn't exist.`
+      return "This page doesn't exist."
     }
-    return `This ${itemTypeLabel.toLowerCase()} doesn't exist or isn't shared with you.`
+    return "This page doesn't exist or isn't shared with you."
   }
 
   return (
     <div className="flex-1 min-h-0 flex items-center justify-center">
       <div className="text-center text-muted-foreground">
         <p>{getMessage()}</p>
-        {!itemExists && isDm && requestedType && (
+        {!itemExists && isDm && requestedSlug && (
           <p className="mt-2">
             <Button variant="link" onClick={handleCreate} disabled={isPending}>
               Create it

@@ -118,7 +118,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
             onClick()
             return
           }
-          setLastSelectedItem({ type: file.type, slug: file.slug })
+          setLastSelectedItem(file.slug)
         }}
       >
         <Card

@@ -9,26 +9,33 @@ export async function startSession(
   const { campaign } = await requireDmRole(ctx, campaignId)
   const now = Date.now()
 
-  // End current session if one exists
-  if (campaign.currentSessionId) {
-    const existingSession = await ctx.db.get(campaign.currentSessionId)
-    if (existingSession) {
-      await ctx.db.patch(campaign.currentSessionId, {
-        endedAt: now,
-        updatedTime: now,
-        updatedBy: ctx.user.profile._id,
-      })
+  const endPrevious = async () => {
+    if (campaign.currentSessionId) {
+      const existingSession = await ctx.db.get(campaign.currentSessionId)
+      if (existingSession) {
+        await ctx.db.patch(campaign.currentSessionId, {
+          endedAt: now,
+          updatedTime: now,
+          updatedBy: ctx.user.profile._id,
+        })
+      }
     }
   }
 
-  const sessionId = await ctx.db.insert('sessions', {
-    campaignId,
-    name,
-    startedAt: now,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
-    createdBy: ctx.user.profile._id,
-  })
+  const insertNew = () =>
+    ctx.db.insert('sessions', {
+      campaignId,
+      name: name ?? null,
+      startedAt: now,
+      endedAt: null,
+      deletionTime: null,
+      deletedBy: null,
+      updatedTime: null,
+      updatedBy: null,
+      createdBy: ctx.user.profile._id,
+    })
+
+  const [, sessionId] = await Promise.all([endPrevious(), insertNew()])
 
   await ctx.db.patch(campaignId, {
     currentSessionId: sessionId,

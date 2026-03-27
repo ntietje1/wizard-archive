@@ -5,6 +5,7 @@ import { useEditorContextMenu } from '../hooks/useEditorContextMenu'
 import { EditorContextMenuProvider } from './editor-context-menu-provider'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { MenuItemDef, ViewContext } from '../types'
+import { logger } from '~/shared/utils/logger'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -125,7 +126,7 @@ const EditorMenuContent = forwardRef<
     try {
       await menuItem.action(menuContext)
     } catch (error) {
-      console.error('ContextMenu: Error executing action', error)
+      logger.error(error)
     }
     actionInProgressRef.current = false
     setIsOpen(false)

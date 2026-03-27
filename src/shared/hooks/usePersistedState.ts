@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { logger } from '~/shared/utils/logger'
 
 const isBrowser = typeof window !== 'undefined'
 
@@ -18,7 +19,7 @@ function usePersistedState<T>(
         setStoredValue(parsedValue)
       }
     } catch (error) {
-      console.log(error)
+      logger.debug(error)
     }
   }, [key])
 
@@ -41,7 +42,7 @@ function usePersistedState<T>(
         return valueToStore
       })
     } catch (error) {
-      console.log(error)
+      logger.debug(error)
     }
   }
 
@@ -57,7 +58,7 @@ function usePersistedState<T>(
               event.newValue ? JSON.parse(event.newValue) : initialValue,
             )
           } catch (error) {
-            console.log(error)
+            logger.debug(error)
           }
         }
       } else {
@@ -70,7 +71,7 @@ function usePersistedState<T>(
           try {
             setStoredValue(JSON.parse(customEvent.detail.newValue))
           } catch (error) {
-            console.log(error)
+            logger.debug(error)
           }
         }
       }

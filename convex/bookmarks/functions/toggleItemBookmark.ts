@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
@@ -10,15 +11,16 @@ export async function toggleItemBookmark(
 ) {
   const item = await ctx.db.get(sidebarItemId)
   if (!item) {
-    throw new Error('Sidebar item not found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
+
+  const campaignId = item.campaignId
+  const { membership } = await requireCampaignMembership(ctx, campaignId)
+
   await checkItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-
-  const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
   const campaignMemberId = membership._id
 
   // Check if bookmark already exists
@@ -32,20 +34,37 @@ export async function toggleItemBookmark(
     )
     .unique()
 
+  const now = Date.now()
+  const profileId = ctx.user.profile._id
+
   if (existingBookmark) {
-    // Remove bookmark
-    await ctx.db.delete(existingBookmark._id)
-    return { isBookmarked: false }
-  } else {
-    // Add bookmark
-    await ctx.db.insert('bookmarks', {
-      campaignId,
-      sidebarItemId: sidebarItemId,
-      campaignMemberId,
-      updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
-      createdBy: ctx.user.profile._id,
+    if (existingBookmark.deletionTime === null) {
+      await ctx.db.patch(existingBookmark._id, {
+        deletionTime: now,
+        deletedBy: profileId,
+        updatedTime: now,
+        updatedBy: profileId,
+      })
+      return { isBookmarked: false }
+    }
+    await ctx.db.patch(existingBookmark._id, {
+      deletionTime: null,
+      deletedBy: null,
+      updatedTime: now,
+      updatedBy: profileId,
     })
     return { isBookmarked: true }
   }
+
+  await ctx.db.insert('bookmarks', {
+    campaignId,
+    sidebarItemId,
+    campaignMemberId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+  return { isBookmarked: true }
 }

@@ -5,6 +5,7 @@ import { api } from 'convex/_generated/api'
 import type { CampaignMember } from 'convex/campaigns/types'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,6 @@ export function RemovePlayerDialog({
 }) {
   const updateMemberStatus = useAppMutation(
     api.campaigns.mutations.updateCampaignMemberStatus,
-    { errorMessage: 'Failed to remove player' },
   )
 
   const playerName = player?.userProfile.name ?? 'this player'
@@ -40,7 +40,7 @@ export function RemovePlayerDialog({
       })
       toast.success('Player removed successfully')
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to remove player')
     }
     onClose()
   }

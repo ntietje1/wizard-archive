@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { Button } from '~/features/shadcn/components/button'
+import { logger } from '~/shared/utils/logger'
 
 export default function ErrorPage({
   error = 'An unexpected error occurred. Please refresh the page.',
@@ -8,7 +9,7 @@ export default function ErrorPage({
   error?: string
 }) {
   useEffect(() => {
-    console.error(error)
+    logger.error(error)
   }, [error])
 
   return (

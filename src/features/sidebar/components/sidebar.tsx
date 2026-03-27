@@ -4,10 +4,10 @@ import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export function FileSidebar() {
-  const { status } = useAllSidebarItems()
+  const { status } = useActiveSidebarItems()
   const { campaignId } = useCampaign()
   const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
 

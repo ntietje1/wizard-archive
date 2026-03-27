@@ -1,3 +1,4 @@
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { requireCampaignMembership } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
@@ -26,7 +27,7 @@ export async function getSidebarItemAncestors(
     }
     await requireCampaignMembership(ctx, rawFolder.campaignId)
     // Trashed items only show trashed ancestors
-    if (isTrashed && !rawFolder.deletionTime) {
+    if (isTrashed && rawFolder.location !== SIDEBAR_ITEM_LOCATION.trash) {
       break
     }
     const folder = await enhanceSidebarItem(ctx, { item: rawFolder })

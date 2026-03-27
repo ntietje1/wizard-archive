@@ -1,124 +1,72 @@
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { SidebarItemLocation } from '../types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
+import type { AnySidebarItemFromDb } from '../types/types'
 
-export interface DescendantItems {
-  folders: Array<Doc<'folders'>>
-  notes: Array<Doc<'notes'>>
-  maps: Array<Doc<'gameMaps'>>
-  files: Array<Doc<'files'>>
-}
-
-/**
- * Recursively collects all descendants of a folder, grouped by type.
- * Single source of truth for tree traversal — used by delete, trash, and download.
- *
- * By default queries only active (non-trashed) items (`trashed: false`).
- * Set `trashed: true` to collect trashed descendants (needed for restore / permanent delete).
- */
 export async function collectDescendants(
   ctx: QueryCtx,
   {
-    folderId,
     campaignId,
-    trashed = false,
+    location,
+    folderId,
   }: {
-    folderId: Id<'folders'>
     campaignId: Id<'campaigns'>
-    trashed?: boolean
+    location: SidebarItemLocation
+    folderId: Id<'folders'>
   },
-): Promise<DescendantItems> {
-  const result: DescendantItems = {
-    folders: [],
-    notes: [],
-    maps: [],
-    files: [],
-  }
+): Promise<Array<AnySidebarItemFromDb>> {
+  const result: Array<AnySidebarItemFromDb> = []
 
   async function collectFromFolder(parentId: Id<'folders'>) {
-    const [childFolders, childNotes, childMaps, childFiles] = trashed
-      ? await Promise.all([
-          ctx.db
-            .query('folders')
-            .withIndex('by_campaign_parent_deletionTime', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('parentId', parentId)
-                .gt('deletionTime', 0),
-            )
-            .collect(),
-          ctx.db
-            .query('notes')
-            .withIndex('by_campaign_parent_deletionTime', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('parentId', parentId)
-                .gt('deletionTime', 0),
-            )
-            .collect(),
-          ctx.db
-            .query('gameMaps')
-            .withIndex('by_campaign_parent_deletionTime', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('parentId', parentId)
-                .gt('deletionTime', 0),
-            )
-            .collect(),
-          ctx.db
-            .query('files')
-            .withIndex('by_campaign_parent_deletionTime', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('parentId', parentId)
-                .gt('deletionTime', 0),
-            )
-            .collect(),
-        ])
-      : await Promise.all([
-          ctx.db
-            .query('folders')
-            .withIndex('by_campaign_parent_name', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('deletionTime', undefined)
-                .eq('parentId', parentId),
-            )
-            .collect(),
-          ctx.db
-            .query('notes')
-            .withIndex('by_campaign_parent_name', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('deletionTime', undefined)
-                .eq('parentId', parentId),
-            )
-            .collect(),
-          ctx.db
-            .query('gameMaps')
-            .withIndex('by_campaign_parent_name', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('deletionTime', undefined)
-                .eq('parentId', parentId),
-            )
-            .collect(),
-          ctx.db
-            .query('files')
-            .withIndex('by_campaign_parent_name', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .eq('deletionTime', undefined)
-                .eq('parentId', parentId),
-            )
-            .collect(),
-        ])
+    const [childFolders, childNotes, childMaps, childFiles] = await Promise.all(
+      [
+        ctx.db
+          .query('folders')
+          .withIndex('by_campaign_location_parent_name', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('location', location)
+              .eq('parentId', parentId),
+          )
+          .collect(),
+        ctx.db
+          .query('notes')
+          .withIndex('by_campaign_location_parent_name', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('location', location)
+              .eq('parentId', parentId),
+          )
+          .collect(),
+        ctx.db
+          .query('gameMaps')
+          .withIndex('by_campaign_location_parent_name', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('location', location)
+              .eq('parentId', parentId),
+          )
+          .collect(),
+        ctx.db
+          .query('files')
+          .withIndex('by_campaign_location_parent_name', (q) =>
+            q
+              .eq('campaignId', campaignId)
+              .eq('location', location)
+              .eq('parentId', parentId),
+          )
+          .collect(),
+      ],
+    )
 
-    result.notes.push(...childNotes)
-    result.maps.push(...childMaps)
-    result.files.push(...childFiles)
+    result.push(
+      ...(childNotes as Array<AnySidebarItemFromDb>),
+      ...(childMaps as Array<AnySidebarItemFromDb>),
+      ...(childFiles as Array<AnySidebarItemFromDb>),
+    )
 
     for (const folder of childFolders) {
-      result.folders.push(folder)
+      result.push(folder as AnySidebarItemFromDb)
       await collectFromFolder(folder._id)
     }
   }

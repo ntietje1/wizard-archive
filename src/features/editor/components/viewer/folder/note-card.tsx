@@ -66,7 +66,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
             onClick()
             return
           }
-          setLastSelectedItem({ type: note.type, slug: note.slug })
+          setLastSelectedItem(note.slug)
         }}
       >
         <Card

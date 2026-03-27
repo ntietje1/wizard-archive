@@ -198,7 +198,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
             onClick()
             return
           }
-          setLastSelectedItem({ type: folder.type, slug: folder.slug })
+          setLastSelectedItem(folder.slug)
         }}
       >
         <div className="relative block w-full h-full cursor-pointer group">

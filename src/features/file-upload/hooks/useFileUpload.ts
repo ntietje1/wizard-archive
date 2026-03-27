@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useState } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
+import { logger } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 
 export interface UploadProgress {
@@ -19,19 +20,11 @@ export const useFileUpload = () => {
 
   const generateUploadUrl = useAppMutation(
     api.storage.mutations.generateUploadUrl,
-    { errorMessage: 'Failed to generate upload URL' },
   )
 
-  const trackUploadMutation = useAppMutation(
-    api.storage.mutations.trackUpload,
-    {
-      errorMessage: 'Failed to track upload',
-    },
-  )
+  const trackUploadMutation = useAppMutation(api.storage.mutations.trackUpload)
 
-  const commitUpload = useAppMutation(api.storage.mutations.commitUpload, {
-    errorMessage: 'Failed to commit upload',
-  })
+  const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
 
   // assumes file is already validated
   const uploadFile = useMutation({
@@ -69,11 +62,11 @@ export const useFileUpload = () => {
                 })
                 resolve(storageId)
               } catch (error) {
-                console.error('Failed to track upload', error)
+                logger.error(error)
                 reject(new Error('Failed to track upload'))
               }
             } catch (error) {
-              console.error('Failed to parse upload response', error)
+              logger.error(error)
               reject(new Error('Failed to parse upload response'))
             }
           } else {

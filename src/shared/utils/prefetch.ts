@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { ERROR_CODE, isAppError } from 'convex/errors'
+import { ERROR_CODE, isClientError } from 'convex/errors'
 import type { QueryClient } from '@tanstack/react-query'
 import type {
   FunctionArgs,
@@ -17,7 +17,7 @@ export async function prefetchQuery<
   try {
     return await queryClient.ensureQueryData(convexQuery(query, args))
   } catch (e) {
-    if (!isAppError(e, ERROR_CODE.NOT_AUTHENTICATED)) throw e
+    if (!isClientError(e, ERROR_CODE.NOT_AUTHENTICATED)) throw e
     return undefined
   }
 }

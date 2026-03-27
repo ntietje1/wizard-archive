@@ -5,6 +5,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
+import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -53,7 +54,7 @@ export function MapForm({
   onSuccess,
 }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
-  const { navigateToMap } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const map = useAuthQuery(
@@ -67,9 +68,9 @@ export function MapForm({
     uploadOnSelect: true,
     fileTypeValidator: (file: File) => {
       if (!file.type.startsWith('image/')) {
-        return { success: false, error: 'Only image files are allowed' }
+        return { valid: false, error: 'Only image files are allowed' }
       }
-      return { success: true }
+      return { valid: true }
     },
   })
 
@@ -130,8 +131,7 @@ export function MapForm({
         try {
           finalImageStorageId = await imageUpload.handleSubmit()
         } catch (error) {
-          console.error('Failed to commit image upload:', error)
-          toast.error('Failed to save image')
+          handleError(error, 'Failed to save image')
           return
         }
       } else if (map.data?.imageStorageId && !imageUpload.removed) {
@@ -158,7 +158,7 @@ export function MapForm({
           toast.success('Map updated')
           onSuccess?.(slug)
         } catch (error) {
-          console.error(error)
+          handleError(error, 'Failed to save map')
           return
         }
       } else if (campaignId) {
@@ -170,7 +170,7 @@ export function MapForm({
           parentId: parentId ?? null,
         })
         await openParentFolders(newMapId)
-        navigateToMap(newMapSlug)
+        navigateToItem(newMapSlug)
         toast.success('Map created')
         onSuccess?.(newMapSlug)
         onClose()
@@ -179,7 +179,7 @@ export function MapForm({
         return
       }
     } catch (error) {
-      console.error(error)
+      handleError(error, 'Failed to save map')
     }
   }
 

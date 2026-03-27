@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
+import { logger } from '~/shared/utils/logger'
 
 export function AuthRedirectPage() {
   const navigate = useNavigate()
@@ -13,7 +14,7 @@ export function AuthRedirectPage() {
         try {
           const url = new URL(joinUrl, window.location.origin)
           if (url.origin !== window.location.origin) {
-            console.error('Invalid redirect URL origin:', joinUrl)
+            logger.error('Invalid redirect URL origin:', joinUrl)
             sessionStorage.removeItem('joinCampaignRedirectUrl')
             navigate({ to: '/', replace: true })
             return
@@ -22,7 +23,7 @@ export function AuthRedirectPage() {
           window.location.href = url.pathname + url.search + url.hash
           return
         } catch {
-          console.error('Invalid redirect URL format:', joinUrl)
+          logger.error('Invalid redirect URL format:', joinUrl)
           sessionStorage.removeItem('joinCampaignRedirectUrl')
           navigate({ to: '/', replace: true })
           return

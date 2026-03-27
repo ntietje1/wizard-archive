@@ -1,3 +1,4 @@
+import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   requireItemAccess,
   validateSidebarItemRename,
@@ -25,7 +26,7 @@ export async function updateFile(
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
   const fileFromDb = await ctx.db.get(fileId)
-  if (!fileFromDb) throw new Error('File not found')
+  if (!fileFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
   await requireCampaignMembership(ctx, fileFromDb.campaignId)
   const file = await requireItemAccess(ctx, {
     rawItem: fileFromDb,

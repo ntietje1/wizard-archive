@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -12,8 +13,8 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import {
-  useAllSidebarItems,
-  useTrashedSidebarItems,
+  useActiveSidebarItems,
+  useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
@@ -28,8 +29,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { moveItem } = useMoveSidebarItem()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, parentItemsMap, getAncestorSidebarItems } =
-    useAllSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashedSidebarItems()
+    useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 

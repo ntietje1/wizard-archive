@@ -3,7 +3,10 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
@@ -12,8 +15,9 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { handleError, logger } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
+import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
@@ -32,7 +36,7 @@ import {
 import { assertNever } from '~/shared/utils/utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
-import { useAllSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -41,8 +45,7 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, navigateToMap, clearEditorContent } =
-    useEditorNavigation()
+  const { navigateToItem, clearEditorContent } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateSidebarItem()
@@ -53,7 +56,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
-  const { parentItemsMap } = useAllSidebarItems()
+  const { parentItemsMap } = useActiveSidebarItems()
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(
     null,
@@ -71,7 +74,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
       if (!ctx.item) return
-      navigateToItem(ctx.item)
+      navigateToItem(ctx.item.slug)
     },
 
     rename: async (ctx: MenuContext) => {
@@ -95,20 +98,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
 
       // Everything else (including empty folders): trash immediately
-      moveItem(item, { deleted: true }).then(
+      moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash }).then(
         () => {
-          const current = getSelectedTypeAndSlug()
-          if (
-            current &&
-            item.type === current.type &&
-            item.slug === current.slug
-          ) {
+          const currentSlug = getSelectedSlug()
+          if (item.slug === currentSlug) {
             clearEditorContent()
           }
           toast.success('Moved to trash')
         },
         (error) => {
-          console.error(error)
+          handleError(error, 'Failed to move item to trash')
         },
       )
     },
@@ -121,7 +120,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     createNote: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -132,16 +131,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create note')
       }
     },
 
     createFolder: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -155,16 +154,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           ),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create folder')
       }
     },
 
     createMap: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -178,16 +177,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           ),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create map')
       }
     },
 
     createFile: async (ctx: MenuContext) => {
       if (!campaignId) return
       if (ctx.item && !isFolder(ctx.item)) {
-        console.error('Invalid parent type')
+        logger.error('Invalid parent type')
         return
       }
       try {
@@ -198,9 +197,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
-        navigateToItem(result)
+        navigateToItem(result.slug)
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to create file')
       }
     },
 
@@ -259,11 +258,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         // Navigate to the map
         const map = ctx.activeMap
-        navigateToMap(map.slug)
+        navigateToItem(map.slug)
         toast.info('Highlighting map pin... (coming soon)')
       } catch (error) {
-        console.error('Failed to navigate to map pin:', error)
-        toast.error('Failed to navigate to map pin')
+        handleError(error, 'Failed to navigate to map pin')
       }
     },
 
@@ -283,8 +281,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         })
         toast.success('Pin removed')
       } catch (error) {
-        console.error('Failed to remove pin:', error)
-        toast.error('Failed to remove pin')
+        handleError(error, 'Failed to remove pin')
       }
     },
 
@@ -300,8 +297,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         })
         toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
       } catch (error) {
-        console.error('Failed to toggle pin visibility:', error)
-        toast.error('Failed to toggle pin visibility')
+        handleError(error, 'Failed to toggle pin visibility')
       }
     },
 
@@ -359,8 +355,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           toast.success(`Access set to ${level}`)
         }
       } catch (error) {
-        console.error('Failed to set general access level:', error)
-        toast.error('Failed to update access level')
+        handleError(error, 'Failed to update access level')
       }
     },
 
@@ -382,8 +377,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         document.body.removeChild(link)
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download file:', error)
-        toast.error('Failed to download file')
+        handleError(error, 'Failed to download file')
       }
     },
 
@@ -420,8 +414,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download note:', error)
-        toast.error('Failed to download note')
+        handleError(error, 'Failed to download note')
       }
     },
 
@@ -443,8 +436,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         document.body.removeChild(link)
         toast.success('Download started')
       } catch (error) {
-        console.error('Failed to download map:', error)
-        toast.error('Failed to download map')
+        handleError(error, 'Failed to download map')
       }
     },
 
@@ -476,12 +468,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 case SIDEBAR_ITEM_TYPES.files:
                 case SIDEBAR_ITEM_TYPES.gameMaps: {
                   if (!item.downloadUrl) {
-                    console.warn(`No download URL for: ${item.path}`)
+                    logger.warn(`No download URL for: ${item.path}`)
                     return
                   }
                   const response = await fetch(item.downloadUrl)
                   if (!response.ok) {
-                    console.warn(`Failed to fetch: ${item.path}`)
+                    logger.warn(`Failed to fetch: ${item.path}`)
                     return
                   }
                   const blob = await response.blob()
@@ -497,7 +489,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                   assertNever(item)
               }
             } catch (error) {
-              console.warn(`Failed to process: ${item.path}`, error)
+              logger.warn(`Failed to process: ${item.path}`, error)
             }
           },
         )
@@ -520,9 +512,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.dismiss(toastId)
         toast.success(`Downloaded ${items.length} item(s)`)
       } catch (error) {
-        console.error('Failed to download folder:', error)
         toast.dismiss(toastId)
-        toast.error('Failed to download folder')
+        handleError(error, 'Failed to download folder')
       }
     },
 
@@ -553,12 +544,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
               case SIDEBAR_ITEM_TYPES.files:
               case SIDEBAR_ITEM_TYPES.gameMaps: {
                 if (!item.downloadUrl) {
-                  console.warn(`No download URL for: ${item.path}`)
+                  logger.warn(`No download URL for: ${item.path}`)
                   return
                 }
                 const response = await fetch(item.downloadUrl)
                 if (!response.ok) {
-                  console.warn(`Failed to fetch: ${item.path}`)
+                  logger.warn(`Failed to fetch: ${item.path}`)
                   return
                 }
                 const blob = await response.blob()
@@ -574,7 +565,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
                 assertNever(item)
             }
           } catch (error) {
-            console.warn(`Failed to process: ${item.path}`, error)
+            logger.warn(`Failed to process: ${item.path}`, error)
           }
         })
 
@@ -596,19 +587,18 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         toast.dismiss(toastId)
         toast.success(`Downloaded ${items.length} item(s)`)
       } catch (error) {
-        console.error('Failed to download all items:', error)
         toast.dismiss(toastId)
-        toast.error('Failed to download')
+        handleError(error, 'Failed to download')
       }
     },
 
     restore: async (ctx: MenuContext) => {
       if (!ctx.item) return
       try {
-        await moveItem(ctx.item, { deleted: false })
+        await moveItem(ctx.item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
         toast.success('Item restored')
       } catch (error) {
-        console.error(error)
+        handleError(error, 'Failed to restore item')
       }
     },
 
@@ -631,7 +621,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           sidebarItemId: ctx.item._id,
         })
         .catch((error) => {
-          console.error('Failed to toggle bookmark:', error)
+          handleError(error, 'Failed to toggle bookmark')
         })
     },
   }

@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
@@ -16,6 +15,7 @@ import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidat
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { handleError } from '~/shared/utils/logger'
 
 interface NewItemCardProps {
   parentId: Id<'folders'>
@@ -61,10 +61,9 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         name: getDefaultName(type, parentId),
       })
       openParentFolders(result.id)
-      navigateToItem(result)
+      navigateToItem(result.slug)
     } catch (error) {
-      console.error(error)
-      toast.error(`Failed to create item`)
+      handleError(error, 'Failed to create item')
     }
   }
 

@@ -1,14 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
-import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
+import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -61,27 +64,21 @@ export function useEditSidebarItem() {
   const queryClient = useQueryClient()
   const { navigateToItem } = useEditorNavigation()
 
-  const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote, {
-    errorMessage: 'Failed to update note',
-  })
+  const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote)
   const updateFolderMutation = useAppMutation(
     api.folders.mutations.updateFolder,
-    { errorMessage: 'Failed to update folder' },
   )
-  const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap, {
-    errorMessage: 'Failed to update map',
-  })
-  const updateFileMutation = useAppMutation(api.files.mutations.updateFile, {
-    errorMessage: 'Failed to update file',
-  })
+  const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap)
+  const updateFileMutation = useAppMutation(api.files.mutations.updateFile)
 
   const optimisticUpdate = (
     updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,
   ) => {
     if (!campaignId) return
     queryClient.setQueryData<Array<AnySidebarItem>>(
-      convexQuery(api.sidebarItems.queries.getAllSidebarItems, {
+      convexQuery(api.sidebarItems.queries.getSidebarItemsByLocation, {
         campaignId,
+        location: SIDEBAR_ITEM_LOCATION.sidebar,
       }).queryKey,
       (prev) => (prev ? updater(prev) : prev),
     )
@@ -102,9 +99,8 @@ export function useEditSidebarItem() {
       if (!result.valid) throw new Error(result.error)
     }
 
-    const current = getSelectedTypeAndSlug()
-    const isCurrentItem =
-      current && item.type === current.type && item.slug === current.slug
+    const currentSlug = getSelectedSlug()
+    const isCurrentItem = item.slug === currentSlug
 
     const optimisticFields: Partial<EditItemBase> = {}
     if (trimmedName !== undefined) optimisticFields.name = trimmedName
@@ -176,7 +172,7 @@ export function useEditSidebarItem() {
           prev.map((i) => (i._id === item._id ? { ...i, slug } : i)),
         )
         if (isCurrentItem) {
-          await navigateToItem({ type: item.type, slug }, true)
+          await navigateToItem(slug, true)
         }
       }
 

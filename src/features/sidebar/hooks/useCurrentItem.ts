@@ -4,7 +4,7 @@ import { api } from 'convex/_generated/api'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { getTypeAndSlug } from '~/features/sidebar/utils/sidebar-item-utils'
+import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export function useCurrentItem() {
   const { campaignId } = useCampaign()
@@ -15,37 +15,28 @@ export function useCurrentItem() {
   })
   const editorSearch = editorMatch?.search ?? {}
 
-  const typeAndSlug = getTypeAndSlug(editorSearch)
+  const slug = getSlug(editorSearch)
 
   const sidebarItemQuery = useAuthQuery(
     api.sidebarItems.queries.getSidebarItemBySlug,
-    typeAndSlug && campaignId
-      ? { campaignId, type: typeAndSlug.type, slug: typeAndSlug.slug }
-      : 'skip',
+    slug && campaignId ? { campaignId, slug } : 'skip',
     {
-      placeholderData: typeAndSlug ? keepPreviousData : undefined,
+      placeholderData: slug ? keepPreviousData : undefined,
     },
   )
 
-  const rawItem = typeAndSlug ? (sidebarItemQuery.data ?? null) : null
+  const rawItem = slug ? (sidebarItemQuery.data ?? null) : null
 
-  // When keepPreviousData is active, we may have stale data from a different
-  // item while the new query loads. Detect this and treat it as loading.
-  const isStale =
-    rawItem &&
-    typeAndSlug &&
-    (rawItem.type !== typeAndSlug.type || rawItem.slug !== typeAndSlug.slug)
+  const isStale = rawItem && slug && rawItem.slug !== slug
 
   const item = isStale ? null : rawItem
 
-  // The query has definitively resolved with null for the current params
-  // (not stale previous data, not still loading).
   const queryReturnedNull =
     rawItem === null &&
     sidebarItemQuery.status === 'success' &&
     !sidebarItemQuery.isFetching
 
-  const hasRequestedItem = typeAndSlug !== null
+  const hasRequestedItem = slug !== null
   const isLoading = hasRequestedItem && !item && !queryReturnedNull
   const isNotFound = hasRequestedItem && !item && !isLoading
 

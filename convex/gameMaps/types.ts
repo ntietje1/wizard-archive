@@ -37,5 +37,5 @@ export type MapPin = CommonValidatorFields<'mapPins'> & {
 }
 
 export type MapPinWithItem = MapPin & {
-  item?: AnySidebarItem
+  item: AnySidebarItem | null
 }

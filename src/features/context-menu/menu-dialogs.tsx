@@ -6,11 +6,12 @@ import {
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { handleError } from '~/shared/utils/logger'
 import { MapDialog } from '~/features/editor/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/features/editor/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/features/sidebar/components/forms/sidebar-item-edit-dialog'
 import { FolderDeleteConfirmDialog } from '~/features/sidebar/components/folder-delete-confirm-dialog'
-import { getSelectedTypeAndSlug } from '~/features/sidebar/hooks/useSelectedItem'
+import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 
 export interface MenuDialogState {
   deleteFolderDialog: Folder | null
@@ -57,12 +58,8 @@ export function MenuDialogs({
           folder={deleteFolderDialog}
           isDeleting={true}
           onConfirm={() => {
-            const current = getSelectedTypeAndSlug()
-            if (
-              current &&
-              deleteFolderDialog.type === current.type &&
-              deleteFolderDialog.slug === current.slug
-            ) {
+            const currentSlug = getSelectedSlug()
+            if (deleteFolderDialog.slug === currentSlug) {
               clearEditorContent()
             }
           }}
@@ -109,7 +106,7 @@ export function MenuDialogs({
               await emptyTrashBin()
               toast.success('Trash emptied')
             } catch (error) {
-              console.error(error)
+              handleError(error, 'Failed to empty trash')
             }
             closeEmptyTrashDialog()
           }}
@@ -124,16 +121,12 @@ export function MenuDialogs({
             try {
               await permanentlyDeleteItem(confirmPermanentDeleteItem)
               toast.success('Item permanently deleted')
-              const current = getSelectedTypeAndSlug()
-              if (
-                current &&
-                confirmPermanentDeleteItem.type === current.type &&
-                confirmPermanentDeleteItem.slug === current.slug
-              ) {
+              const currentSlug = getSelectedSlug()
+              if (confirmPermanentDeleteItem.slug === currentSlug) {
                 clearEditorContent()
               }
             } catch (error) {
-              console.error(error)
+              handleError(error, 'Failed to delete item')
             }
             closePermanentDeleteDialog()
           }}

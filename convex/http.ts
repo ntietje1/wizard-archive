@@ -1,6 +1,6 @@
 import { httpRouter } from 'convex/server'
 import { httpAction } from './_generated/server'
-import { authComponent, createAuth } from './auth'
+import { authComponent, createAuth } from './auth/component'
 import { resend } from './email'
 
 const http = httpRouter()

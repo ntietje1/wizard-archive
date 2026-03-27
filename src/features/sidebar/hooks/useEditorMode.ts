@@ -3,10 +3,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { EDITOR_MODE } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Editor, EditorMode } from 'convex/editors/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
@@ -34,7 +36,6 @@ export function useEditorMode(): EditorModeContextType {
   const setEditorMutation = useAppMutation(
     api.editors.mutations.setCurrentEditor,
     {
-      errorMessage: 'Failed to update editor',
       onMutate: async ({ editorMode: newMode }) => {
         if (!campaignData?._id || !newMode) return
 
@@ -56,10 +57,11 @@ export function useEditorMode(): EditorModeContextType {
 
         return { previous, queryKey: queryOptions.queryKey }
       },
-      onError: (_err, _vars, context) => {
+      onError: (err, _vars, context) => {
         if (context?.previous) {
           queryClient.setQueryData(context.queryKey, context.previous)
         }
+        handleError(err, 'Failed to update editor mode')
       },
       onSettled: () => {
         if (!campaignData?._id) return
@@ -76,7 +78,7 @@ export function useEditorMode(): EditorModeContextType {
 
   const rawEditorMode = editorQuery.data?.editorMode ?? EDITOR_MODE.EDITOR
 
-  const isDeleted = !!currentItem?.deletionTime
+  const isDeleted = currentItem?.location === SIDEBAR_ITEM_LOCATION.trash
   const canEdit =
     !isDeleted &&
     hasAtLeastPermissionLevel(

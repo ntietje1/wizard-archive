@@ -34,8 +34,7 @@ function FlatSidebarItemComponent({
 
   const icon = getSidebarItemIcon(item)
 
-  const handleClick = () =>
-    setLastSelectedItem({ type: item.type, slug: item.slug })
+  const handleClick = () => setLastSelectedItem(item.slug)
 
   const handleFinishRename = async (name: string) => {
     await editItem({ item, name })

@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { createFile as createFileFn } from './functions/createFile'
 import { updateFile as updateFileFn } from './functions/updateFile'
-import { deleteFile as deleteFileFn } from './functions/deleteFile'
 import type { Id } from '../_generated/dataModel'
 
 export const createFile = authMutation({
@@ -56,15 +55,5 @@ export const updateFile = authMutation({
       iconName: args.iconName,
       color: args.color,
     })
-  },
-})
-
-export const deleteFile = authMutation({
-  args: {
-    fileId: v.id('files'),
-  },
-  returns: v.id('files'),
-  handler: async (ctx, args): Promise<Id<'files'>> => {
-    return await deleteFileFn(ctx, { fileId: args.fileId })
   },
 })
