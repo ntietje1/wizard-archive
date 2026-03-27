@@ -28,21 +28,13 @@ export function ActiveSessionsSection() {
 
   const handleRevokeSession = async (token: string) => {
     setRevokingId(token)
-    try {
-      await revokeSession(token)
-    } catch {
-      // Error toast handled by useAuthSessions onError
-    }
+    await revokeSession(token).catch()
     setRevokingId(null)
   }
 
   const handleRevokeAllOtherSessions = async () => {
     setIsRevokingAll(true)
-    try {
-      await revokeOtherSessions()
-    } catch {
-      // Error toast handled by useAuthSessions onError
-    }
+    await revokeOtherSessions().catch()
     setIsRevokingAll(false)
   }
 
