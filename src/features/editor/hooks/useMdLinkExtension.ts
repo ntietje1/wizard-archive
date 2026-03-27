@@ -11,7 +11,6 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
 import {
-  TYPE_TO_URL_PARAM,
   overlapsSelection,
   registerLinkPlugins,
 } from '~/features/editor/utils/link-extension-utils'
@@ -103,10 +102,7 @@ export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
     const item = resolveItemByPath(pathSegments, allItems, itemsMap)
     if (!item) return undefined
 
-    const urlParam = TYPE_TO_URL_PARAM[item.type]
-    if (!urlParam) return undefined
-
-    const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?${urlParam}=${item.slug}`
+    const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${item.slug}`
     return { item, href }
   }
 

@@ -3,13 +3,6 @@ import type { RefObject } from 'react'
 import type { Plugin, PluginKey } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
 
-export const TYPE_TO_URL_PARAM: Record<string, string> = {
-  note: 'note',
-  folder: 'folder',
-  gameMap: 'map',
-  file: 'file',
-}
-
 /**
  * Check if a range overlaps with the selection
  */
