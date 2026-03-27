@@ -35,5 +35,6 @@ export async function getBlockSharesByBlock(
     .withIndex('by_campaign_block_member', (q) =>
       q.eq('campaignId', block.campaignId).eq('blockId', block._id),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 }

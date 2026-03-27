@@ -68,7 +68,8 @@ async function isBlockSharedWithMember(
         .eq('blockId', blockId)
         .eq('campaignMemberId', campaignMemberId),
     )
-    .unique()
+    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .first()
 
   return share !== null
 }

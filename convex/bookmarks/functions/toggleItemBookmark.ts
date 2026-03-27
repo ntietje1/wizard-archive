@@ -33,22 +33,37 @@ export async function toggleItemBookmark(
     )
     .unique()
 
+  const now = Date.now()
+  const profileId = ctx.user.profile._id
+
   if (existingBookmark) {
-    // Remove bookmark
-    await ctx.db.delete(existingBookmark._id)
-    return { isBookmarked: false }
-  } else {
-    // Add bookmark
-    await ctx.db.insert('bookmarks', {
-      campaignId,
-      sidebarItemId,
-      campaignMemberId,
+    if (existingBookmark.deletionTime === null) {
+      await ctx.db.patch(existingBookmark._id, {
+        deletionTime: now,
+        deletedBy: profileId,
+        updatedTime: now,
+        updatedBy: profileId,
+      })
+      return { isBookmarked: false }
+    }
+    await ctx.db.patch(existingBookmark._id, {
       deletionTime: null,
       deletedBy: null,
-      updatedTime: null,
-      updatedBy: null,
-      createdBy: ctx.user.profile._id,
+      updatedTime: now,
+      updatedBy: profileId,
     })
     return { isBookmarked: true }
   }
+
+  await ctx.db.insert('bookmarks', {
+    campaignId,
+    sidebarItemId,
+    campaignMemberId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+  return { isBookmarked: true }
 }

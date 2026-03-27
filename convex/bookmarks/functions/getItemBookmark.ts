@@ -20,5 +20,6 @@ export async function getItemBookmark(
         .eq('campaignMemberId', membership._id)
         .eq('sidebarItemId', sidebarItemId),
     )
-    .unique()
+    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .first()
 }

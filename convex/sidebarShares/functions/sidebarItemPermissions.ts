@@ -87,6 +87,7 @@ export async function resolveInheritedPermissions(
               .eq('campaignId', campaignId)
               .eq('sidebarItemId', currentParentId!),
           )
+          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
         for (const share of folderShares) {
           if (unresolvedMembers.has(share.campaignMemberId)) {
@@ -177,7 +178,8 @@ export async function getSidebarItemPermissionLevel(
         .eq('sidebarItemId', item._id)
         .eq('campaignMemberId', checkId),
     )
-    .unique()
+    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .first()
   if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
 
   if (item.allPermissionLevel !== null) return item.allPermissionLevel

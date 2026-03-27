@@ -10,7 +10,7 @@ export async function updatePinVisibility(
   { mapPinId, visible }: { mapPinId: Id<'mapPins'>; visible: boolean },
 ): Promise<Id<'mapPins'>> {
   const pin = await ctx.db.get(mapPinId)
-  if (!pin) {
+  if (!pin || pin.deletionTime !== null) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Pin not found')
   }
 

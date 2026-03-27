@@ -22,7 +22,8 @@ export const findBlockByBlockNoteId = async (
         .eq('noteId', noteId)
         .eq('blockId', blockId),
     )
-    .unique()
+    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .first()
 
   return block
 }

@@ -44,6 +44,7 @@ export async function createItemPin(
   const existingPins = await ctx.db
     .query('mapPins')
     .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
   const existingPinItemIds = existingPins.map((p) => p.itemId)
 

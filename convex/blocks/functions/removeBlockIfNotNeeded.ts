@@ -2,11 +2,6 @@ import { SHARE_STATUS } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
-/**
- * Removes a block if:
- * - It is not shared
- * - It is not a top-level block
- */
 export async function removeBlockIfNotNeeded(
   ctx: AuthMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
@@ -19,5 +14,11 @@ export async function removeBlockIfNotNeeded(
   ) {
     return
   }
-  await ctx.db.delete(blockId)
+  const now = Date.now()
+  await ctx.db.patch(blockId, {
+    deletionTime: now,
+    deletedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+  })
 }

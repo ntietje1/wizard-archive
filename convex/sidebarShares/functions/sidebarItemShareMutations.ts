@@ -48,13 +48,20 @@ export async function shareSidebarItemWithMember(
   const now = Date.now()
 
   if (existingShare) {
-    // Update permission level if provided and different
+    const updates: Record<string, unknown> = {}
+    if (existingShare.deletionTime !== null) {
+      updates.deletionTime = null
+      updates.deletedBy = null
+    }
     if (
       permissionLevel !== null &&
       existingShare.permissionLevel !== permissionLevel
     ) {
+      updates.permissionLevel = permissionLevel
+    }
+    if (Object.keys(updates).length > 0) {
       await ctx.db.patch(existingShare._id, {
-        permissionLevel,
+        ...updates,
         updatedTime: now,
         updatedBy: ctx.user.profile._id,
       })
@@ -104,25 +111,13 @@ export async function unshareSidebarItemFromMember(
     )
     .unique()
 
-  if (share) {
-    await ctx.db.delete(share._id)
+  if (share && share.deletionTime === null) {
+    const now = Date.now()
+    await ctx.db.patch(share._id, {
+      deletionTime: now,
+      deletedBy: ctx.user.profile._id,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    })
   }
-}
-
-export async function deleteSidebarItemShares(
-  ctx: AuthMutationCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
-): Promise<void> {
-  const item = await ctx.db.get(sidebarItemId)
-  if (!item) return
-  const campaignId = item.campaignId
-
-  const shares = await ctx.db
-    .query('sidebarItemShares')
-    .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', campaignId).eq('sidebarItemId', sidebarItemId),
-    )
-    .collect()
-
-  await Promise.all(shares.map((share) => ctx.db.delete(share._id)))
 }

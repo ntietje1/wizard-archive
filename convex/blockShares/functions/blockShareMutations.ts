@@ -79,6 +79,15 @@ async function addBlockShare(
     .unique()
 
   if (existingShare) {
+    if (existingShare.deletionTime !== null) {
+      const now = Date.now()
+      await ctx.db.patch(existingShare._id, {
+        deletionTime: null,
+        deletedBy: null,
+        updatedTime: now,
+        updatedBy: ctx.user.profile._id,
+      })
+    }
     return existingShare._id
   }
 
@@ -118,8 +127,14 @@ async function removeBlockShare(
     )
     .unique()
 
-  if (share) {
-    await ctx.db.delete(share._id)
+  if (share && share.deletionTime === null) {
+    const now = Date.now()
+    await ctx.db.patch(share._id, {
+      deletionTime: now,
+      deletedBy: ctx.user.profile._id,
+      updatedTime: now,
+      updatedBy: ctx.user.profile._id,
+    })
   }
 }
 
@@ -135,10 +150,18 @@ async function clearBlockShares(
     .withIndex('by_campaign_block_member', (q) =>
       q.eq('campaignId', block.campaignId).eq('blockId', blockId),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
+  const now = Date.now()
+  const profileId = ctx.user.profile._id
   for (const share of shares) {
-    await ctx.db.delete(share._id)
+    await ctx.db.patch(share._id, {
+      deletionTime: now,
+      deletedBy: profileId,
+      updatedTime: now,
+      updatedBy: profileId,
+    })
   }
 }
 
@@ -199,6 +222,7 @@ export async function unshareBlockFromMemberHelper(
     .withIndex('by_campaign_block_member', (q) =>
       q.eq('campaignId', block.campaignId).eq('blockId', block._id),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()
 
   // If no shares remain, set status to not_shared

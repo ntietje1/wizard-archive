@@ -23,7 +23,6 @@ import type * as blockShares_functions_unshareBlocks from "../blockShares/functi
 import type * as blockShares_mutations from "../blockShares/mutations.js";
 import type * as blockShares_queries from "../blockShares/queries.js";
 import type * as blockShares_types from "../blockShares/types.js";
-import type * as blocks_functions_deleteBlocksByNote from "../blocks/functions/deleteBlocksByNote.js";
 import type * as blocks_functions_findBlockByBlockNoteId from "../blocks/functions/findBlockByBlockNoteId.js";
 import type * as blocks_functions_getBlockWithShares from "../blocks/functions/getBlockWithShares.js";
 import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
@@ -34,7 +33,6 @@ import type * as blocks_functions_saveTopLevelBlocksForNote from "../blocks/func
 import type * as blocks_functions_updateBlock from "../blocks/functions/updateBlock.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
-import type * as bookmarks_functions_deleteItemBookmarks from "../bookmarks/functions/deleteItemBookmarks.js";
 import type * as bookmarks_functions_getCampaignBookmarks from "../bookmarks/functions/getCampaignBookmarks.js";
 import type * as bookmarks_functions_getItemBookmark from "../bookmarks/functions/getItemBookmark.js";
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
@@ -197,7 +195,6 @@ declare const fullApi: ApiFromModules<{
   "blockShares/mutations": typeof blockShares_mutations;
   "blockShares/queries": typeof blockShares_queries;
   "blockShares/types": typeof blockShares_types;
-  "blocks/functions/deleteBlocksByNote": typeof blocks_functions_deleteBlocksByNote;
   "blocks/functions/findBlockByBlockNoteId": typeof blocks_functions_findBlockByBlockNoteId;
   "blocks/functions/getBlockWithShares": typeof blocks_functions_getBlockWithShares;
   "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;
@@ -208,7 +205,6 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/updateBlock": typeof blocks_functions_updateBlock;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
-  "bookmarks/functions/deleteItemBookmarks": typeof bookmarks_functions_deleteItemBookmarks;
   "bookmarks/functions/getCampaignBookmarks": typeof bookmarks_functions_getCampaignBookmarks;
   "bookmarks/functions/getItemBookmark": typeof bookmarks_functions_getItemBookmark;
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;

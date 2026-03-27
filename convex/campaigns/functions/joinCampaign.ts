@@ -29,7 +29,7 @@ export async function joinCampaign(
     )
     .unique()
 
-  if (existingMember) {
+  if (existingMember && existingMember.deletionTime === null) {
     return existingMember.status
   }
 

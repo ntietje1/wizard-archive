@@ -35,6 +35,7 @@ export async function getMemberShares(
     .withIndex('by_campaign_member', (q) =>
       q.eq('campaignId', campaignId).eq('campaignMemberId', campaignMemberId),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
   return buildSharesMap(shares)
 }
@@ -50,6 +51,7 @@ export async function getAllCampaignShares(
   const allShares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) => q.eq('campaignId', campaignId))
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
   return buildSharesMap(allShares)
 }

@@ -20,6 +20,7 @@ export async function getTopLevelBlocksByNote(
         .eq('noteId', noteId)
         .eq('isTopLevel', true),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
   return blocks.sort((a, b) => (a.position || 0) - (b.position || 0))

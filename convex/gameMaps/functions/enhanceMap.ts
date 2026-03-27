@@ -90,6 +90,7 @@ export const enhanceGameMapWithContent = async (
     ctx.db
       .query('mapPins')
       .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
+      .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect(),
     getCampaignBookmarks(ctx, gameMap.campaignId, membership._id),
     hasFullAccess

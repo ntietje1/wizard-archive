@@ -22,8 +22,10 @@ async function countAcceptedPlayers(
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
-  return members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted)
-    .length
+  return members.filter(
+    (m) =>
+      m.deletionTime === null && m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+  ).length
 }
 
 async function enhanceCampaign(
@@ -49,7 +51,7 @@ async function enhanceCampaign(
       )
       .unique()
 
-    if (member) {
+    if (member && member.deletionTime === null) {
       myMembership = {
         ...member,
         userProfile: profile,

@@ -10,7 +10,7 @@ export async function removeItemPin(
   { mapPinId }: { mapPinId: Id<'mapPins'> },
 ): Promise<Id<'mapPins'>> {
   const pin = await ctx.db.get(mapPinId)
-  if (!pin) {
+  if (!pin || pin.deletionTime !== null) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Pin not found')
   }
 
@@ -22,6 +22,12 @@ export async function removeItemPin(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  await ctx.db.delete(mapPinId)
+  const now = Date.now()
+  await ctx.db.patch(mapPinId, {
+    deletionTime: now,
+    deletedBy: ctx.user.profile._id,
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+  })
   return mapPinId
 }

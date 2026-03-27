@@ -23,6 +23,7 @@ export async function saveTopLevelBlocksForNote(
         .eq('noteId', noteId)
         .eq('isTopLevel', true),
     )
+    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
   const existingBlocksMap = new Map(

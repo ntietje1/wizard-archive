@@ -26,7 +26,7 @@ export async function updateCampaignMemberStatus(
   }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get(memberId)
-  if (!member) {
+  if (!member || member.deletionTime !== null) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Member not found')
   }
 
