@@ -21,7 +21,7 @@ export function CardGridSkeleton({
   const skeletonCount = showCreateCard ? count - 1 : count
 
   return (
-    <ContentGrid className={className}>
+    <ContentGrid className={className} data-testid="campaigns-loading-skeleton">
       {showCreateCard && (
         <Card className={`${cardHeight} border-2 border-dashed`}>
           <CardContent className="flex flex-col items-center justify-center h-full p-6">

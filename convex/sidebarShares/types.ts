@@ -17,4 +17,6 @@ export type SidebarItemShare = {
   updatedTime: number | null
   updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
+  deletionTime: number | null
+  deletedBy: Id<'userProfiles'> | null
 }

@@ -25,6 +25,10 @@ export default [
       'react-refresh/only-export-components': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       'no-shadow': ['warn', { allow: ['_'] }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
 ]

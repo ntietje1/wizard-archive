@@ -7,6 +7,14 @@ export interface HeadingEntry {
   normalizedText: string
 }
 
+interface BlockLike {
+  id?: string
+  type?: string
+  props?: Record<string, unknown>
+  content?: Array<{ type: string; text?: string }>
+  children?: Array<BlockLike>
+}
+
 function extractText(
   content: Array<{ type: string; text?: string }> | undefined,
 ): string {
@@ -22,11 +30,11 @@ export function normalizeHeadingText(text: string): string {
 }
 
 export function extractHeadingsFromContent(
-  content: Array<CustomPartialBlock>,
+  content: Array<CustomPartialBlock | BlockLike>,
 ): Array<HeadingEntry> {
   const headings: Array<HeadingEntry> = []
 
-  const process = (block: CustomPartialBlock) => {
+  const process = (block: BlockLike) => {
     if (block.type === 'heading') {
       const text = extractText(block.content)
       if (text) {
