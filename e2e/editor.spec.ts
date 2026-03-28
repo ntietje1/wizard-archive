@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { deleteCampaign } from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign } from './helpers/campaign-helpers'
 import { createNote as createNoteHelper } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -13,10 +13,7 @@ test.describe.serial('editor workspace', () => {
     })
     const page = await context.newPage()
     await page.goto('/campaigns')
-    await page.getByRole('button', { name: /new campaign|create/i }).click()
-    await page.getByLabel('Name').fill(campaignName)
-    await page.getByRole('button', { name: /create/i }).click()
-    await expect(page.getByText(campaignName)).toBeVisible()
+    await createCampaign(page, campaignName)
     await page.close()
     await context.close()
   })
@@ -40,7 +37,9 @@ test.describe.serial('editor workspace', () => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await expect(page.locator('[data-testid="sidebar"], nav')).toBeVisible()
+    await expect(
+      page.getByRole('navigation', { name: 'Sidebar' }),
+    ).toBeVisible()
   })
 
   test('create note appears in sidebar', async ({ page }) => {
@@ -49,9 +48,7 @@ test.describe.serial('editor workspace', () => {
     await page.waitForURL(/\/campaigns\//)
     await createNoteHelper(page, noteName)
     await expect(
-      page
-        .locator('[data-testid="sidebar"], nav')
-        .getByText(noteName, { exact: true }),
+      page.getByRole('link', { name: noteName, exact: true }),
     ).toBeVisible()
   })
 
@@ -59,7 +56,7 @@ test.describe.serial('editor workspace', () => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await page.getByText(noteName).click()
+    await page.getByRole('link', { name: noteName, exact: true }).click()
     await expect(
       page.locator('[contenteditable], [data-testid="editor"]'),
     ).toBeVisible()

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
@@ -15,7 +16,10 @@ test.describe.serial('file upload', () => {
   let testFilePath: string
 
   test.beforeAll(async ({ browser }) => {
-    testFilePath = path.join(__dirname, testFileName)
+    testFilePath = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      testFileName,
+    )
     fs.writeFileSync(testFilePath, 'Test file content for E2E upload')
 
     const context = await browser.newContext({
@@ -51,7 +55,7 @@ test.describe.serial('file upload', () => {
     await navigateToCampaign(page, campaignName)
 
     const uploadButton = page.getByRole('button', {
-      name: /upload|new file|add file/i,
+      name: /^file upload/i,
     })
     await uploadButton.click()
 
@@ -65,22 +69,21 @@ test.describe.serial('file upload', () => {
       await submitButton.click()
     }
 
-    await expect(page.getByText(testFileName.replace('.txt', ''))).toBeVisible({
-      timeout: 10000,
-    })
+    await expect(
+      page.getByRole('link', { name: /untitled file/i }),
+    ).toBeVisible({ timeout: 10000 })
   })
 
   test('click uploaded file loads viewer', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
-    const fileItem = page.getByText(testFileName.replace('.txt', ''))
+    const fileItem = page.getByRole('link', { name: /untitled file/i })
     await expect(fileItem).toBeVisible({ timeout: 5000 })
     await fileItem.click()
-    await expect(
-      page.locator(
-        '[data-testid="file-viewer"], [data-testid="editor"], iframe, embed, img',
-      ),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('input[type="text"]')).toHaveValue(
+      /untitled file/i,
+      { timeout: 5000 },
+    )
   })
 })

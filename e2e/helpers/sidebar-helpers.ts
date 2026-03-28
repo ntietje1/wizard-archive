@@ -1,24 +1,41 @@
 import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+async function renameCurrentItem(page: Page, name: string) {
+  const textbox = page.getByRole('textbox', { name: 'Item name' })
+  await expect(textbox).toHaveValue(/.+/, { timeout: 10000 })
+  await textbox.click()
+  await textbox.fill(name)
+  await textbox.press('Enter')
+  await page.waitForTimeout(500)
+}
+
 export async function createNote(page: Page, name: string) {
-  await page.getByRole('button', { name: /new note/i }).click()
-  await page.getByRole('textbox').last().fill(name)
-  await page.getByRole('textbox').last().press('Enter')
-  await expect(page.getByText(name, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Create new note' }).click()
+  await renameCurrentItem(page, name)
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
+    timeout: 10000,
+  })
 }
 
 export async function createFolder(page: Page, name: string) {
-  await page.getByRole('button', { name: /new folder/i }).click()
-  await page.getByRole('textbox').last().fill(name)
-  await page.getByRole('textbox').last().press('Enter')
-  await expect(page.getByText(name, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Create new folder' }).click()
+  await renameCurrentItem(page, name)
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
+    timeout: 10000,
+  })
 }
 
 export async function openItem(page: Page, name: string) {
-  await page.getByText(name, { exact: true }).click()
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  await sidebar.getByRole('link', { name, exact: true }).click()
 }
 
 export async function openContextMenu(page: Page, itemName: string) {
-  await page.getByText(itemName, { exact: true }).click({ button: 'right' })
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  await sidebar
+    .getByRole('link', { name: itemName, exact: true })
+    .click({ button: 'right' })
 }

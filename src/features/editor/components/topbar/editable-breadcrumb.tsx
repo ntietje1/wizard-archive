@@ -112,7 +112,7 @@ export function EditableName({
 
   const innerContent = (
     <>
-      <span className="invisible px-1 block whitespace-pre">
+      <span className="invisible px-1 block whitespace-pre" aria-hidden="true">
         {name || defaultName}
       </span>
       <input
@@ -120,6 +120,7 @@ export function EditableName({
         type="text"
         value={name}
         placeholder={defaultName}
+        aria-label="Item name"
         readOnly={!isEditing || disabled}
         disabled={isSubmitting || disabled}
         onChange={(e) => {

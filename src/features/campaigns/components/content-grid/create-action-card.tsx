@@ -21,7 +21,15 @@ export function CreateActionCard({
 }: CreateActionCardProps) {
   return (
     <Card
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
       className={`border-2 border-dashed border-primary/40 hover:border-primary/60 transition-colors duration-100 ease-out cursor-pointer group bg-accent ${minHeight} ${className}`}
     >
       <CardContent className="flex flex-col items-center justify-center h-full text-center p-6">

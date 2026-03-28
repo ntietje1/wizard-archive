@@ -2,10 +2,18 @@ import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 export async function createCampaign(page: Page, name: string) {
-  await page.getByRole('button', { name: /new campaign|create/i }).click()
-  await page.getByLabel('Name').fill(name)
-  await page.getByRole('button', { name: /create/i }).click()
-  await expect(page.getByText(name)).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await page
+    .getByRole('button', { name: /new campaign|create.*campaign/i })
+    .first()
+    .click()
+
+  await page.getByLabel(/campaign name/i).fill(name)
+  await page.getByRole('button', { name: /^create campaign$/i }).click()
+  await expect(
+    page.getByRole('dialog', { name: /new campaign/i }),
+  ).not.toBeVisible({ timeout: 10000 })
+  await expect(page.getByText(name)).toBeVisible({ timeout: 10000 })
 }
 
 export async function navigateToCampaign(page: Page, campaignName: string) {
@@ -14,9 +22,9 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
 }
 
 export async function deleteCampaign(page: Page, name: string) {
-  const card = page.locator('[data-testid="campaign-card"]', { hasText: name })
-  await card.getByRole('button', { name: /delete|more/i }).click()
-  await page.getByRole('menuitem', { name: /delete/i }).click()
-  await page.getByRole('button', { name: /confirm|delete/i }).click()
-  await expect(page.getByText(name)).not.toBeVisible()
+  const card = page.locator('a', { hasText: name }).locator('..')
+  await card.getByRole('button', { name: /delete campaign/i }).click()
+  const dialog = page.getByRole('dialog', { name: /delete campaign/i })
+  await dialog.getByRole('button', { name: /^delete/i }).click()
+  await expect(dialog).not.toBeVisible()
 }

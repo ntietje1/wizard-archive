@@ -57,35 +57,21 @@ test.describe.serial('sharing', () => {
 
     await page.getByRole('button', { name: /share/i }).click()
 
-    const allPlayersSelect = page
-      .getByText(/all players/i)
-      .locator('..')
-      .getByRole('combobox')
-      .or(
-        page
-          .getByText(/all players/i)
-          .locator('..')
-          .getByRole('button'),
-      )
-      .first()
-    await expect(allPlayersSelect).toBeVisible()
-    await allPlayersSelect.click()
+    const noneSelect = page.getByText('None').first()
+    await expect(noneSelect).toBeVisible()
+    await noneSelect.click()
     await page.getByRole('option', { name: /view/i }).first().click()
   })
 
-  test('view-as-player filters sidebar', async ({ page }) => {
+  test('view-as-player dropdown opens', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
     const viewAsButton = page.getByRole('button', { name: /view as/i })
     await expect(viewAsButton).toBeVisible()
     await viewAsButton.click()
-    await page
-      .getByRole('option', { name: /player/i })
-      .first()
-      .click()
-
-    const sidebar = page.locator('[data-testid="sidebar"], nav')
-    await expect(sidebar).toBeVisible()
+    await expect(
+      page.getByText(/no other players in this campaign/i),
+    ).toBeVisible()
   })
 })

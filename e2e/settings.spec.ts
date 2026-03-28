@@ -1,19 +1,21 @@
 import { expect, test } from '@playwright/test'
 
 test('open settings from user menu', async ({ page }) => {
-  await page.goto('/campaigns')
-  await page.getByRole('button', { name: /user|avatar|menu/i }).click()
-  await page.getByText(/settings/i).click()
-  await expect(page).toHaveURL(/\/settings/)
+  await page.goto('/campaigns', { waitUntil: 'networkidle' })
+  await page.getByRole('button').first().click()
+  await page.getByRole('button', { name: /settings/i }).click()
+  await expect(page.getByRole('dialog', { name: /settings/i })).toBeVisible()
 })
 
 test('theme toggle changes html class', async ({ page }) => {
-  await page.goto('/settings')
-  const themeToggle = page.getByRole('button', { name: /theme|dark|light/i })
-  await expect(themeToggle).toBeVisible()
+  await page.goto('/campaigns', { waitUntil: 'networkidle' })
+  await page.getByRole('button').first().click()
+  await page.getByRole('button', { name: /settings/i }).click()
+  await page.getByRole('button', { name: /preferences/i }).click()
 
   const initialClass = await page.locator('html').getAttribute('class')
-  await themeToggle.click()
+  const targetTheme = initialClass?.includes('dark') ? /^light /i : /^dark /i
+  await page.getByRole('button', { name: targetTheme }).click()
   const newClass = await page.locator('html').getAttribute('class')
   expect(newClass).not.toEqual(initialClass)
 })

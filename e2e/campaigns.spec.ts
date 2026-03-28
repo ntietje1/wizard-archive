@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { deleteCampaign } from './helpers/campaign-helpers'
+import {
+  createCampaign,
+  deleteCampaign,
+  navigateToCampaign,
+} from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const testCampaignName = testName('E2E Campaign')
@@ -12,17 +16,16 @@ test.describe.serial('campaign operations', () => {
 
   test('create campaign', async ({ page }) => {
     await page.goto('/campaigns')
-    await page.getByRole('button', { name: /new campaign|create/i }).click()
-    await page.getByLabel('Name').fill(testCampaignName)
-    await page.getByRole('button', { name: /create/i }).click()
+    await createCampaign(page, testCampaignName)
     await expect(page.getByText(testCampaignName)).toBeVisible()
   })
 
   test('navigate to campaign editor', async ({ page }) => {
     await page.goto('/campaigns')
-    await page.getByText(testCampaignName).click()
-    await page.waitForURL(/\/campaigns\//)
-    await expect(page.locator('[data-testid="sidebar"], nav')).toBeVisible()
+    await navigateToCampaign(page, testCampaignName)
+    await expect(
+      page.getByRole('navigation', { name: 'Sidebar' }),
+    ).toBeVisible()
   })
 
   test.afterAll(async ({ browser }) => {

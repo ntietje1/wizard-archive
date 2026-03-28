@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { deleteCampaign } from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign } from './helpers/campaign-helpers'
 import {
   createFolder,
   createNote,
@@ -18,10 +18,7 @@ test.describe.serial('sidebar operations', () => {
     })
     const page = await context.newPage()
     await page.goto('/campaigns')
-    await page.getByRole('button', { name: /new campaign|create/i }).click()
-    await page.getByLabel('Name').fill(campaignName)
-    await page.getByRole('button', { name: /create/i }).click()
-    await expect(page.getByText(campaignName)).toBeVisible()
+    await createCampaign(page, campaignName)
     await page.close()
     await context.close()
   })
@@ -46,16 +43,22 @@ test.describe.serial('sidebar operations', () => {
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
     await createFolder(page, folderName)
-    await expect(page.getByText(folderName)).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: folderName, exact: true }),
+    ).toBeVisible()
     await createNote(page, noteName)
-    await expect(page.getByText(noteName)).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: noteName, exact: true }),
+    ).toBeVisible()
   })
 
   test('context menu shows expected actions', async ({ page }) => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await expect(page.getByText(noteName)).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: noteName, exact: true }),
+    ).toBeVisible()
     await openContextMenu(page, noteName)
     await expect(page.getByRole('menuitem', { name: /rename/i })).toBeVisible()
     await expect(
@@ -67,11 +70,13 @@ test.describe.serial('sidebar operations', () => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await expect(page.getByText(noteName)).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: noteName, exact: true }),
+    ).toBeVisible()
     await openContextMenu(page, noteName)
     await page.getByText(/rename/i).click()
     const renamedName = `Renamed ${Date.now()}`
-    const renameInput = page.getByRole('textbox', { name: /name/i })
+    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
     await renameInput.fill(renamedName)
     await renameInput.press('Enter')
     await expect(page.getByText(renamedName)).toBeVisible()

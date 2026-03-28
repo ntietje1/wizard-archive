@@ -22,6 +22,7 @@ export function BookmarksFilterButton() {
         size="icon"
         onClick={toggleBookmarksOnlyMode}
         data-state={bookmarksOnlyMode ? 'active' : 'inactive'}
+        aria-label={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'}
       >
         {bookmarksOnlyMode ? (
           <BookmarkCheck className="h-4 w-4" />

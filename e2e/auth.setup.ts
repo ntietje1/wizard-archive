@@ -15,7 +15,7 @@ setup('authenticate', async ({ page }) => {
     throw new Error('E2E_TEST_EMAIL and E2E_TEST_PASSWORD must be set')
   }
 
-  await page.goto('/sign-in')
+  await page.goto('/sign-in', { waitUntil: 'networkidle' })
   await signIn(page, email, password)
   await page.waitForURL('**/campaigns', { timeout: 15000 })
   await page.context().storageState({ path: authFile })
