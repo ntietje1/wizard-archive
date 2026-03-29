@@ -109,7 +109,8 @@ export function ContentCard({
 
   return (
     <div
-      data-testid="campaign-card"
+      role="article"
+      aria-label={title}
       className={`relative group ${linkWrapper ? className : ''}`}
     >
       {wrappedCard}

@@ -230,7 +230,7 @@ function TrashPopoverItem({
           size="sm"
           className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
           onClick={() => onRestore(item)}
-          title="Restore"
+          aria-label="Restore"
         >
           <RotateCcw className="h-3.5 w-3.5" />
         </Button>
@@ -239,7 +239,7 @@ function TrashPopoverItem({
           size="sm"
           className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-muted-foreground/10 rounded-sm"
           onClick={() => onPermanentDelete(item)}
-          title="Delete forever"
+          aria-label="Delete forever"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>

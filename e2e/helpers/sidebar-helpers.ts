@@ -3,15 +3,17 @@ import type { Page } from '@playwright/test'
 
 async function renameCurrentItem(page: Page, name: string) {
   const textbox = page.getByRole('textbox', { name: 'Item name' })
-  await expect(textbox).toHaveValue(/.+/, { timeout: 10000 })
+  await expect(textbox).toHaveValue(/untitled/i, { timeout: 10000 })
   await textbox.click()
   await textbox.fill(name)
   await textbox.press('Enter')
-  await page.waitForTimeout(500)
+  await expect(textbox).toHaveAttribute('readonly', '', { timeout: 5000 })
 }
 
 export async function createNote(page: Page, name: string) {
+  const prevUrl = page.url()
   await page.getByRole('button', { name: 'Create new note' }).click()
+  await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
   await renameCurrentItem(page, name)
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
   await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
@@ -20,7 +22,9 @@ export async function createNote(page: Page, name: string) {
 }
 
 export async function createFolder(page: Page, name: string) {
+  const prevUrl = page.url()
   await page.getByRole('button', { name: 'Create new folder' }).click()
+  await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
   await renameCurrentItem(page, name)
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
   await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
@@ -38,4 +42,5 @@ export async function openContextMenu(page: Page, itemName: string) {
   await sidebar
     .getByRole('link', { name: itemName, exact: true })
     .click({ button: 'right' })
+  await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 }

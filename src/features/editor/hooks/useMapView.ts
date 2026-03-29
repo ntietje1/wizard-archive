@@ -1,22 +1,27 @@
-import { createContext, useContext } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { Id } from 'convex/_generated/dataModel'
+import { useMapViewStore } from '~/features/editor/stores/map-view-store'
 
 export interface MapViewContextType {
   activeMap: GameMapWithContent | null
   activePin: MapPinWithItem | null
   setActivePinId: (pinId: Id<'mapPins'> | null) => void
 }
-export const MapViewContext = createContext<MapViewContextType | null>(null)
 
 export function useMapView(): MapViewContextType {
-  const context = useContext(MapViewContext)
-  if (!context) {
-    throw new Error('useMapView must be used within a MapViewProvider')
+  const activeMap = useMapViewStore((s) => s.activeMap)
+  const pins = useMapViewStore((s) => s.pins)
+  const activePinId = useMapViewStore((s) => s.activePinId)
+  const setActivePinId = useMapViewStore((s) => s.setActivePinId)
+  return {
+    activeMap,
+    activePin: pins.find((pin) => pin._id === activePinId) ?? null,
+    setActivePinId,
   }
-  return context
 }
 
 export function useMapViewOptional(): MapViewContextType | null {
-  return useContext(MapViewContext)
+  const result = useMapView()
+  if (!result.activeMap) return null
+  return result
 }

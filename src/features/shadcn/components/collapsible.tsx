@@ -111,8 +111,19 @@ function CollapsibleContent({
               key="collapsible-content"
               data-slot="collapsible-content"
               initial={{ height: 0 }}
-              animate={isOpen ? { height: 'auto' } : { height: 0 }}
-              transition={resolvedTransition}
+              animate={
+                isOpen
+                  ? { height: 'auto', visibility: 'visible' as const }
+                  : { height: 0, visibility: 'hidden' as const }
+              }
+              transition={{
+                ...resolvedTransition,
+                visibility: {
+                  delay: isOpen ? 0 : (resolvedTransition.duration ?? 0),
+                },
+              }}
+              aria-hidden={!isOpen}
+              inert={!isOpen ? true : undefined}
               style={{
                 overflow: 'hidden',
                 ...style,

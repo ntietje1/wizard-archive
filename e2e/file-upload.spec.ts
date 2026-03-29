@@ -59,7 +59,7 @@ test.describe.serial('file upload', () => {
     })
     await uploadButton.click()
 
-    const fileInput = page.locator('input[type="file"]')
+    const fileInput = page.getByLabel('Upload file')
     await fileInput.setInputFiles(testFilePath)
 
     const submitButton = page.getByRole('button', {
@@ -81,7 +81,7 @@ test.describe.serial('file upload', () => {
     const fileItem = page.getByRole('link', { name: /untitled file/i })
     await expect(fileItem).toBeVisible({ timeout: 5000 })
     await fileItem.click()
-    await expect(page.locator('input[type="text"]')).toHaveValue(
+    await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(
       /untitled file/i,
       { timeout: 5000 },
     )

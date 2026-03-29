@@ -25,7 +25,11 @@ const avatarButtonClassName = cn(
 
 function AvatarPlaceholder() {
   return (
-    <button className={avatarButtonClassName} disabled>
+    <button
+      className={avatarButtonClassName}
+      disabled
+      aria-label="User menu loading"
+    >
       <Avatar size="sm">
         <AvatarFallback>U</AvatarFallback>
       </Avatar>
@@ -54,7 +58,7 @@ function UserMenuBase() {
       <PopoverTrigger
         nativeButton
         render={
-          <button className={avatarButtonClassName}>
+          <button className={avatarButtonClassName} aria-label="User menu">
             <Avatar size="sm">
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />

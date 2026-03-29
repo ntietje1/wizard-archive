@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
@@ -8,6 +8,7 @@ import { AudioFileViewer } from './audio-file-viewer'
 import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
 import { VideoFileViewer } from './video-file-viewer'
+import { PdfFileViewer } from './pdf-file-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'convex/files/types'
@@ -17,10 +18,6 @@ import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPrev
 import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
 import { assertNever } from '~/shared/utils/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-
-const PdfFileViewer = lazy(() =>
-  import('./pdf-file-viewer').then((m) => ({ default: m.PdfFileViewer })),
-)
 
 const pdfFallback = (
   <div className="flex items-center justify-center w-full h-full">

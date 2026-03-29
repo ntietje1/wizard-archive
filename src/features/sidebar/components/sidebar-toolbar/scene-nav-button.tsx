@@ -14,7 +14,11 @@ export function SceneNavButton() {
         params={{ dmUsername, campaignSlug }}
       >
         {({ isActive }) => (
-          <Button variant={isActive ? 'secondary' : 'ghost'} size="icon">
+          <Button
+            variant={isActive ? 'secondary' : 'ghost'}
+            size="icon"
+            aria-label="Scene"
+          >
             <PictureInPicture2 className="h-4 w-4" />
           </Button>
         )}

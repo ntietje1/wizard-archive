@@ -59,6 +59,7 @@ function SidebarItemButtonBaseComponent({
               variant="ghost"
               size="sm"
               className="h-6 w-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
               onClick={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
@@ -106,6 +107,7 @@ function SidebarItemButtonBaseComponent({
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              aria-label="More options"
               onClick={(e) => {
                 e.preventDefault()
                 onMoreOptions(e)

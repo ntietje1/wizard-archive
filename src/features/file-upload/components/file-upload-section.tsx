@@ -178,6 +178,7 @@ export function FileUploadSection({
                 type="file"
                 accept={acceptPattern}
                 disabled={fileUpload.isUploading || isSubmitting}
+                aria-label="Upload file"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const file = e.target.files?.[0]
                   if (file) {
@@ -209,6 +210,7 @@ export function FileUploadSection({
                 type="file"
                 accept={acceptPattern}
                 disabled={fileUpload.isUploading || isSubmitting}
+                aria-label="Upload file"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const file = e.target.files?.[0]
                   if (file) {

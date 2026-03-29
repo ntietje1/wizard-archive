@@ -19,6 +19,7 @@ export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
         <Button
           variant="ghost"
           size="icon"
+          aria-label="More options"
           disabled={!hasMenu}
           onClick={(e) => {
             e.preventDefault()
