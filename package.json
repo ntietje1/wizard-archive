@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.12.4",
   "engines": {
-    "node": ">=22.9.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "npx convex dev --once && concurrently -r npm:dev:web npm:dev:convex",

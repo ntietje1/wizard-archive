@@ -58,9 +58,9 @@ test.describe.serial('view-as-player', () => {
     const joinButton = playerPage.getByRole('button', { name: /join/i })
     await expect(joinButton).toBeVisible({ timeout: 10000 })
     await joinButton.click()
-    await expect(
-      playerPage.getByText(/request|joined|pending|member/i),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(playerPage.getByText(/Request Sent|You're In!/i)).toBeVisible({
+      timeout: 10000,
+    })
     await playerPage.close()
     await playerContext.close()
 
@@ -112,14 +112,12 @@ test.describe.serial('view-as-player', () => {
     const shareButton = page.getByRole('button', { name: /^private|^shared/i })
     await shareButton.click()
 
-    const sharePopover = page.locator('[data-slot="popover-content"]')
-    await expect(sharePopover).toBeVisible({ timeout: 5000 })
+    const shareDialog = page.getByRole('dialog').filter({ hasText: 'Share' })
+    await expect(shareDialog).toBeVisible({ timeout: 5000 })
 
-    const allPlayersRow = sharePopover
-      .locator('div')
-      .filter({ hasText: /^All Players/ })
-      .filter({ has: page.locator('[data-slot="select-trigger"]') })
-    const permSelect = allPlayersRow.locator('[data-slot="select-trigger"]')
+    const permSelect = shareDialog
+      .getByRole('combobox')
+      .filter({ hasNotText: /full access/i })
     await expect(permSelect).toContainText(/none/i, { timeout: 5000 })
     await permSelect.click()
     await page
@@ -139,8 +137,9 @@ test.describe.serial('view-as-player', () => {
     await expect(viewAsButton).toBeVisible()
     await viewAsButton.click()
 
+    const playerUsername = E2E_PLAYER_EMAIL!.split('@')[0]
     const playerItem = page.getByRole('menuitemcheckbox', {
-      name: new RegExp(E2E_PLAYER_EMAIL!, 'i'),
+      name: new RegExp(playerUsername, 'i'),
     })
     await expect(playerItem).toBeVisible({ timeout: 5000 })
     await playerItem.click()

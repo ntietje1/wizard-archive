@@ -51,7 +51,9 @@ test.describe.serial('player invite flow', () => {
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'User menu' }).click()
-    await page.getByText(/settings/i).click()
+    const settingsBtn = page.getByRole('button', { name: /^settings$/i })
+    await expect(settingsBtn).toBeVisible({ timeout: 10000 })
+    await settingsBtn.click({ force: true })
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })
@@ -85,9 +87,9 @@ test.describe.serial('player invite flow', () => {
     await expect(joinButton).toBeVisible({ timeout: 10000 })
     await joinButton.click()
 
-    await expect(
-      playerPage.getByText(/request|joined|pending|member/i),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(playerPage.getByText(/Request Sent|You're In!/i)).toBeVisible({
+      timeout: 10000,
+    })
 
     await playerPage.close()
     await playerContext.close()
@@ -98,7 +100,9 @@ test.describe.serial('player invite flow', () => {
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'User menu' }).click()
-    await page.getByText(/settings/i).click()
+    const settingsBtn2 = page.getByRole('button', { name: /^settings$/i })
+    await expect(settingsBtn2).toBeVisible({ timeout: 10000 })
+    await settingsBtn2.click({ force: true })
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })

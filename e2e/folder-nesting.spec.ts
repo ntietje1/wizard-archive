@@ -131,7 +131,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).toBeVisible({ timeout: 10000 })
 
-    await page.getByRole('button', { name: 'Close all folders' }).click()
+    await page.getByRole('button', { name: /close-all-folders mode/i }).click()
 
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),

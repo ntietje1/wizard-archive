@@ -56,8 +56,12 @@ test.describe.serial('trash operations', () => {
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
     await page.getByRole('button', { name: /^trash/i }).click()
-    const trashItem = page.locator('div').filter({ hasText: noteName }).first()
-    await expect(trashItem).toBeVisible()
+    await expect(page.getByText(noteName)).toBeVisible({ timeout: 5000 })
+    const trashItem = page
+      .locator('.group')
+      .filter({ hasText: noteName })
+      .first()
+    await trashItem.hover()
     const restoreBtn = trashItem.getByRole('button', { name: /restore/i })
     await restoreBtn.click()
     await expect(

@@ -31,7 +31,7 @@ export async function applyFormatting(page: Page, shortcut: string) {
 
 export async function openSlashMenu(page: Page) {
   const editor = await getEditor(page)
-  await editor.click()
+  await editor.focus()
   await page.keyboard.type('/')
   const menu = page.getByRole('listbox')
   await expect(menu).toBeVisible({ timeout: 5000 })
