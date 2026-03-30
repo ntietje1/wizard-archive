@@ -1,0 +1,505 @@
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+} from '../campaigns/types'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_TYPES,
+} from '../sidebarItems/types/baseTypes'
+import { SHARE_STATUS } from '../blockShares/types'
+import { slugify } from '../common/slug'
+import type { TestConvex } from 'convex-test'
+import type { Id } from '../_generated/dataModel'
+import type schema from '../schema'
+import type {
+  SidebarItemId,
+  SidebarItemLocation,
+  SidebarItemType,
+} from '../sidebarItems/types/baseTypes'
+import type { PermissionLevel } from '../permissions/types'
+import type { ShareStatus } from '../blockShares/types'
+
+type T = TestConvex<typeof schema>
+
+let counter = 0
+
+function nextId() {
+  return ++counter
+}
+
+const commonFields = (creatorId: Id<'userProfiles'>) => ({
+  updatedTime: null,
+  updatedBy: null,
+  createdBy: creatorId,
+  deletionTime: null,
+  deletedBy: null,
+})
+
+export async function createUserProfile(
+  t: T,
+  overrides?: Partial<{
+    authUserId: string
+    username: string
+    email: string | null
+    emailVerified: boolean | null
+    name: string | null
+    imageUrl: string | null
+    imageStorageId: Id<'_storage'> | null
+    twoFactorEnabled: boolean | null
+  }>,
+) {
+  const n = nextId()
+  const defaults = {
+    authUserId: `auth-user-${n}`,
+    username: `user-${n}`,
+    email: `user-${n}@test.com`,
+    emailVerified: null,
+    name: `Test User ${n}`,
+    imageUrl: null,
+    imageStorageId: null,
+    twoFactorEnabled: null,
+  }
+  const data = { ...defaults, ...overrides }
+  const id = await t.run(async (ctx) => {
+    return await ctx.db.insert('userProfiles', data)
+  })
+  return { _id: id, ...data }
+}
+
+export async function createCampaignWithDm(
+  t: T,
+  dmProfile: { _id: Id<'userProfiles'> },
+  overrides?: Partial<{
+    name: string
+    description: string
+    slug: string
+    status: 'Active' | 'Inactive'
+    currentSessionId: Id<'sessions'> | null
+  }>,
+) {
+  const n = nextId()
+  const defaults = {
+    name: `Campaign ${n}`,
+    description: '',
+    dmUserId: dmProfile._id,
+    slug: `campaign-${n}`,
+    status: 'Active' as const,
+    currentSessionId: null,
+    ...commonFields(dmProfile._id),
+  }
+  const campaignData = { ...defaults, ...overrides, dmUserId: dmProfile._id }
+  const campaignId = await t.run(async (ctx) => {
+    return await ctx.db.insert('campaigns', campaignData)
+  })
+
+  const memberId = await t.run(async (ctx) => {
+    return await ctx.db.insert('campaignMembers', {
+      userId: dmProfile._id,
+      campaignId,
+      role: CAMPAIGN_MEMBER_ROLE.DM,
+      status: CAMPAIGN_MEMBER_STATUS.Accepted,
+      ...commonFields(dmProfile._id),
+    })
+  })
+
+  return { campaignId, dmMemberId: memberId }
+}
+
+export async function addPlayerToCampaign(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  playerProfile: { _id: Id<'userProfiles'> },
+  overrides?: Partial<{
+    status: 'Pending' | 'Accepted' | 'Rejected' | 'Removed'
+  }>,
+) {
+  const creatorId = playerProfile._id
+  const defaults = {
+    userId: playerProfile._id,
+    campaignId,
+    role: CAMPAIGN_MEMBER_ROLE.Player,
+    status: CAMPAIGN_MEMBER_STATUS.Accepted,
+    ...commonFields(creatorId),
+  }
+  const data = { ...defaults, ...overrides }
+  const memberId = await t.run(async (ctx) => {
+    return await ctx.db.insert('campaignMembers', data)
+  })
+  return { memberId, ...data }
+}
+
+const sidebarItemBase = (
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  name: string,
+): {
+  name: string
+  slug: string
+  campaignId: Id<'campaigns'>
+  iconName: null
+  color: null
+  parentId: null
+  allPermissionLevel: PermissionLevel | null
+  location: SidebarItemLocation
+} & ReturnType<typeof commonFields> => ({
+  name,
+  slug: slugify(name),
+  campaignId,
+  iconName: null,
+  color: null,
+  parentId: null,
+  allPermissionLevel: null,
+  location: SIDEBAR_ITEM_LOCATION.sidebar,
+  ...commonFields(creatorProfileId),
+})
+
+export async function createNote(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    name: string
+    slug: string
+    parentId: Id<'folders'> | null
+    allPermissionLevel: PermissionLevel | null
+    location: SidebarItemLocation
+    iconName: string | null
+    color: string | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const n = nextId()
+  const name = overrides?.name ?? `Note ${n}`
+  const defaults = {
+    ...sidebarItemBase(campaignId, creatorProfileId, name),
+    type: SIDEBAR_ITEM_TYPES.notes,
+  }
+  const data = {
+    ...defaults,
+    ...overrides,
+    slug: overrides?.slug ?? slugify(name),
+  }
+  const noteId = await t.run(async (ctx) => {
+    return await ctx.db.insert('notes', data)
+  })
+  return { noteId, ...data }
+}
+
+export async function createFolder(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    name: string
+    slug: string
+    parentId: Id<'folders'> | null
+    inheritShares: boolean
+    allPermissionLevel: PermissionLevel | null
+    location: SidebarItemLocation
+    iconName: string | null
+    color: string | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const n = nextId()
+  const name = overrides?.name ?? `Folder ${n}`
+  const defaults = {
+    ...sidebarItemBase(campaignId, creatorProfileId, name),
+    type: SIDEBAR_ITEM_TYPES.folders,
+    inheritShares: false,
+  }
+  const data = {
+    ...defaults,
+    ...overrides,
+    slug: overrides?.slug ?? slugify(name),
+  }
+  const folderId = await t.run(async (ctx) => {
+    return await ctx.db.insert('folders', data)
+  })
+  return { folderId, ...data }
+}
+
+export async function createFile(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    name: string
+    slug: string
+    parentId: Id<'folders'> | null
+    storageId: Id<'_storage'> | null
+    allPermissionLevel: PermissionLevel | null
+    location: SidebarItemLocation
+    iconName: string | null
+    color: string | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const n = nextId()
+  const name = overrides?.name ?? `File ${n}`
+  const defaults = {
+    ...sidebarItemBase(campaignId, creatorProfileId, name),
+    type: SIDEBAR_ITEM_TYPES.files,
+    storageId: null,
+  }
+  const data = {
+    ...defaults,
+    ...overrides,
+    slug: overrides?.slug ?? slugify(name),
+  }
+  const fileId = await t.run(async (ctx) => {
+    return await ctx.db.insert('files', data)
+  })
+  return { fileId, ...data }
+}
+
+export async function createGameMap(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    name: string
+    slug: string
+    parentId: Id<'folders'> | null
+    imageStorageId: Id<'_storage'> | null
+    allPermissionLevel: PermissionLevel | null
+    location: SidebarItemLocation
+    iconName: string | null
+    color: string | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const n = nextId()
+  const name = overrides?.name ?? `Map ${n}`
+  const defaults = {
+    ...sidebarItemBase(campaignId, creatorProfileId, name),
+    type: SIDEBAR_ITEM_TYPES.gameMaps,
+    imageStorageId: null,
+  }
+  const data = {
+    ...defaults,
+    ...overrides,
+    slug: overrides?.slug ?? slugify(name),
+  }
+  const mapId = await t.run(async (ctx) => {
+    return await ctx.db.insert('gameMaps', data)
+  })
+  return { mapId, ...data }
+}
+
+export async function createSession(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    name: string | null
+    startedAt: number
+    endedAt: number | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const defaults = {
+    campaignId,
+    name: null,
+    startedAt: Date.now(),
+    endedAt: null,
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const sessionId = await t.run(async (ctx) => {
+    return await ctx.db.insert('sessions', data)
+  })
+  return { sessionId, ...data }
+}
+
+export async function createBlock(
+  t: T,
+  noteId: Id<'notes'>,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: Partial<{
+    blockId: string
+    position: number | null
+    content: Record<string, unknown>
+    isTopLevel: boolean
+    shareStatus: ShareStatus | null
+    deletionTime: number | null
+    deletedBy: Id<'userProfiles'> | null
+  }>,
+) {
+  const n = nextId()
+  const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
+  const defaults = {
+    noteId,
+    blockId: `block-${n}`,
+    position: null,
+    content: { id: `block-${n}`, type: 'paragraph', content: [] },
+    isTopLevel: true,
+    campaignId,
+    shareStatus,
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const blockDbId = await t.run(async (ctx) => {
+    return await ctx.db.insert('blocks', data)
+  })
+  return { blockDbId, ...data }
+}
+
+export async function createSidebarShare(
+  t: T,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides: {
+    campaignId: Id<'campaigns'>
+    sidebarItemId: SidebarItemId
+    sidebarItemType: SidebarItemType
+    campaignMemberId: Id<'campaignMembers'>
+    permissionLevel?: PermissionLevel | null
+    sessionId?: Id<'sessions'> | null
+    deletionTime?: number | null
+    deletedBy?: Id<'userProfiles'> | null
+  },
+) {
+  const permissionLevel: PermissionLevel | null = 'view'
+  const sessionId: Id<'sessions'> | null = null
+  const defaults = {
+    permissionLevel,
+    sessionId,
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const shareId = await t.run(async (ctx) => {
+    return await ctx.db.insert('sidebarItemShares', data)
+  })
+  return { shareId, ...data }
+}
+
+export async function createBlockShare(
+  t: T,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides: {
+    campaignId: Id<'campaigns'>
+    noteId: Id<'notes'>
+    blockId: Id<'blocks'>
+    campaignMemberId: Id<'campaignMembers'>
+    sessionId?: Id<'sessions'> | null
+    deletionTime?: number | null
+    deletedBy?: Id<'userProfiles'> | null
+  },
+) {
+  const sessionId: Id<'sessions'> | null = null
+  const defaults = {
+    sessionId,
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const blockShareId = await t.run(async (ctx) => {
+    return await ctx.db.insert('blockShares', data)
+  })
+  return { blockShareId, ...data }
+}
+
+export async function createBookmark(
+  t: T,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides: {
+    campaignId: Id<'campaigns'>
+    sidebarItemId: SidebarItemId
+    campaignMemberId: Id<'campaignMembers'>
+    deletionTime?: number | null
+    deletedBy?: Id<'userProfiles'> | null
+  },
+) {
+  const defaults = {
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const bookmarkId = await t.run(async (ctx) => {
+    return await ctx.db.insert('bookmarks', data)
+  })
+  return { bookmarkId, ...data }
+}
+
+export async function createMapPin(
+  t: T,
+  mapId: Id<'gameMaps'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides: {
+    itemId: SidebarItemId
+    x?: number
+    y?: number
+    visible?: boolean
+    deletionTime?: number | null
+    deletedBy?: Id<'userProfiles'> | null
+  },
+) {
+  const defaults = {
+    mapId,
+    x: 0,
+    y: 0,
+    visible: true,
+    ...commonFields(creatorProfileId),
+  }
+  const data = { ...defaults, ...overrides }
+  const pinId = await t.run(async (ctx) => {
+    return await ctx.db.insert('mapPins', data)
+  })
+  return { pinId, ...data }
+}
+
+export async function setupFolderTree(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  opts: {
+    depth: number
+    inheritShares?: Array<boolean>
+    leafType?: 'note' | 'file' | 'gameMap'
+  },
+) {
+  const { depth, inheritShares = [], leafType = 'note' } = opts
+  const folders: Array<Id<'folders'>> = []
+
+  for (let i = 0; i < depth; i++) {
+    const parentId = i === 0 ? null : folders[i - 1]
+    const inherit = inheritShares[i] ?? false
+    const { folderId } = await createFolder(t, campaignId, creatorProfileId, {
+      name: `Folder-L${i}`,
+      parentId,
+      inheritShares: inherit,
+    })
+    folders.push(folderId)
+  }
+
+  const leafParent = folders[folders.length - 1] ?? null
+
+  switch (leafType) {
+    case 'note': {
+      const { noteId } = await createNote(t, campaignId, creatorProfileId, {
+        parentId: leafParent,
+      })
+      return { folders, leaf: noteId }
+    }
+    case 'file': {
+      const { fileId } = await createFile(t, campaignId, creatorProfileId, {
+        parentId: leafParent,
+      })
+      return { folders, leaf: fileId }
+    }
+    case 'gameMap': {
+      const { mapId } = await createGameMap(t, campaignId, creatorProfileId, {
+        parentId: leafParent,
+      })
+      return { folders, leaf: mapId }
+    }
+    default: {
+      const _exhaustive: never = leafType
+      throw new Error(`Unknown leaf type: ${_exhaustive}`)
+    }
+  }
+}

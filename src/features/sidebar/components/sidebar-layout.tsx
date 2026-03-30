@@ -166,15 +166,16 @@ function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
         className="shrink-0 overflow-hidden border-r"
         style={{ width: totalDisplayWidth }}
       >
-        <div
+        <nav
           ref={innerRef}
           className="h-full"
           style={{ width: totalContentWidth }}
+          aria-label="Sidebar"
         >
           <SidebarWrapper>
             <SidebarContent />
           </SidebarWrapper>
-        </div>
+        </nav>
       </div>
       <div
         ref={handleRef}

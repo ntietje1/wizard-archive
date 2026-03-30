@@ -11,6 +11,7 @@ export function CampaignPlayersButton() {
       <Button
         variant="ghost"
         size="icon"
+        aria-label="Players"
         onClick={() => openSettings('campaign-people')}
       >
         <Users className="h-4 w-4" />

@@ -4,6 +4,9 @@
   "sideEffects": false,
   "type": "module",
   "packageManager": "pnpm@10.12.4",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "npx convex dev --once && concurrently -r npm:dev:web npm:dev:convex",
     "dev:web": "vite dev",
@@ -13,6 +16,13 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test:frontend": "vitest run",
+    "test:frontend:watch": "vitest",
+    "test:frontend:coverage": "vitest run --coverage",
+    "test:backend": "vitest --config convex/vitest.config.mts",
+    "test:backend:run": "vitest run --config convex/vitest.config.mts",
+    "test:e2e": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test",
+    "test:e2e:ui": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test --ui",
     "prepare": "husky"
   },
   "dependencies": {
@@ -71,9 +81,14 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@eslint/js": "^9.36.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.12",
     "@tanstack/eslint-config": "^0.3.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/color": "^4.2.0",
     "@types/escape-html": "^1.0.4",
     "@types/lodash-es": "^4.17.12",
@@ -85,26 +100,30 @@
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.1.2",
     "autoprefixer": "^10.4.21",
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "~9.2.0",
+    "convex-test": "^0.0.44",
     "eslint": "^9.36.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^6.1.0",
     "eslint-plugin-react-refresh": "^0.4.23",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
+    "jsdom": "^29.0.1",
     "lint-staged": "^16.4.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.12",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.1.2"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
     "*.{js,mjs,cjs}": [

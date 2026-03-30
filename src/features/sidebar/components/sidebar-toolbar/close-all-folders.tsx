@@ -19,6 +19,11 @@ export function CloseAllFoldersButton() {
         size="icon"
         onClick={toggleCloseAllFoldersMode}
         data-state={closeAllFoldersMode ? 'active' : 'inactive'}
+        aria-label={
+          closeAllFoldersMode
+            ? 'Exit close-all-folders mode'
+            : 'Enter close-all-folders mode'
+        }
       >
         {closeAllFoldersMode ? (
           <FolderDot className="h-4 w-4" />

@@ -294,9 +294,11 @@ export function MapViewer({
   mapRef.current = map
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     setImageLoaded(false)
+    setImageError(false)
   }, [map.imageUrl])
 
   const { isDm } = useCampaign()
@@ -446,6 +448,10 @@ export function MapViewer({
     const handlePinPlacementRequest = (
       event: CustomEvent<{ itemId: SidebarItemId }>,
     ) => {
+      if (imageError) {
+        toast.error('Cannot place pin: map image failed to load')
+        return
+      }
       setPendingPinItem(event.detail)
     }
 
@@ -459,7 +465,7 @@ export function MapViewer({
         handlePinPlacementRequest as EventListener,
       )
     }
-  }, [])
+  }, [imageError])
 
   useEffect(() => {
     const handlePinMoveRequest = (
@@ -790,7 +796,7 @@ export function MapViewer({
               </>
             )}
             {/* Loading spinner while map image is loading */}
-            {map.imageUrl && !imageLoaded && (
+            {map.imageUrl && !imageLoaded && !imageError && (
               <div className="absolute inset-0 z-[999] flex items-center justify-center">
                 <LoadingSpinner size="lg" />
               </div>
@@ -845,6 +851,7 @@ export function MapViewer({
                       className="select-none pointer-events-auto"
                       draggable={false}
                       onLoad={() => setImageLoaded(true)}
+                      onError={() => setImageError(true)}
                       style={{
                         cursor:
                           pendingPinItem || pendingPinMove

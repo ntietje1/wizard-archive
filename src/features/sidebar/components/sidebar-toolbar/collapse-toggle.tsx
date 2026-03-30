@@ -10,6 +10,7 @@ export function CollapseToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+      aria-label={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
     >
       {isSidebarExpanded ? (
         <PanelLeft className="h-4 w-4" />

@@ -108,7 +108,11 @@ export function ContentCard({
   const wrappedCard = linkWrapper ? linkWrapper(cardContent) : cardContent
 
   return (
-    <div className={`relative group ${linkWrapper ? className : ''}`}>
+    <div
+      role="article"
+      aria-label={title}
+      className={`relative group ${linkWrapper ? className : ''}`}
+    >
       {wrappedCard}
       {actionButtons && (
         <div className="absolute top-4 right-4 flex gap-1 z-10">

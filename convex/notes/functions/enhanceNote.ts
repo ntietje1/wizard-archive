@@ -5,7 +5,6 @@ import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockShare
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
-import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
@@ -49,10 +48,12 @@ export const enhanceNoteWithContent = async (
           ? getBlockSharesByBlock(ctx, { block })
           : Promise.resolve([]),
       ])
-      blockMeta[block.blockId] = {
-        myPermissionLevel: result?.permissionLevel ?? PERMISSION_LEVEL.NONE,
-        shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
-        sharedWith: blockShares.map((s) => s.campaignMemberId),
+      if (result) {
+        blockMeta[block.blockId] = {
+          myPermissionLevel: result.permissionLevel,
+          shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+          sharedWith: blockShares.map((s) => s.campaignMemberId),
+        }
       }
     }),
   )

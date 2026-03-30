@@ -5,6 +5,8 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
+export const NAME_VALIDATION_DEBOUNCE_MS = 300
+
 interface UseNameValidationOptions {
   name: string
   initialName: string
@@ -27,7 +29,7 @@ export function useNameValidation({
   const debouncedSetNameRef = useRef(
     debounce((value: string) => {
       setDebouncedName(value)
-    }, 300),
+    }, NAME_VALIDATION_DEBOUNCE_MS),
   )
 
   useEffect(() => {

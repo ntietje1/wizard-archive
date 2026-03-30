@@ -43,6 +43,7 @@ export function NewNoteButton() {
         size="icon"
         onClick={handleNewNote}
         disabled={isPending}
+        aria-label="Create new note"
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />

@@ -16,7 +16,8 @@ import type {
 } from '@blocknote/core'
 
 // remove link from inline content specs
-const { link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
+const { link: _link, ...remainingInlineContentSpecs } =
+  defaultInlineContentSpecs
 
 export const customInlineContentSpecs = {
   ...remainingInlineContentSpecs,

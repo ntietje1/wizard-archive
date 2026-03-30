@@ -30,11 +30,11 @@ export function CampaignsContent() {
     (campaign: Campaign) => campaign._id === deletingCampaignId,
   )
 
-  if (campaigns.status === 'pending') {
+  if (campaigns.status === 'pending' && !campaigns.data) {
     return <CampaignsContentLoading />
   }
 
-  if (campaigns.status === 'error') {
+  if (campaigns.status === 'error' && !campaigns.data) {
     return <CampaignsContentError />
   }
 
@@ -42,10 +42,10 @@ export function CampaignsContent() {
     setDeletingCampaignId(null)
   }
 
-  if (campaigns.data.length === 0) {
-    return (
-      <>
-        <ContentGrid className="flex-1">
+  return (
+    <>
+      <ContentGrid className="flex-1">
+        {!campaigns.data?.length ? (
           <EmptyState
             icon={Sword}
             title="No campaigns yet"
@@ -59,100 +59,84 @@ export function CampaignsContent() {
             }}
             className="col-span-full md:col-span-2 lg:col-span-3 max-w-2xl mx-auto"
           />
-        </ContentGrid>
-
-        <CampaignDialog
-          mode="create"
-          isOpen={creatingCampaign}
-          onClose={() => setCreatingCampaign(false)}
-          campaigns={campaigns.data}
-        />
-      </>
-    )
-  }
-
-  return (
-    <>
-      <ContentGrid className="flex-1">
-        {/* Create New Campaign Card */}
-        {campaigns.data.length > 0 && (
-          <CreateActionCard
-            onClick={() => {
-              setCreatingCampaign(true)
-            }}
-            title="New Campaign"
-            description="Start a new adventure with your party"
-            icon={Sword}
-            minHeight="h-64"
-          />
+        ) : (
+          <>
+            <CreateActionCard
+              onClick={() => {
+                setCreatingCampaign(true)
+              }}
+              title="New Campaign"
+              description="Start a new adventure with your party"
+              icon={Sword}
+              minHeight="h-64"
+            />
+            {[...(campaigns.data ?? [])]
+              .sort((a, b) => b._creationTime - a._creationTime)
+              .map((campaign: Campaign) => {
+                return (
+                  <ContentCard
+                    key={campaign._id}
+                    title={campaign.name}
+                    description={campaign.description}
+                    className="block h-64 w-full"
+                    badges={[
+                      {
+                        text: campaign.status,
+                        icon: Users,
+                        variant: 'secondary',
+                      },
+                      {
+                        text: campaign.myMembership?.role ?? 'None',
+                        icon: User,
+                        variant: 'secondary',
+                      },
+                    ]}
+                    actionButtons={
+                      campaign.myMembership?.role === 'DM'
+                        ? [
+                            {
+                              icon: Edit,
+                              onClick: (e: React.MouseEvent) => {
+                                e.stopPropagation()
+                                setEditingCampaignId(campaign._id)
+                              },
+                              'aria-label': 'Edit campaign',
+                            },
+                            {
+                              icon: Trash2,
+                              onClick: (e: React.MouseEvent) => {
+                                e.stopPropagation()
+                                setDeletingCampaignId(campaign._id)
+                              },
+                              'aria-label': 'Delete campaign',
+                              variant: 'destructive',
+                            },
+                          ]
+                        : undefined
+                    }
+                    linkWrapper={(children) => (
+                      <Link
+                        to={`/campaigns/$dmUsername/$campaignSlug/editor`}
+                        params={{
+                          dmUsername: campaign.dmUserProfile.username,
+                          campaignSlug: campaign.slug,
+                        }}
+                      >
+                        {children}
+                      </Link>
+                    )}
+                  />
+                )
+              })}
+          </>
         )}
-
-        {/* Existing Campaigns */}
-        {campaigns.data
-          .sort((a, b) => b._creationTime - a._creationTime)
-          .map((campaign: Campaign) => {
-            return (
-              <ContentCard
-                key={campaign._id}
-                title={campaign.name}
-                description={campaign.description}
-                className="block h-64 w-full"
-                badges={[
-                  {
-                    text: campaign.status,
-                    icon: Users,
-                    variant: 'secondary',
-                  },
-                  {
-                    text: campaign.myMembership?.role ?? 'None',
-                    icon: User,
-                    variant: 'secondary',
-                  },
-                ]}
-                actionButtons={
-                  campaign.myMembership?.role === 'DM'
-                    ? [
-                        {
-                          icon: Edit,
-                          onClick: (e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            setEditingCampaignId(campaign._id)
-                          },
-                          'aria-label': 'Edit campaign',
-                        },
-                        {
-                          icon: Trash2,
-                          onClick: (e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            setDeletingCampaignId(campaign._id)
-                          },
-                          'aria-label': 'Delete campaign',
-                          variant: 'destructive',
-                        },
-                      ]
-                    : undefined
-                }
-                linkWrapper={(children) => (
-                  <Link
-                    to={`/campaigns/$dmUsername/$campaignSlug/editor`}
-                    params={{
-                      dmUsername: campaign.dmUserProfile.username,
-                      campaignSlug: campaign.slug,
-                    }}
-                  >
-                    {children}
-                  </Link>
-                )}
-              />
-            )
-          })}
       </ContentGrid>
 
       <CampaignDialog
         mode="create"
         isOpen={creatingCampaign}
         onClose={() => setCreatingCampaign(false)}
-        campaigns={campaigns.data}
+        campaigns={campaigns.data ?? []}
       />
 
       <CampaignDialog
@@ -160,7 +144,7 @@ export function CampaignsContent() {
         isOpen={editingCampaignId !== null}
         onClose={() => setEditingCampaignId(null)}
         campaign={currentlyEditingCampaign ?? undefined}
-        campaigns={campaigns.data}
+        campaigns={campaigns.data ?? []}
       />
 
       {currentlyDeletingCampaign && (

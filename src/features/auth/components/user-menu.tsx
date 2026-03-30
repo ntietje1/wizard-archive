@@ -15,7 +15,6 @@ import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getInitials } from '~/shared/utils/get-initials'
-import { useDeviceSessions } from '~/features/auth/hooks/useAuthSessions'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 
 const avatarButtonClassName = cn(
@@ -25,7 +24,11 @@ const avatarButtonClassName = cn(
 
 function AvatarPlaceholder() {
   return (
-    <button className={avatarButtonClassName} disabled>
+    <button
+      className={avatarButtonClassName}
+      disabled
+      aria-label="User menu loading"
+    >
       <Avatar size="sm">
         <AvatarFallback>U</AvatarFallback>
       </Avatar>
@@ -37,24 +40,17 @@ function UserMenuBase() {
   const [open, setOpen] = useState(false)
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
-  const deviceSessions = useDeviceSessions()
 
   if (!profile) {
     return <AvatarPlaceholder />
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-        if (nextOpen) deviceSessions.refresh()
-      }}
-    >
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         nativeButton
         render={
-          <button className={avatarButtonClassName}>
+          <button className={avatarButtonClassName} aria-label="User menu">
             <Avatar size="sm">
               {profile.imageUrl && (
                 <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
