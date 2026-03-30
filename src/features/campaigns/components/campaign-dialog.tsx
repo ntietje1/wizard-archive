@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -71,7 +71,9 @@ function CampaignForm({
   const campaignsRef: RefObject<Array<Campaign>> = useRef(campaigns)
   campaignsRef.current = campaigns
 
-  const initialSlug = useRef(Math.random().toString(36).substring(2, 15))
+  const [initialSlug] = useState(() =>
+    Math.random().toString(36).substring(2, 15),
+  )
 
   const form = useForm({
     defaultValues:
@@ -84,7 +86,7 @@ function CampaignForm({
         : {
             name: '',
             description: '',
-            slug: initialSlug.current,
+            slug: initialSlug,
           },
     onSubmit: async ({ value }) => {
       try {
