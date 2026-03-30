@@ -7,62 +7,107 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: 22
+  STORE_PATH_KEY: pnpm-store-
+
 jobs:
-  typecheck:
-    name: Type Check
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - id: pnpm-store
+        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm tsc --noEmit
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm lint
 
   format:
     name: Format Check
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm prettier --check .
 
   react-compiler:
     name: React Compiler Health
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: npx react-compiler-healthcheck --src "src/**/*.{ts,tsx}"
 
   react-doctor:
     name: React Doctor
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,9 +115,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Run React Doctor (full scan on main, diff on PRs)
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -90,9 +139,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm test:frontend --reporter=verbose
 
   backend-test:
@@ -104,9 +157,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm test:backend:run --reporter=verbose
 
   build:
@@ -118,9 +175,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm vite build
 
   e2e-test:
@@ -133,9 +194,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: npx playwright install --with-deps chromium
       - run: pnpm test:e2e
         env:
