@@ -71,21 +71,21 @@ function CampaignForm({
   const campaignsRef: RefObject<Array<Campaign>> = useRef(campaigns)
   campaignsRef.current = campaigns
 
-  const defaultValues =
-    mode === 'edit' && campaign
-      ? {
-          name: campaign.name,
-          description: campaign.description || '',
-          slug: campaign.slug,
-        }
-      : {
-          name: '',
-          description: '',
-          slug: Math.random().toString(36).substring(2, 15),
-        }
+  const initialSlug = useRef(Math.random().toString(36).substring(2, 15))
 
   const form = useForm({
-    defaultValues,
+    defaultValues:
+      mode === 'edit' && campaign
+        ? {
+            name: campaign.name,
+            description: campaign.description || '',
+            slug: campaign.slug,
+          }
+        : {
+            name: '',
+            description: '',
+            slug: initialSlug.current,
+          },
     onSubmit: async ({ value }) => {
       try {
         if (mode === 'create') {
