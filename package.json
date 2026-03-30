@@ -18,8 +18,8 @@
     "test:coverage": "vitest run --coverage",
     "test:backend": "vitest --config convex/vitest.config.mts",
     "test:backend:run": "vitest run --config convex/vitest.config.mts",
-    "test:e2e": "node --env-file=.env.local ./node_modules/@playwright/test/cli.js test",
-    "test:e2e:ui": "node --env-file=.env.local ./node_modules/@playwright/test/cli.js test --ui",
+    "test:e2e": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test",
+    "test:e2e:ui": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test --ui",
     "prepare": "husky"
   },
   "dependencies": {
