@@ -14,7 +14,7 @@ const campaignName = testName('E2E Download')
 const testFileName = 'test-download.txt'
 
 test.describe.serial('file download', () => {
-  let testFilePath: string
+  let testFilePath: string | null = null
 
   test.beforeAll(async ({ browser }) => {
     testFilePath = path.join(
@@ -45,7 +45,7 @@ test.describe.serial('file download', () => {
   })
 
   test.afterAll(async ({ browser }) => {
-    if (fs.existsSync(testFilePath)) {
+    if (testFilePath && fs.existsSync(testFilePath)) {
       fs.unlinkSync(testFilePath)
     }
     const context = await browser.newContext({

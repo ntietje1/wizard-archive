@@ -40,7 +40,10 @@ test.describe.serial('view-as-player', () => {
     // Extract campaign URL info for the join link
     const url = page.url()
     const match = url.match(/\/campaigns\/([^/]+)\/([^/]+)/)
-    const [, dmUsername, campaignSlug] = match!
+    if (!match) {
+      throw new Error(`Unexpected campaign URL format: ${url}`)
+    }
+    const [, dmUsername, campaignSlug] = match
 
     await page.close()
     await context.close()
@@ -69,16 +72,18 @@ test.describe.serial('view-as-player', () => {
     await dmPage.goto('/campaigns')
     await navigateToCampaign(dmPage, campaignName)
     const dialog = await openSettingsPeopleTab(dmPage)
-    const approveButton = dialog.getByRole('button', {
+    const playerRow = dialog.locator('div').filter({
+      hasText: new RegExp(E2E_PLAYER_EMAIL!, 'i'),
+    })
+    const approveButton = playerRow.getByRole('button', {
       name: /approve|accept/i,
     })
     const hasApprove = await approveButton
-      .first()
       .waitFor({ state: 'visible', timeout: 5000 })
       .then(() => true)
       .catch(() => false)
     if (hasApprove) {
-      await approveButton.first().click()
+      await approveButton.click()
     }
     await dmPage.close()
     await dmContext.close()
