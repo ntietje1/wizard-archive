@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'

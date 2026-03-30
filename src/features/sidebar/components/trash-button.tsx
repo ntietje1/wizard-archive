@@ -19,10 +19,11 @@ export function TrashButton() {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLDivElement>(null)
 
-  const isDragging = useDndStore((s) => s.isDraggingElement)
   useEffect(() => {
-    if (isDragging) setOpen(false)
-  }, [isDragging])
+    return useDndStore.subscribe((state) => {
+      if (state.isDraggingElement) setOpen(false)
+    })
+  }, [])
 
   const { parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = parentItemsMap.get(null) ?? []
