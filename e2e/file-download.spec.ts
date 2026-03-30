@@ -77,12 +77,14 @@ test.describe.serial('file download', () => {
     await expect(downloadItem).toBeVisible()
     await expect(downloadItem).toBeEnabled()
 
-    // Intercept navigation caused by programmatic download link
-    const [popup] = await Promise.all([
+    const [popup, download] = await Promise.all([
       page.waitForEvent('popup', { timeout: 5000 }).catch(() => null),
+      page.waitForEvent('download', { timeout: 5000 }).catch(() => null),
       downloadItem.click(),
     ])
-    // Clean up popup if one opened (cross-origin download opens new tab)
+    if (download) {
+      expect(download.suggestedFilename()).toBeTruthy()
+    }
     if (popup) await popup.close()
   })
 })

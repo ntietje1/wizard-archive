@@ -134,7 +134,9 @@ test.describe.serial('view-as-player', () => {
     await expect(viewAsButton).toBeVisible()
     await viewAsButton.click()
 
-    const playerItem = page.getByRole('menuitemcheckbox').first()
+    const playerItem = page.getByRole('menuitemcheckbox', {
+      name: new RegExp(E2E_PLAYER_EMAIL!, 'i'),
+    })
     await expect(playerItem).toBeVisible({ timeout: 5000 })
     await playerItem.click()
 

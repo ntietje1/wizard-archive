@@ -192,6 +192,13 @@ test.describe.serial('game maps', () => {
 
     if (wasHiding) {
       await expect(pin).toBeHidden({ timeout: 5000 })
+
+      // Restore pin visibility for subsequent tests
+      await pin.click({ button: 'right', force: true })
+      const showItem = page.getByRole('menuitem', { name: /show pin/i })
+      await expect(showItem).toBeVisible({ timeout: 3000 })
+      await showItem.click()
+      await expect(pin).toBeVisible({ timeout: 5000 })
     } else {
       await expect(pin).toBeVisible({ timeout: 5000 })
     }

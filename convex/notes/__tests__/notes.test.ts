@@ -316,9 +316,8 @@ describe('updateNoteContent', () => {
     )
     expect(result).toBe(noteId)
 
-    // Verify content was persisted
     const note = await playerAuth.query(api.notes.queries.getNote, { noteId })
-    expect(note?.content).toHaveLength(1)
+    expect(note?.content).toEqual(blocks)
   })
 
   it('rejects player without EDIT permission', async () => {

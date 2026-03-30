@@ -207,7 +207,6 @@ jobs:
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: ${{ secrets.VITE_SITE_URL }}
-          E2E_CONVEX_URL: ${{ secrets.E2E_CONVEX_URL }}
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
           E2E_PLAYER_EMAIL: ${{ secrets.E2E_PLAYER_EMAIL }}

@@ -56,7 +56,9 @@ test.describe.serial('editor workspace', () => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await page.getByRole('link', { name: noteName, exact: true }).click()
+    const localNote = `Editor Note ${Date.now()}`
+    await createNoteHelper(page, localNote)
+    await page.getByRole('link', { name: localNote, exact: true }).click()
     await expect(
       page.locator('[contenteditable], [data-testid="editor"]'),
     ).toBeVisible()

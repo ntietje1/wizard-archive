@@ -86,6 +86,9 @@ describe('setCurrentEditor', () => {
       campaignId: ctx.campaignId,
     })
     expect(result).not.toBeNull()
+    expect(result!.sortOrder).toBe(SORT_ORDERS.DateCreated)
+    expect(result!.sortDirection).toBe(SORT_DIRECTIONS.Ascending)
+    expect(result!.editorMode).toBe(EDITOR_MODE.EDITOR)
   })
 
   it('upserts existing editor', async () => {

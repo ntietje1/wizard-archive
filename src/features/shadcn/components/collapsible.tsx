@@ -122,13 +122,13 @@ function CollapsibleContent({
                   delay: isOpen ? 0 : (resolvedTransition.duration ?? 0),
                 },
               }}
+              {...props}
               aria-hidden={!isOpen}
               inert={!isOpen ? true : undefined}
               style={{
                 overflow: 'hidden',
                 ...style,
               }}
-              {...props}
             />
           ) : (
             isOpen && (

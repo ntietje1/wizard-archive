@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { mkdir } from 'node:fs/promises'
 import { test as setup } from '@playwright/test'
 import { signIn } from './helpers/auth-helpers'
 
@@ -18,5 +19,6 @@ setup('authenticate', async ({ page }) => {
   await page.goto('/sign-in', { waitUntil: 'networkidle' })
   await signIn(page, email, password)
   await page.waitForURL('**/campaigns', { timeout: 15000 })
+  await mkdir(path.dirname(authFile), { recursive: true })
   await page.context().storageState({ path: authFile })
 })

@@ -69,7 +69,7 @@ describe('toggleBookmark', () => {
     expect(result.isBookmarked).toBe(true)
   })
 
-  it('allows bookmarking DM-owned note without explicit share', async () => {
+  it('allows player to bookmark DM-owned note without explicit share', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 

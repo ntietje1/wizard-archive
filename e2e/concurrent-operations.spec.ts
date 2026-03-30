@@ -48,22 +48,24 @@ test.describe.serial('concurrent operations', () => {
     const page1 = await context1.newPage()
     const page2 = await context2.newPage()
 
-    await page1.goto('/campaigns')
-    await page2.goto('/campaigns')
-    await navigateToCampaign(page1, campaignName)
-    await navigateToCampaign(page2, campaignName)
+    try {
+      await page1.goto('/campaigns')
+      await page2.goto('/campaigns')
+      await navigateToCampaign(page1, campaignName)
+      await navigateToCampaign(page2, campaignName)
 
-    const noteName = `SyncNote ${Date.now()}`
-    await createNote(page1, noteName)
+      const noteName = `SyncNote ${Date.now()}`
+      await createNote(page1, noteName)
 
-    const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar2.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible({ timeout: 15000 })
-
-    await page1.close()
-    await page2.close()
-    await context1.close()
-    await context2.close()
+      const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
+      await expect(
+        sidebar2.getByRole('link', { name: noteName, exact: true }),
+      ).toBeVisible({ timeout: 15000 })
+    } finally {
+      await page1.close()
+      await page2.close()
+      await context1.close()
+      await context2.close()
+    }
   })
 })

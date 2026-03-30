@@ -1,6 +1,8 @@
+import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import type { ReactNode } from 'react'
 import { CampaignsContent } from '~/features/campaigns/components/campaigns-content'
 import { createCampaign } from '~/test/factories/campaign-factory'
 import { mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
@@ -14,10 +16,11 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({}),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  Link: ({ children, ...props }: Record<string, unknown>) => {
-    const { createElement } = require('react')
-    return createElement('a', { href: props.to, ...props }, children)
-  },
+  Link: ({
+    children,
+    ...props
+  }: Record<string, unknown> & { children?: ReactNode }) =>
+    createElement('a', { href: props.to, ...props }, children),
   useRouter: () => ({ navigate: vi.fn() }),
 }))
 

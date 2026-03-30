@@ -45,8 +45,9 @@ test.describe.serial('sharing', () => {
     await page.getByText(noteName).click()
 
     await page.getByRole('button', { name: /share/i }).click()
+    const sharePopover = page.locator('[data-slot="popover-content"]')
     await expect(
-      page.getByText(/share|permissions|access/i).first(),
+      sharePopover.getByText(/share|permissions|access|full access/i).first(),
     ).toBeVisible()
   })
 
@@ -56,8 +57,9 @@ test.describe.serial('sharing', () => {
     await page.getByText(noteName).click()
 
     await page.getByRole('button', { name: /share/i }).click()
+    const sharePopover = page.locator('[data-slot="popover-content"]')
 
-    const noneSelect = page.getByText('None').first()
+    const noneSelect = sharePopover.getByText('None').first()
     await expect(noneSelect).toBeVisible()
     await noneSelect.click()
     await page.getByRole('option', { name: /view/i }).first().click()

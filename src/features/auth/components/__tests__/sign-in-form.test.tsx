@@ -1,6 +1,8 @@
+import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
 
 const mockSignInEmail = vi.fn()
@@ -10,10 +12,11 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({}),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  Link: ({ children, ...props }: Record<string, unknown>) => {
-    const { createElement } = require('react')
-    return createElement('a', { href: props.to, ...props }, children)
-  },
+  Link: ({
+    children,
+    ...props
+  }: Record<string, unknown> & { children?: ReactNode }) =>
+    createElement('a', { href: props.to, ...props }, children),
   useRouter: () => ({ navigate: vi.fn() }),
 }))
 

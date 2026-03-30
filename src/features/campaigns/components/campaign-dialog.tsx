@@ -105,6 +105,8 @@ export function CampaignDialog({
         description: campaign.description || '',
         slug: campaign.slug,
       })
+    } else if (mode === 'edit') {
+      formRef.current.reset({ ...DEFAULT_CAMPAIGN_FORM_VALUES })
     }
   }, [mode, campaign, isOpen])
 

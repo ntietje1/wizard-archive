@@ -52,7 +52,7 @@ test.describe.serial('error states', () => {
     await openContextMenu(page, note1)
     await page.getByRole('menuitem', { name: /rename/i }).click()
 
-    const renameInput = page.getByPlaceholder(/enter a name/i)
+    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
     await expect(renameInput).toBeVisible({ timeout: 5000 })
     await renameInput.fill(note2)
     await renameInput.press('Enter')
@@ -70,7 +70,14 @@ test.describe.serial('error states', () => {
     page,
   }) => {
     await page.goto('/campaigns')
-    await page.waitForLoadState('networkidle')
+    await page
+      .getByRole('heading', { level: 1 })
+      .or(
+        page
+          .getByRole('button', { name: /new campaign|create.*campaign/i })
+          .first(),
+      )
+      .waitFor({ timeout: 10000 })
 
     await page
       .getByRole('button', { name: /new campaign|create.*campaign/i })

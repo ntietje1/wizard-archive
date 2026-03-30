@@ -110,6 +110,9 @@ describe('updateUsername', () => {
     })
 
     expect(result).toBe('mynewname')
+
+    const profile = await authed.query(api.users.queries.getUserProfile, {})
+    expect(profile?.username).toBe('mynewname')
   })
 
   it('rejects username shorter than 2 characters', async () => {

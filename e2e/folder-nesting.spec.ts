@@ -12,7 +12,11 @@ const campaignName = testName('E2E Folders')
 let parentFolder: string
 let childNote: string
 
-async function toggleFolderExpansion(page: Page, folderName: string) {
+async function setFolderExpansion(
+  page: Page,
+  folderName: string,
+  expand: boolean,
+) {
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
   const folderLink = sidebar.getByRole('link', {
     name: folderName,
@@ -23,7 +27,11 @@ async function toggleFolderExpansion(page: Page, folderName: string) {
   const chevron = folderRow.getByRole('button', {
     name: /expand folder|collapse folder/i,
   })
-  await chevron.click()
+  const label = await chevron.getAttribute('aria-label')
+  const isExpanded = /collapse/i.test(label ?? '')
+  if (isExpanded !== expand) {
+    await chevron.click()
+  }
 }
 
 test.describe.serial('folder nesting and expand/collapse', () => {
@@ -78,7 +86,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
     await nameInput.press('Enter')
 
     // Expand folder to verify child is inside
-    await toggleFolderExpansion(page, parentFolder)
+    await setFolderExpansion(page, parentFolder, true)
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).toBeVisible({ timeout: 10000 })
@@ -93,19 +101,19 @@ test.describe.serial('folder nesting and expand/collapse', () => {
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     // Expand folder first
-    await toggleFolderExpansion(page, parentFolder)
+    await setFolderExpansion(page, parentFolder, true)
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).toBeVisible({ timeout: 10000 })
 
     // Collapse folder — child should hide
-    await toggleFolderExpansion(page, parentFolder)
+    await setFolderExpansion(page, parentFolder, false)
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).not.toBeVisible({ timeout: 10000 })
 
     // Expand folder again — child should reappear
-    await toggleFolderExpansion(page, parentFolder)
+    await setFolderExpansion(page, parentFolder, true)
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).toBeVisible({ timeout: 10000 })
@@ -118,7 +126,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     // Expand folder first so child is visible
-    await toggleFolderExpansion(page, parentFolder)
+    await setFolderExpansion(page, parentFolder, true)
     await expect(
       sidebar.getByRole('link', { name: childNote, exact: true }),
     ).toBeVisible({ timeout: 10000 })

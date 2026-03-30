@@ -71,7 +71,17 @@ test.describe.serial('permissions granularity', () => {
 
     const row = allPlayersRow(page)
     const permSelect = row.locator('[data-slot="select-trigger"]')
-    await expect(permSelect).toContainText(/none/i, { timeout: 5000 })
+
+    // Ensure starting state is None
+    if (!(await permSelect.textContent())?.match(/none/i)) {
+      await permSelect.click()
+      await page
+        .getByRole('option', { name: /^none$/i })
+        .first()
+        .click()
+      await expect(permSelect).toContainText(/none/i, { timeout: 5000 })
+    }
+
     await permSelect.click()
     await page
       .getByRole('option', { name: /^view$/i })
@@ -89,7 +99,17 @@ test.describe.serial('permissions granularity', () => {
 
     const row = allPlayersRow(page)
     const permSelect = row.locator('[data-slot="select-trigger"]')
-    await expect(permSelect).toContainText(/view/i, { timeout: 5000 })
+
+    // Ensure starting state is View
+    if (!(await permSelect.textContent())?.match(/view/i)) {
+      await permSelect.click()
+      await page
+        .getByRole('option', { name: /^view$/i })
+        .first()
+        .click()
+      await expect(permSelect).toContainText(/view/i, { timeout: 5000 })
+    }
+
     await permSelect.click()
     await page
       .getByRole('option', { name: /^edit$/i })
@@ -107,7 +127,17 @@ test.describe.serial('permissions granularity', () => {
 
     const row = allPlayersRow(page)
     const permSelect = row.locator('[data-slot="select-trigger"]')
-    await expect(permSelect).toContainText(/edit/i, { timeout: 5000 })
+
+    // Ensure starting state is Edit
+    if (!(await permSelect.textContent())?.match(/edit/i)) {
+      await permSelect.click()
+      await page
+        .getByRole('option', { name: /^edit$/i })
+        .first()
+        .click()
+      await expect(permSelect).toContainText(/edit/i, { timeout: 5000 })
+    }
+
     await permSelect.click()
     await page
       .getByRole('option', { name: /^none$/i })

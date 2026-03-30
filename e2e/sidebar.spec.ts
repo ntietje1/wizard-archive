@@ -79,6 +79,9 @@ test.describe.serial('sidebar operations', () => {
     const renameInput = page.getByRole('textbox', { name: /enter a name/i })
     await renameInput.fill(renamedName)
     await renameInput.press('Enter')
-    await expect(page.getByText(renamedName)).toBeVisible()
+    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+    await expect(
+      sidebar.getByRole('link', { name: renamedName, exact: true }),
+    ).toBeVisible()
   })
 })
