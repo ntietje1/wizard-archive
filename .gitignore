@@ -33,6 +33,7 @@ app.config.timestamp_*.js
 
 e2e/.auth/
 playwright-report/
+coverage/
 
 .claude/
 

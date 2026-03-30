@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from 'convex-test'
+import prosemirrorSync from '@convex-dev/prosemirror-sync/test'
 import schema from '../schema'
 
 const modules = import.meta.glob([
@@ -17,5 +18,11 @@ const modules = import.meta.glob([
 ])
 
 export function createTestContext() {
-  return convexTest(schema, modules)
+  const t = convexTest(schema, modules)
+  t.registerComponent(
+    'prosemirrorSync',
+    prosemirrorSync.schema,
+    prosemirrorSync.modules,
+  )
+  return t
 }
