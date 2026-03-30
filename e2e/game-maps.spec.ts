@@ -140,13 +140,15 @@ test.describe.serial('game maps', () => {
     await expect(canvas).toBeVisible()
 
     const mapImage = canvas.locator('img').first()
-    await expect(mapImage).toBeVisible({ timeout: 10000 })
-    const isImageLoaded = await mapImage.evaluate(
-      (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+    await mapImage.waitFor({ state: 'visible', timeout: 10000 })
+    await page.waitForFunction(
+      (el) => {
+        const img = el?.querySelector('img')
+        return img != null && img.complete && img.naturalWidth > 0
+      },
+      await canvas.elementHandle(),
+      { timeout: 10000 },
     )
-    if (!isImageLoaded) {
-      throw new Error('Map image failed to load — cannot place pin')
-    }
 
     await mapImage.click({ force: true })
     await expect(page.locator('[data-pin-id]').first()).toBeVisible({

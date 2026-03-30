@@ -88,6 +88,11 @@ describe('isTextFile', () => {
   it('returns false for null content type and no filename', () => {
     expect(isTextFile(null)).toBe(false)
   })
+
+  it('detects text extension when content type is null', () => {
+    expect(isTextFile(null, 'readme.txt')).toBe(true)
+    expect(isTextFile(null, 'notes.md')).toBe(true)
+  })
 })
 
 describe('validateFileSize', () => {
@@ -99,6 +104,9 @@ describe('validateFileSize', () => {
   it('rejects files over the limit', () => {
     const result = validateFileSize(MAX_FILE_SIZE + 1)
     expect(result.valid).toBe(false)
+    if (!result.valid) {
+      expect(result.error).toContain('less than')
+    }
   })
 
   it('supports custom max size', () => {
@@ -140,12 +148,16 @@ describe('validateFileUpload', () => {
   it('rejects invalid type before checking size', () => {
     const result = validateFileUpload('application/zip', 1)
     expect(result.valid).toBe(false)
-    expect('error' in result && result.error).toContain('valid file type')
+    if (!result.valid) {
+      expect(result.error).toContain('valid file type')
+    }
   })
 
   it('rejects oversized file with valid type', () => {
     const result = validateFileUpload('image/png', MAX_FILE_SIZE + 1)
     expect(result.valid).toBe(false)
-    expect('error' in result && result.error).toContain('less than')
+    if (!result.valid) {
+      expect(result.error).toContain('less than')
+    }
   })
 })

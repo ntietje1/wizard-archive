@@ -205,6 +205,7 @@ function TrashPopoverItem({
   return (
     <div
       ref={ref}
+      data-testid={`trash-item-${item.name}`}
       className="flex items-center w-full py-1 px-1 rounded-sm hover:bg-muted/70 group min-w-0"
     >
       <Link

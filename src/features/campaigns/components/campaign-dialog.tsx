@@ -206,7 +206,7 @@ function CampaignForm({
               id="campaign-slug"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={() => field.handleBlur()}
+              onBlur={field.handleBlur}
               placeholder="campaign-link"
               maxLength={30}
               disabled={form.state.isSubmitting}

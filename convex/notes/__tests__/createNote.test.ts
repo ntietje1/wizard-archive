@@ -161,6 +161,19 @@ describe('createNote', () => {
     )
   })
 
+  it('validates whitespace-only name', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '   ',
+        parentId: null,
+      }),
+    )
+  })
+
   it('validates name uniqueness under same parent', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -175,6 +188,25 @@ describe('createNote', () => {
       dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Duplicate',
+        parentId: null,
+      }),
+    )
+  })
+
+  it('validates name uniqueness case-insensitively', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Duplicate',
+      parentId: null,
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'duplicate',
         parentId: null,
       }),
     )

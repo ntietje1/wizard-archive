@@ -23,13 +23,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/save@v4
         with:
           path: |
             node_modules
-            ${{ steps.pnpm-store.outputs.path }}
+            ~/.local/share/pnpm/store
           key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
   typecheck:
