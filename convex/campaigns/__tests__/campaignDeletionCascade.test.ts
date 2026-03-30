@@ -73,7 +73,7 @@ describe('campaign deletion cascade', () => {
       campaignMemberId: p1.memberId,
     })
 
-    const { pinId } = await createMapPin(t, mapId, ctx.campaignId, dmId, {
+    const { pinId } = await createMapPin(t, mapId, dmId, {
       itemId: noteId,
       x: 10,
       y: 20,

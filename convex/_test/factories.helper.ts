@@ -428,7 +428,6 @@ export async function createBookmark(
 export async function createMapPin(
   t: T,
   mapId: Id<'gameMaps'>,
-  campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
   overrides: {
     itemId: SidebarItemId

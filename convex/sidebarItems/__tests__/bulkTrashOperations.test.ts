@@ -18,6 +18,7 @@ import {
   setupFolderTree,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import type { Id } from '../../_generated/dataModel'
 
 describe('bulk trash operations', () => {
   const t = createTestContext()
@@ -66,7 +67,7 @@ describe('bulk trash operations', () => {
       sidebarItemId: noteId,
       campaignMemberId: ctx.player.memberId,
     })
-    const { pinId } = await createMapPin(t, mapId, ctx.campaignId, dmId, {
+    const { pinId } = await createMapPin(t, mapId, dmId, {
       itemId: noteId,
     })
 
@@ -217,10 +218,13 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folders, leaf } = await setupFolderTree(t, ctx.campaignId, dmId, {
-      depth: 5,
-      leafType: 'note',
-    })
+    const { folders, leaf: leafId } = await setupFolderTree(
+      t,
+      ctx.campaignId,
+      dmId,
+      { depth: 5, leafType: 'note' },
+    )
+    const leaf = leafId as Id<'notes'>
 
     const { blockDbId } = await createBlock(t, leaf, ctx.campaignId, dmId, {
       blockId: 'deep-block',
