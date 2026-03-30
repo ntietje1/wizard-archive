@@ -114,6 +114,9 @@ startxref
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
+    await expect(page.getByLabel('Upload file')).toBeAttached({
+      timeout: 15000,
+    })
     await page.getByLabel('Upload file').setInputFiles(pdfPath)
 
     // Second file upload creates "Untitled File 2"

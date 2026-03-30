@@ -4,10 +4,18 @@ import {
   deleteCampaign,
   navigateToCampaign,
 } from './helpers/campaign-helpers'
+import { signIn } from './helpers/auth-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
+import { openSettingsPeopleTab } from './helpers/permission-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
-test.skip(!process.env.E2E_PLAYER_EMAIL, 'Requires E2E_PLAYER_EMAIL env var')
+const E2E_PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL
+const E2E_PLAYER_PASSWORD = process.env.E2E_PLAYER_PASSWORD
+
+test.skip(
+  !E2E_PLAYER_EMAIL || !E2E_PLAYER_PASSWORD,
+  'Requires E2E_PLAYER_EMAIL and E2E_PLAYER_PASSWORD env vars',
+)
 
 const campaignName = testName('E2E ViewAs')
 let sharedNote: string
@@ -28,8 +36,52 @@ test.describe.serial('view-as-player', () => {
     await navigateToCampaign(page, campaignName)
     await createNote(page, sharedNote)
     await createNote(page, unsharedNote)
+
+    // Extract campaign URL info for the join link
+    const url = page.url()
+    const match = url.match(/\/campaigns\/([^/]+)\/([^/]+)/)
+    const [, dmUsername, campaignSlug] = match!
+
     await page.close()
     await context.close()
+
+    // Sign in as player and join the campaign
+    const playerContext = await browser.newContext()
+    const playerPage = await playerContext.newPage()
+    await playerPage.goto('/sign-in', { waitUntil: 'networkidle' })
+    await signIn(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
+    await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
+    await playerPage.goto(`/join/${dmUsername}/${campaignSlug}`)
+    const joinButton = playerPage.getByRole('button', { name: /join/i })
+    await expect(joinButton).toBeVisible({ timeout: 10000 })
+    await joinButton.click()
+    await expect(
+      playerPage.getByText(/request|joined|pending|member/i),
+    ).toBeVisible({ timeout: 10000 })
+    await playerPage.close()
+    await playerContext.close()
+
+    // DM approves the join request
+    const dmContext = await browser.newContext({
+      storageState: AUTH_STORAGE_PATH,
+    })
+    const dmPage = await dmContext.newPage()
+    await dmPage.goto('/campaigns')
+    await navigateToCampaign(dmPage, campaignName)
+    const dialog = await openSettingsPeopleTab(dmPage)
+    const approveButton = dialog.getByRole('button', {
+      name: /approve|accept/i,
+    })
+    const hasApprove = await approveButton
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false)
+    if (hasApprove) {
+      await approveButton.first().click()
+    }
+    await dmPage.close()
+    await dmContext.close()
   })
 
   test.afterAll(async ({ browser }) => {
@@ -52,7 +104,7 @@ test.describe.serial('view-as-player', () => {
     await navigateToCampaign(page, campaignName)
     await openItem(page, sharedNote)
 
-    const shareButton = page.getByRole('button', { name: /share/i })
+    const shareButton = page.getByRole('button', { name: /^private|^shared/i })
     await shareButton.click()
 
     const sharePopover = page.locator('[data-slot="popover-content"]')
@@ -74,7 +126,7 @@ test.describe.serial('view-as-player', () => {
     await page.keyboard.press('Escape')
   })
 
-  test('view-as all players shows only shared note', async ({ page }) => {
+  test('view-as player shows only shared note', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
@@ -82,7 +134,9 @@ test.describe.serial('view-as-player', () => {
     await expect(viewAsButton).toBeVisible()
     await viewAsButton.click()
 
-    await page.getByText(/all players/i).click()
+    const playerItem = page.getByRole('menuitemcheckbox').first()
+    await expect(playerItem).toBeVisible({ timeout: 5000 })
+    await playerItem.click()
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
     await expect(

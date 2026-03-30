@@ -23,6 +23,12 @@ export const useMapViewStore = create<MapViewState & MapViewActions>((set) => ({
   activePinId: null,
 
   setActiveMap: (map, pins) => set({ activeMap: map, pins, activePinId: null }),
-  setActivePinId: (activePinId) => set({ activePinId }),
+  setActivePinId: (pinId) =>
+    set((state) => ({
+      activePinId:
+        pinId === null || state.pins.some((p) => p._id === pinId)
+          ? pinId
+          : state.activePinId,
+    })),
   clearMapView: () => set({ activeMap: null, pins: [], activePinId: null }),
 }))

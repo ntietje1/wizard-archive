@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -81,33 +81,32 @@ export function CampaignDialog({
     },
   })
 
-  // Initialize form data
+  const formRef = useRef(form)
+  formRef.current = form
+
   useEffect(() => {
+    if (!isOpen) {
+      formRef.current.reset({
+        name: '',
+        description: '',
+        slug: '',
+      })
+      return
+    }
     if (mode === 'create') {
       const randomSlug = Math.random().toString(36).substring(2, 15)
-      form.reset({
+      formRef.current.reset({
         ...DEFAULT_CAMPAIGN_FORM_VALUES,
         slug: randomSlug,
       })
     } else if (campaign) {
-      form.reset({
+      formRef.current.reset({
         name: campaign.name,
         description: campaign.description || '',
         slug: campaign.slug,
       })
     }
-  }, [mode, campaign, isOpen, form])
-
-  // Clear form when dialog closes
-  useEffect(() => {
-    if (!isOpen && form.state.isDirty) {
-      form.reset({
-        name: '',
-        description: '',
-        slug: '',
-      })
-    }
-  }, [isOpen, form])
+  }, [mode, campaign, isOpen])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return
@@ -127,6 +126,7 @@ export function CampaignDialog({
       icon={Sword}
     >
       <form
+        noValidate
         onSubmit={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -151,7 +151,6 @@ export function CampaignDialog({
                 onBlur={field.handleBlur}
                 placeholder="Enter campaign name"
                 disabled={form.state.isSubmitting}
-                required
               />
               {field.state.meta.errors.length > 0 &&
               field.state.meta.isTouched ? (
@@ -212,10 +211,8 @@ export function CampaignDialog({
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={() => field.handleBlur()}
                 placeholder="campaign-link"
-                minLength={3}
                 maxLength={30}
                 disabled={form.state.isSubmitting}
-                required
               />
               {field.state.meta.errors.length > 0 &&
               field.state.meta.isTouched ? (

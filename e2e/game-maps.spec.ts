@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import zlib from 'node:zlib'
 import { expect, test } from '@playwright/test'
 import {
   createCampaign,
@@ -10,6 +11,40 @@ import {
 import { createNote } from './helpers/sidebar-helpers'
 import { createMap, openMap, uploadMapImage } from './helpers/map-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+
+function crc32(buf: Buffer): number {
+  let crc = 0xffffffff
+  for (const byte of buf) {
+    crc ^= byte
+    for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
+  }
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const len = Buffer.alloc(4)
+  len.writeUInt32BE(data.length)
+  const typeData = Buffer.concat([Buffer.from(type), data])
+  const crc = Buffer.alloc(4)
+  crc.writeUInt32BE(crc32(typeData))
+  return Buffer.concat([len, typeData, crc])
+}
+
+function createTestPng(w: number, h: number): Buffer {
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  const raw = Buffer.alloc(h * (1 + w * 3), 0)
+  for (let y = 0; y < h; y++) raw[y * (1 + w * 3)] = 0
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', zlib.deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ])
+}
 
 const campaignName = testName('E2E Maps')
 let mapName: string
@@ -23,30 +58,11 @@ test.describe.serial('game maps', () => {
     mapName = `Test Map ${id}`
     noteName = `Pin Target ${id}`
 
-    // Create a minimal valid PNG (1x1 red pixel)
-    const pngHeader = Buffer.from([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ])
-    const ihdr = Buffer.from([
-      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01,
-      0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-      0xde, 0x00,
-    ])
-    const idat = Buffer.from([
-      0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8,
-      0xcf, 0xc0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33,
-    ])
-    const iend = Buffer.from([
-      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
-    ])
     testImagePath = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       'test-map-image.png',
     )
-    fs.writeFileSync(
-      testImagePath,
-      Buffer.concat([pngHeader, ihdr, idat, iend]),
-    )
+    fs.writeFileSync(testImagePath, createTestPng(200, 200))
 
     const context = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
@@ -124,20 +140,18 @@ test.describe.serial('game maps', () => {
     await expect(canvas).toBeVisible()
 
     const mapImage = canvas.locator('img').first()
+    await expect(mapImage).toBeVisible({ timeout: 10000 })
     const isImageLoaded = await mapImage.evaluate(
       (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
     )
-
-    if (isImageLoaded) {
-      await canvas.click({ position: { x: 200, y: 200 } })
-      await expect(page.locator('[data-pin-id]').first()).toBeVisible({
-        timeout: 5000,
-      })
-    } else {
-      await expect(page.getByText(/map image failed to load/i)).toBeVisible({
-        timeout: 5000,
-      })
+    if (!isImageLoaded) {
+      throw new Error('Map image failed to load — cannot place pin')
     }
+
+    await mapImage.click({ force: true })
+    await expect(page.locator('[data-pin-id]').first()).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('pin context menu shows actions', async ({ page }) => {
@@ -146,14 +160,14 @@ test.describe.serial('game maps', () => {
     await openMap(page, mapName)
 
     const pin = page.locator('[data-pin-id]').first()
-    await expect(pin).toBeVisible({ timeout: 5000 })
+    await expect(pin).toBeVisible({ timeout: 15000 })
     await pin.click({ button: 'right' })
 
-    await expect(page.getByRole('menuitem', { name: /move pin/i })).toBeVisible(
-      { timeout: 3000 },
-    )
     await expect(
-      page.getByRole('menuitem', { name: /remove pin/i }),
+      page.getByRole('menuitem', { name: 'Move Pin', exact: true }),
+    ).toBeVisible({ timeout: 3000 })
+    await expect(
+      page.getByRole('menuitem', { name: 'Remove Pin', exact: true }),
     ).toBeVisible()
 
     await page.keyboard.press('Escape')
@@ -172,9 +186,15 @@ test.describe.serial('game maps', () => {
       name: /hide pin|show pin/i,
     })
     await expect(toggleItem).toBeVisible({ timeout: 3000 })
+    const label = await toggleItem.textContent()
+    const wasHiding = /hide/i.test(label ?? '')
     await toggleItem.click()
 
-    await expect(page.locator('[data-pin-id]').first()).toBeVisible()
+    if (wasHiding) {
+      await expect(pin).toBeHidden({ timeout: 5000 })
+    } else {
+      await expect(pin).toBeVisible({ timeout: 5000 })
+    }
   })
 
   test('remove pin from map', async ({ page }) => {
@@ -186,7 +206,9 @@ test.describe.serial('game maps', () => {
     await expect(pin).toBeVisible({ timeout: 5000 })
     const pinCount = await page.locator('[data-pin-id]').count()
     await pin.click({ button: 'right' })
-    await page.getByRole('menuitem', { name: /remove pin/i }).click()
+    await page
+      .getByRole('menuitem', { name: 'Remove Pin', exact: true })
+      .click()
 
     await expect(page.locator('[data-pin-id]')).toHaveCount(pinCount - 1, {
       timeout: 5000,

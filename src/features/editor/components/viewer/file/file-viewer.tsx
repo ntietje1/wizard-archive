@@ -122,9 +122,7 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
     case 'pdf':
       return (
         <ClientOnly fallback={pdfFallback}>
-          <Suspense fallback={pdfFallback}>
-            <PdfFileViewer pdfUrl={file.downloadUrl} />
-          </Suspense>
+          <PdfFileViewer pdfUrl={file.downloadUrl} />
         </ClientOnly>
       )
     case 'video':

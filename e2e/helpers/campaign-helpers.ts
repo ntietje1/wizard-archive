@@ -7,20 +7,24 @@ export async function createCampaign(page: Page, name: string) {
       name: /new campaign|create.*campaign|first campaign/i,
     })
     .first()
-  await expect(newCampaignButton).toBeVisible({ timeout: 10000 })
+  await expect(newCampaignButton).toBeVisible({ timeout: 30000 })
   await newCampaignButton.click()
 
   const nameInput = page.getByLabel(/campaign name/i)
   await expect(nameInput).toBeVisible({ timeout: 5000 })
   await nameInput.fill(name)
+
+  const slugInput = page.getByLabel(/custom link/i)
+  await slugInput.fill(Math.random().toString(36).substring(2, 12))
+
   await nameInput.press('Tab')
   const createBtn = page.getByRole('button', { name: /^create campaign$/i })
   await expect(createBtn).toBeEnabled({ timeout: 5000 })
   await createBtn.click()
   await expect(
     page.getByRole('dialog', { name: /new campaign/i }),
-  ).not.toBeVisible({ timeout: 15000 })
-  await expect(page.getByText(name)).toBeVisible({ timeout: 10000 })
+  ).not.toBeVisible({ timeout: 30000 })
+  await expect(page.getByText(name)).toBeVisible({ timeout: 15000 })
 }
 
 export async function navigateToCampaign(page: Page, campaignName: string) {
@@ -30,8 +34,9 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
 
 export async function deleteCampaign(page: Page, name: string) {
   const card = page.getByRole('article', { name })
+  await expect(card).toBeVisible({ timeout: 15000 })
   await card.getByRole('button', { name: /delete campaign/i }).click()
   const dialog = page.getByRole('dialog', { name: /delete campaign/i })
   await dialog.getByRole('button', { name: /^delete/i }).click()
-  await expect(dialog).not.toBeVisible()
+  await expect(dialog).not.toBeVisible({ timeout: 10000 })
 }

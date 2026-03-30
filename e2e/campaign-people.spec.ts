@@ -65,14 +65,15 @@ test.describe.serial('campaign people management', () => {
     const dialog = await openSettingsPeopleTab(page)
 
     const acceptButton = dialog.getByRole('button', { name: /^accept$/i })
+    const firstAcceptButton = acceptButton.first()
     const isVisible = await acceptButton
       .first()
       .waitFor({ state: 'visible', timeout: 3000 })
       .then(() => true)
       .catch(() => false)
     if (isVisible) {
-      await acceptButton.first().click()
-      await expect(acceptButton.first()).not.toBeVisible({ timeout: 5000 })
+      await firstAcceptButton.click()
+      await expect(firstAcceptButton).not.toBeVisible({ timeout: 5000 })
     }
   })
 

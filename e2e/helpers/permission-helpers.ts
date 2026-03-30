@@ -11,9 +11,20 @@ export async function openShareMenu(page: Page) {
 export async function openSettingsPeopleTab(page: Page) {
   const userMenuBtn = page.getByRole('button', { name: 'User menu' })
   await expect(userMenuBtn).toBeVisible({ timeout: 5000 })
-  await userMenuBtn.click()
-  await expect(page.getByText('Sign out')).toBeVisible({ timeout: 5000 })
-  await page.getByText('Settings').click()
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await userMenuBtn.click()
+    try {
+      await page
+        .getByRole('button', { name: /^settings$/i })
+        .click({ timeout: 5000 })
+      break
+    } catch {
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    }
+  }
+
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible({ timeout: 10000 })
   await dialog.getByRole('button', { name: /people/i }).click()

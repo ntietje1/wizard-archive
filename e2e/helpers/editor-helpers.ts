@@ -50,10 +50,10 @@ export async function selectSlashMenuItem(
 export async function newParagraphAtEnd(page: Page) {
   const editor = await getEditor(page)
   await editor.click()
-  await page.keyboard.press('End')
   const endShortcut =
     process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
   await page.keyboard.press(endShortcut)
+  await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(200)
 }

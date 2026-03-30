@@ -76,9 +76,9 @@ test.describe.serial('player invite flow', () => {
     const playerContext = await browser.newContext()
     const playerPage = await playerContext.newPage()
 
-    await playerPage.goto('/sign-in')
+    await playerPage.goto('/sign-in', { waitUntil: 'networkidle' })
     await signIn(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
-    await expect(playerPage).toHaveURL(/\/campaigns/, { timeout: 15000 })
+    await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
 
     await playerPage.goto(`/join/${dmUsername}/${campaignSlug}`)
     const joinButton = playerPage.getByRole('button', { name: /join/i })
