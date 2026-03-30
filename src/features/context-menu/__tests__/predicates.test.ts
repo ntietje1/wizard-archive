@@ -3,7 +3,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { MenuContext } from '~/features/context-menu/types'
-import type { GameMapWithContent } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import { VIEW_CONTEXT } from '~/features/context-menu/constants'
 import * as p from '~/features/context-menu/predicates'
 import {
@@ -173,10 +173,27 @@ describe('trash predicates', () => {
 })
 
 describe('map predicates', () => {
-  const mockMap = {
-    _id: testId<'gameMaps'>('map_1'),
-    pins: [{ itemId: testId<'notes'>('note_pinned') }],
-  } as unknown as GameMapWithContent
+  const mockPin: MapPinWithItem = {
+    _id: testId<'mapPins'>('pin_1'),
+    _creationTime: Date.now(),
+    mapId: testId<'gameMaps'>('map_1'),
+    itemId: testId<'notes'>('note_pinned'),
+    x: 0,
+    y: 0,
+    visible: true,
+    item: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: testId<'userProfiles'>('user_1'),
+    deletionTime: null,
+    deletedBy: null,
+  }
+
+  const mockMap: GameMapWithContent = {
+    ...createGameMap({ _id: testId<'gameMaps'>('map_1') }),
+    ancestors: [],
+    pins: [mockPin],
+  }
 
   it('hasActiveMap', () => {
     expect(p.hasActiveMap(ctx({ activeMap: mockMap }))).toBe(true)
