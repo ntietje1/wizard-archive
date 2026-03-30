@@ -53,7 +53,7 @@ test.describe.serial('player invite flow', () => {
     await page.getByRole('button', { name: 'User menu' }).click()
     const settingsBtn = page.getByRole('button', { name: /^settings$/i })
     await expect(settingsBtn).toBeVisible({ timeout: 10000 })
-    await settingsBtn.click({ force: true })
+    await settingsBtn.click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })
@@ -102,7 +102,7 @@ test.describe.serial('player invite flow', () => {
     await page.getByRole('button', { name: 'User menu' }).click()
     const settingsBtn2 = page.getByRole('button', { name: /^settings$/i })
     await expect(settingsBtn2).toBeVisible({ timeout: 10000 })
-    await settingsBtn2.click({ force: true })
+    await settingsBtn2.click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })

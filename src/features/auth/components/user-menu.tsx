@@ -15,7 +15,6 @@ import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getInitials } from '~/shared/utils/get-initials'
-import { useDeviceSessions } from '~/features/auth/hooks/useAuthSessions'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 
 const avatarButtonClassName = cn(
@@ -41,20 +40,13 @@ function UserMenuBase() {
   const [open, setOpen] = useState(false)
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
-  const deviceSessions = useDeviceSessions()
 
   if (!profile) {
     return <AvatarPlaceholder />
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-        if (nextOpen) deviceSessions.refresh()
-      }}
-    >
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         nativeButton
         render={
