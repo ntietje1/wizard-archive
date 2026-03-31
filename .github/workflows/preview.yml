@@ -30,6 +30,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      - name: Ensure Convex Preview Exists
+        continue-on-error: true
+        run: |
+          npx convex deploy \
+            --preview-create "pr-${{ github.event.pull_request.number }}"
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+
       - name: Set Convex Preview Env Vars
         run: |
           PREVIEW="pr-${{ github.event.pull_request.number }}"
