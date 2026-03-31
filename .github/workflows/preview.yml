@@ -31,10 +31,11 @@ jobs:
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
-            --cmd 'VITE_CONVEX_SITE_URL="${VITE_CONVEX_URL/.cloud/.site}" npx vite build' \
+            --cmd 'npx vite build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+          VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev
           VITE_IS_PREVIEW: 'true'
 
