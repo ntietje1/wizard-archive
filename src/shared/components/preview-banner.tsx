@@ -1,10 +1,11 @@
 import { Eye } from 'lucide-react'
-import { prNumber } from '~/shared/utils/preview'
+import { githubRepository, prNumber } from '~/shared/utils/preview'
 
 export function PreviewBanner() {
-  const prUrl = prNumber
-    ? `https://github.com/ntietje1/dnd-notes-tool/pull/${prNumber}`
-    : undefined
+  const prUrl =
+    prNumber && githubRepository
+      ? `https://github.com/${githubRepository}/pull/${prNumber}`
+      : undefined
 
   return (
     <div
