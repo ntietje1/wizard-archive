@@ -27,7 +27,7 @@ jobs:
       - name: Deploy Convex
         run: npx convex deploy --cmd-url-env-var-name VITE_CONVEX_URL
         env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
       - name: Deploy Cloudflare Workers
         run: vite build --mode production && wrangler deploy
         env:
