@@ -24,8 +24,7 @@
     "test:e2e": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test",
     "test:e2e:ui": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test --ui",
     "prepare": "husky",
-    "deploy:dev": "vite build --mode dev && tsc --noEmit && wrangler deploy --name wizard-archive-dev",
-    "deploy:prod": "vite build --mode production && tsc --noEmit && wrangler deploy --name wizard-archive",
+    "deploy:prod": "vite build --mode production && tsc --noEmit && wrangler deploy",
     "preview": "pnpm run build && wrangler dev",
     "cf-typegen": "wrangler types"
   },
