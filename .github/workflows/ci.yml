@@ -68,6 +68,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
+  knip:
+    name: Knip
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            ~/.local/share/pnpm/store
+          key: ${{ env.STORE_PATH_KEY }}${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+      # TODO: remove --include flag once unused exports/types are cleaned up
+      - run: pnpm knip --include dependencies,unlisted
+
   format:
     name: Format Check
     runs-on: ubuntu-latest
