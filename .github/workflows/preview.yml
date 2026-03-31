@@ -18,6 +18,8 @@ jobs:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     environment: preview
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -52,6 +54,17 @@ jobs:
         run: npx wrangler deploy --name ${{ env.WORKER_NAME }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Comment Preview URL
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-url
+          message: |
+            ### Preview Deployment
+
+            | Service | URL |
+            |---------|-----|
+            | Frontend | https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev |
 
   cleanup-preview:
     name: Cleanup Preview

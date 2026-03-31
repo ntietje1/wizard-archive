@@ -127,7 +127,7 @@ export function SignInCredentialsForm({
               Continue with Google
             </Button>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent side="right">
             OAuth is unavailable on preview deployments. Use email and password
             instead.
           </TooltipContent>
