@@ -42,6 +42,7 @@ jobs:
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
           VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Set Convex Preview Env Vars
         run: |
