@@ -27,6 +27,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      - name: Set Convex Preview Env Vars
+        run: |
+          PREVIEW="pr-${{ github.event.pull_request.number }}"
+          npx convex env set SITE_URL "https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+
       - name: Deploy Convex Preview
         run: |
           npx convex deploy \
