@@ -7,7 +7,13 @@ import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 import { Separator } from '~/features/shadcn/components/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '~/features/shadcn/components/tooltip'
 import { GoogleIcon } from '~/features/auth/utils/custom-icons'
+import { isPreview } from '~/shared/utils/preview'
 
 type SignInCredentialsFormProps = {
   redirectTo: string
@@ -102,19 +108,30 @@ export function SignInCredentialsForm({
       </div>
       <div className="flex flex-col gap-4">
         {/* Social login buttons */}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => handleSocialSignIn('google')}
-          disabled={isDisabled}
-        >
-          {socialLoading === 'google' ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <GoogleIcon />
-          )}
-          Continue with Google
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="w-full" />}
+            disabled={!isPreview}
+          >
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleSocialSignIn('google')}
+              disabled={isDisabled || isPreview}
+            >
+              {socialLoading === 'google' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <GoogleIcon />
+              )}
+              Continue with Google
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            OAuth is unavailable on preview deployments. Use email and password
+            instead.
+          </TooltipContent>
+        </Tooltip>
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
