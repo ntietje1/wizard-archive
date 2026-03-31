@@ -15,6 +15,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,9 +27,9 @@ jobs:
       - name: Deploy Convex
         run: npx convex deploy --cmd-url-env-var-name VITE_CONVEX_URL
         env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
       - name: Deploy Cloudflare Workers
-        run: vite build --mode production && wrangler deploy
+        run: npx vite build --mode production && npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
