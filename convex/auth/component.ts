@@ -41,8 +41,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
 })
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = getRequiredEnv('SITE_URL')
-
+  const siteUrl = process.env.SITE_URL ?? ''
   const googleClientId = process.env.GOOGLE_CLIENT_ID
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
   const googleProvider =

@@ -30,23 +30,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Ensure Convex Preview Exists
-        continue-on-error: true
-        run: |
-          npx convex deploy \
-            --preview-create "pr-${{ github.event.pull_request.number }}"
-        env:
-          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
-
-      - name: Set Convex Preview Env Vars
-        run: |
-          PREVIEW="pr-${{ github.event.pull_request.number }}"
-          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
-          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
-          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
-        env:
-          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
-
       - name: Deploy Convex Preview
         run: |
           npx convex deploy \
@@ -60,6 +43,15 @@ jobs:
           VITE_IS_PREVIEW: 'true'
           VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Set Convex Preview Env Vars
+        run: |
+          PREVIEW="pr-${{ github.event.pull_request.number }}"
+          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
 
       - name: Deploy Cloudflare Workers Preview
         run: |
