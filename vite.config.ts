@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
+import { cloudflare } from '@cloudflare/vite-plugin'
 
 export default defineConfig({
   server: {
@@ -19,6 +20,11 @@ export default defineConfig({
     react({
       babel: {
         plugins: ['babel-plugin-react-compiler'],
+      },
+    }),
+    cloudflare({
+      viteEnvironment: {
+        name: 'ssr',
       },
     }),
   ],

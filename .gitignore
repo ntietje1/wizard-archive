@@ -6,6 +6,7 @@ yarn.lock
 .env
 .env.local
 .env.dev
+.env.production
 .DS_Store
 .cache
 .vercel
@@ -15,6 +16,7 @@ yarn.lock
 .output
 .tanstack
 
+/dist/
 /build/
 /api/
 /server/build
@@ -37,3 +39,9 @@ coverage/
 
 .claude/
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
