@@ -17,6 +17,8 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import type { Theme } from '~/features/settings/hooks/useTheme'
 import { NavigationProgress } from '~/shared/components/navigation-progress'
+import { PreviewBanner } from '~/shared/components/preview-banner'
+import { isPreview } from '~/shared/utils/preview'
 import { ThemeProvider } from '~/shared/components/theme-provider'
 import { resolveTheme } from '~/features/settings/hooks/useTheme'
 import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPreferences'
@@ -133,6 +135,7 @@ function RootDocument({
       <body className="flex flex-col min-h-screen">
         <LazyMotion features={domAnimation}>
           <NavigationProgress />
+          {isPreview && <PreviewBanner />}
           {children}
           <Toaster />
           <ReactQueryDevtools

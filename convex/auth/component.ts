@@ -20,14 +20,6 @@ import type { DataModel } from '../_generated/dataModel'
 
 const authFunctions: AuthFunctions = internal.auth.component
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(`${name} environment variable is required`)
-  }
-  return value
-}
-
 export const authComponent = createClient<DataModel>(components.betterAuth, {
   authFunctions,
   triggers: {
@@ -41,9 +33,19 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
 })
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = getRequiredEnv('SITE_URL')
-  const googleClientId = getRequiredEnv('GOOGLE_CLIENT_ID')
-  const googleClientSecret = getRequiredEnv('GOOGLE_CLIENT_SECRET')
+  const siteUrl = process.env.SITE_URL ?? ''
+  const googleClientId = process.env.GOOGLE_CLIENT_ID
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const googleProvider =
+    googleClientId && googleClientSecret
+      ? {
+          google: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+          },
+        }
+      : {}
+
   return betterAuth({
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
@@ -98,10 +100,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       },
     },
     socialProviders: {
-      google: {
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
-      },
+      ...googleProvider,
     },
     plugins: [convex({ authConfig }), twoFactor(), multiSession()],
   })

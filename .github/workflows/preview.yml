@@ -1,0 +1,94 @@
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+  WORKER_NAME: wizard-archive-pr-${{ github.event.pull_request.number }}
+  PREVIEW_URL: https://preview-${{ github.event.pull_request.number }}.wizardarchive.com
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy Convex Preview
+        run: |
+          npx convex deploy \
+            --preview-create "pr-${{ github.event.pull_request.number }}" \
+            --cmd 'npx vite build' \
+            --cmd-url-env-var-name VITE_CONVEX_URL
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+          VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+          VITE_IS_PREVIEW: 'true'
+          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Set Convex Preview Env Vars
+        run: |
+          PREVIEW="pr-${{ github.event.pull_request.number }}"
+          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
+          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+
+      - name: Deploy Cloudflare Workers Preview
+        run: |
+          npx wrangler deploy \
+            --name ${{ env.WORKER_NAME }} \
+            --route "preview-${{ github.event.pull_request.number }}.wizardarchive.com/*"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Comment Preview URL
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-url
+          message: |
+            ### Preview Deployment
+
+            | Service | URL |
+            |---------|-----|
+            | Frontend | ${{ env.PREVIEW_URL }} |
+
+  cleanup-preview:
+    name: Cleanup Preview
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Convex previews are automatically deleted after 7 days, so we don't need to do anything here
+
+      - name: Delete Cloudflare Workers Preview
+        run: npx wrangler delete --name ${{ env.WORKER_NAME }} --force
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
