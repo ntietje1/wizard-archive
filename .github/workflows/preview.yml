@@ -11,6 +11,7 @@ concurrency:
 env:
   NODE_VERSION: 22
   WORKER_NAME: wizard-archive-pr-${{ github.event.pull_request.number }}
+  PREVIEW_URL: https://pr-${{ github.event.pull_request.number }}.preview.wizardarchive.com
 
 jobs:
   deploy-preview:
@@ -38,20 +39,24 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
-          VITE_SITE_URL: https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
+          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Set Convex Preview Env Vars
         run: |
           PREVIEW="pr-${{ github.event.pull_request.number }}"
-          npx convex env set SITE_URL "https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev" --preview-name "$PREVIEW"
+          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
           npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
           npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
 
       - name: Deploy Cloudflare Workers Preview
-        run: npx wrangler deploy --name ${{ env.WORKER_NAME }}
+        run: |
+          npx wrangler deploy \
+            --name ${{ env.WORKER_NAME }} \
+            --route "pr-${{ github.event.pull_request.number }}.preview.wizardarchive.com/*"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
@@ -64,7 +69,7 @@ jobs:
 
             | Service | URL |
             |---------|-----|
-            | Frontend | https://${{ env.WORKER_NAME }}.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev |
+            | Frontend | ${{ env.PREVIEW_URL }} |
 
   cleanup-preview:
     name: Cleanup Preview
