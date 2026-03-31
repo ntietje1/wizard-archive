@@ -23,7 +23,9 @@ const authFunctions: AuthFunctions = internal.auth.component
 function getRequiredEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(`${name} environment variable is required`)
+    // Return empty during Convex module analysis (env vars aren't available
+    // until the deployment exists). Auth will fail at request time if truly unset.
+    return ''
   }
   return value
 }
