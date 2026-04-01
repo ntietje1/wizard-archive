@@ -175,6 +175,7 @@ function getCursorColor(userId: string): string {
 }
 
 const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
+  const { canEdit } = useEditorMode()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
 
@@ -184,6 +185,7 @@ const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
   const { doc, provider, instanceId, isLoading } = useConvexYjsCollaboration(
     note._id,
     { name: userName, color: userColor },
+    canEdit,
   )
 
   if (isLoading || !doc || !provider) {

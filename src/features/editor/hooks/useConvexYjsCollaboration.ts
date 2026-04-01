@@ -1,8 +1,7 @@
 import * as Y from 'yjs'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { PERSIST_INTERVAL_MS } from 'convex/yjsSync/constants'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -18,28 +17,28 @@ let nextInstanceId = 1
 export function useConvexYjsCollaboration(
   documentId: Id<'notes'>,
   user: { name: string; color: string },
+  canEdit: boolean,
 ) {
   const convex = useConvex()
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const initialLoadDone = useRef(false)
+  const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
 
   useEffect(() => {
-    initialLoadDone.current = false
     setIsLoading(true)
+    setAfterSeq(undefined)
 
     const doc = new Y.Doc()
-    const provider = new ConvexYjsProvider(doc, documentId)
-
-    provider.setPushUpdate((args) =>
-      convex.mutation(api.yjsSync.mutations.pushUpdate, args),
-    )
-    provider.setPushAwareness((args) =>
-      convex.mutation(api.yjsSync.mutations.pushAwareness, args),
-    )
-    provider.setRemoveAwareness((args) =>
-      convex.mutation(api.yjsSync.mutations.removeAwareness, args),
-    )
+    const provider = new ConvexYjsProvider(doc, documentId, {
+      pushUpdate: (args) =>
+        convex.mutation(api.yjsSync.mutations.pushUpdate, args),
+      pushAwareness: (args) =>
+        convex.mutation(api.yjsSync.mutations.pushAwareness, args),
+      removeAwareness: (args) =>
+        convex.mutation(api.yjsSync.mutations.removeAwareness, args),
+      persistBlocks: (args) =>
+        convex.mutation(api.yjsSync.mutations.persistBlocks, args),
+    })
 
     setState({ doc, provider, instanceId: nextInstanceId++ })
 
@@ -51,22 +50,25 @@ export function useConvexYjsCollaboration(
   }, [documentId, convex])
 
   useEffect(() => {
-    if (state) {
-      state.provider.awareness.setLocalStateField('user', user)
-    }
+    if (state) state.provider.setUser(user)
   }, [state, user.name, user.color])
+
+  useEffect(() => {
+    if (state) state.provider.writable = canEdit
+  }, [state, canEdit])
 
   const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
     documentId,
+    afterSeq,
   })
 
   useEffect(() => {
     if (updatesResult.data && state) {
       state.provider.applyRemoteUpdates(updatesResult.data)
-      if (!initialLoadDone.current) {
-        initialLoadDone.current = true
-        setIsLoading(false)
+      if (afterSeq === undefined && updatesResult.data.length > 0) {
+        setAfterSeq(state.provider.lastAppliedSeq)
       }
+      if (isLoading) setIsLoading(false)
     }
   }, [updatesResult.data, state])
 
@@ -79,27 +81,6 @@ export function useConvexYjsCollaboration(
       state.provider.applyRemoteAwareness(awarenessResult.data)
     }
   }, [awarenessResult.data, state])
-
-  useEffect(() => {
-    if (!state) return
-
-    const persist = () => {
-      convex
-        .mutation(api.yjsSync.mutations.persistBlocks, {
-          documentId,
-        })
-        .catch((err: unknown) => {
-          console.error('[YJS] persist failed for', documentId, err)
-        })
-    }
-
-    const persistInterval = setInterval(persist, PERSIST_INTERVAL_MS)
-
-    return () => {
-      clearInterval(persistInterval)
-      persist()
-    }
-  }, [state, convex, documentId])
 
   return {
     doc: state?.doc ?? null,
