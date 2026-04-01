@@ -95,6 +95,7 @@ test.describe.serial('editor stress tests', () => {
     multiParagraph: `MultiPara ${Date.now()}`,
     undoBasic: `UndoBasic ${Date.now()}`,
     undoSelect: `UndoSel ${Date.now()}`,
+    redoAfterSync: `RedoSync ${Date.now()}`,
     complex: `Complex ${Date.now()}`,
   }
 
@@ -146,6 +147,31 @@ test.describe.serial('editor stress tests', () => {
     await page.keyboard.press(`${MOD}+z`)
     await expect(editor).not.toContainText(text, { timeout: 5000 })
 
+    await page.keyboard.press(`${MOD}+Shift+z`)
+    await expect(editor).toContainText(text, { timeout: 5000 })
+  })
+
+  test('redo works after undo and sync round-trips', async ({ page }) => {
+    const editor = await navigateToNote(page, notes.redoAfterSync)
+    await editor.click()
+
+    const text = `RedoSync-${Date.now()}`
+    await page.keyboard.type(text)
+    await expect(editor).toContainText(text)
+
+    // Wait for Yjs to sync the content to the server and back
+    await page.waitForTimeout(3000)
+
+    // Undo all content (back to empty)
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press(`${MOD}+z`)
+    }
+    await expect(editor).not.toContainText(text, { timeout: 5000 })
+
+    // Wait for the empty state to sync back
+    await page.waitForTimeout(3000)
+
+    // Redo should restore the text
     await page.keyboard.press(`${MOD}+Shift+z`)
     await expect(editor).toContainText(text, { timeout: 5000 })
   })
