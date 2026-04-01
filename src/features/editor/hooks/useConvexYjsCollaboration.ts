@@ -91,7 +91,7 @@ export function useConvexYjsCollaboration(
           encodedState: encodedState.slice().buffer,
         })
         .catch((err: unknown) => {
-          console.error('Failed to persist blocks for', documentId, err)
+          console.error('[YJS] persist failed for', documentId, err)
         })
     }
 

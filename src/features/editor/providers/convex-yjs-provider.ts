@@ -41,12 +41,20 @@ function uint8ToArrayBuffer(uint8: Uint8Array): ArrayBuffer {
   if (uint8.byteOffset === 0 && uint8.byteLength === uint8.buffer.byteLength) {
     return uint8.buffer as ArrayBuffer
   }
-  return new Uint8Array(uint8).buffer
+  return uint8.buffer.slice(
+    uint8.byteOffset,
+    uint8.byteOffset + uint8.byteLength,
+  ) as ArrayBuffer
 }
+
+const DEBOUNCE_MS = 50
+const MAX_BATCH_MS = 200
 
 export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   doc: Y.Doc
   awareness: Awareness
+  synced = false
+
   private documentId: Id<'notes'>
   private lastAppliedSeq = -1
   private knownRemoteClientIds = new Set<number>()
@@ -54,7 +62,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private pushAwarenessFn: PushAwarenessFn | null = null
   private removeAwarenessFn: RemoveAwarenessFn | null = null
   private destroyed = false
-  synced = false
+  private pendingUpdates: Array<Uint8Array> = []
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null
+  private maxWaitTimer: ReturnType<typeof setTimeout> | null = null
+  private pushInFlight = false
 
   constructor(doc: Y.Doc, documentId: Id<'notes'>) {
     super()
@@ -81,10 +92,8 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   applyRemoteUpdates(updates: Array<UpdateEntry>) {
     if (this.destroyed) return
 
-    const sorted = [...updates].sort((a, b) => a.seq - b.seq)
-
     let applied = false
-    for (const entry of sorted) {
+    for (const entry of updates) {
       if (entry.seq > this.lastAppliedSeq) {
         Y.applyUpdate(this.doc, new Uint8Array(entry.update), this)
         this.lastAppliedSeq = entry.seq
@@ -119,42 +128,12 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.knownRemoteClientIds = currentRemoteIds
   }
 
-  private handleDocUpdate = (update: Uint8Array, origin: unknown) => {
-    if (origin === this || this.destroyed) return
-    this.pushUpdateFn?.({
-      documentId: this.documentId,
-      update: uint8ToArrayBuffer(update),
-    }).catch((err: unknown) => {
-      console.error('Failed to push Yjs update for', this.documentId, err)
-    })
-  }
-
-  private handleAwarenessUpdate = (
-    {
-      added,
-      updated,
-    }: { added: Array<number>; updated: Array<number>; removed: Array<number> },
-    origin: unknown,
-  ) => {
-    if (origin === this || this.destroyed) return
-
-    const myClientId = this.doc.clientID
-    const changed = [...added, ...updated].filter((id) => id === myClientId)
-    if (changed.length === 0) return
-
-    const encoded = encodeAwarenessUpdate(this.awareness, [myClientId])
-    this.pushAwarenessFn?.({
-      documentId: this.documentId,
-      clientId: myClientId,
-      state: uint8ToArrayBuffer(encoded),
-    }).catch((err: unknown) => {
-      console.error('Failed to push awareness for', this.documentId, err)
-    })
-  }
-
   destroy() {
     if (this.destroyed) return
     this.destroyed = true
+
+    this.pushInFlight = false
+    this.flushUpdates()
 
     this.removeAwarenessFn?.({
       documentId: this.documentId,
@@ -172,5 +151,87 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.awareness.destroy()
 
     super.destroy()
+  }
+
+  private handleDocUpdate = (update: Uint8Array, origin: unknown) => {
+    if (origin === this || this.destroyed) return
+    this.pendingUpdates.push(update)
+
+    if (this.debounceTimer) clearTimeout(this.debounceTimer)
+    this.debounceTimer = setTimeout(() => this.flushUpdates(), DEBOUNCE_MS)
+
+    if (!this.maxWaitTimer) {
+      this.maxWaitTimer = setTimeout(() => this.flushUpdates(), MAX_BATCH_MS)
+    }
+  }
+
+  private flushUpdates() {
+    this.clearTimers()
+    if (this.pushInFlight) return
+    if (this.pendingUpdates.length === 0 || !this.pushUpdateFn) return
+
+    const merged =
+      this.pendingUpdates.length === 1
+        ? this.pendingUpdates[0]
+        : Y.mergeUpdates(this.pendingUpdates)
+    this.pendingUpdates = []
+
+    this.pushInFlight = true
+    this.pushUpdateFn({
+      documentId: this.documentId,
+      update: uint8ToArrayBuffer(merged),
+    })
+      .then(({ seq }) => {
+        if (seq > this.lastAppliedSeq) this.lastAppliedSeq = seq
+      })
+      .catch((err: unknown) => {
+        console.error('[YJS] push failed for', this.documentId, err)
+      })
+      .finally(() => {
+        this.pushInFlight = false
+        if (this.pendingUpdates.length > 0) this.scheduleFlush()
+      })
+  }
+
+  private scheduleFlush() {
+    if (!this.debounceTimer) {
+      this.debounceTimer = setTimeout(() => this.flushUpdates(), DEBOUNCE_MS)
+    }
+    if (!this.maxWaitTimer) {
+      this.maxWaitTimer = setTimeout(() => this.flushUpdates(), MAX_BATCH_MS)
+    }
+  }
+
+  private clearTimers() {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer)
+      this.debounceTimer = null
+    }
+    if (this.maxWaitTimer) {
+      clearTimeout(this.maxWaitTimer)
+      this.maxWaitTimer = null
+    }
+  }
+
+  private handleAwarenessUpdate = (
+    {
+      added,
+      updated,
+    }: { added: Array<number>; updated: Array<number>; removed: Array<number> },
+    origin: unknown,
+  ) => {
+    if (origin === this || this.destroyed) return
+
+    const myClientId = this.doc.clientID
+    if (!added.includes(myClientId) && !updated.includes(myClientId)) return
+
+    const encoded = encodeAwarenessUpdate(this.awareness, [myClientId])
+    this.pushAwarenessFn?.({
+      documentId: this.documentId,
+      clientId: myClientId,
+      state: uint8ToArrayBuffer(encoded),
+    }).catch((err: unknown) => {
+      console.error('[YJS] awareness push failed for', this.documentId, err)
+    })
   }
 }

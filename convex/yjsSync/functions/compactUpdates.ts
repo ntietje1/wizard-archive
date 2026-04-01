@@ -4,10 +4,10 @@ import { uint8ToArrayBuffer } from './uint8ToArrayBuffer'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 
-const COMPACT_THRESHOLD = 50
+export const COMPACT_INTERVAL = 20
 
-export function shouldCompact(updateCount: number): boolean {
-  return updateCount > COMPACT_THRESHOLD
+export function shouldCompact(seq: number): boolean {
+  return seq > 0 && seq % COMPACT_INTERVAL === 0
 }
 
 export async function compactUpdates(

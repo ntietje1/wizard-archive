@@ -1,4 +1,5 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { AuthQueryCtx } from '../../functions'
@@ -30,4 +31,15 @@ export async function checkYjsWriteAccess(
   documentId: Id<'notes'>,
 ) {
   return await checkYjsAccess(ctx, documentId, PERMISSION_LEVEL.EDIT)
+}
+
+// lighter check for hot mutation path
+export async function checkYjsMembership(
+  ctx: AuthQueryCtx,
+  documentId: Id<'notes'>,
+) {
+  const note = await ctx.db.get(documentId)
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  await requireCampaignMembership(ctx, note.campaignId)
+  return note
 }

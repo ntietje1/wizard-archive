@@ -7,6 +7,7 @@ import { editorSchema } from '../notes/editorSpecs'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { internal } from '../_generated/api'
 import {
+  checkYjsMembership,
   checkYjsReadAccess,
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
@@ -19,7 +20,7 @@ export const pushUpdate = authMutation({
   },
   returns: v.object({ seq: v.number() }),
   handler: async (ctx, { documentId, update }) => {
-    await checkYjsWriteAccess(ctx, documentId)
+    await checkYjsMembership(ctx, documentId)
 
     const latest = await ctx.db
       .query('yjsUpdates')
@@ -36,12 +37,7 @@ export const pushUpdate = authMutation({
       isSnapshot: false,
     })
 
-    const updates = await ctx.db
-      .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', documentId))
-      .collect()
-
-    if (shouldCompact(updates.length)) {
+    if (shouldCompact(seq)) {
       await ctx.scheduler.runAfter(
         0,
         internal.yjsSync.internalMutations.compact,
@@ -61,7 +57,7 @@ export const pushAwareness = authMutation({
   },
   returns: v.null(),
   handler: async (ctx, { documentId, clientId, state }) => {
-    await checkYjsReadAccess(ctx, documentId)
+    await checkYjsMembership(ctx, documentId)
 
     const existing = await ctx.db
       .query('yjsAwareness')
