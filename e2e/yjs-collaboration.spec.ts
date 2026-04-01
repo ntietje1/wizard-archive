@@ -80,8 +80,10 @@ test.describe.serial('yjs collaboration', () => {
       await page1.keyboard.press('Home')
       await page1.keyboard.type(textA)
 
+      await page1.waitForTimeout(100)
+
       await editor2.click()
-      await page2.keyboard.press('Home')
+      await page2.keyboard.press('End')
       await page2.keyboard.type(textB)
 
       await expect(editor1).toContainText(textA, { timeout: 15000 })
@@ -251,7 +253,7 @@ test.describe.serial('yjs collaboration', () => {
       await page1.keyboard.press('Enter')
       await page1.keyboard.type(duringOffline)
 
-      await page1.waitForTimeout(2000)
+      await expect(editor1).toContainText(duringOffline, { timeout: 5000 })
 
       await context2.setOffline(false)
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
@@ -8,18 +7,7 @@ import { shouldCompact } from '../functions/compactUpdates'
 import { uint8ToArrayBuffer } from '../functions/uint8ToArrayBuffer'
 import { createYjsDocument } from '../functions/createYjsDocument'
 import { deleteYjsDocument } from '../functions/deleteYjsDocument'
-
-function makeYjsUpdate(): ArrayBuffer {
-  const doc = new Y.Doc()
-  doc.getXmlFragment('document')
-  const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
-  doc.destroy()
-  return ab
-}
+import { makeYjsUpdate } from './makeYjsUpdate.helper'
 
 describe('shouldCompact', () => {
   it('returns false for seq 0', () => {

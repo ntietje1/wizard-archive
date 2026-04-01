@@ -4,18 +4,8 @@ import { createTestContext } from '../../_test/setup.helper'
 import { setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
 import { internal } from '../../_generated/api'
-
-function makeYjsUpdate(): ArrayBuffer {
-  const doc = new Y.Doc()
-  doc.getXmlFragment('document')
-  const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
-  doc.destroy()
-  return ab
-}
+import { AWARENESS_TTL_MS } from '../constants'
+import { makeYjsUpdate } from './makeYjsUpdate.helper'
 
 describe('compact', () => {
   const t = createTestContext()
@@ -182,7 +172,7 @@ describe('cleanupStaleAwareness', () => {
         clientId: 1,
         userId: ctx.dm.profile._id,
         state: new ArrayBuffer(4),
-        updatedAt: Date.now() - 31000,
+        updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
     })
 
@@ -210,7 +200,7 @@ describe('cleanupStaleAwareness', () => {
         clientId: 1,
         userId: ctx.dm.profile._id,
         state: new ArrayBuffer(4),
-        updatedAt: Date.now() - 5000,
+        updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
     })
 
@@ -238,7 +228,7 @@ describe('cleanupStaleAwareness', () => {
         clientId: 1,
         userId: ctx.dm.profile._id,
         state: new ArrayBuffer(4),
-        updatedAt: Date.now() - 31000,
+        updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
     })
 
@@ -248,7 +238,7 @@ describe('cleanupStaleAwareness', () => {
         clientId: 2,
         userId: ctx.dm.profile._id,
         state: new ArrayBuffer(4),
-        updatedAt: Date.now() - 5000,
+        updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
     })
 

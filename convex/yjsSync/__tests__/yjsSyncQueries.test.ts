@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import {
   asDm,
@@ -12,18 +11,7 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-
-function makeEmptyYjsUpdate(): ArrayBuffer {
-  const doc = new Y.Doc()
-  doc.getXmlFragment('document')
-  const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
-  doc.destroy()
-  return ab
-}
+import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
 
 describe('getUpdates', () => {
   const t = createTestContext()

@@ -65,7 +65,7 @@ export function useConvexYjsCollaboration(
   useEffect(() => {
     if (updatesResult.data && state) {
       state.provider.applyRemoteUpdates(updatesResult.data)
-      if (afterSeq === undefined && updatesResult.data.length > 0) {
+      if (updatesResult.data.length > 0) {
         setAfterSeq(state.provider.lastAppliedSeq)
       }
       if (isLoading) setIsLoading(false)

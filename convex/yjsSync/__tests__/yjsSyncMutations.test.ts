@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import {
   asDm,
@@ -13,18 +12,7 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-
-function makeEmptyYjsUpdate(): ArrayBuffer {
-  const doc = new Y.Doc()
-  doc.getXmlFragment('document')
-  const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
-  doc.destroy()
-  return ab
-}
+import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
 
 function makeAwarenessState(): ArrayBuffer {
   return new Uint8Array([1, 2, 3, 4]).buffer
@@ -597,7 +585,7 @@ describe('persistBlocks', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
 
-      expect(blocks.length).toBeGreaterThanOrEqual(0)
+      expect(blocks.length).toBe(0)
     })
   })
 })
