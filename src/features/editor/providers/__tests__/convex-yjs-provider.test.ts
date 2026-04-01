@@ -92,17 +92,19 @@ describe('ConvexYjsProvider', () => {
       expect(provider.synced).toBe(false)
     })
 
-    it('destroy calls removeAwareness with correct args', () => {
+    it('destroy calls removeAwareness with correct args', async () => {
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.removeAwareness).toHaveBeenCalledWith({
         documentId: DOCUMENT_ID,
         clientId: doc.clientID,
       })
     })
 
-    it('destroy is idempotent', () => {
+    it('destroy is idempotent', async () => {
       provider.destroy()
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.removeAwareness).toHaveBeenCalledTimes(1)
     })
 
@@ -391,36 +393,40 @@ describe('ConvexYjsProvider', () => {
       expect(config.persistBlocks).not.toHaveBeenCalled()
     })
 
-    it('persists on destroy when writable', () => {
+    it('persists on destroy when writable', async () => {
       provider.writable = true
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.persistBlocks).toHaveBeenCalledWith({
         documentId: DOCUMENT_ID,
       })
     })
 
-    it('does not persist on destroy when not writable', () => {
+    it('does not persist on destroy when not writable', async () => {
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.persistBlocks).not.toHaveBeenCalled()
     })
   })
 
   describe('edge cases', () => {
-    it('flush on destroy sends pending updates when writable', () => {
+    it('flush on destroy sends pending updates when writable', async () => {
       provider.writable = true
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
 
       expect(config.pushUpdate).not.toHaveBeenCalled()
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
 
-    it('does not flush on destroy when not writable', () => {
+    it('does not flush on destroy when not writable', async () => {
       provider.writable = true
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       provider.writable = false
 
       provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
       expect(config.pushUpdate).not.toHaveBeenCalled()
     })
   })
