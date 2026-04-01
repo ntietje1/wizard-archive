@@ -39,6 +39,7 @@ jobs:
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
@@ -54,6 +55,7 @@ jobs:
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
