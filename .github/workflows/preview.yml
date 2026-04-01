@@ -49,6 +49,7 @@ jobs:
           PREVIEW="pr-${{ github.event.pull_request.number }}"
           npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
           npx convex env set BETTER_AUTH_SECRET "${{ secrets.BETTER_AUTH_SECRET }}" --preview-name "$PREVIEW"
+          npx convex env set RESEND_API_KEY "${{ secrets.RESEND_API_KEY }}" --preview-name "$PREVIEW"
           npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
           npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
         env:
