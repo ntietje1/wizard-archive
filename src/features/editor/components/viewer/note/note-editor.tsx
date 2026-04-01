@@ -1,6 +1,6 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
+import { SideMenuController } from '@blocknote/react'
 import { useEffect, useRef, useState } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { editorSchema } from 'convex/notes/editorSpecs'
@@ -86,17 +86,44 @@ const ReadOnlyNote = ({
   noteId: Id<'notes'>
 }) => {
   const resolvedTheme = useResolvedTheme()
-  const initialContent = content.length > 0 ? content : undefined
-
-  const editor: CustomBlockNoteEditor = useCreateBlockNote({
-    schema: editorSchema,
-    initialContent,
-  })
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
 
   useEffect(() => {
-    editor.replaceBlocks(editor.document, content)
+    const initialContent = content.length > 0 ? content : undefined
+    const instance = BlockNoteEditor.create({
+      schema: editorSchema,
+      initialContent,
+    }) as CustomBlockNoteEditor
+
+    setEditor(instance)
+
+    return () => {
+      instance._tiptapEditor.destroy()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (editor) {
+      editor.replaceBlocks(editor.document, content)
+    }
   }, [editor, content])
 
+  if (!editor) return null
+
+  return (
+    <ReadOnlyNoteReady editor={editor} noteId={noteId} theme={resolvedTheme} />
+  )
+}
+
+const ReadOnlyNoteReady = ({
+  editor,
+  noteId,
+  theme,
+}: {
+  editor: CustomBlockNoteEditor
+  noteId: Id<'notes'>
+  theme: 'light' | 'dark'
+}) => {
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)
   useDisableAutolink(editor)
@@ -108,7 +135,7 @@ const ReadOnlyNote = ({
         key={noteId + 'viewer'}
         editable={false}
         editor={editor}
-        theme={resolvedTheme}
+        theme={theme}
         sideMenu={false}
         formattingToolbar={false}
         slashMenu={false}
