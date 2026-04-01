@@ -26,6 +26,7 @@ export async function createYjsDocument(
     const doc = blocksToYDoc(editor, content)
     update = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
     doc.destroy()
+    editor._tiptapEditor.destroy()
   } else {
     const doc = new Y.Doc()
     doc.getXmlFragment('document')

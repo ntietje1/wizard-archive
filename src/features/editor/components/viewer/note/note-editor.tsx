@@ -198,7 +198,7 @@ const CollaborativeNoteWithEditor = ({
       collaboration: {
         provider,
         fragment: doc.getXmlFragment('document'),
-        user,
+        user: { name: user.name, color: user.color },
         showCursorLabels: 'activity',
       },
     }) as CustomBlockNoteEditor
@@ -208,7 +208,7 @@ const CollaborativeNoteWithEditor = ({
     return () => {
       instance._tiptapEditor.destroy()
     }
-  }, [doc, provider, user])
+  }, [doc, provider, user.name, user.color])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 

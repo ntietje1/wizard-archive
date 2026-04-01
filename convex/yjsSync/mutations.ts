@@ -1,4 +1,3 @@
-import * as Y from 'yjs'
 import { v } from 'convex/values'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks } from '@blocknote/core/yjs'
@@ -7,11 +6,11 @@ import { editorSchema } from '../notes/editorSpecs'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { internal } from '../_generated/api'
 import {
-  checkYjsMembership,
   checkYjsReadAccess,
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
+import { reconstructYDoc } from './functions/reconstructYDoc'
 
 export const pushUpdate = authMutation({
   args: {
@@ -20,7 +19,7 @@ export const pushUpdate = authMutation({
   },
   returns: v.object({ seq: v.number() }),
   handler: async (ctx, { documentId, update }) => {
-    await checkYjsMembership(ctx, documentId)
+    await checkYjsWriteAccess(ctx, documentId)
 
     const latest = await ctx.db
       .query('yjsUpdates')
@@ -57,7 +56,7 @@ export const pushAwareness = authMutation({
   },
   returns: v.null(),
   handler: async (ctx, { documentId, clientId, state }) => {
-    await checkYjsMembership(ctx, documentId)
+    await checkYjsReadAccess(ctx, documentId)
 
     const existing = await ctx.db
       .query('yjsAwareness')
@@ -112,14 +111,12 @@ export const removeAwareness = authMutation({
 export const persistBlocks = authMutation({
   args: {
     documentId: v.id('notes'),
-    encodedState: v.bytes(),
   },
   returns: v.null(),
-  handler: async (ctx, { documentId, encodedState }) => {
+  handler: async (ctx, { documentId }) => {
     await checkYjsWriteAccess(ctx, documentId)
 
-    const doc = new Y.Doc()
-    Y.applyUpdate(doc, new Uint8Array(encodedState))
+    const { doc } = await reconstructYDoc(ctx, documentId)
 
     const editor = BlockNoteEditor.create({
       schema: editorSchema,
@@ -127,6 +124,7 @@ export const persistBlocks = authMutation({
     })
     const blocks = yDocToBlocks(editor, doc)
     doc.destroy()
+    editor._tiptapEditor.destroy()
 
     await saveTopLevelBlocksForNote(ctx, {
       noteId: documentId,

@@ -84,11 +84,9 @@ export function useConvexYjsCollaboration(
     if (!state) return
 
     const persist = () => {
-      const encodedState = Y.encodeStateAsUpdate(state.doc)
       convex
         .mutation(api.yjsSync.mutations.persistBlocks, {
           documentId,
-          encodedState: encodedState.slice().buffer,
         })
         .catch((err: unknown) => {
           console.error('[YJS] persist failed for', documentId, err)

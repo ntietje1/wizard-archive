@@ -9,6 +9,7 @@ export async function reconstructYDoc(
   const updates = await ctx.db
     .query('yjsUpdates')
     .withIndex('by_document_seq', (q) => q.eq('documentId', documentId))
+    .order('asc')
     .collect()
 
   const doc = new Y.Doc()

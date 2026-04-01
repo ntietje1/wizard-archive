@@ -132,7 +132,6 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (this.destroyed) return
     this.destroyed = true
 
-    this.pushInFlight = false
     this.flushUpdates()
 
     this.removeAwarenessFn?.({
