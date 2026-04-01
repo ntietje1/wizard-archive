@@ -63,7 +63,7 @@ async function withDualEditorContexts(
   }
 }
 
-async function withSingleEditorAndLateJoin(
+async function withControllableSecondEditor(
   browser: Browser,
   campaign: string,
   testFn: (ctx: {
@@ -102,11 +102,14 @@ async function withSingleEditorAndLateJoin(
 
     const editor1 = await getEditor(page1)
 
+    let cachedEditor2: Locator | null = null
     const getEditor2 = async () => {
+      if (cachedEditor2) return cachedEditor2
       await page2.goto('/campaigns')
       await navigateToCampaign(page2, campaign)
       await openItem(page2, noteName)
-      return await getEditor(page2)
+      cachedEditor2 = await getEditor(page2)
+      return cachedEditor2
     }
 
     await testFn({ page1, page2, context2, editor1, getEditor2 })
@@ -174,7 +177,7 @@ test.describe.serial('yjs collaboration', () => {
   })
 
   test('large document sync', async ({ browser }) => {
-    await withSingleEditorAndLateJoin(
+    await withControllableSecondEditor(
       browser,
       campaignName,
       async ({ page1, editor1, getEditor2 }) => {
@@ -218,7 +221,7 @@ test.describe.serial('yjs collaboration', () => {
   })
 
   test('reconnection after brief disconnect', async ({ browser }) => {
-    await withSingleEditorAndLateJoin(
+    await withControllableSecondEditor(
       browser,
       campaignName,
       async ({ page1, context2, editor1, getEditor2 }) => {

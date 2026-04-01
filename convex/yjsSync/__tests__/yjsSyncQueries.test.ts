@@ -241,6 +241,9 @@ describe('getAwareness', () => {
     })
 
     expect(results).toHaveLength(1)
+    expect(results[0].clientId).toBe(10)
+    expect(results[0].state).toBeInstanceOf(ArrayBuffer)
+    expect(typeof results[0].updatedAt).toBe('number')
   })
 
   it('player with view share can read awareness entries', async () => {
@@ -273,6 +276,10 @@ describe('getAwareness', () => {
     )
 
     expect(results).toHaveLength(1)
+    expect(results[0].clientId).toBe(20)
+    expect(results[0].state).toBeInstanceOf(ArrayBuffer)
+    expect(results[0].state.byteLength).toBe(4)
+    expect(typeof results[0].updatedAt).toBe('number')
   })
 
   it('returns only clientId, state, and updatedAt fields', async () => {

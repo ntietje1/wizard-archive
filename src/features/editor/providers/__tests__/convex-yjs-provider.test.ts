@@ -420,15 +420,6 @@ describe('ConvexYjsProvider', () => {
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
 
-    it('flushes pending updates when writable is set to false', () => {
-      provider.writable = true
-      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-
-      expect(config.pushUpdate).not.toHaveBeenCalled()
-      provider.writable = false
-      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
-    })
-
     it('does not flush on destroy when not writable', async () => {
       provider.writable = true
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])

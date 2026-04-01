@@ -108,8 +108,11 @@ test.describe.serial('editor stress tests', () => {
     await page.goto('/campaigns')
     try {
       await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
+    } catch (err) {
+      console.warn(
+        `[cleanup] Failed to delete campaign "${campaignName}":`,
+        err,
+      )
     }
     await page.close()
     await ctx.close()
@@ -159,7 +162,7 @@ test.describe.serial('editor stress tests', () => {
 
     await expect(editor).toContainText(before + after)
 
-    for (const _ of Array(after.length)) {
+    for (let i = 0; i < after.length; i++) {
       await page.keyboard.press('ArrowLeft')
     }
 
@@ -210,7 +213,7 @@ test.describe.serial('editor stress tests', () => {
     await page.keyboard.type(text)
     await expect(editor).toContainText(text)
 
-    await page.waitForTimeout(2000)
+    await page.waitForLoadState('networkidle')
 
     await page.reload({ waitUntil: 'networkidle' })
 
@@ -235,7 +238,10 @@ test.describe.serial('editor stress tests', () => {
 
         await editor1.click()
         await page1.keyboard.press(`${MOD}+a`)
-        await page1.waitForTimeout(100)
+        await page1.waitForFunction(
+          () => (window.getSelection()?.toString()?.length ?? 0) > 0,
+          { timeout: 3000 },
+        )
         await page1.keyboard.press('Backspace')
 
         await expect(editor1).not.toContainText(text, { timeout: 10000 })
@@ -267,7 +273,9 @@ test.describe.serial('editor stress tests', () => {
     await page.keyboard.press('Escape')
     await expect(menu).not.toBeVisible()
 
-    for (let i = 0; i < 5; i++) await page.keyboard.press('Backspace')
+    const filterText = 'head'
+    for (let i = 0; i < filterText.length + 1; i++)
+      await page.keyboard.press('Backspace')
 
     await page.keyboard.type('/')
     await expect(menu).toBeVisible({ timeout: 5000 })
@@ -450,7 +458,7 @@ test.describe.serial('editor stress tests', () => {
     await expect(editor).toContainText(code)
 
     await openItem(page, notes.midInsert)
-    await expect(getEditor(page)).resolves.toBeTruthy()
+    await expect(await getEditor(page)).toBeVisible()
 
     await openItem(page, notes.complex)
     const editorAfter = await getEditor(page)

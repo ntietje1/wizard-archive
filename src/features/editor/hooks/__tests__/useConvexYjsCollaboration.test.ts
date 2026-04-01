@@ -168,11 +168,9 @@ describe('useConvexYjsCollaboration', () => {
       { clientId: 999, state: new ArrayBuffer(0), updatedAt: Date.now() },
     ]
 
-    mockUseAuthQuery
-      .mockReturnValueOnce({ data: [] })
-      .mockReturnValueOnce({ data: awarenessEntries })
-      .mockReturnValueOnce({ data: [] })
-      .mockReturnValueOnce({ data: awarenessEntries })
+    mockUseAuthQuery.mockImplementation((query: unknown) =>
+      query === 'getAwareness' ? { data: awarenessEntries } : { data: [] },
+    )
 
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
 
