@@ -37,7 +37,6 @@
     "@blocknote/react": "^0.46.2",
     "@blocknote/shadcn": "^0.46.2",
     "@convex-dev/better-auth": "0.11.3",
-    "@convex-dev/prosemirror-sync": "^0.2.1",
     "@convex-dev/react-query": "0.1.0",
     "@convex-dev/resend": "^0.2.3",
     "@tailwindcss/postcss": "^4.1.12",
@@ -61,6 +60,7 @@
     "escape-html": "^1.0.3",
     "input-otp": "^1.4.2",
     "jszip": "^3.10.1",
+    "lib0": "^0.2.117",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.541.0",
     "motion": "^12.24.12",
@@ -76,6 +76,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.29",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

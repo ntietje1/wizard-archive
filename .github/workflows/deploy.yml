@@ -26,7 +26,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Deploy Convex
-        run: npx convex deploy --cmd-url-env-var-name VITE_CONVEX_URL
+        run: npx convex deploy
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
       - name: Deploy Cloudflare Workers

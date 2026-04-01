@@ -15,4 +15,10 @@ crons.cron(
   internal.auth.internalMutations.purgeExpiredAuthData,
 )
 
+crons.interval(
+  'cleanup stale Yjs awareness entries',
+  { seconds: 30 },
+  internal.yjsSync.internalMutations.cleanupStaleAwareness,
+)
+
 export default crons
