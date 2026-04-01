@@ -49,7 +49,7 @@ jobs:
         if: github.event.action != 'opened' && github.event.action != 'closed'
         run: |
           npx convex deploy \
-            --preview-name "pr-${{ github.event.pull_request.number }}" \
+            --preview-create "pr-${{ github.event.pull_request.number }}" \
             --cmd 'npx vite build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
