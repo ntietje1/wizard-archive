@@ -237,7 +237,7 @@ const CollaborativeNoteWithEditor = ({
     return () => {
       instance._tiptapEditor.destroy()
     }
-  }, [doc, provider, user.name, user.color])
+  }, [doc, provider])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
