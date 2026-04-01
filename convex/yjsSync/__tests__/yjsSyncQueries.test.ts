@@ -220,6 +220,61 @@ describe('getAwareness', () => {
     expect(typeof results[0].updatedAt).toBe('number')
   })
 
+  it('DM can read awareness entries', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'DM Awareness Note',
+      parentId: null,
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      documentId: noteId,
+      clientId: 10,
+      state: new ArrayBuffer(4),
+    })
+
+    const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
+      documentId: noteId,
+    })
+
+    expect(results).toHaveLength(1)
+  })
+
+  it('player with view share can read awareness entries', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Shared Awareness Note',
+      parentId: null,
+    })
+
+    await createSidebarShare(t, ctx.dm.profile._id, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      documentId: noteId,
+      clientId: 20,
+      state: new ArrayBuffer(4),
+    })
+
+    const results = await asPlayer(ctx).query(
+      api.yjsSync.queries.getAwareness,
+      { documentId: noteId },
+    )
+
+    expect(results).toHaveLength(1)
+  })
+
   it('returns only clientId, state, and updatedAt fields', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)

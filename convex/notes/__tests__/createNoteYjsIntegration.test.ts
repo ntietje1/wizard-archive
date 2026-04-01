@@ -52,7 +52,7 @@ describe('createNote YJS integration', () => {
     Y.applyUpdate(doc, new Uint8Array(updates[0].update))
 
     const fragment = doc.getXmlFragment('document')
-    expect(fragment).toBeDefined()
+    expect(fragment.length).toBe(0)
 
     doc.destroy()
   })

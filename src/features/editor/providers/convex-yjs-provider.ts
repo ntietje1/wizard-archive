@@ -91,14 +91,15 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
 
   set writable(value: boolean) {
     if (this._writable === value) return
-    this._writable = value
 
-    if (value) {
-      this.startPersistInterval()
-    } else {
+    if (!value) {
+      this.flushUpdates()
+      this._writable = false
       this.stopPersistInterval()
       this.clearUpdateTimers()
-      this.pendingUpdates = []
+    } else {
+      this._writable = true
+      this.startPersistInterval()
     }
   }
 
@@ -241,8 +242,9 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       })
       .catch((err: unknown) => {
         console.error('[YJS] push failed for', this.documentId, err)
-        this.pendingUpdates.unshift(merged)
-        this.scheduleFlush()
+        if (this._writable && !this.destroyed) {
+          this.pendingUpdates.unshift(merged)
+        }
       })
       .finally(() => {
         this.pushInFlight = false
@@ -251,6 +253,8 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   }
 
   private scheduleFlush() {
+    if (this.destroyed || !this._writable) return
+
     if (!this.debounceTimer) {
       this.debounceTimer = setTimeout(
         () => this.flushUpdates(),

@@ -61,8 +61,10 @@ describe('useConvexYjsCollaboration', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
+    mockMutation.mockClear()
     mockMutation.mockResolvedValue(null)
     mockUseAuthQuery.mockReturnValue({ data: undefined })
+    MockConvexYjsProvider.mockClear()
     mockProviderDestroy.mockClear()
     mockApplyRemoteUpdates.mockClear()
     mockApplyRemoteAwareness.mockClear()
@@ -166,12 +168,11 @@ describe('useConvexYjsCollaboration', () => {
       { clientId: 999, state: new ArrayBuffer(0), updatedAt: Date.now() },
     ]
 
-    let callCount = 0
-    mockUseAuthQuery.mockImplementation(() => {
-      callCount++
-      if (callCount % 2 === 1) return { data: [] }
-      return { data: awarenessEntries }
-    })
+    mockUseAuthQuery
+      .mockReturnValueOnce({ data: [] })
+      .mockReturnValueOnce({ data: awarenessEntries })
+      .mockReturnValueOnce({ data: [] })
+      .mockReturnValueOnce({ data: awarenessEntries })
 
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
 

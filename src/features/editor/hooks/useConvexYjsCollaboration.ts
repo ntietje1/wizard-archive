@@ -49,9 +49,10 @@ export function useConvexYjsCollaboration(
     }
   }, [documentId, convex])
 
+  const { name, color } = user
   useEffect(() => {
-    if (state) state.provider.setUser(user)
-  }, [state, user.name, user.color])
+    if (state) state.provider.setUser({ name, color })
+  }, [state, name, color])
 
   useEffect(() => {
     if (state) state.provider.writable = canEdit

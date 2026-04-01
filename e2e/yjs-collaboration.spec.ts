@@ -7,8 +7,116 @@ import {
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { getEditor } from './helpers/editor-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { Browser, BrowserContext, Locator, Page } from '@playwright/test'
 
 const campaignName = testName('E2E YJS Collab')
+
+async function withDualEditorContexts(
+  browser: Browser,
+  campaign: string,
+  testFn: (ctx: {
+    page1: Page
+    page2: Page
+    editor1: Locator
+    editor2: Locator
+  }) => Promise<void>,
+) {
+  const noteName = `Test ${Date.now()}`
+
+  const setupCtx = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const setupPage = await setupCtx.newPage()
+  await setupPage.goto('/campaigns')
+  await navigateToCampaign(setupPage, campaign)
+  await createNote(setupPage, noteName)
+  await setupPage.close()
+  await setupCtx.close()
+
+  const context1 = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const context2 = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const page1 = await context1.newPage()
+  const page2 = await context2.newPage()
+
+  try {
+    await page1.goto('/campaigns')
+    await navigateToCampaign(page1, campaign)
+    await openItem(page1, noteName)
+
+    await page2.goto('/campaigns')
+    await navigateToCampaign(page2, campaign)
+    await openItem(page2, noteName)
+
+    const editor1 = await getEditor(page1)
+    const editor2 = await getEditor(page2)
+
+    await testFn({ page1, page2, editor1, editor2 })
+  } finally {
+    await page1.close()
+    await page2.close()
+    await context1.close()
+    await context2.close()
+  }
+}
+
+async function withSingleEditorAndLateJoin(
+  browser: Browser,
+  campaign: string,
+  testFn: (ctx: {
+    page1: Page
+    page2: Page
+    context2: BrowserContext
+    editor1: Locator
+    getEditor2: () => Promise<Locator>
+  }) => Promise<void>,
+) {
+  const noteName = `Test ${Date.now()}`
+
+  const setupCtx = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const setupPage = await setupCtx.newPage()
+  await setupPage.goto('/campaigns')
+  await navigateToCampaign(setupPage, campaign)
+  await createNote(setupPage, noteName)
+  await setupPage.close()
+  await setupCtx.close()
+
+  const context1 = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const context2 = await browser.newContext({
+    storageState: AUTH_STORAGE_PATH,
+  })
+  const page1 = await context1.newPage()
+  const page2 = await context2.newPage()
+
+  try {
+    await page1.goto('/campaigns')
+    await navigateToCampaign(page1, campaign)
+    await openItem(page1, noteName)
+
+    const editor1 = await getEditor(page1)
+
+    const getEditor2 = async () => {
+      await page2.goto('/campaigns')
+      await navigateToCampaign(page2, campaign)
+      await openItem(page2, noteName)
+      return await getEditor(page2)
+    }
+
+    await testFn({ page1, page2, context2, editor1, getEditor2 })
+  } finally {
+    await page1.close()
+    await page2.close()
+    await context1.close()
+    await context2.close()
+  }
+}
 
 test.describe.serial('yjs collaboration', () => {
   test.beforeAll(async ({ browser }) => {
@@ -40,229 +148,102 @@ test.describe.serial('yjs collaboration', () => {
   test('concurrent typing in two tabs merges without conflict', async ({
     browser,
   }) => {
-    const testNote = `Concurrent ${Date.now()}`
+    await withDualEditorContexts(
+      browser,
+      campaignName,
+      async ({ page1, page2, editor1, editor2 }) => {
+        const textA = `AlphaText-${Date.now()}-A`
+        const textB = `BetaText-${Date.now()}-B`
 
-    const setupCtx = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const setupPage = await setupCtx.newPage()
-    await setupPage.goto('/campaigns')
-    await navigateToCampaign(setupPage, campaignName)
-    await createNote(setupPage, testNote)
-    await setupPage.close()
-    await setupCtx.close()
+        await editor1.click()
+        await page1.keyboard.press('Home')
+        await page1.keyboard.type(textA)
 
-    const context1 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const context2 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page1 = await context1.newPage()
-    const page2 = await context2.newPage()
+        await expect(editor2).toContainText(textA, { timeout: 15000 })
 
-    try {
-      await page1.goto('/campaigns')
-      await navigateToCampaign(page1, campaignName)
-      await openItem(page1, testNote)
+        await editor2.click()
+        await page2.keyboard.press('End')
+        await page2.keyboard.type(textB)
 
-      await page2.goto('/campaigns')
-      await navigateToCampaign(page2, campaignName)
-      await openItem(page2, testNote)
-
-      const editor1 = await getEditor(page1)
-      const editor2 = await getEditor(page2)
-
-      const textA = `AlphaText-${Date.now()}-A`
-      const textB = `BetaText-${Date.now()}-B`
-
-      await editor1.click()
-      await page1.keyboard.press('Home')
-      await page1.keyboard.type(textA)
-
-      await expect(editor2).toContainText(textA, { timeout: 15000 })
-
-      await editor2.click()
-      await page2.keyboard.press('End')
-      await page2.keyboard.type(textB)
-
-      await expect(editor1).toContainText(textB, { timeout: 15000 })
-      await expect(editor1).toContainText(textA, { timeout: 15000 })
-      await expect(editor2).toContainText(textA, { timeout: 15000 })
-      await expect(editor2).toContainText(textB, { timeout: 15000 })
-    } finally {
-      await page1.close()
-      await page2.close()
-      await context1.close()
-      await context2.close()
-    }
+        await expect(editor1).toContainText(textB, { timeout: 15000 })
+        await expect(editor1).toContainText(textA, { timeout: 15000 })
+        await expect(editor2).toContainText(textA, { timeout: 15000 })
+        await expect(editor2).toContainText(textB, { timeout: 15000 })
+      },
+    )
   })
 
   test('large document sync', async ({ browser }) => {
-    const testNote = `LargeDoc ${Date.now()}`
+    await withSingleEditorAndLateJoin(
+      browser,
+      campaignName,
+      async ({ page1, editor1, getEditor2 }) => {
+        await editor1.click()
 
-    const setupCtx = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const setupPage = await setupCtx.newPage()
-    await setupPage.goto('/campaigns')
-    await navigateToCampaign(setupPage, campaignName)
-    await createNote(setupPage, testNote)
-    await setupPage.close()
-    await setupCtx.close()
+        const paragraphs = [
+          `Paragraph-1-${Date.now()}: The ancient wizard consulted the tome.`,
+          `Paragraph-2-${Date.now()}: Runes glowed along the chamber walls.`,
+          `Paragraph-3-${Date.now()}: A portal shimmered into existence nearby.`,
+          `Paragraph-4-${Date.now()}: The adventurers prepared for the journey.`,
+          `Paragraph-5-${Date.now()}: Beyond the gate lay uncharted territory.`,
+        ]
 
-    const context1 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const context2 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page1 = await context1.newPage()
-    const page2 = await context2.newPage()
+        for (const paragraph of paragraphs) {
+          await page1.keyboard.type(paragraph)
+          await page1.keyboard.press('Enter')
+        }
 
-    try {
-      await page1.goto('/campaigns')
-      await navigateToCampaign(page1, campaignName)
-      await openItem(page1, testNote)
+        const editor2 = await getEditor2()
 
-      const editor1 = await getEditor(page1)
-      await editor1.click()
-
-      const paragraphs = [
-        `Paragraph-1-${Date.now()}: The ancient wizard consulted the tome.`,
-        `Paragraph-2-${Date.now()}: Runes glowed along the chamber walls.`,
-        `Paragraph-3-${Date.now()}: A portal shimmered into existence nearby.`,
-        `Paragraph-4-${Date.now()}: The adventurers prepared for the journey.`,
-        `Paragraph-5-${Date.now()}: Beyond the gate lay uncharted territory.`,
-      ]
-
-      for (const paragraph of paragraphs) {
-        await page1.keyboard.type(paragraph)
-        await page1.keyboard.press('Enter')
-      }
-
-      await page2.goto('/campaigns')
-      await navigateToCampaign(page2, campaignName)
-      await openItem(page2, testNote)
-
-      const editor2 = await getEditor(page2)
-
-      for (const paragraph of paragraphs) {
-        await expect(editor2).toContainText(paragraph, { timeout: 15000 })
-      }
-    } finally {
-      await page1.close()
-      await page2.close()
-      await context1.close()
-      await context2.close()
-    }
+        for (const paragraph of paragraphs) {
+          await expect(editor2).toContainText(paragraph, { timeout: 15000 })
+        }
+      },
+    )
   })
 
   test('rapid typing syncs reliably', async ({ browser }) => {
-    const testNote = `RapidType ${Date.now()}`
+    await withDualEditorContexts(
+      browser,
+      campaignName,
+      async ({ page1, editor1, editor2 }) => {
+        await editor1.click()
 
-    const setupCtx = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const setupPage = await setupCtx.newPage()
-    await setupPage.goto('/campaigns')
-    await navigateToCampaign(setupPage, campaignName)
-    await createNote(setupPage, testNote)
-    await setupPage.close()
-    await setupCtx.close()
+        const rapidText = `RapidBurst-${Date.now()}-TheQuickBrownFoxJumpsOverTheLazyDogRepeatedly`
+        await page1.keyboard.type(rapidText, { delay: 0 })
 
-    const context1 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const context2 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page1 = await context1.newPage()
-    const page2 = await context2.newPage()
-
-    try {
-      await page1.goto('/campaigns')
-      await navigateToCampaign(page1, campaignName)
-      await openItem(page1, testNote)
-
-      await page2.goto('/campaigns')
-      await navigateToCampaign(page2, campaignName)
-      await openItem(page2, testNote)
-
-      const editor1 = await getEditor(page1)
-      await editor1.click()
-
-      const rapidText = `RapidBurst-${Date.now()}-TheQuickBrownFoxJumpsOverTheLazyDogRepeatedly`
-      await page1.keyboard.type(rapidText, { delay: 0 })
-
-      const editor2 = await getEditor(page2)
-      await expect(editor2).toContainText(rapidText, { timeout: 15000 })
-    } finally {
-      await page1.close()
-      await page2.close()
-      await context1.close()
-      await context2.close()
-    }
+        await expect(editor2).toContainText(rapidText, { timeout: 15000 })
+      },
+    )
   })
 
   test('reconnection after brief disconnect', async ({ browser }) => {
-    const testNote = `Reconnect ${Date.now()}`
+    await withSingleEditorAndLateJoin(
+      browser,
+      campaignName,
+      async ({ page1, context2, editor1, getEditor2 }) => {
+        const editor2 = await getEditor2()
 
-    const setupCtx = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const setupPage = await setupCtx.newPage()
-    await setupPage.goto('/campaigns')
-    await navigateToCampaign(setupPage, campaignName)
-    await createNote(setupPage, testNote)
-    await setupPage.close()
-    await setupCtx.close()
+        const beforeOffline = `BeforeOffline-${Date.now()}`
+        await editor1.click()
+        await page1.keyboard.type(beforeOffline)
 
-    const context1 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const context2 = await browser.newContext({
-      storageState: AUTH_STORAGE_PATH,
-    })
-    const page1 = await context1.newPage()
-    const page2 = await context2.newPage()
+        await expect(editor2).toContainText(beforeOffline, { timeout: 15000 })
 
-    try {
-      await page1.goto('/campaigns')
-      await navigateToCampaign(page1, campaignName)
-      await openItem(page1, testNote)
+        await context2.setOffline(true)
 
-      await page2.goto('/campaigns')
-      await navigateToCampaign(page2, campaignName)
-      await openItem(page2, testNote)
+        const duringOffline = `DuringOffline-${Date.now()}`
+        await editor1.click()
+        await page1.keyboard.press('End')
+        await page1.keyboard.press('Enter')
+        await page1.keyboard.type(duringOffline)
 
-      const editor1 = await getEditor(page1)
-      const editor2 = await getEditor(page2)
+        await expect(editor1).toContainText(duringOffline, { timeout: 5000 })
 
-      const beforeOffline = `BeforeOffline-${Date.now()}`
-      await editor1.click()
-      await page1.keyboard.type(beforeOffline)
+        await context2.setOffline(false)
 
-      await expect(editor2).toContainText(beforeOffline, { timeout: 15000 })
-
-      await context2.setOffline(true)
-
-      const duringOffline = `DuringOffline-${Date.now()}`
-      await editor1.click()
-      await page1.keyboard.press('End')
-      await page1.keyboard.press('Enter')
-      await page1.keyboard.type(duringOffline)
-
-      await expect(editor1).toContainText(duringOffline, { timeout: 5000 })
-
-      await context2.setOffline(false)
-
-      await expect(editor2).toContainText(duringOffline, { timeout: 15000 })
-    } finally {
-      await page1.close()
-      await page2.close()
-      await context1.close()
-      await context2.close()
-    }
+        await expect(editor2).toContainText(duringOffline, { timeout: 15000 })
+      },
+    )
   })
 })

@@ -127,10 +127,10 @@ describe('ConvexYjsProvider', () => {
     })
 
     it('skips already-applied seqs', () => {
-      const update1 = createRemoteUpdate(0)
+      const update1 = createDistinctRemoteUpdate(0)
       provider.applyRemoteUpdates([update1])
 
-      const update2 = createRemoteUpdate(0)
+      const update2 = createDistinctRemoteUpdate(0, doc)
       provider.applyRemoteUpdates([update2])
 
       const frag = doc.getXmlFragment('document')
@@ -308,12 +308,12 @@ describe('ConvexYjsProvider', () => {
       expect(config.pushUpdate).not.toHaveBeenCalled()
     })
 
-    it('drops pending updates when writable set to false', () => {
+    it('flushes pending updates when writable set to false', () => {
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-      provider.writable = false
-
-      vi.advanceTimersByTime(200)
       expect(config.pushUpdate).not.toHaveBeenCalled()
+
+      provider.writable = false
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -420,10 +420,20 @@ describe('ConvexYjsProvider', () => {
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
 
+    it('flushes pending updates when writable is set to false', () => {
+      provider.writable = true
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
+
+      expect(config.pushUpdate).not.toHaveBeenCalled()
+      provider.writable = false
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+    })
+
     it('does not flush on destroy when not writable', async () => {
       provider.writable = true
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       provider.writable = false
+      ;(config.pushUpdate as ReturnType<typeof vi.fn>).mockClear()
 
       provider.destroy()
       await vi.advanceTimersByTimeAsync(0)

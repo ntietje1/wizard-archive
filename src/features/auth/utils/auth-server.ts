@@ -1,4 +1,5 @@
 import { convexBetterAuthReactStart } from '@convex-dev/better-auth/react-start'
+import { ERROR_CODE, isClientError } from 'convex/errors'
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL
 const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL
@@ -18,4 +19,9 @@ export const {
 } = convexBetterAuthReactStart({
   convexUrl,
   convexSiteUrl,
+  jwtCache: {
+    enabled: true,
+    expirationToleranceSeconds: 60,
+    isAuthError: (error) => isClientError(error, ERROR_CODE.NOT_AUTHENTICATED),
+  },
 })

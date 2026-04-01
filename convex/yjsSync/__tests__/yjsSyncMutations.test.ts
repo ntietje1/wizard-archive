@@ -165,35 +165,37 @@ describe('pushUpdate', () => {
 
   it('triggers compaction at COMPACT_INTERVAL', async () => {
     vi.useFakeTimers()
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
+    try {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
-      campaignId: ctx.campaignId,
-      name: 'Compact Note',
-      parentId: null,
-    })
-
-    for (let i = 1; i <= 20; i++) {
-      await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        documentId: noteId,
-        update: makeEmptyYjsUpdate(),
+      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Compact Note',
+        parentId: null,
       })
+
+      for (let i = 1; i <= 20; i++) {
+        await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+          documentId: noteId,
+          update: makeEmptyYjsUpdate(),
+        })
+      }
+
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+      await t.run(async (dbCtx) => {
+        const rows = await dbCtx.db
+          .query('yjsUpdates')
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .collect()
+
+        expect(rows).toHaveLength(1)
+        expect(rows[0].isSnapshot).toBe(true)
+      })
+    } finally {
+      vi.useRealTimers()
     }
-
-    await t.finishAllScheduledFunctions(vi.runAllTimers)
-
-    await t.run(async (dbCtx) => {
-      const rows = await dbCtx.db
-        .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
-        .collect()
-
-      expect(rows).toHaveLength(1)
-      expect(rows[0].isSnapshot).toBe(true)
-    })
-
-    vi.useRealTimers()
   })
 
   it('does not trigger compaction before interval', async () => {
@@ -558,7 +560,7 @@ describe('persistBlocks', () => {
     expect(result).toBeNull()
   })
 
-  it('persists YDoc content to blocks table', async () => {
+  it('empty YDoc produces no blocks', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 

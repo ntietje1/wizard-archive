@@ -42,6 +42,7 @@ import { useNoteEditorDropTarget } from '~/features/dnd/hooks/useNoteEditorDropT
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { patchYUndoPluginDestroy } from '~/features/editor/utils/patch-yundo-destroy'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -100,6 +101,7 @@ const ReadOnlyNote = ({
     return () => {
       instance._tiptapEditor.destroy()
     }
+    // content is synced via the separate replaceBlocks effect
   }, [])
 
   useEffect(() => {
@@ -234,9 +236,28 @@ const CollaborativeNoteWithEditor = ({
 
     setEditor(instance)
 
+    // y-prosemirror's yUndoPlugin.destroy() kills the UndoManager when
+    // TipTap reconfigures plugins during mount. We re-register the
+    // handler after reconfigurations settle.
+    let cancelled = false
+    let retries = 0
+    const MAX_RETRIES = 30
+    const tryPatch = () => {
+      if (cancelled) return
+      if (instance._tiptapEditor.view.state.plugins.length === 0) {
+        if (++retries >= MAX_RETRIES) return
+        requestAnimationFrame(tryPatch)
+        return
+      }
+      patchYUndoPluginDestroy(instance._tiptapEditor.view)
+    }
+    requestAnimationFrame(tryPatch)
+
     return () => {
+      cancelled = true
       instance._tiptapEditor.destroy()
     }
+    // user.name/color handled by provider.setUser() in useConvexYjsCollaboration
   }, [doc, provider])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)

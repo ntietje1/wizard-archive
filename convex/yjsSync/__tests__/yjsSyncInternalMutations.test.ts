@@ -110,8 +110,9 @@ describe('compact', () => {
       initialUpdate.byteOffset + initialUpdate.byteLength,
     ) as ArrayBuffer
 
+    const preModStateVector = Y.encodeStateVector(originalDoc)
     fragment.insert(0, [new Y.XmlText('hello world')])
-    const modUpdate = Y.encodeStateAsUpdate(originalDoc)
+    const modUpdate = Y.encodeStateAsUpdate(originalDoc, preModStateVector)
     const modAb = modUpdate.buffer.slice(
       modUpdate.byteOffset,
       modUpdate.byteOffset + modUpdate.byteLength,
@@ -258,9 +259,9 @@ describe('cleanupStaleAwareness', () => {
   })
 
   it('no-op when no awareness entries exist', async () => {
-    await t.mutation(
-      internal.yjsSync.internalMutations.cleanupStaleAwareness,
-      {},
-    )
+    // Should complete without throwing
+    await expect(
+      t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {}),
+    ).resolves.not.toThrow()
   })
 })
