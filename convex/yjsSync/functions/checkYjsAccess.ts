@@ -2,32 +2,32 @@ import { requireItemAccess } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { YjsDocumentId } from './types'
 
 async function checkYjsAccess(
   ctx: AuthQueryCtx,
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
   requiredLevel: (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL],
 ) {
-  const note = await ctx.db.get(documentId)
-  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  const doc = await ctx.db.get(documentId)
+  if (!doc) throwClientError(ERROR_CODE.NOT_FOUND, 'Document not found')
   await requireItemAccess(ctx, {
-    rawItem: note,
+    rawItem: doc,
     requiredLevel,
   })
-  return note
+  return doc
 }
 
 export async function checkYjsReadAccess(
   ctx: AuthQueryCtx,
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
 ) {
   return await checkYjsAccess(ctx, documentId, PERMISSION_LEVEL.VIEW)
 }
 
 export async function checkYjsWriteAccess(
   ctx: AuthQueryCtx,
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
 ) {
   return await checkYjsAccess(ctx, documentId, PERMISSION_LEVEL.EDIT)
 }

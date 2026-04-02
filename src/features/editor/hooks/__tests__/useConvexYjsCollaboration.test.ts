@@ -38,7 +38,6 @@ vi.mock('convex/_generated/api', () => ({
         pushUpdate: 'pushUpdate',
         pushAwareness: 'pushAwareness',
         removeAwareness: 'removeAwareness',
-        persistBlocks: 'persistBlocks',
       },
     },
   },
@@ -107,7 +106,6 @@ describe('useConvexYjsCollaboration', () => {
         pushUpdate: expect.any(Function),
         pushAwareness: expect.any(Function),
         removeAwareness: expect.any(Function),
-        persistBlocks: expect.any(Function),
       }),
     )
   })

@@ -8,6 +8,7 @@ import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
 import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-viewer'
 import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
+import { CanvasViewer } from '~/features/editor/components/viewer/canvas/canvas-viewer'
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
@@ -31,6 +32,8 @@ export function SidebarItemEditor({
         return <FolderViewer key={item._id} item={item} search={search} />
       case SIDEBAR_ITEM_TYPES.files:
         return <FileViewer key={item._id} item={item} search={search} />
+      case SIDEBAR_ITEM_TYPES.canvases:
+        return <CanvasViewer key={item._id} item={item} search={search} />
       default:
         return assertNever(item)
     }

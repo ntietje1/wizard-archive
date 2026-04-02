@@ -1,11 +1,11 @@
-import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
+import { yjsDocumentIdValidator } from './schema'
 import { compactUpdates } from './functions/compactUpdates'
 import { AWARENESS_TTL_MS } from './constants'
 
 export const compact = internalMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
   },
   handler: async (ctx, { documentId }) => {
     await compactUpdates(ctx, documentId)

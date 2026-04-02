@@ -116,6 +116,8 @@ async function collectItemsRecursively(
         items.push(...nestedItems)
         break
       }
+      case SIDEBAR_ITEM_TYPES.canvases:
+        break
       default:
         assertNever(child)
     }

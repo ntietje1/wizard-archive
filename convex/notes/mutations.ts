@@ -1,9 +1,15 @@
 import { v } from 'convex/values'
+import { BlockNoteEditor } from '@blocknote/core'
+import { yDocToBlocks } from '@blocknote/core/yjs'
 import { authMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
+import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
+import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
+import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
 import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
+import { editorSchema } from './editorSpecs'
 import type { Id } from '../_generated/dataModel'
 
 export const updateNote = authMutation({
@@ -55,6 +61,36 @@ export const createNote = authMutation({
       content: args.content,
       campaignId: args.campaignId,
     })
+  },
+})
+
+export const persistNoteBlocks = authMutation({
+  args: {
+    documentId: v.id('notes'),
+  },
+  returns: v.null(),
+  handler: async (ctx, { documentId }) => {
+    await checkYjsWriteAccess(ctx, documentId)
+
+    const { doc } = await reconstructYDoc(ctx, documentId)
+    const editor = BlockNoteEditor.create({
+      schema: editorSchema,
+      _headless: true,
+    })
+
+    try {
+      const blocks = yDocToBlocks(editor, doc)
+
+      await saveTopLevelBlocksForNote(ctx, {
+        noteId: documentId,
+        content: blocks,
+      })
+    } finally {
+      doc.destroy()
+      editor._tiptapEditor.destroy()
+    }
+
+    return null
   },
 })
 

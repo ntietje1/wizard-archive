@@ -37,11 +37,16 @@ type CreateFileArgs = CreateItemBase & {
   storageId?: Id<'_storage'>
 }
 
+type CreateCanvasArgs = CreateItemBase & {
+  type: typeof SIDEBAR_ITEM_TYPES.canvases
+}
+
 export type CreateItemArgs =
   | CreateNoteArgs
   | CreateFolderArgs
   | CreateMapArgs
   | CreateFileArgs
+  | CreateCanvasArgs
 
 export type CreateItemResult = {
   id: SidebarItemId
@@ -57,6 +62,9 @@ export function useCreateSidebarItem() {
   )
   const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap)
   const createFileMutation = useAppMutation(api.files.mutations.createFile)
+  const createCanvasMutation = useAppMutation(
+    api.canvases.mutations.createCanvas,
+  )
 
   const createItem = async (
     args: CreateItemArgs,
@@ -108,6 +116,16 @@ export function useCreateSidebarItem() {
           color: args.color,
         })
         return { id: fileId, slug, type: args.type }
+      }
+      case SIDEBAR_ITEM_TYPES.canvases: {
+        const { canvasId, slug } = await createCanvasMutation.mutateAsync({
+          campaignId: args.campaignId,
+          name: trimmedName,
+          parentId: args.parentId,
+          iconName: args.iconName,
+          color: args.color,
+        })
+        return { id: canvasId, slug, type: args.type }
       }
       default:
         return assertNever(args)

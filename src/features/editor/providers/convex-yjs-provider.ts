@@ -6,9 +6,7 @@ import {
   encodeAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
-import { PERSIST_INTERVAL_MS } from 'convex/yjsSync/constants'
-import { uint8ToArrayBuffer } from 'convex/yjsSync/functions/uint8ToArrayBuffer'
-import type { Id } from 'convex/_generated/dataModel'
+import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
 
 type AwarenessEntry = {
   clientId: number
@@ -27,19 +25,28 @@ type ProviderEvents = {
 
 export type ConvexYjsProviderConfig = {
   pushUpdate: (args: {
-    documentId: Id<'notes'>
+    documentId: string
     update: ArrayBuffer
   }) => Promise<{ seq: number }>
   pushAwareness: (args: {
-    documentId: Id<'notes'>
+    documentId: string
     clientId: number
     state: ArrayBuffer
   }) => Promise<null>
   removeAwareness: (args: {
-    documentId: Id<'notes'>
+    documentId: string
     clientId: number
   }) => Promise<null>
-  persistBlocks: (args: { documentId: Id<'notes'> }) => Promise<null>
+}
+
+function uint8ToArrayBuffer(uint8: Uint8Array): ArrayBuffer {
+  if (uint8.byteOffset === 0 && uint8.byteLength === uint8.buffer.byteLength) {
+    return uint8.buffer as ArrayBuffer
+  }
+  return uint8.buffer.slice(
+    uint8.byteOffset,
+    uint8.byteOffset + uint8.byteLength,
+  ) as ArrayBuffer
 }
 
 const UPDATE_DEBOUNCE_MS = 50
@@ -52,7 +59,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   synced = false
   lastAppliedSeq = -1
 
-  private documentId: Id<'notes'>
+  private documentId: YjsDocumentId
   private config: ConvexYjsProviderConfig
   private knownRemoteClientIds = new Set<number>()
   private destroyed = false
@@ -61,15 +68,12 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private maxWaitTimer: ReturnType<typeof setTimeout> | null = null
   private pushInFlight = false
-  private inflightPromise: Promise<void> | null = null
-  private dirty = false
-  private persistTimer: ReturnType<typeof setInterval> | null = null
   private awarenessTimer: ReturnType<typeof setTimeout> | null = null
   private awarenessInFlight = false
 
   constructor(
     doc: Y.Doc,
-    documentId: Id<'notes'>,
+    documentId: YjsDocumentId,
     config: ConvexYjsProviderConfig,
   ) {
     super()
@@ -88,11 +92,9 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (!value) {
       this.flushUpdates()
       this._writable = false
-      this.stopPersistInterval()
       this.clearUpdateTimers()
     } else {
       this._writable = true
-      this.startPersistInterval()
     }
   }
 
@@ -143,67 +145,42 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (this.destroyed) return
     this.destroyed = true
 
-    this.stopPersistInterval()
     this.clearAwarenessTimer()
 
-    const documentId = this.documentId
-    const clientID = this.doc.clientID
-    const awareness = this.awareness
-    const writable = this._writable
-    const shouldPersist = this.dirty
-
     const teardown = async () => {
-      if (writable) {
+      if (this._writable) {
         await this.flushUpdates()
-        if (shouldPersist) {
-          this.config.persistBlocks({ documentId }).catch(() => {})
-        }
       }
 
       await this.flushAwareness()
 
       this.config
-        .removeAwareness({ documentId, clientId: clientID })
+        .removeAwareness({
+          documentId: this.documentId,
+          clientId: this.doc.clientID,
+        })
         .catch(() => {})
     }
 
     teardown().finally(() => {
-      removeAwarenessStates(awareness, [clientID], 'local-disconnect')
+      removeAwarenessStates(
+        this.awareness,
+        [this.doc.clientID],
+        'local-disconnect',
+      )
 
       this.doc.off('update', this.handleDocUpdate)
-      awareness.off('update', this.handleAwarenessUpdate)
-      awareness.destroy()
+      this.awareness.off('update', this.handleAwarenessUpdate)
+      this.awareness.destroy()
 
       super.destroy()
     })
-  }
-
-  private persist() {
-    this.config.persistBlocks({ documentId: this.documentId }).catch(() => {})
-  }
-
-  private startPersistInterval() {
-    this.stopPersistInterval()
-    this.persistTimer = setInterval(() => {
-      if (this.dirty) {
-        this.dirty = false
-        this.persist()
-      }
-    }, PERSIST_INTERVAL_MS)
-  }
-
-  private stopPersistInterval() {
-    if (this.persistTimer) {
-      clearInterval(this.persistTimer)
-      this.persistTimer = null
-    }
   }
 
   // -- Document update batching --
 
   private handleDocUpdate = (update: Uint8Array, origin: unknown) => {
     if (origin === this || this.destroyed || !this._writable) return
-    this.dirty = true
     this.pendingUpdates.push(update)
 
     if (this.debounceTimer) clearTimeout(this.debounceTimer)
@@ -222,7 +199,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
 
   private flushUpdates(): Promise<void> {
     this.clearUpdateTimers()
-    if (this.pushInFlight) return this.inflightPromise ?? Promise.resolve()
+    if (this.pushInFlight) return Promise.resolve()
     if (this.pendingUpdates.length === 0) return Promise.resolve()
 
     const merged =
@@ -232,7 +209,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.pendingUpdates = []
 
     this.pushInFlight = true
-    this.inflightPromise = this.config
+    return this.config
       .pushUpdate({
         documentId: this.documentId,
         update: uint8ToArrayBuffer(merged),
@@ -248,10 +225,8 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       })
       .finally(() => {
         this.pushInFlight = false
-        this.inflightPromise = null
         if (this.pendingUpdates.length > 0) this.scheduleFlush()
       })
-    return this.inflightPromise
   }
 
   private scheduleFlush() {

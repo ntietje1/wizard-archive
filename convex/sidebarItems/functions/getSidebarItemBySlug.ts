@@ -5,6 +5,7 @@ import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
 import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
 import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
+import { enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -18,11 +19,12 @@ export const getSidebarItemBySlug = async (
   const idx = (q: any) => q.eq('campaignId', campaignId).eq('slug', slug)
 
   // specifically don't filter out deleted items, as they are still viewable in this context
-  const [note, folder, map, file] = await Promise.all([
+  const [note, folder, map, file, canvas] = await Promise.all([
     ctx.db.query('notes').withIndex('by_campaign_slug', idx).unique(),
     ctx.db.query('folders').withIndex('by_campaign_slug', idx).unique(),
     ctx.db.query('gameMaps').withIndex('by_campaign_slug', idx).unique(),
     ctx.db.query('files').withIndex('by_campaign_slug', idx).unique(),
+    ctx.db.query('canvases').withIndex('by_campaign_slug', idx).unique(),
   ])
 
   if (note) {
@@ -54,6 +56,13 @@ export const getSidebarItemBySlug = async (
       requiredLevel: PERMISSION_LEVEL.VIEW,
     })
     return enhanced ? enhanceFileWithContent(ctx, { file: enhanced }) : null
+  }
+  if (canvas) {
+    const enhanced = await checkItemAccess(ctx, {
+      rawItem: canvas,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+    return enhanced ? enhanceCanvasWithContent(ctx, { canvas: enhanced }) : null
   }
 
   return null

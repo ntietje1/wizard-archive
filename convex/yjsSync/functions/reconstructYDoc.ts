@@ -1,10 +1,10 @@
 import * as Y from 'yjs'
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
-import type { Id } from '../../_generated/dataModel'
+import type { YjsDocumentId } from './types'
 
 export async function reconstructYDoc(
   ctx: QueryCtx | MutationCtx,
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
 ) {
   const updates = await ctx.db
     .query('yjsUpdates')

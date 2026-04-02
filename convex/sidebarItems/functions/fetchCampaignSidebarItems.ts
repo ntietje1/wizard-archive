@@ -21,7 +21,7 @@ export const fetchCampaignSidebarItems = async (
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
 
-  const [folders, notes, maps, files, bookmarkIds, sharesMap] =
+  const [folders, notes, maps, files, canvases, bookmarkIds, sharesMap] =
     await Promise.all([
       ctx.db
         .query('folders')
@@ -47,6 +47,12 @@ export const fetchCampaignSidebarItems = async (
           q.eq('campaignId', campaignId).eq('location', location),
         )
         .collect(),
+      ctx.db
+        .query('canvases')
+        .withIndex('by_campaign_location_parent_name', (q) =>
+          q.eq('campaignId', campaignId).eq('location', location),
+        )
+        .collect(),
       getCampaignBookmarks(ctx, campaignId, membership._id),
       hasFullAccess
         ? getAllCampaignShares(ctx, campaignId)
@@ -58,6 +64,7 @@ export const fetchCampaignSidebarItems = async (
     ...notes,
     ...maps,
     ...files,
+    ...canvases,
   ]
 
   return await Promise.all(

@@ -2,6 +2,7 @@ import { enhanceFile } from '../../files/functions/enhanceFile'
 import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMap } from '../../gameMaps/functions/enhanceMap'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
+import { enhanceCanvas } from '../../canvases/functions/enhanceCanvas'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { requireCampaignMembership } from '../../functions'
@@ -45,6 +46,12 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
     case SIDEBAR_ITEM_TYPES.notes:
       return enhanceNote(ctx, {
         note: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return enhanceCanvas(ctx, {
+        canvas: item,
         sharesMap,
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>

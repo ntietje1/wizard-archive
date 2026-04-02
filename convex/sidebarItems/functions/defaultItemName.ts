@@ -6,6 +6,7 @@ export const defaultNameMap: Record<SidebarItemType, string> = {
   [SIDEBAR_ITEM_TYPES.notes]: 'Untitled Note',
   [SIDEBAR_ITEM_TYPES.gameMaps]: 'Untitled Map',
   [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
+  [SIDEBAR_ITEM_TYPES.canvases]: 'Untitled Canvas',
 }
 
 /**

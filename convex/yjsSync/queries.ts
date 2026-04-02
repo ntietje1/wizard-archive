@@ -1,10 +1,11 @@
 import { v } from 'convex/values'
 import { authQuery } from '../functions'
+import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess } from './functions/checkYjsAccess'
 
 export const getUpdates = authQuery({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     afterSeq: v.optional(v.number()),
   },
   returns: v.array(
@@ -31,7 +32,7 @@ export const getUpdates = authQuery({
 
 export const getAwareness = authQuery({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
   },
   returns: v.array(
     v.object({

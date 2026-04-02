@@ -7,6 +7,7 @@ import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
 import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
 import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
+import { enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
 import { assertNever } from '../../common/types'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { SidebarItemId } from '../types/baseTypes'
@@ -64,6 +65,14 @@ export const getSidebarItemById = async (
       })
       if (!enhanced) return null
       return enhanceFileWithContent(ctx, { file: enhanced })
+    }
+    case SIDEBAR_ITEM_TYPES.canvases: {
+      const enhanced = await checkItemAccess(ctx, {
+        rawItem: item,
+        requiredLevel: PERMISSION_LEVEL.VIEW,
+      })
+      if (!enhanced) return null
+      return enhanceCanvasWithContent(ctx, { canvas: enhanced })
     }
     default:
       assertNever(item)

@@ -362,6 +362,7 @@ export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
   [SIDEBAR_ITEM_TYPES.notes]: nonFolderItemConfig,
   [SIDEBAR_ITEM_TYPES.gameMaps]: nonFolderItemConfig,
   [SIDEBAR_ITEM_TYPES.files]: nonFolderItemConfig,
+  [SIDEBAR_ITEM_TYPES.canvases]: nonFolderItemConfig,
 }
 
 // ─── Dispatch Functions ─────────────────────────────────────────────

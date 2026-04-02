@@ -1,16 +1,18 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
+export const yjsDocumentIdValidator = v.union(v.id('notes'), v.id('canvases'))
+
 export const yjsSyncTables = {
   yjsUpdates: defineTable({
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     update: v.bytes(),
     seq: v.number(),
     isSnapshot: v.boolean(),
   }).index('by_document_seq', ['documentId', 'seq']),
 
   yjsAwareness: defineTable({
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     clientId: v.number(),
     userId: v.id('userProfiles'),
     state: v.bytes(),

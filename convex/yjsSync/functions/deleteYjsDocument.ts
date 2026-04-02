@@ -1,9 +1,9 @@
 import type { MutationCtx } from '../../_generated/server'
-import type { Id } from '../../_generated/dataModel'
+import type { YjsDocumentId } from './types'
 
 export async function deleteYjsDocument(
   ctx: MutationCtx,
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
 ) {
   const [updates, awareness] = await Promise.all([
     ctx.db

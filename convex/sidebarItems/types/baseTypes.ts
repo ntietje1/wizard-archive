@@ -19,6 +19,7 @@ export const SIDEBAR_ITEM_TYPES = {
   folders: 'folder',
   gameMaps: 'gameMap',
   files: 'file',
+  canvases: 'canvas',
 } as const
 
 export type SidebarItemType =

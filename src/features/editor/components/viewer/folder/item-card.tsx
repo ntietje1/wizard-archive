@@ -3,6 +3,7 @@ import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'
 import { FileCard } from './file-card'
+import { CanvasCard } from './canvas-card'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertNever } from '~/shared/utils/utils'
@@ -24,6 +25,8 @@ export function ItemCard({ item, parentId }: ItemCardProps<AnySidebarItem>) {
       return <MapCard item={item} />
     case SIDEBAR_ITEM_TYPES.files:
       return <FileCard item={item} />
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return <CanvasCard item={item} />
     default:
       return assertNever(item)
   }

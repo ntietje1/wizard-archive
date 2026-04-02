@@ -511,7 +511,7 @@ describe('persistBlocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
-      t.mutation(api.yjsSync.mutations.persistBlocks, {
+      t.mutation(api.notes.mutations.persistNoteBlocks, {
         documentId: noteId,
       }),
     )
@@ -537,7 +537,7 @@ describe('persistBlocks', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.yjsSync.mutations.persistBlocks, {
+      playerAuth.mutation(api.notes.mutations.persistNoteBlocks, {
         documentId: noteId,
       }),
     )
@@ -553,9 +553,12 @@ describe('persistBlocks', () => {
       parentId: null,
     })
 
-    const result = await dmAuth.mutation(api.yjsSync.mutations.persistBlocks, {
-      documentId: noteId,
-    })
+    const result = await dmAuth.mutation(
+      api.notes.mutations.persistNoteBlocks,
+      {
+        documentId: noteId,
+      },
+    )
 
     expect(result).toBeNull()
   })
@@ -575,9 +578,12 @@ describe('persistBlocks', () => {
       update: makeEmptyYjsUpdate(),
     })
 
-    const result = await dmAuth.mutation(api.yjsSync.mutations.persistBlocks, {
-      documentId: noteId,
-    })
+    const result = await dmAuth.mutation(
+      api.notes.mutations.persistNoteBlocks,
+      {
+        documentId: noteId,
+      },
+    )
 
     expect(result).toBeNull()
 

@@ -1,3 +1,6 @@
+import * as Y from 'yjs'
+import { BlockNoteEditor } from '@blocknote/core'
+import { blocksToYDoc } from '@blocknote/core/yjs'
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
   findUniqueSidebarItemSlug,
@@ -9,6 +12,8 @@ import {
   SIDEBAR_ITEM_TYPES,
 } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
+import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
+import { editorSchema } from '../editorSpecs'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
@@ -67,6 +72,22 @@ export async function createNote(
   if (content) {
     await saveTopLevelBlocksForNote(ctx, { noteId, content })
   }
-  await createYjsDocument(ctx, { noteId, content: content ?? null })
+
+  let initialState: ArrayBuffer | undefined
+  if (content && content.length > 0) {
+    const editor = BlockNoteEditor.create({
+      schema: editorSchema,
+      _headless: true,
+    })
+    const doc = blocksToYDoc(editor, content)
+    try {
+      initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
+    } finally {
+      doc.destroy()
+      editor._tiptapEditor.destroy()
+    }
+  }
+
+  await createYjsDocument(ctx, { documentId: noteId, initialState })
   return { noteId, slug: uniqueSlug }
 }
