@@ -372,8 +372,9 @@ describe('ConvexYjsProvider', () => {
   })
 
   describe('persist interval', () => {
-    it('starts persist interval when writable is set to true', () => {
+    it('persists after interval when local edits occurred', () => {
       provider.writable = true
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
 
       vi.advanceTimersByTime(10_000)
       expect(config.persistBlocks).toHaveBeenCalledWith({
@@ -381,8 +382,16 @@ describe('ConvexYjsProvider', () => {
       })
     })
 
+    it('does not persist after interval when no local edits occurred', () => {
+      provider.writable = true
+
+      vi.advanceTimersByTime(10_000)
+      expect(config.persistBlocks).not.toHaveBeenCalled()
+    })
+
     it('stops persist interval when writable is set to false', () => {
       provider.writable = true
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       vi.advanceTimersByTime(10_000)
       expect(config.persistBlocks).toHaveBeenCalledTimes(1)
 
@@ -393,13 +402,21 @@ describe('ConvexYjsProvider', () => {
       expect(config.persistBlocks).not.toHaveBeenCalled()
     })
 
-    it('persists on destroy when writable', async () => {
+    it('persists on destroy when writable and dirty', async () => {
       provider.writable = true
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       provider.destroy()
       await vi.advanceTimersByTimeAsync(0)
       expect(config.persistBlocks).toHaveBeenCalledWith({
         documentId: DOCUMENT_ID,
       })
+    })
+
+    it('does not persist on destroy when writable but clean', async () => {
+      provider.writable = true
+      provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(config.persistBlocks).not.toHaveBeenCalled()
     })
 
     it('does not persist on destroy when not writable', async () => {

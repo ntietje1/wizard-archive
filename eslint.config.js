@@ -1,14 +1,15 @@
 //  @ts-check
 
+import path from 'node:path'
+import { includeIgnoreFile } from '@eslint/compat'
 import { tanstackConfig } from '@tanstack/eslint-config'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
+  includeIgnoreFile(path.resolve(import.meta.dirname, '.gitignore')),
   {
     ignores: [
-      '.output/**',
-      '.nitro/**',
       'convex/_generated/**',
       'src/routeTree.gen.ts',
       'src/features/shadcn/**',

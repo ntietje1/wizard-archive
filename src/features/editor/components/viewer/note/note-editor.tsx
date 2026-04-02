@@ -42,7 +42,11 @@ import { useNoteEditorDropTarget } from '~/features/dnd/hooks/useNoteEditorDropT
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { patchYUndoPluginDestroy } from '~/features/editor/utils/patch-yundo-destroy'
+import {
+  patchYSyncAfterTypeChanged,
+  patchYUndoPluginDestroy,
+} from '~/features/editor/utils/patch-yundo-destroy'
+import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -157,25 +161,6 @@ const ReadOnlyNoteReady = ({
 // Collaborative editor – Yjs powered
 // ---------------------------------------------------------------------------
 
-const CURSOR_COLORS = [
-  '#e06c75',
-  '#e5c07b',
-  '#98c379',
-  '#56b6c2',
-  '#61afef',
-  '#c678dd',
-  '#d19a66',
-  '#be5046',
-]
-
-function getCursorColor(userId: string): string {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0
-  }
-  return CURSOR_COLORS[Math.abs(hash) % CURSOR_COLORS.length]
-}
-
 const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
   const { canEdit } = useEditorMode()
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
@@ -250,6 +235,7 @@ const CollaborativeNoteWithEditor = ({
         return
       }
       patchYUndoPluginDestroy(instance._tiptapEditor.view)
+      patchYSyncAfterTypeChanged(instance._tiptapEditor.view)
     }
     requestAnimationFrame(tryPatch)
 

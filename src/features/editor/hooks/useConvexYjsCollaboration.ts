@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
@@ -23,6 +23,8 @@ export function useConvexYjsCollaboration(
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
+  const canEditRef = useRef(canEdit)
+  canEditRef.current = canEdit
 
   useEffect(() => {
     setIsLoading(true)
@@ -40,6 +42,7 @@ export function useConvexYjsCollaboration(
         convex.mutation(api.yjsSync.mutations.persistBlocks, args),
     })
 
+    provider.writable = canEditRef.current
     setState({ doc, provider, instanceId: nextInstanceId++ })
 
     return () => {

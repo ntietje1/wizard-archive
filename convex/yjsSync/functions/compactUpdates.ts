@@ -15,12 +15,20 @@ export async function compactUpdates(
   documentId: Id<'notes'>,
 ) {
   const { doc, updates } = await reconstructYDoc(ctx, documentId)
-  if (updates.length <= 1) return
+  if (updates.length <= 1) {
+    doc.destroy()
+    return
+  }
 
   const encoded = Y.encodeStateAsUpdate(doc)
-  const maxSeq = Math.max(...updates.map((u) => u.seq))
+  doc.destroy()
+  const maxSeq = updates.reduce(
+    (max, u) => (u.seq > max ? u.seq : max),
+    updates[0].seq,
+  )
 
-  await Promise.all(updates.map((row) => ctx.db.delete(row._id)))
+  const toDelete = updates.filter((row) => row.seq <= maxSeq)
+  await Promise.all(toDelete.map((row) => ctx.db.delete(row._id)))
 
   await ctx.db.insert('yjsUpdates', {
     documentId,

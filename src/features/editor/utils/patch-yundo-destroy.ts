@@ -25,90 +25,164 @@ function findYUndoPlugin(view: EditorView): Plugin | undefined {
 }
 
 export function patchYUndoPluginDestroy(view: EditorView) {
-  const yUndoPlugin = findYUndoPlugin(view)
-  if (!yUndoPlugin || !yUndoPlugin.spec.view) return
+  try {
+    const yUndoPlugin = findYUndoPlugin(view)
+    if (!yUndoPlugin || !yUndoPlugin.spec.view) return
 
-  const undoState = yUndoPlugin.getState(view.state)
-  const um = undoState?.undoManager
-  if (!um) return
+    const undoState = yUndoPlugin.getState(view.state)
+    const um = undoState?.undoManager
+    if (!um) return
 
-  const umAny = um as Record<string, any>
+    const umAny = um as Record<string, any>
 
-  // If the afterTransactionHandler was unregistered (by a prior destroy),
-  // re-register it so the UndoManager tracks changes again.
-  const handler = umAny.afterTransactionHandler
-  if (handler) {
-    const observers = um.doc._observers as Map<string, Set<any>>
+    if (typeof umAny.afterTransactionHandler !== 'function') {
+      console.warn(
+        '[patchYUndoPluginDestroy] afterTransactionHandler not found, skipping patch',
+      )
+      return
+    }
+
+    // If the afterTransactionHandler was unregistered (by a prior destroy),
+    // re-register it so the UndoManager tracks changes again.
+    const handler = umAny.afterTransactionHandler
+    const observers = um.doc._observers as Map<string, Set<any>> | undefined
     const afterTxSet = observers?.get?.('afterTransaction')
     if (!afterTxSet || !afterTxSet.has(handler)) {
       um.doc.on('afterTransaction', handler)
     }
-    // Also restore trackedOrigins self-reference if it was removed
     if (!um.trackedOrigins.has(um)) {
       um.trackedOrigins.add(um)
     }
-  }
 
-  // Patch the view factory to prevent future destructions
-  const originalViewFactory = yUndoPlugin.spec.view as (v: EditorView) => {
-    destroy?: () => void
-  }
+    const originalViewFactory = yUndoPlugin.spec.view as (v: EditorView) => {
+      destroy?: () => void
+    }
 
-  yUndoPlugin.spec.view = (editorView: EditorView) => {
-    const currentUm = yUndoPlugin.getState(editorView.state)?.undoManager
-    if (!currentUm) return originalViewFactory(editorView)
+    yUndoPlugin.spec.view = (editorView: EditorView) => {
+      const currentUm = yUndoPlugin.getState(editorView.state)?.undoManager
+      if (!currentUm) return originalViewFactory(editorView)
 
-    const currentUmAny = currentUm as Record<string, any>
+      const currentUmAny = currentUm as Record<string, any>
 
-    // Restore if previously saved
-    if (currentUmAny.__yundo_saved) {
-      const saved = currentUmAny.__yundo_saved
-      if (saved.hasTrackedSelf) currentUm.trackedOrigins.add(currentUm)
-      const savedHandler = currentUmAny.afterTransactionHandler
-      if (savedHandler) {
-        const observers = currentUm.doc._observers as
-          | Map<string, Set<any>>
-          | undefined
-        const afterTxSet = observers?.get?.('afterTransaction')
-        if (!afterTxSet || !afterTxSet.has(savedHandler)) {
-          currentUm.doc.on('afterTransaction', savedHandler)
-        }
+      if (typeof currentUmAny.afterTransactionHandler !== 'function') {
+        return originalViewFactory(editorView)
       }
-      currentUmAny._observers = saved.observers
-      delete currentUmAny.__yundo_saved
-    }
 
-    const result = originalViewFactory(editorView)
-
-    return {
-      ...result,
-      destroy: () => {
-        currentUmAny.__yundo_saved = {
-          hasTrackedSelf: currentUm.trackedOrigins.has(currentUm),
-          observers: currentUmAny._observers,
+      if (currentUmAny.__yundo_saved) {
+        const saved = currentUmAny.__yundo_saved
+        if (saved.hasTrackedSelf) currentUm.trackedOrigins.add(currentUm)
+        const savedHandler = currentUmAny.afterTransactionHandler
+        if (savedHandler) {
+          const obs = currentUm.doc._observers as
+            | Map<string, Set<any>>
+            | undefined
+          const txSet = obs?.get?.('afterTransaction')
+          if (!txSet || !txSet.has(savedHandler)) {
+            currentUm.doc.on('afterTransaction', savedHandler)
+          }
         }
-        result?.destroy?.()
-      },
+        currentUmAny._observers = saved.observers
+        delete currentUmAny.__yundo_saved
+      }
+
+      const result = originalViewFactory(editorView)
+
+      return {
+        ...result,
+        destroy: () => {
+          currentUmAny.__yundo_saved = {
+            hasTrackedSelf: currentUm.trackedOrigins.has(currentUm),
+            observers: currentUmAny._observers,
+          }
+          result?.destroy?.()
+        },
+      }
     }
+
+    const pluginViews = (view as Record<string, any>).pluginViews as
+      | Array<{ destroy?: () => void }>
+      | undefined
+    if (!pluginViews) {
+      console.warn(
+        '[patchYUndoPluginDestroy] pluginViews not found, skipping pluginView patch',
+      )
+      return
+    }
+
+    const pluginIndex = view.state.plugins.indexOf(yUndoPlugin)
+    if (pluginIndex === -1 || !pluginViews[pluginIndex]) return
+
+    const existingPluginView = pluginViews[pluginIndex]
+    const originalDestroy = existingPluginView.destroy
+
+    existingPluginView.destroy = () => {
+      umAny.__yundo_saved = {
+        hasTrackedSelf: um.trackedOrigins.has(um),
+        observers: umAny._observers,
+      }
+      originalDestroy?.call(existingPluginView)
+    }
+  } catch (err) {
+    console.warn(
+      '[patchYUndoPluginDestroy] Unexpected error, undo patch skipped:',
+      err,
+    )
   }
+}
 
-  // Also patch the existing pluginView's destroy handler
-  const pluginViews = (view as Record<string, any>).pluginViews as Array<{
-    destroy?: () => void
-  }>
-  if (!pluginViews) return
+/**
+ * y-prosemirror's _typeChanged (Yjs→PM sync) runs inside the undo/redo
+ * Yjs transaction, but _prosemirrorChanged (PM→Yjs sync) is deferred to
+ * the next PM transaction because the binding mutex blocks it during
+ * _typeChanged. By the time it runs, the undo transaction has committed,
+ * so the PM→Yjs attribute sync becomes a separate tracked transaction
+ * that clears the redo stack.
+ *
+ * Fix: after _typeChanged exits the mutex, immediately call
+ * _prosemirrorChanged while still inside the undo's Yjs transaction.
+ * Nested doc.transact calls merge into the parent transaction, so the
+ * attribute sync uses the undo's origin and the UndoManager treats it
+ * as part of the undo, not a new change.
+ */
+export function patchYSyncAfterTypeChanged(view: EditorView) {
+  try {
+    for (const p of view.state.plugins) {
+      try {
+        const s = p.getState(view.state)
+        if (s && typeof s === 'object' && 'binding' in s && s.binding) {
+          const binding = s.binding as Record<string, any>
+          if (
+            typeof binding._typeChanged !== 'function' ||
+            typeof binding._prosemirrorChanged !== 'function' ||
+            binding.__typeChangedPatched
+          ) {
+            break
+          }
+          binding.__typeChangedPatched = true
 
-  const pluginIndex = view.state.plugins.indexOf(yUndoPlugin)
-  if (pluginIndex === -1 || !pluginViews[pluginIndex]) return
+          const origTypeChanged = binding._typeChanged.bind(binding)
+          binding._typeChanged = (
+            events: Array<unknown>,
+            transaction: Record<string, any>,
+          ) => {
+            origTypeChanged(events, transaction)
+            if (binding.prosemirrorView) {
+              binding.mux(() => {
+                binding._prosemirrorChanged(binding.prosemirrorView.state.doc)
+              })
+            }
+          }
 
-  const existingPluginView = pluginViews[pluginIndex]
-  const originalDestroy = existingPluginView.destroy
-
-  existingPluginView.destroy = () => {
-    umAny.__yundo_saved = {
-      hasTrackedSelf: um.trackedOrigins.has(um),
-      observers: umAny._observers,
+          break
+        }
+      } catch {
+        /* skip */
+      }
     }
-    originalDestroy?.call(existingPluginView)
+  } catch (err) {
+    console.warn(
+      '[patchYSyncAfterTypeChanged] Unexpected error, patch skipped:',
+      err,
+    )
   }
 }
