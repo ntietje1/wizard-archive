@@ -116,6 +116,7 @@ async function collectItemsRecursively(
         items.push(...nestedItems)
         break
       }
+      // TODO: add canvas -> img export
       case SIDEBAR_ITEM_TYPES.canvases:
         break
       default:

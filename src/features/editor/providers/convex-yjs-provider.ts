@@ -51,7 +51,7 @@ function uint8ToArrayBuffer(uint8: Uint8Array): ArrayBuffer {
 
 const UPDATE_DEBOUNCE_MS = 50
 const UPDATE_MAX_BATCH_MS = 200
-const AWARENESS_DEBOUNCE_MS = 100
+const AWARENESS_THROTTLE_MS = 16
 
 export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   doc: Y.Doc
@@ -70,6 +70,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private pushInFlight = false
   private awarenessTimer: ReturnType<typeof setTimeout> | null = null
   private awarenessInFlight = false
+  private awarenessDirty = false
 
   constructor(
     doc: Y.Doc,
@@ -275,11 +276,19 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   }
 
   private scheduleAwarenessFlush() {
-    if (this.awarenessTimer) clearTimeout(this.awarenessTimer)
-    this.awarenessTimer = setTimeout(
-      () => this.flushAwareness(),
-      AWARENESS_DEBOUNCE_MS,
-    )
+    if (this.awarenessTimer) {
+      this.awarenessDirty = true
+      return
+    }
+
+    this.flushAwareness()
+    this.awarenessTimer = setTimeout(() => {
+      this.awarenessTimer = null
+      if (this.awarenessDirty) {
+        this.awarenessDirty = false
+        this.scheduleAwarenessFlush()
+      }
+    }, AWARENESS_THROTTLE_MS)
   }
 
   private clearAwarenessTimer() {
@@ -291,7 +300,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
 
   private flushAwareness(): Promise<void> {
     this.clearAwarenessTimer()
-    if (this.awarenessInFlight) return Promise.resolve()
+    if (this.awarenessInFlight) {
+      this.awarenessDirty = true
+      return Promise.resolve()
+    }
 
     const myClientId = this.doc.clientID
     const encoded = encodeAwarenessUpdate(this.awareness, [myClientId])
@@ -309,6 +321,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       })
       .finally(() => {
         this.awarenessInFlight = false
+        if (this.awarenessDirty && !this.destroyed) {
+          this.awarenessDirty = false
+          this.scheduleAwarenessFlush()
+        }
       })
   }
 }

@@ -486,11 +486,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isItemNotTrashed(ctx) &&
-        p.isNotType(
-          SIDEBAR_ITEM_TYPES.gameMaps,
-          SIDEBAR_ITEM_TYPES.files,
-          SIDEBAR_ITEM_TYPES.canvases,
-        )(ctx),
+        p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editItem,
     },
 

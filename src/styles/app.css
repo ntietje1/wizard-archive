@@ -145,6 +145,10 @@
   transition-duration: 0s !important;
 }
 
+/* Disable edge path transitions to prevent visual lag during graph interactions */
+.react-flow__edge path {
+  transition: none !important;
+}
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;

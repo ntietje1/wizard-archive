@@ -19,6 +19,7 @@ export function useNoteYjsCollaboration(
 
     let active = true
     let isPersisting = false
+    let pendingCleanupPersist = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const persist = () => {
@@ -33,7 +34,10 @@ export function useNoteYjsCollaboration(
         })
         .finally(() => {
           isPersisting = false
-          if (active) {
+          if (pendingCleanupPersist) {
+            pendingCleanupPersist = false
+            persist()
+          } else if (active) {
             timeoutId = setTimeout(persist, PERSIST_INTERVAL_MS)
           }
         })
@@ -44,7 +48,11 @@ export function useNoteYjsCollaboration(
     return () => {
       active = false
       if (timeoutId !== null) clearTimeout(timeoutId)
-      persist()
+      if (isPersisting) {
+        pendingCleanupPersist = true
+      } else {
+        persist()
+      }
     }
   }, [noteId, canEdit, result.isLoading, convex])
 

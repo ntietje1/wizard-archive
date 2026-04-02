@@ -79,11 +79,12 @@ export async function createNote(
       schema: editorSchema,
       _headless: true,
     })
-    const doc = blocksToYDoc(editor, content)
+    let doc: Y.Doc | undefined
     try {
+      doc = blocksToYDoc(editor, content)
       initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
     } finally {
-      doc.destroy()
+      doc?.destroy()
       editor._tiptapEditor.destroy()
     }
   }

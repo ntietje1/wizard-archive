@@ -73,12 +73,12 @@ export const persistNoteBlocks = authMutation({
     await checkYjsWriteAccess(ctx, documentId)
 
     const { doc } = await reconstructYDoc(ctx, documentId)
-    const editor = BlockNoteEditor.create({
-      schema: editorSchema,
-      _headless: true,
-    })
-
+    let editor: ReturnType<typeof BlockNoteEditor.create> | undefined
     try {
+      editor = BlockNoteEditor.create({
+        schema: editorSchema,
+        _headless: true,
+      })
       const blocks = yDocToBlocks(editor, doc)
 
       await saveTopLevelBlocksForNote(ctx, {
@@ -87,7 +87,7 @@ export const persistNoteBlocks = authMutation({
       })
     } finally {
       doc.destroy()
-      editor._tiptapEditor.destroy()
+      editor?._tiptapEditor.destroy()
     }
 
     return null

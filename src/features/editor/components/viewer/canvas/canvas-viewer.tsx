@@ -1,10 +1,12 @@
 import { useCallback, useMemo } from 'react'
 import {
   Background,
-  Controls,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  ViewportPortal,
+  useOnSelectionChange,
+  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { api } from 'convex/_generated/api'
@@ -13,13 +15,17 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import { CanvasContext } from './canvas-context'
 import { canvasNodeTypes } from './canvas-node-types'
 import { CanvasToolbar } from './canvas-toolbar'
-import type { Edge, Node } from '@xyflow/react'
+import { CanvasRemoteCursors } from './canvas-remote-cursors'
+import type { RemoteHighlight } from './canvas-context'
+import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { useCanvasYjsCollaboration } from '~/features/editor/hooks/useCanvasYjsCollaboration'
 import { useYjsReactFlowSync } from '~/features/editor/hooks/useYjsReactFlowSync'
+import { useCanvasAwareness } from '~/features/editor/hooks/useCanvasAwareness'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 
@@ -47,6 +53,7 @@ const DELETE_KEYS = ['Backspace', 'Delete']
 const DELETE_KEYS_NONE: Array<string> = []
 const EMPTY_NODES: Array<Node> = []
 const EMPTY_EDGES: Array<Edge> = []
+const EMPTY_DRAG_POSITIONS: Record<string, { x: number; y: number }> = {}
 
 export function CanvasViewer({
   item: canvas,
@@ -71,7 +78,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   const userName = profile?.name ?? profile?.username ?? 'Anonymous'
   const userColor = profile ? getCursorColor(profile._id) : '#61afef'
 
-  const { doc, isLoading } = useCanvasYjsCollaboration(
+  const { doc, provider, isLoading } = useCanvasYjsCollaboration(
     canvas._id,
     { name: userName, color: userColor },
     canEdit,
@@ -100,6 +107,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
       edgesMap={edgesMap}
       canEdit={canEdit}
       colorMode={resolvedTheme}
+      provider={provider}
     />
   )
 }
@@ -109,19 +117,79 @@ function CanvasFlow({
   edgesMap,
   canEdit,
   colorMode,
+  provider,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
   canEdit: boolean
   colorMode: 'light' | 'dark'
+  provider: ConvexYjsProvider | null
 }) {
+  const reactFlowInstance = useReactFlow()
+  const { remoteUsers, setLocalCursor, setLocalDragging, setLocalSelection } =
+    useCanvasAwareness(provider)
+
+  const remoteDragPositions = useMemo(() => {
+    let merged: Record<string, { x: number; y: number }> | null = null
+    for (const user of remoteUsers) {
+      if (!user.dragging) continue
+      if (!merged) merged = {}
+      Object.assign(merged, user.dragging)
+    }
+    return merged ?? EMPTY_DRAG_POSITIONS
+  }, [remoteUsers])
+
   const {
     onNodeDragStart,
     onNodeDragStop,
     onNodesDelete,
     onEdgesDelete,
     onConnect,
-  } = useYjsReactFlowSync(nodesMap, edgesMap)
+  } = useYjsReactFlowSync(nodesMap, edgesMap, remoteDragPositions)
+
+  const handleNodeDrag: OnNodeDrag = useCallback(
+    (event, _node, nodes) => {
+      setLocalDragging(Object.fromEntries(nodes.map((n) => [n.id, n.position])))
+      const pos = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      setLocalCursor(pos)
+    },
+    [setLocalDragging, reactFlowInstance, setLocalCursor],
+  )
+
+  const handleNodeDragStop: OnNodeDrag = useCallback(
+    (event, node, nodes) => {
+      onNodeDragStop(event, node, nodes)
+      setLocalDragging(null)
+    },
+    [onNodeDragStop, setLocalDragging],
+  )
+
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      const pos = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      setLocalCursor(pos)
+    },
+    [reactFlowInstance, setLocalCursor],
+  )
+
+  const handleMouseLeave = useCallback(() => {
+    setLocalCursor(null)
+  }, [setLocalCursor])
+
+  const handleSelectionChange = useCallback(
+    ({ nodes }: { nodes: Array<Node> }) => {
+      setLocalSelection(nodes.length > 0 ? nodes.map((n) => n.id) : null)
+    },
+    [setLocalSelection],
+  )
+
+  useOnSelectionChange({ onChange: handleSelectionChange })
 
   const updateNodeData = useCallback(
     (nodeId: string, data: Record<string, unknown>) => {
@@ -136,9 +204,25 @@ function CanvasFlow({
     [nodesMap],
   )
 
+  const remoteHighlights = useMemo(() => {
+    const map = new Map<string, RemoteHighlight>()
+    for (const user of remoteUsers) {
+      const nodeIds = user.dragging
+        ? Object.keys(user.dragging)
+        : user.selectedNodeIds
+      if (!nodeIds) continue
+      for (const nodeId of nodeIds) {
+        if (!map.has(nodeId)) {
+          map.set(nodeId, { color: user.user.color, name: user.user.name })
+        }
+      }
+    }
+    return map
+  }, [remoteUsers])
+
   const canvasContextValue = useMemo(
-    () => ({ updateNodeData }),
-    [updateNodeData],
+    () => ({ updateNodeData, remoteHighlights }),
+    [updateNodeData, remoteHighlights],
   )
 
   return (
@@ -149,10 +233,13 @@ function CanvasFlow({
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
           onNodeDragStart={onNodeDragStart}
-          onNodeDragStop={onNodeDragStop}
+          onNodeDrag={handleNodeDrag}
+          onNodeDragStop={handleNodeDragStop}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           onConnect={onConnect}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
           nodeTypes={canvasNodeTypes}
           nodesDraggable={canEdit}
           nodesConnectable={canEdit}
@@ -162,9 +249,11 @@ function CanvasFlow({
           fitView
           proOptions={PRO_OPTIONS}
         >
-          <Background />
-          <Controls showInteractive={false} />
+          <Background bgColor="var(--background)" />
           <MiniMap zoomable={false} pannable={false} />
+          <ViewportPortal>
+            <CanvasRemoteCursors remoteUsers={remoteUsers} />
+          </ViewportPortal>
         </ReactFlow>
       </div>
     </CanvasContext>

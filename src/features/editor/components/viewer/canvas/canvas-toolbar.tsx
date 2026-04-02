@@ -1,6 +1,6 @@
 import { useReactFlow } from '@xyflow/react'
 import { Maximize2, Minus, Plus, StickyNote, Type } from 'lucide-react'
-import { STICKY_COLOR_COUNT } from './nodes/stick-node-colors'
+import { STICKY_COLOR_COUNT } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { Button } from '~/features/shadcn/components/button'
@@ -11,14 +11,14 @@ interface CanvasToolbarProps {
 }
 
 export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
-  const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
 
   const addNode = (type: 'text' | 'sticky') => {
     const id = crypto.randomUUID()
-    const position = {
-      x: Math.random() * 400 + 100,
-      y: Math.random() * 400 + 100,
-    }
+    const position = screenToFlowPosition({
+      x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
+      y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
+    })
 
     const node: Node = {
       id,

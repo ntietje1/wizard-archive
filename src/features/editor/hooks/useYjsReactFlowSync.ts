@@ -10,6 +10,8 @@ import type {
   OnNodesDelete,
 } from '@xyflow/react'
 import type * as Y from 'yjs'
+import type { SpringState } from '~/shared/hooks/useSpringPosition'
+import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
 
 function yMapToArray<T>(map: Y.Map<T>): Array<T> {
   const items: Array<T> = []
@@ -20,11 +22,22 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
 export function useYjsReactFlowSync(
   nodesMap: Y.Map<Node> | null,
   edgesMap: Y.Map<Edge> | null,
+  remoteDragPositions: Record<string, { x: number; y: number }>,
 ) {
   const reactFlow = useReactFlow()
   const draggingIds = useRef(new Set<string>())
   const suppressNodeObserver = useRef(false)
   const suppressEdgeObserver = useRef(false)
+  const remoteDragRef = useRef(remoteDragPositions)
+  remoteDragRef.current = remoteDragPositions
+
+  const springStates = useRef(
+    new Map<
+      string,
+      { spring: SpringState; target: { x: number; y: number } }
+    >(),
+  )
+  const springActiveIds = useRef(new Set<string>())
 
   useEffect(() => {
     if (!nodesMap) return
@@ -40,6 +53,11 @@ export function useYjsReactFlowSync(
           const local = currentById.get(remote.id)
           if (!local) return remote
           if (draggingIds.current.has(remote.id)) {
+            return { ...local, ...remote, position: local.position }
+          }
+          const spring = springStates.current.get(remote.id)
+          if (spring) {
+            spring.target = remote.position
             return { ...local, ...remote, position: local.position }
           }
           return { ...local, ...remote }
@@ -71,6 +89,76 @@ export function useYjsReactFlowSync(
     edgesMap.observe(handler)
     return () => edgesMap.unobserve(handler)
   }, [edgesMap, reactFlow])
+
+  const prevTimeRef = useRef(0)
+
+  useEffect(() => {
+    let rafId: number
+
+    const animate = (time: number) => {
+      const dt = Math.min(
+        (time - (prevTimeRef.current || time)) / 1000,
+        SPRING_DEFAULTS.maxDt,
+      )
+      prevTimeRef.current = time
+
+      const targets = remoteDragRef.current
+      const targetKeys = Object.keys(targets)
+      const springs = springStates.current
+      const active = springActiveIds.current
+
+      for (const nodeId of targetKeys) {
+        if (!springs.has(nodeId)) {
+          springs.set(nodeId, {
+            spring: {
+              pos: { ...targets[nodeId] },
+              vel: { x: 0, y: 0 },
+            },
+            target: targets[nodeId],
+          })
+        } else {
+          springs.get(nodeId)!.target = targets[nodeId]
+        }
+        active.add(nodeId)
+      }
+
+      const updates = new Map<string, { x: number; y: number }>()
+      const settled: Array<string> = []
+
+      for (const [nodeId, s] of springs) {
+        if (draggingIds.current.has(nodeId)) continue
+
+        const didSettle = stepSpring(s.spring, s.target, dt)
+
+        if (didSettle && !(nodeId in targets)) {
+          settled.push(nodeId)
+        }
+
+        updates.set(nodeId, { x: s.spring.pos.x, y: s.spring.pos.y })
+      }
+
+      for (const nodeId of settled) {
+        springs.delete(nodeId)
+        active.delete(nodeId)
+      }
+
+      if (updates.size > 0) {
+        reactFlow.setNodes((current) =>
+          current.map((node) => {
+            if (draggingIds.current.has(node.id)) return node
+            const pos = updates.get(node.id)
+            if (pos) return { ...node, position: pos }
+            return node
+          }),
+        )
+      }
+
+      rafId = requestAnimationFrame(animate)
+    }
+
+    rafId = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(rafId)
+  }, [reactFlow])
 
   const onNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
     for (const n of nodes) draggingIds.current.add(n.id)
