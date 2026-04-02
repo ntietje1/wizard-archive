@@ -1,17 +1,56 @@
 import { useReactFlow } from '@xyflow/react'
-import { Maximize2, Minus, Plus, StickyNote, Type } from 'lucide-react'
+import {
+  BoxSelect,
+  Eraser,
+  Lasso,
+  Maximize2,
+  Minus,
+  MousePointer2,
+  Pencil,
+  Plus,
+  StickyNote,
+  Trash2,
+  Type,
+} from 'lucide-react'
 import { STICKY_COLOR_COUNT } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
+import type { StrokeData } from './canvas-stroke-utils'
+import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
 import { Button } from '~/features/shadcn/components/button'
+
+const STROKE_COLORS = [
+  'var(--foreground)',
+  '#e06c75',
+  '#e5c07b',
+  '#98c379',
+  '#61afef',
+  '#c678dd',
+]
+
+const STROKE_SIZES = [2, 4, 8, 16]
 
 interface CanvasToolbarProps {
   nodesMap: Y.Map<Node>
+  strokesMap: Y.Map<StrokeData>
   canEdit: boolean
+  onDeleteSelectedStrokes: () => void
 }
 
-export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
+export function CanvasToolbar({
+  nodesMap,
+  canEdit,
+  onDeleteSelectedStrokes,
+}: CanvasToolbarProps) {
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
+
+  const activeTool = useCanvasToolStore((s) => s.activeTool)
+  const strokeColor = useCanvasToolStore((s) => s.strokeColor)
+  const strokeSize = useCanvasToolStore((s) => s.strokeSize)
+  const selectedStrokeIds = useCanvasToolStore((s) => s.selectedStrokeIds)
+  const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
+  const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
+  const setStrokeSize = useCanvasToolStore((s) => s.setStrokeSize)
 
   const addNode = (type: 'text' | 'sticky') => {
     const id = crypto.randomUUID()
@@ -36,9 +75,42 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
   }
 
   return (
-    <div className="absolute top-4 left-4 z-10 flex gap-1 bg-background/80 backdrop-blur-sm border rounded-lg p-1 shadow-sm">
+    <div className="absolute top-4 left-4 z-10 flex items-center gap-1 bg-background/80 backdrop-blur-sm border rounded-lg p-1 shadow-sm">
       {canEdit && (
         <>
+          <ToolButton
+            active={activeTool === 'select'}
+            onClick={() => setActiveTool('select')}
+            label="Select"
+            icon={<MousePointer2 className="h-4 w-4" />}
+          />
+          <ToolButton
+            active={activeTool === 'draw'}
+            onClick={() => setActiveTool('draw')}
+            label="Draw"
+            icon={<Pencil className="h-4 w-4" />}
+          />
+          <ToolButton
+            active={activeTool === 'erase'}
+            onClick={() => setActiveTool('erase')}
+            label="Eraser"
+            icon={<Eraser className="h-4 w-4" />}
+          />
+          <ToolButton
+            active={activeTool === 'lasso'}
+            onClick={() => setActiveTool('lasso')}
+            label="Lasso select"
+            icon={<Lasso className="h-4 w-4" />}
+          />
+          <ToolButton
+            active={activeTool === 'rectangle-select'}
+            onClick={() => setActiveTool('rectangle-select')}
+            label="Rectangle select"
+            icon={<BoxSelect className="h-4 w-4" />}
+          />
+
+          <div className="w-px h-6 bg-border mx-1" />
+
           <Button
             variant="ghost"
             size="icon"
@@ -59,7 +131,70 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
           >
             <StickyNote className="h-4 w-4" />
           </Button>
-          <div className="w-px bg-border mx-1" />
+
+          {activeTool === 'draw' && (
+            <>
+              <div className="w-px h-6 bg-border mx-1" />
+              <div className="flex items-center gap-0.5">
+                {STROKE_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    className="h-5 w-5 rounded-sm border border-border transition-colors"
+                    style={{
+                      backgroundColor: color,
+                      outline:
+                        strokeColor === color
+                          ? '2px solid var(--primary)'
+                          : 'none',
+                      outlineOffset: '1px',
+                    }}
+                    onClick={() => setStrokeColor(color)}
+                    aria-label={`Stroke color ${color}`}
+                    title={`Stroke color`}
+                  />
+                ))}
+              </div>
+              <div className="w-px h-6 bg-border mx-1" />
+              <div className="flex items-center gap-0.5">
+                {STROKE_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    className="h-8 w-8 flex items-center justify-center rounded-sm transition-colors"
+                    style={{
+                      backgroundColor:
+                        strokeSize === size ? 'var(--accent)' : 'transparent',
+                    }}
+                    onClick={() => setStrokeSize(size)}
+                    aria-label={`Stroke size ${size}`}
+                    title={`Size ${size}`}
+                  >
+                    <div
+                      className="rounded-full bg-foreground"
+                      style={{ width: size, height: size }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {selectedStrokeIds.size > 0 && (
+            <>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={onDeleteSelectedStrokes}
+                aria-label="Delete selected strokes"
+                title="Delete selected strokes"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+
+          <div className="w-px h-6 bg-border mx-1" />
         </>
       )}
       <Button
@@ -93,5 +228,30 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
         <Maximize2 className="h-4 w-4" />
       </Button>
     </div>
+  )
+}
+
+function ToolButton({
+  active,
+  onClick,
+  label,
+  icon,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  icon: React.ReactNode
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={`h-8 w-8 ${active ? 'bg-accent' : ''}`}
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+    >
+      {icon}
+    </Button>
   )
 }

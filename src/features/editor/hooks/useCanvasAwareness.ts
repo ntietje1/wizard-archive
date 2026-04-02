@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
 import type { ConvexYjsProvider } from '../providers/convex-yjs-provider'
-import type { RemoteUser } from '../components/viewer/canvas/canvas-awareness-types'
+import type {
+  DrawingState,
+  RemoteUser,
+} from '../components/viewer/canvas/canvas-awareness-types'
 
 function buildRemoteUsers(
   awareness: Awareness,
@@ -18,6 +21,7 @@ function buildRemoteUsers(
         (state.dragging as Record<string, { x: number; y: number }> | null) ??
         null,
       selectedNodeIds: (state.selectedNodeIds as Array<string> | null) ?? null,
+      drawing: (state.drawing as DrawingState | null) ?? null,
     })
   })
   return users
@@ -61,5 +65,15 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     awarenessRef.current?.setLocalStateField('selectedNodeIds', nodeIds)
   }, [])
 
-  return { remoteUsers, setLocalCursor, setLocalDragging, setLocalSelection }
+  const setLocalDrawing = useCallback((drawing: DrawingState | null) => {
+    awarenessRef.current?.setLocalStateField('drawing', drawing)
+  }, [])
+
+  return {
+    remoteUsers,
+    setLocalCursor,
+    setLocalDragging,
+    setLocalSelection,
+    setLocalDrawing,
+  }
 }

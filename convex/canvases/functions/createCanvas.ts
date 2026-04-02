@@ -66,6 +66,7 @@ export async function createCanvas(
   const doc = new Y.Doc()
   doc.getMap('nodes')
   doc.getMap('edges')
+  doc.getMap('strokes')
   const initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
   doc.destroy()
 
