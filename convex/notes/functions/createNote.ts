@@ -8,7 +8,7 @@ import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
 } from '../../sidebarItems/types/baseTypes'
-import { EMPTY_PM_DOC, prosemirrorSync } from '../../prosemirrorSync'
+import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
@@ -67,6 +67,6 @@ export async function createNote(
   if (content) {
     await saveTopLevelBlocksForNote(ctx, { noteId, content })
   }
-  await prosemirrorSync.create(ctx, noteId, EMPTY_PM_DOC)
+  await createYjsDocument(ctx, { noteId, content: content ?? null })
   return { noteId, slug: uniqueSlug }
 }

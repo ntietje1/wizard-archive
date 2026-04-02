@@ -107,7 +107,6 @@ import type * as notes_queries from "../notes/queries.js";
 import type * as notes_types from "../notes/types.js";
 import type * as permissions_hasAtLeastPermissionLevel from "../permissions/hasAtLeastPermissionLevel.js";
 import type * as permissions_types from "../permissions/types.js";
-import type * as prosemirrorSync from "../prosemirrorSync.js";
 import type * as sessions_functions_endCurrentSession from "../sessions/functions/endCurrentSession.js";
 import type * as sessions_functions_getCurrentSession from "../sessions/functions/getCurrentSession.js";
 import type * as sessions_functions_getSession from "../sessions/functions/getSession.js";
@@ -173,6 +172,16 @@ import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_types from "../users/types.js";
 import type * as users_validation from "../users/validation.js";
+import type * as yjsSync_constants from "../yjsSync/constants.js";
+import type * as yjsSync_functions_checkYjsAccess from "../yjsSync/functions/checkYjsAccess.js";
+import type * as yjsSync_functions_compactUpdates from "../yjsSync/functions/compactUpdates.js";
+import type * as yjsSync_functions_createYjsDocument from "../yjsSync/functions/createYjsDocument.js";
+import type * as yjsSync_functions_deleteYjsDocument from "../yjsSync/functions/deleteYjsDocument.js";
+import type * as yjsSync_functions_reconstructYDoc from "../yjsSync/functions/reconstructYDoc.js";
+import type * as yjsSync_functions_uint8ToArrayBuffer from "../yjsSync/functions/uint8ToArrayBuffer.js";
+import type * as yjsSync_internalMutations from "../yjsSync/internalMutations.js";
+import type * as yjsSync_mutations from "../yjsSync/mutations.js";
+import type * as yjsSync_queries from "../yjsSync/queries.js";
 
 import type {
   ApiFromModules,
@@ -280,7 +289,6 @@ declare const fullApi: ApiFromModules<{
   "notes/types": typeof notes_types;
   "permissions/hasAtLeastPermissionLevel": typeof permissions_hasAtLeastPermissionLevel;
   "permissions/types": typeof permissions_types;
-  prosemirrorSync: typeof prosemirrorSync;
   "sessions/functions/endCurrentSession": typeof sessions_functions_endCurrentSession;
   "sessions/functions/getCurrentSession": typeof sessions_functions_getCurrentSession;
   "sessions/functions/getSession": typeof sessions_functions_getSession;
@@ -346,6 +354,16 @@ declare const fullApi: ApiFromModules<{
   "users/queries": typeof users_queries;
   "users/types": typeof users_types;
   "users/validation": typeof users_validation;
+  "yjsSync/constants": typeof yjsSync_constants;
+  "yjsSync/functions/checkYjsAccess": typeof yjsSync_functions_checkYjsAccess;
+  "yjsSync/functions/compactUpdates": typeof yjsSync_functions_compactUpdates;
+  "yjsSync/functions/createYjsDocument": typeof yjsSync_functions_createYjsDocument;
+  "yjsSync/functions/deleteYjsDocument": typeof yjsSync_functions_deleteYjsDocument;
+  "yjsSync/functions/reconstructYDoc": typeof yjsSync_functions_reconstructYDoc;
+  "yjsSync/functions/uint8ToArrayBuffer": typeof yjsSync_functions_uint8ToArrayBuffer;
+  "yjsSync/internalMutations": typeof yjsSync_internalMutations;
+  "yjsSync/mutations": typeof yjsSync_mutations;
+  "yjsSync/queries": typeof yjsSync_queries;
 }>;
 
 /**
@@ -375,82 +393,6 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
-  prosemirrorSync: {
-    lib: {
-      deleteDocument: FunctionReference<
-        "mutation",
-        "internal",
-        { id: string },
-        null
-      >;
-      deleteSnapshots: FunctionReference<
-        "mutation",
-        "internal",
-        { afterVersion?: number; beforeVersion?: number; id: string },
-        null
-      >;
-      deleteSteps: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          afterVersion?: number;
-          beforeTs: number;
-          deleteNewerThanLatestSnapshot?: boolean;
-          id: string;
-        },
-        null
-      >;
-      getSnapshot: FunctionReference<
-        "query",
-        "internal",
-        { id: string; version?: number },
-        { content: null } | { content: string; version: number }
-      >;
-      getSteps: FunctionReference<
-        "query",
-        "internal",
-        { id: string; version: number },
-        {
-          clientIds: Array<string | number>;
-          steps: Array<string>;
-          version: number;
-        }
-      >;
-      latestVersion: FunctionReference<
-        "query",
-        "internal",
-        { id: string },
-        null | number
-      >;
-      submitSnapshot: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          content: string;
-          id: string;
-          pruneSnapshots?: boolean;
-          version: number;
-        },
-        null
-      >;
-      submitSteps: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          clientId: string | number;
-          id: string;
-          steps: Array<string>;
-          version: number;
-        },
-        | {
-            clientIds: Array<string | number>;
-            status: "needs-rebase";
-            steps: Array<string>;
-          }
-        | { status: "synced" }
-      >;
-    };
-  };
   betterAuth: {
     adapter: {
       create: FunctionReference<

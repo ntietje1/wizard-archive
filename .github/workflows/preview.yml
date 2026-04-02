@@ -30,7 +30,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Deploy Convex Preview
+      - name: Deploy Convex Preview (Create on Open)
+        if: github.event.action == 'opened'
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
@@ -44,14 +45,34 @@ jobs:
           VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
-      - name: Set Convex Preview Env Vars
+      - name: Set Preview Environment Variables
+        if: github.event.action == 'opened'
         run: |
-          PREVIEW="pr-${{ github.event.pull_request.number }}"
-          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" --preview-name "$PREVIEW"
-          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" --preview-name "$PREVIEW"
-          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" --preview-name "$PREVIEW"
+          npx convex env set BETTER_AUTH_SECRET "${{ secrets.BETTER_AUTH_SECRET }}" \
+            --preview "pr-${{ github.event.pull_request.number }}"
+          npx convex env set SITE_URL "${{ env.PREVIEW_URL }}" \
+            --preview "pr-${{ github.event.pull_request.number }}"
+          npx convex env set GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --preview "pr-${{ github.event.pull_request.number }}"
+          npx convex env set GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --preview "pr-${{ github.event.pull_request.number }}"
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+
+      - name: Deploy Convex Preview (Update Existing)
+        if: github.event.action != 'opened' && github.event.action != 'closed'
+        run: |
+          npx convex deploy \
+            --preview-create "pr-${{ github.event.pull_request.number }}" \
+            --cmd 'npx vite build' \
+            --cmd-url-env-var-name VITE_CONVEX_URL
+        env:
+          CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
+          VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+          VITE_IS_PREVIEW: 'true'
+          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Deploy Cloudflare Workers Preview
         run: |

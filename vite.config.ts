@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { defineConfig } from 'vite'
@@ -28,7 +29,14 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      yjs: path.resolve(__dirname, 'node_modules/yjs/dist/yjs.mjs'),
+    },
+    dedupe: ['yjs'],
+  },
   optimizeDeps: {
+    include: ['yjs'],
     exclude: ['@tanstack/router-devtools-core'],
   },
   ssr: {

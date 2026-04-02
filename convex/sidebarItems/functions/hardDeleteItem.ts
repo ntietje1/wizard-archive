@@ -1,4 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { deleteYjsDocument } from '../../yjsSync/functions/deleteYjsDocument'
 import { applyToDependents } from './applyToDependents'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
@@ -25,6 +26,10 @@ export async function hardDeleteItem(
   await applyToDependents(ctx, item, async (_, doc) => {
     await ctx.db.delete(doc._id)
   })
+
+  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    await deleteYjsDocument(ctx, item._id)
+  }
 
   await ctx.db.delete(item._id)
 }

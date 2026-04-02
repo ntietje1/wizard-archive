@@ -1,10 +1,11 @@
+import { BlockNoteEditor } from '@blocknote/core'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { useBlockNoteSync } from '@convex-dev/prosemirror-sync/blocknote'
-import { useEffect, useRef } from 'react'
+import { SideMenuController } from '@blocknote/react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { editorSchema } from 'convex/notes/editorSpecs'
+import { api } from 'convex/_generated/api'
+import { EDITOR_MODE } from 'convex/editors/types'
 import SelectionToolbar from '../../extensions/selection-toolbar/selection-toolbar'
 import { WikiLinkAutocomplete } from '../../extensions/wiki-link/wiki-link-autocomplete'
 import { WikiLinkClickHandler } from '../../extensions/wiki-link/wiki-link-click-handler'
@@ -13,6 +14,8 @@ import { BlockNoteContextMenuHandler } from '../../extensions/blocknote-context-
 import { PreventExternalDrop } from '../../extensions/prevent-external-drop/prevent-external-drop'
 import { SideMenuRenderer } from '../../extensions/side-menu/side-menu'
 import { SlashMenu } from '../../extensions/slash-menu/slash-menu'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { Doc } from 'yjs'
 import '../../extensions/wiki-link/wiki-link.css'
 import '../../extensions/md-link/md-link.css'
 import type { EditorViewerProps } from '../sidebar-item-editor'
@@ -22,6 +25,7 @@ import type {
   CustomBlockNoteEditor,
 } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
+import type { EditorMode } from 'convex/editors/types'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
@@ -36,6 +40,13 @@ import { useRestoreScrollPosition } from '~/features/editor/hooks/useRestoreScro
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { useNoteEditorDropTarget } from '~/features/dnd/hooks/useNoteEditorDropTarget'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import {
+  patchYSyncAfterTypeChanged,
+  patchYUndoPluginDestroy,
+} from '~/features/editor/utils/patch-yundo-destroy'
+import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -80,17 +91,45 @@ const ReadOnlyNote = ({
   noteId: Id<'notes'>
 }) => {
   const resolvedTheme = useResolvedTheme()
-  const initialContent = content.length > 0 ? content : undefined
-
-  const editor: CustomBlockNoteEditor = useCreateBlockNote({
-    schema: editorSchema,
-    initialContent,
-  })
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
 
   useEffect(() => {
-    editor.replaceBlocks(editor.document, content)
+    const initialContent = content.length > 0 ? content : undefined
+    const instance = BlockNoteEditor.create({
+      schema: editorSchema,
+      initialContent,
+    }) as CustomBlockNoteEditor
+
+    setEditor(instance)
+
+    return () => {
+      instance._tiptapEditor.destroy()
+    }
+    // content is synced via the separate replaceBlocks effect
+  }, [])
+
+  useEffect(() => {
+    if (editor) {
+      editor.replaceBlocks(editor.document, content)
+    }
   }, [editor, content])
 
+  if (!editor) return null
+
+  return (
+    <ReadOnlyNoteReady editor={editor} noteId={noteId} theme={resolvedTheme} />
+  )
+}
+
+const ReadOnlyNoteReady = ({
+  editor,
+  noteId,
+  theme,
+}: {
+  editor: CustomBlockNoteEditor
+  noteId: Id<'notes'>
+  theme: 'light' | 'dark'
+}) => {
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)
   useDisableAutolink(editor)
@@ -102,7 +141,7 @@ const ReadOnlyNote = ({
         key={noteId + 'viewer'}
         editable={false}
         editor={editor}
-        theme={resolvedTheme}
+        theme={theme}
         sideMenu={false}
         formattingToolbar={false}
         slashMenu={false}
@@ -119,21 +158,24 @@ const ReadOnlyNote = ({
 }
 
 // ---------------------------------------------------------------------------
-// Collaborative editor – prosemirror-sync powered
+// Collaborative editor – Yjs powered
 // ---------------------------------------------------------------------------
 
 const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
-  const { editorMode } = useEditorMode()
+  const { canEdit } = useEditorMode()
+  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const profile = profileQuery.data
 
-  const sync = useBlockNoteSync<CustomBlockNoteEditor>(
-    api.prosemirrorSync,
+  const userName = profile?.name ?? profile?.username ?? 'Anonymous'
+  const userColor = profile ? getCursorColor(profile._id) : '#61afef'
+
+  const { doc, provider, instanceId, isLoading } = useConvexYjsCollaboration(
     note._id,
-    { editorOptions: { schema: editorSchema } },
+    { name: userName, color: userColor },
+    canEdit,
   )
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-
-  if (!sync.editor) {
+  if (isLoading || !doc || !provider) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -142,8 +184,75 @@ const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
   }
 
   return (
+    <CollaborativeNoteWithEditor
+      key={instanceId}
+      doc={doc}
+      provider={provider}
+      note={note}
+      user={{ name: userName, color: userColor }}
+    />
+  )
+}
+
+const CollaborativeNoteWithEditor = ({
+  doc,
+  provider,
+  note,
+  user,
+}: {
+  doc: Doc
+  provider: ConvexYjsProvider
+  note: NoteWithContent
+  user: { name: string; color: string }
+}) => {
+  const { editorMode } = useEditorMode()
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+
+  useEffect(() => {
+    const instance = BlockNoteEditor.create({
+      schema: editorSchema,
+      collaboration: {
+        provider,
+        fragment: doc.getXmlFragment('document'),
+        user: { name: user.name, color: user.color },
+        showCursorLabels: 'activity',
+      },
+    }) as CustomBlockNoteEditor
+
+    setEditor(instance)
+
+    // y-prosemirror's yUndoPlugin.destroy() kills the UndoManager when
+    // TipTap reconfigures plugins during mount. We re-register the
+    // handler after reconfigurations settle.
+    let cancelled = false
+    let retries = 0
+    const MAX_RETRIES = 30
+    const tryPatch = () => {
+      if (cancelled) return
+      if (instance._tiptapEditor.view.state.plugins.length === 0) {
+        if (++retries >= MAX_RETRIES) return
+        requestAnimationFrame(tryPatch)
+        return
+      }
+      patchYUndoPluginDestroy(instance._tiptapEditor.view)
+      patchYSyncAfterTypeChanged(instance._tiptapEditor.view)
+    }
+    requestAnimationFrame(tryPatch)
+
+    return () => {
+      cancelled = true
+      instance._tiptapEditor.destroy()
+    }
+    // user.name/color handled by provider.setUser() in useConvexYjsCollaboration
+  }, [doc, provider])
+
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  if (!editor) return null
+
+  return (
     <CollaborativeNoteReady
-      editor={sync.editor}
+      editor={editor}
       note={note}
       editorMode={editorMode}
       scrollAreaRef={scrollAreaRef}
@@ -159,7 +268,7 @@ const CollaborativeNoteReady = ({
 }: {
   editor: CustomBlockNoteEditor
   note: NoteWithContent
-  editorMode: string
+  editorMode: EditorMode
   scrollAreaRef: React.RefObject<HTMLDivElement | null>
 }) => {
   const resolvedTheme = useResolvedTheme()
@@ -210,7 +319,7 @@ const CollaborativeNoteReady = ({
               sideMenu={false}
               formattingToolbar={false}
               slashMenu={false}
-              editable={editorMode === 'editor'}
+              editable={editorMode === EDITOR_MODE.EDITOR}
             >
               <PreventExternalDrop />
               <BlockNoteContextMenuHandler />
