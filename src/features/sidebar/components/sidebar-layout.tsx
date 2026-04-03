@@ -146,9 +146,17 @@ function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
         setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
       }
 
-      outerRef.current?.style.removeProperty('width')
-      innerRef.current?.style.removeProperty('width')
-      handleRef.current?.style.removeProperty('left')
+      const displayWidth =
+        finalWidth < SNAP_CLOSED_THRESHOLD
+          ? 0
+          : Math.max(SIDEBAR_MIN_WIDTH, finalWidth)
+      const contentWidth = displayWidth > 0 ? displayWidth : startWidth
+      const totalDisplay = displayWidth + NAV_COLUMN_WIDTH
+      const totalContent = contentWidth + NAV_COLUMN_WIDTH
+
+      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
+      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
+      if (handleRef.current) handleRef.current.style.left = `${totalDisplay}px`
     }
 
     document.addEventListener('mousemove', handleMouseMove)
