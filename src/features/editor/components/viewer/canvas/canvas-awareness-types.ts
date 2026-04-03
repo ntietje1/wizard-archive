@@ -2,6 +2,7 @@ export type DrawingState = {
   points: Array<[number, number, number]>
   color: string
   size: number
+  opacity: number
 }
 
 export type SelectingState =

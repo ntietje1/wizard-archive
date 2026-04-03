@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { strokePathIntersectsRect } from '../components/viewer/canvas/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
+import type { Bounds } from '../components/viewer/canvas/canvas-stroke-utils'
 import type { SelectingState } from '../components/viewer/canvas/canvas-awareness-types'
 
 interface UseCanvasSelectionRectOptions {
@@ -15,6 +18,7 @@ export function useCanvasSelectionRect({
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
   const rafRef = useRef(0)
+  const lastFlowRectRef = useRef<Bounds | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -41,6 +45,7 @@ export function useCanvasSelectionRect({
       ) {
         return
       }
+      const wasActive = prevRect !== null
       prevRect = userSelectionRect
 
       if (rafRef.current) {
@@ -49,6 +54,26 @@ export function useCanvasSelectionRect({
       }
 
       if (!userSelectionRect) {
+        if (wasActive && lastFlowRectRef.current) {
+          const selRect = lastFlowRectRef.current
+          reactFlow.setNodes((nodes) =>
+            nodes.map((n) => {
+              if (!n.selected || n.type !== 'stroke') return n
+              const strokeData = n.data as StrokeNodeData
+              if (
+                !strokePathIntersectsRect(
+                  strokeData.points,
+                  strokeData.size,
+                  selRect,
+                )
+              ) {
+                return { ...n, selected: false }
+              }
+              return n
+            }),
+          )
+        }
+        lastFlowRectRef.current = null
         useCanvasToolStore.getState().setSelectionRect(null)
         setLocalSelecting(null)
         return
@@ -85,6 +110,7 @@ export function useCanvasSelectionRect({
           height: bottomRight.y - topLeft.y,
         }
 
+        lastFlowRectRef.current = flowRect
         useCanvasToolStore.getState().setSelectionRect(flowRect)
         setLocalSelecting({ type: 'rect', ...flowRect })
       })

@@ -74,7 +74,7 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   )
 }
 
-function segmentsIntersect(
+export function segmentsIntersect(
   ax: number,
   ay: number,
   bx: number,
@@ -187,4 +187,143 @@ export function strokeInsideRect(stroke: StrokeData, rect: Bounds): boolean {
     }
   }
   return true
+}
+
+function pointToSegmentDistSq(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax
+  const dy = by - ay
+  const lenSq = dx * dx + dy * dy
+  if (lenSq === 0) {
+    const ex = px - ax
+    const ey = py - ay
+    return ex * ex + ey * ey
+  }
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq))
+  const projX = ax + t * dx
+  const projY = ay + t * dy
+  const ex = px - projX
+  const ey = py - projY
+  return ex * ex + ey * ey
+}
+
+export function pointNearStrokePath(
+  px: number,
+  py: number,
+  points: Array<[number, number, number]>,
+  size: number,
+  threshold: number = 20,
+): boolean {
+  if (points.length < 2) return false
+  const outline = getStroke(points, { ...STROKE_OPTIONS_BASE, size })
+  if (outline.length < 3) return false
+
+  const poly = outline.map(([x, y]) => ({ x, y }))
+  if (pointInPolygon(px, py, poly)) return true
+
+  const thresholdSq = threshold * threshold
+  for (let i = 0; i < outline.length; i++) {
+    const j = (i + 1) % outline.length
+    if (
+      pointToSegmentDistSq(
+        px,
+        py,
+        outline[i][0],
+        outline[i][1],
+        outline[j][0],
+        outline[j][1],
+      ) <= thresholdSq
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+export function strokePathIntersectsPolygon(
+  points: Array<[number, number, number]>,
+  polygon: Array<{ x: number; y: number }>,
+): boolean {
+  for (const [px, py] of points) {
+    if (pointInPolygon(px, py, polygon)) return true
+  }
+  if (points.length >= 2 && polygon.length >= 2) {
+    for (let i = 0; i < polygon.length; i++) {
+      const j = (i + 1) % polygon.length
+      for (let k = 0; k < points.length - 1; k++) {
+        if (
+          segmentsIntersect(
+            polygon[i].x,
+            polygon[i].y,
+            polygon[j].x,
+            polygon[j].y,
+            points[k][0],
+            points[k][1],
+            points[k + 1][0],
+            points[k + 1][1],
+          )
+        ) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+export function strokePathIntersectsRect(
+  points: Array<[number, number, number]>,
+  size: number,
+  rect: Bounds,
+): boolean {
+  if (points.length === 0) return false
+  const expanded = {
+    x: rect.x - size,
+    y: rect.y - size,
+    width: rect.width + size * 2,
+    height: rect.height + size * 2,
+  }
+  for (const [px, py] of points) {
+    if (
+      px >= expanded.x &&
+      px <= expanded.x + expanded.width &&
+      py >= expanded.y &&
+      py <= expanded.y + expanded.height
+    ) {
+      return true
+    }
+  }
+  if (points.length >= 2) {
+    const rectEdges: Array<[number, number, number, number]> = [
+      [rect.x, rect.y, rect.x + rect.width, rect.y],
+      [rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height],
+      [rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height],
+      [rect.x, rect.y + rect.height, rect.x, rect.y],
+    ]
+    for (const [ex1, ey1, ex2, ey2] of rectEdges) {
+      for (let i = 0; i < points.length - 1; i++) {
+        if (
+          segmentsIntersect(
+            ex1,
+            ey1,
+            ex2,
+            ey2,
+            points[i][0],
+            points[i][1],
+            points[i + 1][0],
+            points[i + 1][1],
+          )
+        ) {
+          return true
+        }
+      }
+    }
+  }
+  return false
 }

@@ -14,6 +14,7 @@ interface CanvasToolState {
   activeTool: CanvasTool
   strokeColor: string
   strokeSize: number
+  strokeOpacity: number
   erasingStrokeIds: Set<string>
   localDrawing: DrawingState | null
   lassoPath: Array<{ x: number; y: number }>
@@ -28,6 +29,7 @@ interface CanvasToolActions {
   setActiveTool: (tool: CanvasTool) => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
+  setStrokeOpacity: (opacity: number) => void
   setErasingStrokeIds: (ids: Set<string>) => void
   setLocalDrawing: (drawing: DrawingState | null) => void
   setLassoPath: (path: Array<{ x: number; y: number }>) => void
@@ -47,6 +49,7 @@ const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
   strokeColor: 'var(--foreground)',
   strokeSize: 4,
+  strokeOpacity: 100,
   erasingStrokeIds: new Set(),
   localDrawing: null,
   lassoPath: [],
@@ -72,6 +75,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
 
     setStrokeColor: (color) => set({ strokeColor: color }),
     setStrokeSize: (size) => set({ strokeSize: size }),
+    setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
     setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
     setLocalDrawing: (drawing) => set({ localDrawing: drawing }),

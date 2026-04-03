@@ -22,7 +22,7 @@ export function useCanvasDrawing({
     (e: React.PointerEvent) => {
       if (e.button !== 0) return
       ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-      const { strokeColor, strokeSize, setLocalDrawing } =
+      const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
         useCanvasToolStore.getState()
       const pos = reactFlow.screenToFlowPosition({
         x: e.clientX,
@@ -30,7 +30,12 @@ export function useCanvasDrawing({
       })
       const point: [number, number, number] = [pos.x, pos.y, e.pressure || 0.5]
       pointsRef.current = [point]
-      const drawing = { points: [point], color: strokeColor, size: strokeSize }
+      const drawing = {
+        points: [point],
+        color: strokeColor,
+        size: strokeSize,
+        opacity: strokeOpacity,
+      }
       setLocalDrawing(drawing)
       setAwarenessDrawing(drawing)
     },
@@ -40,7 +45,7 @@ export function useCanvasDrawing({
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (e.buttons !== 1 || pointsRef.current.length === 0) return
-      const { strokeColor, strokeSize, setLocalDrawing } =
+      const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
         useCanvasToolStore.getState()
       const pos = reactFlow.screenToFlowPosition({
         x: e.clientX,
@@ -52,6 +57,7 @@ export function useCanvasDrawing({
         points: [...pointsRef.current],
         color: strokeColor,
         size: strokeSize,
+        opacity: strokeOpacity,
       }
       setLocalDrawing(drawing)
       setAwarenessDrawing(drawing)
@@ -60,7 +66,7 @@ export function useCanvasDrawing({
   )
 
   const onPointerUp = useCallback(() => {
-    const { strokeColor, strokeSize, setLocalDrawing } =
+    const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
       useCanvasToolStore.getState()
     const points = pointsRef.current
     if (points.length >= 2) {
@@ -76,6 +82,7 @@ export function useCanvasDrawing({
           points: [...points],
           color: strokeColor,
           size: strokeSize,
+          opacity: strokeOpacity,
           bounds,
         },
       }

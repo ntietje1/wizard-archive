@@ -30,7 +30,7 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
             key={`remote-${user.clientId}`}
             d={d}
             fill={user.drawing.color}
-            opacity={0.7}
+            opacity={((user.drawing.opacity ?? 100) / 100) * 0.7}
           />
         )
       })}
@@ -39,6 +39,7 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
         <path
           d={pointsToPathD(localDrawing.points, localDrawing.size)}
           fill={localDrawing.color}
+          opacity={(localDrawing.opacity ?? 100) / 100}
         />
       )}
     </svg>

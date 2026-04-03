@@ -1,7 +1,11 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { pointInPolygon } from '../components/viewer/canvas/canvas-stroke-utils'
+import {
+  pointInPolygon,
+  strokePathIntersectsPolygon,
+} from '../components/viewer/canvas/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
 import type { SelectingState } from '../components/viewer/canvas/canvas-awareness-types'
 
 interface UseCanvasLassoSelectionOptions {
@@ -75,6 +79,15 @@ export function useCanvasLassoSelection({
     nodeLookup.forEach((internalNode, nodeId) => {
       const { position, measured } = internalNode
       if (!measured?.width || !measured?.height) return
+
+      if (internalNode.type === 'stroke') {
+        const strokeData = internalNode.data as StrokeNodeData
+        if (strokePathIntersectsPolygon(strokeData.points, polygon)) {
+          selectedNodeIds.add(nodeId)
+        }
+        return
+      }
+
       const corners = [
         { x: position.x, y: position.y },
         { x: position.x + measured.width, y: position.y },

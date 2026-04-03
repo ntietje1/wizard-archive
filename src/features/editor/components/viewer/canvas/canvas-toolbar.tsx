@@ -14,20 +14,11 @@ import {
   Type,
   Undo2,
 } from 'lucide-react'
-import { STICKY_COLOR_COUNT } from './nodes/sticky-node-colors'
+import { STICKY_COLORS } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
 import { Button } from '~/features/shadcn/components/button'
-
-const STROKE_COLORS = [
-  'var(--foreground)',
-  '#e06c75',
-  '#e5c07b',
-  '#98c379',
-  '#61afef',
-  '#c678dd',
-]
 
 const STROKE_SIZES = [2, 4, 8, 16]
 
@@ -40,10 +31,8 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
-  const strokeColor = useCanvasToolStore((s) => s.strokeColor)
   const strokeSize = useCanvasToolStore((s) => s.strokeSize)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
-  const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
   const setStrokeSize = useCanvasToolStore((s) => s.setStrokeSize)
   const canUndo = useCanvasToolStore((s) => s.canUndo)
   const canRedo = useCanvasToolStore((s) => s.canRedo)
@@ -56,6 +45,7 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
       x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
       y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
     })
+    const { strokeColor, strokeOpacity } = useCanvasToolStore.getState()
 
     const node: Node = {
       id,
@@ -64,7 +54,16 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
       data: {
         label: type === 'text' ? 'New text' : '',
         ...(type === 'sticky'
-          ? { colorIndex: Math.floor(Math.random() * STICKY_COLOR_COUNT) }
+          ? {
+              color: STICKY_COLORS.includes(
+                strokeColor as (typeof STICKY_COLORS)[number],
+              )
+                ? strokeColor
+                : STICKY_COLORS[
+                    Math.floor(Math.random() * STICKY_COLORS.length)
+                  ],
+              opacity: strokeOpacity,
+            }
           : {}),
       },
     }
@@ -163,26 +162,6 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
 
           {activeTool === 'draw' && (
             <>
-              <div className="w-px h-6 bg-border mx-1" />
-              <div className="flex items-center gap-0.5">
-                {STROKE_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    className="h-5 w-5 rounded-sm border border-border transition-colors"
-                    style={{
-                      backgroundColor: color,
-                      outline:
-                        strokeColor === color
-                          ? '2px solid var(--primary)'
-                          : 'none',
-                      outlineOffset: '1px',
-                    }}
-                    onClick={() => setStrokeColor(color)}
-                    aria-label={`Stroke color ${color}`}
-                    title={`Stroke color`}
-                  />
-                ))}
-              </div>
               <div className="w-px h-6 bg-border mx-1" />
               <div className="flex items-center gap-0.5">
                 {STROKE_SIZES.map((size) => (

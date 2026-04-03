@@ -15,14 +15,17 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { CanvasContext } from './canvas-context'
 import { canvasNodeTypes } from './canvas-node-types'
+import { CanvasColorPanel } from './canvas-color-panel'
 import { CanvasToolbar } from './canvas-toolbar'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasStrokes } from './canvas-strokes'
+import { pointNearStrokePath } from './canvas-stroke-utils'
 import type { RemoteHighlight } from './canvas-context'
 import type { Bounds } from './canvas-stroke-utils'
 import type { RemoteUser } from './canvas-awareness-types'
-import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
+import type { Edge, Node, NodeMouseHandler, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
+import type { StrokeNodeData } from './nodes/stroke-node'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
@@ -275,6 +278,25 @@ function CanvasFlow({
     [onNodeDragStop, setLocalDragging],
   )
 
+  const handleNodeClick: NodeMouseHandler = useCallback(
+    (event, node) => {
+      if (node.type !== 'stroke') return
+      const pos = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      const strokeData = node.data as StrokeNodeData
+      if (
+        !pointNearStrokePath(pos.x, pos.y, strokeData.points, strokeData.size)
+      ) {
+        reactFlowInstance.setNodes((nodes) =>
+          nodes.map((n) => (n.id === node.id ? { ...n, selected: false } : n)),
+        )
+      }
+    },
+    [reactFlowInstance],
+  )
+
   const handleMouseMove = useCallback(
     (event: React.MouseEvent) => {
       const pos = reactFlowInstance.screenToFlowPosition({
@@ -371,11 +393,13 @@ function CanvasFlow({
 
   return (
     <CanvasContext value={canvasContextValue}>
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative allow-motion">
         <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
+        <CanvasColorPanel canEdit={canEdit} />
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
+          onNodeClick={isSelectMode ? handleNodeClick : undefined}
           onNodeDragStart={isSelectMode ? onNodeDragStart : undefined}
           onNodeDrag={isSelectMode ? handleNodeDrag : undefined}
           onNodeDragStop={isSelectMode ? handleNodeDragStop : undefined}

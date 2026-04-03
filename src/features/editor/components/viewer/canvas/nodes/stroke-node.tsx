@@ -7,6 +7,7 @@ export type StrokeNodeData = {
   points: Array<[number, number, number]>
   color: string
   size: number
+  opacity?: number
   bounds: Bounds
 }
 
@@ -25,7 +26,11 @@ export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
       style={{ overflow: 'visible' }}
     >
       <g transform={`translate(${-bounds.x}, ${-bounds.y})`}>
-        <path d={d} fill={color} opacity={isErasing ? 0.3 : 1} />
+        <path
+          d={d}
+          fill={color}
+          opacity={isErasing ? 0.3 : (data.opacity ?? 100) / 100}
+        />
         {selected && (
           <path
             d={d}

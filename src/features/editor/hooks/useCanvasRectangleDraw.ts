@@ -4,21 +4,6 @@ import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { Node, XYPosition } from '@xyflow/react'
 import type * as Y from 'yjs'
 
-const COLORS = [
-  '#D14D41',
-  '#DA702C',
-  '#D0A215',
-  '#879A39',
-  '#3AA99F',
-  '#4385BE',
-  '#8B7EC8',
-  '#CE5D97',
-]
-
-function getRandomColor(): string {
-  return COLORS[Math.floor(Math.random() * COLORS.length)]
-}
-
 export function useCanvasRectangleDraw({
   nodesMap,
 }: {
@@ -103,7 +88,7 @@ export function useCanvasRectangleDraw({
       position: { x: rect.x, y: rect.y },
       width: rect.width,
       height: rect.height,
-      data: { color: getRandomColor() },
+      data: { color: store.strokeColor, opacity: store.strokeOpacity },
     }
 
     nodesMap.set(id, node)
