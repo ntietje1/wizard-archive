@@ -60,9 +60,15 @@ export function useCanvasSelectionRect({
             nodes.map((n) => {
               if (!n.selected || n.type !== 'stroke') return n
               const strokeData = n.data as StrokeNodeData
+              const offsetX = n.position.x - strokeData.bounds.x
+              const offsetY = n.position.y - strokeData.bounds.y
+              const adjustedPoints = strokeData.points.map(
+                ([x, y, p]) =>
+                  [x + offsetX, y + offsetY, p] as [number, number, number],
+              )
               if (
                 !strokePathIntersectsRect(
-                  strokeData.points,
+                  adjustedPoints,
                   strokeData.size,
                   selRect,
                 )
@@ -74,7 +80,9 @@ export function useCanvasSelectionRect({
           )
         }
         lastFlowRectRef.current = null
-        useCanvasToolStore.getState().setSelectionRect(null)
+        const store = useCanvasToolStore.getState()
+        store.setSelectionRect(null)
+        store.setRectDeselectedIds(new Set())
         setLocalSelecting(null)
         return
       }
@@ -113,6 +121,23 @@ export function useCanvasSelectionRect({
         lastFlowRectRef.current = flowRect
         useCanvasToolStore.getState().setSelectionRect(flowRect)
         setLocalSelecting({ type: 'rect', ...flowRect })
+
+        const deselected = new Set<string>()
+        for (const n of reactFlow.getNodes()) {
+          if (!n.selected || n.type !== 'stroke') continue
+          const strokeData = n.data as StrokeNodeData
+          const ox = n.position.x - strokeData.bounds.x
+          const oy = n.position.y - strokeData.bounds.y
+          const adjustedPoints = strokeData.points.map(
+            ([x, y, p]) => [x + ox, y + oy, p] as [number, number, number],
+          )
+          if (
+            !strokePathIntersectsRect(adjustedPoints, strokeData.size, flowRect)
+          ) {
+            deselected.add(n.id)
+          }
+        }
+        useCanvasToolStore.getState().setRectDeselectedIds(deselected)
       })
     })
 

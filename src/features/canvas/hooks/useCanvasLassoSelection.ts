@@ -82,7 +82,13 @@ export function useCanvasLassoSelection({
 
       if (internalNode.type === 'stroke') {
         const strokeData = internalNode.data as StrokeNodeData
-        if (strokePathIntersectsPolygon(strokeData.points, polygon)) {
+        const offsetX = position.x - strokeData.bounds.x
+        const offsetY = position.y - strokeData.bounds.y
+        const adjustedPoints = strokeData.points.map(
+          ([x, y, p]) =>
+            [x + offsetX, y + offsetY, p] as [number, number, number],
+        )
+        if (strokePathIntersectsPolygon(adjustedPoints, polygon)) {
           selectedNodeIds.add(nodeId)
         }
         return

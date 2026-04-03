@@ -16,6 +16,9 @@ export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
 export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
   const { points, color, size, bounds } = data
   const isErasing = useCanvasToolStore((s) => s.erasingStrokeIds.has(id))
+  const isRectDeselected = useCanvasToolStore((s) =>
+    s.rectDeselectedIds.has(id),
+  )
   const d = pointsToPathD(points, size)
   if (!d) return null
 
@@ -30,8 +33,9 @@ export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
           d={d}
           fill={color}
           opacity={isErasing ? 0.3 : (data.opacity ?? 100) / 100}
+          style={{ pointerEvents: 'auto' }}
         />
-        {selected && (
+        {selected && !isRectDeselected && (
           <path
             d={d}
             fill="none"

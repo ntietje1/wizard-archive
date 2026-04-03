@@ -29,6 +29,7 @@ interface CanvasToolState {
   strokeSize: number
   strokeOpacity: number
   erasingStrokeIds: Set<string>
+  rectDeselectedIds: Set<string>
   localDrawing: DrawingState | null
   lassoPath: Array<{ x: number; y: number }>
   selectionRect: Bounds | null
@@ -44,6 +45,7 @@ interface CanvasToolActions {
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
   setErasingStrokeIds: (ids: Set<string>) => void
+  setRectDeselectedIds: (ids: Set<string>) => void
   setLocalDrawing: (drawing: DrawingState | null) => void
   setLassoPath: (path: Array<{ x: number; y: number }>) => void
   setSelectionRect: (rect: Bounds | null) => void
@@ -62,6 +64,7 @@ const INITIAL_STATE: CanvasToolState = {
   strokeSize: 4,
   strokeOpacity: 100,
   erasingStrokeIds: new Set(),
+  rectDeselectedIds: new Set(),
   localDrawing: null,
   lassoPath: [],
   selectionRect: null,
@@ -79,6 +82,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
       set({
         activeTool: tool,
         erasingStrokeIds: new Set(),
+        rectDeselectedIds: new Set(),
         localDrawing: null,
         lassoPath: [],
         selectionRect: null,
@@ -89,6 +93,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
     setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
     setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
+    setRectDeselectedIds: (ids) => set({ rectDeselectedIds: ids }),
     setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
     setLassoPath: (path) => set({ lassoPath: path }),
     setSelectionRect: (rect) => set({ selectionRect: rect }),

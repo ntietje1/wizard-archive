@@ -2,6 +2,14 @@ import { pointsToPathD } from '../utils/canvas-stroke-utils'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
+export function MiniMapStrokePath(
+  points: Array<[number, number, number]>,
+  size: number,
+  zoom: number,
+): string {
+  return pointsToPathD(points, (size + 12) / zoom)
+}
+
 interface CanvasStrokesProps {
   remoteUsers: Array<RemoteUser>
 }

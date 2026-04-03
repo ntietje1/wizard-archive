@@ -13,7 +13,6 @@ import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { CanvasContext } from '../utils/canvas-context'
-import { pointNearStrokePath } from '../utils/canvas-stroke-utils'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { useCanvasAwareness } from '../hooks/useCanvasAwareness'
 import { useCanvasDrawing } from '../hooks/useCanvasDrawing'
@@ -26,6 +25,7 @@ import { useCanvasSelectionSync } from '../hooks/useCanvasSelectionSync'
 import { MAX_ZOOM, MIN_ZOOM, useCanvasWheel } from '../hooks/useCanvasWheel'
 import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts'
 import { useCanvasOverlayHandlers } from '../hooks/useCanvasOverlayHandlers'
+import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasStrokes } from './canvas-strokes'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasToolbar } from './canvas-toolbar'
@@ -34,9 +34,8 @@ import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { RemoteHighlight } from '../utils/canvas-context'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
-import type { Edge, Node, NodeMouseHandler, OnNodeDrag } from '@xyflow/react'
+import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
-import type { StrokeNodeData } from './nodes/stroke-node'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
@@ -238,25 +237,6 @@ function CanvasFlow({
     [onNodeDragStop, setLocalDragging],
   )
 
-  const handleNodeClick: NodeMouseHandler = useCallback(
-    (event, node) => {
-      if (node.type !== 'stroke') return
-      const pos = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      })
-      const strokeData = node.data as StrokeNodeData
-      if (
-        !pointNearStrokePath(pos.x, pos.y, strokeData.points, strokeData.size)
-      ) {
-        reactFlowInstance.setNodes((nodes) =>
-          nodes.map((n) => (n.id === node.id ? { ...n, selected: false } : n)),
-        )
-      }
-    },
-    [reactFlowInstance],
-  )
-
   const handleMouseMove = useCallback(
     (event: React.MouseEvent) => {
       const pos = reactFlowInstance.screenToFlowPosition({
@@ -319,7 +299,6 @@ function CanvasFlow({
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
-          onNodeClick={isSelectMode ? handleNodeClick : undefined}
           onNodeDragStart={isSelectMode ? onNodeDragStart : undefined}
           onNodeDrag={isSelectMode ? handleNodeDrag : undefined}
           onNodeDragStop={isSelectMode ? handleNodeDragStop : undefined}
@@ -349,7 +328,11 @@ function CanvasFlow({
           proOptions={PRO_OPTIONS}
         >
           <Background bgColor="var(--background)" />
-          <MiniMap zoomable={false} pannable={false} />
+          <MiniMap
+            zoomable={false}
+            pannable={false}
+            nodeComponent={MiniMapNode}
+          />
           <ViewportPortal>
             <CanvasStrokes remoteUsers={remoteUsers} />
             <CanvasRemoteCursors remoteUsers={remoteUsers} />
