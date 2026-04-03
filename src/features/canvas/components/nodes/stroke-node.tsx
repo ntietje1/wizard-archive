@@ -36,13 +36,19 @@ export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
           style={{ pointerEvents: 'auto' }}
         />
         {selected && !isRectDeselected && (
-          <path
-            d={d}
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth={2}
-            strokeDasharray="4 2"
-          />
+          <>
+            <rect
+              x={bounds.x}
+              y={bounds.y}
+              width={bounds.width}
+              height={bounds.height}
+              fill="none"
+              stroke="var(--primary)"
+              strokeWidth={1}
+              rx={2}
+            />
+            <path d={pointsToPathD(points, size * 0.3)} fill="var(--primary)" />
+          </>
         )}
       </g>
     </svg>

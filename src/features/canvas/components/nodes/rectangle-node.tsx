@@ -28,9 +28,9 @@ export function RectangleNode({
             opacity: (data.opacity ?? 100) / 100,
             outline:
               selected || highlight
-                ? `2px solid ${highlight?.color ?? 'var(--primary)'}`
+                ? `1px solid ${highlight?.color ?? 'var(--primary)'}`
                 : 'none',
-            outlineOffset: '2px',
+            outlineOffset: '1px',
           }}
         />
       </div>

@@ -200,6 +200,17 @@
   display: none !important;
 }
 
+/* Style React Flow's multi-node selection bounding box */
+.react-flow__nodesselection-rect {
+  border: 1px dotted var(--primary) !important;
+  background: oklch(from var(--primary) l c h / 0.08) !important;
+}
+
+/* Hide native multi-select box on pointerdown to match per-node indicator timing */
+.react-flow__renderer:active .react-flow__nodesselection-rect {
+  opacity: 0 !important;
+}
+
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */
 .react-flow__node-stroke {
   pointer-events: none !important;

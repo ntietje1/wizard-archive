@@ -21,9 +21,9 @@ export function TextNode({ id, data, selected }: NodeProps) {
     <div className="relative">
       {(selected || highlight) && (
         <div
-          className="absolute inset-0 rounded-lg pointer-events-none"
+          className="absolute -inset-0.5 rounded-lg pointer-events-none"
           style={{
-            border: `2px solid ${highlight?.color ?? 'var(--primary)'}`,
+            border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
           }}
         />
       )}

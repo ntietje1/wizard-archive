@@ -33,9 +33,9 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
     <div className="relative">
       {(selected || highlight) && (
         <div
-          className="absolute inset-0 rounded-md pointer-events-none"
+          className="absolute -inset-0.5 rounded-md pointer-events-none"
           style={{
-            border: `2px solid ${highlight?.color ?? 'var(--primary)'}`,
+            border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
           }}
         />
       )}

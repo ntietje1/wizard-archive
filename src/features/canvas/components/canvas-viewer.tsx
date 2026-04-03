@@ -362,8 +362,8 @@ const SELECTION_STYLE = {
   fill: 'var(--primary)',
   fillOpacity: 0.08,
   stroke: 'var(--primary)',
-  strokeWidth: 1.5,
-  strokeDasharray: '6 3',
+  strokeWidth: 1,
+  strokeDasharray: '3 3',
 } as const
 
 function SelectionOverlays({
@@ -416,8 +416,8 @@ function SelectionOverlays({
               fill={user.user.color}
               fillOpacity={0.06}
               stroke={user.user.color}
-              strokeWidth={1.5}
-              strokeDasharray="6 3"
+              strokeWidth={1}
+              strokeDasharray="3 3"
             />
           )
         }
@@ -429,8 +429,8 @@ function SelectionOverlays({
               fill={user.user.color}
               fillOpacity={0.06}
               stroke={user.user.color}
-              strokeWidth={1.5}
-              strokeDasharray="6 3"
+              strokeWidth={1}
+              strokeDasharray="3 3"
             />
           )
         }

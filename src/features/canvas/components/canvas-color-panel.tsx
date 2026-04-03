@@ -10,10 +10,13 @@ interface CanvasColorPanelProps {
   canEdit: boolean
 }
 
+const COLOR_RELEVANT_TOOLS = new Set(['draw', 'rectangle'])
+
 export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   const { updateNodeData } = useContext(CanvasContext)
   const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
 
+  const activeTool = useCanvasToolStore((s) => s.activeTool)
   const strokeColor = useCanvasToolStore((s) => s.strokeColor)
   const strokeOpacity = useCanvasToolStore((s) => s.strokeOpacity)
   const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
@@ -50,39 +53,43 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     onChange: ({ nodes }) => setSelectedNodes(nodes),
   })
 
-  const hasSelection = selectedNodes.length > 0
+  const colorRelevantNodes = selectedNodes.filter(
+    (n) => n.data?.color !== undefined,
+  )
+  const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
+  const hasColorSelection = colorRelevantNodes.length > 0
 
-  const activeColor = hasSelection
-    ? getSelectionColor(selectedNodes)
+  const activeColor = hasColorSelection
+    ? getSelectionColor(colorRelevantNodes)
     : strokeColor
 
-  const activeOpacity = hasSelection
-    ? getSelectionOpacity(selectedNodes)
+  const activeOpacity = hasColorSelection
+    ? getSelectionOpacity(colorRelevantNodes)
     : strokeOpacity
 
   const handleColorChange = useCallback(
     (color: string) => {
       setStrokeColor(color)
-      scheduleNodeUpdate({ color })
+      if (hasColorSelection) scheduleNodeUpdate({ color })
     },
-    [setStrokeColor, scheduleNodeUpdate],
+    [setStrokeColor, scheduleNodeUpdate, hasColorSelection],
   )
 
   const handleOpacityChange = useCallback(
     (opacity: number) => {
       setStrokeOpacity(opacity)
-      scheduleNodeUpdate({ opacity })
+      if (hasColorSelection) scheduleNodeUpdate({ opacity })
     },
-    [setStrokeOpacity, scheduleNodeUpdate],
+    [setStrokeOpacity, scheduleNodeUpdate, hasColorSelection],
   )
 
   useEffect(() => {
-    if (!hasSelection) return
-    const color = getSelectionColor(selectedNodes)
+    if (!hasColorSelection) return
+    const color = getSelectionColor(colorRelevantNodes)
     if (color) setStrokeColor(color)
-    const opacity = getSelectionOpacity(selectedNodes)
+    const opacity = getSelectionOpacity(colorRelevantNodes)
     setStrokeOpacity(opacity)
-  }, [hasSelection, selectedNodes, setStrokeColor, setStrokeOpacity])
+  }, [hasColorSelection, colorRelevantNodes, setStrokeColor, setStrokeOpacity])
 
   useEffect(() => {
     return () => {
@@ -90,7 +97,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     }
   }, [])
 
-  if (!canEdit) return null
+  if (!canEdit || (!isToolRelevant && !hasColorSelection)) return null
 
   const displayColor = activeColor ?? strokeColor
 
