@@ -1,22 +1,21 @@
-import { useCallback, useContext, useRef, useState } from 'react'
+import { useContext } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { CanvasContext } from '../canvas-context'
+import { CanvasContext } from '../../utils/canvas-context'
+import { useNodeEditing } from '../../hooks/useNodeEditing'
 import type { NodeProps } from '@xyflow/react'
 
 export function TextNode({ id, data, selected }: NodeProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const shouldCommitRef = useRef(true)
   const { updateNodeData, remoteHighlights } = useContext(CanvasContext)
   const label = (data.label as string) || 'Text'
   const highlight = remoteHighlights.get(id)
 
-  const commitEdit = useCallback(
-    (value: string) => {
-      setIsEditing(false)
-      if (value !== label) updateNodeData(id, { label: value })
-    },
-    [id, label, updateNodeData],
-  )
+  const {
+    isEditing,
+    startEditing,
+    handleBlur,
+    handleKeyDown,
+    containerKeyDown,
+  } = useNodeEditing({ id, currentValue: label, updateNodeData })
 
   return (
     <div className="relative">
@@ -31,13 +30,8 @@ export function TextNode({ id, data, selected }: NodeProps) {
       <div
         className="px-4 py-2 rounded-lg border bg-background shadow-sm min-w-[120px]"
         tabIndex={0}
-        onDoubleClick={() => setIsEditing(true)}
-        onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === 'F2') && !isEditing) {
-            e.preventDefault()
-            setIsEditing(true)
-          }
-        }}
+        onDoubleClick={startEditing}
+        onKeyDown={containerKeyDown}
       >
         <Handle type="target" position={Position.Top} className="!bg-primary" />
         {isEditing ? (
@@ -45,19 +39,8 @@ export function TextNode({ id, data, selected }: NodeProps) {
             className="bg-transparent outline-none text-sm w-full"
             aria-label="Text node content"
             defaultValue={label}
-            onBlur={(e) => {
-              if (shouldCommitRef.current) commitEdit(e.currentTarget.value)
-              shouldCommitRef.current = true
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur()
-              }
-              if (e.key === 'Escape') {
-                shouldCommitRef.current = false
-                setIsEditing(false)
-              }
-            }}
+            onBlur={(e) => handleBlur(e.currentTarget.value)}
+            onKeyDown={(e) => handleKeyDown(e, e.currentTarget.value)}
             autoFocus
           />
         ) : (

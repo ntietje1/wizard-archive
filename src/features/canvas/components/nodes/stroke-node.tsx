@@ -1,7 +1,7 @@
-import { pointsToPathD } from '../canvas-stroke-utils'
-import type { Bounds } from '../canvas-stroke-utils'
+import { pointsToPathD } from '../../utils/canvas-stroke-utils'
+import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import type { Bounds } from '../../utils/canvas-stroke-utils'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
 
 export type StrokeNodeData = {
   points: Array<[number, number, number]>

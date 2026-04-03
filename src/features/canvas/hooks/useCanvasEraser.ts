@@ -1,8 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { polylineIntersectsStroke } from '../components/viewer/canvas/canvas-stroke-utils'
-import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
+import { polylineIntersectsStroke } from '../utils/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/nodes/stroke-node'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 

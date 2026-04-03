@@ -14,10 +14,10 @@ import {
   Type,
   Undo2,
 } from 'lucide-react'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { STICKY_COLORS } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
-import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
 import { Button } from '~/features/shadcn/components/button'
 
 const STROKE_SIZES = [2, 4, 8, 16]

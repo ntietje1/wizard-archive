@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { strokePathIntersectsRect } from '../components/viewer/canvas/canvas-stroke-utils'
-import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
-import type { Bounds } from '../components/viewer/canvas/canvas-stroke-utils'
-import type { SelectingState } from '../components/viewer/canvas/canvas-awareness-types'
+import { strokePathIntersectsRect } from '../utils/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/nodes/stroke-node'
+import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { SelectingState } from '../utils/canvas-awareness-types'
 
 interface UseCanvasSelectionRectOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void

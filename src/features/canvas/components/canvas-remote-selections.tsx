@@ -1,7 +1,7 @@
 import { useNodes } from '@xyflow/react'
 import { useMemo } from 'react'
 import { NameLabel } from './canvas-remote-cursors'
-import type { RemoteUser } from './canvas-awareness-types'
+import type { RemoteUser } from '../utils/canvas-awareness-types'
 
 const DEFAULT_NODE_WIDTH = 150
 const DEFAULT_NODE_HEIGHT = 40

@@ -1,4 +1,5 @@
 import getStroke from 'perfect-freehand'
+import type { XYPosition } from '@xyflow/react'
 
 export type StrokeData = {
   id: string
@@ -18,6 +19,15 @@ const STROKE_OPTIONS_BASE = {
   thinning: 0.5,
   smoothing: 0.5,
   streamline: 0.5,
+}
+
+export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    width: Math.abs(b.x - a.x),
+    height: Math.abs(b.y - a.y),
+  }
 }
 
 export function pointsToPathD(

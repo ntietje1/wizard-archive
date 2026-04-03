@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { DrawingState } from '../components/viewer/canvas/canvas-awareness-types'
-import type { Bounds } from '../components/viewer/canvas/canvas-stroke-utils'
+import type { DrawingState } from '../utils/canvas-awareness-types'
+import type { Bounds } from '../utils/canvas-stroke-utils'
 
 export type CanvasTool =
   | 'select'
@@ -9,6 +9,19 @@ export type CanvasTool =
   | 'erase'
   | 'lasso'
   | 'rectangle'
+
+const TOOL_CURSORS: Record<CanvasTool, string | undefined> = {
+  select: undefined,
+  hand: 'grab',
+  draw: 'crosshair',
+  erase: 'cell',
+  lasso: 'crosshair',
+  rectangle: 'crosshair',
+}
+
+export function getToolCursor(tool: CanvasTool): string | undefined {
+  return TOOL_CURSORS[tool]
+}
 
 interface CanvasToolState {
   activeTool: CanvasTool
@@ -43,8 +56,6 @@ interface CanvasToolActions {
   reset: () => void
 }
 
-const noop = () => {}
-
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
   strokeColor: 'var(--foreground)',
@@ -56,8 +67,8 @@ const INITIAL_STATE: CanvasToolState = {
   selectionRect: null,
   canUndo: false,
   canRedo: false,
-  undo: noop,
-  redo: noop,
+  undo: () => {},
+  redo: () => {},
 }
 
 export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
   Background,
   MiniMap,
@@ -6,43 +6,45 @@ import {
   ReactFlowProvider,
   SelectionMode,
   ViewportPortal,
-  useOnSelectionChange,
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import { CanvasContext } from './canvas-context'
-import { canvasNodeTypes } from './canvas-node-types'
-import { CanvasColorPanel } from './canvas-color-panel'
-import { CanvasToolbar } from './canvas-toolbar'
-import { CanvasRemoteCursors } from './canvas-remote-cursors'
+import { CanvasContext } from '../utils/canvas-context'
+import { pointNearStrokePath } from '../utils/canvas-stroke-utils'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasAwareness } from '../hooks/useCanvasAwareness'
+import { useCanvasDrawing } from '../hooks/useCanvasDrawing'
+import { useCanvasEraser } from '../hooks/useCanvasEraser'
+import { useCanvasLassoSelection } from '../hooks/useCanvasLassoSelection'
+import { useCanvasRectangleDraw } from '../hooks/useCanvasRectangleDraw'
+import { useCanvasHistory } from '../hooks/useCanvasHistory'
+import { useCanvasSelectionRect } from '../hooks/useCanvasSelectionRect'
+import { useCanvasSelectionSync } from '../hooks/useCanvasSelectionSync'
+import { MAX_ZOOM, MIN_ZOOM, useCanvasWheel } from '../hooks/useCanvasWheel'
+import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts'
+import { useCanvasOverlayHandlers } from '../hooks/useCanvasOverlayHandlers'
 import { CanvasStrokes } from './canvas-strokes'
-import { pointNearStrokePath } from './canvas-stroke-utils'
-import type { RemoteHighlight } from './canvas-context'
-import type { Bounds } from './canvas-stroke-utils'
-import type { RemoteUser } from './canvas-awareness-types'
+import { CanvasRemoteCursors } from './canvas-remote-cursors'
+import { CanvasToolbar } from './canvas-toolbar'
+import { CanvasColorPanel } from './canvas-color-panel'
+import { canvasNodeTypes } from './nodes/canvas-node-types'
+import type { RemoteHighlight } from '../utils/canvas-context'
+import type { RemoteUser } from '../utils/canvas-awareness-types'
+import type { Bounds } from '../utils/canvas-stroke-utils'
 import type { Edge, Node, NodeMouseHandler, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { StrokeNodeData } from './nodes/stroke-node'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
-import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { useCanvasYjsCollaboration } from '~/features/editor/hooks/useCanvasYjsCollaboration'
-import { useYjsReactFlowSync } from '~/features/editor/hooks/useYjsReactFlowSync'
-import { useCanvasAwareness } from '~/features/editor/hooks/useCanvasAwareness'
-import { useCanvasDrawing } from '~/features/editor/hooks/useCanvasDrawing'
-import { useCanvasEraser } from '~/features/editor/hooks/useCanvasEraser'
-import { useCanvasLassoSelection } from '~/features/editor/hooks/useCanvasLassoSelection'
-import { useCanvasRectangleDraw } from '~/features/editor/hooks/useCanvasRectangleDraw'
-import { useCanvasHistory } from '~/features/editor/hooks/useCanvasHistory'
-import { useCanvasSelectionRect } from '~/features/editor/hooks/useCanvasSelectionRect'
-import { useCanvasWheel } from '~/features/editor/hooks/useCanvasWheel'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useYjsReactFlowSync } from '~/features/editor/hooks/useYjsReactFlowSync'
+import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 const CURSOR_COLORS = [
   '#e06c75',
@@ -96,7 +98,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   const userName = profile?.name ?? profile?.username ?? 'Anonymous'
   const userColor = profile ? getCursorColor(profile._id) : '#61afef'
 
-  const { doc, provider, isLoading } = useCanvasYjsCollaboration(
+  const { doc, provider, isLoading } = useConvexYjsCollaboration(
     canvas._id,
     { name: userName, color: userColor },
     canEdit,
@@ -187,77 +189,34 @@ function CanvasFlow({
     edgesMap,
   })
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey
-      if (!mod) return
-
-      const el = document.activeElement
-      if (
-        el instanceof HTMLInputElement ||
-        el instanceof HTMLTextAreaElement ||
-        (el instanceof HTMLElement && el.isContentEditable)
-      ) {
-        return
-      }
-
-      const { undo, redo } = useCanvasToolStore.getState()
-      if (e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        undo()
-      } else if (e.key === 'z' && e.shiftKey) {
-        e.preventDefault()
-        redo()
-      } else if (e.key === 'y') {
-        e.preventDefault()
-        redo()
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
+  useCanvasKeyboardShortcuts()
 
   const drawing = useCanvasDrawing({
     nodesMap,
     setAwarenessDrawing: setLocalDrawing,
   })
   const eraser = useCanvasEraser({ nodesMap })
-  const lasso = useCanvasLassoSelection({
-    setLocalSelecting,
-  })
+  const lasso = useCanvasLassoSelection({ setLocalSelecting })
   const rectangleDraw = useCanvasRectangleDraw({ nodesMap })
+
   useCanvasSelectionRect({
     setLocalSelecting,
     enabled: canEdit && isSelectMode,
   })
 
-  const overlayHandlers = useMemo(() => {
-    if (activeTool === 'draw')
-      return {
-        onPointerDown: drawing.onPointerDown,
-        onPointerMove: drawing.onPointerMove,
-        onPointerUp: drawing.onPointerUp,
-      }
-    if (activeTool === 'erase')
-      return {
-        onPointerDown: eraser.onPointerDown,
-        onPointerMove: eraser.onPointerMove,
-        onPointerUp: eraser.onPointerUp,
-      }
-    if (activeTool === 'lasso')
-      return {
-        onPointerDown: lasso.onPointerDown,
-        onPointerMove: lasso.onPointerMove,
-        onPointerUp: lasso.onPointerUp,
-      }
-    if (activeTool === 'rectangle')
-      return {
-        onPointerDown: rectangleDraw.onPointerDown,
-        onPointerMove: rectangleDraw.onPointerMove,
-        onPointerUp: rectangleDraw.onPointerUp,
-      }
-    return null
-  }, [activeTool, drawing, eraser, lasso, rectangleDraw])
+  useCanvasSelectionSync({
+    setLocalSelection,
+    onHistorySelectionChange,
+  })
+
+  const { overlayHandlers, toolCursor } = useCanvasOverlayHandlers({
+    drawing,
+    eraser,
+    lasso,
+    rectangleDraw,
+  })
+
+  const wrapperRef = useCanvasWheel()
 
   const handleNodeDrag: OnNodeDrag = useCallback(
     (event, _node, nodes) => {
@@ -313,33 +272,6 @@ function CanvasFlow({
     setLocalCursor(null)
   }, [setLocalCursor])
 
-  const prevSelectionRef = useRef<Array<string>>([])
-  const handleSelectionChange = useCallback(
-    ({ nodes }: { nodes: Array<Node> }) => {
-      const nodeIds = nodes.map((n) => n.id)
-      if (
-        nodeIds.length !== prevSelectionRef.current.length ||
-        nodeIds.some((id, i) => id !== prevSelectionRef.current[i])
-      ) {
-        prevSelectionRef.current = nodeIds
-        setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
-        onHistorySelectionChange(nodeIds)
-
-        const selectedSet = new Set(nodeIds)
-        reactFlowInstance.setNodes((current) =>
-          current.map((n) =>
-            n.draggable === selectedSet.has(n.id)
-              ? n
-              : { ...n, draggable: selectedSet.has(n.id) },
-          ),
-        )
-      }
-    },
-    [setLocalSelection, reactFlowInstance, onHistorySelectionChange],
-  )
-
-  useOnSelectionChange({ onChange: handleSelectionChange })
-
   const updateNodeData = useCallback(
     (nodeId: string, data: Record<string, unknown>) => {
       const existing = nodesMap.get(nodeId)
@@ -373,21 +305,6 @@ function CanvasFlow({
     () => ({ updateNodeData, remoteHighlights }),
     [updateNodeData, remoteHighlights],
   )
-
-  const toolCursor =
-    activeTool === 'draw'
-      ? 'crosshair'
-      : activeTool === 'erase'
-        ? 'cell'
-        : activeTool === 'lasso'
-          ? 'crosshair'
-          : activeTool === 'rectangle'
-            ? 'crosshair'
-            : activeTool === 'hand'
-              ? 'grab'
-              : undefined
-
-  const wrapperRef = useCanvasWheel()
 
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY
   const nodesDraggable = false
@@ -423,6 +340,8 @@ function CanvasFlow({
             canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE
           }
           colorMode={colorMode}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
           zoomOnScroll={false}
           panOnScroll={false}
           preventScrolling={false}

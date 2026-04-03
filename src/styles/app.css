@@ -35,6 +35,26 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-t-gray: var(--t-gray);
+  --color-t-brown: var(--t-brown);
+  --color-t-orange: var(--t-orange);
+  --color-t-yellow: var(--t-yellow);
+  --color-t-green: var(--t-green);
+  --color-t-blue: var(--t-blue);
+  --color-t-purple: var(--t-purple);
+  --color-t-pink: var(--t-pink);
+  --color-t-red: var(--t-red);
+  --color-bg-gray: var(--bg-gray);
+  --color-bg-brown: var(--bg-brown);
+  --color-bg-orange: var(--bg-orange);
+  --color-bg-yellow: var(--bg-yellow);
+  --color-bg-green: var(--bg-green);
+  --color-bg-blue: var(--bg-blue);
+  --color-bg-purple: var(--bg-purple);
+  --color-bg-pink: var(--bg-pink);
+  --color-bg-red: var(--bg-red);
+
   --radius-sm: max(0px, calc(0.35rem - 4px));
   --radius-md: max(0px, calc(0.35rem - 2px));
   --radius-lg: 0.35rem;
@@ -91,6 +111,26 @@
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.57 0.16 286.05);
 
+  --t-gray: #979a9b;
+  --t-brown: #937264;
+  --t-orange: #ffa344;
+  --t-yellow: #ffdc49;
+  --t-green: #4dab9a;
+  --t-blue: #529cca;
+  --t-purple: #9a6dd7;
+  --t-pink: #e255a1;
+  --t-red: #ff7369;
+
+  --bg-gray: #ebeced;
+  --bg-brown: #e9e5e3;
+  --bg-orange: #faebdd;
+  --bg-yellow: #fbf3db;
+  --bg-green: #ddedea;
+  --bg-blue: #ddebf1;
+  --bg-purple: #eae4f2;
+  --bg-pink: #f4dfeb;
+  --bg-red: #fbe4e4;
+
   --radius: 0.35rem;
 }
 
@@ -126,6 +166,16 @@
   --sidebar-accent-foreground: oklch(0.95 0.01416 303.899);
   --sidebar-border: oklch(0.29 0 0);
   --sidebar-ring: oklch(0.57 0.16 285.99);
+
+  --bg-gray: #454b4e;
+  --bg-brown: #434040;
+  --bg-orange: #594a3a;
+  --bg-yellow: #59563b;
+  --bg-green: #354c4b;
+  --bg-blue: #364954;
+  --bg-purple: #443f57;
+  --bg-pink: #533b4c;
+  --bg-red: #594141;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -153,6 +203,10 @@
 /* Hide React Flow's selection box since we render our own */
 .react-flow__selection {
   display: none !important;
+}
+
+.react-flow__node-stroke {
+  pointer-events: none !important;
 }
 @layer base {
   *:focus:not(:focus-visible) {

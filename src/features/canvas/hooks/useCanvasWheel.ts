@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 
-const MIN_ZOOM = 0.1
-const MAX_ZOOM = 4
+export const MIN_ZOOM = 0.1
+export const MAX_ZOOM = 4
 const ZOOM_SENSITIVITY = 0.005
 const PAN_SENSITIVITY = 1
 

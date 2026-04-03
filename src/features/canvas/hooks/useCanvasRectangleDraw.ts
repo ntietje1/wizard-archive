@@ -1,8 +1,11 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { rectFromPoints } from '../utils/canvas-stroke-utils'
 import type { Node, XYPosition } from '@xyflow/react'
 import type * as Y from 'yjs'
+
+const MIN_RECT_SIZE = 10
 
 export function useCanvasRectangleDraw({
   nodesMap,
@@ -42,12 +45,7 @@ export function useCanvasRectangleDraw({
           const s = startRef.current
           if (!s) return
           const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
-          useCanvasToolStore.getState().setSelectionRect({
-            x: Math.min(s.x, pos.x),
-            y: Math.min(s.y, pos.y),
-            width: Math.abs(pos.x - s.x),
-            height: Math.abs(pos.y - s.y),
-          })
+          useCanvasToolStore.getState().setSelectionRect(rectFromPoints(s, pos))
         })
       }
     },
@@ -72,14 +70,8 @@ export function useCanvasRectangleDraw({
 
     if (!s) return
 
-    const rect = {
-      x: Math.min(s.x, pos.x),
-      y: Math.min(s.y, pos.y),
-      width: Math.abs(pos.x - s.x),
-      height: Math.abs(pos.y - s.y),
-    }
-
-    if (rect.width < 10 && rect.height < 10) return
+    const rect = rectFromPoints(s, pos)
+    if (rect.width < MIN_RECT_SIZE && rect.height < MIN_RECT_SIZE) return
 
     const id = crypto.randomUUID()
     const node: Node = {

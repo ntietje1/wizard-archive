@@ -4,9 +4,9 @@ import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import {
   pointInPolygon,
   strokePathIntersectsPolygon,
-} from '../components/viewer/canvas/canvas-stroke-utils'
-import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
-import type { SelectingState } from '../components/viewer/canvas/canvas-awareness-types'
+} from '../utils/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/nodes/stroke-node'
+import type { SelectingState } from '../utils/canvas-awareness-types'
 
 interface UseCanvasLassoSelectionOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void

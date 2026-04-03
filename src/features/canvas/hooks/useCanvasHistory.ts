@@ -34,7 +34,7 @@ export function useCanvasHistory({
       undo,
       redo,
     })
-  }, []) // undo/redo are stable via undoManagerRef — defined below, bound once
+  }, [])
 
   const restoreSelection = useCallback(
     (nodeIds: Array<string>) => {

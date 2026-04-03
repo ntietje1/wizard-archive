@@ -1,17 +1,10 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
-import { CanvasContext } from './canvas-context'
+import { CanvasContext } from '../utils/canvas-context'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { Node } from '@xyflow/react'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
-import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
-
-const PRESET_COLORS = [
-  'var(--foreground)',
-  '#e06c75',
-  '#98c379',
-  '#61afef',
-  '#c678dd',
-]
+import { BASE_TEXT_COLORS } from '~/shared/utils/color'
 
 interface CanvasColorPanelProps {
   canEdit: boolean
@@ -103,7 +96,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
 
   return (
     <div className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm border rounded-lg p-2 shadow-sm flex items-center gap-1">
-      {PRESET_COLORS.map((color) => (
+      {BASE_TEXT_COLORS.map((color) => (
         <button
           key={color}
           className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110"

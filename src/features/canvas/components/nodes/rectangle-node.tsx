@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { NodeResizer } from '@xyflow/react'
-import { CanvasContext } from '../canvas-context'
+import { CanvasContext } from '../../utils/canvas-context'
 import type { Node, NodeProps } from '@xyflow/react'
 
 export type RectangleNodeType = Node<

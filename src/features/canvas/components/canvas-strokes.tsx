@@ -1,6 +1,6 @@
-import { pointsToPathD } from './canvas-stroke-utils'
-import type { RemoteUser } from './canvas-awareness-types'
-import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
+import { pointsToPathD } from '../utils/canvas-stroke-utils'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import type { RemoteUser } from '../utils/canvas-awareness-types'
 
 interface CanvasStrokesProps {
   remoteUsers: Array<RemoteUser>

@@ -1,6 +1,7 @@
-import { useCallback, useContext, useRef, useState } from 'react'
+import { useCallback, useContext, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { CanvasContext } from '../canvas-context'
+import { CanvasContext } from '../../utils/canvas-context'
+import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { STICKY_COLORS } from './sticky-node-colors'
 import type { Node, NodeProps } from '@xyflow/react'
 
@@ -10,27 +11,23 @@ export type StickyNodeType = Node<
 >
 
 export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
-  const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
-  const shouldCommitRef = useRef(true)
   const { updateNodeData, remoteHighlights } = useContext(CanvasContext)
   const label = data.label || ''
   const color = data.color || STICKY_COLORS[0]
   const opacity = (data.opacity ?? 100) / 100
   const highlight = remoteHighlights.get(id)
 
+  const {
+    isEditing,
+    startEditing: baseStartEditing,
+    handleBlur,
+  } = useNodeEditing({ id, currentValue: label, updateNodeData })
+
   const startEditing = useCallback(() => {
     setEditValue(label)
-    setIsEditing(true)
-  }, [label])
-
-  const commitEdit = useCallback(
-    (value: string) => {
-      setIsEditing(false)
-      if (value !== label) updateNodeData(id, { label: value })
-    },
-    [id, label, updateNodeData],
-  )
+    baseStartEditing()
+  }, [label, baseStartEditing])
 
   return (
     <div className="relative">
@@ -63,15 +60,10 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
             aria-label="Sticky note text"
             value={editValue}
             onChange={(e) => setEditValue(e.currentTarget.value)}
-            onBlur={() => {
-              if (shouldCommitRef.current) commitEdit(editValue)
-              else setIsEditing(false)
-              shouldCommitRef.current = true
-            }}
+            onBlur={() => handleBlur(editValue)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                shouldCommitRef.current = false
-                e.currentTarget.blur()
+                handleBlur(label)
               }
             }}
             autoFocus

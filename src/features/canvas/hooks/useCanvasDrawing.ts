@@ -1,8 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { getStrokeBounds } from '../components/viewer/canvas/canvas-stroke-utils'
-import type { DrawingState } from '../components/viewer/canvas/canvas-awareness-types'
+import { getStrokeBounds } from '../utils/canvas-stroke-utils'
+import type { DrawingState } from '../utils/canvas-awareness-types'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
