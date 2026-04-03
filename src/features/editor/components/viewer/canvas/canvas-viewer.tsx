@@ -35,6 +35,7 @@ import { useCanvasDrawing } from '~/features/editor/hooks/useCanvasDrawing'
 import { useCanvasEraser } from '~/features/editor/hooks/useCanvasEraser'
 import { useCanvasLassoSelection } from '~/features/editor/hooks/useCanvasLassoSelection'
 import { useCanvasRectangleDraw } from '~/features/editor/hooks/useCanvasRectangleDraw'
+import { useCanvasHistory } from '~/features/editor/hooks/useCanvasHistory'
 import { useCanvasSelectionRect } from '~/features/editor/hooks/useCanvasSelectionRect'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
@@ -177,6 +178,41 @@ function CanvasFlow({
     onConnect,
   } = useYjsReactFlowSync(nodesMap, edgesMap, remoteDragPositions)
 
+  const { onSelectionChange: onHistorySelectionChange } = useCanvasHistory({
+    nodesMap,
+    edgesMap,
+  })
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey
+      if (!mod) return
+
+      const el = document.activeElement
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLElement && el.isContentEditable)
+      ) {
+        return
+      }
+
+      const { undo, redo } = useCanvasToolStore.getState()
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (e.key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        redo()
+      } else if (e.key === 'y') {
+        e.preventDefault()
+        redo()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
+
   const drawing = useCanvasDrawing({
     nodesMap,
     setAwarenessDrawing: setLocalDrawing,
@@ -264,6 +300,7 @@ function CanvasFlow({
       ) {
         prevSelectionRef.current = nodeIds
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
+        onHistorySelectionChange(nodeIds)
 
         const selectedSet = new Set(nodeIds)
         reactFlowInstance.setNodes((current) =>
@@ -275,7 +312,7 @@ function CanvasFlow({
         )
       }
     },
-    [setLocalSelection, reactFlowInstance],
+    [setLocalSelection, reactFlowInstance, onHistorySelectionChange],
   )
 
   useOnSelectionChange({ onChange: handleSelectionChange })

@@ -18,6 +18,10 @@ interface CanvasToolState {
   localDrawing: DrawingState | null
   lassoPath: Array<{ x: number; y: number }>
   selectionRect: Bounds | null
+  canUndo: boolean
+  canRedo: boolean
+  undo: () => void
+  redo: () => void
 }
 
 interface CanvasToolActions {
@@ -28,8 +32,16 @@ interface CanvasToolActions {
   setLocalDrawing: (drawing: DrawingState | null) => void
   setLassoPath: (path: Array<{ x: number; y: number }>) => void
   setSelectionRect: (rect: Bounds | null) => void
+  setHistory: (history: {
+    canUndo: boolean
+    canRedo: boolean
+    undo: () => void
+    redo: () => void
+  }) => void
   reset: () => void
 }
+
+const noop = () => {}
 
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
@@ -39,6 +51,10 @@ const INITIAL_STATE: CanvasToolState = {
   localDrawing: null,
   lassoPath: [],
   selectionRect: null,
+  canUndo: false,
+  canRedo: false,
+  undo: noop,
+  redo: noop,
 }
 
 export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
@@ -61,6 +77,8 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
     setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
     setLassoPath: (path) => set({ lassoPath: path }),
     setSelectionRect: (rect) => set({ selectionRect: rect }),
+
+    setHistory: (history) => set(history),
 
     reset: () => set(INITIAL_STATE),
   }),

@@ -168,13 +168,15 @@ export function useYjsReactFlowSync(
     (_event, _node, nodes) => {
       if (!nodesMap) return
       suppressNodeObserver.current = true
-      for (const n of nodes) {
-        draggingIds.current.delete(n.id)
-        const existing = nodesMap.get(n.id)
-        if (existing) {
-          nodesMap.set(n.id, { ...existing, position: n.position })
+      nodesMap.doc!.transact(() => {
+        for (const n of nodes) {
+          draggingIds.current.delete(n.id)
+          const existing = nodesMap.get(n.id)
+          if (existing) {
+            nodesMap.set(n.id, { ...existing, position: n.position })
+          }
         }
-      }
+      })
       suppressNodeObserver.current = false
     },
     [nodesMap],
@@ -184,7 +186,9 @@ export function useYjsReactFlowSync(
     (deleted) => {
       if (!nodesMap) return
       suppressNodeObserver.current = true
-      for (const node of deleted) nodesMap.delete(node.id)
+      nodesMap.doc!.transact(() => {
+        for (const node of deleted) nodesMap.delete(node.id)
+      })
       suppressNodeObserver.current = false
     },
     [nodesMap],
@@ -194,7 +198,9 @@ export function useYjsReactFlowSync(
     (deleted) => {
       if (!edgesMap) return
       suppressEdgeObserver.current = true
-      for (const edge of deleted) edgesMap.delete(edge.id)
+      edgesMap.doc!.transact(() => {
+        for (const edge of deleted) edgesMap.delete(edge.id)
+      })
       suppressEdgeObserver.current = false
     },
     [edgesMap],

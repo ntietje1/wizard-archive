@@ -9,8 +9,10 @@ import {
   Pencil,
   Plus,
   RectangleHorizontal,
+  Redo2,
   StickyNote,
   Type,
+  Undo2,
 } from 'lucide-react'
 import { STICKY_COLOR_COUNT } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
@@ -43,6 +45,10 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
   const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
   const setStrokeSize = useCanvasToolStore((s) => s.setStrokeSize)
+  const canUndo = useCanvasToolStore((s) => s.canUndo)
+  const canRedo = useCanvasToolStore((s) => s.canRedo)
+  const undo = useCanvasToolStore((s) => s.undo)
+  const redo = useCanvasToolStore((s) => s.redo)
 
   const addNode = (type: 'text' | 'sticky') => {
     const id = crypto.randomUUID()
@@ -128,6 +134,31 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
             title="Add sticky note"
           >
             <StickyNote className="h-4 w-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={undo}
+            disabled={!canUndo}
+            aria-label="Undo"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={redo}
+            disabled={!canRedo}
+            aria-label="Redo"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 className="h-4 w-4" />
           </Button>
 
           {activeTool === 'draw' && (

@@ -83,9 +83,11 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
 
   const onPointerUp = useCallback(() => {
     erasingRef.current = false
-    for (const id of markedRef.current) {
-      nodesMap.delete(id)
-    }
+    nodesMap.doc!.transact(() => {
+      for (const id of markedRef.current) {
+        nodesMap.delete(id)
+      }
+    })
     markedRef.current = new Set()
     trailRef.current = []
     useCanvasToolStore.getState().setErasingStrokeIds(new Set())
