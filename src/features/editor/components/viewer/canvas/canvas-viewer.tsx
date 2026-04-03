@@ -40,6 +40,7 @@ import { useCanvasLassoSelection } from '~/features/editor/hooks/useCanvasLassoS
 import { useCanvasRectangleDraw } from '~/features/editor/hooks/useCanvasRectangleDraw'
 import { useCanvasHistory } from '~/features/editor/hooks/useCanvasHistory'
 import { useCanvasSelectionRect } from '~/features/editor/hooks/useCanvasSelectionRect'
+import { useCanvasWheel } from '~/features/editor/hooks/useCanvasWheel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 
@@ -386,6 +387,8 @@ function CanvasFlow({
               ? 'grab'
               : undefined
 
+  const wrapperRef = useCanvasWheel()
+
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY
   const nodesDraggable = false
   const nodesConnectable = canEdit && isSelectMode
@@ -393,7 +396,7 @@ function CanvasFlow({
 
   return (
     <CanvasContext value={canvasContextValue}>
-      <div className="flex-1 min-h-0 relative allow-motion">
+      <div ref={wrapperRef} className="flex-1 min-h-0 relative allow-motion">
         <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
         <CanvasColorPanel canEdit={canEdit} />
         <ReactFlow
@@ -420,6 +423,9 @@ function CanvasFlow({
             canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE
           }
           colorMode={colorMode}
+          zoomOnScroll={false}
+          panOnScroll={false}
+          preventScrolling={false}
           fitView
           proOptions={PRO_OPTIONS}
         >
