@@ -1,17 +1,18 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { getStrokeBounds } from '../components/viewer/canvas/canvas-stroke-utils'
 import type { DrawingState } from '../components/viewer/canvas/canvas-awareness-types'
-import type { StrokeData } from '../components/viewer/canvas/canvas-stroke-utils'
+import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasDrawingOptions {
-  strokesMap: Y.Map<StrokeData>
+  nodesMap: Y.Map<Node>
   setAwarenessDrawing: (drawing: DrawingState | null) => void
 }
 
 export function useCanvasDrawing({
-  strokesMap,
+  nodesMap,
   setAwarenessDrawing,
 }: UseCanvasDrawingOptions) {
   const pointsRef = useRef<Array<[number, number, number]>>([])
@@ -63,19 +64,27 @@ export function useCanvasDrawing({
       useCanvasToolStore.getState()
     const points = pointsRef.current
     if (points.length >= 2) {
+      const bounds = getStrokeBounds(points, strokeSize)
       const id = crypto.randomUUID()
-      const stroke: StrokeData = {
+      const node: Node = {
         id,
-        points: [...points],
-        color: strokeColor,
-        size: strokeSize,
+        type: 'stroke',
+        position: { x: bounds.x, y: bounds.y },
+        width: bounds.width,
+        height: bounds.height,
+        data: {
+          points: [...points],
+          color: strokeColor,
+          size: strokeSize,
+          bounds,
+        },
       }
-      strokesMap.set(id, stroke)
+      nodesMap.set(id, node)
     }
     pointsRef.current = []
     setLocalDrawing(null)
     setAwarenessDrawing(null)
-  }, [strokesMap, setAwarenessDrawing])
+  }, [nodesMap, setAwarenessDrawing])
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

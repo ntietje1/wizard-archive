@@ -1,25 +1,15 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import {
-  pointInPolygon,
-  strokeInsidePolygon,
-} from '../components/viewer/canvas/canvas-stroke-utils'
-import type { StrokeData } from '../components/viewer/canvas/canvas-stroke-utils'
-import type * as Y from 'yjs'
-
-function yMapToArray<T>(map: Y.Map<T>): Array<T> {
-  const items: Array<T> = []
-  map.forEach((value) => items.push(value))
-  return items
-}
+import { pointInPolygon } from '../components/viewer/canvas/canvas-stroke-utils'
+import type { SelectingState } from '../components/viewer/canvas/canvas-awareness-types'
 
 interface UseCanvasLassoSelectionOptions {
-  strokesMap: Y.Map<StrokeData>
+  setLocalSelecting: (selecting: SelectingState | null) => void
 }
 
 export function useCanvasLassoSelection({
-  strokesMap,
+  setLocalSelecting,
 }: UseCanvasLassoSelectionOptions) {
   const pointsRef = useRef<Array<{ x: number; y: number }>>([])
   const activeRef = useRef(false)
@@ -36,14 +26,20 @@ export function useCanvasLassoSelection({
         y: e.clientY,
       })
       pointsRef.current = [pos]
-      const store = useCanvasToolStore.getState()
-      store.setLassoPath([pos])
-      store.setSelectedStrokeIds(new Set())
+      useCanvasToolStore.getState().setLassoPath([pos])
+      setLocalSelecting({ type: 'lasso', points: [pos] })
       reactFlow.setNodes((nodes) =>
-        nodes.map((n) => (n.selected ? { ...n, selected: false } : n)),
+        nodes.map((node) =>
+          node.selected ? { ...node, selected: false } : node,
+        ),
+      )
+      reactFlow.setEdges((edges) =>
+        edges.map((edge) =>
+          edge.selected ? { ...edge, selected: false } : edge,
+        ),
       )
     },
-    [reactFlow],
+    [reactFlow, setLocalSelecting],
   )
 
   const onPointerMove = useCallback(
@@ -54,14 +50,17 @@ export function useCanvasLassoSelection({
         y: e.clientY,
       })
       pointsRef.current.push(pos)
-      useCanvasToolStore.getState().setLassoPath([...pointsRef.current])
+      const path = [...pointsRef.current]
+      useCanvasToolStore.getState().setLassoPath(path)
+      setLocalSelecting({ type: 'lasso', points: path })
     },
-    [reactFlow],
+    [reactFlow, setLocalSelecting],
   )
 
   const onPointerUp = useCallback(() => {
     if (!activeRef.current) return
     activeRef.current = false
+    setLocalSelecting(null)
     const polygon = pointsRef.current
     const store = useCanvasToolStore.getState()
 
@@ -91,18 +90,17 @@ export function useCanvasLassoSelection({
       nodes.map((n) => ({ ...n, selected: selectedNodeIds.has(n.id) })),
     )
 
-    const strokes = yMapToArray(strokesMap)
-    const matchedStrokes = new Set<string>()
-    for (const stroke of strokes) {
-      if (strokeInsidePolygon(stroke, polygon)) {
-        matchedStrokes.add(stroke.id)
-      }
-    }
-    store.setSelectedStrokeIds(matchedStrokes)
+    reactFlow.setEdges((edges) =>
+      edges.map((edge) => ({
+        ...edge,
+        selected:
+          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
+      })),
+    )
 
     store.setLassoPath([])
     pointsRef.current = []
-  }, [reactFlow, storeApi, strokesMap])
+  }, [reactFlow, storeApi, setLocalSelecting])
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

@@ -2,20 +2,15 @@ import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { polylineIntersectsStroke } from '../components/viewer/canvas/canvas-stroke-utils'
-import type { StrokeData } from '../components/viewer/canvas/canvas-stroke-utils'
+import type { StrokeNodeData } from '../components/viewer/canvas/nodes/stroke-node'
+import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
-function yMapToArray<T>(map: Y.Map<T>): Array<T> {
-  const items: Array<T> = []
-  map.forEach((value) => items.push(value))
-  return items
-}
-
 interface UseCanvasEraserOptions {
-  strokesMap: Y.Map<StrokeData>
+  nodesMap: Y.Map<Node>
 }
 
-export function useCanvasEraser({ strokesMap }: UseCanvasEraserOptions) {
+export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
   const trailRef = useRef<Array<{ x: number; y: number }>>([])
   const erasingRef = useRef(false)
   const markedRef = useRef(new Set<string>())
@@ -25,12 +20,28 @@ export function useCanvasEraser({ strokesMap }: UseCanvasEraserOptions) {
     const trail = trailRef.current
     if (trail.length < 2) return
 
-    const strokes = yMapToArray(strokesMap)
+    const strokeNodes = reactFlow.getNodes().filter((n) => n.type === 'stroke')
+
     let changed = false
-    for (const stroke of strokes) {
-      if (markedRef.current.has(stroke.id)) continue
-      if (polylineIntersectsStroke(trail, stroke)) {
-        markedRef.current.add(stroke.id)
+    for (const node of strokeNodes) {
+      if (markedRef.current.has(node.id)) continue
+
+      const data = node.data as StrokeNodeData
+      const offsetX = node.position.x - data.bounds.x
+      const offsetY = node.position.y - data.bounds.y
+
+      const adjustedStroke = {
+        id: node.id,
+        color: data.color,
+        size: data.size,
+        points: data.points.map(
+          ([x, y, p]) =>
+            [x + offsetX, y + offsetY, p] as [number, number, number],
+        ),
+      }
+
+      if (polylineIntersectsStroke(trail, adjustedStroke)) {
+        markedRef.current.add(node.id)
         changed = true
       }
     }
@@ -39,7 +50,7 @@ export function useCanvasEraser({ strokesMap }: UseCanvasEraserOptions) {
         .getState()
         .setErasingStrokeIds(new Set(markedRef.current))
     }
-  }, [strokesMap])
+  }, [reactFlow])
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -73,12 +84,12 @@ export function useCanvasEraser({ strokesMap }: UseCanvasEraserOptions) {
   const onPointerUp = useCallback(() => {
     erasingRef.current = false
     for (const id of markedRef.current) {
-      strokesMap.delete(id)
+      nodesMap.delete(id)
     }
     markedRef.current = new Set()
     trailRef.current = []
     useCanvasToolStore.getState().setErasingStrokeIds(new Set())
-  }, [strokesMap])
+  }, [nodesMap])
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

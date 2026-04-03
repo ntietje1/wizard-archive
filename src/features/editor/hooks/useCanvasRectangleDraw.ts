@@ -1,0 +1,113 @@
+import { useCallback, useRef } from 'react'
+import { useReactFlow } from '@xyflow/react'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import type { Node, XYPosition } from '@xyflow/react'
+import type * as Y from 'yjs'
+
+const COLORS = [
+  '#D14D41',
+  '#DA702C',
+  '#D0A215',
+  '#879A39',
+  '#3AA99F',
+  '#4385BE',
+  '#8B7EC8',
+  '#CE5D97',
+]
+
+function getRandomColor(): string {
+  return COLORS[Math.floor(Math.random() * COLORS.length)]
+}
+
+export function useCanvasRectangleDraw({
+  nodesMap,
+}: {
+  nodesMap: Y.Map<Node>
+}) {
+  const startRef = useRef<XYPosition | null>(null)
+  const activeRef = useRef(false)
+  const lastClientPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const rafRef = useRef(0)
+
+  const reactFlow = useReactFlow()
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      activeRef.current = true
+      const pos = reactFlow.screenToFlowPosition({
+        x: e.clientX,
+        y: e.clientY,
+      })
+      startRef.current = pos
+      lastClientPos.current = { x: e.clientX, y: e.clientY }
+      useCanvasToolStore.getState().setSelectionRect(null)
+    },
+    [reactFlow],
+  )
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!activeRef.current || e.buttons !== 1) return
+      lastClientPos.current = { x: e.clientX, y: e.clientY }
+
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = 0
+          const s = startRef.current
+          if (!s) return
+          const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
+          useCanvasToolStore.getState().setSelectionRect({
+            x: Math.min(s.x, pos.x),
+            y: Math.min(s.y, pos.y),
+            width: Math.abs(pos.x - s.x),
+            height: Math.abs(pos.y - s.y),
+          })
+        })
+      }
+    },
+    [reactFlow],
+  )
+
+  const onPointerUp = useCallback(() => {
+    if (!activeRef.current) return
+    activeRef.current = false
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
+    }
+
+    const s = startRef.current
+    startRef.current = null
+
+    const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
+    const store = useCanvasToolStore.getState()
+    store.setSelectionRect(null)
+
+    if (!s) return
+
+    const rect = {
+      x: Math.min(s.x, pos.x),
+      y: Math.min(s.y, pos.y),
+      width: Math.abs(pos.x - s.x),
+      height: Math.abs(pos.y - s.y),
+    }
+
+    if (rect.width < 10 && rect.height < 10) return
+
+    const id = crypto.randomUUID()
+    const node: Node = {
+      id,
+      type: 'rectangle',
+      position: { x: rect.x, y: rect.y },
+      width: rect.width,
+      height: rect.height,
+      data: { color: getRandomColor() },
+    }
+
+    nodesMap.set(id, node)
+  }, [reactFlow, nodesMap])
+
+  return { onPointerDown, onPointerMove, onPointerUp }
+}

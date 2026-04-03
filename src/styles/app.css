@@ -149,6 +149,11 @@
 .react-flow__edge path {
   transition: none !important;
 }
+
+/* Hide React Flow's selection box since we render our own */
+.react-flow__selection {
+  display: none !important;
+}
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;

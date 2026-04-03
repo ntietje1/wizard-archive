@@ -4,6 +4,7 @@ import type { ConvexYjsProvider } from '../providers/convex-yjs-provider'
 import type {
   DrawingState,
   RemoteUser,
+  SelectingState,
 } from '../components/viewer/canvas/canvas-awareness-types'
 
 function buildRemoteUsers(
@@ -22,6 +23,7 @@ function buildRemoteUsers(
         null,
       selectedNodeIds: (state.selectedNodeIds as Array<string> | null) ?? null,
       drawing: (state.drawing as DrawingState | null) ?? null,
+      selecting: (state.selecting as SelectingState | null) ?? null,
     })
   })
   return users
@@ -38,11 +40,26 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     awarenessRef.current = awareness
     const localClientId = provider.doc.clientID
 
-    const handler = () => {
+    const handler = ({
+      added,
+      updated,
+      removed,
+    }: {
+      added: Array<number>
+      updated: Array<number>
+      removed: Array<number>
+    }) => {
+      // Skip re-render if only the local client changed
+      const remoteChanged =
+        added.some((id) => id !== localClientId) ||
+        updated.some((id) => id !== localClientId) ||
+        removed.some((id) => id !== localClientId)
+      if (!remoteChanged) return
+
       setRemoteUsers(buildRemoteUsers(awareness, localClientId))
     }
 
-    handler()
+    setRemoteUsers(buildRemoteUsers(awareness, localClientId))
     awareness.on('change', handler)
     return () => {
       awareness.off('change', handler)
@@ -69,11 +86,16 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     awarenessRef.current?.setLocalStateField('drawing', drawing)
   }, [])
 
+  const setLocalSelecting = useCallback((selecting: SelectingState | null) => {
+    awarenessRef.current?.setLocalStateField('selecting', selecting)
+  }, [])
+
   return {
     remoteUsers,
     setLocalCursor,
     setLocalDragging,
     setLocalSelection,
     setLocalDrawing,
+    setLocalSelecting,
   }
 }

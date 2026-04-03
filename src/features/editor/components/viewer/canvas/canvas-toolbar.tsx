@@ -1,21 +1,20 @@
 import { useReactFlow } from '@xyflow/react'
 import {
-  BoxSelect,
   Eraser,
+  Hand,
   Lasso,
   Maximize2,
   Minus,
   MousePointer2,
   Pencil,
   Plus,
+  RectangleHorizontal,
   StickyNote,
-  Trash2,
   Type,
 } from 'lucide-react'
 import { STICKY_COLOR_COUNT } from './nodes/sticky-node-colors'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
-import type { StrokeData } from './canvas-stroke-utils'
 import { useCanvasToolStore } from '~/features/editor/stores/canvas-tool-store'
 import { Button } from '~/features/shadcn/components/button'
 
@@ -32,22 +31,15 @@ const STROKE_SIZES = [2, 4, 8, 16]
 
 interface CanvasToolbarProps {
   nodesMap: Y.Map<Node>
-  strokesMap: Y.Map<StrokeData>
   canEdit: boolean
-  onDeleteSelectedStrokes: () => void
 }
 
-export function CanvasToolbar({
-  nodesMap,
-  canEdit,
-  onDeleteSelectedStrokes,
-}: CanvasToolbarProps) {
+export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const strokeColor = useCanvasToolStore((s) => s.strokeColor)
   const strokeSize = useCanvasToolStore((s) => s.strokeSize)
-  const selectedStrokeIds = useCanvasToolStore((s) => s.selectedStrokeIds)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
   const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
   const setStrokeSize = useCanvasToolStore((s) => s.setStrokeSize)
@@ -85,6 +77,12 @@ export function CanvasToolbar({
             icon={<MousePointer2 className="h-4 w-4" />}
           />
           <ToolButton
+            active={activeTool === 'hand'}
+            onClick={() => setActiveTool('hand')}
+            label="Hand"
+            icon={<Hand className="h-4 w-4" />}
+          />
+          <ToolButton
             active={activeTool === 'draw'}
             onClick={() => setActiveTool('draw')}
             label="Draw"
@@ -103,10 +101,10 @@ export function CanvasToolbar({
             icon={<Lasso className="h-4 w-4" />}
           />
           <ToolButton
-            active={activeTool === 'rectangle-select'}
-            onClick={() => setActiveTool('rectangle-select')}
-            label="Rectangle select"
-            icon={<BoxSelect className="h-4 w-4" />}
+            active={activeTool === 'rectangle'}
+            onClick={() => setActiveTool('rectangle')}
+            label="Rectangle"
+            icon={<RectangleHorizontal className="h-4 w-4" />}
           />
 
           <div className="w-px h-6 bg-border mx-1" />
@@ -175,22 +173,6 @@ export function CanvasToolbar({
                   </button>
                 ))}
               </div>
-            </>
-          )}
-
-          {selectedStrokeIds.size > 0 && (
-            <>
-              <div className="w-px h-6 bg-border mx-1" />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                onClick={onDeleteSelectedStrokes}
-                aria-label="Delete selected strokes"
-                title="Delete selected strokes"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </>
           )}
 

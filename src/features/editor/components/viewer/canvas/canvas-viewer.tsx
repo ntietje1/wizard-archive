@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   Background,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  SelectionMode,
   ViewportPortal,
   useOnSelectionChange,
   useReactFlow,
@@ -18,7 +19,8 @@ import { CanvasToolbar } from './canvas-toolbar'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasStrokes } from './canvas-strokes'
 import type { RemoteHighlight } from './canvas-context'
-import type { Bounds, StrokeData } from './canvas-stroke-utils'
+import type { Bounds } from './canvas-stroke-utils'
+import type { RemoteUser } from './canvas-awareness-types'
 import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { EditorViewerProps } from '../sidebar-item-editor'
@@ -32,7 +34,8 @@ import { useCanvasAwareness } from '~/features/editor/hooks/useCanvasAwareness'
 import { useCanvasDrawing } from '~/features/editor/hooks/useCanvasDrawing'
 import { useCanvasEraser } from '~/features/editor/hooks/useCanvasEraser'
 import { useCanvasLassoSelection } from '~/features/editor/hooks/useCanvasLassoSelection'
-import { useCanvasRectangleSelection } from '~/features/editor/hooks/useCanvasRectangleSelection'
+import { useCanvasRectangleDraw } from '~/features/editor/hooks/useCanvasRectangleDraw'
+import { useCanvasSelectionRect } from '~/features/editor/hooks/useCanvasSelectionRect'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 
@@ -61,6 +64,9 @@ const DELETE_KEYS_NONE: Array<string> = []
 const EMPTY_NODES: Array<Node> = []
 const EMPTY_EDGES: Array<Edge> = []
 const EMPTY_DRAG_POSITIONS: Record<string, { x: number; y: number }> = {}
+const PAN_MIDDLE_ONLY: Array<number> = [1]
+const PAN_BOTH: Array<number> = [0, 1]
+const SELECTION_KEY_DISABLED: Array<string> = []
 
 export function CanvasViewer({
   item: canvas,
@@ -99,17 +105,12 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     () => (doc ? doc.getMap<Edge>('edges') : null),
     [doc],
   )
-  const strokesMap = useMemo(
-    () => (doc ? doc.getMap<StrokeData>('strokes') : null),
-    [doc],
-  )
 
-  // Reset store when unmounting or switching canvas
   useEffect(() => {
     return () => useCanvasToolStore.getState().reset()
   }, [canvas._id])
 
-  if (isLoading || !doc || !nodesMap || !edgesMap || !strokesMap) {
+  if (isLoading || !doc || !nodesMap || !edgesMap) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -121,7 +122,6 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     <CanvasFlow
       nodesMap={nodesMap}
       edgesMap={edgesMap}
-      strokesMap={strokesMap}
       canEdit={canEdit}
       colorMode={resolvedTheme}
       provider={provider}
@@ -132,14 +132,12 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 function CanvasFlow({
   nodesMap,
   edgesMap,
-  strokesMap,
   canEdit,
   colorMode,
   provider,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  strokesMap: Y.Map<StrokeData>
   canEdit: boolean
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
@@ -151,15 +149,15 @@ function CanvasFlow({
     setLocalDragging,
     setLocalSelection,
     setLocalDrawing,
+    setLocalSelecting,
   } = useCanvasAwareness(provider)
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
-  const selectedStrokeIds = useCanvasToolStore((s) => s.selectedStrokeIds)
   const lassoPath = useCanvasToolStore((s) => s.lassoPath)
   const selectionRect = useCanvasToolStore((s) => s.selectionRect)
-  const clearSelectedStrokes = useCanvasToolStore((s) => s.clearSelectedStrokes)
 
   const isSelectMode = activeTool === 'select'
+  const isHandMode = activeTool === 'hand'
 
   const remoteDragPositions = useMemo(() => {
     let merged: Record<string, { x: number; y: number }> | null = null
@@ -180,40 +178,18 @@ function CanvasFlow({
   } = useYjsReactFlowSync(nodesMap, edgesMap, remoteDragPositions)
 
   const drawing = useCanvasDrawing({
-    strokesMap,
+    nodesMap,
     setAwarenessDrawing: setLocalDrawing,
   })
-  const eraser = useCanvasEraser({ strokesMap })
-  const lasso = useCanvasLassoSelection({ strokesMap })
-  const rectangle = useCanvasRectangleSelection({ strokesMap })
-
-  const handleDeleteSelectedStrokes = useCallback(() => {
-    const ids = useCanvasToolStore.getState().selectedStrokeIds
-    for (const id of ids) {
-      strokesMap.delete(id)
-    }
-    useCanvasToolStore.getState().clearSelectedStrokes()
-  }, [strokesMap])
-
-  // Backspace / Delete to remove selected strokes
-  useEffect(() => {
-    if (!canEdit || selectedStrokeIds.size === 0) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== 'Backspace' && e.key !== 'Delete') return
-      const target = e.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return
-      }
-      e.preventDefault()
-      handleDeleteSelectedStrokes()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [canEdit, selectedStrokeIds, handleDeleteSelectedStrokes])
+  const eraser = useCanvasEraser({ nodesMap })
+  const lasso = useCanvasLassoSelection({
+    setLocalSelecting,
+  })
+  const rectangleDraw = useCanvasRectangleDraw({ nodesMap })
+  useCanvasSelectionRect({
+    setLocalSelecting,
+    enabled: canEdit && isSelectMode,
+  })
 
   const overlayHandlers = useMemo(() => {
     if (activeTool === 'draw')
@@ -234,14 +210,14 @@ function CanvasFlow({
         onPointerMove: lasso.onPointerMove,
         onPointerUp: lasso.onPointerUp,
       }
-    if (activeTool === 'rectangle-select')
+    if (activeTool === 'rectangle')
       return {
-        onPointerDown: rectangle.onPointerDown,
-        onPointerMove: rectangle.onPointerMove,
-        onPointerUp: rectangle.onPointerUp,
+        onPointerDown: rectangleDraw.onPointerDown,
+        onPointerMove: rectangleDraw.onPointerMove,
+        onPointerUp: rectangleDraw.onPointerUp,
       }
     return null
-  }, [activeTool, drawing, eraser, lasso, rectangle])
+  }, [activeTool, drawing, eraser, lasso, rectangleDraw])
 
   const handleNodeDrag: OnNodeDrag = useCallback(
     (event, _node, nodes) => {
@@ -278,20 +254,31 @@ function CanvasFlow({
     setLocalCursor(null)
   }, [setLocalCursor])
 
+  const prevSelectionRef = useRef<Array<string>>([])
   const handleSelectionChange = useCallback(
     ({ nodes }: { nodes: Array<Node> }) => {
-      setLocalSelection(nodes.length > 0 ? nodes.map((n) => n.id) : null)
+      const nodeIds = nodes.map((n) => n.id)
+      if (
+        nodeIds.length !== prevSelectionRef.current.length ||
+        nodeIds.some((id, i) => id !== prevSelectionRef.current[i])
+      ) {
+        prevSelectionRef.current = nodeIds
+        setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
+
+        const selectedSet = new Set(nodeIds)
+        reactFlowInstance.setNodes((current) =>
+          current.map((n) =>
+            n.draggable === selectedSet.has(n.id)
+              ? n
+              : { ...n, draggable: selectedSet.has(n.id) },
+          ),
+        )
+      }
     },
-    [setLocalSelection],
+    [setLocalSelection, reactFlowInstance],
   )
 
   useOnSelectionChange({ onChange: handleSelectionChange })
-
-  const handlePaneClick = useCallback(() => {
-    if (useCanvasToolStore.getState().selectedStrokeIds.size > 0) {
-      clearSelectedStrokes()
-    }
-  }, [clearSelectedStrokes])
 
   const updateNodeData = useCallback(
     (nodeId: string, data: Record<string, unknown>) => {
@@ -332,19 +319,23 @@ function CanvasFlow({
       ? 'crosshair'
       : activeTool === 'erase'
         ? 'cell'
-        : activeTool === 'lasso' || activeTool === 'rectangle-select'
+        : activeTool === 'lasso'
           ? 'crosshair'
-          : undefined
+          : activeTool === 'rectangle'
+            ? 'crosshair'
+            : activeTool === 'hand'
+              ? 'grab'
+              : undefined
+
+  const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY
+  const nodesDraggable = false
+  const nodesConnectable = canEdit && isSelectMode
+  const elementsSelectable = canEdit && isSelectMode
 
   return (
     <CanvasContext value={canvasContextValue}>
       <div className="flex-1 min-h-0 relative">
-        <CanvasToolbar
-          nodesMap={nodesMap}
-          strokesMap={strokesMap}
-          canEdit={canEdit}
-          onDeleteSelectedStrokes={handleDeleteSelectedStrokes}
-        />
+        <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
@@ -354,14 +345,16 @@ function CanvasFlow({
           onNodesDelete={isSelectMode ? onNodesDelete : undefined}
           onEdgesDelete={isSelectMode ? onEdgesDelete : undefined}
           onConnect={isSelectMode ? onConnect : undefined}
-          onPaneClick={handlePaneClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           nodeTypes={canvasNodeTypes}
-          nodesDraggable={canEdit && isSelectMode}
-          nodesConnectable={canEdit && isSelectMode}
-          elementsSelectable={canEdit && isSelectMode}
-          panOnDrag={isSelectMode}
+          nodesDraggable={nodesDraggable}
+          nodesConnectable={nodesConnectable}
+          elementsSelectable={elementsSelectable}
+          selectionOnDrag={canEdit && isSelectMode}
+          selectionMode={SelectionMode.Partial}
+          selectionKeyCode={SELECTION_KEY_DISABLED}
+          panOnDrag={panOnDrag}
           deleteKeyCode={
             canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE
           }
@@ -372,14 +365,13 @@ function CanvasFlow({
           <Background bgColor="var(--background)" />
           <MiniMap zoomable={false} pannable={false} />
           <ViewportPortal>
-            <CanvasStrokes
-              strokesMap={strokesMap}
-              remoteUsers={remoteUsers}
-              interactive={canEdit && isSelectMode}
-            />
+            <CanvasStrokes remoteUsers={remoteUsers} />
             <CanvasRemoteCursors remoteUsers={remoteUsers} />
-            <LassoOverlay path={lassoPath} />
-            <RectangleOverlay rect={selectionRect} />
+            <SelectionOverlays
+              lassoPath={lassoPath}
+              selectionRect={selectionRect}
+              remoteUsers={remoteUsers}
+            />
           </ViewportPortal>
         </ReactFlow>
 
@@ -397,33 +389,23 @@ function CanvasFlow({
   )
 }
 
-function LassoOverlay({ path }: { path: Array<{ x: number; y: number }> }) {
-  if (path.length < 2) return null
-  const points = path.map((p) => `${p.x},${p.y}`).join(' ')
-  return (
-    <svg
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
-      <polyline
-        points={points}
-        fill="var(--primary)"
-        fillOpacity={0.08}
-        stroke="var(--primary)"
-        strokeWidth={1.5}
-        strokeDasharray="6 3"
-      />
-    </svg>
-  )
-}
+const SELECTION_STYLE = {
+  fill: 'var(--primary)',
+  fillOpacity: 0.08,
+  stroke: 'var(--primary)',
+  strokeWidth: 1.5,
+  strokeDasharray: '6 3',
+} as const
 
-function RectangleOverlay({ rect }: { rect: Bounds | null }) {
-  if (!rect) return null
+function SelectionOverlays({
+  lassoPath,
+  selectionRect,
+  remoteUsers,
+}: {
+  lassoPath: Array<{ x: number; y: number }>
+  selectionRect: Bounds | null
+  remoteUsers: Array<RemoteUser>
+}) {
   return (
     <svg
       style={{
@@ -434,17 +416,57 @@ function RectangleOverlay({ rect }: { rect: Bounds | null }) {
         pointerEvents: 'none',
       }}
     >
-      <rect
-        x={rect.x}
-        y={rect.y}
-        width={rect.width}
-        height={rect.height}
-        fill="var(--primary)"
-        fillOpacity={0.08}
-        stroke="var(--primary)"
-        strokeWidth={1.5}
-        strokeDasharray="6 3"
-      />
+      {lassoPath.length >= 2 && (
+        <polyline
+          points={lassoPath.map((p) => `${p.x},${p.y}`).join(' ')}
+          {...SELECTION_STYLE}
+        />
+      )}
+
+      {selectionRect && (
+        <rect
+          x={selectionRect.x}
+          y={selectionRect.y}
+          width={selectionRect.width}
+          height={selectionRect.height}
+          {...SELECTION_STYLE}
+        />
+      )}
+
+      {remoteUsers.map((user) => {
+        if (!user.selecting) return null
+        const s = user.selecting
+        if (s.type === 'rect') {
+          return (
+            <rect
+              key={`sel-${user.clientId}`}
+              x={s.x}
+              y={s.y}
+              width={s.width}
+              height={s.height}
+              fill={user.user.color}
+              fillOpacity={0.06}
+              stroke={user.user.color}
+              strokeWidth={1.5}
+              strokeDasharray="6 3"
+            />
+          )
+        }
+        if (s.type === 'lasso' && s.points.length >= 2) {
+          return (
+            <polyline
+              key={`sel-${user.clientId}`}
+              points={s.points.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill={user.user.color}
+              fillOpacity={0.06}
+              stroke={user.user.color}
+              strokeWidth={1.5}
+              strokeDasharray="6 3"
+            />
+          )
+        }
+        return null
+      })}
     </svg>
   )
 }
