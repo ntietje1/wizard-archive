@@ -47,6 +47,7 @@ import {
   patchYUndoPluginDestroy,
 } from '~/features/editor/utils/patch-yundo-destroy'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
+import { useNoteThumbnailCapture } from '~/features/editor/hooks/useNoteThumbnailCapture'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { viewAsPlayerId } = useEditorMode()
@@ -260,6 +261,9 @@ const CollaborativeNoteWithEditor = ({
   )
 }
 
+const THUMBNAIL_CAPTURE_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+const THUMBNAIL_CAPTURE_INITIAL_DELAY_MS = 3000
+
 const CollaborativeNoteReady = ({
   editor,
   note,
@@ -283,6 +287,30 @@ const CollaborativeNoteReady = ({
   useRestoreScrollPosition(note._id, scrollAreaRef, isScrollingToHeading)
 
   const editorDropRef = useRef<HTMLDivElement>(null)
+
+  // Thumbnail capture
+  const { captureThumbnail } = useNoteThumbnailCapture(note._id)
+  useEffect(() => {
+    const editorEl = editorDropRef.current?.querySelector(
+      '.bn-editor',
+    ) as HTMLElement | null
+    if (!editorEl) return
+
+    const tryCapture = () => captureThumbnail(editorEl)
+
+    // Initial capture after editor settles
+    const initialTimeout = setTimeout(
+      tryCapture,
+      THUMBNAIL_CAPTURE_INITIAL_DELAY_MS,
+    )
+    // Periodic re-capture (server claim handles cooldown)
+    const interval = setInterval(tryCapture, THUMBNAIL_CAPTURE_INTERVAL_MS)
+
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
+  }, [captureThumbnail])
   useNoteEditorDropTarget({ ref: editorDropRef, editor, noteId: note._id })
 
   const handleWrapperContextMenu = (e: React.MouseEvent) => {

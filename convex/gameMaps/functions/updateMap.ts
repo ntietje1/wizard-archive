@@ -47,6 +47,9 @@ export async function updateMap(
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
+    if (imageStorageId) {
+      updates.thumbnailStorageId = imageStorageId
+    }
   }
   if (iconName !== undefined) {
     updates.iconName = iconName

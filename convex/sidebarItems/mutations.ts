@@ -7,6 +7,10 @@ import {
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
+import {
+  claimThumbnailGeneration as claimThumbnailGenerationFn,
+  commitThumbnail as commitThumbnailFn,
+} from './functions/thumbnailGeneration'
 import type { SidebarItemId } from './types/baseTypes'
 
 export const moveSidebarItem = authMutation({
@@ -43,6 +47,37 @@ export const emptyTrashBin = authMutation({
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     await emptyTrashBinFn(ctx, { campaignId: args.campaignId })
+    return null
+  },
+})
+
+export const claimThumbnailGeneration = authMutation({
+  args: {
+    itemId: sidebarItemIdValidator,
+  },
+  returns: v.object({
+    claimed: v.boolean(),
+    reason: v.optional(v.union(v.literal('too_recent'), v.literal('locked'))),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ claimed: boolean; reason?: 'too_recent' | 'locked' }> => {
+    return await claimThumbnailGenerationFn(ctx, { itemId: args.itemId })
+  },
+})
+
+export const commitThumbnail = authMutation({
+  args: {
+    itemId: sidebarItemIdValidator,
+    thumbnailStorageId: v.id('_storage'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await commitThumbnailFn(ctx, {
+      itemId: args.itemId,
+      thumbnailStorageId: args.thumbnailStorageId,
+    })
     return null
   },
 })

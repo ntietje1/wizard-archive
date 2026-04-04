@@ -27,14 +27,15 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const label = item?.name ?? 'Missing item'
   const typeLabel = item?.type ?? 'unknown'
   const isMissing = !item
+  const thumbnailUrl = item?.thumbnailUrl
 
   return (
     <ResizableNodeWrapper
       id={id}
       selected={!!selected}
       dragging={!!dragging}
-      minWidth={isRichView ? 240 : 140}
-      minHeight={isRichView ? 180 : 40}
+      minWidth={isRichView ? 240 : 200}
+      minHeight={isRichView ? 180 : 260}
     >
       <div className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden">
         <Handle type="target" position={Position.Top} className="!bg-primary" />
@@ -47,7 +48,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
-            {!isRichView && (
+            {!isRichView && !thumbnailUrl && (
               <p className="text-xs text-muted-foreground uppercase tracking-widest select-none">
                 {typeLabel}
               </p>
@@ -58,6 +59,22 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
         {isRichView && !isMissing && (
           <div className="flex-1 min-h-0 border-t">
             <EmbedRichContent contentItem={contentItem} />
+          </div>
+        )}
+
+        {!isRichView && !isMissing && thumbnailUrl && (
+          <div className="flex-1 min-h-0 border-t">
+            <img
+              src={thumbnailUrl}
+              alt={label}
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+        )}
+
+        {!isRichView && !isMissing && !thumbnailUrl && (
+          <div className="flex-1 min-h-0 border-t flex items-center justify-center">
+            <Icon className="h-8 w-8 text-muted-foreground/50" />
           </div>
         )}
 

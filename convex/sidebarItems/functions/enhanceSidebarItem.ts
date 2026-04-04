@@ -74,6 +74,10 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
 ) {
   const { membership } = await requireCampaignMembership(ctx, item.campaignId)
 
+  const thumbnailUrl = item.thumbnailStorageId
+    ? await ctx.storage.getUrl(item.thumbnailStorageId)
+    : null
+
   // Batch path: all data is pre-loaded
   if (sharesMap && bookmarkIds) {
     const itemShares = sharesMap.get(item._id)
@@ -85,6 +89,7 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
         item,
         sharesMap,
       }),
+      thumbnailUrl,
     }
   }
 
@@ -110,5 +115,11 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
     getSidebarItemPermissionLevel(ctx, { item }),
   ])
 
-  return { ...item, shares, isBookmarked: bookmark !== null, myPermissionLevel }
+  return {
+    ...item,
+    shares,
+    isBookmarked: bookmark !== null,
+    myPermissionLevel,
+    thumbnailUrl,
+  }
 }

@@ -57,12 +57,14 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   type: T
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  thumbnailStorageId?: Id<'_storage'>
 } & CommonTableFields
 
 export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {
   shares: Array<SidebarItemShare>
   isBookmarked: boolean
   myPermissionLevel: PermissionLevel
+  thumbnailUrl?: string | null
 }
 
 export type SidebarItemWithContent<T extends SidebarItemType> =

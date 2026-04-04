@@ -1,12 +1,10 @@
 import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { MapPin, MoreVertical } from 'lucide-react'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { ItemCardProps } from './item-card'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { Card, CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -44,12 +42,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const isSelected = useIsSelectedItem(map)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const imageUrlQuery = useAuthQuery(
-    api.storage.queries.getDownloadUrl,
-    map.imageStorageId ? { storageId: map.imageStorageId } : 'skip',
-  )
-
-  const imageUrl = imageUrlQuery.data || null
+  const thumbnailUrl = map.thumbnailUrl ?? null
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -105,11 +98,9 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
 
           {/* Image Section */}
           <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
-            {imageUrlQuery.isLoading && map.imageStorageId ? (
-              <div className="bg-muted w-full h-full" />
-            ) : imageUrl ? (
+            {thumbnailUrl ? (
               <img
-                src={imageUrl}
+                src={thumbnailUrl}
                 alt={map.name}
                 className="w-full h-full object-cover"
               />

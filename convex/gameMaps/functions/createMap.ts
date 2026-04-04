@@ -51,6 +51,7 @@ export async function createMap(
     iconName: iconName ?? null,
     color: color ?? null,
     imageStorageId: imageStorageId ?? null,
+    thumbnailStorageId: imageStorageId,
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,

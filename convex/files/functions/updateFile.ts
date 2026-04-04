@@ -47,6 +47,16 @@ export async function updateFile(
   }
   if (storageId !== undefined) {
     updates.storageId = storageId
+    if (storageId) {
+      const metadata = await ctx.db.system.get(storageId)
+      if (metadata?.contentType?.startsWith('image/')) {
+        updates.thumbnailStorageId = storageId
+      } else {
+        updates.thumbnailStorageId = undefined
+      }
+    } else {
+      updates.thumbnailStorageId = undefined
+    }
   }
   if (iconName !== undefined) {
     updates.iconName = iconName

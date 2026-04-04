@@ -13,6 +13,8 @@ import { folderValidator } from '../folders/baseSchema'
 const noteTableFields = {
   ...commonSidebarItemTableFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+  lastThumbnailUpdate: v.optional(v.number()),
+  thumbnailGenerationLock: v.optional(v.number()),
 }
 
 export const notesTables = {
@@ -33,6 +35,8 @@ const noteValidatorFields = {
   ...commonValidatorFields('notes'),
   ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+  lastThumbnailUpdate: v.optional(v.number()),
+  thumbnailGenerationLock: v.optional(v.number()),
 }
 
 export const noteValidator = v.object(noteValidatorFields)
