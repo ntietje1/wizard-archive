@@ -280,6 +280,20 @@ function CanvasFlow({
     [nodesMap],
   )
 
+  const onResizeEnd = useCallback(
+    (
+      nodeId: string,
+      width: number,
+      height: number,
+      position: { x: number; y: number },
+    ) => {
+      const existing = nodesMap.get(nodeId)
+      if (!existing) return
+      nodesMap.set(nodeId, { ...existing, width, height, position })
+    },
+    [nodesMap],
+  )
+
   const remoteHighlights = useMemo(() => {
     const map = new Map<string, RemoteHighlight>()
     for (const user of remoteUsers) {
@@ -297,8 +311,8 @@ function CanvasFlow({
   }, [remoteUsers])
 
   const canvasContextValue = useMemo(
-    () => ({ updateNodeData, remoteHighlights }),
-    [updateNodeData, remoteHighlights],
+    () => ({ updateNodeData, onResizeEnd, remoteHighlights }),
+    [updateNodeData, onResizeEnd, remoteHighlights],
   )
 
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY

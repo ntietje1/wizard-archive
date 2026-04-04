@@ -1,5 +1,6 @@
 import { pointsToPathD } from '../../utils/canvas-stroke-utils'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Bounds } from '../../utils/canvas-stroke-utils'
 import type { Node, NodeProps } from '@xyflow/react'
 
@@ -13,7 +14,14 @@ export type StrokeNodeData = {
 
 export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
 
-export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
+export function StrokeNode({
+  id,
+  data,
+  selected,
+  dragging,
+  width,
+  height,
+}: NodeProps<StrokeNodeType>) {
   const { points, color, size, bounds } = data
   const isErasing = useCanvasToolStore((s) => s.erasingStrokeIds.has(id))
   const isRectDeselected = useCanvasToolStore((s) =>
@@ -22,13 +30,25 @@ export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
   const d = pointsToPathD(points, size)
   if (!d) return null
 
+  const svgWidth = width ?? bounds.width
+  const svgHeight = height ?? bounds.height
+
   return (
-    <svg
-      width={bounds.width}
-      height={bounds.height}
-      style={{ overflow: 'visible' }}
+    <ResizableNodeWrapper
+      id={id}
+      selected={!!selected}
+      dragging={!!dragging}
+      isRectDeselected={isRectDeselected}
+      minWidth={20}
+      minHeight={20}
     >
-      <g transform={`translate(${-bounds.x}, ${-bounds.y})`}>
+      <svg
+        width={svgWidth}
+        height={svgHeight}
+        viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+        preserveAspectRatio="none"
+        style={{ overflow: 'visible' }}
+      >
         <path
           d={d}
           fill={color}
@@ -36,21 +56,9 @@ export function StrokeNode({ id, data, selected }: NodeProps<StrokeNodeType>) {
           style={{ pointerEvents: 'auto' }}
         />
         {selected && !isRectDeselected && (
-          <>
-            <rect
-              x={bounds.x}
-              y={bounds.y}
-              width={bounds.width}
-              height={bounds.height}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth={1}
-              rx={2}
-            />
-            <path d={pointsToPathD(points, size * 0.3)} fill="var(--primary)" />
-          </>
+          <path d={pointsToPathD(points, size * 0.3)} fill="var(--primary)" />
         )}
-      </g>
-    </svg>
+      </svg>
+    </ResizableNodeWrapper>
   )
 }

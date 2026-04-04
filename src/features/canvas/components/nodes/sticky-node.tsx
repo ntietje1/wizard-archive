@@ -3,6 +3,7 @@ import { Handle, Position } from '@xyflow/react'
 import { CanvasContext } from '../../utils/canvas-context'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
+import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 
 export type StickyNodeType = Node<
@@ -10,13 +11,17 @@ export type StickyNodeType = Node<
   'sticky'
 >
 
-export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
+export function StickyNode({
+  id,
+  data,
+  selected,
+  dragging,
+}: NodeProps<StickyNodeType>) {
   const [editValue, setEditValue] = useState('')
-  const { updateNodeData, remoteHighlights } = useContext(CanvasContext)
+  const { updateNodeData } = useContext(CanvasContext)
   const label = data.label || ''
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
-  const highlight = remoteHighlights.get(id)
 
   const {
     isEditing,
@@ -30,17 +35,15 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
   }, [label, baseStartEditing])
 
   return (
-    <div className="relative">
-      {(selected || highlight) && (
-        <div
-          className="absolute -inset-0.5 rounded-md pointer-events-none"
-          style={{
-            border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
-          }}
-        />
-      )}
+    <ResizableNodeWrapper
+      id={id}
+      selected={!!selected}
+      dragging={!!dragging}
+      minWidth={100}
+      minHeight={100}
+    >
       <div
-        className="w-[160px] min-h-[160px] p-3 rounded-md shadow-lg shadow-black/20"
+        className="h-full w-full p-3 rounded-md shadow-lg shadow-black/20"
         style={{ backgroundColor: color, color: '#1a1a1a', opacity }}
         role="group"
         aria-label={label || 'Empty sticky note'}
@@ -79,6 +82,6 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
           className="!bg-primary"
         />
       </div>
-    </div>
+    </ResizableNodeWrapper>
   )
 }

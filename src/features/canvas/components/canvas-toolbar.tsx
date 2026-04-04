@@ -51,6 +51,8 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
       id,
       type,
       position,
+      width: type === 'sticky' ? 160 : 120,
+      height: type === 'sticky' ? 160 : 36,
       data: {
         label: type === 'text' ? 'New text' : '',
         ...(type === 'sticky'

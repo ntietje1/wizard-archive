@@ -216,6 +216,10 @@
   pointer-events: none !important;
 }
 
+.react-flow__node-stroke .react-flow__resize-control {
+  pointer-events: auto !important;
+}
+
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;

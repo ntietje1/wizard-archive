@@ -1,16 +1,12 @@
-import { useContext } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle } from 'lucide-react'
-import { CanvasContext } from '../../utils/canvas-context'
+import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { NodeProps } from '@xyflow/react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 
-export function EmbedNode({ id, data, selected }: NodeProps) {
-  const { remoteHighlights } = useContext(CanvasContext)
-  const highlight = remoteHighlights.get(id)
-
+export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const sidebarItemId = data.sidebarItemId as SidebarItemId | undefined
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
@@ -21,16 +17,14 @@ export function EmbedNode({ id, data, selected }: NodeProps) {
   const isMissing = !item
 
   return (
-    <div className="relative">
-      {(selected || highlight) && (
-        <div
-          className="absolute -inset-0.5 rounded-lg pointer-events-none"
-          style={{
-            border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
-          }}
-        />
-      )}
-      <div className="w-[200px] px-3 py-2.5 rounded-lg border bg-card shadow-sm">
+    <ResizableNodeWrapper
+      id={id}
+      selected={!!selected}
+      dragging={!!dragging}
+      minWidth={140}
+      minHeight={40}
+    >
+      <div className="h-full w-full px-3 py-2.5 rounded-lg border bg-card shadow-sm">
         <Handle type="target" position={Position.Top} className="!bg-primary" />
         <div className="flex items-center gap-2 min-w-0">
           {isMissing ? (
@@ -51,6 +45,6 @@ export function EmbedNode({ id, data, selected }: NodeProps) {
           className="!bg-primary"
         />
       </div>
-    </div>
+    </ResizableNodeWrapper>
   )
 }

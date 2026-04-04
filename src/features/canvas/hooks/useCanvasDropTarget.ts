@@ -87,6 +87,8 @@ export function useCanvasDropTarget({
           id,
           type: 'embed',
           position,
+          width: 200,
+          height: 52,
           data: { sidebarItemId },
         })
       },
@@ -131,6 +133,8 @@ export function useCanvasDropTarget({
                 x: basePosition.x + i * 20,
                 y: basePosition.y + i * 20,
               },
+              width: 200,
+              height: 52,
               data: { sidebarItemId: result.id },
             })
           }
