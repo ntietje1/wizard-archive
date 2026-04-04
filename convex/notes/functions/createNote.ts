@@ -1,6 +1,3 @@
-import * as Y from 'yjs'
-import { BlockNoteEditor } from '@blocknote/core'
-import { blocksToYDoc } from '@blocknote/core/yjs'
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
   findUniqueSidebarItemSlug,
@@ -12,8 +9,7 @@ import {
   SIDEBAR_ITEM_TYPES,
 } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
-import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
-import { editorSchema } from '../editorSpecs'
+import { internal } from '../../_generated/api'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
@@ -73,22 +69,18 @@ export async function createNote(
     await saveTopLevelBlocksForNote(ctx, { noteId, content })
   }
 
-  let initialState: ArrayBuffer | undefined
+  // Create empty Yjs document. If content was provided, schedule a Node.js
+  // action to convert the blocks into a Yjs update (requires @blocknote/core
+  // which can't run in the Convex V8 isolate).
+  await createYjsDocument(ctx, { documentId: noteId })
+
   if (content && content.length > 0) {
-    const editor = BlockNoteEditor.create({
-      schema: editorSchema,
-      _headless: true,
-    })
-    let doc: Y.Doc | undefined
-    try {
-      doc = blocksToYDoc(editor, content)
-      initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
-    } finally {
-      doc?.destroy()
-      editor._tiptapEditor.destroy()
-    }
+    await ctx.scheduler.runAfter(
+      0,
+      internal.notes.nodeActions.initializeNoteContent,
+      { noteId, content },
+    )
   }
 
-  await createYjsDocument(ctx, { documentId: noteId, initialState })
   return { noteId, slug: uniqueSlug }
 }
