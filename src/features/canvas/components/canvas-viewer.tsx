@@ -116,6 +116,11 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     [doc],
   )
 
+  const canvasUser = useMemo(
+    () => ({ name: userName, color: userColor }),
+    [userName, userColor],
+  )
+
   useEffect(() => {
     return () => useCanvasToolStore.getState().reset()
   }, [canvas._id])
@@ -136,6 +141,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
       canEdit={canEdit}
       colorMode={resolvedTheme}
       provider={provider}
+      user={canvasUser}
     />
   )
 }
@@ -147,6 +153,7 @@ function CanvasFlow({
   canEdit,
   colorMode,
   provider,
+  user: canvasUser,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -154,6 +161,7 @@ function CanvasFlow({
   canEdit: boolean
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
+  user: { name: string; color: string }
 }) {
   const reactFlowInstance = useReactFlow()
   const {
@@ -311,8 +319,14 @@ function CanvasFlow({
   }, [remoteUsers])
 
   const canvasContextValue = useMemo(
-    () => ({ updateNodeData, onResizeEnd, remoteHighlights }),
-    [updateNodeData, onResizeEnd, remoteHighlights],
+    () => ({
+      updateNodeData,
+      onResizeEnd,
+      remoteHighlights,
+      canEdit,
+      user: canvasUser,
+    }),
+    [updateNodeData, onResizeEnd, remoteHighlights, canEdit, canvasUser],
   )
 
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY

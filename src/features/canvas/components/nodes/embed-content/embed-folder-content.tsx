@@ -1,0 +1,33 @@
+import type { Id } from 'convex/_generated/dataModel'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { getSidebarItemIcon } from '~/shared/utils/category-icons'
+
+export function EmbedFolderContent({ folderId }: { folderId: Id<'folders'> }) {
+  const { parentItemsMap } = useActiveSidebarItems()
+  const children = parentItemsMap.get(folderId) ?? []
+
+  if (children.length === 0) {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center text-xs text-muted-foreground">
+        Empty folder
+      </div>
+    )
+  }
+
+  return (
+    <div className="nodrag nopan nowheel h-full overflow-auto p-2 space-y-0.5">
+      {children.map((child) => {
+        const Icon = getSidebarItemIcon(child)
+        return (
+          <div
+            key={child._id as string}
+            className="flex items-center gap-1.5 px-1.5 py-1 rounded text-xs truncate"
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{child.name}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}

@@ -11,12 +11,17 @@ export interface CanvasContextValue {
     position: { x: number; y: number },
   ) => void
   remoteHighlights: Map<string, RemoteHighlight>
+  canEdit: boolean
+  user: { name: string; color: string }
 }
 
 const EMPTY_HIGHLIGHTS = new Map<string, RemoteHighlight>()
+const DEFAULT_USER = { name: 'Anonymous', color: '#61afef' }
 
 export const CanvasContext = createContext<CanvasContextValue>({
   updateNodeData: () => {},
   onResizeEnd: () => {},
   remoteHighlights: EMPTY_HIGHLIGHTS,
+  canEdit: false,
+  user: DEFAULT_USER,
 })
