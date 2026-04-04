@@ -17,6 +17,7 @@ import { assertNever } from '~/shared/utils/utils'
 
 // ─── Constants ───────────────────────────────────────────────────────
 
+export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
@@ -43,6 +44,12 @@ export type SidebarItemDropData = {
 
 export type ResolvedSidebarItemDropData = AnySidebarItem & {
   ancestorIds?: Array<Id<'folders'>>
+}
+
+export interface CanvasDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof CANVAS_DROP_ZONE_TYPE
+  canvasId: Id<'canvases'>
 }
 
 export interface MapDropZoneData {
@@ -77,6 +84,7 @@ export interface TrashDropZoneData {
 export type SidebarDropData =
   | ResolvedSidebarItemDropData
   | SidebarRootDropZoneData
+  | CanvasDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData
   | NoteEditorDropZoneData
@@ -87,12 +95,14 @@ export type DragDropAction =
   | 'trash'
   | 'restore'
   | 'pin'
+  | 'embed'
   | 'open'
   | 'link'
   | null
 
 export type DropRejectionReason =
   | 'self_pin'
+  | 'self_embed'
   | 'already_pinned'
   | 'not_folder'
   | 'circular'
@@ -183,6 +193,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot move folder into itself'
     case 'self_pin':
       return 'Cannot pin map to itself'
+    case 'self_embed':
+      return 'Cannot embed canvas into itself'
     case 'already_pinned':
       return 'Already pinned to this map'
     case 'not_folder':
@@ -335,6 +347,19 @@ const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
   getTargetKey: (raw) => `note:${raw.noteId}`,
 })
 
+const canvasConfig = typedConfig<CanvasDropZoneData>({
+  resolve: (item, target) => {
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash)
+      return rejection('trashed_item')
+    if ((item._id as string) === (target.canvasId as string))
+      return rejection('self_embed')
+    return operation('embed', 'Add to canvas')
+  },
+  canAcceptFiles: true,
+  getHighlightId: (t) => `canvas:${t.canvasId}`,
+  getTargetKey: (raw) => `canvas:${raw.canvasId}`,
+})
+
 const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
   resolve: () => null,
   canAcceptFiles: false,
@@ -345,6 +370,7 @@ const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
 // ─── Registry ───────────────────────────────────────────────────────
 
 type DropZoneType =
+  | typeof CANVAS_DROP_ZONE_TYPE
   | typeof TRASH_DROP_ZONE_TYPE
   | typeof MAP_DROP_ZONE_TYPE
   | typeof NOTE_EDITOR_DROP_TYPE
@@ -353,6 +379,7 @@ type DropZoneType =
   | SidebarItemType
 
 export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
+  [CANVAS_DROP_ZONE_TYPE]: canvasConfig,
   [TRASH_DROP_ZONE_TYPE]: trashConfig,
   [MAP_DROP_ZONE_TYPE]: mapConfig,
   [NOTE_EDITOR_DROP_TYPE]: noteEditorConfig,

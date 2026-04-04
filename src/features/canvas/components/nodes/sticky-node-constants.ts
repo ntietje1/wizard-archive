@@ -1,0 +1,1 @@
+export const STICKY_DEFAULT_COLOR = '#FFEBA1'

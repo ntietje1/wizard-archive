@@ -15,7 +15,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { STICKY_COLORS } from './nodes/sticky-node-colors'
+import { STICKY_DEFAULT_COLOR } from './nodes/sticky-node-constants'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { Button } from '~/features/shadcn/components/button'
@@ -45,7 +45,7 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
       x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
       y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
     })
-    const { strokeColor, strokeOpacity } = useCanvasToolStore.getState()
+    const { strokeOpacity } = useCanvasToolStore.getState()
 
     const node: Node = {
       id,
@@ -55,13 +55,7 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
         label: type === 'text' ? 'New text' : '',
         ...(type === 'sticky'
           ? {
-              color: STICKY_COLORS.includes(
-                strokeColor as (typeof STICKY_COLORS)[number],
-              )
-                ? strokeColor
-                : STICKY_COLORS[
-                    Math.floor(Math.random() * STICKY_COLORS.length)
-                  ],
+              color: STICKY_DEFAULT_COLOR,
               opacity: strokeOpacity,
             }
           : {}),

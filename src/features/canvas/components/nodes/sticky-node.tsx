@@ -2,7 +2,7 @@ import { useCallback, useContext, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { CanvasContext } from '../../utils/canvas-context'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
-import { STICKY_COLORS } from './sticky-node-colors'
+import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import type { Node, NodeProps } from '@xyflow/react'
 
 export type StickyNodeType = Node<
@@ -14,7 +14,7 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
   const [editValue, setEditValue] = useState('')
   const { updateNodeData, remoteHighlights } = useContext(CanvasContext)
   const label = data.label || ''
-  const color = data.color || STICKY_COLORS[0]
+  const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
   const highlight = remoteHighlights.get(id)
 
@@ -40,8 +40,8 @@ export function StickyNode({ id, data, selected }: NodeProps<StickyNodeType>) {
         />
       )}
       <div
-        className="w-[200px] min-h-[120px] p-3 rounded-md shadow-md"
-        style={{ backgroundColor: color, opacity }}
+        className="w-[160px] min-h-[160px] p-3 rounded-md shadow-lg shadow-black/20"
+        style={{ backgroundColor: color, color: '#1a1a1a', opacity }}
         role="group"
         aria-label={label || 'Empty sticky note'}
         tabIndex={0}

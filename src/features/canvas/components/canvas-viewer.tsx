@@ -15,6 +15,7 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import { CanvasContext } from '../utils/canvas-context'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { useCanvasAwareness } from '../hooks/useCanvasAwareness'
+import { useCanvasDropTarget } from '../hooks/useCanvasDropTarget'
 import { useCanvasDrawing } from '../hooks/useCanvasDrawing'
 import { useCanvasEraser } from '../hooks/useCanvasEraser'
 import { useCanvasLassoSelection } from '../hooks/useCanvasLassoSelection'
@@ -31,6 +32,7 @@ import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasToolbar } from './canvas-toolbar'
 import { CanvasColorPanel } from './canvas-color-panel'
 import { canvasNodeTypes } from './nodes/canvas-node-types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { RemoteHighlight } from '../utils/canvas-context'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
@@ -40,10 +42,12 @@ import type { EditorViewerProps } from '~/features/editor/components/viewer/side
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useYjsReactFlowSync } from '~/features/editor/hooks/useYjsReactFlowSync'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { cn } from '~/features/shadcn/lib/utils'
 
 const CURSOR_COLORS = [
   '#e06c75',
@@ -128,6 +132,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     <CanvasFlow
       nodesMap={nodesMap}
       edgesMap={edgesMap}
+      canvasId={canvas._id}
       canEdit={canEdit}
       colorMode={resolvedTheme}
       provider={provider}
@@ -138,12 +143,14 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 function CanvasFlow({
   nodesMap,
   edgesMap,
+  canvasId,
   canEdit,
   colorMode,
   provider,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
+  canvasId: Id<'canvases'>
   canEdit: boolean
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
@@ -216,6 +223,14 @@ function CanvasFlow({
   })
 
   const wrapperRef = useCanvasWheel()
+
+  const { dropOverlayRef, isDropTarget, isFileDropTarget } =
+    useCanvasDropTarget({
+      nodesMap,
+      canvasId,
+      canEdit,
+      isSelectMode,
+    })
 
   const handleNodeDrag: OnNodeDrag = useCallback(
     (event, _node, nodes) => {
@@ -344,6 +359,12 @@ function CanvasFlow({
           </ViewportPortal>
         </ReactFlow>
 
+        <CanvasDropOverlay
+          ref={dropOverlayRef}
+          isDropTarget={isDropTarget}
+          isFileDropTarget={isFileDropTarget}
+        />
+
         {overlayHandlers && (
           <div
             className="absolute inset-0 z-[5]"
@@ -355,6 +376,38 @@ function CanvasFlow({
         )}
       </div>
     </CanvasContext>
+  )
+}
+
+/**
+ * Transparent overlay that becomes the pragmatic-dnd drop target during drags.
+ * ReactFlow's internal DOM layering (pane z-1, viewport z-2, renderer z-4)
+ * prevents reliable `elementsFromPoint` hit-testing back to an ancestor wrapper.
+ * This overlay sits above those layers so pragmatic-dnd detects it directly.
+ */
+function CanvasDropOverlay({
+  ref,
+  isDropTarget,
+  isFileDropTarget,
+}: {
+  ref: React.RefObject<HTMLDivElement | null>
+  isDropTarget: boolean
+  isFileDropTarget: boolean
+}) {
+  const isDragging = useDndStore(
+    (s) => s.isDraggingElement || s.isDraggingFiles,
+  )
+  const active = isDropTarget || isFileDropTarget
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'absolute inset-0 z-[4]',
+        isDragging ? 'pointer-events-auto' : 'pointer-events-none',
+        active && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
+      )}
+    />
   )
 }
 

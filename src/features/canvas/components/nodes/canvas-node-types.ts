@@ -1,3 +1,4 @@
+import { EmbedNode } from './embed-node'
 import { TextNode } from './text-node'
 import { StickyNode } from './sticky-node'
 import { RectangleNode } from './rectangle-node'
@@ -9,4 +10,5 @@ export const canvasNodeTypes: NodeTypes = {
   sticky: StickyNode,
   rectangle: RectangleNode,
   stroke: StrokeNode,
+  embed: EmbedNode,
 }
