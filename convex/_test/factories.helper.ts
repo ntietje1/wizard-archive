@@ -141,6 +141,9 @@ const sidebarItemBase = (
   parentId: null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  previewStorageId: null
+  previewLockedUntil: null
+  previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
   slug: slugify(name),
@@ -150,6 +153,9 @@ const sidebarItemBase = (
   parentId: null,
   allPermissionLevel: null,
   location: SIDEBAR_ITEM_LOCATION.sidebar,
+  previewStorageId: null,
+  previewLockedUntil: null,
+  previewUpdatedAt: null,
   ...commonFields(creatorProfileId),
 })
 

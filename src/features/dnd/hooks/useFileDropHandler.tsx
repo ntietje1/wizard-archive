@@ -29,6 +29,7 @@ import {
   getErrorMessage,
   uploadFile,
 } from '~/features/file-upload/utils/file-upload'
+import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 
 interface DropOptions {
   parentId: Id<'folders'> | null
@@ -56,6 +57,7 @@ export function useFileDropHandler() {
   )
   const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
   const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
+  const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
 
   const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
     new Map(),
@@ -151,6 +153,8 @@ export function useFileDropHandler() {
           storageId,
           parentId,
         })
+
+        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>)
 
         if (!silent) {
           toast.dismiss(toastId)

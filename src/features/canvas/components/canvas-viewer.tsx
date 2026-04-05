@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   Background,
   MiniMap,
@@ -42,6 +42,7 @@ import type { EditorViewerProps } from '~/features/editor/components/viewer/side
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
+import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -142,6 +143,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
       colorMode={resolvedTheme}
       provider={provider}
       user={canvasUser}
+      doc={doc}
     />
   )
 }
@@ -154,6 +156,7 @@ function CanvasFlow({
   colorMode,
   provider,
   user: canvasUser,
+  doc,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -162,6 +165,7 @@ function CanvasFlow({
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
   user: { name: string; color: string }
+  doc: Y.Doc
 }) {
   const reactFlowInstance = useReactFlow()
   const {
@@ -231,6 +235,20 @@ function CanvasFlow({
   })
 
   const wrapperRef = useCanvasWheel()
+  const canvasContainerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const el = wrapperRef.current?.querySelector(
+      '.react-flow',
+    ) as HTMLElement | null
+    canvasContainerRef.current = el
+  })
+
+  useCanvasPreview({
+    canvasId,
+    doc,
+    containerRef: canvasContainerRef,
+  })
 
   const { dropOverlayRef, isDropTarget, isFileDropTarget } =
     useCanvasDropTarget({

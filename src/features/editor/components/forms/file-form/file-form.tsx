@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { validateFileForUpload } from 'convex/storage/validation'
 import type { Id } from 'convex/_generated/dataModel'
+import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
@@ -58,6 +59,7 @@ export function FileForm({
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
+  const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
   const file = useAuthQuery(
     api.files.queries.getFile,
     fileId ? { fileId } : 'skip',
@@ -159,6 +161,10 @@ export function FileForm({
             color: values.color,
           })
 
+          if (fileUpload.file) {
+            await generatePdfPreviewIfNeeded(fileUpload.file, fileId)
+          }
+
           toast.success('File updated')
           onSuccess?.(slug)
         } catch (error) {
@@ -173,6 +179,13 @@ export function FileForm({
           storageId: finalStorageId,
           parentId: parentId ?? null,
         })
+        if (fileUpload.file) {
+          await generatePdfPreviewIfNeeded(
+            fileUpload.file,
+            newFileId as Id<'files'>,
+          )
+        }
+
         await openParentFolders(newFileId)
         navigateToItem(newFileSlug)
         toast.success('File created')

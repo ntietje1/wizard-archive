@@ -27,6 +27,7 @@ import type {
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorMode } from 'convex/editors/types'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { useNotePreview } from '~/features/previews/hooks/use-note-preview'
 import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
@@ -256,6 +257,7 @@ const CollaborativeNoteWithEditor = ({
       note={note}
       editorMode={editorMode}
       scrollAreaRef={scrollAreaRef}
+      doc={doc}
     />
   )
 }
@@ -265,11 +267,13 @@ const CollaborativeNoteReady = ({
   note,
   editorMode,
   scrollAreaRef,
+  doc,
 }: {
   editor: CustomBlockNoteEditor
   note: NoteWithContent
   editorMode: EditorMode
   scrollAreaRef: React.RefObject<HTMLDivElement | null>
+  doc: Doc
 }) => {
   const resolvedTheme = useResolvedTheme()
   useWikiLinkExtension(editor)
@@ -283,6 +287,19 @@ const CollaborativeNoteReady = ({
   useRestoreScrollPosition(note._id, scrollAreaRef, isScrollingToHeading)
 
   const editorDropRef = useRef<HTMLDivElement>(null)
+  const noteEditorRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    noteEditorRef.current = editorDropRef.current?.querySelector(
+      '.bn-editor',
+    ) as HTMLElement | null
+  })
+
+  useNotePreview({
+    noteId: note._id,
+    doc,
+    editorContainerRef: noteEditorRef,
+  })
   useNoteEditorDropTarget({ ref: editorDropRef, editor, noteId: note._id })
 
   const handleWrapperContextMenu = (e: React.MouseEvent) => {

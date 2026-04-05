@@ -95,9 +95,17 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
           </div>
 
           <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
-            <div className="w-full h-full flex items-center justify-center">
-              <Grid2x2Plus className="w-12 h-12 text-muted-foreground" />
-            </div>
+            {canvas.previewUrl ? (
+              <img
+                src={canvas.previewUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Grid2x2Plus className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />
           </div>
         </Card>

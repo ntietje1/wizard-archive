@@ -17,6 +17,9 @@ export const commonSidebarItemTableFields = {
   parentId: v.union(v.id('folders'), v.null()),
   allPermissionLevel: v.union(permissionLevelValidator, v.null()),
   location: sidebarItemLocationValidator,
+  previewStorageId: v.union(v.id('_storage'), v.null()),
+  previewLockedUntil: v.union(v.number(), v.null()),
+  previewUpdatedAt: v.union(v.number(), v.null()),
   ...commonTableFields,
 }
 
@@ -25,4 +28,5 @@ export const commonSidebarItemValidatorFields = {
   shares: v.optional(v.array(sidebarItemShareValidator)),
   isBookmarked: v.optional(v.boolean()),
   myPermissionLevel: v.optional(permissionLevelValidator),
+  previewUrl: v.optional(v.union(v.string(), v.null())),
 }

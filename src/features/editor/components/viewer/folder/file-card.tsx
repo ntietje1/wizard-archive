@@ -146,9 +146,17 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
             </Button>
           </div>
 
-          {/* Icon Section: Centered Large Icon */}
+          {/* Preview / Icon Section */}
           <div className="flex items-center justify-center flex-1 mb-10">
-            <FileIcon className="w-12 h-12 select-none text-muted-foreground" />
+            {file.previewUrl ? (
+              <img
+                src={file.previewUrl}
+                alt=""
+                className="w-full h-full object-cover rounded-sm"
+              />
+            ) : (
+              <FileIcon className="w-12 h-12 select-none text-muted-foreground" />
+            )}
           </div>
         </Card>
       </Link>

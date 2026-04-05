@@ -86,10 +86,17 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
             </div>
           </div>
 
-          {/* Icon Section */}
+          {/* Preview Section */}
           <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-muted flex items-center justify-center">
-            <FileText className="w-8 h-8 text-muted-foreground" />
-            {/* Three-dot menu button in top right */}
+            {note.previewUrl ? (
+              <img
+                src={note.previewUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <FileText className="w-8 h-8 text-muted-foreground" />
+            )}
             <Button
               variant="ghost"
               size="sm"

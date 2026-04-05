@@ -47,13 +47,23 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
-            {!isRichView && (
+            {!isRichView && !item?.previewUrl && (
               <p className="text-xs text-muted-foreground uppercase tracking-widest select-none">
                 {typeLabel}
               </p>
             )}
           </div>
         </div>
+
+        {!isRichView && !isMissing && item?.previewUrl && (
+          <div className="flex-1 min-h-0 border-t">
+            <img
+              src={item.previewUrl}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
         {isRichView && !isMissing && (
           <div className="flex-1 min-h-0 border-t">
