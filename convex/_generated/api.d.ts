@@ -107,7 +107,6 @@ import type * as notes_functions_createNote from "../notes/functions/createNote.
 import type * as notes_functions_enhanceNote from "../notes/functions/enhanceNote.js";
 import type * as notes_functions_getNote from "../notes/functions/getNote.js";
 import type * as notes_functions_updateNote from "../notes/functions/updateNote.js";
-import type * as notes_functions_updateNoteContent from "../notes/functions/updateNoteContent.js";
 import type * as notes_mutations from "../notes/mutations.js";
 import type * as notes_queries from "../notes/queries.js";
 import type * as notes_types from "../notes/types.js";
@@ -298,7 +297,6 @@ declare const fullApi: ApiFromModules<{
   "notes/functions/enhanceNote": typeof notes_functions_enhanceNote;
   "notes/functions/getNote": typeof notes_functions_getNote;
   "notes/functions/updateNote": typeof notes_functions_updateNote;
-  "notes/functions/updateNoteContent": typeof notes_functions_updateNoteContent;
   "notes/mutations": typeof notes_mutations;
   "notes/queries": typeof notes_queries;
   "notes/types": typeof notes_types;

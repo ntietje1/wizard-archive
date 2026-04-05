@@ -41,7 +41,7 @@ import { useRestoreScrollPosition } from '~/features/editor/hooks/useRestoreScro
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { useNoteEditorDropTarget } from '~/features/dnd/hooks/useNoteEditorDropTarget'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
-import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
+import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import {
   patchYSyncAfterTypeChanged,
@@ -170,7 +170,7 @@ const CollaborativeNote = ({ note }: { note: NoteWithContent }) => {
   const userName = profile?.name ?? profile?.username ?? 'Anonymous'
   const userColor = profile ? getCursorColor(profile._id) : '#61afef'
 
-  const { doc, provider, instanceId, isLoading } = useConvexYjsCollaboration(
+  const { doc, provider, instanceId, isLoading } = useNoteYjsCollaboration(
     note._id,
     { name: userName, color: userColor },
     canEdit,

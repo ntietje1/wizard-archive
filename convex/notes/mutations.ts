@@ -8,7 +8,6 @@ import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
 import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
-import { updateNoteContent as updateNoteContentFn } from './functions/updateNoteContent'
 import { editorSchema } from './editorSpecs'
 import type { Id } from '../_generated/dataModel'
 
@@ -79,7 +78,7 @@ export const persistNoteBlocks = authMutation({
         schema: editorSchema,
         _headless: true,
       })
-      const blocks = yDocToBlocks(editor, doc)
+      const blocks = yDocToBlocks(editor, doc, 'document')
 
       await saveTopLevelBlocksForNote(ctx, {
         noteId: documentId,
@@ -91,19 +90,5 @@ export const persistNoteBlocks = authMutation({
     }
 
     return null
-  },
-})
-
-export const updateNoteContent = authMutation({
-  args: {
-    noteId: v.id('notes'),
-    content: v.array(customBlockValidator),
-  },
-  returns: v.id('notes'),
-  handler: async (ctx, args): Promise<Id<'notes'>> => {
-    return await updateNoteContentFn(ctx, {
-      noteId: args.noteId,
-      content: args.content,
-    })
   },
 })

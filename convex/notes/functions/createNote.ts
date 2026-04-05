@@ -84,7 +84,7 @@ export async function createNote(
     })
     let doc: Y.Doc | undefined
     try {
-      doc = blocksToYDoc(editor, content)
+      doc = blocksToYDoc(editor, content, 'document')
       initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
     } finally {
       doc?.destroy()

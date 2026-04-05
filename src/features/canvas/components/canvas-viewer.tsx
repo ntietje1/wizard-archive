@@ -8,6 +8,7 @@ import {
   ViewportPortal,
   useReactFlow,
 } from '@xyflow/react'
+import { ClientOnly } from '@tanstack/react-router'
 import '@xyflow/react/dist/style.css'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -83,9 +84,11 @@ export function CanvasViewer({
   item: canvas,
 }: EditorViewerProps<CanvasWithContent>) {
   return (
-    <ReactFlowProvider>
-      <CanvasViewerInner canvas={canvas} />
-    </ReactFlowProvider>
+    <ClientOnly fallback={null}>
+      <ReactFlowProvider>
+        <CanvasViewerInner canvas={canvas} />
+      </ReactFlowProvider>
+    </ClientOnly>
   )
 }
 

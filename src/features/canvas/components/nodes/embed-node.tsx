@@ -1,7 +1,6 @@
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { useIsEmbedRichView } from '../../hooks/useEmbedZoomLevel'
 import { useEmbedItemContent } from '../../hooks/useEmbedItemContent'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-content/embed-note-content'
@@ -20,22 +19,19 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 
-  const isRichView = useIsEmbedRichView()
-  const contentItem = useEmbedItemContent(sidebarItemId, isRichView)
+  const contentItem = useEmbedItemContent(sidebarItemId, true)
 
   const Icon = getSidebarItemIcon(item)
   const label = item?.name ?? 'Missing item'
-  const typeLabel = item?.type ?? 'unknown'
   const isMissing = !item
-  const previewUrl = item?.previewUrl
 
   return (
     <ResizableNodeWrapper
       id={id}
       selected={!!selected}
       dragging={!!dragging}
-      minWidth={isRichView ? 240 : 200}
-      minHeight={isRichView ? 180 : 260}
+      minWidth={240}
+      minHeight={180}
     >
       <div className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden">
         <Handle type="target" position={Position.Top} className="!bg-primary" />
@@ -48,33 +44,12 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
-            {!isRichView && !previewUrl && (
-              <p className="text-xs text-muted-foreground uppercase tracking-widest select-none">
-                {typeLabel}
-              </p>
-            )}
           </div>
         </div>
 
-        {isRichView && !isMissing && (
+        {!isMissing && (
           <div className="flex-1 min-h-0 border-t">
             <EmbedRichContent contentItem={contentItem} />
-          </div>
-        )}
-
-        {!isRichView && !isMissing && previewUrl && (
-          <div className="flex-1 min-h-0 border-t">
-            <img
-              src={previewUrl}
-              alt={label}
-              className="w-full h-full object-cover object-top"
-            />
-          </div>
-        )}
-
-        {!isRichView && !isMissing && !previewUrl && (
-          <div className="flex-1 min-h-0 border-t flex items-center justify-center">
-            <Icon className="h-8 w-8 text-muted-foreground/50" />
           </div>
         )}
 
@@ -103,7 +78,7 @@ function EmbedRichContent({
 
   switch (contentItem.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return <EmbedNoteContent noteId={contentItem._id} />
+      return <EmbedNoteContent content={contentItem.content} />
     case SIDEBAR_ITEM_TYPES.folders:
       return <EmbedFolderContent folderId={contentItem._id} />
     case SIDEBAR_ITEM_TYPES.gameMaps:

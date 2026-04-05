@@ -6,8 +6,8 @@ export async function captureElementPreview(
   const blob = await toBlob(element, {
     width: element.clientWidth,
     height: element.clientHeight,
-    pixelRatio: 0.5,
-    quality: 0.8,
+    pixelRatio: 2,
+    quality: 0.9,
     type: 'image/webp',
     skipFonts: true,
     filter: (node) => {
