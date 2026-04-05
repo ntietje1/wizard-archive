@@ -84,6 +84,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.30.2",
+    "@convex-dev/eslint-plugin": "^1.2.2",
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/compat": "^2.0.3",
     "@eslint/js": "^9.36.0",
