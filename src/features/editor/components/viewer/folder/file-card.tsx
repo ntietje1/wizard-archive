@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import {
@@ -14,7 +13,6 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { SidebarFile } from 'convex/files/types'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { Card, CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -87,13 +85,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const isSelected = useIsSelectedItem(file)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const metadataQuery = useAuthQuery(
-    api.storage.queries.getStorageMetadata,
-    file.storageId ? { storageId: file.storageId } : 'skip',
-  )
-
-  const contentType = metadataQuery.data?.contentType ?? null
-  const FileIcon = getFileTypeIcon(contentType, file.name)
+  const FileIcon = getFileTypeIcon(file.contentType, file.name)
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -147,11 +139,11 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           </div>
 
           {/* Preview / Icon Section */}
-          <div className="flex items-center justify-center flex-1 mb-10">
+          <div className="flex items-center justify-center flex-1 mb-10 overflow-hidden">
             {file.previewUrl ? (
               <img
                 src={file.previewUrl}
-                alt=""
+                alt={file.name}
                 className="w-full h-full object-cover rounded-sm"
               />
             ) : (

@@ -86,13 +86,13 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
             </div>
           </div>
 
-          {/* Preview Section */}
+          {/* Preview / Icon Section */}
           <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-muted flex items-center justify-center">
             {note.previewUrl ? (
               <img
                 src={note.previewUrl}
-                alt=""
-                className="w-full h-full object-cover"
+                alt={note.name}
+                className="w-full h-full object-cover object-top"
               />
             ) : (
               <FileText className="w-8 h-8 text-muted-foreground" />
