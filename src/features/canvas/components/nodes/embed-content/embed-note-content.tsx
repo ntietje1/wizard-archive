@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react'
 import { BlockNoteEditor } from '@blocknote/core'
 import { BlockNoteView } from '@blocknote/shadcn'
+import { ClientOnly } from '@tanstack/react-router'
 import { editorSchema } from 'convex/notes/editorSpecs'
 import { CanvasContext } from '../../../utils/canvas-context'
 import type { Id } from 'convex/_generated/dataModel'
@@ -16,6 +17,14 @@ import {
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 export function EmbedNoteContent({ noteId }: { noteId: Id<'notes'> }) {
+  return (
+    <ClientOnly fallback={null}>
+      <EmbedNoteContentInner noteId={noteId} />
+    </ClientOnly>
+  )
+}
+
+function EmbedNoteContentInner({ noteId }: { noteId: Id<'notes'> }) {
   const { user, canEdit } = useContext(CanvasContext)
   const { doc, provider, instanceId, isLoading } = useConvexYjsCollaboration(
     noteId,
