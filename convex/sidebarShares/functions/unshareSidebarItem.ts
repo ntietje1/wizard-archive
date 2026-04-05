@@ -1,6 +1,8 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { unshareSidebarItemFromMember } from './sidebarItemShareMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -26,6 +28,16 @@ export const unshareSidebarItem = async (
   await unshareSidebarItemFromMember(ctx, {
     sidebarItemId,
     campaignMemberId,
+  })
+
+  const member = await ctx.db.get(campaignMemberId)
+  const memberProfile = member ? await ctx.db.get(member.userId) : null
+  await logEditHistory(ctx, {
+    itemId: sidebarItemId,
+    itemType: item.type,
+    campaignId: item.campaignId,
+    action: EDIT_HISTORY_ACTION.unshared,
+    metadata: { memberName: memberProfile?.name ?? 'Unknown' },
   })
 
   return null

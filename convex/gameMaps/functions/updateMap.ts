@@ -5,6 +5,9 @@ import {
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -67,5 +70,40 @@ export async function updateMap(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  const historyBase = {
+    itemId: map._id,
+    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    campaignId: map.campaignId,
+  } as const
+
+  if (name !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: map.name, to: name.trim() },
+    })
+  }
+  if (imageStorageId !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.image_changed,
+    })
+  }
+  if (iconName !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: map.iconName, to: iconName },
+    })
+  }
+  if (color !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: map.color, to: color },
+    })
+  }
+
   return { mapId: map._id, slug: newSlug ?? map.slug }
 }

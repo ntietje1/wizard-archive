@@ -5,6 +5,9 @@ import {
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -74,5 +77,40 @@ export async function updateFile(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  const historyBase = {
+    itemId: file._id,
+    itemType: SIDEBAR_ITEM_TYPES.files,
+    campaignId: file.campaignId,
+  } as const
+
+  if (name !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: file.name, to: name.trim() },
+    })
+  }
+  if (storageId !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.file_replaced,
+    })
+  }
+  if (iconName !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: file.iconName, to: iconName },
+    })
+  }
+  if (color !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: file.color, to: color },
+    })
+  }
+
   return { fileId: file._id, slug: newSlug ?? file.slug }
 }

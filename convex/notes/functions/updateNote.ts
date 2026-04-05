@@ -5,6 +5,9 @@ import {
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -61,5 +64,34 @@ export async function updateNote(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  const historyBase = {
+    itemId: note._id,
+    itemType: SIDEBAR_ITEM_TYPES.notes,
+    campaignId: note.campaignId,
+  } as const
+
+  if (name !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: note.name, to: name.trim() },
+    })
+  }
+  if (iconName !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: note.iconName, to: iconName },
+    })
+  }
+  if (color !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: note.color, to: color },
+    })
+  }
+
   return { noteId: note._id, slug: newSlug ?? note.slug }
 }

@@ -3,6 +3,9 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { validatePinTarget } from '../validation'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -55,7 +58,7 @@ export async function createItemPin(
 
   const profileId = ctx.user.profile._id
 
-  return await ctx.db.insert('mapPins', {
+  const pinId = await ctx.db.insert('mapPins', {
     mapId,
     itemId,
     x,
@@ -67,4 +70,14 @@ export async function createItemPin(
     updatedBy: null,
     createdBy: profileId,
   })
+
+  await logEditHistory(ctx, {
+    itemId: mapId,
+    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    campaignId: mapFromDb.campaignId,
+    action: EDIT_HISTORY_ACTION.pin_added,
+    metadata: { pinItemName: item.name },
+  })
+
+  return pinId
 }

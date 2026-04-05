@@ -1,9 +1,12 @@
-import { useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemEditor } from './viewer/sidebar-item-editor'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
+import { HistoryPanel } from './history-panel'
+import { HistoryPanelContext } from './use-history-panel'
+import type React from 'react'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
@@ -29,6 +32,15 @@ export function EditorContent() {
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+
+  const toggle = useCallback(() => setIsHistoryOpen((v) => !v), [])
+  const close = useCallback(() => setIsHistoryOpen(false), [])
+
+  const historyCtx = useMemo(
+    () => ({ isOpen: isHistoryOpen, toggle, close }),
+    [isHistoryOpen, toggle, close],
+  )
 
   const canView =
     !!item &&
@@ -38,27 +50,32 @@ export function EditorContent() {
       allItemsMap: itemsMap,
     })
 
+  let content: React.ReactNode
+
   if (isLoading) {
-    return (
+    content = (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
+  } else if (editorSearch.trash === true && !item) {
+    content = <TrashPageViewer />
+  } else if (!canView) {
+    content = hasRequestedItem ? <NotSharedContent /> : <EmptyEditorContent />
+  } else {
+    content = <SidebarItemEditor item={item} search={editorSearch} />
   }
 
-  // Show trash page when ?trash=true and no specific item selected
-  if (editorSearch.trash === true && !item) {
-    return <TrashPageViewer />
-  }
-
-  if (!canView) {
-    if (hasRequestedItem) {
-      return <NotSharedContent />
-    }
-    return <EmptyEditorContent />
-  }
-
-  return <SidebarItemEditor item={item} search={editorSearch} />
+  return (
+    <HistoryPanelContext.Provider value={historyCtx}>
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col">{content}</div>
+        {isHistoryOpen && item && (
+          <HistoryPanel itemId={item._id} onClose={close} />
+        )}
+      </div>
+    </HistoryPanelContext.Provider>
+  )
 }
 
 function EmptyEditorContent() {
