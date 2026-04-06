@@ -9,15 +9,9 @@ import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type { Id } from '../_generated/dataModel'
 
-export type NoteFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.notes> & {
-  lastThumbnailUpdate?: number
-  thumbnailGenerationLock?: number
-}
+export type NoteFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.notes>
 
-export type Note = SidebarItem<typeof SIDEBAR_ITEM_TYPES.notes> & {
-  lastThumbnailUpdate?: number
-  thumbnailGenerationLock?: number
-}
+export type Note = SidebarItem<typeof SIDEBAR_ITEM_TYPES.notes>
 
 export type BlockMeta = {
   myPermissionLevel: PermissionLevel
