@@ -28,6 +28,7 @@ interface BaseFields {
   previewUrl: string | null
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
+  previewClaimToken: string | null
   previewUpdatedAt: number | null
   updatedTime: number | null
   updatedBy: Id<'userProfiles'> | null

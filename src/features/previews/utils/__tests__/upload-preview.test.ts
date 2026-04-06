@@ -78,6 +78,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('Preview upload failed: 500')
 
@@ -115,6 +116,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('URL generation failed')
 
@@ -160,6 +162,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('Failed to fetch')
 
@@ -183,6 +186,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('missing storageId')
 
@@ -206,6 +210,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('Preview upload failed: invalid JSON response')
 
