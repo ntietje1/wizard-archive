@@ -16,6 +16,7 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { COOLDOWN_MS } from '../functions/claimPreviewGeneration'
 
 describe('claimPreviewGeneration', () => {
   const t = createTestContext()
@@ -196,7 +197,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch(noteId, {
-        previewUpdatedAt: Date.now() - 5 * 60_000 - 1,
+        previewUpdatedAt: Date.now() - COOLDOWN_MS - 1,
       })
     })
 

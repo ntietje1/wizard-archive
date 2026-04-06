@@ -200,9 +200,9 @@ function CollaborativeEditorInner({
       if (cancelled) return
       if (instance._tiptapEditor.view.state.plugins.length === 0) {
         if (++retries >= MAX_RETRIES) {
-          logger.error(
-            `Failed to patch Yjs plugins after ${MAX_RETRIES} attempts`,
-          )
+          logger.error('Failed to patch Yjs plugins', {
+            maxRetries: MAX_RETRIES,
+          })
           return
         }
         requestAnimationFrame(tryPatch)

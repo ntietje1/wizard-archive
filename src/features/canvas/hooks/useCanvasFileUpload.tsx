@@ -117,7 +117,10 @@ export function useCanvasFileUpload() {
         }
       }
 
-      toast.error(`${file.name}: unsupported file type`)
+      toast.error(
+        <ToastContent title={file.name} message="Unsupported file type" />,
+        { duration: 5000, style: TOAST_STYLE },
+      )
       return null
     } catch (error) {
       toast.error(

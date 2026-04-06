@@ -14,6 +14,7 @@ import type schema from '../schema'
 import type {
   SidebarItemId,
   SidebarItemLocation,
+  SidebarItemTable,
   SidebarItemType,
 } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
@@ -159,36 +160,55 @@ const sidebarItemBase = (
   ...commonFields(creatorProfileId),
 })
 
+type CommonSidebarItemOverrides = Partial<{
+  name: string
+  slug: string
+  parentId: Id<'folders'> | null
+  allPermissionLevel: PermissionLevel | null
+  location: SidebarItemLocation
+  iconName: string | null
+  color: string | null
+  deletionTime: number | null
+  deletedBy: Id<'userProfiles'> | null
+}>
+
+async function insertSidebarItem<TTable extends SidebarItemTable>(
+  t: T,
+  table: TTable,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  label: string,
+  extraDefaults: Record<string, unknown>,
+  overrides?: CommonSidebarItemOverrides & Record<string, unknown>,
+) {
+  const n = nextId()
+  const name = overrides?.name ?? `${label} ${n}`
+  const data = {
+    ...sidebarItemBase(campaignId, creatorProfileId, name),
+    ...extraDefaults,
+    ...overrides,
+    slug: overrides?.slug ?? slugify(name),
+  }
+
+  const id = await t.run(async (ctx) => ctx.db.insert(table, data as any))
+  return { id: id as Id<TTable>, ...data }
+}
+
 export async function createNote(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: Partial<{
-    name: string
-    slug: string
-    parentId: Id<'folders'> | null
-    allPermissionLevel: PermissionLevel | null
-    location: SidebarItemLocation
-    iconName: string | null
-    color: string | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
-  }>,
+  overrides?: CommonSidebarItemOverrides,
 ) {
-  const n = nextId()
-  const name = overrides?.name ?? `Note ${n}`
-  const defaults = {
-    ...sidebarItemBase(campaignId, creatorProfileId, name),
-    type: SIDEBAR_ITEM_TYPES.notes,
-  }
-  const data = {
-    ...defaults,
-    ...overrides,
-    slug: overrides?.slug ?? slugify(name),
-  }
-  const noteId = await t.run(async (ctx) => {
-    return await ctx.db.insert('notes', data)
-  })
+  const { id: noteId, ...data } = await insertSidebarItem(
+    t,
+    'notes',
+    campaignId,
+    creatorProfileId,
+    'Note',
+    { type: SIDEBAR_ITEM_TYPES.notes },
+    overrides,
+  )
   return { noteId, ...data }
 }
 
@@ -196,34 +216,17 @@ export async function createFolder(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: Partial<{
-    name: string
-    slug: string
-    parentId: Id<'folders'> | null
-    inheritShares: boolean
-    allPermissionLevel: PermissionLevel | null
-    location: SidebarItemLocation
-    iconName: string | null
-    color: string | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
-  }>,
+  overrides?: CommonSidebarItemOverrides & Partial<{ inheritShares: boolean }>,
 ) {
-  const n = nextId()
-  const name = overrides?.name ?? `Folder ${n}`
-  const defaults = {
-    ...sidebarItemBase(campaignId, creatorProfileId, name),
-    type: SIDEBAR_ITEM_TYPES.folders,
-    inheritShares: false,
-  }
-  const data = {
-    ...defaults,
-    ...overrides,
-    slug: overrides?.slug ?? slugify(name),
-  }
-  const folderId = await t.run(async (ctx) => {
-    return await ctx.db.insert('folders', data)
-  })
+  const { id: folderId, ...data } = await insertSidebarItem(
+    t,
+    'folders',
+    campaignId,
+    creatorProfileId,
+    'Folder',
+    { type: SIDEBAR_ITEM_TYPES.folders, inheritShares: false },
+    overrides,
+  )
   return { folderId, ...data }
 }
 
@@ -231,34 +234,18 @@ export async function createFile(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: Partial<{
-    name: string
-    slug: string
-    parentId: Id<'folders'> | null
-    storageId: Id<'_storage'> | null
-    allPermissionLevel: PermissionLevel | null
-    location: SidebarItemLocation
-    iconName: string | null
-    color: string | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
-  }>,
+  overrides?: CommonSidebarItemOverrides &
+    Partial<{ storageId: Id<'_storage'> | null }>,
 ) {
-  const n = nextId()
-  const name = overrides?.name ?? `File ${n}`
-  const defaults = {
-    ...sidebarItemBase(campaignId, creatorProfileId, name),
-    type: SIDEBAR_ITEM_TYPES.files,
-    storageId: null,
-  }
-  const data = {
-    ...defaults,
-    ...overrides,
-    slug: overrides?.slug ?? slugify(name),
-  }
-  const fileId = await t.run(async (ctx) => {
-    return await ctx.db.insert('files', data)
-  })
+  const { id: fileId, ...data } = await insertSidebarItem(
+    t,
+    'files',
+    campaignId,
+    creatorProfileId,
+    'File',
+    { type: SIDEBAR_ITEM_TYPES.files, storageId: null },
+    overrides,
+  )
   return { fileId, ...data }
 }
 
@@ -266,35 +253,37 @@ export async function createGameMap(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: Partial<{
-    name: string
-    slug: string
-    parentId: Id<'folders'> | null
-    imageStorageId: Id<'_storage'> | null
-    allPermissionLevel: PermissionLevel | null
-    location: SidebarItemLocation
-    iconName: string | null
-    color: string | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
-  }>,
+  overrides?: CommonSidebarItemOverrides &
+    Partial<{ imageStorageId: Id<'_storage'> | null }>,
 ) {
-  const n = nextId()
-  const name = overrides?.name ?? `Map ${n}`
-  const defaults = {
-    ...sidebarItemBase(campaignId, creatorProfileId, name),
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
-    imageStorageId: null,
-  }
-  const data = {
-    ...defaults,
-    ...overrides,
-    slug: overrides?.slug ?? slugify(name),
-  }
-  const mapId = await t.run(async (ctx) => {
-    return await ctx.db.insert('gameMaps', data)
-  })
+  const { id: mapId, ...data } = await insertSidebarItem(
+    t,
+    'gameMaps',
+    campaignId,
+    creatorProfileId,
+    'Map',
+    { type: SIDEBAR_ITEM_TYPES.gameMaps, imageStorageId: null },
+    overrides,
+  )
   return { mapId, ...data }
+}
+
+export async function createCanvas(
+  t: T,
+  campaignId: Id<'campaigns'>,
+  creatorProfileId: Id<'userProfiles'>,
+  overrides?: CommonSidebarItemOverrides,
+) {
+  const { id: canvasId, ...data } = await insertSidebarItem(
+    t,
+    'canvases',
+    campaignId,
+    creatorProfileId,
+    'Canvas',
+    { type: SIDEBAR_ITEM_TYPES.canvases },
+    overrides,
+  )
+  return { canvasId, ...data }
 }
 
 export async function createSession(

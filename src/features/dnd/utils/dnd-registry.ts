@@ -1,7 +1,6 @@
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
@@ -21,6 +20,7 @@ export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
+export const SIDEBAR_ROOT_TYPE = 'root' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 // ─── Types ───────────────────────────────────────────────────────────

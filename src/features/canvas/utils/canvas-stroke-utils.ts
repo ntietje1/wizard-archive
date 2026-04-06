@@ -346,12 +346,15 @@ export function strokePathIntersectsRect(
   return false
 }
 
+export const MINI_MAP_STROKE_PADDING = 12
+
+const MIN_ZOOM = 1e-6
+
 export function getMiniMapStrokePath(
   points: Array<[number, number, number]>,
   size: number,
   zoom: number,
 ): string {
-  return pointsToPathD(points, (size + MINI_MAP_STROKE_PADDING) / zoom)
-} // Inflates stroke size in minimap to keep thin strokes visible at low zoom
-
-export const MINI_MAP_STROKE_PADDING = 12
+  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
+  return pointsToPathD(points, (size + MINI_MAP_STROKE_PADDING) / safeZoom)
+}

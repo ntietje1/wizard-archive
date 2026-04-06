@@ -12,6 +12,7 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { COMPACT_INTERVAL } from '../functions/compactUpdates'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
 
 function makeAwarenessState(): ArrayBuffer {
@@ -175,7 +176,7 @@ describe('pushUpdate', () => {
         parentId: null,
       })
 
-      for (let i = 1; i <= 20; i++) {
+      for (let i = 1; i <= COMPACT_INTERVAL; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
           documentId: noteId,
           update: makeEmptyYjsUpdate(),
@@ -499,101 +500,6 @@ describe('removeAwareness', () => {
 
       expect(rows).toHaveLength(1)
       expect(rows[0].clientId).toBe(2)
-    })
-  })
-})
-
-describe('persistBlocks', () => {
-  const t = createTestContext()
-
-  it('requires authentication', async () => {
-    const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await expectNotAuthenticated(
-      t.mutation(api.notes.mutations.persistNoteBlocks, {
-        documentId: noteId,
-      }),
-    )
-  })
-
-  it('requires write access', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const playerAuth = asPlayer(ctx)
-
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
-      campaignId: ctx.campaignId,
-      name: 'Write Access Note',
-      parentId: null,
-    })
-
-    await createSidebarShare(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      sidebarItemId: noteId,
-      sidebarItemType: 'note',
-      campaignMemberId: ctx.player.memberId,
-      permissionLevel: 'view',
-    })
-
-    await expectPermissionDenied(
-      playerAuth.mutation(api.notes.mutations.persistNoteBlocks, {
-        documentId: noteId,
-      }),
-    )
-  })
-
-  it('works on empty document without crash', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
-      campaignId: ctx.campaignId,
-      name: 'Empty Doc Note',
-      parentId: null,
-    })
-
-    const result = await dmAuth.mutation(
-      api.notes.mutations.persistNoteBlocks,
-      {
-        documentId: noteId,
-      },
-    )
-
-    expect(result).toBeNull()
-  })
-
-  it('empty YDoc produces no blocks', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
-      campaignId: ctx.campaignId,
-      name: 'Persist Blocks Note',
-      parentId: null,
-    })
-
-    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      documentId: noteId,
-      update: makeEmptyYjsUpdate(),
-    })
-
-    const result = await dmAuth.mutation(
-      api.notes.mutations.persistNoteBlocks,
-      {
-        documentId: noteId,
-      },
-    )
-
-    expect(result).toBeNull()
-
-    await t.run(async (dbCtx) => {
-      const blocks = await dbCtx.db
-        .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
-        .collect()
-
-      expect(blocks.length).toBe(0)
     })
   })
 })

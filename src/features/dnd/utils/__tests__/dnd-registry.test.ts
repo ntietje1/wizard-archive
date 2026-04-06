@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type {
@@ -25,6 +24,7 @@ import {
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
+  SIDEBAR_ROOT_TYPE,
   TRASH_DROP_ZONE_TYPE,
   canDropFilesOnTarget,
   getDragItemId,

@@ -25,8 +25,8 @@ export const commonSidebarItemTableFields = {
 
 export const commonSidebarItemValidatorFields = {
   ...commonSidebarItemTableFields,
-  shares: v.optional(v.array(sidebarItemShareValidator)),
-  isBookmarked: v.optional(v.boolean()),
-  myPermissionLevel: v.optional(permissionLevelValidator),
-  previewUrl: v.optional(v.union(v.string(), v.null())),
+  shares: v.array(sidebarItemShareValidator),
+  isBookmarked: v.boolean(),
+  myPermissionLevel: permissionLevelValidator,
+  previewUrl: v.union(v.string(), v.null()),
 }

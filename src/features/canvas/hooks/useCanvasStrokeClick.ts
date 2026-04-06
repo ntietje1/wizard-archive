@@ -21,8 +21,10 @@ export function useCanvasStrokeClick() {
         .getNodes()
         .filter((n) => n.type === 'stroke')
 
-      for (const node of strokeNodes) {
+      for (let i = strokeNodes.length - 1; i >= 0; i--) {
+        const node = strokeNodes[i]
         const data = node.data as StrokeNodeData
+        if (!data?.bounds || !Array.isArray(data.points)) continue
         const offsetX = node.position.x - data.bounds.x
         const offsetY = node.position.y - data.bounds.y
         const adjustedPoints = data.points.map(

@@ -17,14 +17,15 @@ export function useCanvasKeyboardShortcuts() {
       }
 
       const { undo, redo } = useCanvasToolStore.getState()
+      const code = e.code
       const key = e.key.toLowerCase()
-      if (key === 'z' && !e.shiftKey) {
+      if ((code === 'KeyZ' || key === 'z') && !e.shiftKey) {
         e.preventDefault()
         undo()
-      } else if (key === 'z' && e.shiftKey) {
+      } else if ((code === 'KeyZ' || key === 'z') && e.shiftKey) {
         e.preventDefault()
         redo()
-      } else if (key === 'y') {
+      } else if (code === 'KeyY' || key === 'y') {
         e.preventDefault()
         redo()
       }

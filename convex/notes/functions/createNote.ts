@@ -72,7 +72,7 @@ export async function createNote(
     createdBy: profileId,
   })
 
-  if (content) {
+  if (content && content.length > 0) {
     await saveTopLevelBlocksForNote(ctx, { noteId, content })
   }
 

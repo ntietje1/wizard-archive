@@ -4,8 +4,6 @@ import type { CommonTableFields } from '../../common/types'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../../sidebarShares/types'
 
-export const SIDEBAR_ROOT_TYPE = 'root' as const
-
 export const SIDEBAR_ITEM_LOCATION = {
   sidebar: 'sidebar',
   trash: 'trash',
@@ -22,27 +20,20 @@ export const SIDEBAR_ITEM_TYPES = {
   canvases: 'canvas',
 } as const
 
-export type SidebarItemType =
-  (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
+export type SidebarItemTable = keyof typeof SIDEBAR_ITEM_TYPES
+
+export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[SidebarItemTable]
 
 type SidebarItemTypeToTableNameMap = {
-  [K in keyof typeof SIDEBAR_ITEM_TYPES as (typeof SIDEBAR_ITEM_TYPES)[K]]: K
+  [K in SidebarItemTable as (typeof SIDEBAR_ITEM_TYPES)[K]]: K
 }
 
 type SidebarItemTypeToTableName<T extends SidebarItemType> =
   SidebarItemTypeToTableNameMap[T]
 
-export const SIDEBAR_ITEM_OR_ROOT_TYPES = {
-  ...SIDEBAR_ITEM_TYPES,
-  root: SIDEBAR_ROOT_TYPE,
-} as const
-
-export type SidebarItemOrRootType =
-  (typeof SIDEBAR_ITEM_OR_ROOT_TYPES)[keyof typeof SIDEBAR_ITEM_OR_ROOT_TYPES]
-
 export type SidebarItemId = {
-  [K in keyof typeof SIDEBAR_ITEM_TYPES]: Id<K>
-}[keyof typeof SIDEBAR_ITEM_TYPES]
+  [K in SidebarItemTable]: Id<K>
+}[SidebarItemTable]
 
 export type SidebarItemFromDb<T extends SidebarItemType> = {
   _id: Id<SidebarItemTypeToTableName<T>>
@@ -73,5 +64,3 @@ export type SidebarItemWithContent<T extends SidebarItemType> =
   SidebarItem<T> & {
     ancestors: Array<Folder>
   }
-
-export const DEFAULT_ITEM_COLOR = '#14b8a6'

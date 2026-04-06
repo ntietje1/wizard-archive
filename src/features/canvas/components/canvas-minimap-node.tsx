@@ -14,6 +14,16 @@ interface MiniMapNodeProps {
   shapeRendering: string
 }
 
+interface MiniMapStrokeNodeProps {
+  node: InternalNode<Node>
+  x: number
+  y: number
+  width: number
+  height: number
+  color?: string
+  shapeRendering: string
+}
+
 function MiniMapStrokeNode({
   node,
   x,
@@ -22,15 +32,7 @@ function MiniMapStrokeNode({
   height,
   color,
   shapeRendering,
-}: {
-  node: InternalNode<Node>
-  x: number
-  y: number
-  width: number
-  height: number
-  color?: string
-  shapeRendering: string
-}) {
+}: MiniMapStrokeNodeProps) {
   const { zoom } = useViewport()
 
   const data = node.data as StrokeNodeData

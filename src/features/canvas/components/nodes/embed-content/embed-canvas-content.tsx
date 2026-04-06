@@ -6,7 +6,7 @@ import { TextPreview } from '../text-node'
 import { StickyPreview } from '../sticky-node'
 import { RectanglePreview } from '../rectangle-node'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 import type { StrokeNodeData } from '../stroke-node'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -15,7 +15,7 @@ const DEFAULT_NODE_WIDTH = 150
 const DEFAULT_NODE_HEIGHT = 40
 
 export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
-  const { nodes, isLoading } = useReadOnlyYjsCanvas(canvasId)
+  const { nodes, edges, isLoading } = useReadOnlyYjsCanvas(canvasId)
 
   if (isLoading) {
     return (
@@ -27,12 +27,18 @@ export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
 
   return (
     <div className="nodrag nopan nowheel h-full w-full pointer-events-none overflow-hidden bg-background">
-      <StaticCanvasRenderer nodes={nodes} />
+      <StaticCanvasRenderer nodes={nodes} edges={edges} />
     </div>
   )
 }
 
-function StaticCanvasRenderer({ nodes }: { nodes: Array<Node> }) {
+function StaticCanvasRenderer({
+  nodes,
+  edges,
+}: {
+  nodes: Array<Node>
+  edges: Array<Edge>
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
 
@@ -67,8 +73,50 @@ function StaticCanvasRenderer({ nodes }: { nodes: Array<Node> }) {
     offsetY = (size.h - bh * scale) / 2 - (bounds.minY - padding) * scale
   }
 
+  const nodePositions = new Map<
+    string,
+    { cx: number; cy: number; w: number; h: number }
+  >()
+  for (const node of nodes) {
+    const b = (node.data as { bounds?: { width: number; height: number } })
+      .bounds
+    const w = node.width ?? b?.width ?? DEFAULT_NODE_WIDTH
+    const h = node.height ?? b?.height ?? DEFAULT_NODE_HEIGHT
+    nodePositions.set(node.id, {
+      cx: node.position.x + w / 2,
+      cy: node.position.y + h / 2,
+      w,
+      h,
+    })
+  }
+
   return (
     <div ref={containerRef} className="h-full w-full relative">
+      <svg
+        className="absolute pointer-events-none"
+        overflow="visible"
+        style={{
+          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {edges.map((edge) => {
+          const src = nodePositions.get(edge.source)
+          const tgt = nodePositions.get(edge.target)
+          if (!src || !tgt) return null
+          return (
+            <line
+              key={edge.id}
+              x1={src.cx}
+              y1={src.cy}
+              x2={tgt.cx}
+              y2={tgt.cy}
+              stroke="var(--border)"
+              strokeWidth={1.5}
+            />
+          )
+        })}
+      </svg>
       <div
         className="absolute origin-top-left"
         style={{
@@ -172,6 +220,7 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
   const [doc, setDoc] = useState<Y.Doc | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [nodes, setNodes] = useState<Array<Node>>([])
+  const [edges, setEdges] = useState<Array<Edge>>([])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
   const lastAppliedSeqRef = useRef(-1)
   const canvasIdRef = useRef(canvasId)
@@ -218,11 +267,21 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
     if (!doc) return
 
     const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
     setNodes(yMapToArray(nodesMap))
-    const onChange = () => setNodes(yMapToArray(nodesMap))
-    nodesMap.observe(onChange)
-    return () => nodesMap.unobserve(onChange)
+    setEdges(yMapToArray(edgesMap))
+
+    const onNodesChange = () => setNodes(yMapToArray(nodesMap))
+    const onEdgesChange = () => setEdges(yMapToArray(edgesMap))
+
+    nodesMap.observe(onNodesChange)
+    edgesMap.observe(onEdgesChange)
+    return () => {
+      nodesMap.unobserve(onNodesChange)
+      edgesMap.unobserve(onEdgesChange)
+    }
   }, [doc])
 
-  return { nodes, isLoading }
+  return { nodes, edges, isLoading }
 }

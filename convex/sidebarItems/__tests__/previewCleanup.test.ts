@@ -9,6 +9,26 @@ import {
 } from '../../_test/factories.helper'
 import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { api } from '../../_generated/api'
+import type { TestConvex } from 'convex-test'
+import type schema from '../../schema'
+import type { SidebarItemId } from '../types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
+
+async function trashItem(
+  t: TestConvex<typeof schema>,
+  itemId: SidebarItemId,
+  deletedBy: Id<'userProfiles'>,
+  patches?: Record<string, unknown>,
+) {
+  await t.run(async (dbCtx) => {
+    await dbCtx.db.patch(itemId, {
+      ...patches,
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      deletionTime: Date.now(),
+      deletedBy,
+    })
+  })
+}
 
 describe('preview cleanup on hard delete', () => {
   const t = createTestContext()
@@ -23,13 +43,8 @@ describe('preview cleanup on hard delete', () => {
       return await dbCtx.storage.store(new Blob(['preview']))
     })
 
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
-        previewStorageId: storageId,
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+    await trashItem(t, noteId, ctx.dm.profile._id, {
+      previewStorageId: storageId,
     })
 
     await dmAuth.mutation(
@@ -56,14 +71,9 @@ describe('preview cleanup on hard delete', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(fileId, {
-        storageId: fileBlob,
-        previewStorageId: previewBlob,
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+    await trashItem(t, fileId, ctx.dm.profile._id, {
+      storageId: fileBlob,
+      previewStorageId: previewBlob,
     })
 
     await dmAuth.mutation(
@@ -89,14 +99,9 @@ describe('preview cleanup on hard delete', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(mapId, {
-        imageStorageId: sharedBlob,
-        previewStorageId: sharedBlob,
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+    await trashItem(t, mapId, ctx.dm.profile._id, {
+      imageStorageId: sharedBlob,
+      previewStorageId: sharedBlob,
     })
 
     await dmAuth.mutation(
@@ -126,14 +131,9 @@ describe('preview cleanup on hard delete', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(mapId, {
-        imageStorageId: imageBlob,
-        previewStorageId: previewBlob,
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+    await trashItem(t, mapId, ctx.dm.profile._id, {
+      imageStorageId: imageBlob,
+      previewStorageId: previewBlob,
     })
 
     await dmAuth.mutation(
@@ -154,14 +154,7 @@ describe('preview cleanup on hard delete', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
-    })
+    await trashItem(t, noteId, ctx.dm.profile._id)
 
     await dmAuth.mutation(
       api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
@@ -183,14 +176,7 @@ describe('preview cleanup on hard delete', () => {
       ctx.campaignId,
       ctx.dm.profile._id,
     )
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(folderId, {
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
-    })
+    await trashItem(t, folderId, ctx.dm.profile._id)
 
     await dmAuth.mutation(
       api.sidebarItems.mutations.permanentlyDeleteSidebarItem,

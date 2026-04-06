@@ -54,7 +54,7 @@ export async function updateCanvas(
     return { canvasId: canvas._id, slug: canvas.slug }
   }
 
-  await ctx.db.patch(canvasId, {
+  await ctx.db.patch(canvas._id, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

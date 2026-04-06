@@ -164,7 +164,7 @@ export function FileForm({
           if (fileUpload.file) {
             generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch(
               (err: unknown) =>
-                console.error('PDF preview generation failed:', err),
+                handleError(err, 'PDF preview generation failed'),
             )
           }
 

@@ -54,13 +54,25 @@ export function useCanvasOverlayHandlers(
       handlers.onPointerUp(e as unknown as React.PointerEvent)
     }
 
+    const onPointerCancel = (e: PointerEvent) => {
+      const handlers = handlersRef.current
+      if (!handlers) return
+      if (handlers.onPointerCancel) {
+        handlers.onPointerCancel(e as unknown as React.PointerEvent)
+      } else {
+        handlers.onPointerUp(e as unknown as React.PointerEvent)
+      }
+    }
+
     wrapper.addEventListener('pointerdown', onPointerDown)
     wrapper.addEventListener('pointermove', onPointerMove)
     wrapper.addEventListener('pointerup', onPointerUp)
+    wrapper.addEventListener('pointercancel', onPointerCancel)
     return () => {
       wrapper.removeEventListener('pointerdown', onPointerDown)
       wrapper.removeEventListener('pointermove', onPointerMove)
       wrapper.removeEventListener('pointerup', onPointerUp)
+      wrapper.removeEventListener('pointercancel', onPointerCancel)
     }
   }, [wrapperRef])
 

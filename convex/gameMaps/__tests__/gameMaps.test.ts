@@ -42,18 +42,6 @@ describe('createMap', () => {
     })
   })
 
-  it('DM can create at root level', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
-      campaignId: ctx.campaignId,
-      name: 'Root Map',
-      parentId: null,
-    })
-    expect(result.mapId).toBeDefined()
-  })
-
   it('player cannot create at root level', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)

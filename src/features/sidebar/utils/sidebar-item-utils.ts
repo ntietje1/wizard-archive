@@ -1,7 +1,4 @@
-import {
-  DEFAULT_ITEM_COLOR,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type {
   SidebarItemId,
   SidebarItemType,
@@ -14,6 +11,8 @@ import type { SidebarFile } from 'convex/files/types'
 import type { Canvas } from 'convex/canvases/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
+
+export const DEFAULT_ITEM_COLOR = '#14b8a6'
 
 export const getSlug = (search: EditorSearch): string | null => {
   return search.item ?? null

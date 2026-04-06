@@ -34,11 +34,10 @@ describe('getNote', () => {
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
     expect(result!.name).toBe('Test Note')
-    expect(result!.ancestors).toBeDefined()
     expect(Array.isArray(result!.ancestors)).toBe(true)
-    expect(result!.content).toBeDefined()
     expect(Array.isArray(result!.content)).toBe(true)
-    expect(result!.blockMeta).toBeDefined()
+    expect(typeof result!.blockMeta).toBe('object')
+    expect(Array.isArray(result!.blockMeta)).toBe(false)
   })
 
   it('returns null for nonexistent note', async () => {
@@ -82,11 +81,10 @@ describe('getNote', () => {
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
     expect(result!.name).toBe('Shared Note')
-    expect(result!.ancestors).toBeDefined()
     expect(Array.isArray(result!.ancestors)).toBe(true)
-    expect(result!.content).toBeDefined()
     expect(Array.isArray(result!.content)).toBe(true)
-    expect(result!.blockMeta).toBeDefined()
+    expect(typeof result!.blockMeta).toBe('object')
+    expect(Array.isArray(result!.blockMeta)).toBe(false)
   })
 
   it('returns null for player without access to soft-deleted note', async () => {

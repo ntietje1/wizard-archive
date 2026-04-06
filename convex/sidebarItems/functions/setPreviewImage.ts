@@ -37,11 +37,11 @@ export async function setPreviewImage(
     try {
       await ctx.storage.delete(oldPreviewStorageId)
     } catch (error) {
-      logger.error(
-        'Failed to delete old preview storage',
-        { oldPreviewStorageId, previewStorageId },
+      logger.error('Failed to delete old preview storage', {
+        oldPreviewStorageId,
+        previewStorageId,
         error,
-      )
+      })
     }
   }
 }

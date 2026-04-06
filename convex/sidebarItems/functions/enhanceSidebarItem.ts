@@ -6,6 +6,7 @@ import { enhanceCanvas } from '../../canvases/functions/enhanceCanvas'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { requireCampaignMembership } from '../../functions'
+import { assertNever } from '../../common/types'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
@@ -23,7 +24,6 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
     bookmarkIds?: Set<SidebarItemId>
   },
 ): Promise<EnhancedSidebarItem<T>> {
-  await requireCampaignMembership(ctx, item.campaignId)
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.files:
       return enhanceFile(ctx, {
@@ -56,7 +56,7 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>
     default:
-      throw new Error('Unknown item type')
+      assertNever(item)
   }
 }
 

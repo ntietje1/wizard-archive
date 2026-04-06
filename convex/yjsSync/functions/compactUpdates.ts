@@ -20,7 +20,7 @@ export async function compactUpdates(
     if (updates.length <= 1) return
 
     const encoded = Y.encodeStateAsUpdate(doc)
-    const maxSeq = updates.reduce((max, u) => Math.max(max, u.seq), 0)
+    const maxSeq = updates[updates.length - 1].seq
 
     await Promise.all(updates.map((row) => ctx.db.delete(row._id)))
 
