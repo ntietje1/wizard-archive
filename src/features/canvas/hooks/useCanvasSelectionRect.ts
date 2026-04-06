@@ -163,7 +163,10 @@ export function useCanvasSelectionRect({
         cancelAnimationFrame(rafRef.current)
         rafRef.current = 0
       }
-      useCanvasToolStore.getState().setSelectionRect(null)
+      const store = useCanvasToolStore.getState()
+      store.setSelectionRect(null)
+      store.setRectDeselectedIds(new Set())
+      setLocalSelectingRef.current(null)
     }
   }, [enabled, reactFlow, storeApi])
 }

@@ -162,7 +162,10 @@ export function FileForm({
           })
 
           if (fileUpload.file) {
-            generatePdfPreviewIfNeeded(fileUpload.file, fileId)
+            generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch(
+              (err: unknown) =>
+                console.error('PDF preview generation failed:', err),
+            )
           }
 
           toast.success('File updated')
@@ -180,7 +183,12 @@ export function FileForm({
           parentId: parentId ?? null,
         })
         if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'files'>)
+          generatePdfPreviewIfNeeded(
+            fileUpload.file,
+            newFileId as Id<'files'>,
+          ).catch((err: unknown) =>
+            console.error('PDF preview generation failed:', err),
+          )
         }
 
         await openParentFolders(newFileId)

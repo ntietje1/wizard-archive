@@ -41,6 +41,7 @@ export function useNodeEditing({
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
         e.stopPropagation()
+        shouldCommitRef.current = false
         commitEdit(value)
       }
       if (e.key === 'Escape') {

@@ -29,33 +29,6 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
   const setStrokeOpacity = useCanvasToolStore((s) => s.setStrokeOpacity)
 
-  const pendingUpdate = useRef<Record<string, unknown> | null>(null)
-  const rafId = useRef(0)
-  const selectedNodesRef = useRef(selectedNodes)
-  selectedNodesRef.current = selectedNodes
-
-  const flushNodeUpdates = useCallback(() => {
-    const data = pendingUpdate.current
-    if (!data) return
-    pendingUpdate.current = null
-    for (const node of selectedNodesRef.current) {
-      updateNodeData(node.id, data)
-    }
-  }, [updateNodeData])
-
-  const scheduleNodeUpdate = useCallback(
-    (data: Record<string, unknown>) => {
-      pendingUpdate.current = { ...pendingUpdate.current, ...data }
-      if (!rafId.current) {
-        rafId.current = requestAnimationFrame(() => {
-          rafId.current = 0
-          flushNodeUpdates()
-        })
-      }
-    },
-    [flushNodeUpdates],
-  )
-
   useOnSelectionChange({
     onChange: ({ nodes }) => setSelectedNodes(nodes),
   })
@@ -66,6 +39,38 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   )
   const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
   const hasColorSelection = colorRelevantNodes.length > 0
+
+  const pendingUpdate = useRef<{
+    data: Record<string, unknown>
+    nodeIds: Array<string>
+  } | null>(null)
+  const rafId = useRef(0)
+
+  const flushNodeUpdates = useCallback(() => {
+    const pending = pendingUpdate.current
+    if (!pending) return
+    pendingUpdate.current = null
+    for (const nodeId of pending.nodeIds) {
+      updateNodeData(nodeId, pending.data)
+    }
+  }, [updateNodeData])
+
+  const scheduleNodeUpdate = useCallback(
+    (data: Record<string, unknown>) => {
+      pendingUpdate.current = {
+        data: { ...pendingUpdate.current?.data, ...data },
+        nodeIds:
+          pendingUpdate.current?.nodeIds ?? colorRelevantNodes.map((n) => n.id),
+      }
+      if (!rafId.current) {
+        rafId.current = requestAnimationFrame(() => {
+          rafId.current = 0
+          flushNodeUpdates()
+        })
+      }
+    },
+    [flushNodeUpdates, colorRelevantNodes],
+  )
 
   const activeColor = hasColorSelection
     ? getSelectionColor(colorRelevantNodes)
@@ -113,6 +118,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     <div className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm border rounded-lg p-2 shadow-sm flex items-center gap-1">
       {BASE_TEXT_COLORS.map((color) => (
         <button
+          type="button"
           key={color}
           className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110"
           style={{

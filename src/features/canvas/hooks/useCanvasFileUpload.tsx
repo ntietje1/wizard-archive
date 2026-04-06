@@ -64,7 +64,6 @@ export function useCanvasFileUpload() {
           parentId: null,
           content: blocks,
         })
-        toast.dismiss(toastId)
         toast.success(
           <ToastContent title={file.name} message="Note created" />,
           { duration: 3000, style: TOAST_STYLE },
@@ -99,7 +98,6 @@ export function useCanvasFileUpload() {
             storageId,
             parentId: null,
           })
-          toast.dismiss(toastId)
           toast.success(
             <ToastContent title={file.name} message="File created" />,
             { duration: 3000, style: TOAST_STYLE },
@@ -108,7 +106,6 @@ export function useCanvasFileUpload() {
         } catch (createError) {
           // Storage is committed but sidebar item creation failed — storage is orphaned
           console.error('Orphaned storage after failed createItem:', storageId)
-          toast.dismiss(toastId)
           toast.error(
             <ToastContent
               title={file.name}
@@ -120,16 +117,16 @@ export function useCanvasFileUpload() {
         }
       }
 
-      toast.dismiss(toastId)
       toast.error(`${file.name}: unsupported file type`)
       return null
     } catch (error) {
-      toast.dismiss(toastId)
       toast.error(
         <ToastContent title={file.name} message={getErrorMessage(error)} />,
         { duration: 5000, style: TOAST_STYLE },
       )
       return null
+    } finally {
+      toast.dismiss(toastId)
     }
   }
 

@@ -34,25 +34,38 @@ const CONTROL_STYLE: React.CSSProperties = {
 }
 
 let shiftPressed = false
+const shiftSubscribers = new Set<() => void>()
+
+function notifyShiftSubscribers() {
+  for (const cb of shiftSubscribers) cb()
+}
+
+function onShiftDown(e: KeyboardEvent) {
+  if (e.key === 'Shift' && !shiftPressed) {
+    shiftPressed = true
+    notifyShiftSubscribers()
+  }
+}
+
+function onShiftUp(e: KeyboardEvent) {
+  if (e.key === 'Shift' && shiftPressed) {
+    shiftPressed = false
+    notifyShiftSubscribers()
+  }
+}
 
 function subscribeShift(cb: () => void) {
-  const down = (e: KeyboardEvent) => {
-    if (e.key === 'Shift' && !shiftPressed) {
-      shiftPressed = true
-      cb()
-    }
+  if (shiftSubscribers.size === 0) {
+    window.addEventListener('keydown', onShiftDown)
+    window.addEventListener('keyup', onShiftUp)
   }
-  const up = (e: KeyboardEvent) => {
-    if (e.key === 'Shift' && shiftPressed) {
-      shiftPressed = false
-      cb()
-    }
-  }
-  window.addEventListener('keydown', down)
-  window.addEventListener('keyup', up)
+  shiftSubscribers.add(cb)
   return () => {
-    window.removeEventListener('keydown', down)
-    window.removeEventListener('keyup', up)
+    shiftSubscribers.delete(cb)
+    if (shiftSubscribers.size === 0) {
+      window.removeEventListener('keydown', onShiftDown)
+      window.removeEventListener('keyup', onShiftUp)
+    }
   }
 }
 

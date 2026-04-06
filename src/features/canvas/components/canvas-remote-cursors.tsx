@@ -75,7 +75,7 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
   useSpringPosition(isDragging ? null : user.cursor, elementRef)
 
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDragging || !user.cursor) {
       lerpRef.current = null
       return
     }
@@ -83,10 +83,7 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
     const animate = () => {
       const pinned = pinnedRef.current
       const el = elementRef.current
-      if (!pinned || !el) {
-        rafIdRef.current = requestAnimationFrame(animate)
-        return
-      }
+      if (!pinned || !el) return
 
       const lerp = lerpRef.current
       if (lerp) {
@@ -108,7 +105,7 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
 
     rafIdRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafIdRef.current)
-  }, [isDragging])
+  }, [isDragging, user.cursor])
 
   if (!user.cursor) return null
 

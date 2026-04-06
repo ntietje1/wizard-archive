@@ -46,8 +46,13 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
         }
       : {}
 
+  const betterAuthSecret = process.env.BETTER_AUTH_SECRET
+  if (!betterAuthSecret) {
+    throw new Error('Missing BETTER_AUTH_SECRET environment variable')
+  }
+
   return betterAuth({
-    secret: process.env.BETTER_AUTH_SECRET,
+    secret: betterAuthSecret,
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
     session: {

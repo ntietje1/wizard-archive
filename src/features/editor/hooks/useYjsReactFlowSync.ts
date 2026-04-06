@@ -134,7 +134,11 @@ export function useYjsReactFlowSync(
       const settled: Array<string> = []
 
       for (const [nodeId, s] of springs) {
-        if (draggingIds.current.has(nodeId)) continue
+        if (draggingIds.current.has(nodeId)) {
+          springs.delete(nodeId)
+          active.delete(nodeId)
+          continue
+        }
 
         const didSettle = stepSpring(s.spring, s.target, dt)
 

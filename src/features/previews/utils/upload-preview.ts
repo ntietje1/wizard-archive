@@ -33,11 +33,10 @@ export async function uploadPreviewBlob(
       `Preview upload failed: invalid JSON response (status ${response.status})`,
     )
   }
-  const storageId = json?.storageId as Id<'_storage'> | undefined
-
-  if (!storageId) {
+  if (typeof json?.storageId !== 'string') {
     throw new Error('Preview upload failed: missing storageId in response')
   }
+  const storageId = json.storageId as Id<'_storage'>
 
   await setPreviewImage({ itemId, previewStorageId: storageId })
 }

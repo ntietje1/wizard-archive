@@ -41,7 +41,6 @@ export function StrokePreview({
         d={d}
         fill={color}
         opacity={opacityOverride ?? (data.opacity ?? 100) / 100}
-        style={{ pointerEvents: 'auto' }}
       />
     </svg>
   )

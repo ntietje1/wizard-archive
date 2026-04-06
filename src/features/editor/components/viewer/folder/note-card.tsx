@@ -95,6 +95,8 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
                 src={note.previewUrl}
                 alt={note.name}
                 className="w-full h-full object-cover object-top"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
                 onError={() => setImgError(true)}
               />
             ) : (

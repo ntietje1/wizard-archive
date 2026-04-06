@@ -118,8 +118,14 @@ export function polylineIntersectsStroke(
   })
   if (outline.length < 2) return false
 
+  const poly = outline.map(([x, y]) => ({ x, y }))
+  for (const pt of trail) {
+    if (pointInPolygon(pt.x, pt.y, poly)) return true
+  }
+
   for (let i = 0; i < trail.length - 1; i++) {
-    for (let j = 0; j < outline.length - 1; j++) {
+    for (let j = 0; j < outline.length; j++) {
+      const k = (j + 1) % outline.length
       if (
         segmentsIntersect(
           trail[i].x,
@@ -128,8 +134,8 @@ export function polylineIntersectsStroke(
           trail[i + 1].y,
           outline[j][0],
           outline[j][1],
-          outline[j + 1][0],
-          outline[j + 1][1],
+          outline[k][0],
+          outline[k][1],
         )
       ) {
         return true
