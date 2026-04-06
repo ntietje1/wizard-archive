@@ -179,7 +179,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch(noteId, {
-        previewUpdatedAt: Date.now() - (COOLDOWN_MS - 1),
+        previewUpdatedAt: Date.now() - COOLDOWN_MS / 2,
       })
     })
 
