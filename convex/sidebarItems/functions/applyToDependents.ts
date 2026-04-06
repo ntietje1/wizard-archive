@@ -51,6 +51,23 @@ export async function applyToDependents(
       await Promise.all(pins.map((pin) => operation(ctx, pin)))
       break
     }
+    case SIDEBAR_ITEM_TYPES.canvases: {
+      const [yjsUpdates, yjsAwareness] = await Promise.all([
+        ctx.db
+          .query('yjsUpdates')
+          .withIndex('by_document_seq', (q) => q.eq('documentId', item._id))
+          .collect(),
+        ctx.db
+          .query('yjsAwareness')
+          .withIndex('by_document', (q) => q.eq('documentId', item._id))
+          .collect(),
+      ])
+      await Promise.all([
+        ...yjsUpdates.map((row) => operation(ctx, row)),
+        ...yjsAwareness.map((row) => operation(ctx, row)),
+      ])
+      break
+    }
   }
 
   // Shared dependents (all item types have shares and bookmarks)

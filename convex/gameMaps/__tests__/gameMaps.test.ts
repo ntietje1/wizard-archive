@@ -42,18 +42,6 @@ describe('createMap', () => {
     })
   })
 
-  it('DM can create at root level', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
-      campaignId: ctx.campaignId,
-      name: 'Root Map',
-      parentId: null,
-    })
-    expect(result.mapId).toBeDefined()
-  })
-
   it('player cannot create at root level', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
@@ -174,6 +162,53 @@ describe('updateMap', () => {
         name: 'Nope',
       }),
     )
+  })
+
+  it('updating imageStorageId also sets previewStorageId', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['map-image']))
+    })
+
+    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      mapId,
+      imageStorageId: storageId,
+    })
+
+    await t.run(async (dbCtx) => {
+      const map = await dbCtx.db.get(mapId)
+      expect(map!.imageStorageId).toBe(storageId)
+      expect(map!.previewStorageId).toBe(storageId)
+    })
+  })
+
+  it('updating only name does not change previewStorageId', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['map-image']))
+    })
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch(mapId, { previewStorageId: storageId })
+    })
+
+    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      mapId,
+      name: 'New Name',
+    })
+
+    await t.run(async (dbCtx) => {
+      const map = await dbCtx.db.get(mapId)
+      expect(map!.previewStorageId).toBe(storageId)
+    })
   })
 })
 

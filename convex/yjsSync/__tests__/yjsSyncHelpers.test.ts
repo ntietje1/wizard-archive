@@ -91,11 +91,11 @@ describe('createYjsDocument', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await createYjsDocument(dbCtx, { noteId, content: null })
+      await createYjsDocument(dbCtx, { documentId: noteId })
     })
 
     await t.run(async (dbCtx) => {
-      await createYjsDocument(dbCtx, { noteId, content: null })
+      await createYjsDocument(dbCtx, { documentId: noteId })
     })
 
     await t.run(async (dbCtx) => {

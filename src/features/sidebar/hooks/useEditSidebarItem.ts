@@ -9,6 +9,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
+import type { Canvas } from 'convex/canvases/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
@@ -42,11 +43,16 @@ type EditFileArgs = EditItemBase & {
   storageId?: Id<'_storage'> | null
 }
 
+type EditCanvasArgs = EditItemBase & {
+  item: Canvas
+}
+
 export type EditItemArgs =
   | EditNoteArgs
   | EditFolderArgs
   | EditMapArgs
   | EditFileArgs
+  | EditCanvasArgs
 
 export type EditItemResult = { slug: string }
 
@@ -55,6 +61,7 @@ interface EditItemFn {
   (args: EditFolderArgs): Promise<EditItemResult>
   (args: EditMapArgs): Promise<EditItemResult>
   (args: EditFileArgs): Promise<EditItemResult>
+  (args: EditCanvasArgs): Promise<EditItemResult>
   (args: EditItemBase & { item: AnySidebarItem }): Promise<EditItemResult>
 }
 
@@ -70,6 +77,9 @@ export function useEditSidebarItem() {
   )
   const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap)
   const updateFileMutation = useAppMutation(api.files.mutations.updateFile)
+  const updateCanvasMutation = useAppMutation(
+    api.canvases.mutations.updateCanvas,
+  )
 
   const optimisticUpdate = (
     updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,
@@ -159,6 +169,16 @@ export function useEditSidebarItem() {
             iconName,
             color,
             storageId,
+          })
+          slug = res.slug
+          break
+        }
+        case SIDEBAR_ITEM_TYPES.canvases: {
+          const res = await updateCanvasMutation.mutateAsync({
+            canvasId: item._id,
+            name: trimmedName,
+            iconName,
+            color,
           })
           slug = res.slug
           break

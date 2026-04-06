@@ -17,12 +17,17 @@ export const commonSidebarItemTableFields = {
   parentId: v.union(v.id('folders'), v.null()),
   allPermissionLevel: v.union(permissionLevelValidator, v.null()),
   location: sidebarItemLocationValidator,
+  previewStorageId: v.union(v.id('_storage'), v.null()),
+  previewLockedUntil: v.union(v.number(), v.null()),
+  previewClaimToken: v.union(v.string(), v.null()),
+  previewUpdatedAt: v.union(v.number(), v.null()),
   ...commonTableFields,
 }
 
 export const commonSidebarItemValidatorFields = {
   ...commonSidebarItemTableFields,
-  shares: v.optional(v.array(sidebarItemShareValidator)),
-  isBookmarked: v.optional(v.boolean()),
-  myPermissionLevel: v.optional(permissionLevelValidator),
+  shares: v.array(sidebarItemShareValidator),
+  isBookmarked: v.boolean(),
+  myPermissionLevel: permissionLevelValidator,
+  previewUrl: v.union(v.string(), v.null()),
 }

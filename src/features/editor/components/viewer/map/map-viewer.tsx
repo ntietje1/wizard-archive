@@ -5,7 +5,6 @@ import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
-import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { validatePinTarget } from 'convex/gameMaps/validation'
@@ -15,6 +14,10 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
+import {
+  DEFAULT_ITEM_COLOR,
+  validateHexColorOrDefault,
+} from '~/features/sidebar/utils/sidebar-item-utils'
 import {
   MAP_DROP_ZONE_TYPE,
   getDragItemId,
@@ -34,7 +37,6 @@ import { ZoomControls } from '~/features/editor/components/viewer/zoom-controls'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
-import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'

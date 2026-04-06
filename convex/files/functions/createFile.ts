@@ -44,6 +44,14 @@ export async function createFile(
 
   const profileId = ctx.user.profile._id
 
+  let previewStorageId: Id<'_storage'> | null = null
+  if (storageId) {
+    const metadata = await ctx.db.system.get(storageId)
+    if (metadata?.contentType?.toLowerCase().startsWith('image/')) {
+      previewStorageId = storageId
+    }
+  }
+
   const fileId = await ctx.db.insert('files', {
     campaignId,
     name,
@@ -55,6 +63,10 @@ export async function createFile(
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewStorageId,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: previewStorageId ? Date.now() : null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

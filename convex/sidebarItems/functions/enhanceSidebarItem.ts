@@ -2,9 +2,11 @@ import { enhanceFile } from '../../files/functions/enhanceFile'
 import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMap } from '../../gameMaps/functions/enhanceMap'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
+import { enhanceCanvas } from '../../canvases/functions/enhanceCanvas'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { requireCampaignMembership } from '../../functions'
+import { assertNever } from '../../common/types'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
@@ -22,7 +24,6 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
     bookmarkIds?: Set<SidebarItemId>
   },
 ): Promise<EnhancedSidebarItem<T>> {
-  await requireCampaignMembership(ctx, item.campaignId)
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.files:
       return enhanceFile(ctx, {
@@ -48,8 +49,14 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
         sharesMap,
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return enhanceCanvas(ctx, {
+        canvas: item,
+        sharesMap,
+        bookmarkIds,
+      }) as Promise<EnhancedSidebarItem<T>>
     default:
-      throw new Error('Unknown item type')
+      return assertNever(item)
   }
 }
 
@@ -67,6 +74,10 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
 ) {
   const { membership } = await requireCampaignMembership(ctx, item.campaignId)
 
+  const previewUrl = item.previewStorageId
+    ? ctx.storage.getUrl(item.previewStorageId)
+    : null
+
   // Batch path: all data is pre-loaded
   if (sharesMap && bookmarkIds) {
     const itemShares = sharesMap.get(item._id)
@@ -78,30 +89,39 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
         item,
         sharesMap,
       }),
+      previewUrl: await previewUrl,
     }
   }
 
   // Single-item path: direct queries in parallel
-  const [shares, bookmark, myPermissionLevel] = await Promise.all([
-    ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_item_member', (q) =>
-        q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
-      )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
-      .collect(),
-    ctx.db
-      .query('bookmarks')
-      .withIndex('by_campaign_member_item', (q) =>
-        q
-          .eq('campaignId', item.campaignId)
-          .eq('campaignMemberId', membership._id)
-          .eq('sidebarItemId', item._id),
-      )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
-      .unique(),
-    getSidebarItemPermissionLevel(ctx, { item }),
-  ])
+  const [shares, bookmark, myPermissionLevel, resolvedPreviewUrl] =
+    await Promise.all([
+      ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .collect(),
+      ctx.db
+        .query('bookmarks')
+        .withIndex('by_campaign_member_item', (q) =>
+          q
+            .eq('campaignId', item.campaignId)
+            .eq('campaignMemberId', membership._id)
+            .eq('sidebarItemId', item._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .unique(),
+      getSidebarItemPermissionLevel(ctx, { item }),
+      previewUrl,
+    ])
 
-  return { ...item, shares, isBookmarked: bookmark !== null, myPermissionLevel }
+  return {
+    ...item,
+    shares,
+    isBookmarked: bookmark !== null,
+    myPermissionLevel,
+    previewUrl: resolvedPreviewUrl,
+  }
 }

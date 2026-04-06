@@ -1,9 +1,9 @@
 import * as Y from 'yjs'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
-import type { Id } from 'convex/_generated/dataModel'
+import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 type YjsState = {
@@ -15,7 +15,7 @@ type YjsState = {
 let nextInstanceId = 1
 
 export function useConvexYjsCollaboration(
-  documentId: Id<'notes'>,
+  documentId: YjsDocumentId,
   user: { name: string; color: string },
   canEdit: boolean,
 ) {
@@ -23,8 +23,6 @@ export function useConvexYjsCollaboration(
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
-  const canEditRef = useRef(canEdit)
-  canEditRef.current = canEdit
 
   useEffect(() => {
     setIsLoading(true)
@@ -33,16 +31,22 @@ export function useConvexYjsCollaboration(
     const doc = new Y.Doc()
     const provider = new ConvexYjsProvider(doc, documentId, {
       pushUpdate: (args) =>
-        convex.mutation(api.yjsSync.mutations.pushUpdate, args),
+        convex.mutation(api.yjsSync.mutations.pushUpdate, {
+          ...args,
+          documentId,
+        }),
       pushAwareness: (args) =>
-        convex.mutation(api.yjsSync.mutations.pushAwareness, args),
+        convex.mutation(api.yjsSync.mutations.pushAwareness, {
+          ...args,
+          documentId,
+        }),
       removeAwareness: (args) =>
-        convex.mutation(api.yjsSync.mutations.removeAwareness, args),
-      persistBlocks: (args) =>
-        convex.mutation(api.yjsSync.mutations.persistBlocks, args),
+        convex.mutation(api.yjsSync.mutations.removeAwareness, {
+          ...args,
+          documentId,
+        }),
     })
 
-    provider.writable = canEditRef.current
     setState({ doc, provider, instanceId: nextInstanceId++ })
 
     return () => {
@@ -61,20 +65,28 @@ export function useConvexYjsCollaboration(
     if (state) state.provider.writable = canEdit
   }, [state, canEdit])
 
+  const [error, setError] = useState<Error | null>(null)
+
   const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
     documentId,
     afterSeq,
   })
 
   useEffect(() => {
+    if (updatesResult.isError) {
+      setIsLoading(false)
+      setError(updatesResult.error)
+      return
+    }
     if (updatesResult.data && state) {
+      setError(null)
       state.provider.applyRemoteUpdates(updatesResult.data)
       if (updatesResult.data.length > 0) {
         setAfterSeq(state.provider.lastAppliedSeq)
       }
       if (isLoading) setIsLoading(false)
     }
-  }, [updatesResult.data, state])
+  }, [updatesResult.data, updatesResult.isError, updatesResult.error, state])
 
   const awarenessResult = useAuthQuery(api.yjsSync.queries.getAwareness, {
     documentId,
@@ -91,5 +103,6 @@ export function useConvexYjsCollaboration(
     provider: state?.provider ?? null,
     instanceId: state?.instanceId ?? 0,
     isLoading: isLoading || !state,
+    error,
   }
 }

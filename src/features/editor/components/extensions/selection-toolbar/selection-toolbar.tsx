@@ -13,6 +13,7 @@ import {
 import { TextColorButton } from './text-color-button'
 import { BackgroundColorButton } from './background-color-button'
 
+// TODO: fix this
 export default function SelectionToolbar() {
   return (
     <FormattingToolbarController

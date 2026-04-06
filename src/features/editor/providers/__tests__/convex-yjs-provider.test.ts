@@ -60,7 +60,6 @@ function createConfig(
     pushUpdate: vi.fn().mockResolvedValue({ seq: 0 }),
     pushAwareness: vi.fn().mockResolvedValue(null),
     removeAwareness: vi.fn().mockResolvedValue(null),
-    persistBlocks: vi.fn().mockResolvedValue(null),
     ...overrides,
   }
 }
@@ -318,12 +317,8 @@ describe('ConvexYjsProvider', () => {
   })
 
   describe('awareness push', () => {
-    it('debounces local awareness changes before pushing', () => {
+    it('throttles local awareness changes by flushing immediately then gating', () => {
       provider.awareness.setLocalState({ cursor: { x: 10, y: 20 } })
-
-      expect(config.pushAwareness).not.toHaveBeenCalled()
-
-      vi.advanceTimersByTime(100)
 
       expect(config.pushAwareness).toHaveBeenCalledTimes(1)
       expect(config.pushAwareness).toHaveBeenCalledWith(
@@ -368,61 +363,6 @@ describe('ConvexYjsProvider', () => {
       provider.destroy()
 
       expect(config.pushAwareness).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('persist interval', () => {
-    it('persists after interval when local edits occurred', () => {
-      provider.writable = true
-      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-
-      vi.advanceTimersByTime(10_000)
-      expect(config.persistBlocks).toHaveBeenCalledWith({
-        documentId: DOCUMENT_ID,
-      })
-    })
-
-    it('does not persist after interval when no local edits occurred', () => {
-      provider.writable = true
-
-      vi.advanceTimersByTime(10_000)
-      expect(config.persistBlocks).not.toHaveBeenCalled()
-    })
-
-    it('stops persist interval when writable is set to false', () => {
-      provider.writable = true
-      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-      vi.advanceTimersByTime(10_000)
-      expect(config.persistBlocks).toHaveBeenCalledTimes(1)
-
-      provider.writable = false
-      ;(config.persistBlocks as ReturnType<typeof vi.fn>).mockClear()
-
-      vi.advanceTimersByTime(20_000)
-      expect(config.persistBlocks).not.toHaveBeenCalled()
-    })
-
-    it('persists on destroy when writable and dirty', async () => {
-      provider.writable = true
-      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-      provider.destroy()
-      await vi.advanceTimersByTimeAsync(0)
-      expect(config.persistBlocks).toHaveBeenCalledWith({
-        documentId: DOCUMENT_ID,
-      })
-    })
-
-    it('does not persist on destroy when writable but clean', async () => {
-      provider.writable = true
-      provider.destroy()
-      await vi.advanceTimersByTimeAsync(0)
-      expect(config.persistBlocks).not.toHaveBeenCalled()
-    })
-
-    it('does not persist on destroy when not writable', async () => {
-      provider.destroy()
-      await vi.advanceTimersByTimeAsync(0)
-      expect(config.persistBlocks).not.toHaveBeenCalled()
     })
   })
 

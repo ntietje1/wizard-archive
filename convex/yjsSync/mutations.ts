@@ -1,20 +1,16 @@
 import { v } from 'convex/values'
-import { BlockNoteEditor } from '@blocknote/core'
-import { yDocToBlocks } from '@blocknote/core/yjs'
 import { authMutation } from '../functions'
-import { editorSchema } from '../notes/editorSpecs'
-import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { internal } from '../_generated/api'
+import { yjsDocumentIdValidator } from './schema'
 import {
   checkYjsReadAccess,
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
-import { reconstructYDoc } from './functions/reconstructYDoc'
 
 export const pushUpdate = authMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     update: v.bytes(),
   },
   returns: v.object({ seq: v.number() }),
@@ -50,7 +46,7 @@ export const pushUpdate = authMutation({
 
 export const pushAwareness = authMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     clientId: v.number(),
     state: v.bytes(),
   },
@@ -86,7 +82,7 @@ export const pushAwareness = authMutation({
 
 export const removeAwareness = authMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: yjsDocumentIdValidator,
     clientId: v.number(),
   },
   returns: v.null(),
@@ -103,33 +99,6 @@ export const removeAwareness = authMutation({
     if (existing) {
       await ctx.db.delete(existing._id)
     }
-
-    return null
-  },
-})
-
-export const persistBlocks = authMutation({
-  args: {
-    documentId: v.id('notes'),
-  },
-  returns: v.null(),
-  handler: async (ctx, { documentId }) => {
-    await checkYjsWriteAccess(ctx, documentId)
-
-    const { doc } = await reconstructYDoc(ctx, documentId)
-
-    const editor = BlockNoteEditor.create({
-      schema: editorSchema,
-      _headless: true,
-    })
-    const blocks = yDocToBlocks(editor, doc)
-    doc.destroy()
-    editor._tiptapEditor.destroy()
-
-    await saveTopLevelBlocksForNote(ctx, {
-      noteId: documentId,
-      content: blocks,
-    })
 
     return null
   },

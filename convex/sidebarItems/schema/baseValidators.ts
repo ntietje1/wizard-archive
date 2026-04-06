@@ -11,6 +11,7 @@ export const sidebarItemIdValidator = v.union(
   v.id('folders'),
   v.id('gameMaps'),
   v.id('files'),
+  v.id('canvases'),
 )
 
 export const sidebarItemTypeValidator = v.union(
@@ -18,6 +19,7 @@ export const sidebarItemTypeValidator = v.union(
   v.literal(SIDEBAR_ITEM_TYPES.folders),
   v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   v.literal(SIDEBAR_ITEM_TYPES.files),
+  v.literal(SIDEBAR_ITEM_TYPES.canvases),
 )
 
 export const permissionLevelValidator = v.union(

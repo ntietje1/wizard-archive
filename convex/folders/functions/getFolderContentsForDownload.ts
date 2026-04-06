@@ -46,6 +46,8 @@ async function collectItemsRecursively(
       getSidebarItemPermissionLevel(ctx, { item: child }),
     ),
   )
+  const buildPath = (name: string) =>
+    currentPath ? `${currentPath}/${name}` : name
 
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -54,21 +56,21 @@ async function collectItemsRecursively(
 
     switch (child.type) {
       case SIDEBAR_ITEM_TYPES.files: {
-        const fileName = child.name
         const downloadUrl = child.storageId
           ? await ctx.storage.getUrl(child.storageId)
           : null
         items.push({
           type: SIDEBAR_ITEM_TYPES.files,
-          name: fileName,
-          path: currentPath ? `${currentPath}/${fileName}` : fileName,
+          name: child.name,
+          path: buildPath(child.name),
           downloadUrl,
         })
         break
       }
       case SIDEBAR_ITEM_TYPES.notes: {
-        const baseName = child.name
-        const noteName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
+        const noteName = child.name.endsWith('.md')
+          ? child.name
+          : `${child.name}.md`
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
@@ -85,37 +87,35 @@ async function collectItemsRecursively(
         items.push({
           type: SIDEBAR_ITEM_TYPES.notes,
           name: noteName,
-          path: currentPath ? `${currentPath}/${noteName}` : noteName,
+          path: buildPath(noteName),
           content,
         })
         break
       }
       case SIDEBAR_ITEM_TYPES.gameMaps: {
-        const mapName = child.name
         const downloadUrl = child.imageStorageId
           ? await ctx.storage.getUrl(child.imageStorageId)
           : null
         items.push({
           type: SIDEBAR_ITEM_TYPES.gameMaps,
-          name: mapName,
-          path: currentPath ? `${currentPath}/${mapName}` : mapName,
+          name: child.name,
+          path: buildPath(child.name),
           downloadUrl,
         })
         break
       }
       case SIDEBAR_ITEM_TYPES.folders: {
-        const folderName = child.name
-        const nestedPath = currentPath
-          ? `${currentPath}/${folderName}`
-          : folderName
         const nestedItems = await collectItemsRecursively(ctx, {
           campaignId,
           parentId: child._id,
-          currentPath: nestedPath,
+          currentPath: buildPath(child.name),
         })
         items.push(...nestedItems)
         break
       }
+      // TODO: add canvas -> img export
+      case SIDEBAR_ITEM_TYPES.canvases:
+        break
       default:
         assertNever(child)
     }

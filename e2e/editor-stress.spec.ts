@@ -217,7 +217,7 @@ test.describe.serial('editor stress tests', () => {
 
     await expect(editor).toContainText(before + after)
 
-    for (let i = 0; i < after.length; i++) {
+    for (const _ of after) {
       await page.keyboard.press('ArrowLeft')
     }
 

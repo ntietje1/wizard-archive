@@ -38,6 +38,8 @@ function getTypeName(ctx: MenuContext): string {
       return 'Map'
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return 'Canvas'
     default:
       return assertNever(ctx.item)
   }

@@ -1,0 +1,35 @@
+import { v } from 'convex/values'
+import { defineTable } from 'convex/server'
+import {
+  commonSidebarItemTableFields,
+  commonSidebarItemValidatorFields,
+} from '../sidebarItems/schema/baseFields'
+import { commonValidatorFields } from '../common/schema'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+
+export const canvasTableFields = {
+  ...commonSidebarItemTableFields,
+  type: v.literal(SIDEBAR_ITEM_TYPES.canvases),
+}
+
+export const canvasValidatorFields = {
+  ...commonValidatorFields('canvases'),
+  ...commonSidebarItemValidatorFields,
+  type: v.literal(SIDEBAR_ITEM_TYPES.canvases),
+}
+
+export const canvasValidator = v.object(canvasValidatorFields)
+
+export const canvasesTables = {
+  canvases: defineTable({
+    ...canvasTableFields,
+  })
+    .index('by_campaign_location_parent_name', [
+      'campaignId',
+      'location',
+      'parentId',
+      'name',
+    ])
+    .index('by_campaign_slug', ['campaignId', 'slug'])
+    .index('by_campaign_deletionTime', ['campaignId', 'deletionTime']),
+}

@@ -34,11 +34,11 @@ describe('getNote', () => {
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
     expect(result!.name).toBe('Test Note')
-    expect(result!.ancestors).toBeDefined()
     expect(Array.isArray(result!.ancestors)).toBe(true)
-    expect(result!.content).toBeDefined()
     expect(Array.isArray(result!.content)).toBe(true)
-    expect(result!.blockMeta).toBeDefined()
+    expect(result!.blockMeta).not.toBeNull()
+    expect(typeof result!.blockMeta).toBe('object')
+    expect(Array.isArray(result!.blockMeta)).toBe(false)
   })
 
   it('returns null for nonexistent note', async () => {
@@ -82,11 +82,11 @@ describe('getNote', () => {
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
     expect(result!.name).toBe('Shared Note')
-    expect(result!.ancestors).toBeDefined()
     expect(Array.isArray(result!.ancestors)).toBe(true)
-    expect(result!.content).toBeDefined()
     expect(Array.isArray(result!.content)).toBe(true)
-    expect(result!.blockMeta).toBeDefined()
+    expect(result!.blockMeta).not.toBeNull()
+    expect(typeof result!.blockMeta).toBe('object')
+    expect(Array.isArray(result!.blockMeta)).toBe(false)
   })
 
   it('returns null for player without access to soft-deleted note', async () => {
@@ -274,95 +274,6 @@ describe('updateNote', () => {
       t.mutation(api.notes.mutations.updateNote, {
         noteId,
         name: 'Nope',
-      }),
-    )
-  })
-})
-
-describe('updateNoteContent', () => {
-  const t = createTestContext()
-
-  it('saves blocks with EDIT permission', async () => {
-    const ctx = await setupCampaignContext(t)
-    const playerAuth = asPlayer(ctx)
-
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await createSidebarShare(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      sidebarItemId: noteId,
-      sidebarItemType: 'note',
-      campaignMemberId: ctx.player.memberId,
-      permissionLevel: 'edit',
-    })
-
-    const blocks = [
-      {
-        id: 'block-1',
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Hello', styles: {} }],
-        props: {
-          textColor: 'default',
-          textAlignment: 'left',
-          backgroundColor: 'default',
-        },
-        children: [],
-      },
-    ]
-
-    const result = await playerAuth.mutation(
-      api.notes.mutations.updateNoteContent,
-      { noteId, content: blocks },
-    )
-    expect(result).toBe(noteId)
-
-    const note = await playerAuth.query(api.notes.queries.getNote, { noteId })
-    expect(note?.content).toEqual(blocks)
-  })
-
-  it('rejects player without EDIT permission', async () => {
-    const ctx = await setupCampaignContext(t)
-    const playerAuth = asPlayer(ctx)
-
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await createSidebarShare(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      sidebarItemId: noteId,
-      sidebarItemType: 'note',
-      campaignMemberId: ctx.player.memberId,
-      permissionLevel: 'view',
-    })
-
-    await expectPermissionDenied(
-      playerAuth.mutation(api.notes.mutations.updateNoteContent, {
-        noteId,
-        content: [],
-      }),
-    )
-  })
-
-  it('DM can save blocks', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    const result = await dmAuth.mutation(
-      api.notes.mutations.updateNoteContent,
-      { noteId, content: [] },
-    )
-    expect(result).toBe(noteId)
-  })
-
-  it('requires authentication', async () => {
-    const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await expectNotAuthenticated(
-      t.mutation(api.notes.mutations.updateNoteContent, {
-        noteId,
-        content: [],
       }),
     )
   })
