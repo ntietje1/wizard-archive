@@ -239,7 +239,7 @@ describe('cross-table slug uniqueness', () => {
     expect(item2).not.toBeNull()
   })
 
-  it('does not collide with soft-deleted item slug', async () => {
+  it('collides with soft-deleted item slug', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -257,6 +257,6 @@ describe('cross-table slug uniqueness', () => {
       parentId: null,
     })
 
-    expect(result.slug).toBe('deleted-item')
+    expect(result.slug).toBe('deleted-item-2')
   })
 })
