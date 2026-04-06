@@ -317,12 +317,8 @@ describe('ConvexYjsProvider', () => {
   })
 
   describe('awareness push', () => {
-    it('debounces local awareness changes before pushing', () => {
+    it('throttles local awareness changes by flushing immediately then gating', () => {
       provider.awareness.setLocalState({ cursor: { x: 10, y: 20 } })
-
-      expect(config.pushAwareness).not.toHaveBeenCalled()
-
-      vi.advanceTimersByTime(100)
 
       expect(config.pushAwareness).toHaveBeenCalledTimes(1)
       expect(config.pushAwareness).toHaveBeenCalledWith(

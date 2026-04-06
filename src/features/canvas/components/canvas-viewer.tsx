@@ -254,14 +254,14 @@ function CanvasFlow({
     const wrapper = wrapperRef.current
     if (!wrapper) return
 
-    const el = wrapper.querySelector('.react-flow')
+    const el = wrapper.querySelector<HTMLElement>('.react-flow')
     if (el) {
       canvasContainerRef.current = el
       return
     }
 
     const observer = new MutationObserver(() => {
-      const found = wrapper.querySelector('.react-flow')
+      const found = wrapper.querySelector<HTMLElement>('.react-flow')
       if (found) {
         canvasContainerRef.current = found
         observer.disconnect()
