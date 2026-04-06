@@ -12,6 +12,11 @@ export type DrawingState = {
   opacity: number
 }
 
+export type ResizingState = Record<
+  string,
+  { width: number; height: number; x: number; y: number }
+>
+
 export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }
   | { type: 'lasso'; points: Array<Point2D> }
@@ -20,6 +25,7 @@ export type CanvasAwarenessState = {
   user: { name: string; color: string }
   cursor: { x: number; y: number } | null
   dragging: Record<string, { x: number; y: number }> | null
+  resizing: ResizingState | null
   selectedNodeIds: Array<string> | null
   drawing: DrawingState | null
   selecting: SelectingState | null

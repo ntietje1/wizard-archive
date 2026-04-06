@@ -32,7 +32,12 @@ export function CanvasRemoteSelections({
       const draggedIds = user.dragging
         ? new Set(Object.keys(user.dragging))
         : null
+      const resizedIds = user.resizing
+        ? new Set(Object.keys(user.resizing))
+        : null
       const showNameOnDrag = draggedIds && draggedIds.size > 0
+      const showNameOnResize =
+        !showNameOnDrag && resizedIds && resizedIds.size > 0
 
       if (draggedIds) {
         let first = true
@@ -52,10 +57,29 @@ export function CanvasRemoteSelections({
         }
       }
 
+      if (resizedIds && user.resizing) {
+        let first = true
+        for (const nodeId of resizedIds) {
+          if (draggedIds?.has(nodeId)) continue
+          const dims = user.resizing[nodeId]
+          result.push({
+            key: `${user.clientId}-resize-${nodeId}`,
+            x: dims.x,
+            y: dims.y,
+            width: dims.width,
+            height: dims.height,
+            color: user.user.color,
+            name: first && showNameOnResize ? user.user.name : null,
+          })
+          first = false
+        }
+      }
+
       if (user.selectedNodeIds) {
         let firstSelected = true
         for (const nodeId of user.selectedNodeIds) {
           if (draggedIds?.has(nodeId)) continue
+          if (resizedIds?.has(nodeId)) continue
           const node = nodeById.get(nodeId)
           if (!node) continue
           result.push({
@@ -65,7 +89,10 @@ export function CanvasRemoteSelections({
             width: node.measured?.width ?? DEFAULT_NODE_WIDTH,
             height: node.measured?.height ?? DEFAULT_NODE_HEIGHT,
             color: user.user.color,
-            name: !showNameOnDrag && firstSelected ? user.user.name : null,
+            name:
+              !showNameOnDrag && !showNameOnResize && firstSelected
+                ? user.user.name
+                : null,
           })
           firstSelected = false
         }

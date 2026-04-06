@@ -4,6 +4,12 @@ export type RemoteHighlight = { color: string; name: string }
 
 export interface CanvasContextValue {
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
+  onResize: (
+    nodeId: string,
+    width: number,
+    height: number,
+    position: { x: number; y: number },
+  ) => void
   onResizeEnd: (
     nodeId: string,
     width: number,
@@ -22,6 +28,7 @@ const DEFAULT_USER = { name: 'Anonymous', color: '#61afef' }
 
 export const CanvasContext = createContext<CanvasContextValue>({
   updateNodeData: () => {},
+  onResize: () => {},
   onResizeEnd: () => {},
   remoteHighlights: EMPTY_HIGHLIGHTS,
   canEdit: false,

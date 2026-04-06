@@ -36,7 +36,11 @@ import { CanvasColorPanel } from './canvas-color-panel'
 import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RemoteHighlight } from '../utils/canvas-context'
-import type { Point2D, RemoteUser } from '../utils/canvas-awareness-types'
+import type {
+  Point2D,
+  RemoteUser,
+  ResizingState,
+} from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -77,6 +81,7 @@ const DELETE_KEYS_NONE: Array<string> = []
 const EMPTY_NODES: Array<Node> = []
 const EMPTY_EDGES: Array<Edge> = []
 const EMPTY_DRAG_POSITIONS: Record<string, { x: number; y: number }> = {}
+const EMPTY_RESIZE_DIMENSIONS: ResizingState = {}
 const PAN_MIDDLE_ONLY: Array<number> = [1]
 const PAN_BOTH: Array<number> = [0, 1]
 const SELECTION_KEY_DISABLED: Array<string> = []
@@ -177,6 +182,7 @@ function CanvasFlow({
     remoteUsers,
     setLocalCursor,
     setLocalDragging,
+    setLocalResizing,
     setLocalSelection,
     setLocalDrawing,
     setLocalSelecting,
@@ -206,13 +212,35 @@ function CanvasFlow({
     return merged ?? EMPTY_DRAG_POSITIONS
   }, [remoteUsers])
 
+  const remoteResizeDimensions = useMemo(() => {
+    let merged: ResizingState | null = null
+    const owners = new Map<string, number>()
+    for (const user of remoteUsers) {
+      if (!user.resizing) continue
+      for (const [nodeId, dims] of Object.entries(user.resizing)) {
+        if (!merged) merged = {}
+        const existingOwner = owners.get(nodeId)
+        if (existingOwner === undefined || user.clientId < existingOwner) {
+          merged[nodeId] = dims
+          owners.set(nodeId, user.clientId)
+        }
+      }
+    }
+    return merged ?? EMPTY_RESIZE_DIMENSIONS
+  }, [remoteUsers])
+
   const {
     onNodeDragStart,
     onNodeDragStop,
     onNodesDelete,
     onEdgesDelete,
     onConnect,
-  } = useYjsReactFlowSync(nodesMap, edgesMap, remoteDragPositions)
+  } = useYjsReactFlowSync(
+    nodesMap,
+    edgesMap,
+    remoteDragPositions,
+    remoteResizeDimensions,
+  )
 
   const { onSelectionChange: onHistorySelectionChange } = useCanvasHistory({
     nodesMap,
@@ -338,6 +366,20 @@ function CanvasFlow({
     [nodesMap],
   )
 
+  const handleResize = useCallback(
+    (
+      nodeId: string,
+      width: number,
+      height: number,
+      position: { x: number; y: number },
+    ) => {
+      setLocalResizing({
+        [nodeId]: { width, height, x: position.x, y: position.y },
+      })
+    },
+    [setLocalResizing],
+  )
+
   const onResizeEnd = useCallback(
     (
       nodeId: string,
@@ -345,11 +387,12 @@ function CanvasFlow({
       height: number,
       position: { x: number; y: number },
     ) => {
+      setLocalResizing(null)
       const existing = nodesMap.get(nodeId)
       if (!existing) return
       nodesMap.set(nodeId, { ...existing, width, height, position })
     },
-    [nodesMap],
+    [nodesMap, setLocalResizing],
   )
 
   const remoteHighlights = useMemo(() => {
@@ -357,7 +400,9 @@ function CanvasFlow({
     for (const user of remoteUsers) {
       const nodeIds = user.dragging
         ? Object.keys(user.dragging)
-        : user.selectedNodeIds
+        : user.resizing
+          ? Object.keys(user.resizing)
+          : user.selectedNodeIds
       if (!nodeIds) continue
       for (const nodeId of nodeIds) {
         if (!map.has(nodeId)) {
@@ -371,6 +416,7 @@ function CanvasFlow({
   const canvasContextValue = useMemo(
     () => ({
       updateNodeData,
+      onResize: handleResize,
       onResizeEnd,
       remoteHighlights,
       canEdit,
@@ -380,6 +426,7 @@ function CanvasFlow({
     }),
     [
       updateNodeData,
+      handleResize,
       onResizeEnd,
       remoteHighlights,
       canEdit,

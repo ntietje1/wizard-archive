@@ -9,6 +9,7 @@ import type {
   OnNodeDrag,
   OnNodesDelete,
 } from '@xyflow/react'
+import type { ResizingState } from '~/features/canvas/utils/canvas-awareness-types'
 import type * as Y from 'yjs'
 import type { SpringState } from '~/shared/hooks/useSpringPosition'
 import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
@@ -23,6 +24,7 @@ export function useYjsReactFlowSync(
   nodesMap: Y.Map<Node> | null,
   edgesMap: Y.Map<Edge> | null,
   remoteDragPositions: Record<string, { x: number; y: number }>,
+  remoteResizeDimensions: ResizingState = {},
 ) {
   const reactFlow = useReactFlow()
   const draggingIds = useRef(new Set<string>())
@@ -30,6 +32,8 @@ export function useYjsReactFlowSync(
   const suppressEdgeObserver = useRef(false)
   const remoteDragRef = useRef(remoteDragPositions)
   remoteDragRef.current = remoteDragPositions
+  const remoteResizeRef = useRef(remoteResizeDimensions)
+  remoteResizeRef.current = remoteResizeDimensions
 
   const springStates = useRef(
     new Map<
@@ -54,6 +58,16 @@ export function useYjsReactFlowSync(
           if (!local) return remote
           if (draggingIds.current.has(remote.id)) {
             return { ...local, ...remote, position: local.position }
+          }
+          const resizeDims = remoteResizeRef.current[remote.id]
+          if (resizeDims) {
+            return {
+              ...local,
+              ...remote,
+              width: resizeDims.width,
+              height: resizeDims.height,
+              position: { x: resizeDims.x, y: resizeDims.y },
+            }
           }
           const spring = springStates.current.get(remote.id)
           if (spring) {
@@ -185,6 +199,24 @@ export function useYjsReactFlowSync(
       startSpringLoopRef.current?.()
     }
   }, [remoteDragPositions])
+
+  useEffect(() => {
+    const entries = Object.entries(remoteResizeDimensions)
+    if (entries.length === 0) return
+
+    reactFlow.setNodes((current) =>
+      current.map((node) => {
+        const dims = remoteResizeDimensions[node.id]
+        if (!dims) return node
+        return {
+          ...node,
+          width: dims.width,
+          height: dims.height,
+          position: { x: dims.x, y: dims.y },
+        }
+      }),
+    )
+  }, [remoteResizeDimensions, reactFlow])
 
   const onNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
     for (const n of nodes) draggingIds.current.add(n.id)

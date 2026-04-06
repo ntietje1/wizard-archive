@@ -4,6 +4,7 @@ import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-p
 import type {
   DrawingState,
   RemoteUser,
+  ResizingState,
   SelectingState,
 } from '../utils/canvas-awareness-types'
 
@@ -21,6 +22,7 @@ function buildRemoteUsers(
       dragging:
         (state.dragging as Record<string, { x: number; y: number }> | null) ??
         null,
+      resizing: (state.resizing as ResizingState | null) ?? null,
       selectedNodeIds: (state.selectedNodeIds as Array<string> | null) ?? null,
       drawing: (state.drawing as DrawingState | null) ?? null,
       selecting: (state.selecting as SelectingState | null) ?? null,
@@ -89,6 +91,10 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     awarenessRef.current?.setLocalStateField('drawing', drawing)
   }, [])
 
+  const setLocalResizing = useCallback((resizing: ResizingState | null) => {
+    awarenessRef.current?.setLocalStateField('resizing', resizing)
+  }, [])
+
   const setLocalSelecting = useCallback((selecting: SelectingState | null) => {
     awarenessRef.current?.setLocalStateField('selecting', selecting)
   }, [])
@@ -97,6 +103,7 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     remoteUsers,
     setLocalCursor,
     setLocalDragging,
+    setLocalResizing,
     setLocalSelection,
     setLocalDrawing,
     setLocalSelecting,
