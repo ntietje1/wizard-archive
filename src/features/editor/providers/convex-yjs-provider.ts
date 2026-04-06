@@ -68,6 +68,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private maxWaitTimer: ReturnType<typeof setTimeout> | null = null
   private pushInFlight = false
+  private pushInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessTimer: ReturnType<typeof setTimeout> | null = null
   private awarenessInFlight = false
   private awarenessDirty = false
@@ -200,7 +201,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
 
   private flushUpdates(): Promise<void> {
     this.clearUpdateTimers()
-    if (this.pushInFlight) return Promise.resolve()
+    if (this.pushInFlight) return this.pushInFlightPromise
     if (this.pendingUpdates.length === 0) return Promise.resolve()
 
     const merged =
@@ -210,7 +211,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.pendingUpdates = []
 
     this.pushInFlight = true
-    return this.config
+    this.pushInFlightPromise = this.config
       .pushUpdate({
         documentId: this.documentId,
         update: uint8ToArrayBuffer(merged),
@@ -228,6 +229,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         this.pushInFlight = false
         if (this.pendingUpdates.length > 0) this.scheduleFlush()
       })
+    return this.pushInFlightPromise
   }
 
   private scheduleFlush() {
@@ -258,7 +260,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     }
   }
 
-  // -- Awareness debouncing --
+  // -- Awareness throttling --
 
   private handleAwarenessUpdate = (
     {
