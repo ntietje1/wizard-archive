@@ -3,7 +3,10 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
@@ -59,5 +62,34 @@ export async function updateCanvas(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  const historyBase = {
+    itemId: canvas._id,
+    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    campaignId: canvas.campaignId,
+  } as const
+
+  if (name !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: canvas.name, to: name.trim() },
+    })
+  }
+  if (iconName !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: canvas.iconName, to: iconName },
+    })
+  }
+  if (color !== undefined) {
+    await logEditHistory(ctx, {
+      ...historyBase,
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: canvas.color, to: color },
+    })
+  }
+
   return { canvasId: canvas._id, slug: newSlug ?? canvas.slug }
 }

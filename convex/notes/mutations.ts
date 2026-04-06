@@ -6,9 +6,6 @@ import { customBlockValidator } from '../blocks/schema'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
 import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
-import { EDIT_HISTORY_ACTION } from '../editHistory/types'
-import { logEditHistory } from '../editHistory/log'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
 import { editorSchema } from './editorSpecs'
@@ -72,7 +69,7 @@ export const persistNoteBlocks = authMutation({
   },
   returns: v.null(),
   handler: async (ctx, { documentId }) => {
-    const noteFromDb = await checkYjsWriteAccess(ctx, documentId)
+    await checkYjsWriteAccess(ctx, documentId)
 
     const { doc } = await reconstructYDoc(ctx, documentId)
     let editor: ReturnType<typeof BlockNoteEditor.create> | undefined
@@ -90,28 +87,6 @@ export const persistNoteBlocks = authMutation({
     } finally {
       doc.destroy()
       editor?._tiptapEditor.destroy()
-    }
-
-    // Debounce: skip if the same user edited this note within the last 5 minutes
-    const DEBOUNCE_MS = 5 * 60 * 1000
-    const recentEntries = await ctx.db
-      .query('editHistory')
-      .withIndex('by_item', (q) => q.eq('itemId', documentId))
-      .order('desc')
-      .take(1)
-    const lastEntry = recentEntries[0]
-    const shouldSkip =
-      lastEntry &&
-      lastEntry.action === EDIT_HISTORY_ACTION.content_edited &&
-      Date.now() - lastEntry._creationTime < DEBOUNCE_MS
-
-    if (!shouldSkip) {
-      await logEditHistory(ctx, {
-        itemId: documentId,
-        itemType: SIDEBAR_ITEM_TYPES.notes,
-        campaignId: noteFromDb.campaignId,
-        action: EDIT_HISTORY_ACTION.content_edited,
-      })
     }
 
     return null

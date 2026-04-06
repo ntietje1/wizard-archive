@@ -1,6 +1,8 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { internal } from '../_generated/api'
+import { logEditHistory } from '../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../editHistory/types'
 import { yjsDocumentIdValidator } from './schema'
 import {
   checkYjsReadAccess,
@@ -15,7 +17,7 @@ export const pushUpdate = authMutation({
   },
   returns: v.object({ seq: v.number() }),
   handler: async (ctx, { documentId, update }) => {
-    await checkYjsWriteAccess(ctx, documentId)
+    const doc = await checkYjsWriteAccess(ctx, documentId)
 
     const latest = await ctx.db
       .query('yjsUpdates')
@@ -38,6 +40,29 @@ export const pushUpdate = authMutation({
         internal.yjsSync.internalMutations.compact,
         { documentId },
       )
+    }
+
+    const DEBOUNCE_MS = 5 * 60 * 1000
+    const lastContentEdit = await ctx.db
+      .query('editHistory')
+      .withIndex('by_item_action', (q) =>
+        q
+          .eq('itemId', documentId)
+          .eq('action', EDIT_HISTORY_ACTION.content_edited),
+      )
+      .order('desc')
+      .first()
+
+    if (
+      !lastContentEdit ||
+      Date.now() - lastContentEdit._creationTime >= DEBOUNCE_MS
+    ) {
+      await logEditHistory(ctx, {
+        itemId: documentId,
+        itemType: doc.type,
+        campaignId: doc.campaignId,
+        action: EDIT_HISTORY_ACTION.content_edited,
+      })
     }
 
     return { seq }

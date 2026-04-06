@@ -22,7 +22,7 @@ export const getItemHistory = authQuery({
   handler: async (ctx, { itemId, limit }) => {
     const entries = await ctx.db
       .query('editHistory')
-      .withIndex('by_item', (q) => q.eq('itemId', itemId))
+      .withIndex('by_item_action', (q) => q.eq('itemId', itemId))
       .order('desc')
       .take(limit ?? 50)
 

@@ -14,6 +14,6 @@ export const editHistoryTables = {
     action: v.string(),
     metadata: v.union(v.record(v.string(), v.any()), v.null()),
   })
-    .index('by_item', ['itemId'])
+    .index('by_item_action', ['itemId', 'action'])
     .index('by_campaign', ['campaignId']),
 }
