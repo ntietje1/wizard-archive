@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 
 export const MIN_ZOOM = 0.1
@@ -6,9 +6,8 @@ export const MAX_ZOOM = 4
 const ZOOM_SENSITIVITY = 0.005
 const PAN_SENSITIVITY = 1
 
-export function useCanvasWheel() {
+export function useCanvasWheel(ref: React.RefObject<HTMLDivElement | null>) {
   const reactFlowInstance = useReactFlow()
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = ref.current
@@ -53,6 +52,4 @@ export function useCanvasWheel() {
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
   }, [reactFlowInstance])
-
-  return ref
 }

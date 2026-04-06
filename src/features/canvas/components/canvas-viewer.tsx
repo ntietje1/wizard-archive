@@ -27,6 +27,7 @@ import { useCanvasSelectionSync } from '../hooks/useCanvasSelectionSync'
 import { MAX_ZOOM, MIN_ZOOM, useCanvasWheel } from '../hooks/useCanvasWheel'
 import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts'
 import { useCanvasOverlayHandlers } from '../hooks/useCanvasOverlayHandlers'
+import { useCanvasStrokeClick } from '../hooks/useCanvasStrokeClick'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasStrokes } from './canvas-strokes'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
@@ -240,14 +241,18 @@ function CanvasFlow({
     setEditingEmbedId,
   })
 
-  const { overlayHandlers, toolCursor } = useCanvasOverlayHandlers({
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const { toolCursor } = useCanvasOverlayHandlers(wrapperRef, {
     drawing,
     eraser,
     lasso,
     rectangleDraw,
   })
 
-  const wrapperRef = useCanvasWheel()
+  const onStrokePaneClick = useCanvasStrokeClick()
+
+  useCanvasWheel(wrapperRef)
   const canvasContainerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -390,7 +395,11 @@ function CanvasFlow({
 
   return (
     <CanvasContext value={canvasContextValue}>
-      <div ref={wrapperRef} className="flex-1 min-h-0 relative allow-motion">
+      <div
+        ref={wrapperRef}
+        className="flex-1 min-h-0 relative allow-motion"
+        style={{ cursor: toolCursor }}
+      >
         <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
         <CanvasColorPanel canEdit={canEdit} />
         <ReactFlow
@@ -402,6 +411,7 @@ function CanvasFlow({
           onNodesDelete={isSelectMode ? onNodesDelete : undefined}
           onEdgesDelete={isSelectMode ? onEdgesDelete : undefined}
           onConnect={isSelectMode ? onConnect : undefined}
+          onPaneClick={isSelectMode ? onStrokePaneClick : undefined}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           nodeTypes={canvasNodeTypes}
@@ -446,17 +456,6 @@ function CanvasFlow({
           isDropTarget={isDropTarget}
           isFileDropTarget={isFileDropTarget}
         />
-
-        {overlayHandlers && (
-          <div
-            className="absolute inset-0 z-[5]"
-            style={{ cursor: toolCursor }}
-            onPointerDown={overlayHandlers.onPointerDown}
-            onPointerMove={overlayHandlers.onPointerMove}
-            onPointerUp={overlayHandlers.onPointerUp}
-            onPointerCancel={overlayHandlers.onPointerCancel}
-          />
-        )}
       </div>
     </CanvasContext>
   )
