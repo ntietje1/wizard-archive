@@ -9,6 +9,7 @@ import type {
   OnNodeDrag,
   OnNodesDelete,
 } from '@xyflow/react'
+import type { ResizingState } from '~/features/canvas/utils/canvas-awareness-types'
 import type * as Y from 'yjs'
 import type { SpringState } from '~/shared/hooks/useSpringPosition'
 import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
@@ -23,6 +24,7 @@ export function useYjsReactFlowSync(
   nodesMap: Y.Map<Node> | null,
   edgesMap: Y.Map<Edge> | null,
   remoteDragPositions: Record<string, { x: number; y: number }>,
+  remoteResizeDimensions: ResizingState = {},
 ) {
   const reactFlow = useReactFlow()
   const draggingIds = useRef(new Set<string>())
@@ -30,6 +32,8 @@ export function useYjsReactFlowSync(
   const suppressEdgeObserver = useRef(false)
   const remoteDragRef = useRef(remoteDragPositions)
   remoteDragRef.current = remoteDragPositions
+  const remoteResizeRef = useRef(remoteResizeDimensions)
+  remoteResizeRef.current = remoteResizeDimensions
 
   const springStates = useRef(
     new Map<
@@ -54,6 +58,16 @@ export function useYjsReactFlowSync(
           if (!local) return remote
           if (draggingIds.current.has(remote.id)) {
             return { ...local, ...remote, position: local.position }
+          }
+          const resizeDims = remoteResizeRef.current[remote.id]
+          if (resizeDims) {
+            return {
+              ...local,
+              ...remote,
+              width: resizeDims.width,
+              height: resizeDims.height,
+              position: { x: resizeDims.x, y: resizeDims.y },
+            }
           }
           const spring = springStates.current.get(remote.id)
           if (spring) {
@@ -91,9 +105,17 @@ export function useYjsReactFlowSync(
   }, [edgesMap, reactFlow])
 
   const prevTimeRef = useRef(0)
+  const springRunningRef = useRef(false)
+  const springRafIdRef = useRef(0)
+  const startSpringLoopRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    let rafId: number
+    const startLoop = () => {
+      if (springRunningRef.current) return
+      springRunningRef.current = true
+      prevTimeRef.current = 0
+      springRafIdRef.current = requestAnimationFrame(animate)
+    }
 
     const animate = (time: number) => {
       const dt = Math.min(
@@ -126,7 +148,11 @@ export function useYjsReactFlowSync(
       const settled: Array<string> = []
 
       for (const [nodeId, s] of springs) {
-        if (draggingIds.current.has(nodeId)) continue
+        if (draggingIds.current.has(nodeId)) {
+          springs.delete(nodeId)
+          active.delete(nodeId)
+          continue
+        }
 
         const didSettle = stepSpring(s.spring, s.target, dt)
 
@@ -153,12 +179,44 @@ export function useYjsReactFlowSync(
         )
       }
 
-      rafId = requestAnimationFrame(animate)
+      if (springs.size === 0) {
+        springRunningRef.current = false
+        return
+      }
+
+      springRafIdRef.current = requestAnimationFrame(animate)
     }
 
-    rafId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafId)
+    startSpringLoopRef.current = startLoop
+    return () => {
+      springRunningRef.current = false
+      cancelAnimationFrame(springRafIdRef.current)
+    }
   }, [reactFlow])
+
+  useEffect(() => {
+    if (Object.keys(remoteDragPositions).length > 0) {
+      startSpringLoopRef.current?.()
+    }
+  }, [remoteDragPositions])
+
+  useEffect(() => {
+    const entries = Object.entries(remoteResizeDimensions)
+    if (entries.length === 0) return
+
+    reactFlow.setNodes((current) =>
+      current.map((node) => {
+        const dims = remoteResizeDimensions[node.id]
+        if (!dims) return node
+        return {
+          ...node,
+          width: dims.width,
+          height: dims.height,
+          position: { x: dims.x, y: dims.y },
+        }
+      }),
+    )
+  }, [remoteResizeDimensions, reactFlow])
 
   const onNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
     for (const n of nodes) draggingIds.current.add(n.id)
@@ -166,55 +224,69 @@ export function useYjsReactFlowSync(
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, nodes) => {
-      if (!nodesMap) return
+      for (const n of nodes) draggingIds.current.delete(n.id)
+      if (!nodesMap?.doc) return
       suppressNodeObserver.current = true
-      nodesMap.doc!.transact(() => {
-        for (const n of nodes) {
-          draggingIds.current.delete(n.id)
-          const existing = nodesMap.get(n.id)
-          if (existing) {
-            nodesMap.set(n.id, { ...existing, position: n.position })
+      try {
+        nodesMap.doc.transact(() => {
+          for (const n of nodes) {
+            const existing = nodesMap.get(n.id)
+            if (existing) {
+              nodesMap.set(n.id, { ...existing, position: n.position })
+            }
           }
-        }
-      })
-      suppressNodeObserver.current = false
+        })
+      } finally {
+        suppressNodeObserver.current = false
+      }
     },
     [nodesMap],
   )
 
   const onNodesDelete: OnNodesDelete = useCallback(
     (deleted) => {
-      if (!nodesMap) return
+      if (!nodesMap?.doc) return
       suppressNodeObserver.current = true
-      nodesMap.doc!.transact(() => {
-        for (const node of deleted) nodesMap.delete(node.id)
-      })
-      suppressNodeObserver.current = false
+      try {
+        nodesMap.doc.transact(() => {
+          for (const node of deleted) nodesMap.delete(node.id)
+        })
+      } finally {
+        suppressNodeObserver.current = false
+      }
     },
     [nodesMap],
   )
 
   const onEdgesDelete: OnEdgesDelete = useCallback(
     (deleted) => {
-      if (!edgesMap) return
+      if (!edgesMap?.doc) return
       suppressEdgeObserver.current = true
-      edgesMap.doc!.transact(() => {
-        for (const edge of deleted) edgesMap.delete(edge.id)
-      })
-      suppressEdgeObserver.current = false
+      try {
+        edgesMap.doc.transact(() => {
+          for (const edge of deleted) edgesMap.delete(edge.id)
+        })
+      } finally {
+        suppressEdgeObserver.current = false
+      }
     },
     [edgesMap],
   )
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      if (!edgesMap) return
+      if (!edgesMap?.doc) return
       const id = `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
       const edge: Edge = { id, ...connection }
-      reactFlow.addEdges(edge)
       suppressEdgeObserver.current = true
-      edgesMap.set(id, edge)
-      suppressEdgeObserver.current = false
+      try {
+        edgesMap.doc.transact(() => {
+          edgesMap.set(id, edge)
+        })
+        reactFlow.addEdges(edge)
+      } finally {
+        suppressEdgeObserver.current = false
+      }
     },
     [edgesMap, reactFlow],
   )

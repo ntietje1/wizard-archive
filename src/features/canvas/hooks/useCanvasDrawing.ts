@@ -21,7 +21,7 @@ export function useCanvasDrawing({
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
       const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
         useCanvasToolStore.getState()
       const pos = reactFlow.screenToFlowPosition({
@@ -65,33 +65,48 @@ export function useCanvasDrawing({
     [reactFlow, setAwarenessDrawing],
   )
 
-  const onPointerUp = useCallback(() => {
-    const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
-      useCanvasToolStore.getState()
-    const points = pointsRef.current
-    if (points.length >= 2) {
-      const bounds = getStrokeBounds(points, strokeSize)
-      const id = crypto.randomUUID()
-      const node: Node = {
-        id,
-        type: 'stroke',
-        position: { x: bounds.x, y: bounds.y },
-        width: bounds.width,
-        height: bounds.height,
-        data: {
-          points: [...points],
-          color: strokeColor,
-          size: strokeSize,
-          opacity: strokeOpacity,
-          bounds,
-        },
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
+      const { strokeColor, strokeSize, strokeOpacity, setLocalDrawing } =
+        useCanvasToolStore.getState()
+      const points = pointsRef.current
+      if (points.length >= 2) {
+        const bounds = getStrokeBounds(points, strokeSize)
+        const id = crypto.randomUUID()
+        const node: Node = {
+          id,
+          type: 'stroke',
+          position: { x: bounds.x, y: bounds.y },
+          width: bounds.width,
+          height: bounds.height,
+          data: {
+            points: [...points],
+            color: strokeColor,
+            size: strokeSize,
+            opacity: strokeOpacity,
+            bounds,
+          },
+        }
+        nodesMap.set(id, node)
       }
-      nodesMap.set(id, node)
-    }
-    pointsRef.current = []
-    setLocalDrawing(null)
-    setAwarenessDrawing(null)
-  }, [nodesMap, setAwarenessDrawing])
+      pointsRef.current = []
+      setLocalDrawing(null)
+      setAwarenessDrawing(null)
+    },
+    [nodesMap, setAwarenessDrawing],
+  )
 
-  return { onPointerDown, onPointerMove, onPointerUp }
+  const onPointerCancel = useCallback(
+    (e: React.PointerEvent) => {
+      ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
+      const { setLocalDrawing } = useCanvasToolStore.getState()
+      pointsRef.current = []
+      setLocalDrawing(null)
+      setAwarenessDrawing(null)
+    },
+    [setAwarenessDrawing],
+  )
+
+  return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
 }

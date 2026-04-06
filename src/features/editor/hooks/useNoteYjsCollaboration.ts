@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from './useConvexYjsCollaboration'
@@ -13,18 +13,24 @@ export function useNoteYjsCollaboration(
 ) {
   const convex = useConvex()
   const result = useConvexYjsCollaboration(noteId, user, canEdit)
+  const isPersistingRef = useRef(false)
+  const pendingCleanupPersistRef = useRef(false)
+  const generationRef = useRef(0)
 
   useEffect(() => {
     if (!canEdit || result.isLoading) return
 
+    const generation = ++generationRef.current
+    isPersistingRef.current = false
+    pendingCleanupPersistRef.current = false
+
     let active = true
-    let isPersisting = false
-    let pendingCleanupPersist = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const persist = () => {
-      if (isPersisting) return
-      isPersisting = true
+      if (generation !== generationRef.current) return
+      if (isPersistingRef.current) return
+      isPersistingRef.current = true
       convex
         .mutation(api.notes.mutations.persistNoteBlocks, {
           documentId: noteId,
@@ -33,9 +39,9 @@ export function useNoteYjsCollaboration(
           console.error(`[Notes] persist failed for ${noteId}:`, err)
         })
         .finally(() => {
-          isPersisting = false
-          if (pendingCleanupPersist) {
-            pendingCleanupPersist = false
+          isPersistingRef.current = false
+          if (pendingCleanupPersistRef.current) {
+            pendingCleanupPersistRef.current = false
             persist()
           } else if (active) {
             timeoutId = setTimeout(persist, PERSIST_INTERVAL_MS)
@@ -48,8 +54,8 @@ export function useNoteYjsCollaboration(
     return () => {
       active = false
       if (timeoutId !== null) clearTimeout(timeoutId)
-      if (isPersisting) {
-        pendingCleanupPersist = true
+      if (isPersistingRef.current) {
+        pendingCleanupPersistRef.current = true
       } else {
         persist()
       }

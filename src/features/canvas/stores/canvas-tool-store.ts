@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DrawingState } from '../utils/canvas-awareness-types'
+import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 
 export type CanvasTool =
@@ -31,7 +31,7 @@ interface CanvasToolState {
   erasingStrokeIds: Set<string>
   rectDeselectedIds: Set<string>
   localDrawing: DrawingState | null
-  lassoPath: Array<{ x: number; y: number }>
+  lassoPath: Array<Point2D>
   selectionRect: Bounds | null
   canUndo: boolean
   canRedo: boolean
@@ -47,7 +47,7 @@ interface CanvasToolActions {
   setErasingStrokeIds: (ids: Set<string>) => void
   setRectDeselectedIds: (ids: Set<string>) => void
   setLocalDrawing: (drawing: DrawingState | null) => void
-  setLassoPath: (path: Array<{ x: number; y: number }>) => void
+  setLassoPath: (path: Array<Point2D>) => void
   setSelectionRect: (rect: Bounds | null) => void
   setHistory: (history: {
     canUndo: boolean
@@ -100,6 +100,12 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
 
     setHistory: (history) => set(history),
 
-    reset: () => set(INITIAL_STATE),
+    reset: () =>
+      set({
+        ...INITIAL_STATE,
+        erasingStrokeIds: new Set(),
+        rectDeselectedIds: new Set(),
+        lassoPath: [],
+      }),
   }),
 )

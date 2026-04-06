@@ -1,4 +1,11 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
 import { CanvasContext } from '../utils/canvas-context'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
@@ -12,6 +19,17 @@ interface CanvasColorPanelProps {
 
 const COLOR_RELEVANT_TOOLS = new Set(['draw', 'rectangle'])
 
+const COLOR_NAMES: Record<string, string> = {
+  'var(--foreground)': 'Default',
+  'var(--t-red)': 'Red',
+  'var(--t-orange)': 'Orange',
+  'var(--t-yellow)': 'Yellow',
+  'var(--t-green)': 'Green',
+  'var(--t-blue)': 'Blue',
+  'var(--t-purple)': 'Purple',
+  'var(--t-pink)': 'Pink',
+}
+
 export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   const { updateNodeData } = useContext(CanvasContext)
   const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
@@ -22,23 +40,38 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
   const setStrokeOpacity = useCanvasToolStore((s) => s.setStrokeOpacity)
 
-  const pendingUpdate = useRef<Record<string, unknown> | null>(null)
+  useOnSelectionChange({
+    onChange: ({ nodes }) => setSelectedNodes(nodes),
+  })
+
+  const colorRelevantNodes = useMemo(
+    () => selectedNodes.filter((n) => !!n.data?.color),
+    [selectedNodes],
+  )
+  const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
+  const hasColorSelection = colorRelevantNodes.length > 0
+
+  const pendingUpdate = useRef<{
+    data: Record<string, unknown>
+    nodeIds: Array<string>
+  } | null>(null)
   const rafId = useRef(0)
-  const selectedNodesRef = useRef(selectedNodes)
-  selectedNodesRef.current = selectedNodes
 
   const flushNodeUpdates = useCallback(() => {
-    const data = pendingUpdate.current
-    if (!data) return
+    const pending = pendingUpdate.current
+    if (!pending) return
     pendingUpdate.current = null
-    for (const node of selectedNodesRef.current) {
-      updateNodeData(node.id, data)
+    for (const nodeId of pending.nodeIds) {
+      updateNodeData(nodeId, pending.data)
     }
   }, [updateNodeData])
 
   const scheduleNodeUpdate = useCallback(
     (data: Record<string, unknown>) => {
-      pendingUpdate.current = { ...pendingUpdate.current, ...data }
+      pendingUpdate.current = {
+        data: { ...pendingUpdate.current?.data, ...data },
+        nodeIds: colorRelevantNodes.map((n) => n.id),
+      }
       if (!rafId.current) {
         rafId.current = requestAnimationFrame(() => {
           rafId.current = 0
@@ -46,25 +79,15 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
         })
       }
     },
-    [flushNodeUpdates],
+    [flushNodeUpdates, colorRelevantNodes],
   )
-
-  useOnSelectionChange({
-    onChange: ({ nodes }) => setSelectedNodes(nodes),
-  })
-
-  const colorRelevantNodes = selectedNodes.filter(
-    (n) => n.data?.color !== undefined,
-  )
-  const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
-  const hasColorSelection = colorRelevantNodes.length > 0
 
   const activeColor = hasColorSelection
     ? getSelectionColor(colorRelevantNodes)
     : strokeColor
 
   const activeOpacity = hasColorSelection
-    ? getSelectionOpacity(colorRelevantNodes)
+    ? (getSelectionOpacity(colorRelevantNodes) ?? strokeOpacity)
     : strokeOpacity
 
   const handleColorChange = useCallback(
@@ -88,7 +111,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     const color = getSelectionColor(colorRelevantNodes)
     if (color) setStrokeColor(color)
     const opacity = getSelectionOpacity(colorRelevantNodes)
-    setStrokeOpacity(opacity)
+    if (opacity !== null) setStrokeOpacity(opacity)
   }, [hasColorSelection, colorRelevantNodes, setStrokeColor, setStrokeOpacity])
 
   useEffect(() => {
@@ -105,8 +128,9 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     <div className="absolute top-4 right-4 z-10 bg-background/80 backdrop-blur-sm border rounded-lg p-2 shadow-sm flex items-center gap-1">
       {BASE_TEXT_COLORS.map((color) => (
         <button
+          type="button"
           key={color}
-          className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110"
+          className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           style={{
             backgroundColor: color,
             outline:
@@ -114,7 +138,8 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
             outlineOffset: '1px',
           }}
           onClick={() => handleColorChange(color)}
-          aria-label={`Color ${color}`}
+          aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
+          aria-pressed={activeColor === color}
         />
       ))}
       <div className="w-px h-6 bg-border mx-1" />
@@ -134,15 +159,15 @@ function getSelectionColor(nodes: Array<Node>): string | null {
     const color = node.data?.color as string | undefined
     if (color) colors.add(color)
   }
-  if (colors.size === 1) return [...colors][0]
+  if (colors.size === 1) return colors.values().next().value!
   return null
 }
 
-function getSelectionOpacity(nodes: Array<Node>): number {
+function getSelectionOpacity(nodes: Array<Node>): number | null {
   const opacities = new Set<number>()
   for (const node of nodes) {
     opacities.add((node.data?.opacity as number) ?? 100)
   }
-  if (opacities.size === 1) return [...opacities][0]
-  return 100
+  if (opacities.size === 1) return opacities.values().next().value!
+  return null
 }

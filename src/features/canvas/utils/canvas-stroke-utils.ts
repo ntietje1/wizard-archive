@@ -56,8 +56,10 @@ export function pointsToPathD(
 export function getStrokeBounds(
   points: Array<[number, number, number]>,
   size: number,
+  precomputedOutline?: Array<Array<number>>,
 ): Bounds {
-  const outline = getStroke(points, { ...STROKE_OPTIONS_BASE, size })
+  const outline =
+    precomputedOutline ?? getStroke(points, { ...STROKE_OPTIONS_BASE, size })
   if (outline.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
 
   let minX = Infinity
@@ -108,18 +110,25 @@ export function polylineIntersectsStroke(
 ): boolean {
   if (trail.length < 2 || stroke.points.length < 2) return false
 
-  const bounds = getStrokeBounds(stroke.points, stroke.size)
-  const trailBounds = getPolylineBounds(trail)
-  if (!rectIntersectsBounds(trailBounds, bounds)) return false
-
   const outline = getStroke(stroke.points, {
     ...STROKE_OPTIONS_BASE,
     size: stroke.size,
   })
   if (outline.length < 2) return false
 
+  const bounds = getStrokeBounds(stroke.points, stroke.size, outline)
+
+  const trailBounds = getPolylineBounds(trail)
+  if (!rectIntersectsBounds(trailBounds, bounds)) return false
+
+  const poly = outline.map(([x, y]) => ({ x, y }))
+  for (const pt of trail) {
+    if (pointInPolygon(pt.x, pt.y, poly)) return true
+  }
+
   for (let i = 0; i < trail.length - 1; i++) {
-    for (let j = 0; j < outline.length - 1; j++) {
+    for (let j = 0; j < outline.length; j++) {
+      const k = (j + 1) % outline.length
       if (
         segmentsIntersect(
           trail[i].x,
@@ -128,8 +137,8 @@ export function polylineIntersectsStroke(
           trail[i + 1].y,
           outline[j][0],
           outline[j][1],
-          outline[j + 1][0],
-          outline[j + 1][1],
+          outline[k][0],
+          outline[k][1],
         )
       ) {
         return true
@@ -141,6 +150,8 @@ export function polylineIntersectsStroke(
 }
 
 function getPolylineBounds(points: Array<{ x: number; y: number }>): Bounds {
+  if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
+
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
@@ -179,6 +190,7 @@ export function strokeInsidePolygon(
   stroke: StrokeData,
   polygon: Array<{ x: number; y: number }>,
 ): boolean {
+  if (stroke.points.length === 0) return false
   for (const [px, py] of stroke.points) {
     if (!pointInPolygon(px, py, polygon)) return false
   }
@@ -186,6 +198,7 @@ export function strokeInsidePolygon(
 }
 
 export function strokeInsideRect(stroke: StrokeData, rect: Bounds): boolean {
+  if (stroke.points.length === 0) return false
   for (const [px, py] of stroke.points) {
     if (
       px < rect.x ||
@@ -293,11 +306,12 @@ export function strokePathIntersectsRect(
   rect: Bounds,
 ): boolean {
   if (points.length === 0) return false
+  const half = size / 2
   const expanded = {
-    x: rect.x - size,
-    y: rect.y - size,
-    width: rect.width + size * 2,
-    height: rect.height + size * 2,
+    x: rect.x - half,
+    y: rect.y - half,
+    width: rect.width + size,
+    height: rect.height + size,
   }
   for (const [px, py] of points) {
     if (
@@ -310,11 +324,15 @@ export function strokePathIntersectsRect(
     }
   }
   if (points.length >= 2) {
+    const ex = expanded.x
+    const ey = expanded.y
+    const ew = expanded.width
+    const eh = expanded.height
     const rectEdges: Array<[number, number, number, number]> = [
-      [rect.x, rect.y, rect.x + rect.width, rect.y],
-      [rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height],
-      [rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height],
-      [rect.x, rect.y + rect.height, rect.x, rect.y],
+      [ex, ey, ex + ew, ey],
+      [ex + ew, ey, ex + ew, ey + eh],
+      [ex + ew, ey + eh, ex, ey + eh],
+      [ex, ey + eh, ex, ey],
     ]
     for (const [ex1, ey1, ex2, ey2] of rectEdges) {
       for (let i = 0; i < points.length - 1; i++) {
@@ -336,4 +354,17 @@ export function strokePathIntersectsRect(
     }
   }
   return false
+}
+
+export const MINI_MAP_STROKE_PADDING = 12
+
+const MIN_ZOOM = 1e-6
+
+export function getMiniMapStrokePath(
+  points: Array<[number, number, number]>,
+  size: number,
+  zoom: number,
+): string {
+  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
+  return pointsToPathD(points, (size + MINI_MAP_STROKE_PADDING) / safeZoom)
 }

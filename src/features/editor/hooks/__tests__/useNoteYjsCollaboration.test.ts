@@ -79,7 +79,7 @@ describe('useNoteYjsCollaboration', () => {
     vi.useRealTimers()
   })
 
-  it('delegates to useConvexYjsCollaboration', () => {
+  it('returns doc and provider when rendered', () => {
     const { result } = renderHook(() =>
       useNoteYjsCollaboration(NOTE_ID, USER, true),
     )

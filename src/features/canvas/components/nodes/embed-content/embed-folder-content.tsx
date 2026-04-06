@@ -15,19 +15,22 @@ export function EmbedFolderContent({ folderId }: { folderId: Id<'folders'> }) {
   }
 
   return (
-    <div className="nodrag nopan nowheel h-full overflow-auto p-2 space-y-0.5">
+    <ul
+      aria-label="Folder contents"
+      className="nodrag nopan nowheel h-full overflow-auto p-2 space-y-0.5"
+    >
       {children.map((child) => {
         const Icon = getSidebarItemIcon(child)
         return (
-          <div
-            key={child._id as string}
-            className="flex items-center gap-1.5 px-1.5 py-1 rounded text-xs truncate"
+          <li
+            key={child._id}
+            className="flex items-center gap-1.5 px-1.5 py-1 rounded text-xs"
           >
             <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{child.name}</span>
-          </div>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }

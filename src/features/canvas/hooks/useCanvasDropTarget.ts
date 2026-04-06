@@ -1,21 +1,26 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { monitorForExternal } from '@atlaskit/pragmatic-drag-and-drop/external/adapter'
-import { containsFiles } from '@atlaskit/pragmatic-drag-and-drop/external/file'
-import { useCanvasFileUpload } from './useCanvasFileUpload'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'
+import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
-import { processDataTransferItems } from '~/features/file-upload/utils/folder-reader'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
+import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import {
   CANVAS_DROP_ZONE_TYPE,
   getDragItemId,
 } from '~/features/dnd/utils/dnd-registry'
+
+const EMBED_SIDEBAR_WIDTH = 320
+const EMBED_SIDEBAR_HEIGHT = 240
+const EMBED_FILE_WIDTH = 200
+const EMBED_FILE_HEIGHT = 52
+const STACK_OFFSET = 20
 
 interface UseCanvasDropTargetOptions {
   nodesMap: Y.Map<Node>
@@ -87,63 +92,57 @@ export function useCanvasDropTarget({
           id,
           type: 'embed',
           position,
-          width: 320,
-          height: 240,
+          width: EMBED_SIDEBAR_WIDTH,
+          height: EMBED_SIDEBAR_HEIGHT,
           data: { sidebarItemId },
         })
       },
     })
   }, [])
 
-  const { uploadFileToSidebar } = useCanvasFileUpload()
-  const uploadRef = useRef(uploadFileToSidebar)
-  uploadRef.current = uploadFileToSidebar
+  const { uploadSingleFile } = useFileDropHandler()
+  const uploadRef = useRef(uploadSingleFile)
+  uploadRef.current = uploadSingleFile
 
+  const setFileDropOverride = useDndStore((s) => s.setFileDropOverride)
   useEffect(() => {
-    return monitorForExternal({
-      canMonitor: ({ source }) => containsFiles({ source }),
-      onDrop: async ({ source, location }) => {
-        if (!enabledRef.current) return
-        const topTarget = location.current.dropTargets[0]
-        if (!topTarget) return
-
-        const targetData = topTarget.data
-        if (targetData.type !== CANVAS_DROP_ZONE_TYPE) return
-        if (targetData.canvasId !== canvasIdRef.current) return
-
-        const { clientX, clientY } = location.current.input
-        const basePosition = reactFlowRef.current.screenToFlowPosition({
-          x: clientX,
-          y: clientY,
-        })
-
-        try {
-          const dropResult = await processDataTransferItems(source.items)
-          const files = dropResult.files
-
-          for (let i = 0; i < files.length; i++) {
-            const result = await uploadRef.current(files[i].file)
-            if (!result) continue
-
-            const id = crypto.randomUUID()
-            nodesMapRef.current.set(id, {
-              id,
-              type: 'embed',
-              position: {
-                x: basePosition.x + i * 20,
-                y: basePosition.y + i * 20,
-              },
-              width: 200,
-              height: 52,
-              data: { sidebarItemId: result.id },
-            })
+    if (!enabled) return
+    const handler: FileDropOverride = async (dropResult, clientCoords) => {
+      const basePosition =
+        reactFlowRef.current.screenToFlowPosition(clientCoords)
+      try {
+        const files = dropResult.files
+        const results = await Promise.allSettled(
+          files.map((f) =>
+            uploadRef.current(f.file, null, { navigate: false }),
+          ),
+        )
+        results.forEach((result, i) => {
+          if (result.status === 'rejected') {
+            handleError(result.reason, 'Failed to upload file to canvas')
+            return
           }
-        } catch (error) {
-          handleError(error, 'Failed to upload files to canvas')
-        }
-      },
-    })
-  }, [])
+          if (!result.value) return
+          const id = crypto.randomUUID()
+          nodesMapRef.current.set(id, {
+            id,
+            type: 'embed',
+            position: {
+              x: basePosition.x + i * STACK_OFFSET,
+              y: basePosition.y + i * STACK_OFFSET,
+            },
+            width: EMBED_FILE_WIDTH,
+            height: EMBED_FILE_HEIGHT,
+            data: { sidebarItemId: result.value.id },
+          })
+        })
+      } catch (error) {
+        handleError(error, 'Failed to upload files to canvas')
+      }
+    }
+    setFileDropOverride(handler)
+    return () => setFileDropOverride(null)
+  }, [enabled, setFileDropOverride])
 
   return { dropOverlayRef, isDropTarget, isFileDropTarget }
 }

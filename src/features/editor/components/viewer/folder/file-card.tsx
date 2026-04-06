@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -86,6 +86,8 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
+  const [imageError, setImageError] = useState(false)
+  useEffect(() => setImageError(false), [file.previewUrl])
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -120,7 +122,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           )}
         >
           {/* Top Section: Title + Menu Button */}
-          <div className="flex items-center justify-between min-w-0">
+          <div className="flex items-center justify-between mb-1 min-w-0">
             <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
               {file.name}
             </CardTitle>
@@ -139,12 +141,15 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           </div>
 
           {/* Preview / Icon Section */}
-          <div className="flex items-center justify-center flex-1 mb-10 overflow-hidden">
-            {file.thumbnailUrl ? (
+          <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden flex items-center justify-center">
+            {file.previewUrl && !imageError ? (
               <img
-                src={file.thumbnailUrl}
+                src={file.previewUrl}
                 alt={file.name}
-                className="w-full h-full object-cover rounded-sm"
+                className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
+                draggable={false}
+                loading="lazy"
               />
             ) : (
               <FileIcon className="w-12 h-12 select-none text-muted-foreground" />

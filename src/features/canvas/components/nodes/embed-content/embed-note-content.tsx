@@ -1,117 +1,110 @@
-import { useContext, useEffect, useState } from 'react'
-import { BlockNoteEditor } from '@blocknote/core'
-import { BlockNoteView } from '@blocknote/shadcn'
-import { ClientOnly } from '@tanstack/react-router'
-import { editorSchema } from 'convex/notes/editorSpecs'
-import { CanvasContext } from '../../../utils/canvas-context'
-import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { TextSelection } from '@tiptap/pm/state'
+import type {
+  CustomBlock,
+  CustomBlockNoteEditor,
+} from 'convex/notes/editorSpecs'
 import type { Doc } from 'yjs'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
-import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
-import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
-import {
-  patchYSyncAfterTypeChanged,
-  patchYUndoPluginDestroy,
-} from '~/features/editor/utils/patch-yundo-destroy'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import type { Id } from 'convex/_generated/dataModel'
+import { NoteContent } from '~/features/editor/components/note-content'
+import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { cn } from '~/features/shadcn/lib/utils'
 
-export function EmbedNoteContent({ noteId }: { noteId: Id<'notes'> }) {
-  return (
-    <ClientOnly fallback={null}>
-      <EmbedNoteContentInner noteId={noteId} />
-    </ClientOnly>
-  )
-}
-
-function EmbedNoteContentInner({ noteId }: { noteId: Id<'notes'> }) {
-  const { user, canEdit } = useContext(CanvasContext)
-  const { doc, provider, instanceId, isLoading } = useConvexYjsCollaboration(
-    noteId,
-    user,
-    canEdit,
-  )
-
-  if (isLoading || !doc || !provider) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <LoadingSpinner size="sm" />
-      </div>
-    )
-  }
-
-  return (
-    <EmbedNoteEditor
-      key={instanceId}
-      doc={doc}
-      provider={provider}
-      canEdit={canEdit}
-      user={user}
-    />
-  )
-}
-
-function EmbedNoteEditor({
-  doc,
-  provider,
-  canEdit,
-  user,
+export function EmbedNoteContent({
+  noteId,
+  content,
+  editable,
+  selected,
+  scrollTopRef,
+  clickCoordsRef,
 }: {
-  doc: Doc
-  provider: ConvexYjsProvider
-  canEdit: boolean
-  user: { name: string; color: string }
+  noteId: Id<'notes'>
+  content: Array<CustomBlock>
+  editable: boolean
+  selected: boolean
+  scrollTopRef: React.MutableRefObject<number>
+  clickCoordsRef: React.MutableRefObject<{ x: number; y: number } | null>
 }) {
-  const resolvedTheme = useResolvedTheme()
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const [doc, setDoc] = useState<Doc | null>(null)
+
+  const onEditorChange = useCallback(
+    (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
+      setEditor(newEditor)
+      setDoc(newDoc)
+    },
+    [],
+  )
 
   useEffect(() => {
-    const instance = BlockNoteEditor.create({
-      schema: editorSchema,
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment('document'),
-        user: { name: user.name, color: user.color },
-        showCursorLabels: 'activity',
-      },
-    }) as CustomBlockNoteEditor
+    const el = scrollAreaRef.current?.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLElement | null
+    if (!el) return
 
-    setEditor(instance)
-
-    let cancelled = false
-    let retries = 0
-    const MAX_RETRIES = 30
-    const tryPatch = () => {
-      if (cancelled) return
-      if (instance._tiptapEditor.view.state.plugins.length === 0) {
-        if (++retries >= MAX_RETRIES) return
-        requestAnimationFrame(tryPatch)
-        return
-      }
-      patchYUndoPluginDestroy(instance._tiptapEditor.view)
-      patchYSyncAfterTypeChanged(instance._tiptapEditor.view)
+    const onScroll = () => {
+      scrollTopRef.current = el.scrollTop
     }
-    requestAnimationFrame(tryPatch)
+    el.addEventListener('scroll', onScroll, { passive: true })
+
+    if (scrollTopRef.current > 0) {
+      const raf = requestAnimationFrame(() => {
+        el.scrollTop = scrollTopRef.current
+      })
+      return () => {
+        cancelAnimationFrame(raf)
+        el.removeEventListener('scroll', onScroll)
+      }
+    }
 
     return () => {
-      cancelled = true
-      instance._tiptapEditor.destroy()
+      el.removeEventListener('scroll', onScroll)
     }
-  }, [doc, provider])
+  }, [editor, editable, scrollTopRef])
 
-  if (!editor) return null
+  useEffect(() => {
+    if (!editor || !editable || !doc) return
+
+    const rafId = requestAnimationFrame(() => {
+      const view = editor._tiptapEditor?.view
+      if (!view?.dom?.isConnected) return
+
+      const coords = clickCoordsRef.current
+
+      if (coords) {
+        const pos = view.posAtCoords({ left: coords.x, top: coords.y })
+        if (pos) {
+          const tr = view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, pos.pos),
+          )
+          view.dispatch(tr)
+        }
+        clickCoordsRef.current = null
+      }
+
+      view.focus()
+    })
+
+    return () => cancelAnimationFrame(rafId)
+  }, [editor, editable, doc])
 
   return (
-    <div className="nodrag nopan nowheel h-full overflow-auto">
-      <BlockNoteView
-        editor={editor}
-        theme={resolvedTheme}
-        editable={canEdit}
-        sideMenu={false}
-        formattingToolbar={false}
-        slashMenu={false}
-        linkToolbar={false}
-      />
+    <div
+      className={cn(
+        'h-full',
+        editable && 'nodrag nopan',
+        selected && 'nowheel',
+      )}
+    >
+      <ScrollArea ref={scrollAreaRef} className="h-full">
+        <NoteContent
+          noteId={noteId}
+          content={content}
+          editable={editable}
+          onEditorChange={onEditorChange}
+        />
+      </ScrollArea>
     </div>
   )
 }

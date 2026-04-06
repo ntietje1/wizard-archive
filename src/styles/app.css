@@ -179,9 +179,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :not(.allow-motion *),
-  :not(.allow-motion *)::before,
-  :not(.allow-motion *)::after {
+  :not(.allow-motion, .allow-motion *),
+  :not(.allow-motion, .allow-motion *)::before,
+  :not(.allow-motion, .allow-motion *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -216,6 +216,7 @@
   pointer-events: none !important;
 }
 
+.react-flow__node-stroke path,
 .react-flow__node-stroke .react-flow__resize-control {
   pointer-events: auto !important;
 }

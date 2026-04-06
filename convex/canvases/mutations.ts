@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { createCanvas as createCanvasFn } from './functions/createCanvas'
 import { updateCanvas as updateCanvasFn } from './functions/updateCanvas'
-import type { Id } from '../_generated/dataModel'
 
 export const createCanvas = authMutation({
   args: {
@@ -16,10 +15,7 @@ export const createCanvas = authMutation({
     canvasId: v.id('canvases'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ canvasId: Id<'canvases'>; slug: string }> => {
+  handler: async (ctx, args) => {
     return await createCanvasFn(ctx, {
       name: args.name,
       parentId: args.parentId,
@@ -41,10 +37,7 @@ export const updateCanvas = authMutation({
     canvasId: v.id('canvases'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ canvasId: Id<'canvases'>; slug: string }> => {
+  handler: async (ctx, args) => {
     return await updateCanvasFn(ctx, {
       canvasId: args.canvasId,
       name: args.name,

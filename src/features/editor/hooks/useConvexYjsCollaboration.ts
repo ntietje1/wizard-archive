@@ -65,20 +65,28 @@ export function useConvexYjsCollaboration(
     if (state) state.provider.writable = canEdit
   }, [state, canEdit])
 
+  const [error, setError] = useState<Error | null>(null)
+
   const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
     documentId,
     afterSeq,
   })
 
   useEffect(() => {
+    if (updatesResult.isError) {
+      setIsLoading(false)
+      setError(updatesResult.error)
+      return
+    }
     if (updatesResult.data && state) {
+      setError(null)
       state.provider.applyRemoteUpdates(updatesResult.data)
       if (updatesResult.data.length > 0) {
         setAfterSeq(state.provider.lastAppliedSeq)
       }
       if (isLoading) setIsLoading(false)
     }
-  }, [updatesResult.data, state])
+  }, [updatesResult.data, updatesResult.isError, updatesResult.error, state])
 
   const awarenessResult = useAuthQuery(api.yjsSync.queries.getAwareness, {
     documentId,
@@ -95,5 +103,6 @@ export function useConvexYjsCollaboration(
     provider: state?.provider ?? null,
     instanceId: state?.instanceId ?? 0,
     isLoading: isLoading || !state,
+    error,
   }
 }

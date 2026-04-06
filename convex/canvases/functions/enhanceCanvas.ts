@@ -6,7 +6,7 @@ import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { Canvas, CanvasFromDb, CanvasWithContent } from '../types'
 
-export const enhanceCanvas = async (
+export const enhanceCanvas = (
   ctx: AuthQueryCtx,
   {
     canvas,

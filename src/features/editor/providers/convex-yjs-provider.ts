@@ -68,8 +68,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private maxWaitTimer: ReturnType<typeof setTimeout> | null = null
   private pushInFlight = false
+  private pushInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessTimer: ReturnType<typeof setTimeout> | null = null
   private awarenessInFlight = false
+  private awarenessInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessDirty = false
 
   constructor(
@@ -163,19 +165,21 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         .catch(() => {})
     }
 
-    teardown().finally(() => {
-      removeAwarenessStates(
-        this.awareness,
-        [this.doc.clientID],
-        'local-disconnect',
-      )
+    teardown()
+      .catch(() => {})
+      .finally(() => {
+        removeAwarenessStates(
+          this.awareness,
+          [this.doc.clientID],
+          'local-disconnect',
+        )
 
-      this.doc.off('update', this.handleDocUpdate)
-      this.awareness.off('update', this.handleAwarenessUpdate)
-      this.awareness.destroy()
+        this.doc.off('update', this.handleDocUpdate)
+        this.awareness.off('update', this.handleAwarenessUpdate)
+        this.awareness.destroy()
 
-      super.destroy()
-    })
+        super.destroy()
+      })
   }
 
   // -- Document update batching --
@@ -200,7 +204,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
 
   private flushUpdates(): Promise<void> {
     this.clearUpdateTimers()
-    if (this.pushInFlight) return Promise.resolve()
+    if (this.pushInFlight) return this.pushInFlightPromise
     if (this.pendingUpdates.length === 0) return Promise.resolve()
 
     const merged =
@@ -210,7 +214,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.pendingUpdates = []
 
     this.pushInFlight = true
-    return this.config
+    this.pushInFlightPromise = this.config
       .pushUpdate({
         documentId: this.documentId,
         update: uint8ToArrayBuffer(merged),
@@ -228,6 +232,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         this.pushInFlight = false
         if (this.pendingUpdates.length > 0) this.scheduleFlush()
       })
+    return this.pushInFlightPromise
   }
 
   private scheduleFlush() {
@@ -258,7 +263,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     }
   }
 
-  // -- Awareness debouncing --
+  // -- Awareness throttling --
 
   private handleAwarenessUpdate = (
     {
@@ -302,14 +307,14 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.clearAwarenessTimer()
     if (this.awarenessInFlight) {
       this.awarenessDirty = true
-      return Promise.resolve()
+      return this.awarenessInFlightPromise
     }
 
     const myClientId = this.doc.clientID
     const encoded = encodeAwarenessUpdate(this.awareness, [myClientId])
 
     this.awarenessInFlight = true
-    return this.config
+    this.awarenessInFlightPromise = this.config
       .pushAwareness({
         documentId: this.documentId,
         clientId: myClientId,
@@ -326,5 +331,6 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
           this.scheduleAwarenessFlush()
         }
       })
+    return this.awarenessInFlightPromise
   }
 }

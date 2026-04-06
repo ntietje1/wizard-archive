@@ -25,6 +25,11 @@ interface BaseFields {
   parentId: Id<'folders'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  previewUrl: string | null
+  previewStorageId: Id<'_storage'> | null
+  previewLockedUntil: number | null
+  previewClaimToken: string | null
+  previewUpdatedAt: number | null
   updatedTime: number | null
   updatedBy: Id<'userProfiles'> | null
   createdBy: Id<'userProfiles'>
@@ -47,6 +52,11 @@ function baseFields(): BaseFields {
     parentId: null,
     allPermissionLevel: null,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewUrl: null,
+    previewStorageId: null,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
     createdBy: testId('user_1'),

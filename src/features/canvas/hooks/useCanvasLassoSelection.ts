@@ -6,7 +6,7 @@ import {
   strokePathIntersectsPolygon,
 } from '../utils/canvas-stroke-utils'
 import type { StrokeNodeData } from '../components/nodes/stroke-node'
-import type { SelectingState } from '../utils/canvas-awareness-types'
+import type { Point2D, SelectingState } from '../utils/canvas-awareness-types'
 
 interface UseCanvasLassoSelectionOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void
@@ -15,15 +15,21 @@ interface UseCanvasLassoSelectionOptions {
 export function useCanvasLassoSelection({
   setLocalSelecting,
 }: UseCanvasLassoSelectionOptions) {
-  const pointsRef = useRef<Array<{ x: number; y: number }>>([])
+  const pointsRef = useRef<Array<Point2D>>([])
   const activeRef = useRef(false)
+  const capturedRef = useRef<{
+    element: Element
+    pointerId: number
+  } | null>(null)
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      const target = e.target as HTMLElement
+      target.setPointerCapture(e.pointerId)
+      capturedRef.current = { element: target, pointerId: e.pointerId }
       activeRef.current = true
       const pos = reactFlow.screenToFlowPosition({
         x: e.clientX,
@@ -64,6 +70,16 @@ export function useCanvasLassoSelection({
   const onPointerUp = useCallback(() => {
     if (!activeRef.current) return
     activeRef.current = false
+    if (capturedRef.current) {
+      try {
+        capturedRef.current.element.releasePointerCapture(
+          capturedRef.current.pointerId,
+        )
+      } catch {
+        /* already released */
+      }
+      capturedRef.current = null
+    }
     setLocalSelecting(null)
     const polygon = pointsRef.current
     const store = useCanvasToolStore.getState()
@@ -76,12 +92,15 @@ export function useCanvasLassoSelection({
     const { nodeLookup } = storeApi.getState()
     const selectedNodeIds = new Set<string>()
 
+    // Strokes use intersection (any overlap selects) since they're thin paths;
+    // non-stroke nodes use full containment (all corners inside lasso).
     nodeLookup.forEach((internalNode, nodeId) => {
       const { position, measured } = internalNode
       if (!measured?.width || !measured?.height) return
 
       if (internalNode.type === 'stroke') {
         const strokeData = internalNode.data as StrokeNodeData
+        if (!strokeData?.bounds || !Array.isArray(strokeData.points)) return
         const offsetX = position.x - strokeData.bounds.x
         const offsetY = position.y - strokeData.bounds.y
         const adjustedPoints = strokeData.points.map(
@@ -106,15 +125,20 @@ export function useCanvasLassoSelection({
     })
 
     reactFlow.setNodes((nodes) =>
-      nodes.map((n) => ({ ...n, selected: selectedNodeIds.has(n.id) })),
+      nodes.map((n) => {
+        const isSelected = selectedNodeIds.has(n.id)
+        return n.selected === isSelected ? n : { ...n, selected: isSelected }
+      }),
     )
 
     reactFlow.setEdges((edges) =>
-      edges.map((edge) => ({
-        ...edge,
-        selected:
-          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
-      })),
+      edges.map((edge) => {
+        const isSelected =
+          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+        return edge.selected === isSelected
+          ? edge
+          : { ...edge, selected: isSelected }
+      }),
     )
 
     store.setLassoPath([])

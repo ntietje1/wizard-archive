@@ -50,9 +50,8 @@ export async function updateMap(
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
-    if (imageStorageId) {
-      updates.thumbnailStorageId = imageStorageId
-    }
+    // Maps use imageStorageId as their preview — no separate preview pipeline
+    updates.previewStorageId = imageStorageId
   }
   if (iconName !== undefined) {
     updates.iconName = iconName

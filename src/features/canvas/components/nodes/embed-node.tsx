@@ -1,16 +1,18 @@
+import { useContext, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { useIsEmbedRichView } from '../../hooks/useEmbedZoomLevel'
-import { useEmbedItemContent } from '../../hooks/useEmbedItemContent'
+import { CanvasContext } from '../../utils/canvas-context'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-content/embed-note-content'
 import { EmbedFolderContent } from './embed-content/embed-folder-content'
 import { EmbedMapContent } from './embed-content/embed-map-content'
 import { EmbedFileContent } from './embed-content/embed-file-content'
+import { EmbedCanvasContent } from './embed-content/embed-canvas-content'
 import type { NodeProps } from '@xyflow/react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { assertNever } from '~/shared/utils/utils'
@@ -20,24 +22,38 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 
-  const isRichView = useIsEmbedRichView()
-  const contentItem = useEmbedItemContent(sidebarItemId, isRichView)
+  const { data: contentItem } = useSidebarItemById(sidebarItemId)
+
+  const { editingEmbedId, setEditingEmbedId, canEdit } =
+    useContext(CanvasContext)
+  const isEditing = editingEmbedId === id && !!selected
+
+  const scrollTopRef = useRef(0)
+  const clickCoordsRef = useRef<{ x: number; y: number } | null>(null)
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (canEdit) {
+      clickCoordsRef.current = { x: e.clientX, y: e.clientY }
+      setEditingEmbedId(id)
+    }
+  }
 
   const Icon = getSidebarItemIcon(item)
   const label = item?.name ?? 'Missing item'
-  const typeLabel = item?.type ?? 'unknown'
   const isMissing = !item
-  const thumbnailUrl = item?.thumbnailUrl
 
   return (
     <ResizableNodeWrapper
       id={id}
       selected={!!selected}
       dragging={!!dragging}
-      minWidth={isRichView ? 240 : 200}
-      minHeight={isRichView ? 180 : 260}
+      minWidth={240}
+      minHeight={180}
     >
-      <div className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden">
+      <div
+        className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden"
+        onDoubleClick={handleDoubleClick}
+      >
         <Handle type="target" position={Position.Top} className="!bg-primary" />
 
         <div className="flex items-center gap-2 min-w-0 px-3 py-2">
@@ -48,33 +64,18 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
-            {!isRichView && !thumbnailUrl && (
-              <p className="text-xs text-muted-foreground uppercase tracking-widest select-none">
-                {typeLabel}
-              </p>
-            )}
           </div>
         </div>
 
-        {isRichView && !isMissing && (
+        {!isMissing && (
           <div className="flex-1 min-h-0 border-t">
-            <EmbedRichContent contentItem={contentItem} />
-          </div>
-        )}
-
-        {!isRichView && !isMissing && thumbnailUrl && (
-          <div className="flex-1 min-h-0 border-t">
-            <img
-              src={thumbnailUrl}
-              alt={label}
-              className="w-full h-full object-cover object-top"
+            <EmbedRichContent
+              contentItem={contentItem}
+              isEditing={isEditing}
+              selected={!!selected}
+              scrollTopRef={scrollTopRef}
+              clickCoordsRef={clickCoordsRef}
             />
-          </div>
-        )}
-
-        {!isRichView && !isMissing && !thumbnailUrl && (
-          <div className="flex-1 min-h-0 border-t flex items-center justify-center">
-            <Icon className="h-8 w-8 text-muted-foreground/50" />
           </div>
         )}
 
@@ -90,9 +91,17 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
 
 function EmbedRichContent({
   contentItem,
+  isEditing,
+  selected,
+  scrollTopRef,
+  clickCoordsRef,
 }: {
   contentItem: AnySidebarItemWithContent | undefined
-}) {
+  isEditing: boolean
+  selected: boolean
+  scrollTopRef: React.RefObject<number>
+  clickCoordsRef: React.RefObject<{ x: number; y: number } | null>
+}): React.ReactElement | null {
   if (!contentItem) {
     return (
       <div className="h-full flex items-center justify-center opacity-50">
@@ -103,7 +112,16 @@ function EmbedRichContent({
 
   switch (contentItem.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return <EmbedNoteContent noteId={contentItem._id} />
+      return (
+        <EmbedNoteContent
+          noteId={contentItem._id}
+          content={contentItem.content}
+          editable={isEditing}
+          selected={selected}
+          scrollTopRef={scrollTopRef}
+          clickCoordsRef={clickCoordsRef}
+        />
+      )
     case SIDEBAR_ITEM_TYPES.folders:
       return <EmbedFolderContent folderId={contentItem._id} />
     case SIDEBAR_ITEM_TYPES.gameMaps:
@@ -113,11 +131,13 @@ function EmbedRichContent({
         <EmbedFileContent
           downloadUrl={contentItem.downloadUrl}
           contentType={contentItem.contentType}
+          alt={contentItem.name}
         />
       )
     case SIDEBAR_ITEM_TYPES.canvases:
-      return null
+      return <EmbedCanvasContent canvasId={contentItem._id} />
     default:
       assertNever(contentItem)
+      return null
   }
 }

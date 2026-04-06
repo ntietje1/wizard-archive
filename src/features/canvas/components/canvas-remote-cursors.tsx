@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useNodes } from '@xyflow/react'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import { getContrastColor } from '~/shared/utils/color'
@@ -29,9 +29,11 @@ function CursorIcon({ color }: { color: string }) {
 
 const PIN_LERP_DURATION = 200
 
-function RemoteCursor({ user }: { user: RemoteUser }) {
+function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
-  const isDragging = !!(user.dragging && Object.keys(user.dragging).length > 0)
+  const isDragging = !!(
+    remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0
+  )
   const nodes = useNodes()
   const wasDraggingRef = useRef(false)
   const lerpRef = useRef<{
@@ -40,40 +42,39 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
   } | null>(null)
   const pinnedRef = useRef<{ x: number; y: number } | null>(null)
   const rafIdRef = useRef<number>(0)
+  const animatedPosRef = useRef<{ x: number; y: number } | null>(null)
 
   let pinnedPosition: { x: number; y: number } | null = null
-  if (isDragging && user.cursor && user.dragging) {
-    const entries = Object.entries(user.dragging)
+  if (isDragging && remoteUser.cursor && remoteUser.dragging) {
+    const entries = Object.entries(remoteUser.dragging)
     if (entries.length > 0) {
       const [refNodeId, refDragPos] = entries[0]
       const node = nodes.find((n) => n.id === refNodeId)
       if (node) {
         pinnedPosition = {
-          x: node.position.x + (user.cursor.x - refDragPos.x),
-          y: node.position.y + (user.cursor.y - refDragPos.y),
+          x: node.position.x + (remoteUser.cursor.x - refDragPos.x),
+          y: node.position.y + (remoteUser.cursor.y - refDragPos.y),
         }
       }
     }
   }
 
-  pinnedRef.current = pinnedPosition
+  useLayoutEffect(() => {
+    pinnedRef.current = pinnedPosition
 
-  if (isDragging && !wasDraggingRef.current && elementRef.current) {
-    const style = elementRef.current.style.transform
-    const match = style.match(/translate\((.+?)px,\s*(.+?)px\)/)
-    if (match) {
+    if (isDragging && !wasDraggingRef.current && animatedPosRef.current) {
       lerpRef.current = {
-        from: { x: parseFloat(match[1]), y: parseFloat(match[2]) },
+        from: { ...animatedPosRef.current },
         startTime: performance.now(),
       }
     }
-  }
-  wasDraggingRef.current = isDragging
+    wasDraggingRef.current = isDragging
+  }, [isDragging, pinnedPosition?.x ?? null, pinnedPosition?.y ?? null])
 
-  useSpringPosition(isDragging ? null : user.cursor, elementRef)
+  useSpringPosition(isDragging ? null : remoteUser.cursor, elementRef)
 
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDragging || !remoteUser.cursor) {
       lerpRef.current = null
       return
     }
@@ -81,34 +82,35 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
     const animate = () => {
       const pinned = pinnedRef.current
       const el = elementRef.current
-      if (!pinned || !el) {
-        rafIdRef.current = requestAnimationFrame(animate)
-        return
-      }
+      if (!pinned || !el) return
 
       const lerp = lerpRef.current
+      let x: number
+      let y: number
       if (lerp) {
         const t = Math.min(
           (performance.now() - lerp.startTime) / PIN_LERP_DURATION,
           1,
         )
         const ease = t * (2 - t)
-        const x = lerp.from.x + (pinned.x - lerp.from.x) * ease
-        const y = lerp.from.y + (pinned.y - lerp.from.y) * ease
-        el.style.transform = `translate(${x}px, ${y}px)`
+        x = lerp.from.x + (pinned.x - lerp.from.x) * ease
+        y = lerp.from.y + (pinned.y - lerp.from.y) * ease
         if (t >= 1) lerpRef.current = null
       } else {
-        el.style.transform = `translate(${pinned.x}px, ${pinned.y}px)`
+        x = pinned.x
+        y = pinned.y
       }
+      animatedPosRef.current = { x, y }
+      el.style.transform = `translate(${x}px, ${y}px)`
 
       rafIdRef.current = requestAnimationFrame(animate)
     }
 
     rafIdRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafIdRef.current)
-  }, [isDragging])
+  }, [isDragging, remoteUser.cursor?.x, remoteUser.cursor?.y])
 
-  if (!user.cursor) return null
+  if (!remoteUser.cursor) return null
 
   return (
     <div
@@ -122,8 +124,8 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
         willChange: 'transform',
       }}
     >
-      <CursorIcon color={user.user.color} />
-      <NameLabel name={user.user.name} color={user.user.color} />
+      <CursorIcon color={remoteUser.user.color} />
+      <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>
   )
 }
@@ -158,7 +160,7 @@ export function CanvasRemoteCursors({
   return (
     <>
       {remoteUsers.map((user) => (
-        <RemoteCursor key={user.clientId} user={user} />
+        <RemoteCursor key={user.clientId} remoteUser={user} />
       ))}
     </>
   )

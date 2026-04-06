@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 
 export const MIN_ZOOM = 0.1
@@ -6,14 +6,16 @@ export const MAX_ZOOM = 4
 const ZOOM_SENSITIVITY = 0.005
 const PAN_SENSITIVITY = 1
 
-export function useCanvasWheel() {
+export function useCanvasWheel(ref: React.RefObject<HTMLDivElement | null>) {
   const reactFlowInstance = useReactFlow()
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const handler = (e: WheelEvent) => {
+      if (e.target instanceof Element && e.target.closest('.nowheel')) {
+        return
+      }
       e.preventDefault()
       const { deltaX, deltaY, ctrlKey, shiftKey } = e
       if (ctrlKey) {
@@ -21,11 +23,12 @@ export function useCanvasWheel() {
         const rect = el.getBoundingClientRect()
         const mouseX = e.clientX - rect.left
         const mouseY = e.clientY - rect.top
+        const currentZoom = viewport.zoom || MIN_ZOOM
         const newZoom = Math.min(
           MAX_ZOOM,
-          Math.max(MIN_ZOOM, viewport.zoom * (1 - deltaY * ZOOM_SENSITIVITY)),
+          Math.max(MIN_ZOOM, currentZoom * (1 - deltaY * ZOOM_SENSITIVITY)),
         )
-        const scale = newZoom / viewport.zoom
+        const scale = newZoom / currentZoom
         reactFlowInstance.setViewport({
           x: mouseX - (mouseX - viewport.x) * scale,
           y: mouseY - (mouseY - viewport.y) * scale,
@@ -49,7 +52,5 @@ export function useCanvasWheel() {
     }
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
-  }, [reactFlowInstance])
-
-  return ref
+  }, [reactFlowInstance, ref])
 }

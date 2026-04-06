@@ -23,11 +23,25 @@ export async function hardDeleteItem(
     await ctx.storage.delete(item.imageStorageId)
   }
 
+  // Clean up preview image (skip maps where preview === image, already deleted above)
+  if (
+    item.previewStorageId &&
+    !(
+      item.type === SIDEBAR_ITEM_TYPES.gameMaps &&
+      item.previewStorageId === item.imageStorageId
+    )
+  ) {
+    await ctx.storage.delete(item.previewStorageId)
+  }
+
   await applyToDependents(ctx, item, async (_, doc) => {
     await ctx.db.delete(doc._id)
   })
 
-  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+  if (
+    item.type === SIDEBAR_ITEM_TYPES.notes ||
+    item.type === SIDEBAR_ITEM_TYPES.canvases
+  ) {
     await deleteYjsDocument(ctx, item._id)
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { rectFromPoints } from '../utils/canvas-stroke-utils'
@@ -16,12 +16,37 @@ export function useCanvasRectangleDraw({
   const activeRef = useRef(false)
   const lastClientPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const rafRef = useRef(0)
+  const captureTargetRef = useRef<HTMLElement | null>(null)
+  const pointerIdRef = useRef<number | null>(null)
 
   const reactFlow = useReactFlow()
 
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = 0
+      }
+      if (captureTargetRef.current && pointerIdRef.current !== null) {
+        try {
+          captureTargetRef.current.releasePointerCapture(pointerIdRef.current)
+        } catch {
+          // Pointer capture may already be released
+        }
+        captureTargetRef.current = null
+        pointerIdRef.current = null
+      }
+      activeRef.current = false
+    }
+  }, [])
+
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      if (e.button !== 0) return
+      const target = e.target as HTMLElement
+      target.setPointerCapture(e.pointerId)
+      captureTargetRef.current = target
+      pointerIdRef.current = e.pointerId
       activeRef.current = true
       const pos = reactFlow.screenToFlowPosition({
         x: e.clientX,
@@ -56,6 +81,16 @@ export function useCanvasRectangleDraw({
     if (!activeRef.current) return
     activeRef.current = false
 
+    if (captureTargetRef.current && pointerIdRef.current !== null) {
+      try {
+        captureTargetRef.current.releasePointerCapture(pointerIdRef.current)
+      } catch {
+        // Pointer capture may already be released
+      }
+      captureTargetRef.current = null
+      pointerIdRef.current = null
+    }
+
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current)
       rafRef.current = 0
@@ -71,7 +106,7 @@ export function useCanvasRectangleDraw({
     if (!s) return
 
     const rect = rectFromPoints(s, pos)
-    if (rect.width < MIN_RECT_SIZE && rect.height < MIN_RECT_SIZE) return
+    if (rect.width < MIN_RECT_SIZE || rect.height < MIN_RECT_SIZE) return
 
     const id = crypto.randomUUID()
     const node: Node = {

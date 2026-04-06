@@ -7,6 +7,8 @@ import {
   validateFileForUpload,
 } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   DropResult,
@@ -18,6 +20,7 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { convertTextToBlocks } from '~/features/editor/utils/text-to-blocks'
 import {
   FileProgressContent,
@@ -29,9 +32,20 @@ import {
   getErrorMessage,
   uploadFile,
 } from '~/features/file-upload/utils/file-upload'
+import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 
 interface DropOptions {
   parentId: Id<'folders'> | null
+}
+
+interface UploadSingleFileOptions {
+  silent?: boolean
+  navigate?: boolean
+}
+
+export interface UploadSingleFileResult {
+  id: SidebarItemId
+  slug: string
 }
 
 export interface UploadProgress {
@@ -50,12 +64,14 @@ export function useFileDropHandler() {
   const { createItem } = useCreateSidebarItem()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
+  const { getSiblings } = useSidebarValidation()
 
   const generateUploadUrl = useAppMutation(
     api.storage.mutations.generateUploadUrl,
   )
   const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
   const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
+  const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
 
   const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
     new Map(),
@@ -64,19 +80,20 @@ export function useFileDropHandler() {
   const uploadSingleFile = async (
     file: File,
     parentId: Id<'folders'> | null,
-    silent = false,
-  ): Promise<boolean> => {
+    { silent = false, navigate = true }: UploadSingleFileOptions = {},
+  ): Promise<UploadSingleFileResult | null> => {
     if (!campaignId) {
       toast.error('No campaign selected')
-      return false
+      return null
     }
 
-    const fileName = file.name
+    const siblingNames = getSiblings(parentId).map((s) => s.name)
+    const fileName = deduplicateName(file.name, siblingNames)
     const uploadId = crypto.randomUUID()
     const validation = validateFileForUpload(file)
     if (!validation.valid) {
       if (!silent) toast.error(`${fileName}: ${validation.error}`)
-      return false
+      return null
     }
 
     let toastId: string | number | undefined
@@ -97,9 +114,11 @@ export function useFileDropHandler() {
     }
 
     try {
+      let result: UploadSingleFileResult
+
       if (isTextFile(file.type, file.name)) {
         const blocks = await convertTextToBlocks(file)
-        const result = await createItem({
+        result = await createItem({
           type: SIDEBAR_ITEM_TYPES.notes,
           campaignId,
           name: fileName,
@@ -113,8 +132,6 @@ export function useFileDropHandler() {
             <ToastContent title={fileName} message="Note created" />,
             { duration: 3000, style: TOAST_STYLE },
           )
-          openParentFolders(result.id)
-          navigateToItem(result.slug, true)
         }
       } else if (isMediaFile(file.type)) {
         const uploadUrl = await generateUploadUrl.mutateAsync({})
@@ -141,10 +158,10 @@ export function useFileDropHandler() {
 
         await trackUpload.mutateAsync({
           storageId,
-          originalFileName: fileName,
+          originalFileName: file.name,
         })
         await commitUpload.mutateAsync({ storageId })
-        const result = await createItem({
+        result = await createItem({
           type: SIDEBAR_ITEM_TYPES.files,
           campaignId,
           name: fileName,
@@ -152,24 +169,30 @@ export function useFileDropHandler() {
           parentId,
         })
 
+        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>).catch(
+          (err: unknown) => logger.error('PDF preview generation failed', err),
+        )
+
         if (!silent) {
           toast.dismiss(toastId)
           toast.success(
             <ToastContent title={fileName} message="File created" />,
             { duration: 3000, style: TOAST_STYLE },
           )
-          openParentFolders(result.id)
-          navigateToItem(result.slug)
         }
       } else {
         if (silent) {
           logger.warn(`${fileName}: unsupported file type`)
         }
-        return false
+        return null
       }
 
       if (!silent) activeUploadsRef.current.delete(uploadId)
-      return true
+      if (navigate) {
+        openParentFolders(result.id)
+        navigateToItem(result.slug, isTextFile(file.type, file.name))
+      }
+      return result
     } catch (error) {
       if (!silent) activeUploadsRef.current.delete(uploadId)
       if (!silent && toastId) {
@@ -209,11 +232,14 @@ export function useFileDropHandler() {
     for (const { file } of folder.files) {
       try {
         const validation = validateFileForUpload(file)
-        const success = await uploadSingleFile(file, folderId, true)
-        if (!success && validation.valid) {
+        const res = await uploadSingleFile(file, folderId, {
+          silent: true,
+          navigate: false,
+        })
+        if (!res && validation.valid) {
           logger.warn(`${file.name}: unsupported file type`)
         }
-        if (success) {
+        if (res) {
           progress.processedFiles++
         } else {
           progress.skippedFiles++
@@ -252,7 +278,7 @@ export function useFileDropHandler() {
     // Single file: individual toast with navigation
     if (isSingleFile) {
       // uploadSingleFile handles all toasts when silent=false
-      await uploadSingleFile(files[0].file, options?.parentId ?? null, false)
+      await uploadSingleFile(files[0].file, options?.parentId ?? null)
       return
     }
 
@@ -294,15 +320,15 @@ export function useFileDropHandler() {
       for (const { file } of files) {
         try {
           const validation = validateFileForUpload(file)
-          const success = await uploadSingleFile(
+          const result = await uploadSingleFile(
             file,
             options?.parentId ?? null,
-            true,
+            { silent: true, navigate: false },
           )
-          if (!success && validation.valid) {
+          if (!result && validation.valid) {
             logger.warn(`${file.name}: unsupported file type`)
           }
-          if (success) {
+          if (result) {
             progress.processedFiles++
           } else {
             progress.skippedFiles++
@@ -363,5 +389,5 @@ export function useFileDropHandler() {
     }
   }
 
-  return { handleDrop }
+  return { handleDrop, uploadSingleFile }
 }

@@ -64,6 +64,10 @@ export async function createNote(
     campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewStorageId: null,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,
@@ -71,19 +75,17 @@ export async function createNote(
     createdBy: profileId,
   })
 
-  if (content) {
-    await saveTopLevelBlocksForNote(ctx, { noteId, content })
-  }
-
   let initialState: ArrayBuffer | undefined
   if (content && content.length > 0) {
+    await saveTopLevelBlocksForNote(ctx, { noteId, content })
+
     const editor = BlockNoteEditor.create({
       schema: editorSchema,
       _headless: true,
     })
     let doc: Y.Doc | undefined
     try {
-      doc = blocksToYDoc(editor, content)
+      doc = blocksToYDoc(editor, content, 'document')
       initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
     } finally {
       doc?.destroy()

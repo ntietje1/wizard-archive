@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   MiniMap,
@@ -8,6 +8,7 @@ import {
   ViewportPortal,
   useReactFlow,
 } from '@xyflow/react'
+import { ClientOnly } from '@tanstack/react-router'
 import '@xyflow/react/dist/style.css'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -26,6 +27,7 @@ import { useCanvasSelectionSync } from '../hooks/useCanvasSelectionSync'
 import { MAX_ZOOM, MIN_ZOOM, useCanvasWheel } from '../hooks/useCanvasWheel'
 import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts'
 import { useCanvasOverlayHandlers } from '../hooks/useCanvasOverlayHandlers'
+import { useCanvasStrokeClick } from '../hooks/useCanvasStrokeClick'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasStrokes } from './canvas-strokes'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
@@ -34,14 +36,20 @@ import { CanvasColorPanel } from './canvas-color-panel'
 import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RemoteHighlight } from '../utils/canvas-context'
-import type { RemoteUser } from '../utils/canvas-awareness-types'
+import type {
+  Point2D,
+  RemoteUser,
+  ResizingState,
+} from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { StrokeNodeData } from './nodes/stroke-node'
 import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
+import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -74,6 +82,7 @@ const DELETE_KEYS_NONE: Array<string> = []
 const EMPTY_NODES: Array<Node> = []
 const EMPTY_EDGES: Array<Edge> = []
 const EMPTY_DRAG_POSITIONS: Record<string, { x: number; y: number }> = {}
+const EMPTY_RESIZE_DIMENSIONS: ResizingState = {}
 const PAN_MIDDLE_ONLY: Array<number> = [1]
 const PAN_BOTH: Array<number> = [0, 1]
 const SELECTION_KEY_DISABLED: Array<string> = []
@@ -82,9 +91,11 @@ export function CanvasViewer({
   item: canvas,
 }: EditorViewerProps<CanvasWithContent>) {
   return (
-    <ReactFlowProvider>
-      <CanvasViewerInner canvas={canvas} />
-    </ReactFlowProvider>
+    <ClientOnly fallback={null}>
+      <ReactFlowProvider>
+        <CanvasViewerInner canvas={canvas} />
+      </ReactFlowProvider>
+    </ClientOnly>
   )
 }
 
@@ -101,7 +112,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   const userName = profile?.name ?? profile?.username ?? 'Anonymous'
   const userColor = profile ? getCursorColor(profile._id) : '#61afef'
 
-  const { doc, provider, isLoading } = useConvexYjsCollaboration(
+  const { doc, provider, isLoading, error } = useConvexYjsCollaboration(
     canvas._id,
     { name: userName, color: userColor },
     canEdit,
@@ -125,6 +136,14 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     return () => useCanvasToolStore.getState().reset()
   }, [canvas._id])
 
+  if (error) {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center text-muted-foreground">
+        <p>Failed to load canvas. Please try refreshing the page.</p>
+      </div>
+    )
+  }
+
   if (isLoading || !doc || !nodesMap || !edgesMap) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
@@ -142,6 +161,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
       colorMode={resolvedTheme}
       provider={provider}
       user={canvasUser}
+      doc={doc}
     />
   )
 }
@@ -154,6 +174,7 @@ function CanvasFlow({
   colorMode,
   provider,
   user: canvasUser,
+  doc,
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -162,12 +183,15 @@ function CanvasFlow({
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
   user: { name: string; color: string }
+  doc: Y.Doc
 }) {
   const reactFlowInstance = useReactFlow()
+  const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
   const {
     remoteUsers,
     setLocalCursor,
     setLocalDragging,
+    setLocalResizing,
     setLocalSelection,
     setLocalDrawing,
     setLocalSelecting,
@@ -182,12 +206,39 @@ function CanvasFlow({
 
   const remoteDragPositions = useMemo(() => {
     let merged: Record<string, { x: number; y: number }> | null = null
-    for (const user of remoteUsers) {
-      if (!user.dragging) continue
-      if (!merged) merged = {}
-      Object.assign(merged, user.dragging)
+    const owners = new Map<string, number>()
+    for (const remoteUser of remoteUsers) {
+      if (!remoteUser.dragging) continue
+      for (const [nodeId, pos] of Object.entries(remoteUser.dragging)) {
+        if (!merged) merged = {}
+        const existingOwner = owners.get(nodeId)
+        if (
+          existingOwner === undefined ||
+          remoteUser.clientId < existingOwner
+        ) {
+          merged[nodeId] = pos
+          owners.set(nodeId, remoteUser.clientId)
+        }
+      }
     }
     return merged ?? EMPTY_DRAG_POSITIONS
+  }, [remoteUsers])
+
+  const remoteResizeDimensions = useMemo(() => {
+    let merged: ResizingState | null = null
+    const owners = new Map<string, number>()
+    for (const user of remoteUsers) {
+      if (!user.resizing) continue
+      for (const [nodeId, dims] of Object.entries(user.resizing)) {
+        if (!merged) merged = {}
+        const existingOwner = owners.get(nodeId)
+        if (existingOwner === undefined || user.clientId < existingOwner) {
+          merged[nodeId] = dims
+          owners.set(nodeId, user.clientId)
+        }
+      }
+    }
+    return merged ?? EMPTY_RESIZE_DIMENSIONS
   }, [remoteUsers])
 
   const {
@@ -196,7 +247,12 @@ function CanvasFlow({
     onNodesDelete,
     onEdgesDelete,
     onConnect,
-  } = useYjsReactFlowSync(nodesMap, edgesMap, remoteDragPositions)
+  } = useYjsReactFlowSync(
+    nodesMap,
+    edgesMap,
+    remoteDragPositions,
+    remoteResizeDimensions,
+  )
 
   const { onSelectionChange: onHistorySelectionChange } = useCanvasHistory({
     nodesMap,
@@ -221,16 +277,57 @@ function CanvasFlow({
   useCanvasSelectionSync({
     setLocalSelection,
     onHistorySelectionChange,
+    editingEmbedId,
+    setEditingEmbedId,
   })
 
-  const { overlayHandlers, toolCursor } = useCanvasOverlayHandlers({
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [wrapperElement, setWrapperElement] = useState<HTMLDivElement | null>(
+    null,
+  )
+  const wrapperCallbackRef = (node: HTMLDivElement | null) => {
+    wrapperRef.current = node
+    setWrapperElement(node)
+  }
+
+  const { toolCursor } = useCanvasOverlayHandlers(wrapperElement, {
     drawing,
     eraser,
     lasso,
     rectangleDraw,
   })
 
-  const wrapperRef = useCanvasWheel()
+  const onStrokePaneClick = useCanvasStrokeClick()
+
+  useCanvasWheel(wrapperRef)
+  const canvasContainerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const el = wrapper.querySelector<HTMLElement>('.react-flow')
+    if (el) {
+      canvasContainerRef.current = el
+      return
+    }
+
+    const observer = new MutationObserver(() => {
+      const found = wrapper.querySelector<HTMLElement>('.react-flow')
+      if (found) {
+        canvasContainerRef.current = found
+        observer.disconnect()
+      }
+    })
+    observer.observe(wrapper, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [wrapperRef])
+
+  useCanvasPreview({
+    canvasId,
+    doc,
+    containerRef: canvasContainerRef,
+  })
 
   const { dropOverlayRef, isDropTarget, isFileDropTarget } =
     useCanvasDropTarget({
@@ -288,6 +385,20 @@ function CanvasFlow({
     [nodesMap],
   )
 
+  const handleResize = useCallback(
+    (
+      nodeId: string,
+      width: number,
+      height: number,
+      position: { x: number; y: number },
+    ) => {
+      setLocalResizing({
+        [nodeId]: { width, height, x: position.x, y: position.y },
+      })
+    },
+    [setLocalResizing],
+  )
+
   const onResizeEnd = useCallback(
     (
       nodeId: string,
@@ -295,23 +406,63 @@ function CanvasFlow({
       height: number,
       position: { x: number; y: number },
     ) => {
+      setLocalResizing(null)
       const existing = nodesMap.get(nodeId)
       if (!existing) return
-      nodesMap.set(nodeId, { ...existing, width, height, position })
+
+      if (existing.type === 'stroke' && existing.data?.bounds) {
+        const { bounds, points, size } = existing.data as StrokeNodeData
+        const scaleX = width / bounds.width
+        const scaleY = height / bounds.height
+        const scaledPoints = points.map(
+          ([x, y, p]) =>
+            [
+              bounds.x + (x - bounds.x) * scaleX,
+              bounds.y + (y - bounds.y) * scaleY,
+              p,
+            ] as [number, number, number],
+        )
+        const scaledBounds = { ...bounds, width, height }
+        nodesMap.set(nodeId, {
+          ...existing,
+          width,
+          height,
+          position,
+          data: {
+            ...existing.data,
+            points: scaledPoints,
+            bounds: scaledBounds,
+            size: size * Math.min(scaleX, scaleY),
+          },
+        })
+      } else {
+        nodesMap.set(nodeId, { ...existing, width, height, position })
+      }
     },
-    [nodesMap],
+    [nodesMap, setLocalResizing],
   )
 
   const remoteHighlights = useMemo(() => {
     const map = new Map<string, RemoteHighlight>()
-    for (const user of remoteUsers) {
-      const nodeIds = user.dragging
-        ? Object.keys(user.dragging)
-        : user.selectedNodeIds
+    const owners = new Map<string, number>()
+    for (const remoteUser of remoteUsers) {
+      const nodeIds = remoteUser.dragging
+        ? Object.keys(remoteUser.dragging)
+        : remoteUser.resizing
+          ? Object.keys(remoteUser.resizing)
+          : remoteUser.selectedNodeIds
       if (!nodeIds) continue
       for (const nodeId of nodeIds) {
-        if (!map.has(nodeId)) {
-          map.set(nodeId, { color: user.user.color, name: user.user.name })
+        const existingOwner = owners.get(nodeId)
+        if (
+          existingOwner === undefined ||
+          remoteUser.clientId < existingOwner
+        ) {
+          map.set(nodeId, {
+            color: remoteUser.user.color,
+            name: remoteUser.user.name,
+          })
+          owners.set(nodeId, remoteUser.clientId)
         }
       }
     }
@@ -321,12 +472,24 @@ function CanvasFlow({
   const canvasContextValue = useMemo(
     () => ({
       updateNodeData,
+      onResize: handleResize,
       onResizeEnd,
       remoteHighlights,
       canEdit,
       user: canvasUser,
+      editingEmbedId,
+      setEditingEmbedId,
     }),
-    [updateNodeData, onResizeEnd, remoteHighlights, canEdit, canvasUser],
+    [
+      updateNodeData,
+      handleResize,
+      onResizeEnd,
+      remoteHighlights,
+      canEdit,
+      canvasUser,
+      editingEmbedId,
+      setEditingEmbedId,
+    ],
   )
 
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY
@@ -336,7 +499,11 @@ function CanvasFlow({
 
   return (
     <CanvasContext value={canvasContextValue}>
-      <div ref={wrapperRef} className="flex-1 min-h-0 relative allow-motion">
+      <div
+        ref={wrapperCallbackRef}
+        className="flex-1 min-h-0 relative allow-motion"
+        style={{ cursor: toolCursor }}
+      >
         <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
         <CanvasColorPanel canEdit={canEdit} />
         <ReactFlow
@@ -348,6 +515,7 @@ function CanvasFlow({
           onNodesDelete={isSelectMode ? onNodesDelete : undefined}
           onEdgesDelete={isSelectMode ? onEdgesDelete : undefined}
           onConnect={isSelectMode ? onConnect : undefined}
+          onPaneClick={isSelectMode ? onStrokePaneClick : undefined}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           nodeTypes={canvasNodeTypes}
@@ -392,16 +560,6 @@ function CanvasFlow({
           isDropTarget={isDropTarget}
           isFileDropTarget={isFileDropTarget}
         />
-
-        {overlayHandlers && (
-          <div
-            className="absolute inset-0 z-[5]"
-            style={{ cursor: toolCursor }}
-            onPointerDown={overlayHandlers.onPointerDown}
-            onPointerMove={overlayHandlers.onPointerMove}
-            onPointerUp={overlayHandlers.onPointerUp}
-          />
-        )}
       </div>
     </CanvasContext>
   )
@@ -418,7 +576,7 @@ function CanvasDropOverlay({
   isDropTarget,
   isFileDropTarget,
 }: {
-  ref: React.RefObject<HTMLDivElement | null>
+  ref: React.Ref<HTMLDivElement>
   isDropTarget: boolean
   isFileDropTarget: boolean
 }) {
@@ -452,7 +610,7 @@ function SelectionOverlays({
   selectionRect,
   remoteUsers,
 }: {
-  lassoPath: Array<{ x: number; y: number }>
+  lassoPath: Array<Point2D>
   selectionRect: Bounds | null
   remoteUsers: Array<RemoteUser>
 }) {
@@ -483,20 +641,20 @@ function SelectionOverlays({
         />
       )}
 
-      {remoteUsers.map((user) => {
-        if (!user.selecting) return null
-        const s = user.selecting
+      {remoteUsers.map((remoteUser) => {
+        if (!remoteUser.selecting) return null
+        const s = remoteUser.selecting
         if (s.type === 'rect') {
           return (
             <rect
-              key={`sel-${user.clientId}`}
+              key={`sel-${remoteUser.clientId}`}
               x={s.x}
               y={s.y}
               width={s.width}
               height={s.height}
-              fill={user.user.color}
+              fill={remoteUser.user.color}
               fillOpacity={0.06}
-              stroke={user.user.color}
+              stroke={remoteUser.user.color}
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -505,11 +663,11 @@ function SelectionOverlays({
         if (s.type === 'lasso' && s.points.length >= 2) {
           return (
             <polyline
-              key={`sel-${user.clientId}`}
+              key={`sel-${remoteUser.clientId}`}
               points={s.points.map((p) => `${p.x},${p.y}`).join(' ')}
-              fill={user.user.color}
+              fill={remoteUser.user.color}
               fillOpacity={0.06}
-              stroke={user.user.color}
+              stroke={remoteUser.user.color}
               strokeWidth={1}
               strokeDasharray="3 3"
             />

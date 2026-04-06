@@ -6,6 +6,7 @@ import { enhanceCanvas } from '../../canvases/functions/enhanceCanvas'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { requireCampaignMembership } from '../../functions'
+import { assertNever } from '../../common/types'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
@@ -23,7 +24,6 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
     bookmarkIds?: Set<SidebarItemId>
   },
 ): Promise<EnhancedSidebarItem<T>> {
-  await requireCampaignMembership(ctx, item.campaignId)
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.files:
       return enhanceFile(ctx, {
@@ -56,7 +56,7 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>
     default:
-      throw new Error('Unknown item type')
+      return assertNever(item)
   }
 }
 
@@ -74,8 +74,8 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
 ) {
   const { membership } = await requireCampaignMembership(ctx, item.campaignId)
 
-  const thumbnailUrl = item.thumbnailStorageId
-    ? await ctx.storage.getUrl(item.thumbnailStorageId)
+  const previewUrl = item.previewStorageId
+    ? ctx.storage.getUrl(item.previewStorageId)
     : null
 
   // Batch path: all data is pre-loaded
@@ -89,37 +89,39 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
         item,
         sharesMap,
       }),
-      thumbnailUrl,
+      previewUrl: await previewUrl,
     }
   }
 
   // Single-item path: direct queries in parallel
-  const [shares, bookmark, myPermissionLevel] = await Promise.all([
-    ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_item_member', (q) =>
-        q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
-      )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
-      .collect(),
-    ctx.db
-      .query('bookmarks')
-      .withIndex('by_campaign_member_item', (q) =>
-        q
-          .eq('campaignId', item.campaignId)
-          .eq('campaignMemberId', membership._id)
-          .eq('sidebarItemId', item._id),
-      )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
-      .unique(),
-    getSidebarItemPermissionLevel(ctx, { item }),
-  ])
+  const [shares, bookmark, myPermissionLevel, resolvedPreviewUrl] =
+    await Promise.all([
+      ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .collect(),
+      ctx.db
+        .query('bookmarks')
+        .withIndex('by_campaign_member_item', (q) =>
+          q
+            .eq('campaignId', item.campaignId)
+            .eq('campaignMemberId', membership._id)
+            .eq('sidebarItemId', item._id),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .unique(),
+      getSidebarItemPermissionLevel(ctx, { item }),
+      previewUrl,
+    ])
 
   return {
     ...item,
     shares,
     isBookmarked: bookmark !== null,
     myPermissionLevel,
-    thumbnailUrl,
+    previewUrl: resolvedPreviewUrl,
   }
 }

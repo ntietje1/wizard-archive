@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Palette } from 'lucide-react'
-import { DEFAULT_ITEM_COLOR } from 'convex/sidebarItems/types/baseTypes'
 import { Button } from '~/features/shadcn/components/button'
 import {
   Popover,
@@ -8,7 +7,10 @@ import {
   PopoverTrigger,
 } from '~/features/shadcn/components/popover'
 import { cn } from '~/features/shadcn/lib/utils'
-import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
+import {
+  DEFAULT_ITEM_COLOR,
+  validateHexColorOrDefault,
+} from '~/features/sidebar/utils/sidebar-item-utils'
 
 const COLOR_OPTIONS = [
   { name: 'Default', hex: DEFAULT_ITEM_COLOR },

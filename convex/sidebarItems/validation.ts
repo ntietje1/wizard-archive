@@ -10,7 +10,7 @@ import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
 import type { ValidationResult } from './sharedValidation'
-import type { SidebarItemId } from './types/baseTypes'
+import type { SidebarItemId, SidebarItemTable } from './types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
 import type { AuthQueryCtx } from '../functions'
@@ -292,23 +292,23 @@ async function checkSlugConflict(
     excludeId?: SidebarItemId
   },
 ): Promise<boolean> {
-  const queryTable = (table: 'notes' | 'folders' | 'gameMaps' | 'files') =>
+  const queryTable = (table: SidebarItemTable) =>
     ctx.db
       .query(table)
       .withIndex('by_campaign_slug', (q) =>
         q.eq('campaignId', campaignId).eq('slug', slug),
-      )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
+      ) // check deleted items as well since deleted items can be accessed by slug
       .unique()
 
-  const [note, folder, map, file] = await Promise.all([
+  const [note, folder, map, file, canvas] = await Promise.all([
     queryTable('notes'),
     queryTable('folders'),
     queryTable('gameMaps'),
     queryTable('files'),
+    queryTable('canvases'),
   ])
 
-  const conflict = note ?? folder ?? map ?? file
+  const conflict = note ?? folder ?? map ?? file ?? canvas
   if (!conflict) return false
   return excludeId ? conflict._id !== excludeId : true
 }

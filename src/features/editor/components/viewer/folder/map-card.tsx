@@ -42,7 +42,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const isSelected = useIsSelectedItem(map)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
-  const thumbnailUrl = map.thumbnailUrl ?? null
+  const previewUrl = map.previewUrl ?? null
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -98,9 +98,9 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
 
           {/* Image Section */}
           <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
-            {thumbnailUrl ? (
+            {previewUrl ? (
               <img
-                src={thumbnailUrl}
+                src={previewUrl}
                 alt={map.name}
                 className="w-full h-full object-cover"
               />

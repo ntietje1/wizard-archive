@@ -8,7 +8,7 @@ import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
 import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-viewer'
 import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
-import { CanvasViewer } from '~/features/canvas'
+import { CanvasViewer } from '~/features/canvas/components/canvas-viewer'
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'

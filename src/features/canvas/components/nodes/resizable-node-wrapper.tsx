@@ -1,7 +1,7 @@
 import { useContext, useSyncExternalStore } from 'react'
 import { NodeResizeControl } from '@xyflow/react'
 import { CanvasContext } from '../../utils/canvas-context'
-import type { ControlPosition, OnResizeEnd } from '@xyflow/react'
+import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
 
 const HANDLE_SIZE = 4
 
@@ -34,25 +34,47 @@ const CONTROL_STYLE: React.CSSProperties = {
 }
 
 let shiftPressed = false
+const shiftSubscribers = new Set<() => void>()
+
+function notifyShiftSubscribers() {
+  for (const cb of shiftSubscribers) cb()
+}
+
+function onShiftDown(e: KeyboardEvent) {
+  if (e.key === 'Shift' && !shiftPressed) {
+    shiftPressed = true
+    notifyShiftSubscribers()
+  }
+}
+
+function onShiftUp(e: KeyboardEvent) {
+  if (e.key === 'Shift' && shiftPressed) {
+    shiftPressed = false
+    notifyShiftSubscribers()
+  }
+}
+
+function onWindowBlur() {
+  if (shiftPressed) {
+    shiftPressed = false
+    notifyShiftSubscribers()
+  }
+}
 
 function subscribeShift(cb: () => void) {
-  const down = (e: KeyboardEvent) => {
-    if (e.key === 'Shift' && !shiftPressed) {
-      shiftPressed = true
-      cb()
-    }
+  if (shiftSubscribers.size === 0) {
+    window.addEventListener('keydown', onShiftDown)
+    window.addEventListener('keyup', onShiftUp)
+    window.addEventListener('blur', onWindowBlur)
   }
-  const up = (e: KeyboardEvent) => {
-    if (e.key === 'Shift' && shiftPressed) {
-      shiftPressed = false
-      cb()
-    }
-  }
-  window.addEventListener('keydown', down)
-  window.addEventListener('keyup', up)
+  shiftSubscribers.add(cb)
   return () => {
-    window.removeEventListener('keydown', down)
-    window.removeEventListener('keyup', up)
+    shiftSubscribers.delete(cb)
+    if (shiftSubscribers.size === 0) {
+      window.removeEventListener('keydown', onShiftDown)
+      window.removeEventListener('keyup', onShiftUp)
+      window.removeEventListener('blur', onWindowBlur)
+    }
   }
 }
 
@@ -79,10 +101,18 @@ export function ResizableNodeWrapper({
   minHeight = 30,
   isRectDeselected = false,
 }: ResizableNodeWrapperProps) {
-  const { remoteHighlights, onResizeEnd } = useContext(CanvasContext)
+  const { remoteHighlights, onResize, onResizeEnd } = useContext(CanvasContext)
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging && !isRectDeselected
-  const keepAspectRatio = useSyncExternalStore(subscribeShift, getShift)
+  const keepAspectRatio = useSyncExternalStore(
+    subscribeShift,
+    getShift,
+    getShift,
+  )
+
+  const handleResize: OnResize = (_event, params) => {
+    onResize(id, params.width, params.height, { x: params.x, y: params.y })
+  }
 
   const handleResizeEnd: OnResizeEnd = (_event, params) => {
     onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })
@@ -108,6 +138,7 @@ export function ResizableNodeWrapper({
             minWidth={minWidth}
             minHeight={minHeight}
             keepAspectRatio={keepAspectRatio}
+            onResize={handleResize}
             onResizeEnd={handleResizeEnd}
           >
             <div

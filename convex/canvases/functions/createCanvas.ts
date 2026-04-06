@@ -29,17 +29,17 @@ export async function createCanvas(
     campaignId: Id<'campaigns'>
   },
 ): Promise<{ canvasId: Id<'canvases'>; slug: string }> {
-  name = name.trim()
+  const trimmedName = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
   await validateSidebarItemName(ctx, {
     campaignId,
     parentId,
-    name,
+    name: trimmedName,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name,
+    name: trimmedName,
     campaignId,
   })
 
@@ -47,7 +47,7 @@ export async function createCanvas(
 
   const canvasId = await ctx.db.insert('canvases', {
     campaignId,
-    name,
+    name: trimmedName,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
@@ -55,6 +55,10 @@ export async function createCanvas(
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.canvases,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewStorageId: null,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,
@@ -62,7 +66,7 @@ export async function createCanvas(
     createdBy: profileId,
   })
 
-  // Initialize empty 'nodes' and 'edges' maps so they exist in the Yjs state
+  // getMap calls create the named maps on the Y.Doc so they're included in the initial encoded state
   const doc = new Y.Doc()
   doc.getMap('nodes')
   doc.getMap('edges')

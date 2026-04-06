@@ -33,13 +33,20 @@ export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         const target = location.current.dropTargets[0]
         const ctx = ctxRef.current
         if (!target || !ctx?.campaignId) return
-        const parentId = extractParentId(target)
         try {
           const dropResult = await processDataTransferItems(source.items)
           if (
-            dropResult.files.length > 0 ||
-            dropResult.rootFolders.length > 0
-          ) {
+            dropResult.files.length === 0 &&
+            dropResult.rootFolders.length === 0
+          )
+            return
+
+          const override = useDndStore.getState().fileDropOverride
+          if (override) {
+            const { clientX, clientY } = location.current.input
+            await override(dropResult, { x: clientX, y: clientY })
+          } else {
+            const parentId = extractParentId(target)
             await ctx.handleDropFiles(dropResult, { parentId })
           }
         } catch (error) {

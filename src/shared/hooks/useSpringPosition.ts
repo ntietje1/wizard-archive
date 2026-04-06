@@ -36,9 +36,11 @@ export function stepSpring(
   pos.x += vel.x * dt
   pos.y += vel.y * dt
 
+  const postDx = target.x - pos.x
+  const postDy = target.y - pos.y
   if (
-    Math.abs(dx) < settle &&
-    Math.abs(dy) < settle &&
+    Math.abs(postDx) < settle &&
+    Math.abs(postDy) < settle &&
     Math.abs(vel.x) < settle &&
     Math.abs(vel.y) < settle
   ) {
@@ -64,10 +66,19 @@ export function useSpringPosition(
   const optionsRef = useRef(options)
   optionsRef.current = options
 
+  const runningRef = useRef(false)
+  const rafIdRef = useRef(0)
+  const startLoopRef = useRef<(() => void) | null>(null)
+
   targetRef.current = target
 
   useEffect(() => {
-    let rafId: number
+    const startLoop = () => {
+      if (runningRef.current) return
+      runningRef.current = true
+      prevTimeRef.current = 0
+      rafIdRef.current = requestAnimationFrame(animate)
+    }
 
     const animate = (time: number) => {
       const t = targetRef.current
@@ -75,7 +86,7 @@ export function useSpringPosition(
         posRef.current = null
         velRef.current = { x: 0, y: 0 }
         prevTimeRef.current = 0
-        rafId = requestAnimationFrame(animate)
+        runningRef.current = false
         return
       }
 
@@ -85,7 +96,7 @@ export function useSpringPosition(
         if (elementRef.current) {
           elementRef.current.style.transform = `translate(${t.x}px, ${t.y}px)`
         }
-        rafId = requestAnimationFrame(animate)
+        rafIdRef.current = requestAnimationFrame(animate)
         return
       }
 
@@ -96,16 +107,29 @@ export function useSpringPosition(
       prevTimeRef.current = time
 
       const state: SpringState = { pos: posRef.current, vel: velRef.current }
-      stepSpring(state, t, dt, optionsRef.current)
+      const settled = stepSpring(state, t, dt, optionsRef.current)
 
       if (elementRef.current) {
         elementRef.current.style.transform = `translate(${state.pos.x}px, ${state.pos.y}px)`
       }
 
-      rafId = requestAnimationFrame(animate)
+      if (settled) {
+        runningRef.current = false
+        return
+      }
+
+      rafIdRef.current = requestAnimationFrame(animate)
     }
 
-    rafId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafId)
+    startLoopRef.current = startLoop
+    startLoop()
+    return () => {
+      runningRef.current = false
+      cancelAnimationFrame(rafIdRef.current)
+    }
   }, [elementRef])
+
+  useEffect(() => {
+    if (target) startLoopRef.current?.()
+  }, [target?.x, target?.y])
 }

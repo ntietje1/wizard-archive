@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { CanvasContext } from '../../utils/canvas-context'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
@@ -10,6 +10,31 @@ export type StickyNodeType = Node<
   { label: string; color: string; opacity?: number },
   'sticky'
 >
+
+export function StickyPreview({
+  label,
+  color,
+  opacity,
+}: {
+  label: string
+  color: string
+  opacity?: number
+}) {
+  return (
+    <div
+      className="h-full w-full p-3 rounded-md shadow-lg shadow-black/20"
+      style={{
+        backgroundColor: color || STICKY_DEFAULT_COLOR,
+        color: '#1a1a1a',
+        opacity: (opacity ?? 100) / 100,
+      }}
+    >
+      <p className="text-sm whitespace-pre-wrap select-none">
+        {label || 'Double-click to edit'}
+      </p>
+    </div>
+  )
+}
 
 export function StickyNode({
   id,
@@ -23,6 +48,7 @@ export function StickyNode({
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
 
+  const cancelledRef = useRef(false)
   const {
     isEditing,
     startEditing: baseStartEditing,
@@ -30,6 +56,7 @@ export function StickyNode({
   } = useNodeEditing({ id, currentValue: label, updateNodeData })
 
   const startEditing = useCallback(() => {
+    cancelledRef.current = false
     setEditValue(label)
     baseStartEditing()
   }, [label, baseStartEditing])
@@ -59,14 +86,27 @@ export function StickyNode({
         <Handle type="target" position={Position.Top} className="!bg-primary" />
         {isEditing ? (
           <textarea
-            className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none"
+            className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none nowheel"
             aria-label="Sticky note text"
             value={editValue}
             onChange={(e) => setEditValue(e.currentTarget.value)}
-            onBlur={() => handleBlur(editValue)}
+            onBlur={() => {
+              if (cancelledRef.current) {
+                cancelledRef.current = false
+                return
+              }
+              handleBlur(editValue)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
+                e.preventDefault()
+                e.stopPropagation()
+                cancelledRef.current = true
                 handleBlur(label)
+              } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                cancelledRef.current = true
+                handleBlur(editValue)
               }
             }}
             autoFocus

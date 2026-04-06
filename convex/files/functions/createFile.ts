@@ -46,15 +46,12 @@ export async function createFile(
 
   const profileId = ctx.user.profile._id
 
-  // For image files, reuse the original as the thumbnail
-  let thumbnailStorageId: Id<'_storage'> | undefined
+  let previewStorageId: Id<'_storage'> | null = null
   if (storageId) {
     const metadata = await ctx.db.system.get(storageId)
-    if (metadata?.contentType?.startsWith('image/')) {
-      thumbnailStorageId = storageId
+    if (metadata?.contentType?.toLowerCase().startsWith('image/')) {
+      previewStorageId = storageId
     }
-    // TODO: For PDFs, generate a first-page thumbnail via pdf.js
-    // TODO: For videos, extract a frame via ffmpeg
   }
 
   const fileId = await ctx.db.insert('files', {
@@ -64,11 +61,14 @@ export async function createFile(
     iconName: iconName ?? null,
     color: color ?? null,
     storageId: storageId ?? null,
-    thumbnailStorageId,
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewStorageId,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: previewStorageId ? Date.now() : null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,
