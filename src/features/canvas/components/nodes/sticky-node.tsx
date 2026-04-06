@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { CanvasContext } from '../../utils/canvas-context'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
@@ -48,6 +48,7 @@ export function StickyNode({
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
 
+  const cancelledRef = useRef(false)
   const {
     isEditing,
     startEditing: baseStartEditing,
@@ -84,13 +85,22 @@ export function StickyNode({
         <Handle type="target" position={Position.Top} className="!bg-primary" />
         {isEditing ? (
           <textarea
-            className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none"
+            className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none nowheel"
             aria-label="Sticky note text"
             value={editValue}
             onChange={(e) => setEditValue(e.currentTarget.value)}
-            onBlur={() => handleBlur(editValue)}
+            onBlur={() => {
+              if (cancelledRef.current) {
+                cancelledRef.current = false
+                return
+              }
+              handleBlur(editValue)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
+                e.preventDefault()
+                e.stopPropagation()
+                cancelledRef.current = true
                 handleBlur(label)
               }
             }}

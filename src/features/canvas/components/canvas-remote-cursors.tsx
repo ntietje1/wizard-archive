@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useNodes } from '@xyflow/react'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import { getContrastColor } from '~/shared/utils/color'
@@ -56,19 +56,21 @@ function RemoteCursor({ user }: { user: RemoteUser }) {
     }
   }
 
-  pinnedRef.current = pinnedPosition
+  useLayoutEffect(() => {
+    pinnedRef.current = pinnedPosition
 
-  if (isDragging && !wasDraggingRef.current && elementRef.current) {
-    const style = elementRef.current.style.transform
-    const match = style.match(/translate\((.+?)px,\s*(.+?)px\)/)
-    if (match) {
-      lerpRef.current = {
-        from: { x: parseFloat(match[1]), y: parseFloat(match[2]) },
-        startTime: performance.now(),
+    if (isDragging && !wasDraggingRef.current && elementRef.current) {
+      const style = elementRef.current.style.transform
+      const match = style.match(/translate\((.+?)px,\s*(.+?)px\)/)
+      if (match) {
+        lerpRef.current = {
+          from: { x: parseFloat(match[1]), y: parseFloat(match[2]) },
+          startTime: performance.now(),
+        }
       }
     }
-  }
-  wasDraggingRef.current = isDragging
+    wasDraggingRef.current = isDragging
+  }, [isDragging, pinnedPosition])
 
   useSpringPosition(isDragging ? null : user.cursor, elementRef)
 

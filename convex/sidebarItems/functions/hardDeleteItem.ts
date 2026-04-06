@@ -38,7 +38,10 @@ export async function hardDeleteItem(
     await ctx.db.delete(doc._id)
   })
 
-  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+  if (
+    item.type === SIDEBAR_ITEM_TYPES.notes ||
+    item.type === SIDEBAR_ITEM_TYPES.canvases
+  ) {
     await deleteYjsDocument(ctx, item._id)
   }
 

@@ -10,5 +10,5 @@ export function useEmbedItemContent(
     api.sidebarItems.queries.getSidebarItem,
     enabled && sidebarItemId ? { id: sidebarItemId } : 'skip',
   )
-  return result.data
+  return { data: result.data, isLoading: result.isLoading, error: result.error }
 }

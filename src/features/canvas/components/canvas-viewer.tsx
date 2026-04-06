@@ -35,7 +35,7 @@ import { CanvasColorPanel } from './canvas-color-panel'
 import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RemoteHighlight } from '../utils/canvas-context'
-import type { RemoteUser } from '../utils/canvas-awareness-types'
+import type { Point2D, RemoteUser } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -190,10 +190,17 @@ function CanvasFlow({
 
   const remoteDragPositions = useMemo(() => {
     let merged: Record<string, { x: number; y: number }> | null = null
+    const owners = new Map<string, number>()
     for (const user of remoteUsers) {
       if (!user.dragging) continue
-      if (!merged) merged = {}
-      Object.assign(merged, user.dragging)
+      for (const [nodeId, pos] of Object.entries(user.dragging)) {
+        if (!merged) merged = {}
+        const existingOwner = owners.get(nodeId)
+        if (existingOwner === undefined || user.clientId < existingOwner) {
+          merged[nodeId] = pos
+          owners.set(nodeId, user.clientId)
+        }
+      }
     }
     return merged ?? EMPTY_DRAG_POSITIONS
   }, [remoteUsers])
@@ -244,11 +251,25 @@ function CanvasFlow({
   const canvasContainerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    const el = wrapperRef.current?.querySelector(
-      '.react-flow',
-    ) as HTMLElement | null
-    canvasContainerRef.current = el
-  })
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const el = wrapper.querySelector('.react-flow')
+    if (el) {
+      canvasContainerRef.current = el
+      return
+    }
+
+    const observer = new MutationObserver(() => {
+      const found = wrapper.querySelector('.react-flow')
+      if (found) {
+        canvasContainerRef.current = found
+        observer.disconnect()
+      }
+    })
+    observer.observe(wrapper, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [wrapperRef])
 
   useCanvasPreview({
     canvasId,
@@ -433,6 +454,7 @@ function CanvasFlow({
             onPointerDown={overlayHandlers.onPointerDown}
             onPointerMove={overlayHandlers.onPointerMove}
             onPointerUp={overlayHandlers.onPointerUp}
+            onPointerCancel={overlayHandlers.onPointerCancel}
           />
         )}
       </div>
@@ -485,7 +507,7 @@ function SelectionOverlays({
   selectionRect,
   remoteUsers,
 }: {
-  lassoPath: Array<{ x: number; y: number }>
+  lassoPath: Array<Point2D>
   selectionRect: Bounds | null
   remoteUsers: Array<RemoteUser>
 }) {

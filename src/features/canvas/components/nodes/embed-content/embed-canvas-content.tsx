@@ -11,6 +11,9 @@ import type { StrokeNodeData } from '../stroke-node'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
+const DEFAULT_NODE_WIDTH = 150
+const DEFAULT_NODE_HEIGHT = 40
+
 export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
   const { nodes, isLoading } = useReadOnlyYjsCanvas(canvasId)
 
@@ -83,8 +86,8 @@ function StaticCanvasRenderer({ nodes }: { nodes: Array<Node> }) {
 function StaticNode({ node }: { node: Node }) {
   const { position, width, height, type, data } = node
   const bounds = (data as { bounds?: { width: number; height: number } }).bounds
-  const w = width ?? bounds?.width ?? 150
-  const h = height ?? bounds?.height ?? 40
+  const w = width ?? bounds?.width ?? DEFAULT_NODE_WIDTH
+  const h = height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT
 
   const content = renderNodePreview(type, data, w, h)
   if (!content) return null
@@ -147,8 +150,8 @@ function getNodesBounds(nodes: Array<Node>) {
   for (const node of nodes) {
     const bounds = (node.data as { bounds?: { width: number; height: number } })
       .bounds
-    const w = node.width ?? bounds?.width ?? 150
-    const h = node.height ?? bounds?.height ?? 40
+    const w = node.width ?? bounds?.width ?? DEFAULT_NODE_WIDTH
+    const h = node.height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT
     minX = Math.min(minX, node.position.x)
     minY = Math.min(minY, node.position.y)
     maxX = Math.max(maxX, node.position.x + w)
@@ -171,11 +174,13 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
   const [nodes, setNodes] = useState<Array<Node>>([])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
   const lastAppliedSeqRef = useRef(-1)
+  const canvasIdRef = useRef(canvasId)
 
   useEffect(() => {
     setIsLoading(true)
     setAfterSeq(undefined)
     lastAppliedSeqRef.current = -1
+    canvasIdRef.current = canvasId
 
     const d = new Y.Doc()
     setDoc(d)
@@ -193,6 +198,7 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
 
   useEffect(() => {
     if (!updatesResult.data || !doc) return
+    if (canvasIdRef.current !== canvasId) return
 
     for (const entry of updatesResult.data) {
       if (entry.seq > lastAppliedSeqRef.current) {
@@ -205,16 +211,14 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
       setAfterSeq(lastAppliedSeqRef.current)
     }
 
-    const nodesMap = doc.getMap<Node>('nodes')
-    setNodes(yMapToArray(nodesMap))
-
-    if (isLoading) setIsLoading(false)
-  }, [updatesResult.data, doc])
+    setIsLoading(false)
+  }, [updatesResult.data, doc, canvasId])
 
   useEffect(() => {
     if (!doc) return
 
     const nodesMap = doc.getMap<Node>('nodes')
+    setNodes(yMapToArray(nodesMap))
     const onChange = () => setNodes(yMapToArray(nodesMap))
     nodesMap.observe(onChange)
     return () => nodesMap.unobserve(onChange)

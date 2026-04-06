@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -86,6 +86,8 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
+  const [imageError, setImageError] = useState(false)
+  useEffect(() => setImageError(false), [file.previewUrl])
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -140,11 +142,12 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
 
           {/* Preview / Icon Section */}
           <div className="flex items-center justify-center flex-1 mb-10 overflow-hidden">
-            {file.previewUrl ? (
+            {file.previewUrl && !imageError ? (
               <img
                 src={file.previewUrl}
                 alt={file.name}
                 className="w-full h-full object-cover rounded-sm"
+                onError={() => setImageError(true)}
               />
             ) : (
               <FileIcon className="w-12 h-12 select-none text-muted-foreground" />

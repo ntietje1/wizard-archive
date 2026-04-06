@@ -162,7 +162,7 @@ export function FileForm({
           })
 
           if (fileUpload.file) {
-            await generatePdfPreviewIfNeeded(fileUpload.file, fileId)
+            generatePdfPreviewIfNeeded(fileUpload.file, fileId)
           }
 
           toast.success('File updated')
@@ -180,10 +180,7 @@ export function FileForm({
           parentId: parentId ?? null,
         })
         if (fileUpload.file) {
-          await generatePdfPreviewIfNeeded(
-            fileUpload.file,
-            newFileId as Id<'files'>,
-          )
+          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'files'>)
         }
 
         await openParentFolders(newFileId)

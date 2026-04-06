@@ -6,7 +6,7 @@ import {
   strokePathIntersectsPolygon,
 } from '../utils/canvas-stroke-utils'
 import type { StrokeNodeData } from '../components/nodes/stroke-node'
-import type { SelectingState } from '../utils/canvas-awareness-types'
+import type { Point2D, SelectingState } from '../utils/canvas-awareness-types'
 
 interface UseCanvasLassoSelectionOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void
@@ -15,7 +15,7 @@ interface UseCanvasLassoSelectionOptions {
 export function useCanvasLassoSelection({
   setLocalSelecting,
 }: UseCanvasLassoSelectionOptions) {
-  const pointsRef = useRef<Array<{ x: number; y: number }>>([])
+  const pointsRef = useRef<Array<Point2D>>([])
   const activeRef = useRef(false)
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
@@ -76,6 +76,8 @@ export function useCanvasLassoSelection({
     const { nodeLookup } = storeApi.getState()
     const selectedNodeIds = new Set<string>()
 
+    // Strokes use intersection (any overlap selects) since they're thin paths;
+    // non-stroke nodes use full containment (all corners inside lasso).
     nodeLookup.forEach((internalNode, nodeId) => {
       const { position, measured } = internalNode
       if (!measured?.width || !measured?.height) return
@@ -106,15 +108,20 @@ export function useCanvasLassoSelection({
     })
 
     reactFlow.setNodes((nodes) =>
-      nodes.map((n) => ({ ...n, selected: selectedNodeIds.has(n.id) })),
+      nodes.map((n) => {
+        const isSelected = selectedNodeIds.has(n.id)
+        return n.selected === isSelected ? n : { ...n, selected: isSelected }
+      }),
     )
 
     reactFlow.setEdges((edges) =>
-      edges.map((edge) => ({
-        ...edge,
-        selected:
-          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
-      })),
+      edges.map((edge) => {
+        const isSelected =
+          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+        return edge.selected === isSelected
+          ? edge
+          : { ...edge, selected: isSelected }
+      }),
     )
 
     store.setLassoPath([])

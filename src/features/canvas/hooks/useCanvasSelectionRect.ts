@@ -6,6 +6,15 @@ import type { StrokeNodeData } from '../components/nodes/stroke-node'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 import type { SelectingState } from '../utils/canvas-awareness-types'
 
+function translateStrokePoints(
+  points: Array<[number, number, number]>,
+  offset: { x: number; y: number },
+): Array<[number, number, number]> {
+  return points.map(
+    ([x, y, p]) => [x + offset.x, y + offset.y, p] as [number, number, number],
+  )
+}
+
 interface UseCanvasSelectionRectOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void
   enabled: boolean
@@ -19,6 +28,8 @@ export function useCanvasSelectionRect({
   const storeApi = useStoreApi()
   const rafRef = useRef(0)
   const lastFlowRectRef = useRef<Bounds | null>(null)
+  const setLocalSelectingRef = useRef(setLocalSelecting)
+  setLocalSelectingRef.current = setLocalSelecting
 
   useEffect(() => {
     if (!enabled) return
@@ -60,11 +71,13 @@ export function useCanvasSelectionRect({
             nodes.map((n) => {
               if (!n.selected || n.type !== 'stroke') return n
               const strokeData = n.data as StrokeNodeData
-              const offsetX = n.position.x - strokeData.bounds.x
-              const offsetY = n.position.y - strokeData.bounds.y
-              const adjustedPoints = strokeData.points.map(
-                ([x, y, p]) =>
-                  [x + offsetX, y + offsetY, p] as [number, number, number],
+              const offset = {
+                x: n.position.x - strokeData.bounds.x,
+                y: n.position.y - strokeData.bounds.y,
+              }
+              const adjustedPoints = translateStrokePoints(
+                strokeData.points,
+                offset,
               )
               if (
                 !strokePathIntersectsRect(
@@ -83,32 +96,30 @@ export function useCanvasSelectionRect({
         const store = useCanvasToolStore.getState()
         store.setSelectionRect(null)
         store.setRectDeselectedIds(new Set())
-        setLocalSelecting(null)
+        setLocalSelectingRef.current(null)
         return
       }
 
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = 0
         const current = storeApi.getState()
-        if (!current.userSelectionRect) return
+        if (!current.userSelectionRect || !current.domNode) return
 
-        const bounds = current.domNode?.getBoundingClientRect()
-        const offsetX = bounds?.left ?? 0
-        const offsetY = bounds?.top ?? 0
+        const bounds = current.domNode.getBoundingClientRect()
 
         const topLeft = reactFlow.screenToFlowPosition({
-          x: current.userSelectionRect.x + offsetX,
-          y: current.userSelectionRect.y + offsetY,
+          x: current.userSelectionRect.x + bounds.left,
+          y: current.userSelectionRect.y + bounds.top,
         })
         const bottomRight = reactFlow.screenToFlowPosition({
           x:
             current.userSelectionRect.x +
             current.userSelectionRect.width +
-            offsetX,
+            bounds.left,
           y:
             current.userSelectionRect.y +
             current.userSelectionRect.height +
-            offsetY,
+            bounds.top,
         })
 
         const flowRect = {
@@ -120,16 +131,21 @@ export function useCanvasSelectionRect({
 
         lastFlowRectRef.current = flowRect
         useCanvasToolStore.getState().setSelectionRect(flowRect)
-        setLocalSelecting({ type: 'rect', ...flowRect })
+        setLocalSelectingRef.current({ type: 'rect', ...flowRect })
 
         const deselected = new Set<string>()
-        for (const n of reactFlow.getNodes()) {
-          if (!n.selected || n.type !== 'stroke') continue
+        const selectedStrokes = reactFlow
+          .getNodes()
+          .filter((n) => n.selected && n.type === 'stroke')
+        for (const n of selectedStrokes) {
           const strokeData = n.data as StrokeNodeData
-          const ox = n.position.x - strokeData.bounds.x
-          const oy = n.position.y - strokeData.bounds.y
-          const adjustedPoints = strokeData.points.map(
-            ([x, y, p]) => [x + ox, y + oy, p] as [number, number, number],
+          const offset = {
+            x: n.position.x - strokeData.bounds.x,
+            y: n.position.y - strokeData.bounds.y,
+          }
+          const adjustedPoints = translateStrokePoints(
+            strokeData.points,
+            offset,
           )
           if (
             !strokePathIntersectsRect(adjustedPoints, strokeData.size, flowRect)
@@ -149,5 +165,5 @@ export function useCanvasSelectionRect({
       }
       useCanvasToolStore.getState().setSelectionRect(null)
     }
-  }, [enabled, reactFlow, storeApi, setLocalSelecting])
+  }, [enabled, reactFlow, storeApi])
 }

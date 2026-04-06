@@ -1,3 +1,10 @@
+export type Point2D = { x: number; y: number }
+
+/**
+ * Serialized in-progress stroke data broadcast via awareness.
+ * `points` — array of [x, y, pressure] tuples in flow-space pixels.
+ * `color` — CSS color string. `size` — stroke width in px. `opacity` — 0–100.
+ */
 export type DrawingState = {
   points: Array<[number, number, number]>
   color: string
@@ -7,7 +14,7 @@ export type DrawingState = {
 
 export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }
-  | { type: 'lasso'; points: Array<{ x: number; y: number }> }
+  | { type: 'lasso'; points: Array<Point2D> }
 
 export type CanvasAwarenessState = {
   user: { name: string; color: string }

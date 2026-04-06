@@ -3,6 +3,7 @@ import { captureElementPreview } from '../utils/generate-preview'
 import { useClaimAndUploadPreview } from './use-claim-and-upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
 import type * as Y from 'yjs'
+import { logger } from '~/shared/utils/logger'
 
 const DEBOUNCE_MS = 5_000
 
@@ -35,6 +36,11 @@ export function useCanvasPreview({
         await claimAndUploadRef.current(canvasIdRef.current, () =>
           captureElementPreview(el),
         )
+      } catch (error) {
+        logger.error(
+          `Canvas preview generation failed for ${canvasIdRef.current}:`,
+          error,
+        )
       } finally {
         isGeneratingRef.current = false
       }
@@ -46,6 +52,7 @@ export function useCanvasPreview({
     }
 
     doc.on('update', scheduleGeneration)
+    scheduleGeneration()
 
     return () => {
       doc.off('update', scheduleGeneration)

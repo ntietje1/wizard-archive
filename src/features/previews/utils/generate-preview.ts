@@ -39,28 +39,32 @@ export async function generatePdfPreview(
   const data =
     source instanceof ArrayBuffer ? { data: new Uint8Array(source) } : source
   const pdf = await pdfjsLib.getDocument(data).promise
-  const page = await pdf.getPage(1)
+  try {
+    const page = await pdf.getPage(1)
 
-  const scale = PDF_PREVIEW_WIDTH / page.getViewport({ scale: 1 }).width
-  const viewport = page.getViewport({ scale })
+    const scale = PDF_PREVIEW_WIDTH / page.getViewport({ scale: 1 }).width
+    const viewport = page.getViewport({ scale })
 
-  const canvas = document.createElement('canvas')
-  canvas.width = viewport.width
-  canvas.height = Math.min(viewport.height, PDF_PREVIEW_HEIGHT * scale)
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = Math.min(viewport.height, PDF_PREVIEW_HEIGHT)
 
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Failed to get canvas context')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Failed to get canvas context')
 
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise
 
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob)
-        else reject(new Error('Failed to generate PDF preview'))
-      },
-      'image/webp',
-      0.8,
-    )
-  })
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob)
+          else reject(new Error('Failed to generate PDF preview'))
+        },
+        'image/webp',
+        0.8,
+      )
+    })
+  } finally {
+    pdf.destroy()
+  }
 }

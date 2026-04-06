@@ -65,7 +65,7 @@ export async function createCanvas(
     createdBy: profileId,
   })
 
-  // Initialize empty 'nodes' and 'edges' maps so they exist in the Yjs state
+  // Initialize empty 'nodes', 'edges', and 'strokes' maps so they exist in the Yjs state
   const doc = new Y.Doc()
   doc.getMap('nodes')
   doc.getMap('edges')

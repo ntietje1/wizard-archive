@@ -11,6 +11,7 @@ import type {
   CustomBlockNoteEditor,
 } from 'convex/notes/editorSpecs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import { logger } from '~/shared/utils/logger'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
@@ -122,6 +123,7 @@ function StaticEditorInner({
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
+  const hasInitializedRef = useRef(false)
 
   useEffect(() => {
     const initialContent = content.length > 0 ? content : undefined
@@ -140,9 +142,12 @@ function StaticEditorInner({
   }, [])
 
   useEffect(() => {
-    if (editor && content.length > 0) {
-      editor.replaceBlocks(editor.document, content)
+    if (!editor) return
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true
+      return
     }
+    editor.replaceBlocks(editor.document, content)
   }, [editor, content])
 
   if (!editor) return null
@@ -194,7 +199,12 @@ function CollaborativeEditorInner({
     const tryPatch = () => {
       if (cancelled) return
       if (instance._tiptapEditor.view.state.plugins.length === 0) {
-        if (++retries >= MAX_RETRIES) return
+        if (++retries >= MAX_RETRIES) {
+          logger.error(
+            `Failed to patch Yjs plugins after ${MAX_RETRIES} attempts`,
+          )
+          return
+        }
         requestAnimationFrame(tryPatch)
         return
       }
@@ -208,7 +218,7 @@ function CollaborativeEditorInner({
       instance._tiptapEditor.destroy()
       onEditorChangeRef.current?.(null, null)
     }
-  }, [doc, provider])
+  }, [doc, provider]) // purposely don't include user.name and user.color
 
   if (!editor) return null
 

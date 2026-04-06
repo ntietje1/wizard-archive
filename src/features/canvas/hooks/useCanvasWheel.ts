@@ -14,7 +14,9 @@ export function useCanvasWheel() {
     const el = ref.current
     if (!el) return
     const handler = (e: WheelEvent) => {
-      if ((e.target as HTMLElement).closest?.('.nowheel')) return
+      if (e.target instanceof Element && e.target.closest('.nowheel')) {
+        return
+      }
       e.preventDefault()
       const { deltaX, deltaY, ctrlKey, shiftKey } = e
       if (ctrlKey) {

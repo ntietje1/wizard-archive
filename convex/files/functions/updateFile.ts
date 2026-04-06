@@ -52,9 +52,13 @@ export async function updateFile(
       if (metadata?.contentType?.startsWith('image/')) {
         updates.previewStorageId = storageId
         updates.previewUpdatedAt = Date.now()
+      } else {
+        updates.previewStorageId = null
+        updates.previewUpdatedAt = null
       }
     } else {
       updates.previewStorageId = null
+      updates.previewUpdatedAt = null
     }
   }
   if (iconName !== undefined) {

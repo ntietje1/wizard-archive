@@ -34,7 +34,11 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
   const awarenessRef = useRef<Awareness | null>(null)
 
   useEffect(() => {
-    if (!provider) return
+    if (!provider) {
+      setRemoteUsers([])
+      awarenessRef.current = null
+      return
+    }
 
     const awareness = provider.awareness
     awarenessRef.current = awareness

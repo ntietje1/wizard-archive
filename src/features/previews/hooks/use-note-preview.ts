@@ -37,6 +37,8 @@ export function useNotePreview({
         await claimAndUploadRef.current(noteIdRef.current, () =>
           captureElementPreview(el),
         )
+      } catch (error) {
+        console.error('Failed to generate note preview:', error)
       } finally {
         isGeneratingRef.current = false
       }
@@ -48,6 +50,7 @@ export function useNotePreview({
     }
 
     doc.on('update', scheduleGeneration)
+    scheduleGeneration()
 
     return () => {
       doc.off('update', scheduleGeneration)

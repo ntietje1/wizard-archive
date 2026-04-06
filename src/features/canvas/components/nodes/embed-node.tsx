@@ -22,7 +22,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 
-  const contentItem = useEmbedItemContent(sidebarItemId, true)
+  const { data: contentItem } = useEmbedItemContent(sidebarItemId, true)
 
   const { editingEmbedId, setEditingEmbedId, canEdit } =
     useContext(CanvasContext)
@@ -101,7 +101,7 @@ function EmbedRichContent({
   selected: boolean
   scrollTopRef: React.RefObject<number>
   clickCoordsRef: React.RefObject<{ x: number; y: number } | null>
-}) {
+}): React.ReactElement | null {
   if (!contentItem) {
     return (
       <div className="h-full flex items-center justify-center opacity-50">
@@ -137,5 +137,6 @@ function EmbedRichContent({
       return <EmbedCanvasContent canvasId={contentItem._id} />
     default:
       assertNever(contentItem)
+      return null
   }
 }

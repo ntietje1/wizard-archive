@@ -91,9 +91,17 @@ export function useYjsReactFlowSync(
   }, [edgesMap, reactFlow])
 
   const prevTimeRef = useRef(0)
+  const springRunningRef = useRef(false)
+  const springRafIdRef = useRef(0)
+  const startSpringLoopRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    let rafId: number
+    const startLoop = () => {
+      if (springRunningRef.current) return
+      springRunningRef.current = true
+      prevTimeRef.current = 0
+      springRafIdRef.current = requestAnimationFrame(animate)
+    }
 
     const animate = (time: number) => {
       const dt = Math.min(
@@ -153,12 +161,26 @@ export function useYjsReactFlowSync(
         )
       }
 
-      rafId = requestAnimationFrame(animate)
+      if (springs.size === 0) {
+        springRunningRef.current = false
+        return
+      }
+
+      springRafIdRef.current = requestAnimationFrame(animate)
     }
 
-    rafId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafId)
+    startSpringLoopRef.current = startLoop
+    return () => {
+      springRunningRef.current = false
+      cancelAnimationFrame(springRafIdRef.current)
+    }
   }, [reactFlow])
+
+  useEffect(() => {
+    if (Object.keys(remoteDragPositions).length > 0) {
+      startSpringLoopRef.current?.()
+    }
+  }, [remoteDragPositions])
 
   const onNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
     for (const n of nodes) draggingIds.current.add(n.id)

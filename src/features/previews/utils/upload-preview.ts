@@ -12,18 +12,32 @@ export async function uploadPreviewBlob(
 ): Promise<void> {
   const uploadUrl = await generateUploadUrl()
 
+  const contentType = blob.type || 'application/octet-stream'
+
   const response = await fetch(uploadUrl, {
     method: 'POST',
-    headers: { 'Content-Type': blob.type },
+    headers: { 'Content-Type': contentType },
     body: blob,
   })
 
   if (!response.ok) {
-    throw new Error(`Preview upload failed: ${response.status}`)
+    const errorText = await response.text().catch(() => 'Unknown error')
+    throw new Error(`Preview upload failed: ${response.status} - ${errorText}`)
   }
 
-  const { storageId } = (await response.json()) as {
-    storageId: Id<'_storage'>
+  let json: Record<string, unknown>
+  try {
+    json = await response.json()
+  } catch {
+    throw new Error(
+      `Preview upload failed: invalid JSON response (status ${response.status})`,
+    )
   }
+  const storageId = json?.storageId as Id<'_storage'> | undefined
+
+  if (!storageId) {
+    throw new Error('Preview upload failed: missing storageId in response')
+  }
+
   await setPreviewImage({ itemId, previewStorageId: storageId })
 }

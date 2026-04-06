@@ -25,14 +25,16 @@ export function useCanvasHistory({
   const docMutatedRef = useRef(false)
   const selectionRef = useRef<Array<string>>([])
   const undoManagerRef = useRef<UndoManager | null>(null)
+  const undoFnRef = useRef<() => void>(() => {})
+  const redoFnRef = useRef<() => void>(() => {})
 
   const syncStore = useCallback(() => {
     const { setHistory } = useCanvasToolStore.getState()
     setHistory({
       canUndo: undoStackRef.current.length > 0,
       canRedo: redoStackRef.current.length > 0,
-      undo,
-      redo,
+      undo: () => undoFnRef.current(),
+      redo: () => redoFnRef.current(),
     })
   }, [])
 
@@ -63,8 +65,8 @@ export function useCanvasHistory({
         stackItem.meta.set('selection-after', selectionRef.current.slice())
         um.undo()
         if (selBefore) restoreSelection(selBefore)
+        redoStackRef.current.push({ type: 'doc' })
       }
-      redoStackRef.current.push({ type: 'doc' })
     } else {
       restoreSelection(entry.before)
       redoStackRef.current.push(entry)
@@ -89,8 +91,8 @@ export function useCanvasHistory({
           | undefined
         um.redo()
         if (selAfter) restoreSelection(selAfter)
+        undoStackRef.current.push({ type: 'doc' })
       }
-      undoStackRef.current.push({ type: 'doc' })
     } else {
       restoreSelection(entry.after)
       undoStackRef.current.push(entry)
@@ -99,6 +101,9 @@ export function useCanvasHistory({
     isUndoRedoingRef.current = false
     syncStore()
   }, [restoreSelection, syncStore])
+
+  undoFnRef.current = undo
+  redoFnRef.current = redo
 
   useEffect(() => {
     const um = new UndoManager([nodesMap, edgesMap], {

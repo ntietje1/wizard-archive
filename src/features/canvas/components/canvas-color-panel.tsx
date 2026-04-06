@@ -1,4 +1,11 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
 import { CanvasContext } from '../utils/canvas-context'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
@@ -53,8 +60,9 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     onChange: ({ nodes }) => setSelectedNodes(nodes),
   })
 
-  const colorRelevantNodes = selectedNodes.filter(
-    (n) => n.data?.color !== undefined,
+  const colorRelevantNodes = useMemo(
+    () => selectedNodes.filter((n) => n.data?.color !== undefined),
+    [selectedNodes],
   )
   const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
   const hasColorSelection = colorRelevantNodes.length > 0
@@ -134,7 +142,7 @@ function getSelectionColor(nodes: Array<Node>): string | null {
     const color = node.data?.color as string | undefined
     if (color) colors.add(color)
   }
-  if (colors.size === 1) return [...colors][0]
+  if (colors.size === 1) return colors.values().next().value!
   return null
 }
 
@@ -143,6 +151,6 @@ function getSelectionOpacity(nodes: Array<Node>): number {
   for (const node of nodes) {
     opacities.add((node.data?.opacity as number) ?? 100)
   }
-  if (opacities.size === 1) return [...opacities][0]
+  if (opacities.size === 1) return opacities.values().next().value!
   return 100
 }

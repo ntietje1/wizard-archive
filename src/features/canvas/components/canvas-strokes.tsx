@@ -2,13 +2,7 @@ import { pointsToPathD } from '../utils/canvas-stroke-utils'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
-export function MiniMapStrokePath(
-  points: Array<[number, number, number]>,
-  size: number,
-  zoom: number,
-): string {
-  return pointsToPathD(points, (size + 12) / zoom)
-}
+const REMOTE_STROKE_OPACITY_MULTIPLIER = 0.7
 
 interface CanvasStrokesProps {
   remoteUsers: Array<RemoteUser>
@@ -16,6 +10,11 @@ interface CanvasStrokesProps {
 
 export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
   const localDrawing = useCanvasToolStore((s) => s.localDrawing)
+
+  const localPathD =
+    localDrawing && localDrawing.points.length >= 2
+      ? pointsToPathD(localDrawing.points, localDrawing.size)
+      : null
 
   return (
     <svg
@@ -38,16 +37,19 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
             key={`remote-${user.clientId}`}
             d={d}
             fill={user.drawing.color}
-            opacity={((user.drawing.opacity ?? 100) / 100) * 0.7}
+            opacity={
+              ((user.drawing.opacity ?? 100) / 100) *
+              REMOTE_STROKE_OPACITY_MULTIPLIER
+            }
           />
         )
       })}
 
-      {localDrawing && localDrawing.points.length >= 2 && (
+      {localPathD && (
         <path
-          d={pointsToPathD(localDrawing.points, localDrawing.size)}
-          fill={localDrawing.color}
-          opacity={(localDrawing.opacity ?? 100) / 100}
+          d={localPathD}
+          fill={localDrawing!.color}
+          opacity={(localDrawing!.opacity ?? 100) / 100}
         />
       )}
     </svg>

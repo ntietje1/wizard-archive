@@ -12,6 +12,9 @@ import {
   PopoverTrigger,
 } from '~/features/shadcn/components/popover'
 
+const CHECKERBOARD_PATTERN =
+  'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
+
 interface ColorPickerPopoverProps {
   value: string
   onChange: (color: string) => void
@@ -50,9 +53,6 @@ export function ColorPickerPopover({
     }
   }, [value])
 
-  const checkerboard =
-    'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
-
   return (
     <Popover>
       <PopoverTrigger
@@ -60,8 +60,10 @@ export function ColorPickerPopover({
         render={(props) => (
           <span
             {...props}
+            role="button"
+            aria-label="Open color picker"
             className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 inline-block"
-            style={{ background: checkerboard }}
+            style={{ background: CHECKERBOARD_PATTERN }}
           >
             <span
               className="block h-full w-full rounded-sm"
@@ -85,6 +87,7 @@ export function ColorPickerPopover({
           {onOpacityChange && (
             <SliderPrimitive.Root
               className="relative flex h-4 w-full touch-none"
+              aria-label="Opacity"
               min={0}
               max={100}
               step={1}
@@ -95,8 +98,7 @@ export function ColorPickerPopover({
                 <SliderPrimitive.Track
                   className="relative my-0.5 h-3 w-full grow overflow-hidden rounded-full"
                   style={{
-                    background:
-                      'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center',
+                    background: CHECKERBOARD_PATTERN,
                   }}
                 >
                   <div

@@ -5,6 +5,7 @@ import type { RemoteUser } from '../utils/canvas-awareness-types'
 
 const DEFAULT_NODE_WIDTH = 150
 const DEFAULT_NODE_HEIGHT = 40
+const HIGHLIGHT_PADDING = 4
 
 type HighlightRect = {
   key: string
@@ -81,10 +82,10 @@ export function CanvasRemoteSelections({
           key={rect.key}
           style={{
             position: 'absolute',
-            left: rect.x - 4,
-            top: rect.y - 4,
-            width: rect.width + 8,
-            height: rect.height + 8,
+            left: rect.x - HIGHLIGHT_PADDING,
+            top: rect.y - HIGHLIGHT_PADDING,
+            width: rect.width + HIGHLIGHT_PADDING * 2,
+            height: rect.height + HIGHLIGHT_PADDING * 2,
             border: `2px solid ${rect.color}`,
             borderRadius: 6,
             pointerEvents: 'none',

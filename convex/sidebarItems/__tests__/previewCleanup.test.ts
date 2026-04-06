@@ -107,6 +107,9 @@ describe('preview cleanup on hard delete', () => {
     await t.run(async (dbCtx) => {
       const map = await dbCtx.db.get(mapId)
       expect(map).toBeNull()
+
+      const url = await dbCtx.storage.getUrl(sharedBlob)
+      expect(url).toBeNull()
     })
   })
 

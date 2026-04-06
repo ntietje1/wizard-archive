@@ -15,6 +15,7 @@ export function useNodeEditing({
   const shouldCommitRef = useRef(true)
 
   const startEditing = useCallback(() => {
+    shouldCommitRef.current = true
     setIsEditing(true)
   }, [])
 
@@ -38,9 +39,13 @@ export function useNodeEditing({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, value: string) => {
       if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        e.stopPropagation()
         commitEdit(value)
       }
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         shouldCommitRef.current = false
         setIsEditing(false)
       }

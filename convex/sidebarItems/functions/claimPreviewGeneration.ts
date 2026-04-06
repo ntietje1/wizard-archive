@@ -7,7 +7,7 @@ import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../types/baseTypes'
 
 const LEASE_DURATION_MS = 60_000
-const COOLDOWN_MS = 1 * 60_000
+const COOLDOWN_MS = 5 * 60_000
 
 export async function claimPreviewGeneration(
   ctx: AuthMutationCtx,

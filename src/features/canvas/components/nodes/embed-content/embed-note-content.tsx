@@ -8,6 +8,7 @@ import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { cn } from '~/features/shadcn/lib/utils'
 
 export function EmbedNoteContent({
   noteId,
@@ -21,8 +22,8 @@ export function EmbedNoteContent({
   content: Array<CustomBlock>
   editable: boolean
   selected: boolean
-  scrollTopRef: React.RefObject<number>
-  clickCoordsRef: React.RefObject<{ x: number; y: number } | null>
+  scrollTopRef: React.MutableRefObject<number>
+  clickCoordsRef: React.MutableRefObject<{ x: number; y: number } | null>
 }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
@@ -66,9 +67,9 @@ export function EmbedNoteContent({
     if (!editor || !editable || !doc) return
 
     const rafId = requestAnimationFrame(() => {
-      if (!editor._tiptapEditor.view.dom.isConnected) return
+      const view = editor._tiptapEditor?.view
+      if (!view?.dom?.isConnected) return
 
-      const view = editor._tiptapEditor.view
       const coords = clickCoordsRef.current
 
       if (coords) {
@@ -90,7 +91,11 @@ export function EmbedNoteContent({
 
   return (
     <div
-      className={`h-full${editable ? ' nodrag nopan' : ''}${selected ? ' nowheel' : ''}`}
+      className={cn(
+        'h-full',
+        editable && 'nodrag nopan',
+        selected && 'nowheel',
+      )}
     >
       <ScrollArea ref={scrollAreaRef} className="h-full">
         <NoteContent

@@ -2,6 +2,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireCampaignMembership } from '../../functions'
 import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { logger } from '../../common/logger'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../types/baseTypes'
@@ -25,13 +26,22 @@ export async function setPreviewImage(
   })
 
   const oldPreviewStorageId = item.previewStorageId
-  if (oldPreviewStorageId && oldPreviewStorageId !== previewStorageId) {
-    await ctx.storage.delete(oldPreviewStorageId)
-  }
 
   await ctx.db.patch(itemId, {
     previewStorageId,
     previewUpdatedAt: Date.now(),
     previewLockedUntil: null,
   })
+
+  if (oldPreviewStorageId && oldPreviewStorageId !== previewStorageId) {
+    try {
+      await ctx.storage.delete(oldPreviewStorageId)
+    } catch (error) {
+      logger.error(
+        'Failed to delete old preview storage',
+        { oldPreviewStorageId, previewStorageId },
+        error,
+      )
+    }
+  }
 }

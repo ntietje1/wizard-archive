@@ -20,6 +20,18 @@ import { useUserPreferences } from '~/features/settings/hooks/useUserPreferences
 const SIDEBAR_MIN_WIDTH = 164
 const SNAP_CLOSED_THRESHOLD = 50
 
+function computeSidebarWidths(rawWidth: number, fallbackContentWidth: number) {
+  const displayWidth =
+    rawWidth < SNAP_CLOSED_THRESHOLD ? 0 : Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
+  const contentWidth = displayWidth > 0 ? displayWidth : fallbackContentWidth
+  return {
+    displayWidth,
+    contentWidth,
+    totalDisplay: displayWidth + NAV_COLUMN_WIDTH,
+    totalContent: contentWidth + NAV_COLUMN_WIDTH,
+  }
+}
+
 const SidebarContent = memo(function SidebarContent() {
   const { isDm } = useCampaign()
 
@@ -118,14 +130,10 @@ function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
       const rawWidth = startWidth + delta
       dragWidthRef.current = rawWidth
 
-      const displayWidth =
-        rawWidth < SNAP_CLOSED_THRESHOLD
-          ? 0
-          : Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
-      const contentWidth = displayWidth > 0 ? displayWidth : startWidth
-
-      const totalDisplay = displayWidth + NAV_COLUMN_WIDTH
-      const totalContent = contentWidth + NAV_COLUMN_WIDTH
+      const { totalDisplay, totalContent } = computeSidebarWidths(
+        rawWidth,
+        startWidth,
+      )
 
       if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
       if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
@@ -146,13 +154,10 @@ function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
         setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
       }
 
-      const displayWidth =
-        finalWidth < SNAP_CLOSED_THRESHOLD
-          ? 0
-          : Math.max(SIDEBAR_MIN_WIDTH, finalWidth)
-      const contentWidth = displayWidth > 0 ? displayWidth : startWidth
-      const totalDisplay = displayWidth + NAV_COLUMN_WIDTH
-      const totalContent = contentWidth + NAV_COLUMN_WIDTH
+      const { totalDisplay, totalContent } = computeSidebarWidths(
+        finalWidth,
+        startWidth,
+      )
 
       if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
       if (innerRef.current) innerRef.current.style.width = `${totalContent}px`

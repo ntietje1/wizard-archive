@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -42,6 +42,8 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   )
   const isSelected = useIsSelectedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const [imgError, setImgError] = useState(false)
+  useEffect(() => setImgError(false), [note.previewUrl])
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -88,11 +90,12 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
 
           {/* Preview / Icon Section */}
           <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-muted flex items-center justify-center">
-            {note.previewUrl ? (
+            {note.previewUrl && !imgError ? (
               <img
                 src={note.previewUrl}
                 alt={note.name}
                 className="w-full h-full object-cover object-top"
+                onError={() => setImgError(true)}
               />
             ) : (
               <FileText className="w-8 h-8 text-muted-foreground" />

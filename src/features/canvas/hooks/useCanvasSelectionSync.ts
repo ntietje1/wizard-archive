@@ -21,10 +21,14 @@ export function useCanvasSelectionSync({
   const handleSelectionChange = useCallback(
     ({ nodes }: { nodes: Array<Node> }) => {
       const nodeIds = nodes.map((n) => n.id)
-      if (
-        nodeIds.length !== prevSelectionRef.current.length ||
-        nodeIds.some((id, i) => id !== prevSelectionRef.current[i])
-      ) {
+      const prevIds = prevSelectionRef.current
+      const changed =
+        nodeIds.length !== prevIds.length ||
+        (() => {
+          const prevSet = new Set(prevIds)
+          return nodeIds.some((id) => !prevSet.has(id))
+        })()
+      if (changed) {
         prevSelectionRef.current = nodeIds
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
         onHistorySelectionChange(nodeIds)

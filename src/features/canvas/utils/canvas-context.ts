@@ -29,3 +29,4 @@ export const CanvasContext = createContext<CanvasContextValue>({
   editingEmbedId: null,
   setEditingEmbedId: () => {},
 })
+CanvasContext.displayName = 'CanvasContext'

@@ -1,14 +1,14 @@
 import { EmbedNode } from './embed-node'
-import { TextNode } from './text-node'
-import { StickyNode } from './sticky-node'
 import { RectangleNode } from './rectangle-node'
+import { StickyNode } from './sticky-node'
 import { StrokeNode } from './stroke-node'
+import { TextNode } from './text-node'
 import type { NodeTypes } from '@xyflow/react'
 
 export const canvasNodeTypes: NodeTypes = {
-  text: TextNode,
-  sticky: StickyNode,
-  rectangle: RectangleNode,
-  stroke: StrokeNode,
   embed: EmbedNode,
+  rectangle: RectangleNode,
+  sticky: StickyNode,
+  stroke: StrokeNode,
+  text: TextNode,
 }

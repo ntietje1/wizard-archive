@@ -166,25 +166,29 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(playerNote).not.toBeNull()
     expect(playerNote!.name).toBe('Nested Note')
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'nested-block',
-    })
+    const block = await createBlock(
+      t,
+      noteId,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { blockId: 'nested-block' },
+    )
 
     const playerNoteWithBlocks = await playerAuth.query(
       api.notes.queries.getNote,
       { noteId },
     )
     expect(Object.keys(playerNoteWithBlocks!.blockMeta)).not.toContain(
-      'nested-block',
+      block.blockId,
     )
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       noteId,
       blocks: [
         {
-          blockNoteId: 'nested-block',
+          blockNoteId: block.blockId,
           content: {
-            id: 'nested-block',
+            id: block.blockId,
             type: 'paragraph' as const,
             content: [],
           },
@@ -196,7 +200,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerNoteShared = await playerAuth.query(api.notes.queries.getNote, {
       noteId,
     })
-    expect(Object.keys(playerNoteShared!.blockMeta)).toContain('nested-block')
+    expect(Object.keys(playerNoteShared!.blockMeta)).toContain(block.blockId)
   })
 
   it('removing sidebar share hides note entirely regardless of block shares', async () => {

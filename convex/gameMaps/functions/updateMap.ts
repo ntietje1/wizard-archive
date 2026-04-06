@@ -47,6 +47,7 @@ export async function updateMap(
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
+    // Maps use imageStorageId as their preview — no separate preview pipeline
     updates.previewStorageId = imageStorageId
   }
   if (iconName !== undefined) {

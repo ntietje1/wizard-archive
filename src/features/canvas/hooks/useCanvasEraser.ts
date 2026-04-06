@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { polylineIntersectsStroke } from '../utils/canvas-stroke-utils'
@@ -14,6 +14,7 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
   const trailRef = useRef<Array<{ x: number; y: number }>>([])
   const erasingRef = useRef(false)
   const markedRef = useRef(new Set<string>())
+  const eraserRafRef = useRef(0)
   const reactFlow = useReactFlow()
 
   const testIntersections = useCallback(() => {
@@ -76,14 +77,24 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
         y: e.clientY,
       })
       trailRef.current.push(pos)
-      testIntersections()
+      if (!eraserRafRef.current) {
+        eraserRafRef.current = requestAnimationFrame(() => {
+          eraserRafRef.current = 0
+          testIntersections()
+        })
+      }
     },
     [reactFlow, testIntersections],
   )
 
   const onPointerUp = useCallback(() => {
     erasingRef.current = false
-    nodesMap.doc!.transact(() => {
+    if (eraserRafRef.current) {
+      cancelAnimationFrame(eraserRafRef.current)
+      eraserRafRef.current = 0
+    }
+    if (!nodesMap.doc) return
+    nodesMap.doc.transact(() => {
       for (const id of markedRef.current) {
         nodesMap.delete(id)
       }
@@ -92,6 +103,14 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
     trailRef.current = []
     useCanvasToolStore.getState().setErasingStrokeIds(new Set())
   }, [nodesMap])
+
+  useEffect(() => {
+    return () => {
+      if (eraserRafRef.current) {
+        cancelAnimationFrame(eraserRafRef.current)
+      }
+    }
+  }, [])
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

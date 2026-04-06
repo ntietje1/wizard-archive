@@ -82,7 +82,11 @@ export function ResizableNodeWrapper({
   const { remoteHighlights, onResizeEnd } = useContext(CanvasContext)
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging && !isRectDeselected
-  const keepAspectRatio = useSyncExternalStore(subscribeShift, getShift)
+  const keepAspectRatio = useSyncExternalStore(
+    subscribeShift,
+    getShift,
+    getShift,
+  )
 
   const handleResizeEnd: OnResizeEnd = (_event, params) => {
     onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })

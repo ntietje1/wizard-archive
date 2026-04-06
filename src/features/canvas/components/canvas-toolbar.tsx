@@ -161,13 +161,11 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
               <div className="w-px h-6 bg-border mx-1" />
               <div className="flex items-center gap-0.5">
                 {STROKE_SIZES.map((size) => (
-                  <button
+                  <Button
                     key={size}
-                    className="h-8 w-8 flex items-center justify-center rounded-sm transition-colors"
-                    style={{
-                      backgroundColor:
-                        strokeSize === size ? 'var(--accent)' : 'transparent',
-                    }}
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 ${strokeSize === size ? 'bg-accent' : ''}`}
                     onClick={() => setStrokeSize(size)}
                     aria-label={`Stroke size ${size}`}
                     title={`Size ${size}`}
@@ -176,7 +174,7 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
                       className="rounded-full bg-foreground"
                       style={{ width: size, height: size }}
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
             </>

@@ -5,6 +5,7 @@ type PointerHandlers = {
   onPointerDown: (e: React.PointerEvent) => void
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: (e: React.PointerEvent) => void
+  onPointerCancel?: (e: React.PointerEvent) => void
 }
 
 interface ToolHandlers {
@@ -24,7 +25,12 @@ export function useCanvasOverlayHandlers(tools: ToolHandlers) {
       lasso: tools.lasso,
       rectangle: tools.rectangleDraw,
     }
-    return toolMap[activeTool] ?? null
+    const handlers = toolMap[activeTool]
+    if (!handlers) return null
+    return {
+      ...handlers,
+      onPointerCancel: handlers.onPointerCancel ?? handlers.onPointerUp,
+    }
   }, [activeTool, tools])
 
   const toolCursor = getToolCursor(activeTool)

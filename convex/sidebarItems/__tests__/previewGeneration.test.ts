@@ -34,9 +34,10 @@ describe('claimPreviewGeneration', () => {
     expect(result.claimed).toBe(true)
 
     await t.run(async (dbCtx) => {
+      const now = Date.now()
       const note = await dbCtx.db.get(noteId)
       expect(note!.previewLockedUntil).not.toBeNull()
-      expect(note!.previewLockedUntil).toBeGreaterThan(Date.now() - 1000)
+      expect(note!.previewLockedUntil).toBeGreaterThan(now)
     })
   })
 
@@ -243,9 +244,11 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
+      const now = Date.now()
       const note = await dbCtx.db.get(noteId)
       expect(note!.previewStorageId).toBe(storageId)
       expect(note!.previewUpdatedAt).not.toBeNull()
+      expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(5000)
       expect(note!.previewLockedUntil).toBeNull()
     })
   })
@@ -279,33 +282,6 @@ describe('setPreviewImage', () => {
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
       expect(oldUrl).toBeNull()
-    })
-  })
-
-  it('clears previewLockedUntil on success', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
-        previewLockedUntil: Date.now() + 60_000,
-      })
-    })
-
-    const storageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['preview']))
-    })
-
-    await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      itemId: noteId,
-      previewStorageId: storageId,
-    })
-
-    await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
-      expect(note!.previewLockedUntil).toBeNull()
     })
   })
 
@@ -434,14 +410,15 @@ describe('enhanceBase previewUrl resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const items = await dmAuth.query(
       api.sidebarItems.queries.getSidebarItemsByLocation,
       { campaignId: ctx.campaignId, location: 'sidebar' },
     )
 
-    expect(items.length).toBeGreaterThan(0)
-    expect(items[0].previewUrl).toBeNull()
+    const note = items.find((i) => i._id === noteId)
+    expect(note).toBeDefined()
+    expect(note!.previewUrl).toBeNull()
   })
 })
