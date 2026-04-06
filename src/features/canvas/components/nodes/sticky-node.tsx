@@ -11,6 +11,31 @@ export type StickyNodeType = Node<
   'sticky'
 >
 
+export function StickyPreview({
+  label,
+  color,
+  opacity,
+}: {
+  label: string
+  color: string
+  opacity?: number
+}) {
+  return (
+    <div
+      className="h-full w-full p-3 rounded-md shadow-lg shadow-black/20"
+      style={{
+        backgroundColor: color || STICKY_DEFAULT_COLOR,
+        color: '#1a1a1a',
+        opacity: (opacity ?? 100) / 100,
+      }}
+    >
+      <p className="text-sm whitespace-pre-wrap select-none">
+        {label || 'Double-click to edit'}
+      </p>
+    </div>
+  )
+}
+
 export function StickyNode({
   id,
   data,

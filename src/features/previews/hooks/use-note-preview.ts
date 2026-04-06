@@ -12,7 +12,7 @@ export function useNotePreview({
   editorContainerRef,
 }: {
   noteId: Id<'notes'>
-  doc: Y.Doc
+  doc: Y.Doc | null
   editorContainerRef: React.RefObject<HTMLElement | null>
 }) {
   const isGeneratingRef = useRef(false)
@@ -25,6 +25,8 @@ export function useNotePreview({
   claimAndUploadRef.current = claimAndUpload
 
   useEffect(() => {
+    if (!doc) return
+
     const generate = async () => {
       if (isGeneratingRef.current) return
       const el = editorContainerRef.current

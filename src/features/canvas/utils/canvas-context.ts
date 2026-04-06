@@ -13,6 +13,8 @@ export interface CanvasContextValue {
   remoteHighlights: Map<string, RemoteHighlight>
   canEdit: boolean
   user: { name: string; color: string }
+  editingEmbedId: string | null
+  setEditingEmbedId: (id: string | null) => void
 }
 
 const EMPTY_HIGHLIGHTS = new Map<string, RemoteHighlight>()
@@ -24,4 +26,6 @@ export const CanvasContext = createContext<CanvasContextValue>({
   remoteHighlights: EMPTY_HIGHLIGHTS,
   canEdit: false,
   user: DEFAULT_USER,
+  editingEmbedId: null,
+  setEditingEmbedId: () => {},
 })

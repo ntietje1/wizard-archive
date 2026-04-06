@@ -14,6 +14,39 @@ export type StrokeNodeData = {
 
 export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
 
+export function StrokePreview({
+  data,
+  width,
+  height,
+  opacityOverride,
+}: {
+  data: StrokeNodeData
+  width: number
+  height: number
+  opacityOverride?: number
+}) {
+  const { points, color, size, bounds } = data
+  const d = pointsToPathD(points, size)
+  if (!d) return null
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      preserveAspectRatio="none"
+      style={{ overflow: 'visible' }}
+    >
+      <path
+        d={d}
+        fill={color}
+        opacity={opacityOverride ?? (data.opacity ?? 100) / 100}
+        style={{ pointerEvents: 'auto' }}
+      />
+    </svg>
+  )
+}
+
 export function StrokeNode({
   id,
   data,
@@ -22,13 +55,11 @@ export function StrokeNode({
   width,
   height,
 }: NodeProps<StrokeNodeType>) {
-  const { points, color, size, bounds } = data
+  const { points, size, bounds } = data
   const isErasing = useCanvasToolStore((s) => s.erasingStrokeIds.has(id))
   const isRectDeselected = useCanvasToolStore((s) =>
     s.rectDeselectedIds.has(id),
   )
-  const d = pointsToPathD(points, size)
-  if (!d) return null
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
@@ -42,23 +73,23 @@ export function StrokeNode({
       minWidth={20}
       minHeight={20}
     >
-      <svg
+      <StrokePreview
+        data={data}
         width={svgWidth}
         height={svgHeight}
-        viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
-        preserveAspectRatio="none"
-        style={{ overflow: 'visible' }}
-      >
-        <path
-          d={d}
-          fill={color}
-          opacity={isErasing ? 0.3 : (data.opacity ?? 100) / 100}
-          style={{ pointerEvents: 'auto' }}
-        />
-        {selected && !isRectDeselected && (
+        opacityOverride={isErasing ? 0.3 : undefined}
+      />
+      {selected && !isRectDeselected && (
+        <svg
+          width={svgWidth}
+          height={svgHeight}
+          viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+          preserveAspectRatio="none"
+          style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0 }}
+        >
           <path d={pointsToPathD(points, size * 0.3)} fill="var(--primary)" />
-        )}
-      </svg>
+        </svg>
+      )}
     </ResizableNodeWrapper>
   )
 }

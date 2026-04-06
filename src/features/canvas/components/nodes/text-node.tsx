@@ -5,6 +5,14 @@ import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { NodeProps } from '@xyflow/react'
 
+export function TextPreview({ label }: { label: string }) {
+  return (
+    <div className="px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full">
+      <p className="text-sm select-none">{label || 'Text'}</p>
+    </div>
+  )
+}
+
 export function TextNode({ id, data, selected, dragging }: NodeProps) {
   const { updateNodeData } = useContext(CanvasContext)
   const label = (data.label as string) || 'Text'

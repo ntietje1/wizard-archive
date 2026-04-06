@@ -6,6 +6,26 @@ export type RectangleNodeType = Node<
   'rectangle'
 >
 
+export function RectanglePreview({
+  color,
+  opacity,
+}: {
+  color: string
+  opacity?: number
+}) {
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <div
+        className="relative flex h-[calc(100%-5px)] w-[calc(100%-5px)] items-center justify-center rounded-md border border-border shadow-sm"
+        style={{
+          backgroundColor: color,
+          opacity: (opacity ?? 100) / 100,
+        }}
+      />
+    </div>
+  )
+}
+
 export function RectangleNode({
   id,
   selected,
@@ -20,15 +40,7 @@ export function RectangleNode({
       minWidth={20}
       minHeight={20}
     >
-      <div className="flex h-full w-full items-center justify-center">
-        <div
-          className="relative flex h-[calc(100%-5px)] w-[calc(100%-5px)] items-center justify-center rounded-md border border-border shadow-sm"
-          style={{
-            backgroundColor: data.color,
-            opacity: (data.opacity ?? 100) / 100,
-          }}
-        />
-      </div>
+      <RectanglePreview color={data.color} opacity={data.opacity} />
     </ResizableNodeWrapper>
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   MiniMap,
@@ -171,6 +171,7 @@ function CanvasFlow({
   doc: Y.Doc
 }) {
   const reactFlowInstance = useReactFlow()
+  const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
   const {
     remoteUsers,
     setLocalCursor,
@@ -228,6 +229,8 @@ function CanvasFlow({
   useCanvasSelectionSync({
     setLocalSelection,
     onHistorySelectionChange,
+    editingEmbedId,
+    setEditingEmbedId,
   })
 
   const { overlayHandlers, toolCursor } = useCanvasOverlayHandlers({
@@ -346,8 +349,17 @@ function CanvasFlow({
       remoteHighlights,
       canEdit,
       user: canvasUser,
+      editingEmbedId,
+      setEditingEmbedId,
     }),
-    [updateNodeData, onResizeEnd, remoteHighlights, canEdit, canvasUser],
+    [
+      updateNodeData,
+      onResizeEnd,
+      remoteHighlights,
+      canEdit,
+      canvasUser,
+      editingEmbedId,
+    ],
   )
 
   const panOnDrag = isHandMode ? PAN_BOTH : PAN_MIDDLE_ONLY

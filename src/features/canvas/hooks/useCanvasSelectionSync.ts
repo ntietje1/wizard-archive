@@ -5,11 +5,15 @@ import type { Node } from '@xyflow/react'
 interface UseCanvasSelectionSyncOptions {
   setLocalSelection: (nodeIds: Array<string> | null) => void
   onHistorySelectionChange: (nodeIds: Array<string>) => void
+  editingEmbedId: string | null
+  setEditingEmbedId: (id: string | null) => void
 }
 
 export function useCanvasSelectionSync({
   setLocalSelection,
   onHistorySelectionChange,
+  editingEmbedId,
+  setEditingEmbedId,
 }: UseCanvasSelectionSyncOptions) {
   const reactFlowInstance = useReactFlow()
   const prevSelectionRef = useRef<Array<string>>([])
@@ -25,6 +29,10 @@ export function useCanvasSelectionSync({
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
         onHistorySelectionChange(nodeIds)
 
+        if (editingEmbedId && !nodeIds.includes(editingEmbedId)) {
+          setEditingEmbedId(null)
+        }
+
         const selectedSet = new Set(nodeIds)
         reactFlowInstance.setNodes((current) =>
           current.map((n) =>
@@ -35,7 +43,13 @@ export function useCanvasSelectionSync({
         )
       }
     },
-    [setLocalSelection, reactFlowInstance, onHistorySelectionChange],
+    [
+      setLocalSelection,
+      reactFlowInstance,
+      onHistorySelectionChange,
+      editingEmbedId,
+      setEditingEmbedId,
+    ],
   )
 
   useOnSelectionChange({ onChange: handleSelectionChange })
