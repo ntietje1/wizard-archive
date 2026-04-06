@@ -1,4 +1,4 @@
-import { useReactFlow } from '@xyflow/react'
+import { useReactFlow, useStoreApi } from '@xyflow/react'
 import {
   Eraser,
   Hand,
@@ -15,7 +15,14 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { STICKY_DEFAULT_COLOR } from './nodes/sticky-node-constants'
+import {
+  STICKY_DEFAULT_COLOR,
+  STICKY_DEFAULT_HEIGHT,
+  STICKY_DEFAULT_OPACITY,
+  STICKY_DEFAULT_WIDTH,
+  TEXT_NODE_DEFAULT_HEIGHT,
+  TEXT_NODE_DEFAULT_WIDTH,
+} from './nodes/sticky-node-constants'
 import type { Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { Button } from '~/features/shadcn/components/button'
@@ -28,7 +35,8 @@ interface CanvasToolbarProps {
 }
 
 export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
-  const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
+  const { zoomIn, zoomOut, fitView, getViewport } = useReactFlow()
+  const storeApi = useStoreApi()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const strokeSize = useCanvasToolStore((s) => s.strokeSize)
@@ -41,24 +49,25 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
 
   const addNode = (type: 'text' | 'sticky') => {
     const id = crypto.randomUUID()
-    const position = screenToFlowPosition({
-      x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
-      y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
-    })
-    const { strokeOpacity } = useCanvasToolStore.getState()
-
+    const { x: vx, y: vy, zoom } = getViewport()
+    const { width, height } = storeApi.getState()
+    const position = {
+      x: (width / 2 - vx) / zoom + (Math.random() - 0.5) * 100,
+      y: (height / 2 - vy) / zoom + (Math.random() - 0.5) * 100,
+    }
     const node: Node = {
       id,
       type,
       position,
-      width: type === 'sticky' ? 160 : 120,
-      height: type === 'sticky' ? 160 : 36,
+      width: type === 'sticky' ? STICKY_DEFAULT_WIDTH : TEXT_NODE_DEFAULT_WIDTH,
+      height:
+        type === 'sticky' ? STICKY_DEFAULT_HEIGHT : TEXT_NODE_DEFAULT_HEIGHT,
       data: {
         label: type === 'text' ? 'New text' : '',
         ...(type === 'sticky'
           ? {
               color: STICKY_DEFAULT_COLOR,
-              opacity: strokeOpacity,
+              opacity: STICKY_DEFAULT_OPACITY,
             }
           : {}),
       },
@@ -177,10 +186,9 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
                   </Button>
                 ))}
               </div>
+              <div className="w-px h-6 bg-border mx-1" />
             </>
           )}
-
-          <div className="w-px h-6 bg-border mx-1" />
         </>
       )}
       <Button

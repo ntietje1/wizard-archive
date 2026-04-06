@@ -2,6 +2,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireCampaignMembership } from '../../functions'
 import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { logger } from '../../common/logger'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -24,6 +25,18 @@ export async function setPreviewImage(
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
+
+  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Folders do not support preview images',
+    )
+  }
+
+  const storageUrl = await ctx.storage.getUrl(previewStorageId)
+  if (!storageUrl) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Storage object not found')
+  }
 
   const oldPreviewStorageId = item.previewStorageId
 

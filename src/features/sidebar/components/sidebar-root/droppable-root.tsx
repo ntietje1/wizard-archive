@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import {
-  SIDEBAR_ROOT_TYPE,
+  SIDEBAR_ROOT_DROP_TYPE,
   canDropFilesOnTarget,
 } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -16,12 +16,12 @@ interface DroppableRootProps {
 export function DroppableRoot({ children, className }: DroppableRootProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const rootTargetData = { type: SIDEBAR_ROOT_TYPE } as const
+  const rootTargetData = { type: SIDEBAR_ROOT_DROP_TYPE } as const
 
   const { isDropTarget } = useDndDropTarget({
     ref,
     data: rootTargetData,
-    highlightId: SIDEBAR_ROOT_TYPE,
+    highlightId: SIDEBAR_ROOT_DROP_TYPE,
   })
 
   useExternalDropTarget({

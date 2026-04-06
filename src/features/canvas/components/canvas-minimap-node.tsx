@@ -1,7 +1,7 @@
 import { useInternalNode, useViewport } from '@xyflow/react'
 import { getMiniMapStrokePath } from '../utils/canvas-stroke-utils'
-import type { InternalNode, Node } from '@xyflow/react'
-import type { StrokeNodeData } from './nodes/stroke-node'
+import type { InternalNode } from '@xyflow/react'
+import type { StrokeNodeType } from './nodes/stroke-node'
 
 interface MiniMapNodeProps {
   id: string
@@ -15,7 +15,7 @@ interface MiniMapNodeProps {
 }
 
 interface MiniMapStrokeNodeProps {
-  node: InternalNode<Node>
+  node: InternalNode<StrokeNodeType>
   x: number
   y: number
   width: number
@@ -35,9 +35,9 @@ function MiniMapStrokeNode({
 }: MiniMapStrokeNodeProps) {
   const { zoom } = useViewport()
 
-  const data = node.data as StrokeNodeData
+  const data = node.data
   const d = getMiniMapStrokePath(data.points, data.size, zoom)
-  if (!d) return null
+  if (!d || !data.bounds) return null
 
   const safeWidth = Math.max(data.bounds.width, 1)
   const safeHeight = Math.max(data.bounds.height, 1)
@@ -67,10 +67,13 @@ export function MiniMapNode({
   shapeRendering,
 }: MiniMapNodeProps) {
   const node = useInternalNode(id)
-  if (node?.type === 'stroke') {
+  if (!node) return null
+  if (node.type === 'stroke') {
+    const strokeNode = node as InternalNode<StrokeNodeType>
+    if (!strokeNode.data?.points || !strokeNode.data?.bounds) return null
     return (
       <MiniMapStrokeNode
-        node={node}
+        node={strokeNode}
         x={x}
         y={y}
         width={width}

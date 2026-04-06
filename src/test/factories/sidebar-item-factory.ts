@@ -25,6 +25,7 @@ interface BaseFields {
   parentId: Id<'folders'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  previewUrl: string | null
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
   previewUpdatedAt: number | null
@@ -36,7 +37,6 @@ interface BaseFields {
   shares: Array<SidebarItemShare>
   isBookmarked: boolean
   myPermissionLevel: PermissionLevel
-  previewUrl: string | null
 }
 
 function baseFields(): BaseFields {
@@ -51,6 +51,7 @@ function baseFields(): BaseFields {
     parentId: null,
     allPermissionLevel: null,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
+    previewUrl: null,
     previewStorageId: null,
     previewLockedUntil: null,
     previewUpdatedAt: null,
@@ -62,7 +63,6 @@ function baseFields(): BaseFields {
     shares: [],
     isBookmarked: false,
     myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
-    previewUrl: null,
   }
 }
 

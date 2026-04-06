@@ -19,6 +19,17 @@ interface CanvasColorPanelProps {
 
 const COLOR_RELEVANT_TOOLS = new Set(['draw', 'rectangle'])
 
+const COLOR_NAMES: Record<string, string> = {
+  'var(--foreground)': 'Default',
+  'var(--t-red)': 'Red',
+  'var(--t-orange)': 'Orange',
+  'var(--t-yellow)': 'Yellow',
+  'var(--t-green)': 'Green',
+  'var(--t-blue)': 'Blue',
+  'var(--t-purple)': 'Purple',
+  'var(--t-pink)': 'Pink',
+}
+
 export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   const { updateNodeData } = useContext(CanvasContext)
   const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
@@ -59,8 +70,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     (data: Record<string, unknown>) => {
       pendingUpdate.current = {
         data: { ...pendingUpdate.current?.data, ...data },
-        nodeIds:
-          pendingUpdate.current?.nodeIds ?? colorRelevantNodes.map((n) => n.id),
+        nodeIds: colorRelevantNodes.map((n) => n.id),
       }
       if (!rafId.current) {
         rafId.current = requestAnimationFrame(() => {
@@ -77,7 +87,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     : strokeColor
 
   const activeOpacity = hasColorSelection
-    ? getSelectionOpacity(colorRelevantNodes)
+    ? (getSelectionOpacity(colorRelevantNodes) ?? strokeOpacity)
     : strokeOpacity
 
   const handleColorChange = useCallback(
@@ -101,7 +111,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     const color = getSelectionColor(colorRelevantNodes)
     if (color) setStrokeColor(color)
     const opacity = getSelectionOpacity(colorRelevantNodes)
-    setStrokeOpacity(opacity)
+    if (opacity !== null) setStrokeOpacity(opacity)
   }, [hasColorSelection, colorRelevantNodes, setStrokeColor, setStrokeOpacity])
 
   useEffect(() => {
@@ -120,7 +130,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
         <button
           type="button"
           key={color}
-          className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110"
+          className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           style={{
             backgroundColor: color,
             outline:
@@ -128,7 +138,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
             outlineOffset: '1px',
           }}
           onClick={() => handleColorChange(color)}
-          aria-label={`Color ${color}`}
+          aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
         />
       ))}
       <div className="w-px h-6 bg-border mx-1" />
@@ -152,11 +162,11 @@ function getSelectionColor(nodes: Array<Node>): string | null {
   return null
 }
 
-function getSelectionOpacity(nodes: Array<Node>): number {
+function getSelectionOpacity(nodes: Array<Node>): number | null {
   const opacities = new Set<number>()
   for (const node of nodes) {
     opacities.add((node.data?.opacity as number) ?? 100)
   }
   if (opacities.size === 1) return opacities.values().next().value!
-  return 100
+  return null
 }

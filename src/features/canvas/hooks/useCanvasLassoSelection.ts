@@ -17,13 +17,19 @@ export function useCanvasLassoSelection({
 }: UseCanvasLassoSelectionOptions) {
   const pointsRef = useRef<Array<Point2D>>([])
   const activeRef = useRef(false)
+  const capturedRef = useRef<{
+    element: Element
+    pointerId: number
+  } | null>(null)
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      const target = e.target as HTMLElement
+      target.setPointerCapture(e.pointerId)
+      capturedRef.current = { element: target, pointerId: e.pointerId }
       activeRef.current = true
       const pos = reactFlow.screenToFlowPosition({
         x: e.clientX,
@@ -64,6 +70,16 @@ export function useCanvasLassoSelection({
   const onPointerUp = useCallback(() => {
     if (!activeRef.current) return
     activeRef.current = false
+    if (capturedRef.current) {
+      try {
+        capturedRef.current.element.releasePointerCapture(
+          capturedRef.current.pointerId,
+        )
+      } catch {
+        /* already released */
+      }
+      capturedRef.current = null
+    }
     setLocalSelecting(null)
     const polygon = pointsRef.current
     const store = useCanvasToolStore.getState()
@@ -84,6 +100,7 @@ export function useCanvasLassoSelection({
 
       if (internalNode.type === 'stroke') {
         const strokeData = internalNode.data as StrokeNodeData
+        if (!strokeData?.bounds || !Array.isArray(strokeData.points)) return
         const offsetX = position.x - strokeData.bounds.x
         const offsetY = position.y - strokeData.bounds.y
         const adjustedPoints = strokeData.points.map(

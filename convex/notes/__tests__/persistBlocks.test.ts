@@ -11,7 +11,10 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import {
+  makeYjsUpdate,
+  makeYjsUpdateWithBlocks,
+} from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
 describe('persistBlocks', () => {
   const t = createTestContext()
@@ -71,6 +74,15 @@ describe('persistBlocks', () => {
     )
 
     expect(result).toBeNull()
+
+    await t.run(async (dbCtx) => {
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+
+      expect(blocks.length).toBe(0)
+    })
   })
 
   it('empty YDoc produces no blocks', async () => {
@@ -104,6 +116,76 @@ describe('persistBlocks', () => {
         .collect()
 
       expect(blocks.length).toBe(0)
+    })
+  })
+
+  it('persists blocks from a YDoc with content', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Content Note',
+      parentId: null,
+    })
+
+    const blockIds = {
+      heading: 'heading-block-1',
+      paragraph: 'paragraph-block-1',
+    }
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: blockIds.heading,
+          type: 'heading',
+          props: { level: 1 },
+          content: [{ type: 'text', text: 'Hello World', styles: {} }],
+          children: [],
+        },
+        {
+          id: blockIds.paragraph,
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: 'Some paragraph text', styles: {} }],
+          children: [],
+        },
+      ]),
+    })
+
+    const result = await dmAuth.mutation(
+      api.notes.mutations.persistNoteBlocks,
+      {
+        documentId: noteId,
+      },
+    )
+
+    expect(result).toBeNull()
+
+    await t.run(async (dbCtx) => {
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+
+      expect(blocks.length).toBe(2)
+
+      const headingBlock = blocks.find((b) => b.blockId === blockIds.heading)
+      expect(headingBlock).toMatchObject({
+        isTopLevel: true,
+        content: { type: 'heading' },
+        position: 0,
+      })
+
+      const paragraphBlock = blocks.find(
+        (b) => b.blockId === blockIds.paragraph,
+      )
+      expect(paragraphBlock).toMatchObject({
+        isTopLevel: true,
+        content: { type: 'paragraph' },
+        position: 1,
+      })
     })
   })
 })

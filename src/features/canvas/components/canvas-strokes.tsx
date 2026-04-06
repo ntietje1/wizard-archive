@@ -18,6 +18,7 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
 
   return (
     <svg
+      aria-hidden="true"
       style={{
         position: 'absolute',
         top: 0,
@@ -45,11 +46,11 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
         )
       })}
 
-      {localPathD && (
+      {localPathD && localDrawing && (
         <path
           d={localPathD}
-          fill={localDrawing!.color}
-          opacity={(localDrawing!.opacity ?? 100) / 100}
+          fill={localDrawing.color}
+          opacity={(localDrawing.opacity ?? 100) / 100}
         />
       )}
     </svg>

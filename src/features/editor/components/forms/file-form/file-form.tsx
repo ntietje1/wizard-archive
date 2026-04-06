@@ -187,7 +187,7 @@ export function FileForm({
             fileUpload.file,
             newFileId as Id<'files'>,
           ).catch((err: unknown) =>
-            console.error('PDF preview generation failed:', err),
+            handleError(err, 'PDF preview generation failed'),
           )
         }
 

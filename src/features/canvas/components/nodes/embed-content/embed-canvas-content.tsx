@@ -14,13 +14,30 @@ import { LoadingSpinner } from '~/shared/components/loading-spinner'
 const DEFAULT_NODE_WIDTH = 150
 const DEFAULT_NODE_HEIGHT = 40
 
+function getNodeDimensions(node: Node): { w: number; h: number } {
+  const bounds = (node.data as { bounds?: { width: number; height: number } })
+    .bounds
+  return {
+    w: node.width ?? bounds?.width ?? DEFAULT_NODE_WIDTH,
+    h: node.height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT,
+  }
+}
+
 export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
-  const { nodes, edges, isLoading } = useReadOnlyYjsCanvas(canvasId)
+  const { nodes, edges, isLoading, isError } = useReadOnlyYjsCanvas(canvasId)
 
   if (isLoading) {
     return (
       <div className="nodrag nopan nowheel h-full w-full flex items-center justify-center">
         <LoadingSpinner size="sm" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="nodrag nopan nowheel h-full w-full flex items-center justify-center text-muted-foreground text-sm">
+        Failed to load canvas
       </div>
     )
   }
@@ -60,12 +77,13 @@ function StaticCanvasRenderer({
 
   const bounds = getNodesBounds(nodes)
   const padding = 20
+  const ready = size && bounds
 
   let scale = 1
   let offsetX = 0
   let offsetY = 0
 
-  if (size && bounds) {
+  if (ready) {
     const bw = bounds.maxX - bounds.minX + padding * 2
     const bh = bounds.maxY - bounds.minY + padding * 2
     scale = Math.min(size.w / bw, size.h / bh, 1)
@@ -78,10 +96,7 @@ function StaticCanvasRenderer({
     { cx: number; cy: number; w: number; h: number }
   >()
   for (const node of nodes) {
-    const b = (node.data as { bounds?: { width: number; height: number } })
-      .bounds
-    const w = node.width ?? b?.width ?? DEFAULT_NODE_WIDTH
-    const h = node.height ?? b?.height ?? DEFAULT_NODE_HEIGHT
+    const { w, h } = getNodeDimensions(node)
     nodePositions.set(node.id, {
       cx: node.position.x + w / 2,
       cy: node.position.y + h / 2,
@@ -92,50 +107,52 @@ function StaticCanvasRenderer({
 
   return (
     <div ref={containerRef} className="h-full w-full relative">
-      <svg
-        className="absolute pointer-events-none"
-        overflow="visible"
-        style={{
-          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-          transformOrigin: 'top left',
-        }}
-      >
-        {edges.map((edge) => {
-          const src = nodePositions.get(edge.source)
-          const tgt = nodePositions.get(edge.target)
-          if (!src || !tgt) return null
-          return (
-            <line
-              key={edge.id}
-              x1={src.cx}
-              y1={src.cy}
-              x2={tgt.cx}
-              y2={tgt.cy}
-              stroke="var(--border)"
-              strokeWidth={1.5}
-            />
-          )
-        })}
-      </svg>
-      <div
-        className="absolute origin-top-left"
-        style={{
-          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-        }}
-      >
-        {nodes.map((node) => (
-          <StaticNode key={node.id} node={node} />
-        ))}
-      </div>
+      {!ready ? null : (
+        <>
+          <svg
+            className="absolute pointer-events-none"
+            overflow="visible"
+            style={{
+              transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+              transformOrigin: 'top left',
+            }}
+          >
+            {edges.map((edge) => {
+              const src = nodePositions.get(edge.source)
+              const tgt = nodePositions.get(edge.target)
+              if (!src || !tgt) return null
+              return (
+                <line
+                  key={edge.id}
+                  x1={src.cx}
+                  y1={src.cy}
+                  x2={tgt.cx}
+                  y2={tgt.cy}
+                  stroke="var(--border)"
+                  strokeWidth={1.5}
+                />
+              )
+            })}
+          </svg>
+          <div
+            className="absolute origin-top-left"
+            style={{
+              transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+            }}
+          >
+            {nodes.map((node) => (
+              <StaticNode key={node.id} node={node} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
 function StaticNode({ node }: { node: Node }) {
-  const { position, width, height, type, data } = node
-  const bounds = (data as { bounds?: { width: number; height: number } }).bounds
-  const w = width ?? bounds?.width ?? DEFAULT_NODE_WIDTH
-  const h = height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT
+  const { position, type, data } = node
+  const { w, h } = getNodeDimensions(node)
 
   const content = renderNodePreview(type, data, w, h)
   if (!content) return null
@@ -196,10 +213,7 @@ function getNodesBounds(nodes: Array<Node>) {
   let maxY = -Infinity
 
   for (const node of nodes) {
-    const bounds = (node.data as { bounds?: { width: number; height: number } })
-      .bounds
-    const w = node.width ?? bounds?.width ?? DEFAULT_NODE_WIDTH
-    const h = node.height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT
+    const { w, h } = getNodeDimensions(node)
     minX = Math.min(minX, node.position.x)
     minY = Math.min(minY, node.position.y)
     maxX = Math.max(maxX, node.position.x + w)
@@ -219,6 +233,7 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
 function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
   const [doc, setDoc] = useState<Y.Doc | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
   const [nodes, setNodes] = useState<Array<Node>>([])
   const [edges, setEdges] = useState<Array<Edge>>([])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
@@ -227,6 +242,7 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
 
   useEffect(() => {
     setIsLoading(true)
+    setIsError(false)
     setAfterSeq(undefined)
     lastAppliedSeqRef.current = -1
     canvasIdRef.current = canvasId
@@ -246,8 +262,14 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
   })
 
   useEffect(() => {
+    if (updatesResult.isError) {
+      setIsLoading(false)
+      setIsError(true)
+      return
+    }
     if (!updatesResult.data || !doc) return
     if (canvasIdRef.current !== canvasId) return
+    setIsError(false)
 
     for (const entry of updatesResult.data) {
       if (entry.seq > lastAppliedSeqRef.current) {
@@ -258,10 +280,10 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
 
     if (updatesResult.data.length > 0) {
       setAfterSeq(lastAppliedSeqRef.current)
+    } else {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
-  }, [updatesResult.data, doc, canvasId])
+  }, [updatesResult.data, updatesResult.isError, doc, canvasId])
 
   useEffect(() => {
     if (!doc) return
@@ -283,5 +305,5 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
     }
   }, [doc])
 
-  return { nodes, edges, isLoading }
+  return { nodes, edges, isLoading, isError }
 }

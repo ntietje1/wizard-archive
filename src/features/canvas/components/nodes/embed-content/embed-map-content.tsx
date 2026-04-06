@@ -23,6 +23,8 @@ export function EmbedMapContent({ imageUrl }: { imageUrl: string | null }) {
         alt="Map preview"
         className="h-full w-full object-contain"
         draggable={false}
+        loading="lazy"
+        referrerPolicy="no-referrer"
         onError={() => setImgError(true)}
       />
     </div>

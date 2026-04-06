@@ -71,6 +71,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private pushInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessTimer: ReturnType<typeof setTimeout> | null = null
   private awarenessInFlight = false
+  private awarenessInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessDirty = false
 
   constructor(
@@ -164,19 +165,21 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         .catch(() => {})
     }
 
-    teardown().finally(() => {
-      removeAwarenessStates(
-        this.awareness,
-        [this.doc.clientID],
-        'local-disconnect',
-      )
+    teardown()
+      .catch(() => {})
+      .finally(() => {
+        removeAwarenessStates(
+          this.awareness,
+          [this.doc.clientID],
+          'local-disconnect',
+        )
 
-      this.doc.off('update', this.handleDocUpdate)
-      this.awareness.off('update', this.handleAwarenessUpdate)
-      this.awareness.destroy()
+        this.doc.off('update', this.handleDocUpdate)
+        this.awareness.off('update', this.handleAwarenessUpdate)
+        this.awareness.destroy()
 
-      super.destroy()
-    })
+        super.destroy()
+      })
   }
 
   // -- Document update batching --
@@ -304,14 +307,14 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.clearAwarenessTimer()
     if (this.awarenessInFlight) {
       this.awarenessDirty = true
-      return Promise.resolve()
+      return this.awarenessInFlightPromise
     }
 
     const myClientId = this.doc.clientID
     const encoded = encodeAwarenessUpdate(this.awareness, [myClientId])
 
     this.awarenessInFlight = true
-    return this.config
+    this.awarenessInFlightPromise = this.config
       .pushAwareness({
         documentId: this.documentId,
         clientId: myClientId,
@@ -328,5 +331,6 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
           this.scheduleAwarenessFlush()
         }
       })
+    return this.awarenessInFlightPromise
   }
 }

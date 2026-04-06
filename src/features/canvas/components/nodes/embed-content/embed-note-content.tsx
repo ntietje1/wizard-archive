@@ -87,7 +87,7 @@ export function EmbedNoteContent({
     })
 
     return () => cancelAnimationFrame(rafId)
-  }, [editor, editable, doc, clickCoordsRef])
+  }, [editor, editable, doc])
 
   return (
     <div

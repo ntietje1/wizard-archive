@@ -56,6 +56,7 @@ export function StickyNode({
   } = useNodeEditing({ id, currentValue: label, updateNodeData })
 
   const startEditing = useCallback(() => {
+    cancelledRef.current = false
     setEditValue(label)
     baseStartEditing()
   }, [label, baseStartEditing])
@@ -102,6 +103,10 @@ export function StickyNode({
                 e.stopPropagation()
                 cancelledRef.current = true
                 handleBlur(label)
+              } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                cancelledRef.current = true
+                handleBlur(editValue)
               }
             }}
             autoFocus

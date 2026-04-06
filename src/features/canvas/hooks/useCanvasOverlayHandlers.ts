@@ -15,8 +15,12 @@ interface ToolHandlers {
   rectangleDraw: PointerHandlers
 }
 
+function toReactPointerEvent(e: PointerEvent) {
+  return e as unknown as React.PointerEvent
+}
+
 export function useCanvasOverlayHandlers(
-  wrapperRef: React.RefObject<HTMLDivElement | null>,
+  wrapper: HTMLDivElement | null,
   tools: ToolHandlers,
 ) {
   const activeTool = useCanvasToolStore((s) => s.activeTool)
@@ -35,32 +39,31 @@ export function useCanvasOverlayHandlers(
   handlersRef.current = resolved
 
   useEffect(() => {
-    const wrapper = wrapperRef.current
     if (!wrapper) return
 
     const onPointerDown = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers || e.button !== 0) return
-      handlers.onPointerDown(e as unknown as React.PointerEvent)
+      handlers.onPointerDown(toReactPointerEvent(e))
     }
     const onPointerMove = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers) return
-      handlers.onPointerMove(e as unknown as React.PointerEvent)
+      handlers.onPointerMove(toReactPointerEvent(e))
     }
     const onPointerUp = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers) return
-      handlers.onPointerUp(e as unknown as React.PointerEvent)
+      handlers.onPointerUp(toReactPointerEvent(e))
     }
 
     const onPointerCancel = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers) return
       if (handlers.onPointerCancel) {
-        handlers.onPointerCancel(e as unknown as React.PointerEvent)
+        handlers.onPointerCancel(toReactPointerEvent(e))
       } else {
-        handlers.onPointerUp(e as unknown as React.PointerEvent)
+        handlers.onPointerUp(toReactPointerEvent(e))
       }
     }
 
@@ -74,7 +77,7 @@ export function useCanvasOverlayHandlers(
       wrapper.removeEventListener('pointerup', onPointerUp)
       wrapper.removeEventListener('pointercancel', onPointerCancel)
     }
-  }, [wrapperRef])
+  }, [wrapper])
 
   const toolCursor = getToolCursor(activeTool)
   return { toolCursor }

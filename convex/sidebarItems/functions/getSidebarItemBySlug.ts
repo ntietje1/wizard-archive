@@ -73,6 +73,6 @@ export const getSidebarItemBySlug = async (
     case SIDEBAR_ITEM_TYPES.canvases:
       return enhanceCanvasWithContent(ctx, { canvas: enhanced })
     default:
-      assertNever(enhanced)
+      return assertNever(enhanced)
   }
 }

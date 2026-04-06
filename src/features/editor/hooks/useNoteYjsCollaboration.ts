@@ -15,14 +15,20 @@ export function useNoteYjsCollaboration(
   const result = useConvexYjsCollaboration(noteId, user, canEdit)
   const isPersistingRef = useRef(false)
   const pendingCleanupPersistRef = useRef(false)
+  const generationRef = useRef(0)
 
   useEffect(() => {
     if (!canEdit || result.isLoading) return
+
+    const generation = ++generationRef.current
+    isPersistingRef.current = false
+    pendingCleanupPersistRef.current = false
 
     let active = true
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
     const persist = () => {
+      if (generation !== generationRef.current) return
       if (isPersistingRef.current) return
       isPersistingRef.current = true
       convex

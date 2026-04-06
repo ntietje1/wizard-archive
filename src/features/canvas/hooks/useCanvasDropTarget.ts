@@ -16,6 +16,12 @@ import {
   getDragItemId,
 } from '~/features/dnd/utils/dnd-registry'
 
+const EMBED_SIDEBAR_WIDTH = 320
+const EMBED_SIDEBAR_HEIGHT = 240
+const EMBED_FILE_WIDTH = 200
+const EMBED_FILE_HEIGHT = 52
+const STACK_OFFSET = 20
+
 interface UseCanvasDropTargetOptions {
   nodesMap: Y.Map<Node>
   canvasId: Id<'canvases'>
@@ -86,8 +92,8 @@ export function useCanvasDropTarget({
           id,
           type: 'embed',
           position,
-          width: 320,
-          height: 240,
+          width: EMBED_SIDEBAR_WIDTH,
+          height: EMBED_SIDEBAR_HEIGHT,
           data: { sidebarItemId },
         })
       },
@@ -106,25 +112,30 @@ export function useCanvasDropTarget({
         reactFlowRef.current.screenToFlowPosition(clientCoords)
       try {
         const files = dropResult.files
-        for (let i = 0; i < files.length; i++) {
-          const result = await uploadRef.current(files[i].file, null, {
-            navigate: false,
-          })
-          if (!result) continue
-
+        const results = await Promise.allSettled(
+          files.map((f) =>
+            uploadRef.current(f.file, null, { navigate: false }),
+          ),
+        )
+        results.forEach((result, i) => {
+          if (result.status === 'rejected') {
+            handleError(result.reason, 'Failed to upload file to canvas')
+            return
+          }
+          if (!result.value) return
           const id = crypto.randomUUID()
           nodesMapRef.current.set(id, {
             id,
             type: 'embed',
             position: {
-              x: basePosition.x + i * 20,
-              y: basePosition.y + i * 20,
+              x: basePosition.x + i * STACK_OFFSET,
+              y: basePosition.y + i * STACK_OFFSET,
             },
-            width: 200,
-            height: 52,
-            data: { sidebarItemId: result.id },
+            width: EMBED_FILE_WIDTH,
+            height: EMBED_FILE_HEIGHT,
+            data: { sidebarItemId: result.value.id },
           })
-        }
+        })
       } catch (error) {
         handleError(error, 'Failed to upload files to canvas')
       }

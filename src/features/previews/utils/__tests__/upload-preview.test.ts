@@ -48,6 +48,7 @@ describe('uploadPreviewBlob', () => {
       method: 'POST',
       headers: { 'Content-Type': 'image/webp' },
       body: blob,
+      signal: expect.any(AbortSignal),
     })
     expect(mockSetPreviewImage).toHaveBeenCalledWith({
       itemId: MOCK_ITEM_ID,
@@ -154,6 +155,29 @@ describe('uploadPreviewBlob', () => {
         MOCK_ITEM_ID,
       ),
     ).rejects.toThrow('Failed to fetch')
+
+    expect(mockSetPreviewImage).not.toHaveBeenCalled()
+  })
+
+  it('throws when response JSON is missing storageId', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      }),
+    )
+
+    const blob = new Blob(['test'], { type: 'image/webp' })
+
+    await expect(
+      uploadPreviewBlob(
+        blob,
+        mockGenerateUploadUrl,
+        mockSetPreviewImage,
+        MOCK_ITEM_ID,
+      ),
+    ).rejects.toThrow('missing storageId')
 
     expect(mockSetPreviewImage).not.toHaveBeenCalled()
   })

@@ -5,9 +5,12 @@ import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { NodeProps } from '@xyflow/react'
 
+const TEXT_CONTAINER_CLASS =
+  'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
+
 export function TextPreview({ label }: { label: string }) {
   return (
-    <div className="px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full">
+    <div className={TEXT_CONTAINER_CLASS}>
       <p className="text-sm select-none">{label || 'Text'}</p>
     </div>
   )
@@ -34,7 +37,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps) {
       minHeight={30}
     >
       <div
-        className="px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full"
+        className={TEXT_CONTAINER_CLASS}
         tabIndex={0}
         onDoubleClick={startEditing}
         onKeyDown={containerKeyDown}

@@ -21,16 +21,25 @@ export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }
   | { type: 'lasso'; points: Array<Point2D> }
 
+/**
+ * Complete awareness state for a user's canvas activity.
+ * Tracks cursor position, active drag/resize/draw/select operations.
+ * All operation states are nullable when inactive.
+ */
 export type CanvasAwarenessState = {
   user: { name: string; color: string }
-  cursor: { x: number; y: number } | null
-  dragging: Record<string, { x: number; y: number }> | null
+  cursor: Point2D | null
+  /** Map of element IDs to their current drag positions */
+  dragging: Record<string, Point2D> | null
   resizing: ResizingState | null
   selectedNodeIds: Array<string> | null
   drawing: DrawingState | null
   selecting: SelectingState | null
 }
 
+/**
+ * Remote user's awareness state, including their unique client identifier.
+ */
 export type RemoteUser = CanvasAwarenessState & {
   clientId: number
 }

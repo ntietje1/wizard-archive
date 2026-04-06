@@ -2,7 +2,6 @@ import { useContext, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { useEmbedItemContent } from '../../hooks/useEmbedItemContent'
 import { CanvasContext } from '../../utils/canvas-context'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-content/embed-note-content'
@@ -13,6 +12,7 @@ import { EmbedCanvasContent } from './embed-content/embed-canvas-content'
 import type { NodeProps } from '@xyflow/react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { assertNever } from '~/shared/utils/utils'
@@ -22,7 +22,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 
-  const { data: contentItem } = useEmbedItemContent(sidebarItemId, true)
+  const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
   const { editingEmbedId, setEditingEmbedId, canEdit } =
     useContext(CanvasContext)
@@ -131,6 +131,7 @@ function EmbedRichContent({
         <EmbedFileContent
           downloadUrl={contentItem.downloadUrl}
           contentType={contentItem.contentType}
+          alt={contentItem.name}
         />
       )
     case SIDEBAR_ITEM_TYPES.canvases:

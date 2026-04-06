@@ -27,6 +27,8 @@ export function useNotePreview({
   useEffect(() => {
     if (!doc) return
 
+    let cancelled = false
+
     const generate = async () => {
       if (isGeneratingRef.current) return
       const el = editorContainerRef.current
@@ -34,13 +36,14 @@ export function useNotePreview({
 
       isGeneratingRef.current = true
       try {
+        if (cancelled) return
         await claimAndUploadRef.current(noteIdRef.current, () =>
           captureElementPreview(el),
         )
       } catch (error) {
         console.error('Failed to generate note preview:', error)
       } finally {
-        isGeneratingRef.current = false
+        if (!cancelled) isGeneratingRef.current = false
       }
     }
 
@@ -53,8 +56,10 @@ export function useNotePreview({
     scheduleGeneration()
 
     return () => {
+      cancelled = true
+      isGeneratingRef.current = false
       doc.off('update', scheduleGeneration)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
-  }, [doc, noteId, editorContainerRef])
+  }, [doc, noteId])
 }

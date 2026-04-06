@@ -10,12 +10,20 @@ function isPdfFile(file: File): boolean {
   )
 }
 
+const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
+
 export function usePdfPreviewUpload() {
   const claimAndUpload = useClaimAndUploadPreview()
 
   const generatePdfPreviewIfNeeded = useCallback(
     async (file: File, fileId: Id<'files'>) => {
       if (!isPdfFile(file)) return
+      if (file.size > MAX_PDF_PREVIEW_SIZE) {
+        logger.debug(
+          `Skipping PDF preview for fileId=${fileId}: file too large (${file.size} bytes)`,
+        )
+        return
+      }
       try {
         const buffer = await file.arrayBuffer()
         await claimAndUpload(fileId, () => generatePdfPreview(buffer))

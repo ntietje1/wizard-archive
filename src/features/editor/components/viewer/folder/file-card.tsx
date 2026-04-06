@@ -122,7 +122,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           )}
         >
           {/* Top Section: Title + Menu Button */}
-          <div className="flex items-center justify-between min-w-0">
+          <div className="flex items-center justify-between mb-1 min-w-0">
             <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
               {file.name}
             </CardTitle>
@@ -141,13 +141,15 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           </div>
 
           {/* Preview / Icon Section */}
-          <div className="flex items-center justify-center flex-1 mb-10 overflow-hidden">
+          <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden flex items-center justify-center">
             {file.previewUrl && !imageError ? (
               <img
                 src={file.previewUrl}
                 alt={file.name}
-                className="w-full h-full object-cover rounded-sm"
+                className="w-full h-full object-cover"
                 onError={() => setImageError(true)}
+                draggable={false}
+                loading="lazy"
               />
             ) : (
               <FileIcon className="w-12 h-12 select-none text-muted-foreground" />

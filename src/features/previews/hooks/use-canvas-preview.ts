@@ -58,5 +58,5 @@ export function useCanvasPreview({
       doc.off('update', scheduleGeneration)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
-  }, [doc, canvasId, containerRef])
+  }, [doc, canvasId])
 }

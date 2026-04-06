@@ -169,7 +169,9 @@ export function useFileDropHandler() {
           parentId,
         })
 
-        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>)
+        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>).catch(
+          (err: unknown) => logger.error('PDF preview generation failed', err),
+        )
 
         if (!silent) {
           toast.dismiss(toastId)
@@ -230,14 +232,14 @@ export function useFileDropHandler() {
     for (const { file } of folder.files) {
       try {
         const validation = validateFileForUpload(file)
-        const result = await uploadSingleFile(file, folderId, {
+        const res = await uploadSingleFile(file, folderId, {
           silent: true,
           navigate: false,
         })
-        if (!result && validation.valid) {
+        if (!res && validation.valid) {
           logger.warn(`${file.name}: unsupported file type`)
         }
-        if (result) {
+        if (res) {
           progress.processedFiles++
         } else {
           progress.skippedFiles++

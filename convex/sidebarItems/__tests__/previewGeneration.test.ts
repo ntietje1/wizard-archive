@@ -14,6 +14,7 @@ import {
   expectNotAuthenticated,
   expectNotFound,
   expectPermissionDenied,
+  expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { COOLDOWN_MS } from '../functions/claimPreviewGeneration'
@@ -178,7 +179,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch(noteId, {
-        previewUpdatedAt: Date.now() - 1000,
+        previewUpdatedAt: Date.now() - (COOLDOWN_MS - 1),
       })
     })
 
@@ -197,7 +198,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch(noteId, {
-        previewUpdatedAt: Date.now() - COOLDOWN_MS - 1,
+        previewUpdatedAt: Date.now() - (COOLDOWN_MS + 1),
       })
     })
 
@@ -249,7 +250,7 @@ describe('setPreviewImage', () => {
       const note = await dbCtx.db.get(noteId)
       expect(note!.previewStorageId).toBe(storageId)
       expect(note!.previewUpdatedAt).not.toBeNull()
-      expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(5000)
+      expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(1000)
       expect(note!.previewLockedUntil).toBeNull()
     })
   })
@@ -341,6 +342,46 @@ describe('setPreviewImage', () => {
     )
   })
 
+  it('cannot set preview on folders', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+    )
+
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['preview']))
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        itemId: folderId,
+        previewStorageId: storageId,
+      }),
+    )
+  })
+
+  it('player with no share is denied', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['preview']))
+    })
+
+    await expectPermissionDenied(
+      playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        itemId: noteId,
+        previewStorageId: storageId,
+      }),
+    )
+  })
+
   it('throws NOT_FOUND for nonexistent item', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -358,6 +399,26 @@ describe('setPreviewImage', () => {
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
         itemId: noteId,
         previewStorageId: storageId,
+      }),
+    )
+  })
+
+  it('rejects nonexistent storage id', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const deletedStorageId = await t.run(async (dbCtx) => {
+      const id = await dbCtx.storage.store(new Blob(['temp']))
+      await dbCtx.storage.delete(id)
+      return id
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        itemId: noteId,
+        previewStorageId: deletedStorageId,
       }),
     )
   })

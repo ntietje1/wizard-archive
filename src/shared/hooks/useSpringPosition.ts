@@ -36,9 +36,11 @@ export function stepSpring(
   pos.x += vel.x * dt
   pos.y += vel.y * dt
 
+  const postDx = target.x - pos.x
+  const postDy = target.y - pos.y
   if (
-    Math.abs(dx) < settle &&
-    Math.abs(dy) < settle &&
+    Math.abs(postDx) < settle &&
+    Math.abs(postDy) < settle &&
     Math.abs(vel.x) < settle &&
     Math.abs(vel.y) < settle
   ) {
@@ -129,5 +131,5 @@ export function useSpringPosition(
 
   useEffect(() => {
     if (target) startLoopRef.current?.()
-  }, [target])
+  }, [target?.x, target?.y])
 }

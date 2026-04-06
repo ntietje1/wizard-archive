@@ -23,11 +23,12 @@ export function useCanvasWheel(ref: React.RefObject<HTMLDivElement | null>) {
         const rect = el.getBoundingClientRect()
         const mouseX = e.clientX - rect.left
         const mouseY = e.clientY - rect.top
+        const currentZoom = viewport.zoom || MIN_ZOOM
         const newZoom = Math.min(
           MAX_ZOOM,
-          Math.max(MIN_ZOOM, viewport.zoom * (1 - deltaY * ZOOM_SENSITIVITY)),
+          Math.max(MIN_ZOOM, currentZoom * (1 - deltaY * ZOOM_SENSITIVITY)),
         )
-        const scale = newZoom / viewport.zoom
+        const scale = newZoom / currentZoom
         reactFlowInstance.setViewport({
           x: mouseX - (mouseX - viewport.x) * scale,
           y: mouseY - (mouseY - viewport.y) * scale,
@@ -51,5 +52,5 @@ export function useCanvasWheel(ref: React.RefObject<HTMLDivElement | null>) {
     }
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
-  }, [reactFlowInstance])
+  }, [reactFlowInstance, ref])
 }

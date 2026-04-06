@@ -17,6 +17,8 @@ export function useCanvasSelectionSync({
 }: UseCanvasSelectionSyncOptions) {
   const reactFlowInstance = useReactFlow()
   const prevSelectionRef = useRef<Array<string>>([])
+  const editingEmbedIdRef = useRef(editingEmbedId)
+  editingEmbedIdRef.current = editingEmbedId
 
   const handleSelectionChange = useCallback(
     ({ nodes }: { nodes: Array<Node> }) => {
@@ -33,14 +35,17 @@ export function useCanvasSelectionSync({
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
         onHistorySelectionChange(nodeIds)
 
-        if (editingEmbedId && !nodeIds.includes(editingEmbedId)) {
+        if (
+          editingEmbedIdRef.current &&
+          !nodeIds.includes(editingEmbedIdRef.current)
+        ) {
           setEditingEmbedId(null)
         }
 
         const selectedSet = new Set(nodeIds)
         reactFlowInstance.setNodes((current) =>
           current.map((n) =>
-            n.draggable === selectedSet.has(n.id)
+            (n.draggable ?? false) === selectedSet.has(n.id)
               ? n
               : { ...n, draggable: selectedSet.has(n.id) },
           ),
@@ -51,7 +56,6 @@ export function useCanvasSelectionSync({
       setLocalSelection,
       reactFlowInstance,
       onHistorySelectionChange,
-      editingEmbedId,
       setEditingEmbedId,
     ],
   )

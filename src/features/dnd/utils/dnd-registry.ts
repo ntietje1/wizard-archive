@@ -20,7 +20,7 @@ export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
-export const SIDEBAR_ROOT_TYPE = 'root' as const
+export const SIDEBAR_ROOT_DROP_TYPE = 'root' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export interface MapDropZoneData {
 
 export interface SidebarRootDropZoneData {
   [key: string | symbol]: unknown
-  type: typeof SIDEBAR_ROOT_TYPE
+  type: typeof SIDEBAR_ROOT_DROP_TYPE
 }
 
 export interface EmptyEditorDropZoneData {
@@ -284,7 +284,7 @@ const rootConfig: DropZoneConfig = {
     })
   },
   canAcceptFiles: true,
-  getHighlightId: () => SIDEBAR_ROOT_TYPE,
+  getHighlightId: () => SIDEBAR_ROOT_DROP_TYPE,
 }
 
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
@@ -375,7 +375,7 @@ type DropZoneType =
   | typeof MAP_DROP_ZONE_TYPE
   | typeof NOTE_EDITOR_DROP_TYPE
   | typeof EMPTY_EDITOR_DROP_TYPE
-  | typeof SIDEBAR_ROOT_TYPE
+  | typeof SIDEBAR_ROOT_DROP_TYPE
   | SidebarItemType
 
 export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
@@ -384,7 +384,7 @@ export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
   [MAP_DROP_ZONE_TYPE]: mapConfig,
   [NOTE_EDITOR_DROP_TYPE]: noteEditorConfig,
   [EMPTY_EDITOR_DROP_TYPE]: emptyEditorConfig,
-  [SIDEBAR_ROOT_TYPE]: rootConfig,
+  [SIDEBAR_ROOT_DROP_TYPE]: rootConfig,
   [SIDEBAR_ITEM_TYPES.folders]: folderConfig,
   [SIDEBAR_ITEM_TYPES.notes]: nonFolderItemConfig,
   [SIDEBAR_ITEM_TYPES.gameMaps]: nonFolderItemConfig,

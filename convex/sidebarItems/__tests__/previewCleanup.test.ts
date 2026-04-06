@@ -53,6 +53,9 @@ describe('preview cleanup on hard delete', () => {
     )
 
     await t.run(async (dbCtx) => {
+      const note = await dbCtx.db.get(noteId)
+      expect(note).toBeNull()
+
       const url = await dbCtx.storage.getUrl(storageId)
       expect(url).toBeNull()
     })
@@ -82,6 +85,9 @@ describe('preview cleanup on hard delete', () => {
     )
 
     await t.run(async (dbCtx) => {
+      const file = await dbCtx.db.get(fileId)
+      expect(file).toBeNull()
+
       const fileUrl = await dbCtx.storage.getUrl(fileBlob)
       const previewUrl = await dbCtx.storage.getUrl(previewBlob)
       expect(fileUrl).toBeNull()
@@ -142,6 +148,9 @@ describe('preview cleanup on hard delete', () => {
     )
 
     await t.run(async (dbCtx) => {
+      const map = await dbCtx.db.get(mapId)
+      expect(map).toBeNull()
+
       const imageUrl = await dbCtx.storage.getUrl(imageBlob)
       const previewUrl = await dbCtx.storage.getUrl(previewBlob)
       expect(imageUrl).toBeNull()

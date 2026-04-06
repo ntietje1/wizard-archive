@@ -24,7 +24,7 @@ import {
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
-  SIDEBAR_ROOT_TYPE,
+  SIDEBAR_ROOT_DROP_TYPE,
   TRASH_DROP_ZONE_TYPE,
   canDropFilesOnTarget,
   getDragItemId,
@@ -56,7 +56,7 @@ function trashTarget(): TrashDropZoneData {
 }
 
 function rootTarget(): SidebarRootDropZoneData {
-  return { type: SIDEBAR_ROOT_TYPE }
+  return { type: SIDEBAR_ROOT_DROP_TYPE }
 }
 
 function emptyEditorTarget(): EmptyEditorDropZoneData {
@@ -508,8 +508,8 @@ describe('getDropTargetKey', () => {
     expect(getDropTargetKey({ type: EMPTY_EDITOR_DROP_TYPE })).toBe(
       EMPTY_EDITOR_DROP_TYPE,
     )
-    expect(getDropTargetKey({ type: SIDEBAR_ROOT_TYPE })).toBe(
-      SIDEBAR_ROOT_TYPE,
+    expect(getDropTargetKey({ type: SIDEBAR_ROOT_DROP_TYPE })).toBe(
+      SIDEBAR_ROOT_DROP_TYPE,
     )
   })
 
@@ -551,7 +551,7 @@ describe('getHighlightId', () => {
   })
 
   it('returns zone type for root', () => {
-    expect(getHighlightId(rootTarget())).toBe(SIDEBAR_ROOT_TYPE)
+    expect(getHighlightId(rootTarget())).toBe(SIDEBAR_ROOT_DROP_TYPE)
   })
 
   it('returns map:id for map zone', () => {

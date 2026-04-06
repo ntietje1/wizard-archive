@@ -205,13 +205,13 @@ function CollaborativeEditorInner({
           })
           return
         }
-        requestAnimationFrame(tryPatch)
+        setTimeout(tryPatch, 50)
         return
       }
       patchYUndoPluginDestroy(instance._tiptapEditor.view)
       patchYSyncAfterTypeChanged(instance._tiptapEditor.view)
     }
-    requestAnimationFrame(tryPatch)
+    setTimeout(tryPatch, 50)
 
     return () => {
       cancelled = true

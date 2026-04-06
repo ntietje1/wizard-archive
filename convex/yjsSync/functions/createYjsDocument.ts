@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { logger } from '../../common/logger'
 import { uint8ToArrayBuffer } from './uint8ToArrayBuffer'
 import type { MutationCtx } from '../../_generated/server'
 import type { YjsDocumentId } from './types'
@@ -15,6 +16,16 @@ export async function createYjsDocument(
 ) {
   let update: ArrayBuffer
   if (initialState) {
+    // Validate initialState is a valid Yjs update
+    const testDoc = new Y.Doc()
+    try {
+      Y.applyUpdate(testDoc, new Uint8Array(initialState))
+    } catch (e) {
+      logger.error('Failed to apply initialState as Yjs update', e)
+      testDoc.destroy()
+      throw new Error('Invalid initialState: not a valid Yjs update')
+    }
+    testDoc.destroy()
     update = initialState
   } else {
     const doc = new Y.Doc()

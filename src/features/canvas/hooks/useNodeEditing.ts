@@ -43,8 +43,7 @@ export function useNodeEditing({
         e.stopPropagation()
         shouldCommitRef.current = false
         commitEdit(value)
-      }
-      if (e.key === 'Escape') {
+      } else if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
         shouldCommitRef.current = false
@@ -58,6 +57,7 @@ export function useNodeEditing({
     (e: React.KeyboardEvent) => {
       if ((e.key === 'Enter' || e.key === 'F2') && !isEditing) {
         e.preventDefault()
+        e.stopPropagation()
         startEditing()
       }
     },

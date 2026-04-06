@@ -154,14 +154,9 @@ function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
         setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
       }
 
-      const { totalDisplay, totalContent } = computeSidebarWidths(
-        finalWidth,
-        startWidth,
-      )
-
-      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
-      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
-      if (handleRef.current) handleRef.current.style.left = `${totalDisplay}px`
+      outerRef.current?.style.removeProperty('width')
+      innerRef.current?.style.removeProperty('width')
+      handleRef.current?.style.removeProperty('left')
     }
 
     document.addEventListener('mousemove', handleMouseMove)

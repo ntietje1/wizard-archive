@@ -224,55 +224,69 @@ export function useYjsReactFlowSync(
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, nodes) => {
-      if (!nodesMap) return
+      if (!nodesMap?.doc) return
       suppressNodeObserver.current = true
-      nodesMap.doc!.transact(() => {
-        for (const n of nodes) {
-          draggingIds.current.delete(n.id)
-          const existing = nodesMap.get(n.id)
-          if (existing) {
-            nodesMap.set(n.id, { ...existing, position: n.position })
+      try {
+        nodesMap.doc.transact(() => {
+          for (const n of nodes) {
+            draggingIds.current.delete(n.id)
+            const existing = nodesMap.get(n.id)
+            if (existing) {
+              nodesMap.set(n.id, { ...existing, position: n.position })
+            }
           }
-        }
-      })
-      suppressNodeObserver.current = false
+        })
+      } finally {
+        suppressNodeObserver.current = false
+      }
     },
     [nodesMap],
   )
 
   const onNodesDelete: OnNodesDelete = useCallback(
     (deleted) => {
-      if (!nodesMap) return
+      if (!nodesMap?.doc) return
       suppressNodeObserver.current = true
-      nodesMap.doc!.transact(() => {
-        for (const node of deleted) nodesMap.delete(node.id)
-      })
-      suppressNodeObserver.current = false
+      try {
+        nodesMap.doc.transact(() => {
+          for (const node of deleted) nodesMap.delete(node.id)
+        })
+      } finally {
+        suppressNodeObserver.current = false
+      }
     },
     [nodesMap],
   )
 
   const onEdgesDelete: OnEdgesDelete = useCallback(
     (deleted) => {
-      if (!edgesMap) return
+      if (!edgesMap?.doc) return
       suppressEdgeObserver.current = true
-      edgesMap.doc!.transact(() => {
-        for (const edge of deleted) edgesMap.delete(edge.id)
-      })
-      suppressEdgeObserver.current = false
+      try {
+        edgesMap.doc.transact(() => {
+          for (const edge of deleted) edgesMap.delete(edge.id)
+        })
+      } finally {
+        suppressEdgeObserver.current = false
+      }
     },
     [edgesMap],
   )
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      if (!edgesMap) return
+      if (!edgesMap?.doc) return
       const id = `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
       const edge: Edge = { id, ...connection }
-      reactFlow.addEdges(edge)
       suppressEdgeObserver.current = true
-      edgesMap.set(id, edge)
-      suppressEdgeObserver.current = false
+      try {
+        edgesMap.doc.transact(() => {
+          edgesMap.set(id, edge)
+        })
+        reactFlow.addEdges(edge)
+      } finally {
+        suppressEdgeObserver.current = false
+      }
     },
     [edgesMap, reactFlow],
   )

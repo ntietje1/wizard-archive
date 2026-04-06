@@ -1,4 +1,5 @@
 import { toBlob } from 'html-to-image'
+import type * as PdfjsNamespace from 'pdfjs-dist'
 
 export async function captureElementPreview(
   element: HTMLElement,
@@ -27,14 +28,25 @@ export async function captureElementPreview(
 const PDF_PREVIEW_WIDTH = 600
 const PDF_PREVIEW_HEIGHT = 400
 
+let pdfInitPromise: Promise<typeof PdfjsNamespace> | null = null
+
+function initPdfWorker() {
+  if (!pdfInitPromise) {
+    pdfInitPromise = import('pdfjs-dist').then((pdfjsLib) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url,
+      ).toString()
+      return pdfjsLib
+    })
+  }
+  return pdfInitPromise
+}
+
 export async function generatePdfPreview(
   source: string | ArrayBuffer,
 ): Promise<Blob> {
-  const pdfjsLib = await import('pdfjs-dist')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString()
+  const pdfjsLib = await initPdfWorker()
 
   const data =
     source instanceof ArrayBuffer ? { data: new Uint8Array(source) } : source
@@ -42,12 +54,16 @@ export async function generatePdfPreview(
   try {
     const page = await pdf.getPage(1)
 
-    const scale = PDF_PREVIEW_WIDTH / page.getViewport({ scale: 1 }).width
+    const pageSize = page.getViewport({ scale: 1 })
+    const scale = Math.min(
+      PDF_PREVIEW_WIDTH / pageSize.width,
+      PDF_PREVIEW_HEIGHT / pageSize.height,
+    )
     const viewport = page.getViewport({ scale })
 
     const canvas = document.createElement('canvas')
     canvas.width = viewport.width
-    canvas.height = Math.min(viewport.height, PDF_PREVIEW_HEIGHT)
+    canvas.height = viewport.height
 
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Failed to get canvas context')

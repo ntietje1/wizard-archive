@@ -111,7 +111,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   const userName = profile?.name ?? profile?.username ?? 'Anonymous'
   const userColor = profile ? getCursorColor(profile._id) : '#61afef'
 
-  const { doc, provider, isLoading } = useConvexYjsCollaboration(
+  const { doc, provider, isLoading, error } = useConvexYjsCollaboration(
     canvas._id,
     { name: userName, color: userColor },
     canEdit,
@@ -134,6 +134,14 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   useEffect(() => {
     return () => useCanvasToolStore.getState().reset()
   }, [canvas._id])
+
+  if (error) {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center text-muted-foreground">
+        <p>Failed to load canvas. Please try refreshing the page.</p>
+      </div>
+    )
+  }
 
   if (isLoading || !doc || !nodesMap || !edgesMap) {
     return (
@@ -198,14 +206,17 @@ function CanvasFlow({
   const remoteDragPositions = useMemo(() => {
     let merged: Record<string, { x: number; y: number }> | null = null
     const owners = new Map<string, number>()
-    for (const user of remoteUsers) {
-      if (!user.dragging) continue
-      for (const [nodeId, pos] of Object.entries(user.dragging)) {
+    for (const remoteUser of remoteUsers) {
+      if (!remoteUser.dragging) continue
+      for (const [nodeId, pos] of Object.entries(remoteUser.dragging)) {
         if (!merged) merged = {}
         const existingOwner = owners.get(nodeId)
-        if (existingOwner === undefined || user.clientId < existingOwner) {
+        if (
+          existingOwner === undefined ||
+          remoteUser.clientId < existingOwner
+        ) {
           merged[nodeId] = pos
-          owners.set(nodeId, user.clientId)
+          owners.set(nodeId, remoteUser.clientId)
         }
       }
     }
@@ -270,8 +281,15 @@ function CanvasFlow({
   })
 
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const [wrapperElement, setWrapperElement] = useState<HTMLDivElement | null>(
+    null,
+  )
+  const wrapperCallbackRef = (node: HTMLDivElement | null) => {
+    wrapperRef.current = node
+    setWrapperElement(node)
+  }
 
-  const { toolCursor } = useCanvasOverlayHandlers(wrapperRef, {
+  const { toolCursor } = useCanvasOverlayHandlers(wrapperElement, {
     drawing,
     eraser,
     lasso,
@@ -397,16 +415,25 @@ function CanvasFlow({
 
   const remoteHighlights = useMemo(() => {
     const map = new Map<string, RemoteHighlight>()
-    for (const user of remoteUsers) {
-      const nodeIds = user.dragging
-        ? Object.keys(user.dragging)
-        : user.resizing
-          ? Object.keys(user.resizing)
-          : user.selectedNodeIds
+    const owners = new Map<string, number>()
+    for (const remoteUser of remoteUsers) {
+      const nodeIds = remoteUser.dragging
+        ? Object.keys(remoteUser.dragging)
+        : remoteUser.resizing
+          ? Object.keys(remoteUser.resizing)
+          : remoteUser.selectedNodeIds
       if (!nodeIds) continue
       for (const nodeId of nodeIds) {
-        if (!map.has(nodeId)) {
-          map.set(nodeId, { color: user.user.color, name: user.user.name })
+        const existingOwner = owners.get(nodeId)
+        if (
+          existingOwner === undefined ||
+          remoteUser.clientId < existingOwner
+        ) {
+          map.set(nodeId, {
+            color: remoteUser.user.color,
+            name: remoteUser.user.name,
+          })
+          owners.set(nodeId, remoteUser.clientId)
         }
       }
     }
@@ -443,7 +470,7 @@ function CanvasFlow({
   return (
     <CanvasContext value={canvasContextValue}>
       <div
-        ref={wrapperRef}
+        ref={wrapperCallbackRef}
         className="flex-1 min-h-0 relative allow-motion"
         style={{ cursor: toolCursor }}
       >
@@ -519,7 +546,7 @@ function CanvasDropOverlay({
   isDropTarget,
   isFileDropTarget,
 }: {
-  ref: React.RefObject<HTMLDivElement | null>
+  ref: React.Ref<HTMLDivElement>
   isDropTarget: boolean
   isFileDropTarget: boolean
 }) {
@@ -584,20 +611,20 @@ function SelectionOverlays({
         />
       )}
 
-      {remoteUsers.map((user) => {
-        if (!user.selecting) return null
-        const s = user.selecting
+      {remoteUsers.map((remoteUser) => {
+        if (!remoteUser.selecting) return null
+        const s = remoteUser.selecting
         if (s.type === 'rect') {
           return (
             <rect
-              key={`sel-${user.clientId}`}
+              key={`sel-${remoteUser.clientId}`}
               x={s.x}
               y={s.y}
               width={s.width}
               height={s.height}
-              fill={user.user.color}
+              fill={remoteUser.user.color}
               fillOpacity={0.06}
-              stroke={user.user.color}
+              stroke={remoteUser.user.color}
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -606,11 +633,11 @@ function SelectionOverlays({
         if (s.type === 'lasso' && s.points.length >= 2) {
           return (
             <polyline
-              key={`sel-${user.clientId}`}
+              key={`sel-${remoteUser.clientId}`}
               points={s.points.map((p) => `${p.x},${p.y}`).join(' ')}
-              fill={user.user.color}
+              fill={remoteUser.user.color}
               fillOpacity={0.06}
-              stroke={user.user.color}
+              stroke={remoteUser.user.color}
               strokeWidth={1}
               strokeDasharray="3 3"
             />

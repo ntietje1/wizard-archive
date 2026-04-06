@@ -72,12 +72,10 @@ export async function createNote(
     createdBy: profileId,
   })
 
-  if (content && content.length > 0) {
-    await saveTopLevelBlocksForNote(ctx, { noteId, content })
-  }
-
   let initialState: ArrayBuffer | undefined
   if (content && content.length > 0) {
+    await saveTopLevelBlocksForNote(ctx, { noteId, content })
+
     const editor = BlockNoteEditor.create({
       schema: editorSchema,
       _headless: true,

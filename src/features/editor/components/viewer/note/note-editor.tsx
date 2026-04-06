@@ -50,7 +50,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     noteEditorRef.current = wrapperRef.current?.querySelector(
       '.bn-editor',
     ) as HTMLElement | null
-  }, [])
+  }, [editor])
 
   useNotePreview({ noteId: note._id, doc, editorContainerRef: noteEditorRef })
   useNoteEditorDropTarget({ ref: wrapperRef, editor, noteId: note._id })

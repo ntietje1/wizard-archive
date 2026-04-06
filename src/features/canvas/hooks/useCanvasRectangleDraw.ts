@@ -82,7 +82,11 @@ export function useCanvasRectangleDraw({
     activeRef.current = false
 
     if (captureTargetRef.current && pointerIdRef.current !== null) {
-      captureTargetRef.current.releasePointerCapture(pointerIdRef.current)
+      try {
+        captureTargetRef.current.releasePointerCapture(pointerIdRef.current)
+      } catch {
+        // Pointer capture may already be released
+      }
       captureTargetRef.current = null
       pointerIdRef.current = null
     }
@@ -102,7 +106,7 @@ export function useCanvasRectangleDraw({
     if (!s) return
 
     const rect = rectFromPoints(s, pos)
-    if (rect.width < MIN_RECT_SIZE && rect.height < MIN_RECT_SIZE) return
+    if (rect.width < MIN_RECT_SIZE || rect.height < MIN_RECT_SIZE) return
 
     const id = crypto.randomUUID()
     const node: Node = {

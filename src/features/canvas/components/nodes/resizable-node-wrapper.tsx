@@ -54,10 +54,18 @@ function onShiftUp(e: KeyboardEvent) {
   }
 }
 
+function onWindowBlur() {
+  if (shiftPressed) {
+    shiftPressed = false
+    notifyShiftSubscribers()
+  }
+}
+
 function subscribeShift(cb: () => void) {
   if (shiftSubscribers.size === 0) {
     window.addEventListener('keydown', onShiftDown)
     window.addEventListener('keyup', onShiftUp)
+    window.addEventListener('blur', onWindowBlur)
   }
   shiftSubscribers.add(cb)
   return () => {
@@ -65,6 +73,7 @@ function subscribeShift(cb: () => void) {
     if (shiftSubscribers.size === 0) {
       window.removeEventListener('keydown', onShiftDown)
       window.removeEventListener('keyup', onShiftUp)
+      window.removeEventListener('blur', onWindowBlur)
     }
   }
 }

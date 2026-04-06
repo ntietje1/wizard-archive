@@ -56,7 +56,7 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
         bookmarkIds,
       }) as Promise<EnhancedSidebarItem<T>>
     default:
-      assertNever(item)
+      return assertNever(item)
   }
 }
 

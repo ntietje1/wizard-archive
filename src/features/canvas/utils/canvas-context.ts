@@ -2,23 +2,21 @@ import { createContext } from 'react'
 
 export type RemoteHighlight = { color: string; name: string }
 
+type Position = { x: number; y: number }
+type ResizeHandler = (
+  nodeId: string,
+  width: number,
+  height: number,
+  position: Position,
+) => void
+
 export interface CanvasContextValue {
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
-  onResize: (
-    nodeId: string,
-    width: number,
-    height: number,
-    position: { x: number; y: number },
-  ) => void
-  onResizeEnd: (
-    nodeId: string,
-    width: number,
-    height: number,
-    position: { x: number; y: number },
-  ) => void
+  onResize: ResizeHandler
+  onResizeEnd: ResizeHandler
   remoteHighlights: Map<string, RemoteHighlight>
   canEdit: boolean
-  user: { name: string; color: string }
+  user: RemoteHighlight
   editingEmbedId: string | null
   setEditingEmbedId: (id: string | null) => void
 }

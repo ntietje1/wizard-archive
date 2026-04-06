@@ -18,15 +18,14 @@ import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 function NoteCardSkeleton() {
   return (
     <div className="w-full h-[140px]">
-      <Card className="w-full h-full flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md">
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div className="overflow-hidden">
-            <div className="flex items-center gap-2 mb-2 min-w-0">
-              <div className="bg-muted rounded-md h-5 w-32" />
-            </div>
-          </div>
+      <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
+        <div className="flex items-center justify-between mb-2">
+          <div className="bg-muted rounded-md h-5 w-32" />
+          <div className="bg-muted rounded-md w-6 h-6" />
         </div>
-        <div className="bg-muted w-24 aspect-[5/6] flex-shrink-0 rounded-sm" />
+        <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
+          <div className="bg-muted w-full h-full" />
+        </div>
       </Card>
     </div>
   )
@@ -73,39 +72,18 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
       >
         <Card
           className={cn(
-            'w-full h-full cursor-pointer group flex flex-row flex-nowrap items-stretch gap-4 p-2 relative rounded-md hover:bg-muted/70',
+            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md hover:bg-muted/70',
             isSelected && 'ring-ring ring-2',
           )}
         >
-          {/* Left Content Section */}
-          <div className="p-1 flex-1 min-w-0 flex flex-col justify-between">
-            <div className="overflow-hidden">
-              <div className="flex items-center gap-2 mb-2 min-w-0">
-                <CardTitle className="text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
-                  {note.name}
-                </CardTitle>
-              </div>
-            </div>
-          </div>
-
-          {/* Preview / Icon Section */}
-          <div className="w-24 aspect-[5/6] flex-shrink-0 relative overflow-hidden rounded-sm bg-muted flex items-center justify-center">
-            {note.previewUrl && !imgError ? (
-              <img
-                src={note.previewUrl}
-                alt={note.name}
-                className="w-full h-full object-cover object-top"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <FileText className="w-8 h-8 text-muted-foreground" />
-            )}
+          <div className="flex items-center justify-between mb-1 min-w-0">
+            <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
+              {note.name}
+            </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="absolute top-1 right-1 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring transition-opacity"
               aria-label="More options"
               onClick={(e) => {
                 e.preventDefault()
@@ -115,6 +93,25 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
+          </div>
+
+          <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
+            {note.previewUrl && !imgError ? (
+              <img
+                src={note.previewUrl}
+                alt={note.name}
+                className="w-full h-full object-cover object-top"
+                loading="lazy"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <FileText className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />
           </div>
         </Card>
       </Link>

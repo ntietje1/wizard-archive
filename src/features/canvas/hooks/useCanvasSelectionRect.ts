@@ -129,8 +129,9 @@ export function useCanvasSelectionRect({
           height: bottomRight.y - topLeft.y,
         }
 
+        const toolStore = useCanvasToolStore.getState()
         lastFlowRectRef.current = flowRect
-        useCanvasToolStore.getState().setSelectionRect(flowRect)
+        toolStore.setSelectionRect(flowRect)
         setLocalSelectingRef.current({ type: 'rect', ...flowRect })
 
         const deselected = new Set<string>()
@@ -153,7 +154,7 @@ export function useCanvasSelectionRect({
             deselected.add(n.id)
           }
         }
-        useCanvasToolStore.getState().setRectDeselectedIds(deselected)
+        toolStore.setRectDeselectedIds(deselected)
       })
     })
 

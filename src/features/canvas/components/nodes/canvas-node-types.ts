@@ -5,10 +5,10 @@ import { StrokeNode } from './stroke-node'
 import { TextNode } from './text-node'
 import type { NodeTypes } from '@xyflow/react'
 
-export const canvasNodeTypes: NodeTypes = {
+export const canvasNodeTypes = {
   embed: EmbedNode,
   rectangle: RectangleNode,
   sticky: StickyNode,
   stroke: StrokeNode,
   text: TextNode,
-}
+} satisfies NodeTypes
