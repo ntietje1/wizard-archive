@@ -6,12 +6,14 @@ import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 const MOCK_UPLOAD_URL = 'https://upload.example.com/upload'
 const MOCK_STORAGE_ID = 'storage_abc123' as Id<'_storage'>
 const MOCK_ITEM_ID = 'note_123' as SidebarItemId
+const MOCK_CLAIM_TOKEN = 'test-claim-token'
 
 describe('uploadPreviewBlob', () => {
   let mockGenerateUploadUrl: () => Promise<string>
   let mockSetPreviewImage: (args: {
     itemId: SidebarItemId
     previewStorageId: Id<'_storage'>
+    claimToken: string
   }) => Promise<null>
 
   beforeEach(() => {
@@ -41,6 +43,7 @@ describe('uploadPreviewBlob', () => {
       mockGenerateUploadUrl,
       mockSetPreviewImage,
       MOCK_ITEM_ID,
+      MOCK_CLAIM_TOKEN,
     )
 
     expect(mockGenerateUploadUrl).toHaveBeenCalledOnce()
@@ -53,6 +56,7 @@ describe('uploadPreviewBlob', () => {
     expect(mockSetPreviewImage).toHaveBeenCalledWith({
       itemId: MOCK_ITEM_ID,
       previewStorageId: MOCK_STORAGE_ID,
+      claimToken: MOCK_CLAIM_TOKEN,
     })
   })
 
@@ -88,6 +92,7 @@ describe('uploadPreviewBlob', () => {
       mockGenerateUploadUrl,
       mockSetPreviewImage,
       MOCK_ITEM_ID,
+      MOCK_CLAIM_TOKEN,
     )
 
     expect(fetch).toHaveBeenCalledWith(
@@ -129,6 +134,7 @@ describe('uploadPreviewBlob', () => {
         mockGenerateUploadUrl,
         mockSetPreviewImage,
         MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
       ),
     ).rejects.toThrow('setPreviewImage failed')
 
@@ -136,6 +142,7 @@ describe('uploadPreviewBlob', () => {
     expect(mockSetPreviewImage).toHaveBeenCalledWith({
       itemId: MOCK_ITEM_ID,
       previewStorageId: MOCK_STORAGE_ID,
+      claimToken: MOCK_CLAIM_TOKEN,
     })
   })
 

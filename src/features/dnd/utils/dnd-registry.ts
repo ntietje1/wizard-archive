@@ -208,7 +208,7 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
     case 'dm_only':
       return 'Only the DM can do this'
     case 'trashed_item':
-      return 'Cannot link to a trashed item'
+      return 'The item is trashed and cannot be used'
     default:
       return assertNever(reason)
   }

@@ -42,6 +42,7 @@ import type {
   ResizingState,
 } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { StrokeNodeData } from './nodes/stroke-node'
 import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
@@ -408,7 +409,35 @@ function CanvasFlow({
       setLocalResizing(null)
       const existing = nodesMap.get(nodeId)
       if (!existing) return
-      nodesMap.set(nodeId, { ...existing, width, height, position })
+
+      if (existing.type === 'stroke' && existing.data?.bounds) {
+        const { bounds, points, size } = existing.data as StrokeNodeData
+        const scaleX = width / bounds.width
+        const scaleY = height / bounds.height
+        const scaledPoints = points.map(
+          ([x, y, p]) =>
+            [
+              bounds.x + (x - bounds.x) * scaleX,
+              bounds.y + (y - bounds.y) * scaleY,
+              p,
+            ] as [number, number, number],
+        )
+        const scaledBounds = { ...bounds, width, height }
+        nodesMap.set(nodeId, {
+          ...existing,
+          width,
+          height,
+          position,
+          data: {
+            ...existing.data,
+            points: scaledPoints,
+            bounds: scaledBounds,
+            size: size * Math.min(scaleX, scaleY),
+          },
+        })
+      } else {
+        nodesMap.set(nodeId, { ...existing, width, height, position })
+      }
     },
     [nodesMap, setLocalResizing],
   )
@@ -459,6 +488,7 @@ function CanvasFlow({
       canEdit,
       canvasUser,
       editingEmbedId,
+      setEditingEmbedId,
     ],
   )
 

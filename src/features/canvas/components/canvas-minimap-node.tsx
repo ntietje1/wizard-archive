@@ -49,6 +49,7 @@ function MiniMapStrokeNode({
       width={width}
       height={height}
       viewBox={`${data.bounds.x} ${data.bounds.y} ${safeWidth} ${safeHeight}`}
+      preserveAspectRatio="none"
       overflow="visible"
     >
       <path d={d} fill={color} shapeRendering={shapeRendering} />

@@ -7,8 +7,10 @@ export async function uploadPreviewBlob(
   setPreviewImage: (args: {
     itemId: SidebarItemId
     previewStorageId: Id<'_storage'>
+    claimToken: string
   }) => Promise<null>,
   itemId: SidebarItemId,
+  claimToken: string,
 ): Promise<void> {
   const uploadUrl = await generateUploadUrl()
 
@@ -52,5 +54,5 @@ export async function uploadPreviewBlob(
   }
   const storageId = json.storageId as Id<'_storage'>
 
-  await setPreviewImage({ itemId, previewStorageId: storageId })
+  await setPreviewImage({ itemId, previewStorageId: storageId, claimToken })
 }

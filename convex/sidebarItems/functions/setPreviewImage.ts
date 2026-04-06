@@ -13,9 +13,11 @@ export async function setPreviewImage(
   {
     itemId,
     previewStorageId,
+    claimToken,
   }: {
     itemId: SidebarItemId
     previewStorageId: Id<'_storage'>
+    claimToken: string
   },
 ): Promise<void> {
   const item = await ctx.db.get(itemId)
@@ -33,6 +35,15 @@ export async function setPreviewImage(
     )
   }
 
+  if (
+    !item.previewClaimToken ||
+    item.previewClaimToken !== claimToken ||
+    !item.previewLockedUntil ||
+    item.previewLockedUntil < Date.now()
+  ) {
+    throwClientError(ERROR_CODE.CONFLICT, 'Invalid or expired claim token')
+  }
+
   const storageUrl = await ctx.storage.getUrl(previewStorageId)
   if (!storageUrl) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Storage object not found')
@@ -44,6 +55,7 @@ export async function setPreviewImage(
     previewStorageId,
     previewUpdatedAt: Date.now(),
     previewLockedUntil: null,
+    previewClaimToken: null,
   })
 
   if (oldPreviewStorageId && oldPreviewStorageId !== previewStorageId) {

@@ -224,12 +224,12 @@ export function useYjsReactFlowSync(
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_event, _node, nodes) => {
+      for (const n of nodes) draggingIds.current.delete(n.id)
       if (!nodesMap?.doc) return
       suppressNodeObserver.current = true
       try {
         nodesMap.doc.transact(() => {
           for (const n of nodes) {
-            draggingIds.current.delete(n.id)
             const existing = nodesMap.get(n.id)
             if (existing) {
               nodesMap.set(n.id, { ...existing, position: n.position })

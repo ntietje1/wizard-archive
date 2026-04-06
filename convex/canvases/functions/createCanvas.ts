@@ -57,6 +57,7 @@ export async function createCanvas(
     location: SIDEBAR_ITEM_LOCATION.sidebar,
     previewStorageId: null,
     previewLockedUntil: null,
+    previewClaimToken: null,
     previewUpdatedAt: null,
     deletionTime: null,
     deletedBy: null,

@@ -5,6 +5,7 @@ import {
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type {
+  CanvasDropZoneData,
   DndContext,
   EmptyEditorDropZoneData,
   MapDropZoneData,
@@ -21,6 +22,7 @@ import {
   createNote,
 } from '~/test/factories/sidebar-item-factory'
 import {
+  CANVAS_DROP_ZONE_TYPE,
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
@@ -82,6 +84,12 @@ function mapTarget(
   }
 }
 
+function canvasTarget(
+  canvasId = testId<'canvases'>('canvas_99'),
+): CanvasDropZoneData {
+  return { type: CANVAS_DROP_ZONE_TYPE, canvasId }
+}
+
 function folderTarget(
   overrides?: Partial<ResolvedSidebarItemDropData>,
 ): ResolvedSidebarItemDropData {
@@ -120,6 +128,9 @@ describe('rejectionReasonMessage', () => {
       'Cannot move folder into itself',
     )
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
+    expect(rejectionReasonMessage('self_embed')).toBe(
+      'Cannot embed canvas into itself',
+    )
     expect(rejectionReasonMessage('already_pinned')).toBe(
       'Already pinned to this map',
     )
@@ -133,7 +144,7 @@ describe('rejectionReasonMessage', () => {
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
     expect(rejectionReasonMessage('trashed_item')).toBe(
-      'Cannot link to a trashed item',
+      'The item is trashed and cannot be used',
     )
   })
 })
@@ -422,6 +433,48 @@ describe('resolveDropOutcome', () => {
     })
   })
 
+  // ── Canvas zone ──
+
+  describe('canvas zone', () => {
+    it('returns embed action for a sidebar item', () => {
+      const note = createNote()
+      const result = resolveDropOutcome(note, canvasTarget(), createCtx())
+
+      expect(result).toMatchObject({ type: 'operation', action: 'embed' })
+    })
+
+    it('rejects embedding a canvas into itself', () => {
+      const canvas = createNote()
+      const target = canvasTarget(testId<'canvases'>(canvas._id))
+      const result = resolveDropOutcome(canvas, target, createCtx())
+
+      expect(result).toEqual({ type: 'rejection', reason: 'self_embed' })
+    })
+
+    it('rejects embedding a trashed item', () => {
+      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const result = resolveDropOutcome(note, canvasTarget(), createCtx())
+
+      expect(result).toEqual({ type: 'rejection', reason: 'trashed_item' })
+    })
+
+    it('allows embed even without FULL_ACCESS', () => {
+      const note = createNote({ myPermissionLevel: PERMISSION_LEVEL.VIEW })
+      const result = resolveDropOutcome(note, canvasTarget(), createCtx())
+
+      expect(result?.type).toBe('operation')
+      expect((result as { action: string }).action).toBe('embed')
+    })
+
+    it('embed operation has null execute (handled by monitor)', () => {
+      const note = createNote()
+      const result = resolveDropOutcome(note, canvasTarget(), createCtx())
+
+      expect(result).toMatchObject({ type: 'operation', action: 'embed' })
+      expect((result as { execute: null }).execute).toBeNull()
+    })
+  })
+
   // ── Non-folder sidebar items ──
 
   describe('non-folder sidebar item targets', () => {
@@ -464,6 +517,10 @@ describe('canDropFilesOnTarget', () => {
 
   it('returns false for map zone', () => {
     expect(canDropFilesOnTarget(mapTarget())).toBe(false)
+  })
+
+  it('returns true for canvas zone', () => {
+    expect(canDropFilesOnTarget(canvasTarget())).toBe(true)
   })
 
   it('returns false for note editor zone', () => {
@@ -513,6 +570,12 @@ describe('getDropTargetKey', () => {
     )
   })
 
+  it('returns custom key for canvas zone', () => {
+    expect(
+      getDropTargetKey({ type: CANVAS_DROP_ZONE_TYPE, canvasId: 'canvas_5' }),
+    ).toBe('canvas:canvas_5')
+  })
+
   it('returns custom key for map zone', () => {
     expect(getDropTargetKey({ type: MAP_DROP_ZONE_TYPE, mapId: 'map_5' })).toBe(
       'map:map_5',
@@ -552,6 +615,12 @@ describe('getHighlightId', () => {
 
   it('returns zone type for root', () => {
     expect(getHighlightId(rootTarget())).toBe(SIDEBAR_ROOT_DROP_TYPE)
+  })
+
+  it('returns canvas:id for canvas zone', () => {
+    expect(getHighlightId(canvasTarget(testId<'canvases'>('canvas_7')))).toBe(
+      'canvas:canvas_7',
+    )
   })
 
   it('returns map:id for map zone', () => {
@@ -635,6 +704,13 @@ describe('resolveDropTarget', () => {
 
   it('passes through known zone types', () => {
     const raw = { type: TRASH_DROP_ZONE_TYPE }
+    const result = resolveDropTarget(raw, emptyMap, emptyMap, vi.fn())
+
+    expect(result).toEqual(raw)
+  })
+
+  it('passes through canvas zone type', () => {
+    const raw = { type: CANVAS_DROP_ZONE_TYPE, canvasId: 'canvas_1' }
     const result = resolveDropTarget(raw, emptyMap, emptyMap, vi.fn())
 
     expect(result).toEqual(raw)

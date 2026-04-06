@@ -65,6 +65,7 @@ export async function createFile(
     location: SIDEBAR_ITEM_LOCATION.sidebar,
     previewStorageId,
     previewLockedUntil: null,
+    previewClaimToken: null,
     previewUpdatedAt: previewStorageId ? Date.now() : null,
     deletionTime: null,
     deletedBy: null,

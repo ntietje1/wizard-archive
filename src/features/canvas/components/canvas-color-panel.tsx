@@ -45,7 +45,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
   })
 
   const colorRelevantNodes = useMemo(
-    () => selectedNodes.filter((n) => n.data?.color !== undefined),
+    () => selectedNodes.filter((n) => !!n.data?.color),
     [selectedNodes],
   )
   const isToolRelevant = COLOR_RELEVANT_TOOLS.has(activeTool)
@@ -139,6 +139,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
           }}
           onClick={() => handleColorChange(color)}
           aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
+          aria-pressed={activeColor === color}
         />
       ))}
       <div className="w-px h-6 bg-border mx-1" />

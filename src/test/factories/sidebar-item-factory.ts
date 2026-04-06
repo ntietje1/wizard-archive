@@ -54,6 +54,7 @@ function baseFields(): BaseFields {
     previewUrl: null,
     previewStorageId: null,
     previewLockedUntil: null,
+    previewClaimToken: null,
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,

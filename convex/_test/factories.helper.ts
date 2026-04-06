@@ -144,6 +144,7 @@ const sidebarItemBase = (
   location: SidebarItemLocation
   previewStorageId: null
   previewLockedUntil: null
+  previewClaimToken: null
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
@@ -156,6 +157,7 @@ const sidebarItemBase = (
   location: SIDEBAR_ITEM_LOCATION.sidebar,
   previewStorageId: null,
   previewLockedUntil: null,
+  previewClaimToken: null,
   previewUpdatedAt: null,
   ...commonFields(creatorProfileId),
 })
@@ -170,6 +172,10 @@ type CommonSidebarItemOverrides = Partial<{
   color: string | null
   deletionTime: number | null
   deletedBy: Id<'userProfiles'> | null
+  previewStorageId: Id<'_storage'> | null
+  previewLockedUntil: number | null
+  previewClaimToken: string | null
+  previewUpdatedAt: number | null
 }>
 
 async function insertSidebarItem<TTable extends SidebarItemTable>(

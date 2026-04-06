@@ -19,6 +19,7 @@ export const commonSidebarItemTableFields = {
   location: sidebarItemLocationValidator,
   previewStorageId: v.union(v.id('_storage'), v.null()),
   previewLockedUntil: v.union(v.number(), v.null()),
+  previewClaimToken: v.union(v.string(), v.null()),
   previewUpdatedAt: v.union(v.number(), v.null()),
   ...commonTableFields,
 }

@@ -12,7 +12,7 @@ export const COOLDOWN_MS = 5 * 60_000
 export async function claimPreviewGeneration(
   ctx: AuthMutationCtx,
   { itemId }: { itemId: SidebarItemId },
-): Promise<{ claimed: boolean }> {
+): Promise<{ claimed: boolean; claimToken: string | null }> {
   const item = await ctx.db.get(itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   await requireCampaignMembership(ctx, item.campaignId)
@@ -22,19 +22,23 @@ export async function claimPreviewGeneration(
   })
 
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-    return { claimed: false }
+    return { claimed: false, claimToken: null }
   }
 
   const now = Date.now()
 
   if (item.previewLockedUntil && item.previewLockedUntil > now) {
-    return { claimed: false }
+    return { claimed: false, claimToken: null }
   }
 
   if (item.previewUpdatedAt && now - item.previewUpdatedAt < COOLDOWN_MS) {
-    return { claimed: false }
+    return { claimed: false, claimToken: null }
   }
 
-  await ctx.db.patch(itemId, { previewLockedUntil: now + LEASE_DURATION_MS })
-  return { claimed: true }
+  const claimToken = crypto.randomUUID()
+  await ctx.db.patch(itemId, {
+    previewLockedUntil: now + LEASE_DURATION_MS,
+    previewClaimToken: claimToken,
+  })
+  return { claimed: true, claimToken }
 }

@@ -34,8 +34,10 @@ export function useClaimAndUploadPreview() {
       generate: () => Promise<Blob>,
     ): Promise<PreviewUploadResult> => {
       try {
-        const { claimed } = await claimRef.current.mutateAsync({ itemId })
-        if (!claimed) return { status: 'not-claimed' }
+        const { claimed, claimToken } = await claimRef.current.mutateAsync({
+          itemId,
+        })
+        if (!claimed || !claimToken) return { status: 'not-claimed' }
 
         const blob = await generate()
         await uploadPreviewBlob(
@@ -43,6 +45,7 @@ export function useClaimAndUploadPreview() {
           () => urlRef.current.mutateAsync({}),
           (args) => setRef.current.mutateAsync(args),
           itemId,
+          claimToken,
         )
         return { status: 'success' }
       } catch (error) {

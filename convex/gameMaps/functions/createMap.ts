@@ -57,6 +57,7 @@ export async function createMap(
     location: SIDEBAR_ITEM_LOCATION.sidebar,
     previewStorageId: imageStorageId ?? null,
     previewLockedUntil: null,
+    previewClaimToken: null,
     previewUpdatedAt: null,
     deletionTime: null,
     deletedBy: null,

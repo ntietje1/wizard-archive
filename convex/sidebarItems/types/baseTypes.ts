@@ -50,6 +50,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   location: SidebarItemLocation
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
+  previewClaimToken: string | null
   previewUpdatedAt: number | null
 } & CommonTableFields
 
