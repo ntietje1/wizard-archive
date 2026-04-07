@@ -1,10 +1,20 @@
+import { CANVAS_HISTORY_ACTION } from '../canvases/types'
+import { FILE_HISTORY_ACTION } from '../files/types'
+import { FOLDER_HISTORY_ACTION } from '../folders/types'
+import { MAP_HISTORY_ACTION } from '../gameMaps/types'
+import { NOTE_HISTORY_ACTION } from '../notes/types'
+import type { CanvasHistoryMetadataMap } from '../canvases/types'
+import type { FileHistoryMetadataMap } from '../files/types'
+import type { FolderHistoryMetadataMap } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
+import type { MapHistoryMetadataMap } from '../gameMaps/types'
+import type { NoteHistoryMetadataMap } from '../notes/types'
 import type {
   SidebarItemId,
   SidebarItemType,
 } from '../sidebarItems/types/baseTypes'
 
-export const EDIT_HISTORY_ACTION = {
+export const SHARED_HISTORY_ACTION = {
   created: 'created',
   renamed: 'renamed',
   moved: 'moved',
@@ -13,31 +23,64 @@ export const EDIT_HISTORY_ACTION = {
   icon_changed: 'icon_changed',
   color_changed: 'color_changed',
   content_edited: 'content_edited',
-  image_changed: 'image_changed',
-  image_removed: 'image_removed',
-  file_replaced: 'file_replaced',
-  file_removed: 'file_removed',
-  pin_added: 'pin_added',
-  pin_moved: 'pin_moved',
-  pin_removed: 'pin_removed',
-  pin_visibility_changed: 'pin_visibility_changed',
-  shared: 'shared',
-  unshared: 'unshared',
   permission_changed: 'permission_changed',
   block_share_changed: 'block_share_changed',
   inherit_shares_changed: 'inherit_shares_changed',
 } as const
 
+export type SharedHistoryMetadataMap = {
+  created: null
+  renamed: { from: string; to: string }
+  moved: { from: string | null; to: string | null }
+  trashed: null
+  restored: null
+  icon_changed: { from: string | null; to: string | null }
+  color_changed: { from: string | null; to: string | null }
+  content_edited: null
+  permission_changed: { memberName: string | null; level: string | null }
+  block_share_changed: { status: string }
+  inherit_shares_changed: { inheritShares: boolean }
+}
+
+export const EDIT_HISTORY_ACTION = {
+  ...SHARED_HISTORY_ACTION,
+  ...NOTE_HISTORY_ACTION,
+  ...FOLDER_HISTORY_ACTION,
+  ...MAP_HISTORY_ACTION,
+  ...FILE_HISTORY_ACTION,
+  ...CANVAS_HISTORY_ACTION,
+} as const
+
+export type EditHistoryMetadataMap = SharedHistoryMetadataMap &
+  NoteHistoryMetadataMap &
+  FolderHistoryMetadataMap &
+  MapHistoryMetadataMap &
+  FileHistoryMetadataMap &
+  CanvasHistoryMetadataMap
+
 export type EditHistoryAction =
   (typeof EDIT_HISTORY_ACTION)[keyof typeof EDIT_HISTORY_ACTION]
 
 export type EditHistoryEntry = {
-  _id: Id<'editHistory'>
-  _creationTime: number
-  itemId: SidebarItemId
-  itemType: SidebarItemType
-  campaignId: Id<'campaigns'>
-  campaignMemberId: Id<'campaignMembers'>
-  action: EditHistoryAction
-  metadata: Record<string, unknown> | null
-}
+  [K in EditHistoryAction]: {
+    _id: Id<'editHistory'>
+    _creationTime: number
+    itemId: SidebarItemId
+    itemType: SidebarItemType
+    campaignId: Id<'campaigns'>
+    campaignMemberId: Id<'campaignMembers'>
+    action: K
+    metadata: EditHistoryMetadataMap[K]
+  }
+}[EditHistoryAction]
+
+export type LogEditHistoryArgs = {
+  [K in EditHistoryAction]: {
+    itemId: SidebarItemId
+    itemType: SidebarItemType
+    campaignId: Id<'campaigns'>
+    action: K
+  } & (EditHistoryMetadataMap[K] extends null
+    ? { metadata?: null }
+    : { metadata: EditHistoryMetadataMap[K] })
+}[EditHistoryAction]

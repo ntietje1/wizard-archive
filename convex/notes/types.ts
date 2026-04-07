@@ -25,3 +25,7 @@ export type NoteWithContent = SidebarItemWithContent<
   content: Array<CustomBlock>
   blockMeta: Record<string, BlockMeta>
 }
+
+export const NOTE_HISTORY_ACTION = {} as const
+
+export type NoteHistoryMetadataMap = {}

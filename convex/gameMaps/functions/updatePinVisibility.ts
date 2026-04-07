@@ -22,7 +22,7 @@ export async function updatePinVisibility(
     itemId: map._id,
     itemType: SIDEBAR_ITEM_TYPES.gameMaps,
     campaignId: map.campaignId,
-    action: EDIT_HISTORY_ACTION.pin_visibility_changed,
+    action: EDIT_HISTORY_ACTION.map_pin_visibility_changed,
     metadata: { pinItemName: pinnedItem?.name ?? 'Unknown', visible },
   })
 

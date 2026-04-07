@@ -75,7 +75,7 @@ export async function createItemPin(
     itemId: mapId,
     itemType: SIDEBAR_ITEM_TYPES.gameMaps,
     campaignId: mapFromDb.campaignId,
-    action: EDIT_HISTORY_ACTION.pin_added,
+    action: EDIT_HISTORY_ACTION.map_pin_added,
     metadata: { pinItemName: item.name },
   })
 

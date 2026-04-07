@@ -3,6 +3,8 @@ import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
+import type { EditHistoryEntry } from 'convex/editHistory/types'
+import { assertNever } from '~/shared/utils/utils'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -14,73 +16,72 @@ import {
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
-function formatActionDescription(
-  action: string,
-  metadata: Record<string, unknown> | null,
-): string {
-  if (!metadata) {
-    switch (action) {
-      case 'created':
-        return 'created this item'
-      case 'content_edited':
-        return 'edited content'
-      case 'trashed':
-        return 'moved to trash'
-      case 'restored':
-        return 'restored from trash'
-      case 'icon_changed':
-        return 'changed the icon'
-      case 'color_changed':
-        return 'changed the color'
-      case 'image_changed':
-        return 'changed the map image'
-      case 'image_removed':
-        return 'removed the map image'
-      case 'file_replaced':
-        return 'replaced the file'
-      case 'file_removed':
-        return 'removed the file'
-      case 'permission_changed':
-        return 'changed permissions'
-      case 'block_share_changed':
-        return 'changed block sharing'
-      default:
-        return action
-    }
-  }
-
-  switch (action) {
+function formatActionDescription(entry: EditHistoryEntry): string {
+  switch (entry.action) {
+    case 'created':
+      return 'created this item'
     case 'renamed':
-      return `renamed "${metadata.from}" to "${metadata.to}"`
+      return `renamed "${entry.metadata.from}" to "${entry.metadata.to}"`
     case 'moved':
-      return `moved from ${metadata.from ? `"${metadata.from}"` : 'root'} to ${metadata.to ? `"${metadata.to}"` : 'root'}`
-    case 'pin_added':
-      return `added pin "${metadata.pinItemName}"`
-    case 'pin_moved':
-      return `moved pin "${metadata.pinItemName}"`
-    case 'pin_removed':
-      return `removed pin "${metadata.pinItemName}"`
-    case 'pin_visibility_changed':
-      return `${metadata.visible ? 'showed' : 'hid'} pin "${metadata.pinItemName}"`
-    case 'shared':
-      return `shared with ${metadata.memberName}`
-    case 'unshared':
-      return `unshared from ${metadata.memberName}`
-    case 'permission_changed':
-      return `set permission to ${metadata.level ?? 'all players'}`
+      return `moved from ${entry.metadata.from ? `"${entry.metadata.from}"` : 'root'} to ${entry.metadata.to ? `"${entry.metadata.to}"` : 'root'}`
+    case 'trashed':
+      return 'moved to trash'
+    case 'restored':
+      return 'restored from trash'
+    case 'icon_changed':
+      return entry.metadata.to
+        ? `changed icon to "${entry.metadata.to}"`
+        : 'removed the icon'
+    case 'color_changed':
+      return entry.metadata.to
+        ? `changed color to "${entry.metadata.to}"`
+        : 'removed the color'
+    case 'content_edited':
+      return 'edited content'
+    case 'map_image_changed':
+      return 'changed the map image'
+    case 'map_image_removed':
+      return 'removed the map image'
+    case 'file_replaced':
+      return 'replaced the file'
+    case 'file_removed':
+      return 'removed the file'
+    case 'map_pin_added':
+      return `added pin "${entry.metadata.pinItemName}"`
+    case 'map_pin_moved':
+      return `moved pin "${entry.metadata.pinItemName}"`
+    case 'map_pin_removed':
+      return `removed pin "${entry.metadata.pinItemName}"`
+    case 'map_pin_visibility_changed':
+      return `${entry.metadata.visible ? 'showed' : 'hid'} pin "${entry.metadata.pinItemName}"`
+    case 'permission_changed': {
+      const { memberName, level } = entry.metadata
+      if (memberName) {
+        return level
+          ? `set ${memberName}'s access to ${level}`
+          : `removed ${memberName}'s access`
+      }
+      return level
+        ? `set all players' access to ${level}`
+        : `removed all players' access`
+    }
+    case 'block_share_changed':
+      return entry.metadata.status === 'shared'
+        ? 'shared blocks with players'
+        : 'unshared blocks from players'
     case 'inherit_shares_changed':
-      return metadata.inheritShares
+      return entry.metadata.inheritShares
         ? 'enabled share inheritance'
         : 'disabled share inheritance'
     default:
-      return formatActionDescription(action, null)
+      assertNever(entry)
   }
 }
 
 function groupByDay(
-  entries: Array<HistoryEntry>,
-): Array<{ label: string; entries: Array<HistoryEntry> }> {
-  const groups = new Map<string, Array<HistoryEntry>>()
+  entries: Array<EditHistoryEntry>,
+): Array<{ label: string; entries: Array<EditHistoryEntry> }> {
+  const groups = new Map<string, Array<EditHistoryEntry>>()
 
   for (const entry of entries) {
     const date = new Date(entry._creationTime)
@@ -101,17 +102,6 @@ function groupByDay(
     label,
     entries: groupEntries,
   }))
-}
-
-type HistoryEntry = {
-  _id: Id<'editHistory'>
-  _creationTime: number
-  itemId: SidebarItemId
-  itemType: string
-  campaignId: Id<'campaigns'>
-  campaignMemberId: Id<'campaignMembers'>
-  action: string
-  metadata: Record<string, unknown> | null
 }
 
 const PAGE_SIZE = 20
@@ -150,7 +140,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
     return map
   }, [membersQuery.data])
 
-  const entries = (results ?? []) as Array<HistoryEntry>
+  const entries = (results ?? []) as Array<EditHistoryEntry>
   const dayGroups = groupByDay(entries)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -209,6 +199,8 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                 .slice(0, 2)
                 .toUpperCase()
 
+              const description = formatActionDescription(entry)
+
               return (
                 <div
                   key={entry._id}
@@ -222,7 +214,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                     <p className="text-sm leading-snug">
                       <span className="font-medium">{displayName}</span>{' '}
                       <span className="text-muted-foreground">
-                        {formatActionDescription(entry.action, entry.metadata)}
+                        {description}
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">

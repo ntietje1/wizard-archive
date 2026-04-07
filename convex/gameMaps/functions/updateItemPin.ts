@@ -31,7 +31,7 @@ export async function updateItemPin(
     itemId: map._id,
     itemType: SIDEBAR_ITEM_TYPES.gameMaps,
     campaignId: map.campaignId,
-    action: EDIT_HISTORY_ACTION.pin_moved,
+    action: EDIT_HISTORY_ACTION.map_pin_moved,
     metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
   })
 

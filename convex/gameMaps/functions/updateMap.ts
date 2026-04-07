@@ -71,8 +71,8 @@ export async function updateMap(
         ...historyBase,
         action:
           imageStorageId !== null
-            ? EDIT_HISTORY_ACTION.image_changed
-            : EDIT_HISTORY_ACTION.image_removed,
+            ? EDIT_HISTORY_ACTION.map_image_changed
+            : EDIT_HISTORY_ACTION.map_image_removed,
       }),
     )
   }

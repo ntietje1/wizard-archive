@@ -10,15 +10,18 @@ function computeWidths(
   rawWidth: number,
   fallbackContentWidth: number,
   minWidth: number,
+  maxWidth: number,
   extraWidth: number,
 ) {
-  const displayWidth =
-    rawWidth < SNAP_CLOSED_THRESHOLD ? 0 : Math.max(minWidth, rawWidth)
-  const contentWidth = displayWidth > 0 ? displayWidth : fallbackContentWidth
+  const clamped =
+    rawWidth < SNAP_CLOSED_THRESHOLD
+      ? 0
+      : Math.min(maxWidth, Math.max(minWidth, rawWidth))
+  const contentWidth = clamped > 0 ? clamped : fallbackContentWidth
   return {
-    displayWidth,
+    displayWidth: clamped,
     contentWidth,
-    totalDisplay: displayWidth + extraWidth,
+    totalDisplay: clamped + extraWidth,
     totalContent: contentWidth + extraWidth,
   }
 }
@@ -88,6 +91,7 @@ export function ResizableSidebar({
         rawWidth,
         startWidth,
         minWidth,
+        maxWidth,
         extraWidth,
       )
 
@@ -114,13 +118,14 @@ export function ResizableSidebar({
       if (finalWidth < SNAP_CLOSED_THRESHOLD) {
         onVisibleChange(false)
       } else {
-        onSizeChange(Math.max(minWidth, finalWidth))
+        onSizeChange(Math.min(maxWidth, Math.max(minWidth, finalWidth)))
       }
 
       const { totalDisplay, totalContent } = computeWidths(
         finalWidth,
         startWidth,
         minWidth,
+        maxWidth,
         extraWidth,
       )
 
@@ -180,9 +185,10 @@ export function ResizableSidebar({
     }
   }
 
-  const contentPanelWidth = visible ? size : 0
+  const clampedSize = Math.min(maxWidth, Math.max(minWidth, size))
+  const contentPanelWidth = visible ? clampedSize : 0
   const totalDisplayWidth = contentPanelWidth + extraWidth
-  const totalContentWidth = size + extraWidth
+  const totalContentWidth = clampedSize + extraWidth
 
   const borderClass = side === 'left' ? 'border-r' : 'border-l'
   const handlePositionStyle =

@@ -23,3 +23,13 @@ export type FileWithContent = SidebarItemWithContent<
   downloadUrl: string | null
   contentType: string | null
 }
+
+export const FILE_HISTORY_ACTION = {
+  file_replaced: 'file_replaced',
+  file_removed: 'file_removed',
+} as const
+
+export type FileHistoryMetadataMap = {
+  file_replaced: null
+  file_removed: null
+}

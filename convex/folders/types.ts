@@ -20,3 +20,7 @@ export type FolderWithContent = SidebarItemWithContent<
 > & {
   inheritShares: boolean
 }
+
+export const FOLDER_HISTORY_ACTION = {} as const
+
+export type FolderHistoryMetadataMap = {}

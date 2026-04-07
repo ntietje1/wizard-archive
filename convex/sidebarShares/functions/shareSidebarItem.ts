@@ -49,7 +49,7 @@ export const shareSidebarItem = async (
     action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
       memberName: memberProfile?.name ?? 'Unknown',
-      ...(permissionLevel ? { level: permissionLevel } : {}),
+      level: permissionLevel ?? null,
     },
   })
 

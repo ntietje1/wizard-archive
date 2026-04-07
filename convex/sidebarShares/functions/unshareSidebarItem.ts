@@ -36,8 +36,8 @@ export const unshareSidebarItem = async (
     itemId: sidebarItemId,
     itemType: item.type,
     campaignId: item.campaignId,
-    action: EDIT_HISTORY_ACTION.unshared,
-    metadata: { memberName: memberProfile?.name ?? 'Unknown' },
+    action: EDIT_HISTORY_ACTION.permission_changed,
+    metadata: { memberName: memberProfile?.name ?? 'Unknown', level: null },
   })
 
   return null

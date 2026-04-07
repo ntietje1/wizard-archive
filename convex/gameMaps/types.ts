@@ -39,3 +39,21 @@ export type MapPin = CommonValidatorFields<'mapPins'> & {
 export type MapPinWithItem = MapPin & {
   item: AnySidebarItem | null
 }
+
+export const MAP_HISTORY_ACTION = {
+  map_image_changed: 'map_image_changed',
+  map_image_removed: 'map_image_removed',
+  map_pin_added: 'map_pin_added',
+  map_pin_moved: 'map_pin_moved',
+  map_pin_removed: 'map_pin_removed',
+  map_pin_visibility_changed: 'map_pin_visibility_changed',
+} as const
+
+export type MapHistoryMetadataMap = {
+  map_image_changed: null
+  map_image_removed: null
+  map_pin_added: { pinItemName: string }
+  map_pin_moved: { pinItemName: string }
+  map_pin_removed: { pinItemName: string }
+  map_pin_visibility_changed: { pinItemName: string; visible: boolean }
+}

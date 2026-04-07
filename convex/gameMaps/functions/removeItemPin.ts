@@ -24,7 +24,7 @@ export async function removeItemPin(
     itemId: map._id,
     itemType: SIDEBAR_ITEM_TYPES.gameMaps,
     campaignId: map.campaignId,
-    action: EDIT_HISTORY_ACTION.pin_removed,
+    action: EDIT_HISTORY_ACTION.map_pin_removed,
     metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
   })
 
