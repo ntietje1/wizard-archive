@@ -38,6 +38,13 @@ export async function updateMap(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'gameMaps'>>> = {}
+  const historyPromises: Array<Promise<void>> = []
+
+  const historyBase = {
+    itemId: map._id,
+    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    campaignId: map.campaignId,
+  } as const
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -47,17 +54,47 @@ export async function updateMap(
       newName: trimmedName,
     })
     updates.slug = newSlug
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: map.name, to: trimmedName },
+      }),
+    )
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
     // Maps use imageStorageId as their preview — no separate preview pipeline
     updates.previewStorageId = imageStorageId
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action:
+          imageStorageId !== null
+            ? EDIT_HISTORY_ACTION.image_changed
+            : EDIT_HISTORY_ACTION.image_removed,
+      }),
+    )
   }
   if (iconName !== undefined) {
     updates.iconName = iconName
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.icon_changed,
+        metadata: { from: map.iconName, to: iconName },
+      }),
+    )
   }
   if (color !== undefined) {
     updates.color = color
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.color_changed,
+        metadata: { from: map.color, to: color },
+      }),
+    )
   }
 
   if (Object.keys(updates).length === 0) {
@@ -69,40 +106,7 @@ export async function updateMap(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-
-  const historyBase = {
-    itemId: map._id,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-    campaignId: map.campaignId,
-  } as const
-
-  if (name !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: map.name, to: name.trim() },
-    })
-  }
-  if (imageStorageId !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.image_changed,
-    })
-  }
-  if (iconName !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.icon_changed,
-      metadata: { from: map.iconName, to: iconName },
-    })
-  }
-  if (color !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.color_changed,
-      metadata: { from: map.color, to: color },
-    })
-  }
+  await Promise.all(historyPromises)
 
   return { mapId: map._id, slug: newSlug ?? map.slug }
 }

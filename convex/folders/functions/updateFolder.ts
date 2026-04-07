@@ -36,6 +36,13 @@ export async function updateFolder(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
+  const historyPromises: Array<Promise<void>> = []
+
+  const historyBase = {
+    itemId: folder._id,
+    itemType: SIDEBAR_ITEM_TYPES.folders,
+    campaignId: folder.campaignId,
+  } as const
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -45,14 +52,35 @@ export async function updateFolder(
       newName: trimmedName,
     })
     updates.slug = newSlug
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: folder.name, to: trimmedName },
+      }),
+    )
   }
 
   if (iconName !== undefined) {
     updates.iconName = iconName
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.icon_changed,
+        metadata: { from: folder.iconName, to: iconName },
+      }),
+    )
   }
 
   if (color !== undefined) {
     updates.color = color
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.color_changed,
+        metadata: { from: folder.color, to: color },
+      }),
+    )
   }
 
   if (Object.keys(updates).length === 0) {
@@ -64,34 +92,7 @@ export async function updateFolder(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-
-  const historyBase = {
-    itemId: folder._id,
-    itemType: SIDEBAR_ITEM_TYPES.folders,
-    campaignId: folder.campaignId,
-  } as const
-
-  if (name !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: folder.name, to: name.trim() },
-    })
-  }
-  if (iconName !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.icon_changed,
-      metadata: { from: folder.iconName, to: iconName },
-    })
-  }
-  if (color !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.color_changed,
-      metadata: { from: folder.color, to: color },
-    })
-  }
+  await Promise.all(historyPromises)
 
   return { folderId: folder._id, slug: newSlug ?? folder.slug }
 }

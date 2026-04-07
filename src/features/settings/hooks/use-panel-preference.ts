@@ -39,7 +39,7 @@ export function usePanelPreference(
   const initPanel = store((s) => s.initPanel)
   const panel = store((s) => s.panels[panelId])
 
-  const hasInitialized = useRef(false)
+  const hasInitialized = useRef<string | null>(null)
 
   if (!panel) {
     initPanel(panelId, {
@@ -53,8 +53,8 @@ export function usePanelPreference(
     prefsQuery.data?.panelPreferences?.[panelId]
 
   useEffect(() => {
-    if (prefsQuery.isFetched && !hasInitialized.current) {
-      hasInitialized.current = true
+    if (prefsQuery.isFetched && hasInitialized.current !== panelId) {
+      hasInitialized.current = panelId
       const serverSize = serverPanel?.size ?? defaults.size
       const serverVisible = serverPanel?.visible ?? defaults.visible
       store.getState().setSize(panelId, serverSize)
@@ -70,8 +70,8 @@ export function usePanelPreference(
     store,
   ])
 
-  const size = panel?.size ?? defaults.size
-  const visible = panel?.visible ?? defaults.visible
+  const size = panel?.size ?? initial?.size ?? defaults.size
+  const visible = panel?.visible ?? initial?.visible ?? defaults.visible
   const activeContentId = panel?.activeContentId ?? null
 
   const setSize = (newSize: number) => {

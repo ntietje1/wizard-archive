@@ -11,7 +11,7 @@ interface PanelPreferenceStore {
   initPanel: (panelId: string, state: PanelState) => void
   setSize: (panelId: string, size: number) => void
   setVisible: (panelId: string, visible: boolean) => void
-  setActiveContent: (panelId: string, contentId: string) => void
+  setActiveContent: (panelId: string, contentId: string | null) => void
 }
 
 export const usePanelPreferenceStore = create<PanelPreferenceStore>()(

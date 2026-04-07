@@ -46,9 +46,7 @@ export const shareSidebarItem = async (
     itemId: sidebarItemId,
     itemType: sidebarItemType,
     campaignId: item.campaignId,
-    action: permissionLevel
-      ? EDIT_HISTORY_ACTION.permission_changed
-      : EDIT_HISTORY_ACTION.shared,
+    action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
       memberName: memberProfile?.name ?? 'Unknown',
       ...(permissionLevel ? { level: permissionLevel } : {}),

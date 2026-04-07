@@ -53,6 +53,10 @@ function PanelContent({
       return <OutgoingLinksPanel itemId={itemId} />
     case RIGHT_SIDEBAR_CONTENT.outline:
       return <OutlinePanel itemId={itemId} />
+    default: {
+      const _exhaustiveCheck: never = contentId
+      return _exhaustiveCheck
+    }
   }
 }
 
@@ -64,7 +68,7 @@ export function RightSidebar({
 }: {
   itemId: SidebarItemId
   activeContentId: RightSidebarContentId
-  onContentChange: (contentId: string) => void
+  onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void
 }) {
   return (
@@ -98,6 +102,7 @@ export function RightSidebar({
           size="icon"
           className="h-6 w-6"
           onClick={onClose}
+          aria-label="Close sidebar"
         >
           <X className="h-4 w-4" />
         </Button>

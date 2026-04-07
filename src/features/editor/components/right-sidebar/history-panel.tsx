@@ -32,8 +32,12 @@ function formatActionDescription(
         return 'changed the color'
       case 'image_changed':
         return 'changed the map image'
+      case 'image_removed':
+        return 'removed the map image'
       case 'file_replaced':
         return 'replaced the file'
+      case 'file_removed':
+        return 'removed the file'
       case 'permission_changed':
         return 'changed permissions'
       case 'block_share_changed':
@@ -146,7 +150,13 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {entries.length === 0 && (
+        {historyQuery.isPending && (
+          <p className="text-sm text-muted-foreground p-4 text-center">
+            Loading history...
+          </p>
+        )}
+
+        {!historyQuery.isPending && entries.length === 0 && (
           <p className="text-sm text-muted-foreground p-4 text-center">
             No history yet.
           </p>

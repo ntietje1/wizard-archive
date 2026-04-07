@@ -94,9 +94,16 @@ export const Route = createRootRouteWithContext<{
     let initialPanelPreferences: Record<string, PanelPreference> | null = null
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
-      const prefs = await prefetchUserPreferences(ctx.context.queryClient)
-      initialTheme = prefs?.theme ?? null
-      initialPanelPreferences = prefs?.panelPreferences ?? null
+      try {
+        const prefs = await prefetchUserPreferences(ctx.context.queryClient)
+        initialTheme = prefs?.theme ?? null
+        initialPanelPreferences = prefs?.panelPreferences ?? null
+      } catch (error) {
+        console.debug(
+          '[preferences] prefetchUserPreferences failed, falling back to defaults:',
+          error,
+        )
+      }
     }
     return {
       token,

@@ -38,6 +38,12 @@ export async function updateFile(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {}
+  const historyPromises: Array<Promise<void>> = []
+  const historyBase = {
+    itemId: file._id,
+    itemType: SIDEBAR_ITEM_TYPES.files,
+    campaignId: file.campaignId,
+  } as const
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -47,6 +53,13 @@ export async function updateFile(
       newName: trimmedName,
     })
     updates.slug = newSlug
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: file.name, to: trimmedName },
+      }),
+    )
   }
   if (storageId !== undefined) {
     updates.storageId = storageId
@@ -59,61 +72,53 @@ export async function updateFile(
         updates.previewStorageId = null
         updates.previewUpdatedAt = null
       }
+      historyPromises.push(
+        logEditHistory(ctx, {
+          ...historyBase,
+          action: EDIT_HISTORY_ACTION.file_replaced,
+        }),
+      )
     } else {
       updates.previewStorageId = null
       updates.previewUpdatedAt = null
+      historyPromises.push(
+        logEditHistory(ctx, {
+          ...historyBase,
+          action: EDIT_HISTORY_ACTION.file_removed,
+        }),
+      )
     }
   }
   if (iconName !== undefined) {
     updates.iconName = iconName
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.icon_changed,
+        metadata: { from: file.iconName, to: iconName },
+      }),
+    )
   }
   if (color !== undefined) {
     updates.color = color
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.color_changed,
+        metadata: { from: file.color, to: color },
+      }),
+    )
   }
 
   if (Object.keys(updates).length === 0) {
     return { fileId: file._id, slug: file.slug }
   }
-
   await ctx.db.patch(fileId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-
-  const historyBase = {
-    itemId: file._id,
-    itemType: SIDEBAR_ITEM_TYPES.files,
-    campaignId: file.campaignId,
-  } as const
-
-  if (name !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: file.name, to: name.trim() },
-    })
-  }
-  if (storageId !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.file_replaced,
-    })
-  }
-  if (iconName !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.icon_changed,
-      metadata: { from: file.iconName, to: iconName },
-    })
-  }
-  if (color !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.color_changed,
-      metadata: { from: file.color, to: color },
-    })
-  }
+  await Promise.all(historyPromises)
 
   return { fileId: file._id, slug: newSlug ?? file.slug }
 }

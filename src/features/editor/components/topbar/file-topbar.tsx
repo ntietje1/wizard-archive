@@ -123,7 +123,7 @@ export function FileTopbar() {
           <button
             type="button"
             onClick={toggleHistory}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+            className="text-xs text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors shrink-0"
           >
             {timestampLabel}
           </button>

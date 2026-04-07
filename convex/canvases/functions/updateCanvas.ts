@@ -36,6 +36,13 @@ export async function updateCanvas(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'canvases'>>> = {}
+  const historyPromises: Array<Promise<void>> = []
+
+  const historyBase = {
+    itemId: canvas._id,
+    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    campaignId: canvas.campaignId,
+  } as const
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -45,12 +52,33 @@ export async function updateCanvas(
       newName: trimmedName,
     })
     updates.slug = newSlug
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: canvas.name, to: name.trim() },
+      }),
+    )
   }
   if (iconName !== undefined) {
     updates.iconName = iconName
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.icon_changed,
+        metadata: { from: canvas.iconName, to: iconName },
+      }),
+    )
   }
   if (color !== undefined) {
     updates.color = color
+    historyPromises.push(
+      logEditHistory(ctx, {
+        ...historyBase,
+        action: EDIT_HISTORY_ACTION.color_changed,
+        metadata: { from: canvas.color, to: color },
+      }),
+    )
   }
 
   if (Object.keys(updates).length === 0) {
@@ -62,34 +90,7 @@ export async function updateCanvas(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-
-  const historyBase = {
-    itemId: canvas._id,
-    itemType: SIDEBAR_ITEM_TYPES.canvases,
-    campaignId: canvas.campaignId,
-  } as const
-
-  if (name !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: canvas.name, to: name.trim() },
-    })
-  }
-  if (iconName !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.icon_changed,
-      metadata: { from: canvas.iconName, to: iconName },
-    })
-  }
-  if (color !== undefined) {
-    await logEditHistory(ctx, {
-      ...historyBase,
-      action: EDIT_HISTORY_ACTION.color_changed,
-      metadata: { from: canvas.color, to: color },
-    })
-  }
+  await Promise.all(historyPromises)
 
   return { canvasId: canvas._id, slug: newSlug ?? canvas.slug }
 }

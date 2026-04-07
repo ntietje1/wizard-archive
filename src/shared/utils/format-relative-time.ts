@@ -1,6 +1,11 @@
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now()
   const diff = now - timestamp
+
+  if (diff < 0) {
+    throw new Error('Timestamp cannot be in the future')
+  }
+
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
@@ -11,8 +16,13 @@ export function formatRelativeTime(timestamp: number): string {
   if (hours < 24) return `${hours}h ago`
   if (days < 7) return `${days}d ago`
 
-  return new Date(timestamp).toLocaleDateString(undefined, {
+  const date = new Date(timestamp)
+  const currentYear = new Date().getFullYear()
+  const timestampYear = date.getFullYear()
+
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
+    year: timestampYear !== currentYear ? 'numeric' : undefined,
   })
 }

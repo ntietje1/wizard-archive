@@ -1,11 +1,13 @@
 import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
+import { requireItemAccess } from '../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../permissions/types'
 
 export const getItemHistory = authQuery({
   args: {
     itemId: sidebarItemIdValidator,
-    limit: v.optional(v.number()),
+    limit: v.optional(v.number()), // TODO: add validation for limit
   },
   returns: v.array(
     v.object({
@@ -20,6 +22,11 @@ export const getItemHistory = authQuery({
     }),
   ),
   handler: async (ctx, { itemId, limit }) => {
+    const itemFromDb = await ctx.db.get(itemId)
+    requireItemAccess(ctx, {
+      rawItem: itemFromDb,
+      requiredLevel: PERMISSION_LEVEL.EDIT,
+    })
     const entries = await ctx.db
       .query('editHistory')
       .withIndex('by_item_action', (q) => q.eq('itemId', itemId))

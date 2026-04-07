@@ -10,6 +10,8 @@ import {
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
 
+const EDIT_HISTORY_DEBOUNCE_MS = 5 * 60 * 1000
+
 export const pushUpdate = authMutation({
   args: {
     documentId: yjsDocumentIdValidator,
@@ -42,7 +44,6 @@ export const pushUpdate = authMutation({
       )
     }
 
-    const DEBOUNCE_MS = 5 * 60 * 1000
     const lastContentEdit = await ctx.db
       .query('editHistory')
       .withIndex('by_item_action', (q) =>
@@ -55,7 +56,7 @@ export const pushUpdate = authMutation({
 
     if (
       !lastContentEdit ||
-      Date.now() - lastContentEdit._creationTime >= DEBOUNCE_MS
+      Date.now() - lastContentEdit._creationTime >= EDIT_HISTORY_DEBOUNCE_MS
     ) {
       await logEditHistory(ctx, {
         itemId: documentId,
