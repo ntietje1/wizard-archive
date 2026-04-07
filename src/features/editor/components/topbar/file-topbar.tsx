@@ -15,6 +15,8 @@ import {
   useActiveSidebarItems,
   useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
+import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
+import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
@@ -42,6 +44,18 @@ export function FileTopbar() {
     !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
 
+  const historyPanel = usePanelPreference('editor-history', {
+    size: 300,
+    visible: false,
+  })
+  const toggleHistory = () => historyPanel.setVisible(!historyPanel.visible)
+
+  const timestampLabel = item
+    ? item.updatedTime
+      ? `Edited ${formatRelativeTime(item.updatedTime)}`
+      : `Created ${formatRelativeTime(item._creationTime)}`
+    : null
+
   const middleContent = (
     <ItemButtonWrapper isTrashView={isTrashView}>
       {canEdit && <EditorViewModeToggleButton disabled={!item} />}
@@ -54,7 +68,7 @@ export function FileTopbar() {
       item={item ?? undefined}
       isTrashView={isTrashView}
     >
-      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4">
+      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
         <div
           className={cn(
             'flex-1 min-w-0',
@@ -89,6 +103,16 @@ export function FileTopbar() {
             />
           )}
         </div>
+
+        {timestampLabel && (
+          <button
+            type="button"
+            onClick={toggleHistory}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+          >
+            {timestampLabel}
+          </button>
+        )}
 
         {middleContent}
       </div>

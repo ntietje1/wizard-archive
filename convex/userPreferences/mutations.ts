@@ -3,8 +3,6 @@ import { authMutation } from '../functions'
 
 export const setUserPreferences = authMutation({
   args: {
-    sidebarWidth: v.optional(v.number()),
-    isSidebarExpanded: v.optional(v.boolean()),
     theme: v.optional(
       v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
     ),
@@ -22,9 +20,8 @@ export const setUserPreferences = authMutation({
     if (!existing) {
       return await ctx.db.insert('userPreferences', {
         userId,
-        sidebarWidth: args.sidebarWidth ?? null,
-        isSidebarExpanded: args.isSidebarExpanded ?? null,
         theme: args.theme ?? null,
+        panelPreferences: null,
         deletionTime: null,
         deletedBy: null,
         updatedTime: null,
@@ -34,6 +31,61 @@ export const setUserPreferences = authMutation({
     } else {
       await ctx.db.patch(existing._id, {
         ...args,
+        updatedTime: now,
+        updatedBy: userId,
+      })
+
+      return existing._id
+    }
+  },
+})
+
+export const setPanelPreference = authMutation({
+  args: {
+    panelId: v.string(),
+    size: v.optional(v.number()),
+    visible: v.optional(v.boolean()),
+  },
+  returns: v.id('userPreferences'),
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const userId = ctx.user.profile._id
+
+    const existing = await ctx.db
+      .query('userPreferences')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .unique()
+
+    const currentPrefs = existing?.panelPreferences ?? {}
+    const currentPanel = currentPrefs[args.panelId] ?? {
+      size: null,
+      visible: null,
+    }
+
+    const updatedPanel = {
+      size: args.size !== undefined ? args.size : currentPanel.size,
+      visible: args.visible !== undefined ? args.visible : currentPanel.visible,
+    }
+
+    const updatedPrefs = {
+      ...currentPrefs,
+      [args.panelId]: updatedPanel,
+    }
+
+    if (!existing) {
+      return await ctx.db.insert('userPreferences', {
+        userId,
+        theme: null,
+        panelPreferences: updatedPrefs,
+        deletionTime: null,
+        deletedBy: null,
+        updatedTime: null,
+        updatedBy: null,
+        createdBy: userId,
+      })
+    } else {
+      await ctx.db.patch(existing._id, {
+        panelPreferences: updatedPrefs,
         updatedTime: now,
         updatedBy: userId,
       })

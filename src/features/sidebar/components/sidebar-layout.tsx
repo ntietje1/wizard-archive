@@ -1,38 +1,24 @@
-import { memo, useRef } from 'react'
 import { FileSidebar } from './sidebar'
 import { NewButton } from './new-button'
 import { TrashButton } from './trash-button'
 import { SidebarWrapper } from './sidebar-toolbar/sidebar-toolbar'
-import { NAV_COLUMN_WIDTH } from './sidebar-toolbar/constants'
+import {
+  LEFT_SIDEBAR_DEFAULTS,
+  LEFT_SIDEBAR_PANEL_ID,
+  NAV_COLUMN_WIDTH,
+} from './sidebar-toolbar/constants'
+import { ResizableSidebar } from './resizable-sidebar'
+import type { PanelPreference } from 'convex/userPreferences/types'
 import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
 import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import {
-  SidebarLayoutContext,
-  useSidebarLayout,
-} from '~/features/sidebar/hooks/useSidebarLayout'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useUserPreferences } from '~/features/settings/hooks/useUserPreferences'
+import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 
-const SIDEBAR_MIN_WIDTH = 164
-const SNAP_CLOSED_THRESHOLD = 50
-
-function computeSidebarWidths(rawWidth: number, fallbackContentWidth: number) {
-  const displayWidth =
-    rawWidth < SNAP_CLOSED_THRESHOLD ? 0 : Math.max(SIDEBAR_MIN_WIDTH, rawWidth)
-  const contentWidth = displayWidth > 0 ? displayWidth : fallbackContentWidth
-  return {
-    displayWidth,
-    contentWidth,
-    totalDisplay: displayWidth + NAV_COLUMN_WIDTH,
-    totalContent: contentWidth + NAV_COLUMN_WIDTH,
-  }
-}
-
-const SidebarContent = memo(function SidebarContent() {
+function SidebarContent() {
   const { isDm } = useCampaign()
 
   return (
@@ -63,143 +49,36 @@ const SidebarContent = memo(function SidebarContent() {
       </EditorContextMenu>
     </div>
   )
-})
+}
 
 export function SidebarLayout({
   children,
-  initialSidebarWidth,
-  initialSidebarExpanded,
+  initialPanel,
 }: {
   children: React.ReactNode
-  initialSidebarWidth: number | null
-  initialSidebarExpanded: boolean | null
+  initialPanel: PanelPreference | null
 }) {
-  const {
-    isSidebarExpanded,
-    setIsSidebarExpanded,
-    sidebarWidth,
-    setSidebarWidth,
-    isLoaded: isUserPreferencesLoaded,
-  } = useUserPreferences({
-    sidebarWidth: initialSidebarWidth,
-    isSidebarExpanded: initialSidebarExpanded,
-  })
-
-  const contextValue = {
-    isSidebarExpanded,
-    setIsSidebarExpanded,
-    sidebarWidth,
-    setSidebarWidth,
-    isUserPreferencesLoaded,
-  }
-
-  return (
-    <SidebarLayoutContext.Provider value={contextValue}>
-      <SidebarLayoutInner>{children}</SidebarLayoutInner>
-    </SidebarLayoutContext.Provider>
+  const panelState = usePanelPreference(
+    LEFT_SIDEBAR_PANEL_ID,
+    LEFT_SIDEBAR_DEFAULTS,
+    initialPanel ?? undefined,
   )
-}
-
-function SidebarLayoutInner({ children }: { children: React.ReactNode }) {
-  const {
-    isSidebarExpanded,
-    setIsSidebarExpanded,
-    sidebarWidth,
-    setSidebarWidth,
-    isUserPreferencesLoaded,
-  } = useSidebarLayout()
-
-  const handleRef = useRef<HTMLDivElement>(null)
-  const outerRef = useRef<HTMLDivElement>(null)
-  const innerRef = useRef<HTMLDivElement>(null)
-  const dragWidthRef = useRef(sidebarWidth)
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isSidebarExpanded || !isUserPreferencesLoaded) return
-
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = sidebarWidth
-    dragWidthRef.current = startWidth
-
-    handleRef.current?.classList.add('bg-primary')
-    handleRef.current?.classList.remove('hover:bg-border')
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientX - startX
-      const rawWidth = startWidth + delta
-      dragWidthRef.current = rawWidth
-
-      const { totalDisplay, totalContent } = computeSidebarWidths(
-        rawWidth,
-        startWidth,
-      )
-
-      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
-      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
-      if (handleRef.current) handleRef.current.style.left = `${totalDisplay}px`
-    }
-
-    const handleMouseUp = () => {
-      handleRef.current?.classList.remove('bg-primary')
-      handleRef.current?.classList.add('hover:bg-border')
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-
-      const finalWidth = dragWidthRef.current
-
-      if (finalWidth < SNAP_CLOSED_THRESHOLD) {
-        setIsSidebarExpanded(false)
-      } else {
-        setSidebarWidth(Math.max(SIDEBAR_MIN_WIDTH, finalWidth))
-      }
-
-      const displayWidth =
-        finalWidth < SNAP_CLOSED_THRESHOLD
-          ? 0
-          : Math.max(SIDEBAR_MIN_WIDTH, finalWidth)
-      const contentWidth = displayWidth > 0 ? displayWidth : startWidth
-      const totalDisplay = displayWidth + NAV_COLUMN_WIDTH
-      const totalContent = contentWidth + NAV_COLUMN_WIDTH
-
-      if (outerRef.current) outerRef.current.style.width = `${totalDisplay}px`
-      if (innerRef.current) innerRef.current.style.width = `${totalContent}px`
-      if (handleRef.current) handleRef.current.style.left = `${totalDisplay}px`
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
-
-  const contentPanelWidth = isSidebarExpanded ? sidebarWidth : 0
-  const totalDisplayWidth = contentPanelWidth + NAV_COLUMN_WIDTH
-  const totalContentWidth = sidebarWidth + NAV_COLUMN_WIDTH
 
   return (
     <div className="relative flex flex-1 min-h-0 min-w-0">
-      <div
-        ref={outerRef}
-        className="shrink-0 overflow-hidden border-r"
-        style={{ width: totalDisplayWidth }}
+      <ResizableSidebar
+        side="left"
+        size={panelState.size}
+        visible={panelState.visible}
+        onSizeChange={panelState.setSize}
+        onVisibleChange={panelState.setVisible}
+        isLoaded={panelState.isLoaded}
+        extraWidth={NAV_COLUMN_WIDTH}
       >
-        <nav
-          ref={innerRef}
-          className="h-full"
-          style={{ width: totalContentWidth }}
-          aria-label="Sidebar"
-        >
-          <SidebarWrapper>
-            <SidebarContent />
-          </SidebarWrapper>
-        </nav>
-      </div>
-      <div
-        ref={handleRef}
-        role="separator"
-        className={`absolute top-0 h-full w-1 -ml-0.5 z-10 ${isSidebarExpanded ? 'cursor-col-resize hover:bg-border hover:transition-colors hover:duration-100 ease-out' : ''}`}
-        style={{ left: totalDisplayWidth }}
-        onMouseDown={handleMouseDown}
-      />
+        <SidebarWrapper>
+          <SidebarContent />
+        </SidebarWrapper>
+      </ResizableSidebar>
 
       <div className="flex flex-col flex-1 min-h-0 min-w-0">{children}</div>
     </div>

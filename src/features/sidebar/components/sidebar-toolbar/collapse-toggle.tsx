@@ -1,18 +1,25 @@
 import { PanelLeft, PanelLeftOpen } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
+import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
+import {
+  LEFT_SIDEBAR_DEFAULTS,
+  LEFT_SIDEBAR_PANEL_ID,
+} from '~/features/sidebar/components/sidebar-toolbar/constants'
 
 export function CollapseToggle() {
-  const { isSidebarExpanded, setIsSidebarExpanded } = useSidebarLayout()
+  const { visible, setVisible } = usePanelPreference(
+    LEFT_SIDEBAR_PANEL_ID,
+    LEFT_SIDEBAR_DEFAULTS,
+  )
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-      aria-label={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+      onClick={() => setVisible(!visible)}
+      aria-label={visible ? 'Collapse sidebar' : 'Expand sidebar'}
     >
-      {isSidebarExpanded ? (
+      {visible ? (
         <PanelLeft className="h-4 w-4" />
       ) : (
         <PanelLeftOpen className="h-4 w-4" />

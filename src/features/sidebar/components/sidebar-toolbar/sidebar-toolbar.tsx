@@ -3,15 +3,22 @@ import { NotesNavButton } from './notes-nav-button'
 import { CampaignPlayersButton } from './campaign-players-button'
 import { SceneNavButton } from './scene-nav-button'
 import { UserMenu } from '~/features/auth/components/user-menu'
+import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 import { BookmarksFilterButton } from '~/features/sidebar/components/sidebar-toolbar/bookmarks-filter-button'
 import { CloseAllFoldersButton } from '~/features/sidebar/components/sidebar-toolbar/close-all-folders'
 import { NewFolderButton } from '~/features/sidebar/components/sidebar-toolbar/new-folder'
 import { NewNoteButton } from '~/features/sidebar/components/sidebar-toolbar/new-note'
 import { SortMenu } from '~/features/sidebar/components/sidebar-toolbar/sort-menu'
-import { useSidebarLayout } from '~/features/sidebar/hooks/useSidebarLayout'
+import {
+  LEFT_SIDEBAR_DEFAULTS,
+  LEFT_SIDEBAR_PANEL_ID,
+} from '~/features/sidebar/components/sidebar-toolbar/constants'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
-  const { isSidebarExpanded } = useSidebarLayout()
+  const { visible } = usePanelPreference(
+    LEFT_SIDEBAR_PANEL_ID,
+    LEFT_SIDEBAR_DEFAULTS,
+  )
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -33,7 +40,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
             <UserMenu />
           </div>
         </div>
-        {isSidebarExpanded && <div className="w-[1px] bg-border" />}
+        {visible && <div className="w-[1px] bg-border" />}
         <div className={`flex-1 flex flex-col min-h-0 min-w-0 border-t`}>
           {children}
         </div>

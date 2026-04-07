@@ -5,92 +5,78 @@ import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from '~/features/shadcn/components/avatar'
 import { Button } from '~/features/shadcn/components/button'
-
-const ACTION_LABELS: Record<string, string> = {
-  created: 'Created this item',
-  renamed: 'Renamed',
-  moved: 'Moved',
-  trashed: 'Moved to trash',
-  restored: 'Restored from trash',
-  icon_changed: 'Changed icon',
-  color_changed: 'Changed color',
-  content_edited: 'Edited content',
-  image_changed: 'Changed map image',
-  file_replaced: 'Replaced file',
-  pin_added: 'Added pin',
-  pin_moved: 'Moved pin',
-  pin_removed: 'Removed pin',
-  pin_visibility_changed: 'Changed pin visibility',
-  shared: 'Shared',
-  unshared: 'Unshared',
-  permission_changed: 'Changed permissions',
-  block_share_changed: 'Changed block sharing',
-  inherit_shares_changed: 'Changed share inheritance',
-}
+import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
 function formatActionDescription(
   action: string,
   metadata: Record<string, unknown> | null,
 ): string {
-  const base = ACTION_LABELS[action] ?? action
-
-  if (!metadata) return base
+  if (!metadata) {
+    switch (action) {
+      case 'created':
+        return 'created this item'
+      case 'content_edited':
+        return 'edited content'
+      case 'trashed':
+        return 'moved to trash'
+      case 'restored':
+        return 'restored from trash'
+      case 'icon_changed':
+        return 'changed the icon'
+      case 'color_changed':
+        return 'changed the color'
+      case 'image_changed':
+        return 'changed the map image'
+      case 'file_replaced':
+        return 'replaced the file'
+      case 'permission_changed':
+        return 'changed permissions'
+      case 'block_share_changed':
+        return 'changed block sharing'
+      default:
+        return action
+    }
+  }
 
   switch (action) {
     case 'renamed':
-      return `Renamed "${metadata.from}" to "${metadata.to}"`
+      return `renamed "${metadata.from}" to "${metadata.to}"`
     case 'moved':
-      return `Moved from ${metadata.from ? `"${metadata.from}"` : 'root'} to ${metadata.to ? `"${metadata.to}"` : 'root'}`
+      return `moved from ${metadata.from ? `"${metadata.from}"` : 'root'} to ${metadata.to ? `"${metadata.to}"` : 'root'}`
     case 'pin_added':
+      return `added pin "${metadata.pinItemName}"`
     case 'pin_moved':
+      return `moved pin "${metadata.pinItemName}"`
     case 'pin_removed':
-      return `${base} "${metadata.pinItemName}"`
+      return `removed pin "${metadata.pinItemName}"`
     case 'pin_visibility_changed':
-      return `${metadata.visible ? 'Showed' : 'Hid'} pin "${metadata.pinItemName}"`
+      return `${metadata.visible ? 'showed' : 'hid'} pin "${metadata.pinItemName}"`
     case 'shared':
-      return `Shared with ${metadata.memberName}`
+      return `shared with ${metadata.memberName}`
     case 'unshared':
-      return `Unshared from ${metadata.memberName}`
+      return `unshared from ${metadata.memberName}`
     case 'permission_changed':
-      return `Set permission to ${metadata.level ?? 'all players'}`
+      return `set permission to ${metadata.level ?? 'all players'}`
     case 'inherit_shares_changed':
       return metadata.inheritShares
-        ? 'Enabled share inheritance'
-        : 'Disabled share inheritance'
+        ? 'enabled share inheritance'
+        : 'disabled share inheritance'
     default:
-      return base
+      return formatActionDescription(action, null)
   }
 }
 
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now()
-  const diff = now - timestamp
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (seconds < 60) return 'Just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  if (days < 7) return `${days}d ago`
-
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
 function groupByDay(
-  entries: Array<{ _creationTime: number; [key: string]: unknown }>,
-): Array<{ label: string; entries: typeof entries }> {
-  const groups = new Map<string, typeof entries>()
+  entries: Array<HistoryEntry>,
+): Array<{ label: string; entries: Array<HistoryEntry> }> {
+  const groups = new Map<string, Array<HistoryEntry>>()
 
   for (const entry of entries) {
     const date = new Date(entry._creationTime)
@@ -136,6 +122,8 @@ export function HistoryPanel({
   })
 
   const membersQuery = useCampaignMembers()
+  const { campaign } = useCampaign()
+  const myMemberId = campaign.data?.myMembership?._id
 
   const membersMap = useMemo(() => {
     const map = new Map<
@@ -164,7 +152,7 @@ export function HistoryPanel({
   const dayGroups = groupByDay(entries)
 
   return (
-    <div className="w-72 border-l border-border flex flex-col bg-background shrink-0">
+    <div className="flex flex-col h-full bg-background">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <h3 className="text-sm font-medium">History</h3>
         <Button
@@ -192,8 +180,11 @@ export function HistoryPanel({
               </span>
             </div>
             {group.entries.map((entry) => {
-              const e = entry as HistoryEntry
-              const member = membersMap.get(e.campaignMemberId)
+              const member = membersMap.get(entry.campaignMemberId)
+              const isCurrentUser = entry.campaignMemberId === myMemberId
+              const displayName = isCurrentUser
+                ? 'You'
+                : (member?.name ?? 'Unknown')
               const initials = (member?.name ?? '?')
                 .split(' ')
                 .map((w) => w[0])
@@ -203,7 +194,7 @@ export function HistoryPanel({
 
               return (
                 <div
-                  key={e._id}
+                  key={entry._id}
                   className="flex items-start gap-2.5 px-3 py-2 hover:bg-muted/50"
                 >
                   <Avatar size="sm" className="mt-0.5 shrink-0">
@@ -212,15 +203,13 @@ export function HistoryPanel({
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm leading-snug">
-                      <span className="font-medium">
-                        {member?.name ?? 'Unknown'}
-                      </span>{' '}
+                      <span className="font-medium">{displayName}</span>{' '}
                       <span className="text-muted-foreground">
-                        {formatActionDescription(e.action, e.metadata)}
+                        {formatActionDescription(entry.action, entry.metadata)}
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatRelativeTime(e._creationTime)}
+                      {formatRelativeTime(entry._creationTime)}
                     </p>
                   </div>
                 </div>

@@ -16,6 +16,7 @@ import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import type { Theme } from '~/features/settings/hooks/useTheme'
+import type { PanelPreference } from 'convex/userPreferences/types'
 import { NavigationProgress } from '~/shared/components/navigation-progress'
 import { PreviewBanner } from '~/shared/components/preview-banner'
 import { isPreview } from '~/shared/utils/preview'
@@ -76,8 +77,7 @@ export const Route = createRootRouteWithContext<{
       return {
         token: null,
         initialTheme: null,
-        initialSidebarWidth: null,
-        initialSidebarExpanded: null,
+        initialPanelPreferences: null as Record<string, PanelPreference> | null,
       }
     }
 
@@ -85,27 +85,23 @@ export const Route = createRootRouteWithContext<{
     try {
       token = await fetchAuthToken()
     } catch (error) {
-      // Unauthenticated or expired session — degrade gracefully to client-side auth
       console.debug(
         '[auth] fetchAuthToken failed, falling back to client-side auth:',
         error,
       )
     }
     let initialTheme: Theme | null = null
-    let initialSidebarWidth: number | null = null
-    let initialSidebarExpanded: boolean | null = null
+    let initialPanelPreferences: Record<string, PanelPreference> | null = null
     if (token) {
       ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
       const prefs = await prefetchUserPreferences(ctx.context.queryClient)
       initialTheme = prefs?.theme ?? null
-      initialSidebarWidth = prefs?.sidebarWidth ?? null
-      initialSidebarExpanded = prefs?.isSidebarExpanded ?? null
+      initialPanelPreferences = prefs?.panelPreferences ?? null
     }
     return {
       token,
       initialTheme,
-      initialSidebarWidth,
-      initialSidebarExpanded,
+      initialPanelPreferences,
     }
   },
   component: RootComponent,
