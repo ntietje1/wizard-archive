@@ -15,6 +15,11 @@ import {
   useActiveSidebarItems,
   useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  RIGHT_SIDEBAR_CONTENT,
+  RIGHT_SIDEBAR_DEFAULTS,
+  RIGHT_SIDEBAR_PANEL_ID,
+} from '~/features/editor/components/right-sidebar/constants'
 import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
@@ -44,11 +49,21 @@ export function FileTopbar() {
     !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
 
-  const historyPanel = usePanelPreference('editor-history', {
-    size: 300,
-    visible: false,
-  })
-  const toggleHistory = () => historyPanel.setVisible(!historyPanel.visible)
+  const rightPanel = usePanelPreference(
+    RIGHT_SIDEBAR_PANEL_ID,
+    RIGHT_SIDEBAR_DEFAULTS,
+  )
+  const toggleHistory = () => {
+    const isShowingHistory =
+      rightPanel.visible &&
+      rightPanel.activeContentId === RIGHT_SIDEBAR_CONTENT.history
+    if (isShowingHistory) {
+      rightPanel.setVisible(false)
+    } else {
+      rightPanel.setActiveContent(RIGHT_SIDEBAR_CONTENT.history)
+      rightPanel.setVisible(true)
+    }
+  }
 
   const timestampLabel = item
     ? item.updatedTime

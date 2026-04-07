@@ -1,5 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
+  ArrowUpLeft,
+  ArrowUpRight,
   Bookmark,
   Download,
   Eye,
@@ -11,6 +13,8 @@ import {
   FolderDown,
   FolderPlus,
   Grid2x2Plus,
+  History,
+  List,
   MapPin,
   Move,
   Navigation,
@@ -23,6 +27,11 @@ import {
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import {
+  RIGHT_SIDEBAR_CONTENT,
+  RIGHT_SIDEBAR_PANEL_ID,
+} from '~/features/editor/components/right-sidebar/constants'
+import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -377,6 +386,104 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.createMapPin,
     },
 
+    // ========== PANELS GROUP ==========
+    {
+      id: 'panel-history',
+      label: 'Edit History',
+      icon: History,
+      group: 'panels',
+      priority: 70,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => {
+        const store = usePanelPreferenceStore.getState()
+        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
+        return (
+          panel?.visible === true &&
+          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.history
+        )
+      },
+      action: () => {
+        const store = usePanelPreferenceStore.getState()
+        store.setActiveContent(
+          RIGHT_SIDEBAR_PANEL_ID,
+          RIGHT_SIDEBAR_CONTENT.history,
+        )
+        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+      },
+    },
+    {
+      id: 'panel-backlinks',
+      label: 'Back Links',
+      icon: ArrowUpLeft,
+      group: 'panels',
+      priority: 71,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => {
+        const store = usePanelPreferenceStore.getState()
+        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
+        return (
+          panel?.visible === true &&
+          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.backlinks
+        )
+      },
+      action: () => {
+        const store = usePanelPreferenceStore.getState()
+        store.setActiveContent(
+          RIGHT_SIDEBAR_PANEL_ID,
+          RIGHT_SIDEBAR_CONTENT.backlinks,
+        )
+        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+      },
+    },
+    {
+      id: 'panel-outgoing',
+      label: 'Outgoing Links',
+      icon: ArrowUpRight,
+      group: 'panels',
+      priority: 72,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => {
+        const store = usePanelPreferenceStore.getState()
+        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
+        return (
+          panel?.visible === true &&
+          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.outgoing
+        )
+      },
+      action: () => {
+        const store = usePanelPreferenceStore.getState()
+        store.setActiveContent(
+          RIGHT_SIDEBAR_PANEL_ID,
+          RIGHT_SIDEBAR_CONTENT.outgoing,
+        )
+        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+      },
+    },
+    {
+      id: 'panel-outline',
+      label: 'Outline',
+      icon: List,
+      group: 'panels',
+      priority: 73,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => {
+        const store = usePanelPreferenceStore.getState()
+        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
+        return (
+          panel?.visible === true &&
+          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.outline
+        )
+      },
+      action: () => {
+        const store = usePanelPreferenceStore.getState()
+        store.setActiveContent(
+          RIGHT_SIDEBAR_PANEL_ID,
+          RIGHT_SIDEBAR_CONTENT.outline,
+        )
+        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+      },
+    },
+
     // ========== DOWNLOAD GROUP ==========
     {
       id: 'download-file',
@@ -549,5 +656,6 @@ export const groupConfig = {
   edit: { label: null, priority: 4 },
   navigation: { label: null, priority: 5 },
   'pin-actions': { label: null, priority: 6 },
+  panels: { label: null, priority: 7 },
   danger: { label: null, priority: 99 },
 }

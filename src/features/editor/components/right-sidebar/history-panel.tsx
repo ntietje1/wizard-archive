@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { api } from 'convex/_generated/api'
-import { X } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -11,7 +10,6 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '~/features/shadcn/components/avatar'
-import { Button } from '~/features/shadcn/components/button'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
 function formatActionDescription(
@@ -110,13 +108,7 @@ type HistoryEntry = {
   metadata: Record<string, unknown> | null
 }
 
-export function HistoryPanel({
-  itemId,
-  onClose,
-}: {
-  itemId: SidebarItemId
-  onClose: () => void
-}) {
+export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   const historyQuery = useAuthQuery(api.editHistory.queries.getItemHistory, {
     itemId,
   })
@@ -153,18 +145,6 @@ export function HistoryPanel({
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <h3 className="text-sm font-medium">History</h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
       <div className="flex-1 min-h-0 overflow-y-auto">
         {entries.length === 0 && (
           <p className="text-sm text-muted-foreground p-4 text-center">

@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { EditorContent } from '../components/editor-content'
 import { FileTopbar } from '../components/topbar/file-topbar'
-import { HistoryPanel } from '../components/history-panel'
+import { RightSidebar } from '../components/right-sidebar/right-sidebar'
+import {
+  RIGHT_SIDEBAR_CONTENT,
+  RIGHT_SIDEBAR_DEFAULTS,
+  RIGHT_SIDEBAR_PANEL_ID,
+} from '../components/right-sidebar/constants'
+import type { RightSidebarContentId } from '../components/right-sidebar/constants'
 import { ResizableSidebar } from '~/features/sidebar/components/resizable-sidebar'
 import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 import { useSelectedItemSync } from '~/features/sidebar/hooks/useSelectedItem'
@@ -12,14 +18,18 @@ import { ErrorFallback } from '~/shared/components/error-fallback'
 export function EditorPage() {
   useSelectedItemSync()
   const { item } = useCurrentItem()
-  const historyPanel = usePanelPreference('editor-history', {
-    size: 300,
-    visible: false,
-  })
+  const rightPanel = usePanelPreference(
+    RIGHT_SIDEBAR_PANEL_ID,
+    RIGHT_SIDEBAR_DEFAULTS,
+  )
 
   useEffect(() => {
-    historyPanel.setVisible(false)
+    rightPanel.setVisible(false)
   }, [item?._id])
+
+  const activeContentId =
+    (rightPanel.activeContentId as RightSidebarContentId | null) ??
+    RIGHT_SIDEBAR_CONTENT.history
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -30,19 +40,21 @@ export function EditorPage() {
             <EditorContent />
           </ErrorBoundary>
         </div>
-        {historyPanel.visible && item && (
+        {rightPanel.visible && item && (
           <ResizableSidebar
             side="right"
-            size={historyPanel.size}
-            visible={historyPanel.visible}
-            onSizeChange={historyPanel.setSize}
-            onVisibleChange={historyPanel.setVisible}
-            isLoaded={historyPanel.isLoaded}
+            size={rightPanel.size}
+            visible={rightPanel.visible}
+            onSizeChange={rightPanel.setSize}
+            onVisibleChange={rightPanel.setVisible}
+            isLoaded={rightPanel.isLoaded}
             minWidth={200}
           >
-            <HistoryPanel
+            <RightSidebar
               itemId={item._id}
-              onClose={() => historyPanel.setVisible(false)}
+              activeContentId={activeContentId}
+              onContentChange={rightPanel.setActiveContent}
+              onClose={() => rightPanel.setVisible(false)}
             />
           </ResizableSidebar>
         )}

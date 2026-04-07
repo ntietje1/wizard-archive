@@ -3,6 +3,7 @@ import { create } from 'zustand'
 interface PanelState {
   size: number
   visible: boolean
+  activeContentId: string | null
 }
 
 interface PanelPreferenceStore {
@@ -10,6 +11,7 @@ interface PanelPreferenceStore {
   initPanel: (panelId: string, state: PanelState) => void
   setSize: (panelId: string, size: number) => void
   setVisible: (panelId: string, visible: boolean) => void
+  setActiveContent: (panelId: string, contentId: string) => void
 }
 
 export const usePanelPreferenceStore = create<PanelPreferenceStore>()(
@@ -37,6 +39,18 @@ export const usePanelPreferenceStore = create<PanelPreferenceStore>()(
         if (!panel) return prev
         return {
           panels: { ...prev.panels, [panelId]: { ...panel, visible } },
+        }
+      }),
+
+    setActiveContent: (panelId, contentId) =>
+      set((prev) => {
+        const panel = prev.panels[panelId]
+        if (!panel) return prev
+        return {
+          panels: {
+            ...prev.panels,
+            [panelId]: { ...panel, activeContentId: contentId },
+          },
         }
       }),
   }),

@@ -9,8 +9,10 @@ import { handleError } from '~/shared/utils/logger'
 export type PanelPreferenceState = {
   size: number
   visible: boolean
+  activeContentId: string | null
   setSize: (size: number) => void
   setVisible: (visible: boolean) => void
+  setActiveContent: (contentId: string) => void
   isLoaded: boolean
 }
 
@@ -43,6 +45,7 @@ export function usePanelPreference(
     initPanel(panelId, {
       size: initial?.size ?? defaults.size,
       visible: initial?.visible ?? defaults.visible,
+      activeContentId: null,
     })
   }
 
@@ -69,6 +72,7 @@ export function usePanelPreference(
 
   const size = panel?.size ?? defaults.size
   const visible = panel?.visible ?? defaults.visible
+  const activeContentId = panel?.activeContentId ?? null
 
   const setSize = (newSize: number) => {
     store.getState().setSize(panelId, newSize)
@@ -80,11 +84,17 @@ export function usePanelPreference(
     setPanelPref.mutate({ panelId, visible: newVisible })
   }
 
+  const setActiveContent = (contentId: string) => {
+    store.getState().setActiveContent(panelId, contentId)
+  }
+
   return {
     size,
     visible,
+    activeContentId,
     setSize,
     setVisible,
+    setActiveContent,
     isLoaded: prefsQuery.isSuccess,
   }
 }
