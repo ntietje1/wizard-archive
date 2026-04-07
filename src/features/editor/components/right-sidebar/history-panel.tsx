@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { api } from 'convex/_generated/api'
+import { Loader2 } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
@@ -10,6 +11,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '~/features/shadcn/components/avatar'
+import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
 function formatActionDescription(
@@ -112,10 +114,14 @@ type HistoryEntry = {
   metadata: Record<string, unknown> | null
 }
 
+const PAGE_SIZE = 20
+
 export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
-  const historyQuery = useAuthQuery(api.editHistory.queries.getItemHistory, {
-    itemId,
-  })
+  const { results, status, loadMore } = useAuthPaginatedQuery(
+    api.editHistory.queries.getItemHistory,
+    { itemId },
+    { initialNumItems: PAGE_SIZE },
+  )
 
   const membersQuery = useCampaignMembers()
   const { campaign } = useCampaign()
@@ -144,19 +150,40 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
     return map
   }, [membersQuery.data])
 
-  const entries = (historyQuery.data ?? []) as Array<HistoryEntry>
+  const entries = (results ?? []) as Array<HistoryEntry>
   const dayGroups = groupByDay(entries)
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    const viewport = viewportRef.current
+    if (!sentinel || !viewport) return
+
+    const observer = new IntersectionObserver(
+      (observerEntries) => {
+        if (observerEntries[0]?.isIntersecting && status === 'CanLoadMore') {
+          loadMore(PAGE_SIZE)
+        }
+      },
+      { root: viewport, rootMargin: '100px' },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [status, loadMore])
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {historyQuery.isPending && (
+      <ScrollArea className="flex-1 min-h-0" viewportRef={viewportRef}>
+        {status === 'LoadingFirstPage' && (
           <p className="text-sm text-muted-foreground p-4 text-center">
             Loading history...
           </p>
         )}
 
-        {!historyQuery.isPending && entries.length === 0 && (
+        {status !== 'LoadingFirstPage' && entries.length === 0 && (
           <p className="text-sm text-muted-foreground p-4 text-center">
             No history yet.
           </p>
@@ -207,7 +234,15 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
             })}
           </div>
         ))}
-      </div>
+
+        {status === 'LoadingMore' && (
+          <div className="flex justify-center py-3">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        <div ref={sentinelRef} className="h-px" />
+      </ScrollArea>
     </div>
   )
 }

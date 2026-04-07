@@ -58,12 +58,18 @@ export const pushUpdate = authMutation({
       !lastContentEdit ||
       Date.now() - lastContentEdit._creationTime >= EDIT_HISTORY_DEBOUNCE_MS
     ) {
-      await logEditHistory(ctx, {
-        itemId: documentId,
-        itemType: doc.type,
-        campaignId: doc.campaignId,
-        action: EDIT_HISTORY_ACTION.content_edited,
-      })
+      await Promise.all([
+        logEditHistory(ctx, {
+          itemId: documentId,
+          itemType: doc.type,
+          campaignId: doc.campaignId,
+          action: EDIT_HISTORY_ACTION.content_edited,
+        }),
+        ctx.db.patch(documentId, {
+          updatedTime: Date.now(),
+          updatedBy: ctx.user.profile._id,
+        }),
+      ])
     }
 
     return { seq }
