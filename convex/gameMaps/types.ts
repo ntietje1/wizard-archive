@@ -5,6 +5,7 @@ import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemId,
+  SidebarItemType,
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
@@ -42,14 +43,20 @@ export type MapPinWithItem = MapPin & {
 
 export const GAME_MAP_SNAPSHOT_TYPE = 'game_map' as const
 
+export type GameMapSnapshotPinData = {
+  itemId: SidebarItemId
+  x: number
+  y: number
+  visible: boolean
+  name: string | null
+  color: string | null
+  iconName: string | null
+  itemType: SidebarItemType | null
+}
+
 export type GameMapSnapshotData = {
   imageStorageId: string | null
-  pins: Array<{
-    itemId: SidebarItemId
-    x: number
-    y: number
-    visible: boolean
-  }>
+  pins: Array<GameMapSnapshotPinData>
 }
 
 export const MAP_HISTORY_ACTION = {

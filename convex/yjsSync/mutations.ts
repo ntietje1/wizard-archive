@@ -1,20 +1,13 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { authMutation, requireCampaignMembership } from '../functions'
 import { internal } from '../_generated/api'
-import { logEditHistory } from '../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../editHistory/types'
-import { captureNoteSnapshot } from '../notes/functions/captureNoteSnapshot'
-import { captureCanvasSnapshot } from '../canvases/functions/captureCanvasSnapshot'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { yjsDocumentIdValidator } from './schema'
 import {
   checkYjsReadAccess,
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
-import type { Id } from '../_generated/dataModel'
-
-const EDIT_HISTORY_DEBOUNCE_MS = 5 * 60 * 1000
+import { SNAPSHOT_IDLE_MS } from './constants'
 
 export const pushUpdate = authMutation({
   args: {
@@ -48,55 +41,19 @@ export const pushUpdate = authMutation({
       )
     }
 
-    const lastContentEdit = await ctx.db
-      .query('editHistory')
-      .withIndex('by_item_action', (q) =>
-        q
-          .eq('itemId', documentId)
-          .eq('action', EDIT_HISTORY_ACTION.content_edited),
-      )
-      .order('desc')
-      .first()
+    const { membership } = await requireCampaignMembership(ctx, doc.campaignId)
 
-    if (
-      !lastContentEdit ||
-      Date.now() - lastContentEdit._creationTime >= EDIT_HISTORY_DEBOUNCE_MS
-    ) {
-      const [editHistoryId] = await Promise.all([
-        logEditHistory(
-          ctx,
-          {
-            itemId: documentId,
-            itemType: doc.type,
-            campaignId: doc.campaignId,
-            action: EDIT_HISTORY_ACTION.content_edited,
-          },
-          { hasSnapshot: true },
-        ),
-        ctx.db.patch(documentId, {
-          updatedTime: Date.now(),
-          updatedBy: ctx.user.profile._id,
-        }),
-      ])
-
-      const snapshotArgs = {
-        editHistoryId,
+    await ctx.scheduler.runAfter(
+      SNAPSHOT_IDLE_MS,
+      internal.yjsSync.internalMutations.maybeCreateSnapshot,
+      {
+        documentId,
+        triggerSeq: seq,
         campaignId: doc.campaignId,
+        campaignMemberId: membership._id,
         createdBy: ctx.user.profile._id,
-      }
-
-      if (doc.type === SIDEBAR_ITEM_TYPES.notes) {
-        await captureNoteSnapshot(ctx, {
-          noteId: documentId as Id<'notes'>,
-          ...snapshotArgs,
-        })
-      } else {
-        await captureCanvasSnapshot(ctx, {
-          canvasId: documentId as Id<'canvases'>,
-          ...snapshotArgs,
-        })
-      }
-    }
+      },
+    )
 
     return { seq }
   },

@@ -36,14 +36,23 @@ export async function captureGameMapSnapshot(
     return
   }
 
+  const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
+
   const snapshotData: GameMapSnapshotData = {
     imageStorageId: map.imageStorageId,
-    pins: pins.map((pin) => ({
-      itemId: pin.itemId,
-      x: pin.x,
-      y: pin.y,
-      visible: pin.visible,
-    })),
+    pins: pins.map((pin, i) => {
+      const item = pinItems[i]
+      return {
+        itemId: pin.itemId,
+        x: pin.x,
+        y: pin.y,
+        visible: pin.visible,
+        name: item?.name ?? null,
+        color: item?.color ?? null,
+        iconName: item?.iconName ?? null,
+        itemType: item?.type ?? null,
+      }
+    }),
   }
 
   const json = JSON.stringify(snapshotData)

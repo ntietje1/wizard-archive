@@ -19,6 +19,11 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { canvasNodeTypes } from '~/features/canvas/components/nodes/canvas-node-types'
+import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
+import {
+  resolvePinColor,
+  resolvePinIcon,
+} from '~/features/editor/components/viewer/map/pin-utils'
 
 export function HistoryPreviewViewer({
   entryId,
@@ -189,11 +194,7 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
         <div className="relative">
           <img src={imageUrl.data} alt="Map preview" className="max-w-full" />
           {snapshotData.pins.map((pin, i) => (
-            <div
-              key={i}
-              className="absolute w-3 h-3 bg-primary rounded-full border-2 border-background -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${pin.x * 100}%`, top: `${pin.y * 100}%` }}
-            />
+            <SnapshotPin key={i} pin={pin} />
           ))}
         </div>
       ) : imageUrl.isLoading ? (
@@ -205,6 +206,22 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
           Failed to load map image.
         </div>
       )}
+    </div>
+  )
+}
+
+function SnapshotPin({ pin }: { pin: GameMapSnapshotData['pins'][number] }) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: `${pin.x}%`,
+        top: `${pin.y}%`,
+        transform: 'translate(-50%, -100%)',
+        opacity: pin.visible ? 1 : 0.4,
+      }}
+    >
+      <PinMarker color={resolvePinColor(pin)} icon={resolvePinIcon(pin)} />
     </div>
   )
 }
