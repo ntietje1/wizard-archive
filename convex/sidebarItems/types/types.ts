@@ -14,20 +14,27 @@ import type {
   FileWithContent,
   SidebarFile,
 } from '../../files/types'
+import type {
+  Canvas,
+  CanvasFromDb,
+  CanvasWithContent,
+} from '../../canvases/types'
 
 export type AnySidebarItemFromDb =
   | NoteFromDb
   | FolderFromDb
   | GameMapFromDb
   | FileFromDb
+  | CanvasFromDb
 
-export type AnySidebarItem = Note | Folder | GameMap | SidebarFile
+export type AnySidebarItem = Note | Folder | GameMap | SidebarFile | Canvas
 
 export type AnySidebarItemWithContent =
   | NoteWithContent
   | GameMapWithContent
   | FolderWithContent
   | FileWithContent
+  | CanvasWithContent
 
 export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> =
   T extends NoteFromDb
@@ -38,4 +45,6 @@ export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> =
         ? GameMap
         : T extends FileFromDb
           ? SidebarFile
-          : never
+          : T extends CanvasFromDb
+            ? Canvas
+            : never

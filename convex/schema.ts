@@ -13,6 +13,8 @@ import { gameMapsTables } from './gameMaps/baseSchema'
 import { filesTables } from './files/schema'
 import { bookmarkTables } from './bookmarks/schema'
 import { userPreferencesTables } from './userPreferences/schema'
+import { canvasesTables } from './canvases/baseSchema'
+import { yjsSyncTables } from './yjsSync/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -29,4 +31,6 @@ export default defineSchema({
   ...filesTables,
   ...bookmarkTables,
   ...userPreferencesTables,
+  ...canvasesTables,
+  ...yjsSyncTables,
 })

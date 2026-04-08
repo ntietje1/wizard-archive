@@ -1,14 +1,19 @@
 //  @ts-check
 
+import path from 'node:path'
+import { includeIgnoreFile } from '@eslint/compat'
 import { tanstackConfig } from '@tanstack/eslint-config'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import convexPlugin from '@convex-dev/eslint-plugin'
+
+const recommendedConvexConfig = convexPlugin.configs.recommended[0]
+const recommendedConvexRules = recommendedConvexConfig.rules
 
 export default [
+  includeIgnoreFile(path.resolve(import.meta.dirname, '.gitignore')),
   {
     ignores: [
-      '.output/**',
-      '.nitro/**',
       'convex/_generated/**',
       'src/routeTree.gen.ts',
       'src/features/shadcn/**',
@@ -19,8 +24,12 @@ export default [
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      '@convex-dev': convexPlugin,
     },
     rules: {
+      ...recommendedConvexRules,
+      '@convex-dev/import-wrong-runtime': 'error',
+      '@convex-dev/explicit-table-ids': 'off', // TODO: enable this
       'react-hooks/rules-of-hooks': 'error',
       'react-refresh/only-export-components': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'off',

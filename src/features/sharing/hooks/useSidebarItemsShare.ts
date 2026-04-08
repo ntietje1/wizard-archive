@@ -25,7 +25,12 @@ export interface ShareItemWithPermission extends ShareItem {
 }
 
 interface SidebarItemShareInfo {
-  itemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'>
+  itemId:
+    | Id<'notes'>
+    | Id<'folders'>
+    | Id<'gameMaps'>
+    | Id<'files'>
+    | Id<'canvases'>
   allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>

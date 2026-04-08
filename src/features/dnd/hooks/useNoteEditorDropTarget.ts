@@ -22,7 +22,7 @@ export function useNoteEditorDropTarget({
   noteId,
 }: {
   ref: React.RefObject<HTMLElement | null>
-  editor: CustomBlockNoteEditor
+  editor: CustomBlockNoteEditor | null
   noteId: Id<'notes'>
 }) {
   const dropData = { type: NOTE_EDITOR_DROP_TYPE, noteId }
@@ -54,6 +54,7 @@ export function useNoteEditorDropTarget({
         if (!item || item.location === SIDEBAR_ITEM_LOCATION.trash) return
 
         const { clientX, clientY } = location.current.input
+        if (!editorRef.current) return
         const tiptap = editorRef.current._tiptapEditor
         const posResult = tiptap.view.posAtCoords({
           left: clientX,

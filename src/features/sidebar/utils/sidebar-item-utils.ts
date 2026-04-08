@@ -1,7 +1,4 @@
-import {
-  DEFAULT_ITEM_COLOR,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type {
   SidebarItemId,
   SidebarItemType,
@@ -11,8 +8,11 @@ import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
+import type { Canvas } from 'convex/canvases/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
+
+export const DEFAULT_ITEM_COLOR = '#14b8a6'
 
 export const getSlug = (search: EditorSearch): string | null => {
   return search.item ?? null
@@ -67,6 +67,15 @@ export function isFile(
 }
 
 /**
+ * Type guard to check if a sidebar item is a Canvas.
+ */
+export function isCanvas(
+  item: AnySidebarItem | null | undefined,
+): item is Canvas {
+  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.canvases)
+}
+
+/**
  * Safely extracts a typed sidebar item from a union type.
  * Returns the item if it matches the specified type, undefined otherwise.
  */
@@ -87,6 +96,8 @@ export function getItemTypeLabel(type: SidebarItemType): string {
       return 'Map'
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return 'Canvas'
     default:
       return assertNever(type)
   }
@@ -137,6 +148,8 @@ export function getTypeName(type: SidebarItemType): string {
       return 'Map'
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return 'Canvas'
     default:
       return assertNever(type)
   }
@@ -152,6 +165,8 @@ export function getDefaultIconName(type: SidebarItemType): string {
       return 'MapPin'
     case SIDEBAR_ITEM_TYPES.files:
       return 'File'
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return 'Grid2x2Plus'
     default:
       return assertNever(type)
   }

@@ -81,7 +81,16 @@ export const Route = createRootRouteWithContext<{
       }
     }
 
-    const token = await fetchAuthToken()
+    let token: string | undefined = undefined
+    try {
+      token = await fetchAuthToken()
+    } catch (error) {
+      // Unauthenticated or expired session — degrade gracefully to client-side auth
+      console.debug(
+        '[auth] fetchAuthToken failed, falling back to client-side auth:',
+        error,
+      )
+    }
     let initialTheme: Theme | null = null
     let initialSidebarWidth: number | null = null
     let initialSidebarExpanded: boolean | null = null

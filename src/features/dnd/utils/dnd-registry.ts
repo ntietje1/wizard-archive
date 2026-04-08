@@ -1,7 +1,6 @@
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
-  SIDEBAR_ROOT_TYPE,
 } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
@@ -17,9 +16,11 @@ import { assertNever } from '~/shared/utils/utils'
 
 // ─── Constants ───────────────────────────────────────────────────────
 
+export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
+export const SIDEBAR_ROOT_DROP_TYPE = 'root' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -45,6 +46,12 @@ export type ResolvedSidebarItemDropData = AnySidebarItem & {
   ancestorIds?: Array<Id<'folders'>>
 }
 
+export interface CanvasDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof CANVAS_DROP_ZONE_TYPE
+  canvasId: Id<'canvases'>
+}
+
 export interface MapDropZoneData {
   [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
@@ -55,7 +62,7 @@ export interface MapDropZoneData {
 
 export interface SidebarRootDropZoneData {
   [key: string | symbol]: unknown
-  type: typeof SIDEBAR_ROOT_TYPE
+  type: typeof SIDEBAR_ROOT_DROP_TYPE
 }
 
 export interface EmptyEditorDropZoneData {
@@ -77,6 +84,7 @@ export interface TrashDropZoneData {
 export type SidebarDropData =
   | ResolvedSidebarItemDropData
   | SidebarRootDropZoneData
+  | CanvasDropZoneData
   | EmptyEditorDropZoneData
   | MapDropZoneData
   | NoteEditorDropZoneData
@@ -87,12 +95,14 @@ export type DragDropAction =
   | 'trash'
   | 'restore'
   | 'pin'
+  | 'embed'
   | 'open'
   | 'link'
   | null
 
 export type DropRejectionReason =
   | 'self_pin'
+  | 'self_embed'
   | 'already_pinned'
   | 'not_folder'
   | 'circular'
@@ -183,6 +193,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot move folder into itself'
     case 'self_pin':
       return 'Cannot pin map to itself'
+    case 'self_embed':
+      return 'Cannot embed canvas into itself'
     case 'already_pinned':
       return 'Already pinned to this map'
     case 'not_folder':
@@ -196,7 +208,7 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
     case 'dm_only':
       return 'Only the DM can do this'
     case 'trashed_item':
-      return 'Cannot link to a trashed item'
+      return 'The item is trashed and cannot be used'
     default:
       return assertNever(reason)
   }
@@ -272,7 +284,7 @@ const rootConfig: DropZoneConfig = {
     })
   },
   canAcceptFiles: true,
-  getHighlightId: () => SIDEBAR_ROOT_TYPE,
+  getHighlightId: () => SIDEBAR_ROOT_DROP_TYPE,
 }
 
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
@@ -335,6 +347,19 @@ const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
   getTargetKey: (raw) => `note:${raw.noteId}`,
 })
 
+const canvasConfig = typedConfig<CanvasDropZoneData>({
+  resolve: (item, target) => {
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash)
+      return rejection('trashed_item')
+    if ((item._id as string) === (target.canvasId as string))
+      return rejection('self_embed')
+    return operation('embed', 'Add to canvas')
+  },
+  canAcceptFiles: true,
+  getHighlightId: (t) => `canvas:${t.canvasId}`,
+  getTargetKey: (raw) => `canvas:${raw.canvasId}`,
+})
+
 const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
   resolve: () => null,
   canAcceptFiles: false,
@@ -345,23 +370,26 @@ const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
 // ─── Registry ───────────────────────────────────────────────────────
 
 type DropZoneType =
+  | typeof CANVAS_DROP_ZONE_TYPE
   | typeof TRASH_DROP_ZONE_TYPE
   | typeof MAP_DROP_ZONE_TYPE
   | typeof NOTE_EDITOR_DROP_TYPE
   | typeof EMPTY_EDITOR_DROP_TYPE
-  | typeof SIDEBAR_ROOT_TYPE
+  | typeof SIDEBAR_ROOT_DROP_TYPE
   | SidebarItemType
 
 export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
+  [CANVAS_DROP_ZONE_TYPE]: canvasConfig,
   [TRASH_DROP_ZONE_TYPE]: trashConfig,
   [MAP_DROP_ZONE_TYPE]: mapConfig,
   [NOTE_EDITOR_DROP_TYPE]: noteEditorConfig,
   [EMPTY_EDITOR_DROP_TYPE]: emptyEditorConfig,
-  [SIDEBAR_ROOT_TYPE]: rootConfig,
+  [SIDEBAR_ROOT_DROP_TYPE]: rootConfig,
   [SIDEBAR_ITEM_TYPES.folders]: folderConfig,
   [SIDEBAR_ITEM_TYPES.notes]: nonFolderItemConfig,
   [SIDEBAR_ITEM_TYPES.gameMaps]: nonFolderItemConfig,
   [SIDEBAR_ITEM_TYPES.files]: nonFolderItemConfig,
+  [SIDEBAR_ITEM_TYPES.canvases]: nonFolderItemConfig,
 }
 
 // ─── Dispatch Functions ─────────────────────────────────────────────

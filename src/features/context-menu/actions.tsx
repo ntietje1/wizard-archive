@@ -203,8 +203,27 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       }
     },
 
-    createCanvas: () => {
-      toast.error('Canvas not implemented')
+    createCanvas: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      if (ctx.item && !isFolder(ctx.item)) {
+        logger.error('Invalid parent type')
+        return
+      }
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.canvases,
+          campaignId,
+          parentId: ctx.item?._id ?? null,
+          name: getDefaultName(
+            SIDEBAR_ITEM_TYPES.canvases,
+            ctx.item?._id ?? null,
+          ),
+        })
+        openParentFolders(result.id)
+        navigateToItem(result.slug)
+      } catch (error) {
+        handleError(error, 'Failed to create canvas')
+      }
     },
 
     editMap: (ctx: MenuContext) => {

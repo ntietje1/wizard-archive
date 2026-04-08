@@ -7,6 +7,7 @@ import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
 import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
 import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
+import { enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
 import { assertNever } from '../../common/types'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { SidebarItemId } from '../types/baseTypes'
@@ -32,40 +33,24 @@ export const getSidebarItemById = async (
 
   await requireCampaignMembership(ctx, item.campaignId)
 
-  switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.notes: {
-      const enhanced = await checkItemAccess(ctx, {
-        rawItem: item,
-        requiredLevel: PERMISSION_LEVEL.VIEW,
-      })
-      if (!enhanced) return null
+  const enhanced = await checkItemAccess(ctx, {
+    rawItem: item,
+    requiredLevel: PERMISSION_LEVEL.VIEW,
+  })
+  if (!enhanced) return null
+
+  switch (enhanced.type) {
+    case SIDEBAR_ITEM_TYPES.notes:
       return enhanceNoteWithContent(ctx, { note: enhanced })
-    }
-    case SIDEBAR_ITEM_TYPES.folders: {
-      const enhanced = await checkItemAccess(ctx, {
-        rawItem: item,
-        requiredLevel: PERMISSION_LEVEL.VIEW,
-      })
-      if (!enhanced) return null
+    case SIDEBAR_ITEM_TYPES.folders:
       return enhanceFolderWithContent(ctx, { folder: enhanced })
-    }
-    case SIDEBAR_ITEM_TYPES.gameMaps: {
-      const enhanced = await checkItemAccess(ctx, {
-        rawItem: item,
-        requiredLevel: PERMISSION_LEVEL.VIEW,
-      })
-      if (!enhanced) return null
+    case SIDEBAR_ITEM_TYPES.gameMaps:
       return enhanceGameMapWithContent(ctx, { gameMap: enhanced })
-    }
-    case SIDEBAR_ITEM_TYPES.files: {
-      const enhanced = await checkItemAccess(ctx, {
-        rawItem: item,
-        requiredLevel: PERMISSION_LEVEL.VIEW,
-      })
-      if (!enhanced) return null
+    case SIDEBAR_ITEM_TYPES.files:
       return enhanceFileWithContent(ctx, { file: enhanced })
-    }
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return enhanceCanvasWithContent(ctx, { canvas: enhanced })
     default:
-      assertNever(item)
+      assertNever(enhanced)
   }
 }

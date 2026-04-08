@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { DropOutcome } from '~/features/dnd/utils/dnd-registry'
 import type { Id } from 'convex/_generated/dataModel'
+import type { DropResult } from '~/features/file-upload/utils/folder-reader'
+
+export type FileDropOverride = (
+  dropResult: DropResult,
+  clientCoords: { x: number; y: number },
+) => Promise<void>
 
 interface DndState {
   sidebarDragTargetId: string | null
@@ -8,6 +14,7 @@ interface DndState {
   fileDragHoveredId: Id<'folders'> | null
   isDraggingFiles: boolean
   isDraggingElement: boolean
+  fileDropOverride: FileDropOverride | null
 }
 
 interface DndActions {
@@ -16,6 +23,7 @@ interface DndActions {
   setFileDragHoveredId: (id: Id<'folders'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
+  setFileDropOverride: (handler: FileDropOverride | null) => void
 }
 
 export const useDndStore = create<DndState & DndActions>()((set) => ({
@@ -24,6 +32,7 @@ export const useDndStore = create<DndState & DndActions>()((set) => ({
   fileDragHoveredId: null,
   isDraggingFiles: false,
   isDraggingElement: false,
+  fileDropOverride: null,
 
   setSidebarDragTargetId: (id) =>
     set((state) => {
@@ -34,4 +43,5 @@ export const useDndStore = create<DndState & DndActions>()((set) => ({
   setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
   setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
   setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
+  setFileDropOverride: (handler) => set({ fileDropOverride: handler }),
 }))

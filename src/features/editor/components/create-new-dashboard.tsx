@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { File, FileText, Folder, Loader2, MapPin, Plus } from 'lucide-react'
+import {
+  File,
+  FileText,
+  Folder,
+  Grid2x2Plus,
+  Loader2,
+  MapPin,
+  Plus,
+} from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
@@ -135,6 +143,14 @@ export function CreateNewDashboard({
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.files}
+            />
+            <CreateNewButton
+              icon={Grid2x2Plus}
+              name="Canvas"
+              description="Collaborative whiteboard with nodes and drawing"
+              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.canvases)}
+              disabled={isDisabled}
+              isCreating={creatingType === SIDEBAR_ITEM_TYPES.canvases}
             />
           </div>
         </div>
