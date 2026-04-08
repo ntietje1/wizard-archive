@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { api } from 'convex/_generated/api'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RotateCcw } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditHistoryEntry } from 'convex/editHistory/types'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import {
   Avatar,
@@ -149,9 +150,11 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
 
   const membersQuery = useCampaignMembers()
   const { campaign } = useCampaign()
+  const { canEdit } = useEditorMode()
   const myMemberId = campaign.data?.myMembership?._id
   const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
   const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
+  const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
 
   const membersMap = useMemo(() => {
     const map = new Map<
@@ -250,7 +253,8 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                     hasSnapshot
                       ? 'cursor-pointer hover:bg-muted/50'
                       : 'hover:bg-muted/30',
-                    isSelected && 'bg-accent border-l-2 border-primary',
+                    isSelected &&
+                      'bg-accent shadow-[inset_2px_0_0_0_var(--primary)]',
                   )}
                   onClick={
                     hasSnapshot
@@ -294,6 +298,21 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       {formatRelativeTime(entry._creationTime)}
                     </p>
                   </div>
+                  {hasSnapshot && canEdit && (
+                    <button
+                      type="button"
+                      className={cn(
+                        'mt-0.5 shrink-0 h-6 w-6 flex items-center justify-center rounded-md',
+                        'text-muted-foreground hover:text-foreground hover:bg-muted',
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setRollbackEntryId(entry._id)
+                      }}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               )
             })}

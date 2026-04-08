@@ -11,6 +11,7 @@ import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-
 import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
 import { CanvasViewer } from '~/features/canvas/components/canvas-viewer'
 import { HistoryPreviewViewer } from '~/features/editor/components/viewer/history-preview-viewer'
+import { RollbackConfirmDialog } from '~/features/editor/components/viewer/rollback-confirm-dialog'
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
@@ -34,12 +35,15 @@ export function SidebarItemEditor({
 
   if (previewingEntryId) {
     return (
-      <ErrorBoundary
-        FallbackComponent={ErrorFallback}
-        key={`preview-${previewingEntryId}`}
-      >
-        <HistoryPreviewViewer entryId={previewingEntryId} />
-      </ErrorBoundary>
+      <>
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          key={`preview-${previewingEntryId}`}
+        >
+          <HistoryPreviewViewer entryId={previewingEntryId} />
+        </ErrorBoundary>
+        <RollbackConfirmDialog />
+      </>
     )
   }
 
@@ -61,9 +65,12 @@ export function SidebarItemEditor({
   })()
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
-      <TrashBanner item={item} />
-      {content}
-    </ErrorBoundary>
+    <>
+      <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
+        <TrashBanner item={item} />
+        {content}
+      </ErrorBoundary>
+      <RollbackConfirmDialog />
+    </>
   )
 }
