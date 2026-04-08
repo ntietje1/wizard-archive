@@ -4,6 +4,7 @@ import { EDIT_HISTORY_ACTION } from '../editHistory/types'
 import { captureNoteSnapshot } from '../notes/functions/captureNoteSnapshot'
 import { captureCanvasSnapshot } from '../canvases/functions/captureCanvasSnapshot'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { logger } from '../common/logger'
 import { yjsDocumentIdValidator } from './schema'
 import { compactUpdates } from './functions/compactUpdates'
 import { AWARENESS_TTL_MS, SNAPSHOT_MIN_INTERVAL_MS } from './constants'
@@ -58,12 +59,28 @@ export const maybeCreateSnapshot = internalMutation({
       .first()
     if (
       lastContentEdit &&
+      lastContentEdit.campaignMemberId === args.campaignMemberId &&
       Date.now() - lastContentEdit._creationTime < SNAPSHOT_MIN_INTERVAL_MS
     )
       return null
 
     const doc = await ctx.db.get(args.documentId)
     if (!doc) return null
+
+    if (
+      doc.type !== SIDEBAR_ITEM_TYPES.notes &&
+      doc.type !== SIDEBAR_ITEM_TYPES.canvases
+    ) {
+      logger.warn(
+        `maybeCreateSnapshot: unexpected document type '${(doc as { type: string }).type}' for ${args.documentId}, skipping snapshot`,
+      )
+      return null
+    }
+
+    await ctx.db.patch(args.documentId, {
+      updatedTime: Date.now(),
+      updatedBy: args.createdBy,
+    })
 
     const editHistoryId = await ctx.db.insert('editHistory', {
       itemId: args.documentId,
@@ -72,12 +89,7 @@ export const maybeCreateSnapshot = internalMutation({
       campaignMemberId: args.campaignMemberId,
       action: EDIT_HISTORY_ACTION.content_edited,
       metadata: null,
-      hasSnapshot: true,
-    })
-
-    await ctx.db.patch(args.documentId, {
-      updatedTime: Date.now(),
-      updatedBy: args.createdBy,
+      hasSnapshot: false,
     })
 
     const snapshotArgs = {
@@ -91,16 +103,14 @@ export const maybeCreateSnapshot = internalMutation({
         noteId: args.documentId as Id<'notes'>,
         ...snapshotArgs,
       })
-    } else if (doc.type === SIDEBAR_ITEM_TYPES.canvases) {
+    } else {
       await captureCanvasSnapshot(ctx, {
         canvasId: args.documentId as Id<'canvases'>,
         ...snapshotArgs,
       })
-    } else {
-      console.warn(
-        `maybeCreateSnapshot: unexpected document type '${(doc as { type: string }).type}' for ${args.documentId}, skipping snapshot`,
-      )
     }
+
+    await ctx.db.patch(editHistoryId, { hasSnapshot: true })
 
     return null
   },

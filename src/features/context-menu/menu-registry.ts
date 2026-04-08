@@ -35,6 +35,18 @@ import { usePanelPreferenceStore } from '~/features/settings/stores/panel-prefer
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 
+function isPanelContentActive(contentId: string): boolean {
+  const panel =
+    usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
+  return panel?.visible === true && panel?.activeContentId === contentId
+}
+
+function activatePanelContent(contentId: string): void {
+  const store = usePanelPreferenceStore.getState()
+  store.setActiveContent(RIGHT_SIDEBAR_PANEL_ID, contentId)
+  store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+}
+
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
   if (!ctx.item) return 'Item'
@@ -394,22 +406,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'panels',
       priority: 70,
       shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => {
-        const store = usePanelPreferenceStore.getState()
-        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
-        return (
-          panel?.visible === true &&
-          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.history
-        )
-      },
-      action: () => {
-        const store = usePanelPreferenceStore.getState()
-        store.setActiveContent(
-          RIGHT_SIDEBAR_PANEL_ID,
-          RIGHT_SIDEBAR_CONTENT.history,
-        )
-        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
-      },
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.history),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.history),
     },
     {
       id: 'panel-backlinks',
@@ -418,22 +416,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'panels',
       priority: 71,
       shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => {
-        const store = usePanelPreferenceStore.getState()
-        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
-        return (
-          panel?.visible === true &&
-          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.backlinks
-        )
-      },
-      action: () => {
-        const store = usePanelPreferenceStore.getState()
-        store.setActiveContent(
-          RIGHT_SIDEBAR_PANEL_ID,
-          RIGHT_SIDEBAR_CONTENT.backlinks,
-        )
-        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
-      },
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.backlinks),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.backlinks),
     },
     {
       id: 'panel-outgoing',
@@ -442,22 +426,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'panels',
       priority: 72,
       shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => {
-        const store = usePanelPreferenceStore.getState()
-        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
-        return (
-          panel?.visible === true &&
-          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.outgoing
-        )
-      },
-      action: () => {
-        const store = usePanelPreferenceStore.getState()
-        store.setActiveContent(
-          RIGHT_SIDEBAR_PANEL_ID,
-          RIGHT_SIDEBAR_CONTENT.outgoing,
-        )
-        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
-      },
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outgoing),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outgoing),
     },
     {
       id: 'panel-outline',
@@ -466,22 +436,8 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'panels',
       priority: 73,
       shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => {
-        const store = usePanelPreferenceStore.getState()
-        const panel = store.panels[RIGHT_SIDEBAR_PANEL_ID]
-        return (
-          panel?.visible === true &&
-          panel?.activeContentId === RIGHT_SIDEBAR_CONTENT.outline
-        )
-      },
-      action: () => {
-        const store = usePanelPreferenceStore.getState()
-        store.setActiveContent(
-          RIGHT_SIDEBAR_PANEL_ID,
-          RIGHT_SIDEBAR_CONTENT.outline,
-        )
-        store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
-      },
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outline),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outline),
     },
 
     // ========== DOWNLOAD GROUP ==========

@@ -68,11 +68,17 @@ export const MAP_HISTORY_ACTION = {
   map_pin_visibility_changed: 'map_pin_visibility_changed',
 } as const
 
+export type MapHistoryAction =
+  (typeof MAP_HISTORY_ACTION)[keyof typeof MAP_HISTORY_ACTION]
+
 export type MapHistoryMetadataMap = {
-  map_image_changed: null
-  map_image_removed: null
-  map_pin_added: { pinItemName: string }
-  map_pin_moved: { pinItemName: string }
-  map_pin_removed: { pinItemName: string }
-  map_pin_visibility_changed: { pinItemName: string; visible: boolean }
+  [MAP_HISTORY_ACTION.map_image_changed]: null
+  [MAP_HISTORY_ACTION.map_image_removed]: null
+  [MAP_HISTORY_ACTION.map_pin_added]: { pinItemName: string }
+  [MAP_HISTORY_ACTION.map_pin_moved]: { pinItemName: string }
+  [MAP_HISTORY_ACTION.map_pin_removed]: { pinItemName: string }
+  [MAP_HISTORY_ACTION.map_pin_visibility_changed]: {
+    pinItemName: string
+    visible: boolean
+  }
 }

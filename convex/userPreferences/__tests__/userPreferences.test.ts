@@ -151,6 +151,7 @@ describe('setPanelPreference', () => {
       api.userPreferences.queries.getUserPreferences,
       {},
     )
+    expect(result!.theme).toBeNull()
     expect(result!.panelPreferences).toEqual({
       'left-sidebar': { size: 300, visible: true },
     })
@@ -166,7 +167,7 @@ describe('setPanelPreference', () => {
     })
 
     await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'editor-history',
+      panelId: 'editor-right-sidebar',
       size: 350,
       visible: false,
     })
@@ -177,7 +178,7 @@ describe('setPanelPreference', () => {
     )
     expect(result!.panelPreferences).toEqual({
       'left-sidebar': { size: 280, visible: true },
-      'editor-history': { size: 350, visible: false },
+      'editor-right-sidebar': { size: 350, visible: false },
     })
   })
 

@@ -3,6 +3,7 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from './useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
+import { logger } from '~/shared/utils/logger'
 
 export const PERSIST_INTERVAL_MS = 10_000
 
@@ -36,7 +37,7 @@ export function useNoteYjsCollaboration(
           documentId: noteId,
         })
         .catch((err: unknown) => {
-          console.error(`[Notes] persist failed for ${noteId}:`, err)
+          logger.error(`[Notes] persist failed for ${noteId}:`, err)
         })
         .finally(() => {
           isPersistingRef.current = false

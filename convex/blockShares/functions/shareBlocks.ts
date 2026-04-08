@@ -43,7 +43,11 @@ export const shareBlocks = async (
     itemType: SIDEBAR_ITEM_TYPES.notes,
     campaignId: note.campaignId,
     action: EDIT_HISTORY_ACTION.block_share_changed,
-    metadata: { status: 'shared' },
+    metadata: {
+      status: 'shared',
+      campaignMemberId,
+      blockCount: blocks.length,
+    },
   })
 
   return null

@@ -30,4 +30,4 @@ export const NOTE_SNAPSHOT_TYPE = 'yjs_state' as const
 
 export const NOTE_HISTORY_ACTION = {} as const
 
-export type NoteHistoryMetadataMap = {}
+export type NoteHistoryMetadataMap = Record<string, never>

@@ -41,25 +41,27 @@ export async function updateCanvas(
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: canvas,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
-    changes.push({
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: canvas.name, to: trimmedName },
-    })
+    if (trimmedName !== canvas.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: canvas,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: canvas.name, to: trimmedName },
+      })
+    }
   }
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== canvas.iconName) {
     updates.iconName = iconName
     changes.push({
       action: EDIT_HISTORY_ACTION.icon_changed,
       metadata: { from: canvas.iconName, to: iconName },
     })
   }
-  if (color !== undefined) {
+  if (color !== undefined && color !== canvas.color) {
     updates.color = color
     changes.push({
       action: EDIT_HISTORY_ACTION.color_changed,

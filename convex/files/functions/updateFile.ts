@@ -43,16 +43,18 @@ export async function updateFile(
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: file,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
-    changes.push({
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: file.name, to: trimmedName },
-    })
+    if (trimmedName !== file.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: file,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: file.name, to: trimmedName },
+      })
+    }
   }
   if (storageId !== undefined) {
     updates.storageId = storageId

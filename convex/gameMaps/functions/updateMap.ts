@@ -43,18 +43,20 @@ export async function updateMap(
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: map,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
-    changes.push({
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: map.name, to: trimmedName },
-    })
+    if (trimmedName !== map.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: map,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: map.name, to: trimmedName },
+      })
+    }
   }
-  if (imageStorageId !== undefined) {
+  if (imageStorageId !== undefined && imageStorageId !== map.imageStorageId) {
     updates.imageStorageId = imageStorageId
     updates.previewStorageId = imageStorageId
     changes.push({
@@ -65,14 +67,14 @@ export async function updateMap(
       metadata: null,
     })
   }
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== map.iconName) {
     updates.iconName = iconName
     changes.push({
       action: EDIT_HISTORY_ACTION.icon_changed,
       metadata: { from: map.iconName, to: iconName },
     })
   }
-  if (color !== undefined) {
+  if (color !== undefined && color !== map.color) {
     updates.color = color
     changes.push({
       action: EDIT_HISTORY_ACTION.color_changed,

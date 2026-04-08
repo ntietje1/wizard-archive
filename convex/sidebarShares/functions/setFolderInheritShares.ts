@@ -24,6 +24,8 @@ export const setFolderInheritShares = async (
   })
   await requireDmRole(ctx, folder.campaignId)
 
+  if (folder.inheritShares === inheritShares) return null
+
   await ctx.db.patch(folderId, {
     inheritShares,
   })
@@ -33,7 +35,7 @@ export const setFolderInheritShares = async (
     itemType: SIDEBAR_ITEM_TYPES.folders,
     campaignId: folder.campaignId,
     action: EDIT_HISTORY_ACTION.inherit_shares_changed,
-    metadata: { inheritShares },
+    metadata: { inheritShares, previousInheritShares: folder.inheritShares },
   })
 
   return null

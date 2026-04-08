@@ -44,7 +44,12 @@ export function useCanvasOverlayHandlers(
     const onPointerDown = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers || e.button !== 0) return
-      if (!(e.target as HTMLElement).closest('.react-flow')) return
+      if (
+        !e.target ||
+        !(e.target instanceof Element) ||
+        !e.target.closest('.react-flow')
+      )
+        return
       handlers.onPointerDown(toReactPointerEvent(e))
     }
     const onPointerMove = (e: PointerEvent) => {

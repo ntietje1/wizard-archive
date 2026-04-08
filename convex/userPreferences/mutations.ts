@@ -1,6 +1,8 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
 
+const VALID_PANEL_IDS = ['left-sidebar', 'editor-right-sidebar'] as const
+
 export const setUserPreferences = authMutation({
   args: {
     theme: v.optional(
@@ -48,6 +50,14 @@ export const setPanelPreference = authMutation({
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {
+    if (
+      !VALID_PANEL_IDS.includes(
+        args.panelId as (typeof VALID_PANEL_IDS)[number],
+      )
+    ) {
+      throw new Error(`Invalid panelId: ${args.panelId}`)
+    }
+
     const now = Date.now()
     const userId = ctx.user.profile._id
 
@@ -57,6 +67,7 @@ export const setPanelPreference = authMutation({
       .unique()
 
     const currentPrefs = existing?.panelPreferences ?? {}
+
     const currentPanel = currentPrefs[args.panelId] ?? {
       size: null,
       visible: null,

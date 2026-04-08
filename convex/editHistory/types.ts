@@ -41,9 +41,20 @@ export type SharedHistoryMetadataMap = {
   content_edited: null
   rolled_back: { restoredFromHistoryEntryId: Id<'editHistory'> }
   updated: { changes: Array<EditHistoryChange> }
-  permission_changed: { memberName: string | null; level: string | null }
-  block_share_changed: { status: string }
-  inherit_shares_changed: { inheritShares: boolean }
+  permission_changed: {
+    memberName: string | null
+    level: string | null
+    previousLevel: string | null
+  }
+  block_share_changed: {
+    status: string
+    campaignMemberId?: Id<'campaignMembers'>
+    blockCount?: number
+  }
+  inherit_shares_changed: {
+    inheritShares: boolean
+    previousInheritShares: boolean
+  }
 }
 
 export const EDIT_HISTORY_ACTION = {

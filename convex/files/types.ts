@@ -30,5 +30,5 @@ export const FILE_HISTORY_ACTION = {
 } as const
 
 export type FileHistoryMetadataMap = {
-  [K in keyof typeof FILE_HISTORY_ACTION]: null
+  [K in (typeof FILE_HISTORY_ACTION)[keyof typeof FILE_HISTORY_ACTION]]: null
 }

@@ -21,7 +21,7 @@ import {
 } from '~/features/editor/utils/patch-yundo-destroy'
 
 type NoteContentProps = {
-  noteId: Id<'notes'>
+  noteId?: Id<'notes'>
   content: Array<CustomBlock>
   editable: boolean
   className?: string
@@ -43,7 +43,7 @@ export function NoteContent({
   return (
     <div className={editable ? 'note-editor-fill-height' : undefined}>
       <div className={className}>
-        {editable ? (
+        {editable && noteId ? (
           <CollaborativeEditorLoader
             noteId={noteId}
             content={content}

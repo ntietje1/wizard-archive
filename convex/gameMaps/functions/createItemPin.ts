@@ -6,6 +6,7 @@ import { validatePinTarget } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -86,15 +87,24 @@ export async function createItemPin(
       action: EDIT_HISTORY_ACTION.map_pin_added,
       metadata: { pinItemName: item.name },
     },
-    { hasSnapshot: true },
+    { hasSnapshot: false },
   )
 
-  await captureGameMapSnapshot(ctx, {
-    mapId,
-    editHistoryId,
-    campaignId: mapFromDb.campaignId,
-    createdBy: profileId,
-  })
+  try {
+    await captureGameMapSnapshot(ctx, {
+      mapId,
+      editHistoryId,
+      campaignId: mapFromDb.campaignId,
+      createdBy: profileId,
+    })
+  } catch (error) {
+    logger.warn(
+      `createItemPin: failed to capture snapshot for map ${mapId}`,
+      error,
+    )
+  }
+
+  await ctx.db.patch(editHistoryId, { hasSnapshot: true })
 
   return pinId
 }

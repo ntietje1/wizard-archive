@@ -36,14 +36,14 @@ export function RollbackConfirmDialog() {
       await rollback.mutateAsync({ editHistoryId: rollbackEntryId })
       clearPreview()
       toast.success('Version restored')
+      setRollbackEntryId(null)
     } catch (error) {
       handleError(error, 'Failed to restore version')
-    } finally {
-      setRollbackEntryId(null)
     }
   }
 
   const entryTime = historyEntry.data?._creationTime
+  const hasError = !!historyEntry.error
   const isReady = !historyEntry.isLoading && !!historyEntry.data
 
   return (
@@ -57,7 +57,9 @@ export function RollbackConfirmDialog() {
         <AlertDialogHeader>
           <AlertDialogTitle>Restore this version?</AlertDialogTitle>
           <AlertDialogDescription>
-            {isReady ? (
+            {hasError ? (
+              'Failed to load version details. Please close and try again.'
+            ) : isReady ? (
               <>
                 This will restore the document to its state from{' '}
                 {formatRelativeTime(entryTime!)}. The current content will be
@@ -74,7 +76,7 @@ export function RollbackConfirmDialog() {
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleRestore}
-            disabled={!isReady || rollback.isPending}
+            disabled={!isReady || hasError || rollback.isPending}
           >
             {rollback.isPending ? 'Restoring\u2026' : 'Restore'}
           </AlertDialogAction>

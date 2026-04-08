@@ -16,6 +16,7 @@ export function PinMarker({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="text-primary-foreground"
+        aria-hidden="true"
       >
         <path
           d="M16 0C7.163 0 0 7.163 0 16C0 24.837 16 44 16 44C16 44 32 24.837 32 16C32 7.163 24.837 0 16 0Z"

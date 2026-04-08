@@ -656,10 +656,15 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
+      const storageId = await t.run(async (dbCtx) => {
+        return await dbCtx.storage.store(new Blob(['test']))
+      })
+
       const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: 'Test Map',
         parentId: null,
+        imageStorageId: storageId,
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.updateMap, {

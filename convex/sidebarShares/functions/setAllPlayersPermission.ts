@@ -35,7 +35,11 @@ export const setAllPlayersPermission = async (
     itemType: item.type,
     campaignId: item.campaignId,
     action: EDIT_HISTORY_ACTION.permission_changed,
-    metadata: { memberName: null, level: permissionLevel },
+    metadata: {
+      memberName: null,
+      level: permissionLevel,
+      previousLevel: item.allPermissionLevel ?? null,
+    },
   })
 
   return null

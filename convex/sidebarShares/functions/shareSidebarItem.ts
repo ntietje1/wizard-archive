@@ -33,6 +33,20 @@ export const shareSidebarItem = async (
   })
   await requireDmRole(ctx, item.campaignId)
 
+  const existingShare = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q
+        .eq('campaignId', item.campaignId)
+        .eq('sidebarItemId', sidebarItemId)
+        .eq('campaignMemberId', campaignMemberId),
+    )
+    .unique()
+  const previousLevel =
+    existingShare && existingShare.deletionTime === null
+      ? existingShare.permissionLevel
+      : null
+
   const result = await shareSidebarItemWithMember(ctx, {
     sidebarItemId,
     sidebarItemType,
@@ -44,12 +58,13 @@ export const shareSidebarItem = async (
   const memberProfile = member ? await ctx.db.get(member.userId) : null
   await logEditHistory(ctx, {
     itemId: sidebarItemId,
-    itemType: sidebarItemType,
+    itemType: item.type,
     campaignId: item.campaignId,
     action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
       memberName: memberProfile?.name ?? 'Unknown',
       level: permissionLevel,
+      previousLevel,
     },
   })
 

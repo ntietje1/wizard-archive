@@ -23,4 +23,4 @@ export type FolderWithContent = SidebarItemWithContent<
 
 export const FOLDER_HISTORY_ACTION = {} as const
 
-export type FolderHistoryMetadataMap = {}
+export type FolderHistoryMetadataMap = Record<string, never>

@@ -43,7 +43,11 @@ export const unshareBlocks = async (
     itemType: SIDEBAR_ITEM_TYPES.notes,
     campaignId: note.campaignId,
     action: EDIT_HISTORY_ACTION.block_share_changed,
-    metadata: { status: 'unshared' },
+    metadata: {
+      status: 'unshared',
+      campaignMemberId,
+      blockCount: blockNoteIds.length,
+    },
   })
 
   return null

@@ -90,7 +90,6 @@ export function useCanvasFileUpload() {
           storageId,
           originalFileName: file.name,
         })
-        await commitUpload.mutateAsync({ storageId })
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.files,
           campaignId,
@@ -98,6 +97,7 @@ export function useCanvasFileUpload() {
           storageId,
           parentId: null,
         })
+        await commitUpload.mutateAsync({ storageId })
         toast.dismiss(toastId)
         toast.success(
           <ToastContent title={file.name} message="File created" />,

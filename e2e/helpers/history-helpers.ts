@@ -9,7 +9,10 @@ export async function openHistoryPanel(page: Page) {
 }
 
 export function getHistoryEntry(page: Page, text: string | RegExp) {
-  return page.getByRole('button').filter({ hasText: text })
+  return page
+    .getByTestId('history-panel')
+    .getByRole('button')
+    .filter({ hasText: text })
 }
 
 export async function waitForHistoryEntry(page: Page, text: string | RegExp) {
@@ -39,7 +42,7 @@ export async function restoreFromPreview(page: Page) {
     .getByRole('alertdialog')
     .getByRole('button', { name: 'Restore' })
     .click()
-  await expect(page.getByText('Version restored')).toBeVisible({
+  await expect(page.getByText(/version restored/i)).toBeVisible({
     timeout: 10000,
   })
 }

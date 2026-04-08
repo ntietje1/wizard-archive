@@ -10,7 +10,7 @@ export function HistoryPreviewBanner({
   canEdit,
 }: {
   entryId: Id<'editHistory'>
-  entryTime: number
+  entryTime: number | undefined
   canEdit: boolean
 }) {
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
@@ -21,8 +21,16 @@ export function HistoryPreviewBanner({
       <div className="flex items-center gap-1.5 text-xs font-medium">
         <History className="h-3.5 w-3.5" />
         <span>
-          Previewing version from{' '}
-          <span className="font-semibold">{formatRelativeTime(entryTime)}</span>
+          {entryTime != null ? (
+            <>
+              Previewing version from{' '}
+              <span className="font-semibold">
+                {formatRelativeTime(entryTime)}
+              </span>
+            </>
+          ) : (
+            'Previewing version'
+          )}
         </span>
       </div>
       <div className="flex items-center gap-1">
@@ -42,6 +50,7 @@ export function HistoryPreviewBanner({
           size="sm"
           className="h-5 px-1.5 text-xs"
           onClick={clearPreview}
+          aria-label="Exit history preview"
         >
           <X className="h-3 w-3 mr-0.5" />
           Exit

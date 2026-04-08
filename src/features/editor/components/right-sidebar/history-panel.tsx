@@ -22,7 +22,7 @@ function formatSingleAction(
     case 'created':
       return 'created this item'
     case 'renamed':
-      return `renamed "${metadata?.from}" to "${metadata?.to}"`
+      return `renamed "${metadata?.from ?? '(unknown)'}" to "${metadata?.to ?? '(unknown)'}"`
     case 'moved':
       return `moved from ${metadata?.from ? `"${metadata.from}"` : 'root'} to ${metadata?.to ? `"${metadata.to}"` : 'root'}`
     case 'trashed':
@@ -50,13 +50,13 @@ function formatSingleAction(
     case 'file_removed':
       return 'removed the file'
     case 'map_pin_added':
-      return `added pin "${metadata?.pinItemName}"`
+      return `added pin "${metadata?.pinItemName || '(unnamed)'}"`
     case 'map_pin_moved':
-      return `moved pin "${metadata?.pinItemName}"`
+      return `moved pin "${metadata?.pinItemName || '(unnamed)'}"`
     case 'map_pin_removed':
-      return `removed pin "${metadata?.pinItemName}"`
+      return `removed pin "${metadata?.pinItemName || '(unnamed)'}"`
     case 'map_pin_visibility_changed':
-      return `${metadata?.visible ? 'showed' : 'hid'} pin "${metadata?.pinItemName}"`
+      return `${metadata?.visible ? 'showed' : 'hid'} pin "${metadata?.pinItemName || '(unnamed)'}"`
     case 'permission_changed': {
       const memberName = metadata?.memberName as string | null
       const level = metadata?.level as string | null
@@ -188,7 +188,10 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   }, [status, loadMore])
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div
+      data-testid="history-panel"
+      className="flex flex-col h-full bg-background"
+    >
       <ScrollArea className="flex-1 min-h-0" viewportRef={viewportRef}>
         {status === 'LoadingFirstPage' && (
           <p className="text-sm text-muted-foreground p-4 text-center">
@@ -224,14 +227,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                 ? description
                 : [description]
 
-              const isInteractiveContainer = hasSnapshot && !canEdit
-
               return (
                 <div
                   key={entry._id}
-                  role={isInteractiveContainer ? 'button' : undefined}
-                  tabIndex={isInteractiveContainer ? 0 : undefined}
-                  aria-pressed={isInteractiveContainer ? isSelected : undefined}
+                  role={hasSnapshot ? 'button' : undefined}
+                  tabIndex={hasSnapshot ? 0 : undefined}
+                  aria-pressed={hasSnapshot ? isSelected : undefined}
                   className={cn(
                     'relative flex items-start gap-2.5 px-3 py-2',
                     hasSnapshot
@@ -241,12 +242,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       'bg-accent shadow-[inset_2px_0_0_0_var(--primary)]',
                   )}
                   onClick={
-                    isInteractiveContainer
+                    hasSnapshot
                       ? () => setPreviewingEntry(isSelected ? null : entry._id)
                       : undefined
                   }
                   onKeyDown={
-                    isInteractiveContainer
+                    hasSnapshot
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
@@ -256,24 +257,6 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       : undefined
                   }
                 >
-                  {hasSnapshot && canEdit && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={isSelected}
-                      aria-label="Preview this version"
-                      className="absolute inset-0"
-                      onClick={() =>
-                        setPreviewingEntry(isSelected ? null : entry._id)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          setPreviewingEntry(isSelected ? null : entry._id)
-                        }
-                      }}
-                    />
-                  )}
                   <UserProfileImage
                     imageUrl={profile?.imageUrl}
                     name={profile?.name}
@@ -320,7 +303,10 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                         'relative z-10 mt-0.5 shrink-0 h-6 w-6 flex items-center justify-center rounded-md',
                         'text-muted-foreground hover:text-foreground hover:bg-muted',
                       )}
-                      onClick={() => setRollbackEntryId(entry._id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setRollbackEntryId(entry._id)
+                      }}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>

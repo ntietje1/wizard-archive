@@ -17,4 +17,4 @@ export const CANVAS_SNAPSHOT_TYPE = 'yjs_state' as const
 
 export const CANVAS_HISTORY_ACTION = {} as const
 
-export type CanvasHistoryMetadataMap = {}
+export type CanvasHistoryMetadataMap = Record<string, never>

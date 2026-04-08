@@ -1,6 +1,7 @@
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
 import type { AuthMutationCtx } from '../../functions'
@@ -14,13 +15,17 @@ export async function updatePinVisibility(
 
   if (visible === pin.visible) return mapPinId
 
+  const pinnedItem = await ctx.db.get(pin.itemId)
+
+  if (!pinnedItem) {
+    logger.warn(`Pin ${mapPinId} references missing item ${pin.itemId}`)
+  }
+
   await ctx.db.patch(mapPinId, {
     visible,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-
-  const pinnedItem = await ctx.db.get(pin.itemId)
 
   const editHistoryId = await logEditHistory(
     ctx,

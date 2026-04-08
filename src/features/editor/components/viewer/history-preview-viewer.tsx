@@ -24,6 +24,7 @@ import {
   resolvePinColor,
   resolvePinIcon,
 } from '~/features/editor/components/viewer/map/pin-utils'
+import { logger } from '~/shared/utils/logger'
 
 export function HistoryPreviewViewer({
   entryId,
@@ -40,7 +41,7 @@ export function HistoryPreviewViewer({
     editHistoryId: entryId,
   })
 
-  const entryTime = historyEntry.data?._creationTime ?? 0
+  const entryTime = historyEntry.data?._creationTime
 
   if (snapshotQuery.isLoading || historyEntry.isLoading) {
     return (
@@ -87,6 +88,14 @@ export function HistoryPreviewViewer({
       {snapshot.snapshotType === SNAPSHOT_TYPE.game_map && (
         <GameMapSnapshotPreview data={snapshot.data} />
       )}
+      {snapshot.snapshotType !== SNAPSHOT_TYPE.yjs_state &&
+        snapshot.snapshotType !== SNAPSHOT_TYPE.game_map && (
+          <div className="flex-1 min-h-0 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              Preview not available for this snapshot type.
+            </p>
+          </div>
+        )}
     </div>
   )
 }
@@ -94,23 +103,28 @@ export function HistoryPreviewViewer({
 function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
   const blocks = useMemo(() => {
     const doc = new Y.Doc()
-    Y.applyUpdate(doc, new Uint8Array(data))
-
-    const editor = BlockNoteEditor.create({
-      schema: editorSchema,
-      _headless: true,
-    })
-    const result = yDocToBlocks(editor, doc, 'document') as Array<CustomBlock>
-
-    editor._tiptapEditor.destroy()
-    doc.destroy()
-    return result
+    try {
+      Y.applyUpdate(doc, new Uint8Array(data))
+      const editor = BlockNoteEditor.create({
+        schema: editorSchema,
+        _headless: true,
+      })
+      try {
+        return yDocToBlocks(editor, doc, 'document') as Array<CustomBlock>
+      } finally {
+        editor._tiptapEditor.destroy()
+      }
+    } catch (error) {
+      logger.error('Failed to parse note snapshot:', error)
+      return [] as Array<CustomBlock>
+    } finally {
+      doc.destroy()
+    }
   }, [data])
 
   return (
     <ScrollArea className="flex-1 min-h-0">
       <NoteContent
-        noteId={'' as Id<'notes'>}
         content={blocks}
         editable={false}
         className="mx-auto w-full max-w-3xl mt-2"
@@ -122,16 +136,22 @@ function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
 function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
   const { nodes, edges } = useMemo(() => {
     const doc = new Y.Doc()
-    Y.applyUpdate(doc, new Uint8Array(data))
+    try {
+      Y.applyUpdate(doc, new Uint8Array(data))
 
-    const nodesMap = doc.getMap<Node>('nodes')
-    const edgesMap = doc.getMap<Edge>('edges')
+      const nodesMap = doc.getMap<Node>('nodes')
+      const edgesMap = doc.getMap<Edge>('edges')
 
-    const parsedNodes = Array.from(nodesMap.values())
-    const parsedEdges = Array.from(edgesMap.values())
+      const parsedNodes = Array.from(nodesMap.values())
+      const parsedEdges = Array.from(edgesMap.values())
 
-    doc.destroy()
-    return { nodes: parsedNodes, edges: parsedEdges }
+      return { nodes: parsedNodes, edges: parsedEdges }
+    } catch (error) {
+      logger.error('Failed to parse canvas snapshot:', error)
+      return { nodes: [] as Array<Node>, edges: [] as Array<Edge> }
+    } finally {
+      doc.destroy()
+    }
   }, [data])
 
   return (
@@ -160,7 +180,7 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
     try {
       return JSON.parse(new TextDecoder().decode(data))
     } catch (error) {
-      console.error('Failed to parse game map snapshot data:', error)
+      logger.error('Failed to parse game map snapshot data:', error)
       return null
     }
   }, [data])

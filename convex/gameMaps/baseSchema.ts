@@ -55,5 +55,7 @@ export const gameMapsTables = {
 
   mapPins: defineTable({
     ...mapPinTableFields,
-  }).index('by_map_item', ['mapId', 'itemId']),
+  })
+    .index('by_map_item', ['mapId', 'itemId'])
+    .index('by_map_deletionTime', ['mapId', 'deletionTime']),
 }

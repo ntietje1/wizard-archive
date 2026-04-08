@@ -1,12 +1,13 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-interface PanelState {
+export interface PanelState {
   size: number
   visible: boolean
   activeContentId: string | null
 }
 
-interface PanelPreferenceStore {
+export interface PanelPreferenceStore {
   panels: Record<string, PanelState>
   initPanel: (panelId: string, state: PanelState) => void
   setSize: (panelId: string, size: number) => void
@@ -15,43 +16,53 @@ interface PanelPreferenceStore {
 }
 
 export const usePanelPreferenceStore = create<PanelPreferenceStore>()(
-  (set) => ({
-    panels: {},
+  persist(
+    (set) => ({
+      panels: {},
 
-    initPanel: (panelId, state) =>
-      set((prev) => {
-        if (prev.panels[panelId]) return prev
-        return { panels: { ...prev.panels, [panelId]: state } }
-      }),
+      initPanel: (panelId, state) =>
+        set((prev) => {
+          if (prev.panels[panelId]) return prev
+          return { panels: { ...prev.panels, [panelId]: state } }
+        }),
 
-    setSize: (panelId, size) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: { ...prev.panels, [panelId]: { ...panel, size } },
-        }
-      }),
+      setSize: (panelId, size) =>
+        set((prev) => {
+          const panel = prev.panels[panelId]
+          if (!panel) return prev
+          return {
+            panels: { ...prev.panels, [panelId]: { ...panel, size } },
+          }
+        }),
 
-    setVisible: (panelId, visible) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: { ...prev.panels, [panelId]: { ...panel, visible } },
-        }
-      }),
+      setVisible: (panelId, visible) =>
+        set((prev) => {
+          const panel = prev.panels[panelId]
+          if (!panel) return prev
+          return {
+            panels: { ...prev.panels, [panelId]: { ...panel, visible } },
+          }
+        }),
 
-    setActiveContent: (panelId, contentId) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: {
-            ...prev.panels,
-            [panelId]: { ...panel, activeContentId: contentId },
-          },
-        }
-      }),
-  }),
+      setActiveContent: (panelId, contentId) =>
+        set((prev) => {
+          const panel = prev.panels[panelId]
+          if (!panel) return prev
+          return {
+            panels: {
+              ...prev.panels,
+              [panelId]: { ...panel, activeContentId: contentId },
+            },
+          }
+        }),
+    }),
+    {
+      name: 'panel-preferences',
+      partialize: (state) => ({ panels: state.panels }),
+      version: 1,
+      migrate: (persistedState, _) => {
+        return persistedState
+      },
+    },
+  ),
 )

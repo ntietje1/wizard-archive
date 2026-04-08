@@ -2,6 +2,7 @@ import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
+import { logger } from '../../common/logger'
 import type { GameMapSnapshotData } from '../types'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
@@ -24,17 +25,15 @@ export async function captureGameMapSnapshot(
     ctx.db.get(mapId),
     ctx.db
       .query('mapPins')
-      .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+      .withIndex('by_map_deletionTime', (q) =>
+        q.eq('mapId', mapId).eq('deletionTime', null),
+      )
       .order('asc')
-      .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect(),
   ])
 
   if (!map) {
-    console.warn(
-      `captureGameMapSnapshot: map ${mapId} not found, skipping snapshot`,
-    )
-    return
+    throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
   }
 
   const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
@@ -46,7 +45,7 @@ export async function captureGameMapSnapshot(
   for (let i = 0; i < pins.length; i++) {
     const item = pinItems[i]
     if (!item) {
-      console.warn(
+      logger.warn(
         `captureGameMapSnapshot: pin target ${pins[i].itemId} not found for map ${mapId}, skipping`,
       )
       continue

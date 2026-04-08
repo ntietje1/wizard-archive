@@ -13,6 +13,7 @@ import {
   restoreFromPreview,
   waitForHistoryEntry,
 } from './helpers/history-helpers'
+import type { Page } from '@playwright/test'
 
 const campaignName = testName('E2E EditHistory')
 const noteName = `History Note ${Date.now()}`
@@ -50,14 +51,14 @@ test.describe.serial('edit history', () => {
     await page.goto('/campaigns')
     try {
       await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      console.warn(`[afterAll] Failed to delete campaign: ${error}`)
     }
     await page.close()
     await context.close()
   })
 
-  test('history panel shows creation entry', async ({ page }) => {
+  async function openNoteWithHistory(page: Page) {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
@@ -66,20 +67,18 @@ test.describe.serial('edit history', () => {
     await expect(editor).toBeVisible({ timeout: 10000 })
 
     await openHistoryPanel(page)
+    return editor
+  }
+
+  test('history panel shows creation entry', async ({ page }) => {
+    await openNoteWithHistory(page)
     await waitForHistoryEntry(page, /created/i)
   })
 
   test('history panel shows edited content entry from setup', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
-    await navigateToCampaign(page, campaignName)
-    await openItem(page, noteName)
-
-    const editor = page.locator('[contenteditable="true"]').first()
-    await expect(editor).toBeVisible({ timeout: 10000 })
-
-    await openHistoryPanel(page)
+    await openNoteWithHistory(page)
     await waitForHistoryEntry(page, /edited content/i)
   })
 
@@ -169,6 +168,7 @@ test.describe.serial('edit history', () => {
     await expect(editor).toContainText(updatedContent)
 
     await openHistoryPanel(page)
+    await waitForHistoryEntry(page, /edited content/i)
     await clickHistoryEntry(page, /edited content/i)
     await restoreFromPreview(page)
 
@@ -177,7 +177,7 @@ test.describe.serial('edit history', () => {
     })
   })
 
-  test('rollback creates new history entry', async ({ page }) => {
+  test('restore creates new history entry', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)

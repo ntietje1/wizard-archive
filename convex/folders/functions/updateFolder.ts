@@ -41,19 +41,21 @@ export async function updateFolder(
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: folder,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
-    changes.push({
-      action: EDIT_HISTORY_ACTION.renamed,
-      metadata: { from: folder.name, to: trimmedName },
-    })
+    if (trimmedName !== folder.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: folder,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: folder.name, to: trimmedName },
+      })
+    }
   }
 
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== folder.iconName) {
     updates.iconName = iconName
     changes.push({
       action: EDIT_HISTORY_ACTION.icon_changed,
@@ -61,7 +63,7 @@ export async function updateFolder(
     })
   }
 
-  if (color !== undefined) {
+  if (color !== undefined && color !== folder.color) {
     updates.color = color
     changes.push({
       action: EDIT_HISTORY_ACTION.color_changed,

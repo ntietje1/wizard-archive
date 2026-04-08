@@ -4,6 +4,7 @@ import { UndoManager } from 'yjs'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
+import { logger } from '~/shared/utils/logger'
 
 const MAX_HISTORY_SIZE = 100
 
@@ -69,7 +70,7 @@ export function useCanvasHistory({
           if (selBefore) restoreSelection(selBefore)
           redoStackRef.current.push({ type: 'doc' })
         } else {
-          console.warn(
+          logger.warn(
             'Discarding orphaned doc undo entry (no matching Yjs stack item)',
           )
         }

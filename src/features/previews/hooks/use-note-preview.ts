@@ -3,6 +3,7 @@ import { captureElementPreview } from '../utils/generate-preview'
 import { useClaimAndUploadPreview } from './use-claim-and-upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
 import type * as Y from 'yjs'
+import { logger } from '~/shared/utils/logger'
 
 const DEBOUNCE_MS = 5_000
 
@@ -41,7 +42,7 @@ export function useNotePreview({
           captureElementPreview(el),
         )
       } catch (error) {
-        console.error('Failed to generate note preview:', error)
+        logger.error('Failed to generate note preview:', error)
       } finally {
         if (!cancelled) isGeneratingRef.current = false
       }

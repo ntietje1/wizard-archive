@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
+import { logger } from '../../common/logger'
 import { reconstructYDoc } from './reconstructYDoc'
 import { uint8ToArrayBuffer } from './uint8ToArrayBuffer'
 import type { MutationCtx } from '../../_generated/server'
@@ -23,7 +24,10 @@ export async function captureYjsState(
   },
 ): Promise<void> {
   const doc = await ctx.db.get(documentId)
-  if (!doc) return
+  if (!doc) {
+    logger.warn(`captureYjsState: document not found: ${documentId}`)
+    return
+  }
 
   let yDoc: Y.Doc | undefined
   try {

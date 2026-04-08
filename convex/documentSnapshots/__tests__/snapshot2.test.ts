@@ -7,6 +7,7 @@ import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { SNAPSHOT_TYPE } from '../schema'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 describe('cross-action debounce independence on game maps', () => {
@@ -65,10 +66,15 @@ describe('updateMap creates correct number of history entries', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['test']))
+    })
+
     const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
       campaignId: ctx.campaignId,
       name: 'Single Entry Map',
       parentId: null,
+      imageStorageId: storageId,
     })
 
     // Count history entries before
@@ -107,10 +113,15 @@ describe('updateMap creates correct number of history entries', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
+    const storageId = await t.run(async (dbCtx) => {
+      return await dbCtx.storage.store(new Blob(['test']))
+    })
+
     const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
       campaignId: ctx.campaignId,
       name: 'Multi Update Map',
       parentId: null,
+      imageStorageId: storageId,
     })
 
     const beforeCount = await t.run(async (dbCtx) => {
@@ -212,8 +223,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       expect(addEntry).not.toBeNull()
       expect(addEntry!.hasSnapshot).toBe(true)
 
-      // Advance past debounce, then remove pin
-      vi.advanceTimersByTime(6 * 60 * 1000)
+      vi.advanceTimersByTime(SNAPSHOT_MIN_INTERVAL_MS + 60 * 1000)
 
       const pinId = await t.run(async (dbCtx) => {
         const pin = await dbCtx.db
@@ -455,8 +465,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
                 q.eq('editHistoryId', entry._id),
               )
               .collect()
-            // Should never have more than 1 snapshot per history entry
-            expect(snapshots.length).toBeLessThanOrEqual(1)
+            expect(snapshots.length).toBe(1)
           }
         }
 

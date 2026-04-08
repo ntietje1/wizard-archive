@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { EditorContent } from '../components/editor-content'
 import { FileTopbar } from '../components/topbar/file-topbar'
 import { RightSidebar } from '../components/right-sidebar/right-sidebar'
@@ -23,9 +23,14 @@ export function EditorPage() {
     RIGHT_SIDEBAR_DEFAULTS,
   )
 
+  const setRightPanelVisible = rightPanel.setVisible
+  const prevItemIdRef = useRef(item?._id)
   useEffect(() => {
-    rightPanel.setVisible(false)
-  }, [item?._id])
+    if (prevItemIdRef.current !== item?._id) {
+      prevItemIdRef.current = item?._id
+      setRightPanelVisible(false)
+    }
+  }, [setRightPanelVisible, item?._id])
 
   const activeContentId =
     (rightPanel.activeContentId as RightSidebarContentId | null) ??

@@ -151,26 +151,26 @@ export function ResizableSidebar({
     const grow = side === 'left' ? 'ArrowRight' : 'ArrowLeft'
     const shrink = side === 'left' ? 'ArrowLeft' : 'ArrowRight'
 
-    let newSize: number | null = null
+    let rawSize: number | null = null
 
     switch (e.key) {
       case grow:
-        newSize = Math.min(maxWidth, size + ARROW_STEP)
+        rawSize = size + ARROW_STEP
         break
       case shrink:
-        newSize = size - ARROW_STEP
+        rawSize = size - ARROW_STEP
         break
       case 'PageUp':
-        newSize = Math.min(maxWidth, size + PAGE_STEP)
+        rawSize = size + PAGE_STEP
         break
       case 'PageDown':
-        newSize = size - PAGE_STEP
+        rawSize = size - PAGE_STEP
         break
       case 'Home':
-        newSize = maxWidth
+        rawSize = maxWidth
         break
       case 'End':
-        newSize = minWidth
+        rawSize = minWidth
         break
       default:
         return
@@ -178,10 +178,10 @@ export function ResizableSidebar({
 
     e.preventDefault()
 
-    if (newSize < SNAP_CLOSED_THRESHOLD) {
+    if (rawSize < SNAP_CLOSED_THRESHOLD) {
       onVisibleChange(false)
     } else {
-      onSizeChange(Math.min(maxWidth, Math.max(minWidth, newSize)))
+      onSizeChange(Math.min(maxWidth, Math.max(minWidth, rawSize)))
     }
   }
 
@@ -212,6 +212,7 @@ export function ResizableSidebar({
       <div
         ref={handleRef}
         role="separator"
+        aria-label="Resize sidebar"
         aria-valuenow={visible ? clampedSize : undefined}
         aria-valuemin={minWidth}
         aria-valuemax={maxWidth}

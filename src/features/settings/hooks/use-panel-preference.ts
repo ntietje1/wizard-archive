@@ -12,7 +12,7 @@ export type PanelPreferenceState = {
   activeContentId: string | null
   setSize: (size: number) => void
   setVisible: (visible: boolean) => void
-  setActiveContent: (contentId: string) => void
+  setActiveContent: (contentId: string | null) => void
   isLoaded: boolean
 }
 
@@ -53,7 +53,7 @@ export function usePanelPreference(
     prefsQuery.data?.panelPreferences?.[panelId]
 
   useEffect(() => {
-    if (prefsQuery.isFetched && hasInitialized.current !== panelId) {
+    if (prefsQuery.isSuccess && hasInitialized.current !== panelId) {
       hasInitialized.current = panelId
       const serverSize = serverPanel?.size ?? defaults.size
       const serverVisible = serverPanel?.visible ?? defaults.visible
@@ -61,7 +61,7 @@ export function usePanelPreference(
       store.getState().setVisible(panelId, serverVisible)
     }
   }, [
-    prefsQuery.isFetched,
+    prefsQuery.isSuccess,
     serverPanel?.size,
     serverPanel?.visible,
     defaults.size,
@@ -84,7 +84,7 @@ export function usePanelPreference(
     setPanelPref.mutate({ panelId, visible: newVisible })
   }
 
-  const setActiveContent = (contentId: string) => {
+  const setActiveContent = (contentId: string | null) => {
     store.getState().setActiveContent(panelId, contentId)
   }
 

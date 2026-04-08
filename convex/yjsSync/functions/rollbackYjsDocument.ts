@@ -8,6 +8,11 @@ export async function rollbackYjsDocument(
   documentId: Id<'notes'> | Id<'canvases'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
+  const doc = await ctx.db.get(documentId)
+  if (!doc) {
+    throw new Error(`rollbackYjsDocument: document ${documentId} not found`)
+  }
+
   let hasMore = true
   while (hasMore) {
     const batch = await ctx.db

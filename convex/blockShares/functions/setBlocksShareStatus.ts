@@ -21,6 +21,10 @@ export const setBlocksShareStatus = async (
     status: ShareStatus
   },
 ): Promise<null> => {
+  if (blocks.length === 0) {
+    return null
+  }
+
   const rawNote = await ctx.db.get(noteId)
   const note = await requireItemAccess(ctx, {
     rawItem: rawNote,

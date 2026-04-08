@@ -24,20 +24,24 @@ export const unshareSidebarItem = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
   await requireDmRole(ctx, item.campaignId)
+  const member = await ctx.db.get(campaignMemberId)
+  const memberProfile = member ? await ctx.db.get(member.userId) : null
 
   await unshareSidebarItemFromMember(ctx, {
     sidebarItemId,
     campaignMemberId,
   })
 
-  const member = await ctx.db.get(campaignMemberId)
-  const memberProfile = member ? await ctx.db.get(member.userId) : null
   await logEditHistory(ctx, {
     itemId: sidebarItemId,
     itemType: item.type,
     campaignId: item.campaignId,
     action: EDIT_HISTORY_ACTION.permission_changed,
-    metadata: { memberName: memberProfile?.name ?? 'Unknown', level: null },
+    metadata: {
+      memberName: memberProfile?.name ?? 'Unknown',
+      level: null,
+      previousLevel: null,
+    },
   })
 
   return null

@@ -1,6 +1,10 @@
 const CLOCK_SKEW_TOLERANCE_MS = 5000
 
 export function formatRelativeTime(timestamp: number): string {
+  if (!Number.isFinite(timestamp)) {
+    throw new Error('Invalid timestamp')
+  }
+
   const now = Date.now()
   const diff = now - timestamp
 

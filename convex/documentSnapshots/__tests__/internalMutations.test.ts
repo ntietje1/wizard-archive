@@ -14,18 +14,15 @@ import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { captureCanvasSnapshot } from '../../canvases/functions/captureCanvasSnapshot'
 import { captureNoteSnapshot } from '../../notes/functions/captureNoteSnapshot'
 import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapSnapshot'
+import type { LogEditHistoryArgs } from '../../editHistory/types'
+import type { Id } from '../../_generated/dataModel'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
-  args: {
-    itemId: any
-    itemType: 'note' | 'folder' | 'gameMap' | 'file' | 'canvas'
-    campaignId: any
-    campaignMemberId: any
-    action: string
+  args: LogEditHistoryArgs & {
+    campaignMemberId: Id<'campaignMembers'>
     hasSnapshot: boolean
-    metadata?: Record<string, any> | null
   },
 ) {
   return t.run(async (dbCtx) => {
@@ -304,6 +301,10 @@ describe('captureGameMapSnapshot', () => {
       expect(parsed.pins[0].y).toBe(20)
       expect(parsed.pins[0].visible).toBe(true)
       expect(parsed.pins[0].itemId).toBe(noteId)
+      expect(parsed.pins[0].name).toEqual(expect.any(String))
+      expect(parsed.pins[0].color).toBeNull()
+      expect(parsed.pins[0].iconName).toBeNull()
+      expect(parsed.pins[0].itemType).toBe('note')
     })
   })
 
@@ -368,10 +369,14 @@ describe('captureGameMapSnapshot', () => {
       )
       expect(parsed.pins).toHaveLength(1)
       expect(parsed.pins[0].itemId).toBe(note1)
+      expect(parsed.pins[0].name).toEqual(expect.any(String))
+      expect(parsed.pins[0].color).toBeNull()
+      expect(parsed.pins[0].iconName).toBeNull()
+      expect(parsed.pins[0].itemType).toBe('note')
     })
   })
 
-  it('no-ops when map does not exist', async () => {
+  it('throws when map does not exist', async () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -389,25 +394,16 @@ describe('captureGameMapSnapshot', () => {
       await dbCtx.db.delete(mapId)
     })
 
-    await t.run(async (dbCtx) => {
-      await captureGameMapSnapshot(dbCtx, {
-        mapId,
-        editHistoryId,
-        campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
-      })
-    })
-
-    await t.run(async (dbCtx) => {
-      const snapshot = await dbCtx.db
-        .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
-        .first()
-
-      expect(snapshot).toBeNull()
-    })
+    await expect(
+      t.run(async (dbCtx) => {
+        await captureGameMapSnapshot(dbCtx, {
+          mapId,
+          editHistoryId,
+          campaignId: ctx.campaignId,
+          createdBy: ctx.dm.profile._id,
+        })
+      }),
+    ).rejects.toThrow(/map .* not found/)
   })
 
   it('captures empty pin array when map has no pins', async () => {

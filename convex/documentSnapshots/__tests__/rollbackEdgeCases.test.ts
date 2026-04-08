@@ -299,11 +299,33 @@ describe('canvas rollback data integrity', () => {
       })
       expect(snapshotEntry!.hasSnapshot).toBe(true)
 
+      const originalDoc = new Y.Doc()
+      await t.run(async (dbCtx) => {
+        const updates = await dbCtx.db
+          .query('yjsUpdates')
+          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+          .collect()
+        for (const u of updates) {
+          Y.applyUpdate(originalDoc, new Uint8Array(u.update))
+        }
+      })
+      const originalSv = Y.encodeStateVector(originalDoc)
+      originalDoc.destroy()
+
       vi.advanceTimersByTime(5 * 60 * 1000 + 1)
 
+      const modifiedBlocks = [
+        {
+          id: 'block-1',
+          type: 'paragraph' as const,
+          content: [{ type: 'text' as const, text: 'Modified canvas content' }],
+          props: {},
+          children: [],
+        },
+      ]
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         documentId: canvasId,
-        update: makeYjsUpdate(),
+        update: makeYjsUpdateWithBlocks(modifiedBlocks),
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -321,6 +343,14 @@ describe('canvas rollback data integrity', () => {
         expect(updates).toHaveLength(1)
         expect(updates[0].isSnapshot).toBe(true)
         expect(updates[0].seq).toBe(0)
+
+        const restoredDoc = new Y.Doc()
+        Y.applyUpdate(restoredDoc, new Uint8Array(updates[0].update))
+        const restoredSv = Y.encodeStateVector(restoredDoc)
+        const fragment = restoredDoc.getXmlFragment('document')
+        expect(fragment.toString()).not.toContain('Modified canvas content')
+        expect(Array.from(restoredSv)).toEqual(Array.from(originalSv))
+        restoredDoc.destroy()
       })
     } finally {
       vi.useRealTimers()
@@ -714,6 +744,22 @@ describe('map rollback restores image state', () => {
       const snapshotData: GameMapSnapshotData = JSON.parse(
         new TextDecoder().decode(snapshot!.data),
       )
+
+      const newStorageId = await t.run(async (dbCtx) => {
+        return await dbCtx.storage.store(new Blob(['different-image']))
+      })
+
+      await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+        mapId,
+        imageStorageId: newStorageId,
+      })
+
+      await t.run(async (dbCtx) => {
+        const map = await dbCtx.db.get(mapId)
+        expect(map!.imageStorageId).not.toBe(
+          snapshotData.imageStorageId ?? null,
+        )
+      })
 
       await dmAuth.mutation(
         api.documentSnapshots.mutations.rollbackToSnapshot,

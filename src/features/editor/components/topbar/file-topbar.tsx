@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
+import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
@@ -120,14 +121,14 @@ export function FileTopbar() {
         </div>
 
         {timestampLabel && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={toggleHistory}
             aria-label={`Toggle history panel, ${timestampLabel}`}
-            className="text-xs text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors shrink-0"
+            className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
           >
             {timestampLabel}
-          </button>
+          </Button>
         )}
 
         {middleContent}

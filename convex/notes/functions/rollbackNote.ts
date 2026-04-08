@@ -1,8 +1,9 @@
 import { rollbackYjsDocument } from '../../yjsSync/functions/rollbackYjsDocument'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { AuthMutationCtx } from '../../functions'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackNote(
@@ -11,10 +12,14 @@ export async function rollbackNote(
   snapshotData: ArrayBuffer,
 ): Promise<void> {
   const note = await ctx.db.get(itemId)
+  if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
+    throw new Error(`rollbackNote: expected a note but got ${note?.type}`)
+  }
+
   await requireItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  await rollbackYjsDocument(ctx, itemId as Id<'notes'>, snapshotData)
+  await rollbackYjsDocument(ctx, note._id as Id<'notes'>, snapshotData)
 }

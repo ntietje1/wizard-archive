@@ -26,6 +26,7 @@ import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPrefer
 import { authClient } from '~/features/auth/utils/auth-client'
 import { getToken } from '~/features/auth/utils/auth-server'
 import appCss from '~/styles/app.css?url'
+import { logger } from '~/shared/utils/logger'
 
 const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
   return await getToken()
@@ -85,7 +86,7 @@ export const Route = createRootRouteWithContext<{
     try {
       token = await fetchAuthToken()
     } catch (error) {
-      console.debug(
+      logger.debug(
         '[auth] fetchAuthToken failed, falling back to client-side auth:',
         error,
       )
@@ -99,7 +100,7 @@ export const Route = createRootRouteWithContext<{
         initialTheme = prefs?.theme ?? null
         initialPanelPreferences = prefs?.panelPreferences ?? null
       } catch (error) {
-        console.debug(
+        logger.debug(
           '[preferences] prefetchUserPreferences failed, falling back to defaults:',
           error,
         )
