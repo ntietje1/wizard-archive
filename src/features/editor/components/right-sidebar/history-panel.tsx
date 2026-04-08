@@ -4,10 +4,10 @@ import { Loader2 } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditHistoryEntry } from 'convex/editHistory/types'
-import { assertNever } from '~/shared/utils/utils'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import {
   Avatar,
   AvatarFallback,
@@ -15,29 +15,35 @@ import {
 } from '~/features/shadcn/components/avatar'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
+import { cn } from '~/features/shadcn/lib/utils'
 
-function formatActionDescription(entry: EditHistoryEntry): string {
-  switch (entry.action) {
+function formatSingleAction(
+  action: string,
+  metadata: Record<string, unknown> | null,
+): string {
+  switch (action) {
     case 'created':
       return 'created this item'
     case 'renamed':
-      return `renamed "${entry.metadata.from}" to "${entry.metadata.to}"`
+      return `renamed "${metadata?.from}" to "${metadata?.to}"`
     case 'moved':
-      return `moved from ${entry.metadata.from ? `"${entry.metadata.from}"` : 'root'} to ${entry.metadata.to ? `"${entry.metadata.to}"` : 'root'}`
+      return `moved from ${metadata?.from ? `"${metadata.from}"` : 'root'} to ${metadata?.to ? `"${metadata.to}"` : 'root'}`
     case 'trashed':
       return 'moved to trash'
     case 'restored':
       return 'restored from trash'
     case 'icon_changed':
-      return entry.metadata.to
-        ? `changed icon to "${entry.metadata.to}"`
+      return metadata?.to
+        ? `changed icon to "${metadata.to}"`
         : 'removed the icon'
     case 'color_changed':
-      return entry.metadata.to
-        ? `changed color to "${entry.metadata.to}"`
+      return metadata?.to
+        ? `changed color to "${metadata.to}"`
         : 'removed the color'
     case 'content_edited':
       return 'edited content'
+    case 'rolled_back':
+      return 'restored a previous version'
     case 'map_image_changed':
       return 'changed the map image'
     case 'map_image_removed':
@@ -47,15 +53,16 @@ function formatActionDescription(entry: EditHistoryEntry): string {
     case 'file_removed':
       return 'removed the file'
     case 'map_pin_added':
-      return `added pin "${entry.metadata.pinItemName}"`
+      return `added pin "${metadata?.pinItemName}"`
     case 'map_pin_moved':
-      return `moved pin "${entry.metadata.pinItemName}"`
+      return `moved pin "${metadata?.pinItemName}"`
     case 'map_pin_removed':
-      return `removed pin "${entry.metadata.pinItemName}"`
+      return `removed pin "${metadata?.pinItemName}"`
     case 'map_pin_visibility_changed':
-      return `${entry.metadata.visible ? 'showed' : 'hid'} pin "${entry.metadata.pinItemName}"`
+      return `${metadata?.visible ? 'showed' : 'hid'} pin "${metadata?.pinItemName}"`
     case 'permission_changed': {
-      const { memberName, level } = entry.metadata
+      const memberName = metadata?.memberName as string | null
+      const level = metadata?.level as string | null
       if (memberName) {
         return level
           ? `set ${memberName}'s access to ${level}`
@@ -66,16 +73,43 @@ function formatActionDescription(entry: EditHistoryEntry): string {
         : `removed all players' access`
     }
     case 'block_share_changed':
-      return entry.metadata.status === 'shared'
+      return metadata?.status === 'shared'
         ? 'shared blocks with players'
         : 'unshared blocks from players'
     case 'inherit_shares_changed':
-      return entry.metadata.inheritShares
+      return (metadata?.inheritShares as boolean)
         ? 'enabled share inheritance'
         : 'disabled share inheritance'
     default:
-      assertNever(entry)
+      return action
   }
+}
+
+function formatActionDescription(
+  entry: EditHistoryEntry,
+): string | Array<string> {
+  if (entry.action === 'updated') {
+    const changes = Array.isArray(entry.metadata?.changes)
+      ? (entry.metadata.changes as Array<{
+          action: string
+          metadata: Record<string, unknown> | null
+        }>)
+      : []
+    if (changes.length === 0) {
+      return formatSingleAction(
+        entry.action,
+        entry.metadata as Record<string, unknown> | null,
+      )
+    }
+    if (changes.length === 1) {
+      return formatSingleAction(changes[0].action, changes[0].metadata)
+    }
+    return changes.map((c) => formatSingleAction(c.action, c.metadata))
+  }
+  return formatSingleAction(
+    entry.action,
+    entry.metadata as Record<string, unknown> | null,
+  )
 }
 
 function groupByDay(
@@ -116,6 +150,8 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   const membersQuery = useCampaignMembers()
   const { campaign } = useCampaign()
   const myMemberId = campaign.data?.myMembership?._id
+  const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
+  const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
 
   const membersMap = useMemo(() => {
     const map = new Map<
@@ -200,23 +236,60 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                 .toUpperCase()
 
               const description = formatActionDescription(entry)
+              const isSelected = previewingEntryId === entry._id
+              const hasSnapshot = entry.hasSnapshot
+              const descriptions = Array.isArray(description)
+                ? description
+                : [description]
 
               return (
                 <div
                   key={entry._id}
-                  className="flex items-start gap-2.5 px-3 py-2 hover:bg-muted/50"
+                  className={cn(
+                    'flex items-start gap-2.5 px-3 py-2',
+                    hasSnapshot
+                      ? 'cursor-pointer hover:bg-muted/50'
+                      : 'hover:bg-muted/30',
+                    isSelected && 'bg-accent border-l-2 border-primary',
+                  )}
+                  onClick={
+                    hasSnapshot
+                      ? () => setPreviewingEntry(isSelected ? null : entry._id)
+                      : undefined
+                  }
                 >
                   <Avatar size="sm" className="mt-0.5 shrink-0">
                     {member?.imageUrl && <AvatarImage src={member.imageUrl} />}
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm leading-snug">
-                      <span className="font-medium">{displayName}</span>{' '}
-                      <span className="text-muted-foreground">
-                        {description}
-                      </span>
-                    </p>
+                    {descriptions.length === 1 ? (
+                      <p className="text-sm leading-snug">
+                        <span className="font-medium">{displayName}</span>{' '}
+                        <span className="text-muted-foreground">
+                          {descriptions[0]}
+                        </span>
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm leading-snug">
+                          <span className="font-medium">{displayName}</span>{' '}
+                          <span className="text-muted-foreground">
+                            made {descriptions.length} changes
+                          </span>
+                        </p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {descriptions.map((desc, i) => (
+                            <li
+                              key={i}
+                              className="text-xs text-muted-foreground pl-2 border-l border-border/50"
+                            >
+                              {desc}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {formatRelativeTime(entry._creationTime)}
                     </p>

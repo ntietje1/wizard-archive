@@ -14,6 +14,26 @@ const historyEntryValidator = v.object({
   campaignMemberId: v.id('campaignMembers'),
   action: v.string(),
   metadata: v.union(v.record(v.string(), v.any()), v.null()),
+  hasSnapshot: v.boolean(),
+})
+
+export const getHistoryEntry = authQuery({
+  args: {
+    editHistoryId: v.id('editHistory'),
+  },
+  returns: v.union(historyEntryValidator, v.null()),
+  handler: async (ctx, { editHistoryId }) => {
+    const entry = await ctx.db.get(editHistoryId)
+    if (!entry) return null
+
+    const item = await ctx.db.get(entry.itemId)
+    await requireItemAccess(ctx, {
+      rawItem: item,
+      requiredLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    return entry
+  },
 })
 
 export const getItemHistory = authQuery({
@@ -34,7 +54,7 @@ export const getItemHistory = authQuery({
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
     const itemFromDb = await ctx.db.get(itemId)
-    requireItemAccess(ctx, {
+    await requireItemAccess(ctx, {
       rawItem: itemFromDb,
       requiredLevel: PERMISSION_LEVEL.EDIT,
     })

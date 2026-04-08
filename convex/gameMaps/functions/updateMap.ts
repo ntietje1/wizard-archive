@@ -8,6 +8,7 @@ import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -38,13 +39,7 @@ export async function updateMap(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'gameMaps'>>> = {}
-  const historyPromises: Array<Promise<void>> = []
-
-  const historyBase = {
-    itemId: map._id,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-    campaignId: map.campaignId,
-  } as const
+  const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -54,50 +49,38 @@ export async function updateMap(
       newName: trimmedName,
     })
     updates.slug = newSlug
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: map.name, to: trimmedName },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: map.name, to: trimmedName },
+    })
   }
   if (imageStorageId !== undefined) {
     updates.imageStorageId = imageStorageId
-    // Maps use imageStorageId as their preview — no separate preview pipeline
     updates.previewStorageId = imageStorageId
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action:
-          imageStorageId !== null
-            ? EDIT_HISTORY_ACTION.map_image_changed
-            : EDIT_HISTORY_ACTION.map_image_removed,
-      }),
-    )
+    changes.push({
+      action:
+        imageStorageId !== null
+          ? EDIT_HISTORY_ACTION.map_image_changed
+          : EDIT_HISTORY_ACTION.map_image_removed,
+      metadata: null,
+    })
   }
   if (iconName !== undefined) {
     updates.iconName = iconName
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.icon_changed,
-        metadata: { from: map.iconName, to: iconName },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: map.iconName, to: iconName },
+    })
   }
   if (color !== undefined) {
     updates.color = color
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.color_changed,
-        metadata: { from: map.color, to: color },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: map.color, to: color },
+    })
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (changes.length === 0) {
     return { mapId: map._id, slug: map.slug }
   }
 
@@ -106,7 +89,13 @@ export async function updateMap(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-  await Promise.all(historyPromises)
+
+  await logEditHistory(ctx, {
+    itemId: map._id,
+    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    campaignId: map.campaignId,
+    changes,
+  })
 
   return { mapId: map._id, slug: newSlug ?? map.slug }
 }

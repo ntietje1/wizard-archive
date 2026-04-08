@@ -1,10 +1,14 @@
+const CLOCK_SKEW_TOLERANCE_MS = 5000
+
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now()
   const diff = now - timestamp
 
-  if (diff < 0) {
+  if (diff < -CLOCK_SKEW_TOLERANCE_MS) {
     throw new Error('Timestamp cannot be in the future')
   }
+
+  if (diff < 0) return 'Just now'
 
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
@@ -17,7 +21,7 @@ export function formatRelativeTime(timestamp: number): string {
   if (days < 7) return `${days}d ago`
 
   const date = new Date(timestamp)
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date(now).getFullYear()
   const timestampYear = date.getFullYear()
 
   return date.toLocaleDateString(undefined, {

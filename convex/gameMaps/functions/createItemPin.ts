@@ -6,6 +6,7 @@ import { validatePinTarget } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { captureGameMapSnapshotInline } from '../../documentSnapshots/internalMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -71,12 +72,28 @@ export async function createItemPin(
     createdBy: profileId,
   })
 
-  await logEditHistory(ctx, {
-    itemId: mapId,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+  await ctx.db.patch(mapId, {
+    updatedTime: Date.now(),
+    updatedBy: profileId,
+  })
+
+  const editHistoryId = await logEditHistory(
+    ctx,
+    {
+      itemId: mapId,
+      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      campaignId: mapFromDb.campaignId,
+      action: EDIT_HISTORY_ACTION.map_pin_added,
+      metadata: { pinItemName: item.name },
+    },
+    { hasSnapshot: true },
+  )
+
+  await captureGameMapSnapshotInline(ctx, {
+    mapId,
+    editHistoryId,
     campaignId: mapFromDb.campaignId,
-    action: EDIT_HISTORY_ACTION.map_pin_added,
-    metadata: { pinItemName: item.name },
+    createdBy: profileId,
   })
 
   return pinId

@@ -23,6 +23,8 @@ export const SHARED_HISTORY_ACTION = {
   icon_changed: 'icon_changed',
   color_changed: 'color_changed',
   content_edited: 'content_edited',
+  rolled_back: 'rolled_back',
+  updated: 'updated',
   permission_changed: 'permission_changed',
   block_share_changed: 'block_share_changed',
   inherit_shares_changed: 'inherit_shares_changed',
@@ -37,6 +39,8 @@ export type SharedHistoryMetadataMap = {
   icon_changed: { from: string | null; to: string | null }
   color_changed: { from: string | null; to: string | null }
   content_edited: null
+  rolled_back: { restoredFromHistoryEntryId: Id<'editHistory'> }
+  updated: { changes: Array<EditHistoryChange> }
   permission_changed: { memberName: string | null; level: string | null }
   block_share_changed: { status: string }
   inherit_shares_changed: { inheritShares: boolean }
@@ -61,6 +65,13 @@ export type EditHistoryMetadataMap = SharedHistoryMetadataMap &
 export type EditHistoryAction =
   (typeof EDIT_HISTORY_ACTION)[keyof typeof EDIT_HISTORY_ACTION]
 
+export type EditHistoryChange = {
+  [K in Exclude<EditHistoryAction, 'updated'>]: {
+    action: K
+    metadata: EditHistoryMetadataMap[K]
+  }
+}[Exclude<EditHistoryAction, 'updated'>]
+
 export type EditHistoryEntry = {
   [K in EditHistoryAction]: {
     _id: Id<'editHistory'>
@@ -71,6 +82,7 @@ export type EditHistoryEntry = {
     campaignMemberId: Id<'campaignMembers'>
     action: K
     metadata: EditHistoryMetadataMap[K]
+    hasSnapshot: boolean
   }
 }[EditHistoryAction]
 

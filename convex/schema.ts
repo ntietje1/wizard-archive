@@ -16,6 +16,7 @@ import { userPreferencesTables } from './userPreferences/schema'
 import { canvasesTables } from './canvases/baseSchema'
 import { yjsSyncTables } from './yjsSync/schema'
 import { editHistoryTables } from './editHistory/schema'
+import { documentSnapshotsTables } from './documentSnapshots/schema'
 
 export default defineSchema({
   ...notesTables,
@@ -35,4 +36,5 @@ export default defineSchema({
   ...canvasesTables,
   ...yjsSyncTables,
   ...editHistoryTables,
+  ...documentSnapshotsTables,
 })

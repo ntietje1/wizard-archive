@@ -181,7 +181,7 @@ export function ResizableSidebar({
     if (newSize < SNAP_CLOSED_THRESHOLD) {
       onVisibleChange(false)
     } else {
-      onSizeChange(Math.max(minWidth, newSize))
+      onSizeChange(Math.min(maxWidth, Math.max(minWidth, newSize)))
     }
   }
 
@@ -212,7 +212,7 @@ export function ResizableSidebar({
       <div
         ref={handleRef}
         role="separator"
-        aria-valuenow={visible ? size : 0}
+        aria-valuenow={visible ? clampedSize : undefined}
         aria-valuemin={minWidth}
         aria-valuemax={maxWidth}
         tabIndex={visible ? 0 : undefined}

@@ -13,6 +13,7 @@ export const editHistoryTables = {
     campaignMemberId: v.id('campaignMembers'),
     action: v.string(),
     metadata: v.union(v.record(v.string(), v.any()), v.null()),
+    hasSnapshot: v.boolean(),
   })
     .index('by_item', ['itemId'])
     .index('by_item_action', ['itemId', 'action'])

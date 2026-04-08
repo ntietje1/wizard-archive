@@ -8,6 +8,7 @@ import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -36,13 +37,7 @@ export async function updateFolder(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
-  const historyPromises: Array<Promise<void>> = []
-
-  const historyBase = {
-    itemId: folder._id,
-    itemType: SIDEBAR_ITEM_TYPES.folders,
-    campaignId: folder.campaignId,
-  } as const
+  const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
     const trimmedName = name.trim()
@@ -52,38 +47,29 @@ export async function updateFolder(
       newName: trimmedName,
     })
     updates.slug = newSlug
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: folder.name, to: trimmedName },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.renamed,
+      metadata: { from: folder.name, to: trimmedName },
+    })
   }
 
   if (iconName !== undefined) {
     updates.iconName = iconName
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.icon_changed,
-        metadata: { from: folder.iconName, to: iconName },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: folder.iconName, to: iconName },
+    })
   }
 
   if (color !== undefined) {
     updates.color = color
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.color_changed,
-        metadata: { from: folder.color, to: color },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: folder.color, to: color },
+    })
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (changes.length === 0) {
     return { folderId: folder._id, slug: folder.slug }
   }
 
@@ -92,7 +78,13 @@ export async function updateFolder(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-  await Promise.all(historyPromises)
+
+  await logEditHistory(ctx, {
+    itemId: folder._id,
+    itemType: SIDEBAR_ITEM_TYPES.folders,
+    campaignId: folder.campaignId,
+    changes,
+  })
 
   return { folderId: folder._id, slug: newSlug ?? folder.slug }
 }

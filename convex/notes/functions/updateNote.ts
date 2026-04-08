@@ -8,6 +8,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { EditHistoryChange } from '../../editHistory/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -36,62 +37,56 @@ export async function updateNote(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'notes'>>> = {}
-  const historyPromises: Array<Promise<void>> = []
-
-  const historyBase = {
-    itemId: note._id,
-    itemType: SIDEBAR_ITEM_TYPES.notes,
-    campaignId: note.campaignId,
-  } as const
+  const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: note,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
+    if (trimmedName !== note.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: note,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
         action: EDIT_HISTORY_ACTION.renamed,
         metadata: { from: note.name, to: trimmedName },
-      }),
-    )
+      })
+    }
   }
 
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== note.iconName) {
     updates.iconName = iconName
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.icon_changed,
-        metadata: { from: note.iconName, to: iconName },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: note.iconName, to: iconName },
+    })
   }
 
-  if (color !== undefined) {
+  if (color !== undefined && color !== note.color) {
     updates.color = color
-    historyPromises.push(
-      logEditHistory(ctx, {
-        ...historyBase,
-        action: EDIT_HISTORY_ACTION.color_changed,
-        metadata: { from: note.color, to: color },
-      }),
-    )
+    changes.push({
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: note.color, to: color },
+    })
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (changes.length === 0) {
     return { noteId: note._id, slug: note.slug }
   }
+
   await ctx.db.patch(noteId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
-  await Promise.all(historyPromises)
+
+  await logEditHistory(ctx, {
+    itemId: note._id,
+    itemType: SIDEBAR_ITEM_TYPES.notes,
+    campaignId: note.campaignId,
+    changes,
+  })
 
   return { noteId: note._id, slug: newSlug ?? note.slug }
 }

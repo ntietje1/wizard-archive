@@ -3,6 +3,7 @@ import { authMutation } from '../functions'
 import { internal } from '../_generated/api'
 import { logEditHistory } from '../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../editHistory/types'
+import { captureYjsSnapshotInline } from '../documentSnapshots/internalMutations'
 import { yjsDocumentIdValidator } from './schema'
 import {
   checkYjsReadAccess,
@@ -58,18 +59,30 @@ export const pushUpdate = authMutation({
       !lastContentEdit ||
       Date.now() - lastContentEdit._creationTime >= EDIT_HISTORY_DEBOUNCE_MS
     ) {
-      await Promise.all([
-        logEditHistory(ctx, {
-          itemId: documentId,
-          itemType: doc.type,
-          campaignId: doc.campaignId,
-          action: EDIT_HISTORY_ACTION.content_edited,
-        }),
+      const [editHistoryId] = await Promise.all([
+        logEditHistory(
+          ctx,
+          {
+            itemId: documentId,
+            itemType: doc.type,
+            campaignId: doc.campaignId,
+            action: EDIT_HISTORY_ACTION.content_edited,
+          },
+          { hasSnapshot: true },
+        ),
         ctx.db.patch(documentId, {
           updatedTime: Date.now(),
           updatedBy: ctx.user.profile._id,
         }),
       ])
+
+      await captureYjsSnapshotInline(ctx, {
+        documentId,
+        itemType: doc.type,
+        editHistoryId,
+        campaignId: doc.campaignId,
+        createdBy: ctx.user.profile._id,
+      })
     }
 
     return { seq }

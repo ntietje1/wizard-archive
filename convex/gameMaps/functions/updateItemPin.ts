@@ -1,6 +1,7 @@
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { captureGameMapSnapshotInline } from '../../documentSnapshots/internalMutations'
 import { requirePinAccess } from './requirePinAccess'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -27,12 +28,24 @@ export async function updateItemPin(
   })
 
   const pinnedItem = await ctx.db.get(pin.itemId)
-  await logEditHistory(ctx, {
-    itemId: map._id,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+
+  const editHistoryId = await logEditHistory(
+    ctx,
+    {
+      itemId: map._id,
+      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      campaignId: map.campaignId,
+      action: EDIT_HISTORY_ACTION.map_pin_moved,
+      metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
+    },
+    { hasSnapshot: true },
+  )
+
+  await captureGameMapSnapshotInline(ctx, {
+    mapId: map._id,
+    editHistoryId,
     campaignId: map.campaignId,
-    action: EDIT_HISTORY_ACTION.map_pin_moved,
-    metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
+    createdBy: ctx.user.profile._id,
   })
 
   return mapPinId

@@ -30,6 +30,5 @@ export const FILE_HISTORY_ACTION = {
 } as const
 
 export type FileHistoryMetadataMap = {
-  file_replaced: null
-  file_removed: null
+  [K in keyof typeof FILE_HISTORY_ACTION]: null
 }

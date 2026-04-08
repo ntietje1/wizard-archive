@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
+import { assertNever } from '~/shared/utils/utils'
 
 const TABS = [
   {
@@ -55,7 +56,7 @@ function PanelContent({
       return <OutlinePanel itemId={itemId} />
     default: {
       const _exhaustiveCheck: never = contentId
-      return _exhaustiveCheck
+      assertNever(_exhaustiveCheck)
     }
   }
 }
