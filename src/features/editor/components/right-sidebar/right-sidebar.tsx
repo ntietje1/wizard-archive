@@ -82,6 +82,7 @@ export function RightSidebar({
                 render={
                   <button
                     type="button"
+                    aria-label={tab.label}
                     className={cn(
                       'inline-flex items-center justify-center h-6 w-6 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors',
                       activeContentId === tab.id

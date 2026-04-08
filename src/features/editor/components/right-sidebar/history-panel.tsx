@@ -248,6 +248,9 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
               return (
                 <div
                   key={entry._id}
+                  role={hasSnapshot ? 'button' : undefined}
+                  tabIndex={hasSnapshot ? 0 : undefined}
+                  aria-pressed={hasSnapshot ? isSelected : undefined}
                   className={cn(
                     'flex items-start gap-2.5 px-3 py-2',
                     hasSnapshot
@@ -259,6 +262,16 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                   onClick={
                     hasSnapshot
                       ? () => setPreviewingEntry(isSelected ? null : entry._id)
+                      : undefined
+                  }
+                  onKeyDown={
+                    hasSnapshot
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setPreviewingEntry(isSelected ? null : entry._id)
+                          }
+                        }
                       : undefined
                   }
                 >
@@ -301,6 +314,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                   {hasSnapshot && canEdit && (
                     <button
                       type="button"
+                      aria-label="Restore this version"
                       className={cn(
                         'mt-0.5 shrink-0 h-6 w-6 flex items-center justify-center rounded-md',
                         'text-muted-foreground hover:text-foreground hover:bg-muted',
