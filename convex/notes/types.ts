@@ -26,6 +26,8 @@ export type NoteWithContent = SidebarItemWithContent<
   blockMeta: Record<string, BlockMeta>
 }
 
+export const NOTE_SNAPSHOT_TYPE = 'yjs_state' as const
+
 export const NOTE_HISTORY_ACTION = {} as const
 
 export type NoteHistoryMetadataMap = {}

@@ -5,10 +5,12 @@ import {
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/baseValidators'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { NOTE_SNAPSHOT_TYPE } from '../notes/types'
+import { GAME_MAP_SNAPSHOT_TYPE } from '../gameMaps/types'
 
 export const SNAPSHOT_TYPE = {
-  yjs_state: 'yjs_state',
-  game_map: 'game_map',
+  yjs_state: NOTE_SNAPSHOT_TYPE,
+  game_map: GAME_MAP_SNAPSHOT_TYPE,
 } as const
 
 export const snapshotTypeValidator = v.union(

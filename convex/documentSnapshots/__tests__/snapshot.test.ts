@@ -9,7 +9,7 @@ import {
   makeYjsUpdate,
   makeYjsUpdateWithBlocks,
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { GameMapSnapshotData } from '../types'
+import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 describe('note snapshots capture Y.Doc state directly', () => {
   const t = createTestContext()

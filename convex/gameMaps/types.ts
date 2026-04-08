@@ -40,6 +40,18 @@ export type MapPinWithItem = MapPin & {
   item: AnySidebarItem | null
 }
 
+export const GAME_MAP_SNAPSHOT_TYPE = 'game_map' as const
+
+export type GameMapSnapshotData = {
+  imageStorageId: string | null
+  pins: Array<{
+    itemId: SidebarItemId
+    x: number
+    y: number
+    visible: boolean
+  }>
+}
+
 export const MAP_HISTORY_ACTION = {
   map_image_changed: 'map_image_changed',
   map_image_removed: 'map_image_removed',

@@ -18,13 +18,3 @@ export type DocumentSnapshot = {
   snapshotType: SnapshotType
   data: ArrayBuffer
 } & CommonTableFields
-
-export type GameMapSnapshotData = {
-  imageStorageId: string | null
-  pins: Array<{
-    itemId: SidebarItemId
-    x: number
-    y: number
-    visible: boolean
-  }>
-}

@@ -1,7 +1,7 @@
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { captureGameMapSnapshotInline } from '../../documentSnapshots/internalMutations'
+import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -41,7 +41,7 @@ export async function updateItemPin(
     { hasSnapshot: true },
   )
 
-  await captureGameMapSnapshotInline(ctx, {
+  await captureGameMapSnapshot(ctx, {
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,

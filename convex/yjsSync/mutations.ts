@@ -3,13 +3,16 @@ import { authMutation } from '../functions'
 import { internal } from '../_generated/api'
 import { logEditHistory } from '../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../editHistory/types'
-import { captureYjsSnapshotInline } from '../documentSnapshots/internalMutations'
+import { captureNoteSnapshot } from '../notes/functions/captureNoteSnapshot'
+import { captureCanvasSnapshot } from '../canvases/functions/captureCanvasSnapshot'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { yjsDocumentIdValidator } from './schema'
 import {
   checkYjsReadAccess,
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
+import type { Id } from '../_generated/dataModel'
 
 const EDIT_HISTORY_DEBOUNCE_MS = 5 * 60 * 1000
 
@@ -76,13 +79,23 @@ export const pushUpdate = authMutation({
         }),
       ])
 
-      await captureYjsSnapshotInline(ctx, {
-        documentId,
-        itemType: doc.type,
+      const snapshotArgs = {
         editHistoryId,
         campaignId: doc.campaignId,
         createdBy: ctx.user.profile._id,
-      })
+      }
+
+      if (doc.type === SIDEBAR_ITEM_TYPES.notes) {
+        await captureNoteSnapshot(ctx, {
+          noteId: documentId as Id<'notes'>,
+          ...snapshotArgs,
+        })
+      } else {
+        await captureCanvasSnapshot(ctx, {
+          canvasId: documentId as Id<'canvases'>,
+          ...snapshotArgs,
+        })
+      }
     }
 
     return { seq }

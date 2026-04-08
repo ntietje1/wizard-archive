@@ -7,7 +7,7 @@ import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { SNAPSHOT_TYPE } from '../schema'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { GameMapSnapshotData } from '../types'
+import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 describe('cross-action debounce independence on game maps', () => {
   const t = createTestContext()

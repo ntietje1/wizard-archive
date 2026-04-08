@@ -6,7 +6,7 @@ import { validatePinTarget } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { captureGameMapSnapshotInline } from '../../documentSnapshots/internalMutations'
+import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -89,7 +89,7 @@ export async function createItemPin(
     { hasSnapshot: true },
   )
 
-  await captureGameMapSnapshotInline(ctx, {
+  await captureGameMapSnapshot(ctx, {
     mapId,
     editHistoryId,
     campaignId: mapFromDb.campaignId,

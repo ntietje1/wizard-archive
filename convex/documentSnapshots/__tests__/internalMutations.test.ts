@@ -8,11 +8,13 @@ import {
   createMapPin,
   createNote,
 } from '../../_test/factories.helper'
-import { internal } from '../../_generated/api'
 import { SNAPSHOT_TYPE } from '../schema'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { GameMapSnapshotData } from '../types'
+import { captureCanvasSnapshot } from '../../canvases/functions/captureCanvasSnapshot'
+import { captureNoteSnapshot } from '../../notes/functions/captureNoteSnapshot'
+import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapSnapshot'
+import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
@@ -39,7 +41,7 @@ function createEditHistoryEntry(
   })
 }
 
-describe('captureYjsSnapshot', () => {
+describe('captureCanvasSnapshot', () => {
   const t = createTestContext()
 
   it('captures Y.Doc state for a canvas', async () => {
@@ -69,16 +71,14 @@ describe('captureYjsSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureYjsSnapshot,
-      {
-        documentId: canvasId,
-        itemType: SIDEBAR_ITEM_TYPES.canvases,
+    await t.run(async (dbCtx) => {
+      await captureCanvasSnapshot(dbCtx, {
+        canvasId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -104,55 +104,6 @@ describe('captureYjsSnapshot', () => {
       const sv = Y.encodeStateVector(doc)
       expect(sv).toEqual(expectedSV)
       doc.destroy()
-    })
-  })
-
-  it('captures Y.Doc state for a note', async () => {
-    const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    const yjsUpdate = makeYjsUpdate()
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.insert('yjsUpdates', {
-        documentId: noteId,
-        update: yjsUpdate,
-        seq: 0,
-        isSnapshot: true,
-      })
-    })
-
-    const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: noteId,
-      itemType: SIDEBAR_ITEM_TYPES.notes,
-      campaignId: ctx.campaignId,
-      campaignMemberId: ctx.dm.memberId,
-      action: 'content_edited',
-      hasSnapshot: true,
-    })
-
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureYjsSnapshot,
-      {
-        documentId: noteId,
-        itemType: SIDEBAR_ITEM_TYPES.notes,
-        editHistoryId,
-        campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
-      },
-    )
-
-    await t.run(async (dbCtx) => {
-      const snapshot = await dbCtx.db
-        .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
-        .first()
-
-      expect(snapshot).not.toBeNull()
-      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
-      expect(snapshot!.itemId).toBe(noteId)
-      expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.notes)
     })
   })
 
@@ -207,16 +158,14 @@ describe('captureYjsSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureYjsSnapshot,
-      {
-        documentId: canvasId,
-        itemType: SIDEBAR_ITEM_TYPES.canvases,
+    await t.run(async (dbCtx) => {
+      await captureCanvasSnapshot(dbCtx, {
+        canvasId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -232,6 +181,57 @@ describe('captureYjsSnapshot', () => {
       reconstructed.destroy()
 
       expect(reconstructedSV).toEqual(expectedSV)
+    })
+  })
+})
+
+describe('captureNoteSnapshot', () => {
+  const t = createTestContext()
+
+  it('captures Y.Doc state for a note', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const yjsUpdate = makeYjsUpdate()
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('yjsUpdates', {
+        documentId: noteId,
+        update: yjsUpdate,
+        seq: 0,
+        isSnapshot: true,
+      })
+    })
+
+    const editHistoryId = await createEditHistoryEntry(t, {
+      itemId: noteId,
+      itemType: SIDEBAR_ITEM_TYPES.notes,
+      campaignId: ctx.campaignId,
+      campaignMemberId: ctx.dm.memberId,
+      action: 'content_edited',
+      hasSnapshot: true,
+    })
+
+    await t.run(async (dbCtx) => {
+      await captureNoteSnapshot(dbCtx, {
+        noteId,
+        editHistoryId,
+        campaignId: ctx.campaignId,
+        createdBy: ctx.dm.profile._id,
+      })
+    })
+
+    await t.run(async (dbCtx) => {
+      const snapshot = await dbCtx.db
+        .query('documentSnapshots')
+        .withIndex('by_editHistory', (q) =>
+          q.eq('editHistoryId', editHistoryId),
+        )
+        .first()
+
+      expect(snapshot).not.toBeNull()
+      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
+      expect(snapshot!.itemId).toBe(noteId)
+      expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.notes)
     })
   })
 })
@@ -262,15 +262,14 @@ describe('captureGameMapSnapshot', () => {
       metadata: { pinItemName: 'test' },
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureGameMapSnapshot,
-      {
+    await t.run(async (dbCtx) => {
+      await captureGameMapSnapshot(dbCtx, {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -336,15 +335,14 @@ describe('captureGameMapSnapshot', () => {
       metadata: { pinItemName: 'test' },
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureGameMapSnapshot,
-      {
+    await t.run(async (dbCtx) => {
+      await captureGameMapSnapshot(dbCtx, {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -380,15 +378,14 @@ describe('captureGameMapSnapshot', () => {
       await dbCtx.db.delete(mapId)
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureGameMapSnapshot,
-      {
+    await t.run(async (dbCtx) => {
+      await captureGameMapSnapshot(dbCtx, {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -415,15 +412,14 @@ describe('captureGameMapSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureGameMapSnapshot,
-      {
+    await t.run(async (dbCtx) => {
+      await captureGameMapSnapshot(dbCtx, {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -488,15 +484,14 @@ describe('captureGameMapSnapshot', () => {
       metadata: { pinItemName: 'test' },
     })
 
-    await t.mutation(
-      internal.documentSnapshots.internalMutations.captureGameMapSnapshot,
-      {
+    await t.run(async (dbCtx) => {
+      await captureGameMapSnapshot(dbCtx, {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
         createdBy: ctx.dm.profile._id,
-      },
-    )
+      })
+    })
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
