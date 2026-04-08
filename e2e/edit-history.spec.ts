@@ -36,7 +36,8 @@ test.describe.serial('edit history', () => {
     await page.keyboard.type(initialContent)
     await expect(editor).toContainText(initialContent)
 
-    await page.waitForTimeout(3000)
+    await openHistoryPanel(page)
+    await waitForHistoryEntry(page, /edited content/i)
     await page.close()
     await context.close()
   })
@@ -68,7 +69,9 @@ test.describe.serial('edit history', () => {
     await waitForHistoryEntry(page, /created/i)
   })
 
-  test('editing note creates history entry with snapshot', async ({ page }) => {
+  test('history panel shows edited content entry from setup', async ({
+    page,
+  }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
@@ -164,8 +167,6 @@ test.describe.serial('edit history', () => {
     await page.keyboard.press('End')
     await page.keyboard.type(updatedContent)
     await expect(editor).toContainText(updatedContent)
-
-    await page.waitForTimeout(3000)
 
     await openHistoryPanel(page)
     await clickHistoryEntry(page, /edited content/i)

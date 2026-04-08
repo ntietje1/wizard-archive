@@ -315,6 +315,14 @@ describe('game map operations are rollbackable after every operation', () => {
 
         expect(removeEntry).not.toBeNull()
         expect(removeEntry!.hasSnapshot).toBe(true)
+
+        const snapshot = await dbCtx.db
+          .query('documentSnapshots')
+          .withIndex('by_editHistory', (q) =>
+            q.eq('editHistoryId', removeEntry!._id),
+          )
+          .first()
+        expect(snapshot).not.toBeNull()
       })
     } finally {
       vi.useRealTimers()
@@ -361,6 +369,14 @@ describe('game map operations are rollbackable after every operation', () => {
 
         expect(visEntry).not.toBeNull()
         expect(visEntry!.hasSnapshot).toBe(true)
+
+        const snapshot = await dbCtx.db
+          .query('documentSnapshots')
+          .withIndex('by_editHistory', (q) =>
+            q.eq('editHistoryId', visEntry!._id),
+          )
+          .first()
+        expect(snapshot).not.toBeNull()
       })
     } finally {
       vi.useRealTimers()

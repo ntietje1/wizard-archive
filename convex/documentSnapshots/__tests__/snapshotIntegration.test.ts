@@ -261,6 +261,10 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         parentId: null,
       })
 
+      const beforeNote = await t.run(async (dbCtx) => {
+        return await dbCtx.db.get(noteId)
+      })
+
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         documentId: noteId,
         update: makeYjsUpdate(),
@@ -271,6 +275,8 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const note = await dbCtx.db.get(noteId)
         expect(note!.updatedBy).toBe(ctx.dm.profile._id)
+        expect(note!.updatedTime).not.toBeNull()
+        expect(note!.updatedTime).toBeGreaterThan(beforeNote!.updatedTime ?? 0)
       })
     } finally {
       vi.useRealTimers()

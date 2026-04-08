@@ -7,7 +7,6 @@ import {
   setupCampaignContext,
 } from '../../_test/identities.helper'
 import {
-  createCanvas,
   createGameMap,
   createNote,
   createSidebarShare,
@@ -256,9 +255,9 @@ describe('note rollback data integrity', () => {
 
         const doc = new Y.Doc()
         Y.applyUpdate(doc, new Uint8Array(updates[0].update))
-        const sv = Y.encodeStateVector(doc)
+        const fragment = doc.getXmlFragment('document')
+        expect(fragment.toString()).toContain('Original content')
         doc.destroy()
-        expect(sv.length).toBeGreaterThan(0)
       })
     } finally {
       vi.useRealTimers()
@@ -723,9 +722,7 @@ describe('map rollback restores image state', () => {
 
       await t.run(async (dbCtx) => {
         const map = await dbCtx.db.get(mapId)
-        expect(map!.imageStorageId).toBe(
-          (snapshotData.imageStorageId as any) ?? null,
-        )
+        expect(map!.imageStorageId).toBe(snapshotData.imageStorageId ?? null)
       })
     } finally {
       vi.useRealTimers()

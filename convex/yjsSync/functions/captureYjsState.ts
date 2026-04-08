@@ -25,9 +25,9 @@ export async function captureYjsState(
   const doc = await ctx.db.get(documentId)
   if (!doc) return
 
-  const { doc: yDoc } = await reconstructYDoc(ctx, documentId)
-
+  let yDoc: Y.Doc | undefined
   try {
+    ;({ doc: yDoc } = await reconstructYDoc(ctx, documentId))
     const encoded = Y.encodeStateAsUpdate(yDoc)
     await createSnapshot(ctx, {
       itemId: documentId,
@@ -39,6 +39,6 @@ export async function captureYjsState(
       createdBy,
     })
   } finally {
-    yDoc.destroy()
+    yDoc?.destroy()
   }
 }

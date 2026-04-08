@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test'
 export async function openHistoryPanel(page: Page) {
   await page.getByRole('button', { name: /toggle history panel/i }).click()
   await expect(
-    page.getByText(/loading history|no history yet|created/i),
+    page.getByText(/loading history|no history yet|created this item/i),
   ).toBeVisible({ timeout: 10000 })
 }
 

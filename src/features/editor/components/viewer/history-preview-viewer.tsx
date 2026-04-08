@@ -198,11 +198,11 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
           ))}
         </div>
       ) : imageUrl.isLoading ? (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex items-center justify-center min-h-48">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+        <div className="flex items-center justify-center min-h-48 text-muted-foreground">
           Failed to load map image.
         </div>
       )}

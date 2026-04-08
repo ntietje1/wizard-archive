@@ -91,11 +91,15 @@ export const maybeCreateSnapshot = internalMutation({
         noteId: args.documentId as Id<'notes'>,
         ...snapshotArgs,
       })
-    } else {
+    } else if (doc.type === SIDEBAR_ITEM_TYPES.canvases) {
       await captureCanvasSnapshot(ctx, {
         canvasId: args.documentId as Id<'canvases'>,
         ...snapshotArgs,
       })
+    } else {
+      console.warn(
+        `maybeCreateSnapshot: unexpected document type '${(doc as { type: string }).type}' for ${args.documentId}, skipping snapshot`,
+      )
     }
 
     return null

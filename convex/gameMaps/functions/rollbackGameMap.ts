@@ -1,4 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
+import { requireItemAccess } from '../../sidebarItems/validation'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { GameMapSnapshotData } from '../types'
 import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -19,13 +21,23 @@ export async function rollbackGameMap(
     )
   }
 
+  if (!Array.isArray(parsed.pins)) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Invalid game map snapshot: missing or malformed pins array',
+    )
+  }
+
   const mapId = itemId as Id<'gameMaps'>
   const map = await ctx.db.get(mapId)
-  if (!map) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
+  await requireItemAccess(ctx, {
+    rawItem: map,
+    requiredLevel: PERMISSION_LEVEL.EDIT,
+  })
 
   await ctx.db.patch(mapId, {
     imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
-    previewStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+    previewStorageId: null,
   })
 
   const existingPins = await ctx.db
@@ -50,6 +62,15 @@ export async function rollbackGameMap(
     })),
   )
   const validPins = pinTargetChecks.filter((p) => p.exists).map((p) => p.pin)
+  const skippedCount = pinTargetChecks.length - validPins.length
+  if (skippedCount > 0) {
+    const skippedIds = pinTargetChecks
+      .filter((p) => !p.exists)
+      .map((p) => p.pin.itemId)
+    console.warn(
+      `rollbackGameMap: skipped ${skippedCount} pins with missing targets: ${skippedIds.join(', ')}`,
+    )
+  }
 
   await Promise.all(
     validPins.map((pin) =>

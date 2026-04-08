@@ -8,7 +8,7 @@ export function PinMarker({
   icon: LucideIcon
 }) {
   return (
-    <>
+    <div className="relative inline-block">
       <svg
         width="32"
         height="44"
@@ -31,6 +31,6 @@ export function PinMarker({
       <div className="absolute top-[8px] left-1/2 -translate-x-1/2 w-[18px] h-[18px] flex items-center justify-center">
         <Icon className="w-4 h-4 text-primary-foreground" />
       </div>
-    </>
+    </div>
   )
 }

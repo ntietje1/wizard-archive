@@ -232,6 +232,17 @@ describe('captureNoteSnapshot', () => {
       expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
       expect(snapshot!.itemId).toBe(noteId)
       expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.notes)
+
+      const expectedDoc = new Y.Doc()
+      Y.applyUpdate(expectedDoc, new Uint8Array(yjsUpdate))
+      const expectedSV = Y.encodeStateVector(expectedDoc)
+      expectedDoc.destroy()
+
+      const doc = new Y.Doc()
+      Y.applyUpdate(doc, new Uint8Array(snapshot!.data))
+      const sv = Y.encodeStateVector(doc)
+      expect(sv).toEqual(expectedSV)
+      doc.destroy()
     })
   })
 })

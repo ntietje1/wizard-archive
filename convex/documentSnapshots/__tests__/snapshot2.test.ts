@@ -103,7 +103,7 @@ describe('updateMap creates correct number of history entries', () => {
     expect(imageEntry).toBeDefined()
   })
 
-  it('changing name and image should create exactly 2 history entries', async () => {
+  it('changing name and image should create a single merged history entry', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 

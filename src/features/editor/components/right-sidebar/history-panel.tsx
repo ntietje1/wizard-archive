@@ -142,7 +142,11 @@ function groupByDay(
 const PAGE_SIZE = 20
 
 export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
-  const { results, status, loadMore } = useAuthPaginatedQuery(
+  const {
+    results = [],
+    status,
+    loadMore,
+  } = useAuthPaginatedQuery(
     api.editHistory.queries.getItemHistory,
     { itemId },
     { initialNumItems: PAGE_SIZE },
@@ -179,7 +183,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
     return map
   }, [membersQuery.data])
 
-  const entries = (results ?? []) as Array<EditHistoryEntry>
+  const entries = results as Array<EditHistoryEntry>
   const dayGroups = groupByDay(entries)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -245,14 +249,16 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                 ? description
                 : [description]
 
+              const isInteractiveContainer = hasSnapshot && !canEdit
+
               return (
                 <div
                   key={entry._id}
-                  role={hasSnapshot ? 'button' : undefined}
-                  tabIndex={hasSnapshot ? 0 : undefined}
-                  aria-pressed={hasSnapshot ? isSelected : undefined}
+                  role={isInteractiveContainer ? 'button' : undefined}
+                  tabIndex={isInteractiveContainer ? 0 : undefined}
+                  aria-pressed={isInteractiveContainer ? isSelected : undefined}
                   className={cn(
-                    'flex items-start gap-2.5 px-3 py-2',
+                    'relative flex items-start gap-2.5 px-3 py-2',
                     hasSnapshot
                       ? 'cursor-pointer hover:bg-muted/50'
                       : 'hover:bg-muted/30',
@@ -260,12 +266,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       'bg-accent shadow-[inset_2px_0_0_0_var(--primary)]',
                   )}
                   onClick={
-                    hasSnapshot
+                    isInteractiveContainer
                       ? () => setPreviewingEntry(isSelected ? null : entry._id)
                       : undefined
                   }
                   onKeyDown={
-                    hasSnapshot
+                    isInteractiveContainer
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
@@ -275,6 +281,24 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       : undefined
                   }
                 >
+                  {hasSnapshot && canEdit && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isSelected}
+                      aria-label="Preview this version"
+                      className="absolute inset-0"
+                      onClick={() =>
+                        setPreviewingEntry(isSelected ? null : entry._id)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setPreviewingEntry(isSelected ? null : entry._id)
+                        }
+                      }}
+                    />
+                  )}
                   <Avatar size="sm" className="mt-0.5 shrink-0">
                     {member?.imageUrl && <AvatarImage src={member.imageUrl} />}
                     <AvatarFallback>{initials}</AvatarFallback>
@@ -316,13 +340,10 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       type="button"
                       aria-label="Restore this version"
                       className={cn(
-                        'mt-0.5 shrink-0 h-6 w-6 flex items-center justify-center rounded-md',
+                        'relative z-10 mt-0.5 shrink-0 h-6 w-6 flex items-center justify-center rounded-md',
                         'text-muted-foreground hover:text-foreground hover:bg-muted',
                       )}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setRollbackEntryId(entry._id)
-                      }}
+                      onClick={() => setRollbackEntryId(entry._id)}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>

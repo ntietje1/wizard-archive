@@ -25,6 +25,7 @@ export async function captureGameMapSnapshot(
     ctx.db
       .query('mapPins')
       .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+      .order('asc')
       .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect(),
   ])
@@ -38,21 +39,33 @@ export async function captureGameMapSnapshot(
 
   const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
 
+  const validPins: Array<{
+    pin: (typeof pins)[number]
+    item: NonNullable<(typeof pinItems)[number]>
+  }> = []
+  for (let i = 0; i < pins.length; i++) {
+    const item = pinItems[i]
+    if (!item) {
+      console.warn(
+        `captureGameMapSnapshot: pin target ${pins[i].itemId} not found for map ${mapId}, skipping`,
+      )
+      continue
+    }
+    validPins.push({ pin: pins[i], item })
+  }
+
   const snapshotData: GameMapSnapshotData = {
     imageStorageId: map.imageStorageId,
-    pins: pins.map((pin, i) => {
-      const item = pinItems[i]
-      return {
-        itemId: pin.itemId,
-        x: pin.x,
-        y: pin.y,
-        visible: pin.visible,
-        name: item?.name ?? null,
-        color: item?.color ?? null,
-        iconName: item?.iconName ?? null,
-        itemType: item?.type ?? null,
-      }
-    }),
+    pins: validPins.map(({ pin, item }) => ({
+      itemId: pin.itemId,
+      x: pin.x,
+      y: pin.y,
+      visible: pin.visible,
+      name: item.name ?? null,
+      color: item.color ?? null,
+      iconName: item.iconName ?? null,
+      itemType: item.type ?? null,
+    })),
   }
 
   const json = JSON.stringify(snapshotData)

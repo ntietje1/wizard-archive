@@ -31,38 +31,53 @@ export function RollbackConfirmDialog() {
   )
 
   const handleRestore = async () => {
-    if (!rollbackEntryId) return
-    setRollbackEntryId(null)
+    if (!rollbackEntryId || rollback.isPending) return
     try {
       await rollback.mutateAsync({ editHistoryId: rollbackEntryId })
       clearPreview()
       toast.success('Version restored')
     } catch (error) {
       handleError(error, 'Failed to restore version')
+    } finally {
+      setRollbackEntryId(null)
     }
   }
 
   const entryTime = historyEntry.data?._creationTime
+  const isReady = !historyEntry.isLoading && !!historyEntry.data
 
   return (
     <AlertDialog
       open={rollbackEntryId !== null}
       onOpenChange={(open) => {
-        if (!open) setRollbackEntryId(null)
+        if (!open && !rollback.isPending) setRollbackEntryId(null)
       }}
     >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Restore this version?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will restore the document to its state from{' '}
-            {entryTime ? formatRelativeTime(entryTime) : ''}. The current
-            content will be preserved in the edit history.
+            {isReady ? (
+              <>
+                This will restore the document to its state from{' '}
+                {formatRelativeTime(entryTime!)}. The current content will be
+                preserved in the edit history.
+              </>
+            ) : (
+              'Loading version details\u2026'
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleRestore}>Restore</AlertDialogAction>
+          <AlertDialogCancel disabled={rollback.isPending}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleRestore}
+            disabled={!isReady || rollback.isPending}
+          >
+            {rollback.isPending ? 'Restoring\u2026' : 'Restore'}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
