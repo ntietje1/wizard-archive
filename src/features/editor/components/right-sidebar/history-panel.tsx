@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import { Loader2, RotateCcw } from 'lucide-react'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignMember } from 'convex/campaigns/types'
 import type { EditHistoryEntry } from 'convex/editHistory/types'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -160,28 +156,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
   const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
 
-  const membersMap = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        name: string
-        imageUrl: string | null
-        imageStorageId: Id<'_storage'> | null
-      }
-    >()
-    if (membersQuery.data) {
-      for (const m of membersQuery.data) {
-        map.set(m._id, {
-          name:
-            m.userProfile.name ??
-            (m.userProfile.username ? `@${m.userProfile.username}` : 'Unknown'),
-          imageUrl: m.userProfile.imageUrl,
-          imageStorageId: m.userProfile.imageStorageId,
-        })
-      }
+  const membersMap = new Map<string, CampaignMember>()
+  if (membersQuery.data) {
+    for (const m of membersQuery.data) {
+      membersMap.set(m._id, m)
     }
-    return map
-  }, [membersQuery.data])
+  }
 
   const entries = results as Array<EditHistoryEntry>
   const dayGroups = groupByDay(entries)
@@ -231,17 +211,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
             </div>
             {group.entries.map((entry) => {
               const member = membersMap.get(entry.campaignMemberId)
+              const profile = member?.userProfile
               const isCurrentUser = entry.campaignMemberId === myMemberId
               const displayName = isCurrentUser
                 ? 'You'
-                : (member?.name ?? 'Unknown')
-              const initials = (member?.name ?? '?')
-                .split(' ')
-                .map((w) => w[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase()
-
+                : (profile?.name ??
+                  (profile?.username ? `@${profile.username}` : 'Unknown'))
               const description = formatActionDescription(entry)
               const isSelected = previewingEntryId === entry._id
               const hasSnapshot = entry.hasSnapshot
@@ -299,10 +274,12 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       }}
                     />
                   )}
-                  <Avatar size="sm" className="mt-0.5 shrink-0">
-                    {member?.imageUrl && <AvatarImage src={member.imageUrl} />}
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
+                  <UserProfileImage
+                    imageUrl={profile?.imageUrl}
+                    name={profile?.name}
+                    size="sm"
+                    className="mt-0.5 shrink-0"
+                  />
                   <div className="min-w-0 flex-1">
                     {descriptions.length === 1 ? (
                       <p className="text-sm leading-snug">
