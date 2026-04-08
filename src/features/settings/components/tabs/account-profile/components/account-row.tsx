@@ -7,14 +7,9 @@ import type { UserProfile } from 'convex/users/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useFileUpload } from '~/features/file-upload/hooks/useFileUpload'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
-import { getInitials } from '~/shared/utils/get-initials'
 
 export function AccountRow({ profile }: { profile: UserProfile }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -85,14 +80,12 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
       >
-        <Avatar className="!size-12">
-          {profile.imageUrl && (
-            <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
-          )}
-          <AvatarFallback>
-            {getInitials(profile.name, profile.email)}
-          </AvatarFallback>
-        </Avatar>
+        <UserProfileImage
+          imageUrl={profile.imageUrl}
+          name={profile.name}
+          email={profile.email}
+          size="sm"
+        />
         <div className="absolute inset-0 flex items-center justify-center rounded-full bg-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">
           {isUploading ? (
             <Loader2 className="size-4 text-primary-foreground animate-spin" />

@@ -34,8 +34,9 @@ export async function onCreateUser(
     email: user.email ?? null,
     emailVerified: user.emailVerified ?? null,
     name: user.name ?? null,
-    imageUrl: user.image ?? null,
-    imageStorageId: null,
+    profileImage: user.image
+      ? { type: 'external' as const, url: user.image }
+      : null,
     twoFactorEnabled: user.twoFactorEnabled ?? null,
   })
 }

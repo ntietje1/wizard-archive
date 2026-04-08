@@ -1,4 +1,5 @@
 import type { MutationCtx } from '../../_generated/server'
+import type { ProfileImage } from '../../users/types'
 
 type AuthUserDoc = {
   _id: string
@@ -25,14 +26,22 @@ export async function onUpdateUser(
     name: string | null
     email: string | null
     emailVerified: boolean | null
-    imageUrl: string | null
+    profileImage: ProfileImage | null
     twoFactorEnabled: boolean | null
   }> = {}
   if (newUser.name !== oldUser.name) updates.name = newUser.name
   if (newUser.email !== oldUser.email) updates.email = newUser.email
   if (newUser.emailVerified !== oldUser.emailVerified)
     updates.emailVerified = newUser.emailVerified
-  if (newUser.image !== oldUser.image) updates.imageUrl = newUser.image ?? null
+  // Only update profile image from OAuth if user hasn't uploaded their own
+  if (newUser.image !== oldUser.image) {
+    const hasUserUpload = profile.profileImage?.type === 'storage'
+    if (!hasUserUpload) {
+      updates.profileImage = newUser.image
+        ? { type: 'external', url: newUser.image }
+        : null
+    }
+  }
   if (newUser.twoFactorEnabled !== oldUser.twoFactorEnabled)
     updates.twoFactorEnabled = newUser.twoFactorEnabled ?? null
 

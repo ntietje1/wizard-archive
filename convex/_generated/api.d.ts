@@ -190,6 +190,7 @@ import type * as userPreferences_types from "../userPreferences/types.js";
 import type * as users_constants from "../users/constants.js";
 import type * as users_functions_checkUsernameExists from "../users/functions/checkUsernameExists.js";
 import type * as users_functions_getUserProfile from "../users/functions/getUserProfile.js";
+import type * as users_migrations from "../users/migrations.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_types from "../users/types.js";
@@ -397,6 +398,7 @@ declare const fullApi: ApiFromModules<{
   "users/constants": typeof users_constants;
   "users/functions/checkUsernameExists": typeof users_functions_checkUsernameExists;
   "users/functions/getUserProfile": typeof users_functions_getUserProfile;
+  "users/migrations": typeof users_migrations;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/types": typeof users_types;

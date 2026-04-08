@@ -1,6 +1,7 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import {
+  getUserProfileById,
   getUserProfileByUserId,
   getUserProfileByUsername,
 } from '../../users/functions/getUserProfile'
@@ -33,7 +34,7 @@ async function enhanceCampaign(
   { campaign }: { campaign: CampaignFromDb },
 ): Promise<Campaign> {
   const [dmUserProfile, playerCount] = await Promise.all([
-    ctx.db.get(campaign.dmUserId),
+    getUserProfileById(ctx, { profileId: campaign.dmUserId }),
     countAcceptedPlayers(ctx, { campaignId: campaign._id }),
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')

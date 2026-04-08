@@ -44,8 +44,10 @@ export async function createUserProfile(
     email: string | null
     emailVerified: boolean | null
     name: string | null
-    imageUrl: string | null
-    imageStorageId: Id<'_storage'> | null
+    profileImage:
+      | { type: 'external'; url: string }
+      | { type: 'storage'; storageId: Id<'_storage'> }
+      | null
     twoFactorEnabled: boolean | null
   }>,
 ) {
@@ -56,8 +58,7 @@ export async function createUserProfile(
     email: `user-${n}@test.com`,
     emailVerified: null,
     name: `Test User ${n}`,
-    imageUrl: null,
-    imageStorageId: null,
+    profileImage: null,
     twoFactorEnabled: null,
   }
   const data = { ...defaults, ...overrides }

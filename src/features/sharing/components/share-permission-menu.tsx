@@ -14,18 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/features/shadcn/components/select'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
+import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '~/features/shadcn/components/tooltip'
 import { Switch } from '~/features/shadcn/components/switch'
-import { getInitials } from '~/shared/utils/get-initials'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
 
@@ -238,14 +234,12 @@ function DmRow({ profile }: { profile: UserProfile }) {
       text="DMs always have full access"
       className="flex items-center gap-2.5 px-1 py-1.5"
     >
-      <Avatar size="sm">
-        {profile.imageUrl && (
-          <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
-        )}
-        <AvatarFallback>
-          {getInitials(profile.name, profile.email)}
-        </AvatarFallback>
-      </Avatar>
+      <UserProfileImage
+        imageUrl={profile.imageUrl}
+        name={profile.name}
+        email={profile.email}
+        size="sm"
+      />
       <div className="flex flex-col flex-1 min-w-0 select-none">
         <span className="text-sm font-medium truncate">
           {getDisplayName(profile)}
@@ -295,14 +289,12 @@ function PlayerRow({
       text={infoText}
       className="flex items-center gap-2.5 px-1 py-1.5 select-none"
     >
-      <Avatar size="sm">
-        {profile.imageUrl && (
-          <AvatarImage src={profile.imageUrl} alt={getDisplayName(profile)} />
-        )}
-        <AvatarFallback>
-          {getInitials(profile.name, profile.email)}
-        </AvatarFallback>
-      </Avatar>
+      <UserProfileImage
+        imageUrl={profile.imageUrl}
+        name={profile.name}
+        email={profile.email}
+        size="sm"
+      />
       <div className="flex flex-col flex-1 min-w-0">
         <span className="text-sm font-medium truncate">
           {getDisplayName(profile)}
@@ -446,17 +438,14 @@ function AvatarStack({ members }: { members: Array<CampaignMember> }) {
   return (
     <div className="flex items-center -space-x-2">
       {members.slice(0, 3).map((member) => (
-        <Avatar key={member._id} size="sm" className="ring-2 ring-background">
-          {member.userProfile.imageUrl && (
-            <AvatarImage
-              src={member.userProfile.imageUrl}
-              alt={getDisplayName(member.userProfile)}
-            />
-          )}
-          <AvatarFallback>
-            {getInitials(member.userProfile.name, member.userProfile.email)}
-          </AvatarFallback>
-        </Avatar>
+        <UserProfileImage
+          key={member._id}
+          imageUrl={member.userProfile.imageUrl}
+          name={member.userProfile.name}
+          email={member.userProfile.email}
+          size="sm"
+          className="ring-2 ring-background"
+        />
       ))}
       {members.length > 3 && (
         <Avatar size="sm" className="ring-2 ring-background">
