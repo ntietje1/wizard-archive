@@ -21,9 +21,15 @@ export async function updatePinVisibility(
     logger.warn(`Pin ${mapPinId} references missing item ${pin.itemId}`)
   }
 
+  const now = Date.now()
   await ctx.db.patch(mapPinId, {
     visible,
-    updatedTime: Date.now(),
+    updatedTime: now,
+    updatedBy: ctx.user.profile._id,
+  })
+
+  await ctx.db.patch(map._id, {
+    updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })
 

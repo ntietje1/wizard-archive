@@ -207,7 +207,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
 
         {dayGroups.map((group) => (
           <div key={group.label}>
-            <div className="sticky top-0 bg-background/95 backdrop-blur-sm px-3 py-1.5 border-b border-border/50">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-3 py-1.5 border-b border-border/50">
               <span className="text-xs font-medium text-muted-foreground">
                 {group.label}
               </span>
@@ -306,6 +306,11 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                       onClick={(e) => {
                         e.stopPropagation()
                         setRollbackEntryId(entry._id)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation()
+                        }
                       }}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />

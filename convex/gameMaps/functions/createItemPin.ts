@@ -97,14 +97,13 @@ export async function createItemPin(
       campaignId: mapFromDb.campaignId,
       createdBy: profileId,
     })
+    await ctx.db.patch(editHistoryId, { hasSnapshot: true })
   } catch (error) {
     logger.warn(
       `createItemPin: failed to capture snapshot for map ${mapId}`,
       error,
     )
   }
-
-  await ctx.db.patch(editHistoryId, { hasSnapshot: true })
 
   return pinId
 }
