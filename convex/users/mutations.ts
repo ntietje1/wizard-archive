@@ -54,11 +54,8 @@ export const updateProfileImage = authMutation({
       )
     }
 
-    // Clear external imageUrl (e.g. from OAuth) in favor of the storage file.
-    // The URL is resolved at query time via resolveProfileImageUrl.
     await ctx.db.patch(ctx.user.profile._id, {
-      imageStorageId: args.storageId,
-      imageUrl: null,
+      profileImage: { type: 'storage', storageId: args.storageId },
     })
     return null
   },

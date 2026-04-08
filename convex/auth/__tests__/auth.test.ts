@@ -137,8 +137,10 @@ describe('onCreateUser', () => {
     expect(profile!.email).toBe('full@example.com')
     expect(profile!.emailVerified).toBe(true)
     expect(profile!.name).toBe('Full User')
-    expect(profile!.imageUrl).toBe('https://example.com/avatar.png')
-    expect(profile!.imageStorageId).toBeNull()
+    expect(profile!.profileImage).toEqual({
+      type: 'external',
+      url: 'https://example.com/avatar.png',
+    })
     expect(profile!.twoFactorEnabled).toBe(true)
   })
 })

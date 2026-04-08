@@ -1,13 +1,22 @@
 import type { QueryCtx } from '../../_generated/server'
-import type { UserProfile } from '../types'
+import type { Id } from '../../_generated/dataModel'
+import type { UserProfile, UserProfileFromDb } from '../types'
 
-async function resolveProfileImageUrl(
+async function enhanceProfile(
   ctx: QueryCtx,
-  profile: UserProfile,
+  profile: UserProfileFromDb,
 ): Promise<UserProfile> {
-  if (!profile.imageStorageId) return profile
-  const url = await ctx.storage.getUrl(profile.imageStorageId)
-  return { ...profile, imageUrl: url ?? null }
+  let imageUrl: string | null = null
+  if (profile.profileImage) {
+    if (profile.profileImage.type === 'external') {
+      imageUrl = profile.profileImage.url
+    } else {
+      imageUrl =
+        (await ctx.storage.getUrl(profile.profileImage.storageId)) ?? null
+    }
+  }
+  const { profileImage: _, ...rest } = profile
+  return { ...rest, imageUrl }
 }
 
 export async function getUserProfileByUserId(
@@ -19,7 +28,7 @@ export async function getUserProfileByUserId(
     .withIndex('by_user', (q) => q.eq('authUserId', userId))
     .unique()
   if (!profile) return null
-  return resolveProfileImageUrl(ctx, profile)
+  return enhanceProfile(ctx, profile)
 }
 
 export async function getUserProfileByUsername(
@@ -31,5 +40,14 @@ export async function getUserProfileByUsername(
     .withIndex('by_username', (q) => q.eq('username', username))
     .unique()
   if (!profile) return null
-  return resolveProfileImageUrl(ctx, profile)
+  return enhanceProfile(ctx, profile)
+}
+
+export async function getUserProfileById(
+  ctx: QueryCtx,
+  { profileId }: { profileId: Id<'userProfiles'> },
+): Promise<UserProfile | null> {
+  const profile = await ctx.db.get(profileId)
+  if (!profile) return null
+  return enhanceProfile(ctx, profile)
 }

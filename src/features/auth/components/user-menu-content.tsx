@@ -6,7 +6,6 @@ import { authClient } from '~/features/auth/utils/auth-client'
 import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
 import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { getInitials } from '~/shared/utils/get-initials'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
 import {
   AccountRow,
@@ -69,7 +68,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
           name={profile.name}
           subtitle={`@${profile.username}`}
           imageUrl={profile.imageUrl}
-          fallback={getInitials(profile.name, profile.email)}
+          email={profile.email}
         />
       </div>
 
