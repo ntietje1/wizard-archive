@@ -12,8 +12,15 @@ export default defineConfig([
   },
   {
     files: ['convex/**/*.{ts,tsx}'],
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off',
+    },
     languageOptions: {
       parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       '@convex-dev': convexPlugin,
@@ -24,7 +31,7 @@ export default defineConfig([
       '@convex-dev/require-args-validator': 'error',
       '@convex-dev/import-wrong-runtime': 'error',
       '@convex-dev/no-collect-in-query': 'warn',
-      '@convex-dev/explicit-table-ids': 'off',
+      '@convex-dev/explicit-table-ids': 'error',
     },
   },
 ])
