@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
 import { logger } from '~/shared/utils/logger'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
-import { getInitials } from '~/shared/utils/get-initials'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 type AccountSwitcherProps = {
   otherAccounts: Array<DeviceSession>
@@ -22,21 +17,18 @@ export function AccountRow({
   name,
   subtitle,
   imageUrl,
-  fallback,
+  email,
   rightSlot,
 }: {
   name?: string | null
   subtitle: string
   imageUrl?: string | null
-  fallback: string
+  email?: string | null
   rightSlot?: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-2.5 w-full">
-      <Avatar size="default">
-        {imageUrl && <AvatarImage src={imageUrl} alt={name ?? ''} />}
-        <AvatarFallback>{fallback}</AvatarFallback>
-      </Avatar>
+      <UserProfileImage imageUrl={imageUrl} name={name} email={email} />
       <div className="flex flex-col min-w-0 flex-1">
         {name && <span className="text-sm font-medium truncate">{name}</span>}
         <span className="text-xs text-muted-foreground truncate">
@@ -96,7 +88,7 @@ export function AccountSwitcher({
               name={ds.user.name}
               subtitle={ds.user.email}
               imageUrl={ds.user.image}
-              fallback={getInitials(ds.user.name, ds.user.email)}
+              email={ds.user.email}
               rightSlot={
                 isSwitching ? (
                   <Loader2 className="size-3.5 animate-spin shrink-0" />

@@ -14,6 +14,8 @@ import {
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { editorSchema } from '../editorSpecs'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
@@ -92,5 +94,13 @@ export async function createNote(
   }
 
   await createYjsDocument(ctx, { documentId: noteId, initialState })
+
+  await logEditHistory(ctx, {
+    itemId: noteId,
+    itemType: SIDEBAR_ITEM_TYPES.notes,
+    campaignId,
+    action: EDIT_HISTORY_ACTION.created,
+  })
+
   return { noteId, slug: uniqueSlug }
 }

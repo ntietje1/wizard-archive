@@ -1,23 +1,12 @@
 import type { CampaignMember } from 'convex/campaigns/types'
-import { getInitials } from '~/shared/utils/get-initials'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 export function MemberAvatar({ member }: { member: CampaignMember }) {
   return (
-    <Avatar>
-      {member.userProfile.imageUrl && (
-        <AvatarImage
-          src={member.userProfile.imageUrl}
-          alt={member.userProfile.name ?? ''}
-        />
-      )}
-      <AvatarFallback>
-        {getInitials(member.userProfile.name, member.userProfile.email)}
-      </AvatarFallback>
-    </Avatar>
+    <UserProfileImage
+      imageUrl={member.userProfile.imageUrl}
+      name={member.userProfile.name}
+      email={member.userProfile.email}
+    />
   )
 }

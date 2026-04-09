@@ -5,12 +5,7 @@ import type { DeviceSession } from '~/features/auth/utils/device-sessions'
 import { handleError } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
-import { getInitials } from '~/shared/utils/get-initials'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 type AccountPickerProps = {
   sessions: Array<DeviceSession>
@@ -62,14 +57,12 @@ export function AccountPicker({
               onClick={() => handleSwitch(ds)}
               disabled={!!switchingToken}
             >
-              <Avatar size="sm">
-                {ds.user.image && (
-                  <AvatarImage src={ds.user.image} alt={ds.user.name} />
-                )}
-                <AvatarFallback>
-                  {getInitials(ds.user.name, ds.user.email)}
-                </AvatarFallback>
-              </Avatar>
+              <UserProfileImage
+                imageUrl={ds.user.image}
+                name={ds.user.name}
+                email={ds.user.email}
+                size="sm"
+              />
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate">
                   {ds.user.name}

@@ -10,6 +10,8 @@ import {
 } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -75,6 +77,13 @@ export async function createCanvas(
   doc.destroy()
 
   await createYjsDocument(ctx, { documentId: canvasId, initialState })
+
+  await logEditHistory(ctx, {
+    itemId: canvasId,
+    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    campaignId,
+    action: EDIT_HISTORY_ACTION.created,
+  })
 
   return { canvasId, slug: uniqueSlug }
 }

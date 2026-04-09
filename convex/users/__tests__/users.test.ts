@@ -52,9 +52,10 @@ describe('getUserProfile', () => {
     expect(result).toHaveProperty('email')
     expect(result).toHaveProperty('name')
     expect(result).toHaveProperty('imageUrl')
-    expect(result).toHaveProperty('imageStorageId')
     expect(result).toHaveProperty('twoFactorEnabled')
     expect(result).toHaveProperty('emailVerified')
+    expect(result).not.toHaveProperty('profileImage')
+    expect(result).not.toHaveProperty('imageStorageId')
   })
 })
 
@@ -283,6 +284,6 @@ describe('updateProfileImage', () => {
     await authed.mutation(api.users.mutations.updateProfileImage, { storageId })
 
     const updated = await authed.query(api.users.queries.getUserProfile, {})
-    expect(updated!.imageStorageId).toBe(storageId)
+    expect(updated!.imageUrl).toEqual(expect.any(String))
   })
 })

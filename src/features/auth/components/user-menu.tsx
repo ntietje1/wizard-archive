@@ -1,11 +1,8 @@
 import { useState, useSyncExternalStore } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
+import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
+import { UserProfileImage } from '~/shared/components/user-profile-image'
 import {
   Popover,
   PopoverContent,
@@ -14,7 +11,6 @@ import {
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { getInitials } from '~/shared/utils/get-initials'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 
 const avatarButtonClassName = cn(
@@ -51,14 +47,12 @@ function UserMenuBase() {
         nativeButton
         render={
           <button className={avatarButtonClassName} aria-label="User menu">
-            <Avatar size="sm">
-              {profile.imageUrl && (
-                <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
-              )}
-              <AvatarFallback>
-                {getInitials(profile.name, profile.email)}
-              </AvatarFallback>
-            </Avatar>
+            <UserProfileImage
+              imageUrl={profile.imageUrl}
+              name={profile.name}
+              email={profile.email}
+              size="sm"
+            />
           </button>
         }
       />

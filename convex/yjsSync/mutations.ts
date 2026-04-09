@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { authMutation, requireCampaignMembership } from '../functions'
 import { internal } from '../_generated/api'
 import { yjsDocumentIdValidator } from './schema'
 import {
@@ -7,6 +7,7 @@ import {
   checkYjsWriteAccess,
 } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
+import { SNAPSHOT_IDLE_MS } from './constants'
 
 export const pushUpdate = authMutation({
   args: {
@@ -15,7 +16,7 @@ export const pushUpdate = authMutation({
   },
   returns: v.object({ seq: v.number() }),
   handler: async (ctx, { documentId, update }) => {
-    await checkYjsWriteAccess(ctx, documentId)
+    const doc = await checkYjsWriteAccess(ctx, documentId)
 
     const latest = await ctx.db
       .query('yjsUpdates')
@@ -39,6 +40,20 @@ export const pushUpdate = authMutation({
         { documentId },
       )
     }
+
+    const { membership } = await requireCampaignMembership(ctx, doc.campaignId)
+
+    await ctx.scheduler.runAfter(
+      SNAPSHOT_IDLE_MS,
+      internal.yjsSync.internalMutations.maybeCreateSnapshot,
+      {
+        documentId,
+        triggerSeq: seq,
+        campaignId: doc.campaignId,
+        campaignMemberId: membership._id,
+        createdBy: ctx.user.profile._id,
+      },
+    )
 
     return { seq }
   },

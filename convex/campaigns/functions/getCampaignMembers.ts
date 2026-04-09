@@ -1,5 +1,6 @@
 import { requireCampaignMembership } from '../../functions'
 import { logger } from '../../common/logger'
+import { getUserProfileById } from '../../users/functions/getUserProfile'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { UserProfile } from '../../users/types'
@@ -18,7 +19,9 @@ export async function getCampaignMembers(
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await Promise.all(
     members.map(async (member) => {
-      const profile = await ctx.db.get(member.userId)
+      const profile = await getUserProfileById(ctx, {
+        profileId: member.userId,
+      })
       if (profile) profilesByUserId.set(member.userId, profile)
     }),
   )

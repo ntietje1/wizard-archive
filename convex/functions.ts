@@ -1,6 +1,7 @@
 import { mutationGeneric, queryGeneric } from 'convex/server'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
 import { ERROR_CODE, throwClientError } from './errors'
+import { getUserProfileById } from './users/functions/getUserProfile'
 import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
 import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
@@ -51,9 +52,14 @@ async function checkMembership(
       ERROR_CODE.PERMISSION_DENIED,
       "You don't have access to this campaign",
     )
+  const userProfile = await getUserProfileById(ctx, {
+    profileId: ctx.user.profile._id,
+  })
+  if (!userProfile)
+    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return {
     campaign,
-    membership: { ...member, userProfile: ctx.user.profile },
+    membership: { ...member, userProfile },
   }
 }
 

@@ -14,7 +14,6 @@ export function createUser(overrides?: Partial<UserProfile>): UserProfile {
     emailVerified: true,
     name: `Test User ${userCounter}`,
     imageUrl: null,
-    imageStorageId: null,
     twoFactorEnabled: false,
     ...overrides,
   }
