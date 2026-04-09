@@ -29,6 +29,14 @@ const SidebarItemEditor = lazy(() =>
   })),
 )
 
+function EditorLoading() {
+  return (
+    <div className="flex-1 min-h-0 flex items-center justify-center">
+      <LoadingSpinner size="lg" />
+    </div>
+  )
+}
+
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
@@ -44,11 +52,7 @@ export function EditorContent() {
     })
 
   if (isLoading) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
+    return <EditorLoading />
   }
 
   // Show trash page when ?trash=true and no specific item selected
@@ -64,7 +68,7 @@ export function EditorContent() {
   }
 
   return (
-    <Suspense>
+    <Suspense fallback={<EditorLoading />}>
       <SidebarItemEditor item={item} search={editorSearch} />
     </Suspense>
   )
