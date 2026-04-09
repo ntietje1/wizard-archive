@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/routes/**/*.{ts,tsx}",
+    "convex/**/*.ts",
+    "e2e/**/*.ts"
+  ],
+  "ignorePatterns": [
+    "src/features/shadcn/**",
+    "convex/_generated/**"
+  ],
+  "ignoreDependencies": [
+    "@eslint/js",
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser",
+    "eslint-plugin-react",
+    "globals",
+    "autoprefixer",
+    "lint-staged",
+    "cmdk",
+    "color",
+    "embla-carousel-react",
+    "react-day-picker",
+    "recharts",
+    "vaul",
+    "@types/color",
+    "tw-animate-css"
+  ],
+  "rules": {
+    "unused-files": "warn",
+    "unused-exports": "warn",
+    "unused-dependencies": "warn",
+    "unused-types": "warn"
+  }
+}

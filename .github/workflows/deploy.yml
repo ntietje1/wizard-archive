@@ -13,6 +13,18 @@ env:
   NODE_VERSION: 22
 
 jobs:
+  fallow:
+    name: Fallow (full scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: true
+      - run: vp install --frozen-lockfile
+      - run: vp run fallow
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
