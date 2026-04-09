@@ -38,10 +38,7 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
             key={`remote-${user.clientId}`}
             d={d}
             fill={user.drawing.color}
-            opacity={
-              ((user.drawing.opacity ?? 100) / 100) *
-              REMOTE_STROKE_OPACITY_MULTIPLIER
-            }
+            opacity={((user.drawing.opacity ?? 100) / 100) * REMOTE_STROKE_OPACITY_MULTIPLIER}
           />
         )
       })}

@@ -1,12 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 
-export function PinMarker({
-  color,
-  icon: Icon,
-}: {
-  color: string
-  icon: LucideIcon
-}) {
+export function PinMarker({ color, icon: Icon }: { color: string; icon: LucideIcon }) {
   return (
     <div className="relative inline-block">
       <svg

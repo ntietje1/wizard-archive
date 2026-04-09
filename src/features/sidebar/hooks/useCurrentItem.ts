@@ -32,9 +32,7 @@ export function useCurrentItem() {
   const item = isStale ? null : rawItem
 
   const queryReturnedNull =
-    rawItem === null &&
-    sidebarItemQuery.status === 'success' &&
-    !sidebarItemQuery.isFetching
+    rawItem === null && sidebarItemQuery.status === 'success' && !sidebarItemQuery.isFetching
 
   const hasRequestedItem = slug !== null
   const isLoading = hasRequestedItem && !item && !queryReturnedNull

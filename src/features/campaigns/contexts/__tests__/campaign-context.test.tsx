@@ -23,10 +23,7 @@ vi.mock('@tanstack/react-router', () => ({
   }),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  Link: ({
-    children,
-    ...props
-  }: Record<string, unknown> & { children?: ReactNode }) =>
+  Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) =>
     createElement('a', { href: props.to, ...props }, children),
   useRouter: () => ({ navigate: vi.fn() }),
 }))
@@ -127,9 +124,7 @@ describe('CampaignProvider', () => {
   })
 
   it('does not render children on query error', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(
-      mockAuthQueryError(new Error('Not found')),
-    )
+    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQueryError(new Error('Not found')))
 
     render(
       <TestWrapper>

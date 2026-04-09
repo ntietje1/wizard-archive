@@ -16,10 +16,8 @@ import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function CampaignsContent() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
-  const [editingCampaignId, setEditingCampaignId] =
-    useState<Id<'campaigns'> | null>(null)
-  const [deletingCampaignId, setDeletingCampaignId] =
-    useState<Id<'campaigns'> | null>(null)
+  const [editingCampaignId, setEditingCampaignId] = useState<Id<'campaigns'> | null>(null)
+  const [deletingCampaignId, setDeletingCampaignId] = useState<Id<'campaigns'> | null>(null)
 
   const campaigns = useAuthQuery(api.campaigns.queries.getUserCampaigns, {})
 

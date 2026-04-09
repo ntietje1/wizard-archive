@@ -71,9 +71,7 @@ export function ContentCard({
           <div className="flex-1 pr-20">
             <div className="flex items-center gap-2 mb-1">
               {Icon && <Icon className="w-8 h-8 text-primary select-none" />}
-              <CardTitle
-                className={`text-lg text-foreground line-clamp-1 select-none`}
-              >
+              <CardTitle className={`text-lg text-foreground line-clamp-1 select-none`}>
                 {title}
               </CardTitle>
             </div>
@@ -95,9 +93,7 @@ export function ContentCard({
       {(description || footer) && (
         <CardContent className="pt-0">
           {description && (
-            <CardDescription className="line-clamp-3 mb-3">
-              {description}
-            </CardDescription>
+            <CardDescription className="line-clamp-3 mb-3">{description}</CardDescription>
           )}
           {footer}
         </CardContent>

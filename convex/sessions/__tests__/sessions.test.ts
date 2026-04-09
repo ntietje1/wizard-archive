@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-  setupUser,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/identities.helper'
 import {
   expectConflict,
   expectNotFound,
@@ -20,10 +15,9 @@ describe('startSession', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
     expect(sessionId).toBeDefined()
 
@@ -43,15 +37,14 @@ describe('startSession', () => {
       name: 'Session 1',
     })
 
-    const secondId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId, name: 'Session 2' },
-    )
+    const secondId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+      name: 'Session 2',
+    })
 
-    const sessions = await dmAuth.query(
-      api.sessions.queries.getSessionsByCampaign,
-      { campaignId: ctx.campaignId },
-    )
+    const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
+      campaignId: ctx.campaignId,
+    })
 
     const first = sessions.find((s) => s._id === firstId)
     const second = sessions.find((s) => s._id === secondId)
@@ -86,15 +79,13 @@ describe('endCurrentSession', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
-    const endedId = await dmAuth.mutation(
-      api.sessions.mutations.endCurrentSession,
-      { campaignId: ctx.campaignId },
-    )
+    const endedId = await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
+      campaignId: ctx.campaignId,
+    })
 
     expect(endedId).toBe(sessionId)
 
@@ -139,19 +130,15 @@ describe('setCurrentSession', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
       campaignId: ctx.campaignId,
     })
 
-    const resumedId = await dmAuth.mutation(
-      api.sessions.mutations.setCurrentSession,
-      { sessionId },
-    )
+    const resumedId = await dmAuth.mutation(api.sessions.mutations.setCurrentSession, { sessionId })
 
     expect(resumedId).toBe(sessionId)
 
@@ -191,10 +178,9 @@ describe('setCurrentSession', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
       campaignId: ctx.campaignId,
@@ -215,20 +201,19 @@ describe('updateSession', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId, name: 'Original' },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+      name: 'Original',
+    })
 
     await dmAuth.mutation(api.sessions.mutations.updateSession, {
       sessionId,
       name: 'Updated',
     })
 
-    const sessions = await dmAuth.query(
-      api.sessions.queries.getSessionsByCampaign,
-      { campaignId: ctx.campaignId },
-    )
+    const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
+      campaignId: ctx.campaignId,
+    })
     const updated = sessions.find((s) => s._id === sessionId)
     expect(updated).toBeDefined()
     expect(updated!.name).toBe('Updated')
@@ -239,10 +224,9 @@ describe('updateSession', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sessions.mutations.updateSession, {
@@ -308,10 +292,9 @@ describe('getSessionsByCampaign', () => {
       name: 'S2',
     })
 
-    const sessions = await dmAuth.query(
-      api.sessions.queries.getSessionsByCampaign,
-      { campaignId: ctx.campaignId },
-    )
+    const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
+      campaignId: ctx.campaignId,
+    })
     expect(sessions.length).toBe(2)
   })
 
@@ -335,10 +318,9 @@ describe('getSessionsByCampaign', () => {
       name: 'Test',
     })
 
-    const sessions = await dmAuth.query(
-      api.sessions.queries.getSessionsByCampaign,
-      { campaignId: ctx.campaignId },
-    )
+    const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
+      campaignId: ctx.campaignId,
+    })
 
     expect(sessions.length).toBeGreaterThan(0)
     expect(sessions[0]).toHaveProperty('_id')
@@ -352,10 +334,9 @@ describe('getSessionsByCampaign', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch(sessionId, {
@@ -364,10 +345,9 @@ describe('getSessionsByCampaign', () => {
       })
     })
 
-    const sessions = await dmAuth.query(
-      api.sessions.queries.getSessionsByCampaign,
-      { campaignId: ctx.campaignId },
-    )
+    const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
+      campaignId: ctx.campaignId,
+    })
     expect(sessions.length).toBe(0)
   })
 })

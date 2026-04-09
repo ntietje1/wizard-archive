@@ -4,10 +4,7 @@ import { requireCampaignMembership } from '../../functions'
 import type { SharesMap } from './getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type {
-  AnySidebarItem,
-  AnySidebarItemFromDb,
-} from '../../sidebarItems/types/types'
+import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { PermissionLevel } from '../../permissions/types'
 
 /**
@@ -32,17 +29,11 @@ export async function resolveInheritedPermissions(
   },
 ): Promise<{
   allPlayers: { level: PermissionLevel | null; folderName: string | null }
-  members: Record<
-    Id<'campaignMembers'>,
-    { level: PermissionLevel; folderName: string | null }
-  >
+  members: Record<Id<'campaignMembers'>, { level: PermissionLevel; folderName: string | null }>
 }> {
   const result: {
     allPlayers: { level: PermissionLevel | null; folderName: string | null }
-    members: Record<
-      Id<'campaignMembers'>,
-      { level: PermissionLevel; folderName: string | null }
-    >
+    members: Record<Id<'campaignMembers'>, { level: PermissionLevel; folderName: string | null }>
   } = {
     allPlayers: { level: null, folderName: null },
     members: {} as Record<
@@ -83,9 +74,7 @@ export async function resolveInheritedPermissions(
         const folderShares = await ctx.db
           .query('sidebarItemShares')
           .withIndex('by_campaign_item_member', (q) =>
-            q
-              .eq('campaignId', campaignId)
-              .eq('sidebarItemId', currentParentId!),
+            q.eq('campaignId', campaignId).eq('sidebarItemId', currentParentId!),
           )
           .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
@@ -173,10 +162,7 @@ export async function getSidebarItemPermissionLevel(
   const share = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('sidebarItemId', item._id)
-        .eq('campaignMemberId', checkId),
+      q.eq('campaignId', campaignId).eq('sidebarItemId', item._id).eq('campaignMemberId', checkId),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .unique()

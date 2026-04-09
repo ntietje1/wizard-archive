@@ -15,10 +15,7 @@ export async function getTopLevelBlocksByNote(
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
-      q
-        .eq('campaignId', note.campaignId)
-        .eq('noteId', noteId)
-        .eq('isTopLevel', true),
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('isTopLevel', true),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()

@@ -10,12 +10,8 @@ export function AudioFileViewer({ audioUrl }: AudioFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-destructive">
-            Invalid Audio URL
-          </p>
-          <p className="text-sm mt-2">
-            The audio URL does not meet security requirements.
-          </p>
+          <p className="text-lg font-medium text-destructive">Invalid Audio URL</p>
+          <p className="text-sm mt-2">The audio URL does not meet security requirements.</p>
         </div>
       </div>
     )
@@ -26,11 +22,7 @@ export function AudioFileViewer({ audioUrl }: AudioFileViewerProps) {
       <div className="flex-1 relative min-h-0 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl flex flex-col items-center gap-4">
           <div className="w-24 h-24 bg-accent rounded-lg flex items-center justify-center">
-            <svg
-              className="w-12 h-12 text-primary"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
+            <svg className="w-12 h-12 text-primary" fill="currentColor" viewBox="0 0 20 20">
               <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
             </svg>
           </div>

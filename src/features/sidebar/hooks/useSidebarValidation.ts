@@ -4,10 +4,7 @@ import {
   validateNoCircularParent,
 } from 'convex/sidebarItems/sharedValidation'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
@@ -20,14 +17,8 @@ export interface SidebarValidation {
     parentId: Id<'folders'> | null,
     excludeId?: SidebarItemId,
   ) => ValidationResult
-  canMoveToParent: (
-    itemId: SidebarItemId,
-    newParentId: Id<'folders'> | null,
-  ) => boolean
-  getDefaultName: (
-    type: SidebarItemType,
-    parentId: Id<'folders'> | null,
-  ) => string
+  canMoveToParent: (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => boolean
+  getDefaultName: (type: SidebarItemType, parentId: Id<'folders'> | null) => string
 }
 
 export function useSidebarValidation(): SidebarValidation {
@@ -48,19 +39,11 @@ export function useSidebarValidation(): SidebarValidation {
     return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
   }
 
-  const canMoveToParent = (
-    itemId: SidebarItemId,
-    newParentId: Id<'folders'> | null,
-  ) => {
-    return validateNoCircularParent(itemId, newParentId, (id) =>
-      itemsMap.get(id),
-    ).valid
+  const canMoveToParent = (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => {
+    return validateNoCircularParent(itemId, newParentId, (id) => itemsMap.get(id)).valid
   }
 
-  const getDefaultName = (
-    type: SidebarItemType,
-    parentId: Id<'folders'> | null,
-  ) => {
+  const getDefaultName = (type: SidebarItemType, parentId: Id<'folders'> | null) => {
     return findUniqueDefaultName(type, getSiblings(parentId))
   }
 

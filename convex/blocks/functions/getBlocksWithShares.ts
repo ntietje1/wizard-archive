@@ -44,9 +44,7 @@ export const getBlocksWithShares = async (
       .collect(),
   ])
 
-  const playerMembers = allMembers.filter(
-    (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
-  )
+  const playerMembers = allMembers.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
 
   const sharesByBlockId = new Map<Id<'blocks'>, Array<Id<'campaignMembers'>>>()
   for (const share of allNoteShares) {
@@ -68,8 +66,7 @@ export const getBlocksWithShares = async (
         }
       }
 
-      const shareStatus: ShareStatus =
-        block.shareStatus ?? SHARE_STATUS.NOT_SHARED
+      const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
       const sharedMemberIds =
         shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED

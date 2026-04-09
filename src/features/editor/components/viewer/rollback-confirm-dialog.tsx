@@ -26,9 +26,7 @@ export function RollbackConfirmDialog() {
     rollbackEntryId ? { editHistoryId: rollbackEntryId } : 'skip',
   )
 
-  const rollback = useAppMutation(
-    api.documentSnapshots.mutations.rollbackToSnapshot,
-  )
+  const rollback = useAppMutation(api.documentSnapshots.mutations.rollbackToSnapshot)
 
   const handleRestore = async () => {
     if (!rollbackEntryId || rollback.isPending) return
@@ -61,9 +59,8 @@ export function RollbackConfirmDialog() {
               'Failed to load version details. Please close and try again.'
             ) : isReady ? (
               <>
-                This will restore the document to its state from{' '}
-                {formatRelativeTime(entryTime!)}. The current content will be
-                preserved in the edit history.
+                This will restore the document to its state from {formatRelativeTime(entryTime!)}.
+                The current content will be preserved in the edit history.
               </>
             ) : (
               'Loading version details\u2026'
@@ -71,9 +68,7 @@ export function RollbackConfirmDialog() {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={rollback.isPending}>
-            Cancel
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={rollback.isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleRestore}
             disabled={!isReady || hasError || rollback.isPending}

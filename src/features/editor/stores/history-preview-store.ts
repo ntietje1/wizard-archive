@@ -13,22 +13,20 @@ export interface HistoryPreviewActions {
   clearRollbackEntryId: () => void
 }
 
-export const useHistoryPreviewStore = create<
-  HistoryPreviewState & HistoryPreviewActions
->((set) => ({
-  previewingEntryId: null,
-  rollbackEntryId: null,
+export const useHistoryPreviewStore = create<HistoryPreviewState & HistoryPreviewActions>(
+  (set) => ({
+    previewingEntryId: null,
+    rollbackEntryId: null,
 
-  setPreviewingEntry: (id) => set({ previewingEntryId: id }),
-  clearPreview: () => set({ previewingEntryId: null }),
-  setRollbackEntryId: (id) => set({ rollbackEntryId: id }),
-  clearRollbackEntryId: () => set({ rollbackEntryId: null }),
-}))
+    setPreviewingEntry: (id) => set({ previewingEntryId: id }),
+    clearPreview: () => set({ previewingEntryId: null }),
+    setRollbackEntryId: (id) => set({ rollbackEntryId: id }),
+    clearRollbackEntryId: () => set({ rollbackEntryId: null }),
+  }),
+)
 
-export const selectPreviewingEntryId = (
-  s: HistoryPreviewState,
-): Id<'editHistory'> | null => s.previewingEntryId
+export const selectPreviewingEntryId = (s: HistoryPreviewState): Id<'editHistory'> | null =>
+  s.previewingEntryId
 
-export const selectRollbackEntryId = (
-  s: HistoryPreviewState,
-): Id<'editHistory'> | null => s.rollbackEntryId
+export const selectRollbackEntryId = (s: HistoryPreviewState): Id<'editHistory'> | null =>
+  s.rollbackEntryId

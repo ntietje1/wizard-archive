@@ -15,11 +15,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { FolderFromDb } from '../folders/types'
 import type { AuthQueryCtx } from '../functions'
 import type { Id } from '../_generated/dataModel'
-import type {
-  AnySidebarItem,
-  AnySidebarItemFromDb,
-  EnhancedSidebarItem,
-} from './types/types'
+import type { AnySidebarItem, AnySidebarItemFromDb, EnhancedSidebarItem } from './types/types'
 
 /**
  * Checks if a name is unique under a parent (case-insensitive).
@@ -175,10 +171,7 @@ export async function validateSidebarParentChange(
  */
 export async function validateSidebarCreateParent(
   ctx: AuthQueryCtx,
-  {
-    campaignId,
-    parentId,
-  }: { campaignId: Id<'campaigns'>; parentId: Id<'folders'> | null },
+  { campaignId, parentId }: { campaignId: Id<'campaigns'>; parentId: Id<'folders'> | null },
 ): Promise<void> {
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   if (parentId) {
@@ -295,9 +288,7 @@ async function checkSlugConflict(
   const queryTable = (table: SidebarItemTable) =>
     ctx.db
       .query(table)
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      ) // check deleted items as well since deleted items can be accessed by slug
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug)) // check deleted items as well since deleted items can be accessed by slug
       .unique()
 
   const [note, folder, map, file, canvas] = await Promise.all([

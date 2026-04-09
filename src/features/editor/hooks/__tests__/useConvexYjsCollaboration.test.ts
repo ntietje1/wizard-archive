@@ -81,6 +81,7 @@ describe('useConvexYjsCollaboration', () => {
       this.setUser = mockSetUser
       this.writable = false
       this.awareness = { setLocalStateField: vi.fn() }
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       lastProviderInstance = this
     })
   })
@@ -90,9 +91,7 @@ describe('useConvexYjsCollaboration', () => {
   })
 
   it('returns isLoading true when queries have no data', () => {
-    const { result } = renderHook(() =>
-      useConvexYjsCollaboration(DOCUMENT_ID, USER, true),
-    )
+    const { result } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
     expect(result.current.isLoading).toBe(true)
   })
 
@@ -111,9 +110,7 @@ describe('useConvexYjsCollaboration', () => {
   })
 
   it('returns doc and provider after state initialization', () => {
-    const { result } = renderHook(() =>
-      useConvexYjsCollaboration(DOCUMENT_ID, USER, true),
-    )
+    const { result } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
     expect(result.current.doc).not.toBeNull()
     expect(result.current.provider).not.toBeNull()
     expect(result.current.instanceId).toBeGreaterThan(0)
@@ -162,9 +159,7 @@ describe('useConvexYjsCollaboration', () => {
   })
 
   it('applies remote awareness when awareness data arrives', () => {
-    const awarenessEntries = [
-      { clientId: 999, state: new ArrayBuffer(0), updatedAt: Date.now() },
-    ]
+    const awarenessEntries = [{ clientId: 999, state: new ArrayBuffer(0), updatedAt: Date.now() }]
 
     mockUseAuthQuery.mockImplementation((query: unknown) =>
       query === 'getAwareness' ? { data: awarenessEntries } : { data: [] },
@@ -176,9 +171,7 @@ describe('useConvexYjsCollaboration', () => {
   })
 
   it('destroys provider on unmount', () => {
-    const { unmount } = renderHook(() =>
-      useConvexYjsCollaboration(DOCUMENT_ID, USER, true),
-    )
+    const { unmount } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
     unmount()
     expect(mockProviderDestroy).toHaveBeenCalled()
   })
@@ -190,9 +183,7 @@ describe('useConvexYjsCollaboration', () => {
     const firstId = result1.current.instanceId
     unmount1()
 
-    const { result: result2 } = renderHook(() =>
-      useConvexYjsCollaboration(DOCUMENT_ID, USER, true),
-    )
+    const { result: result2 } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
     expect(result2.current.instanceId).toBeGreaterThan(firstId)
   })
 
@@ -218,9 +209,7 @@ describe('useConvexYjsCollaboration', () => {
     rerender({ docId: OTHER_DOCUMENT_ID })
 
     expect(mockProviderDestroy).toHaveBeenCalled()
-    expect(MockConvexYjsProvider.mock.calls.length).toBeGreaterThan(
-      constructorCallsBefore,
-    )
+    expect(MockConvexYjsProvider.mock.calls.length).toBeGreaterThan(constructorCallsBefore)
     expect(result.current.instanceId).toBeGreaterThan(firstInstanceId)
   })
 })

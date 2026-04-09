@@ -27,8 +27,7 @@ function usePersistedState<T>(
     if (!key) return
     try {
       setStoredValue((prev) => {
-        const valueToStore =
-          value instanceof Function ? (value as (prev: T) => T)(prev) : value
+        const valueToStore = value instanceof Function ? (value as (prev: T) => T)(prev) : value
         if (isBrowser) {
           window.localStorage.setItem(key, JSON.stringify(valueToStore))
           queueMicrotask(() => {
@@ -54,9 +53,7 @@ function usePersistedState<T>(
         // Handle cross-tab/window storage events
         if (event.key === key) {
           try {
-            setStoredValue(
-              event.newValue ? JSON.parse(event.newValue) : initialValue,
-            )
+            setStoredValue(event.newValue ? JSON.parse(event.newValue) : initialValue)
           } catch (error) {
             logger.debug(error)
           }
@@ -78,19 +75,10 @@ function usePersistedState<T>(
     }
 
     window.addEventListener('storage', handleStorageChange as EventListener)
-    window.addEventListener(
-      'localStorageChange',
-      handleStorageChange as EventListener,
-    )
+    window.addEventListener('localStorageChange', handleStorageChange as EventListener)
     return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange as EventListener,
-      )
-      window.removeEventListener(
-        'localStorageChange',
-        handleStorageChange as EventListener,
-      )
+      window.removeEventListener('storage', handleStorageChange as EventListener)
+      window.removeEventListener('localStorageChange', handleStorageChange as EventListener)
     }
   }, [key, initialValue, setStoredValue])
 

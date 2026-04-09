@@ -26,13 +26,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Secrets',
     })
-    const block = await createBlock(
-      t,
-      note.noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { blockId: 'secret-block' },
-    )
+    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'secret-block',
+    })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -91,13 +87,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(
-      t,
-      note.noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { blockId: 'revocable-block' },
-    )
+    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'revocable-block',
+    })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -139,12 +131,10 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Shared Folder', inheritShares: true },
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Shared Folder',
+      inheritShares: true,
+    })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -166,21 +156,12 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(playerNote).not.toBeNull()
     expect(playerNote!.name).toBe('Nested Note')
 
-    const block = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { blockId: 'nested-block' },
-    )
+    const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'nested-block',
+    })
 
-    const playerNoteWithBlocks = await playerAuth.query(
-      api.notes.queries.getNote,
-      { noteId },
-    )
-    expect(Object.keys(playerNoteWithBlocks!.blockMeta)).not.toContain(
-      block.blockId,
-    )
+    const playerNoteWithBlocks = await playerAuth.query(api.notes.queries.getNote, { noteId })
+    expect(Object.keys(playerNoteWithBlocks!.blockMeta)).not.toContain(block.blockId)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       noteId,
@@ -209,13 +190,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(
-      t,
-      note.noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { shareStatus: 'all_shared' },
-    )
+    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      shareStatus: 'all_shared',
+    })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -247,13 +224,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(
-      t,
-      note.noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { blockId: 'transition-block' },
-    )
+    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'transition-block',
+    })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,

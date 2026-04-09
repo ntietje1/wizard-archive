@@ -6,11 +6,7 @@ interface UseNodeEditingOptions {
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
 }
 
-export function useNodeEditing({
-  id,
-  currentValue,
-  updateNodeData,
-}: UseNodeEditingOptions) {
+export function useNodeEditing({ id, currentValue, updateNodeData }: UseNodeEditingOptions) {
   const [isEditing, setIsEditing] = useState(false)
   const shouldCommitRef = useRef(true)
 

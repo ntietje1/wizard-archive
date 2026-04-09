@@ -7,15 +7,9 @@ import {
 } from '@blocknote/react'
 import { toast } from 'sonner'
 import { Share2 } from 'lucide-react'
-import type {
-  CustomBlock,
-  CustomBlockNoteEditor,
-} from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { AggregateShareStatus } from '~/features/sharing/hooks/useBlocksShare'
-import {
-  AGGREGATE_SHARE_STATUS,
-  useBlocksShare,
-} from '~/features/sharing/hooks/useBlocksShare'
+import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 import { assertNever } from '~/shared/utils/utils'
 import {
   ContextMenu,
@@ -53,17 +47,10 @@ export default function ShareSideMenuButton() {
   // Determine blocks to operate on: selection if hovered block is in it, otherwise just the hovered block
   const selection = editor.getSelection()
   const selectedBlocks =
-    selection && selection.blocks.length > 1
-      ? (selection.blocks as Array<CustomBlock>)
-      : null
-  const hoveredBlockInSelection =
-    (block && selectedBlocks?.some((b) => b.id === block.id)) ?? false
+    selection && selection.blocks.length > 1 ? (selection.blocks as Array<CustomBlock>) : null
+  const hoveredBlockInSelection = (block && selectedBlocks?.some((b) => b.id === block.id)) ?? false
   const blocks: Array<CustomBlock> =
-    selectedBlocks && hoveredBlockInSelection
-      ? selectedBlocks
-      : block
-        ? [block]
-        : []
+    selectedBlocks && hoveredBlockInSelection ? selectedBlocks : block ? [block] : []
 
   const {
     isPending,
@@ -91,7 +78,7 @@ export default function ShareSideMenuButton() {
 
     e.preventDefault()
     e.stopPropagation()
-    toggleShareStatus()
+    void toggleShareStatus()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -112,12 +99,7 @@ export default function ShareSideMenuButton() {
         open ? sideMenuExtension.freezeMenu() : sideMenuExtension.unfreezeMenu()
       }
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleButtonClick}
-        onKeyDown={handleKeyDown}
-      >
+      <div role="button" tabIndex={0} onClick={handleButtonClick} onKeyDown={handleKeyDown}>
         <ContextMenuTrigger
           render={
             <Components.SideMenu.Button

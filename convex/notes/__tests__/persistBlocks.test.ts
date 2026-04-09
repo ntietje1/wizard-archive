@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
-import {
-  expectNotAuthenticated,
-  expectPermissionDenied,
-} from '../../_test/assertions.helper'
+import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import {
   makeYjsUpdate,
@@ -66,12 +59,9 @@ describe('persistBlocks', () => {
       parentId: null,
     })
 
-    const result = await dmAuth.mutation(
-      api.notes.mutations.persistNoteBlocks,
-      {
-        documentId: noteId,
-      },
-    )
+    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      documentId: noteId,
+    })
 
     expect(result).toBeNull()
 
@@ -100,12 +90,9 @@ describe('persistBlocks', () => {
       update: makeYjsUpdate(),
     })
 
-    const result = await dmAuth.mutation(
-      api.notes.mutations.persistNoteBlocks,
-      {
-        documentId: noteId,
-      },
-    )
+    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      documentId: noteId,
+    })
 
     expect(result).toBeNull()
 
@@ -154,12 +141,9 @@ describe('persistBlocks', () => {
       ]),
     })
 
-    const result = await dmAuth.mutation(
-      api.notes.mutations.persistNoteBlocks,
-      {
-        documentId: noteId,
-      },
-    )
+    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      documentId: noteId,
+    })
 
     expect(result).toBeNull()
 
@@ -178,9 +162,7 @@ describe('persistBlocks', () => {
         position: 0,
       })
 
-      const paragraphBlock = blocks.find(
-        (b) => b.blockId === blockIds.paragraph,
-      )
+      const paragraphBlock = blocks.find((b) => b.blockId === blockIds.paragraph)
       expect(paragraphBlock).toMatchObject({
         isTopLevel: true,
         content: { type: 'paragraph' },

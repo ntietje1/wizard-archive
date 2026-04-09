@@ -57,17 +57,13 @@ export function StrokeNode({
 }: NodeProps<StrokeNodeType>) {
   const { points, size, bounds } = data
   const isErasing = useCanvasToolStore((s) => s.erasingStrokeIds.has(id))
-  const isRectDeselected = useCanvasToolStore((s) =>
-    s.rectDeselectedIds.has(id),
-  )
+  const isRectDeselected = useCanvasToolStore((s) => s.rectDeselectedIds.has(id))
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
 
   const highlightD =
-    selected && !isRectDeselected
-      ? pointsToPathD(points, size * HIGHLIGHT_SCALE)
-      : null
+    selected && !isRectDeselected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
   const highlightPath = highlightD ? (
     <svg
       width={svgWidth}

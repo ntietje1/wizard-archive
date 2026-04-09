@@ -1,8 +1,4 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 
 export function TooltipButton({
   children,

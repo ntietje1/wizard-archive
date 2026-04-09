@@ -10,10 +10,7 @@ type SignInEmailNotVerifiedProps = {
   onBack: () => void
 }
 
-export function SignInEmailNotVerified({
-  email,
-  onBack,
-}: SignInEmailNotVerifiedProps) {
+export function SignInEmailNotVerified({ email, onBack }: SignInEmailNotVerifiedProps) {
   const [isResending, setIsResending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [error, setError] = useState('')
@@ -54,16 +51,11 @@ export function SignInEmailNotVerified({
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Verify your email</h1>
         <p className="text-sm text-muted-foreground text-balance">
-          Your email address hasn't been verified yet. Check your inbox for a
-          verification link.
+          Your email address hasn't been verified yet. Check your inbox for a verification link.
         </p>
       </div>
       <div className="flex flex-col gap-3">
-        <Button
-          onClick={handleResend}
-          disabled={isResending || cooldown > 0}
-          className="w-full"
-        >
+        <Button onClick={handleResend} disabled={isResending || cooldown > 0} className="w-full">
           {isResending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : cooldown > 0 ? (
@@ -77,9 +69,7 @@ export function SignInEmailNotVerified({
             Verification email sent! Check your inbox.
           </p>
         )}
-        {error && (
-          <p className="text-sm text-destructive text-center">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive text-center">{error}</p>}
         <Button variant="ghost" className="w-full" onClick={onBack}>
           Back to sign in
         </Button>

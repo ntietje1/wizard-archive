@@ -37,10 +37,7 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
   useEffect(() => setImageError(false), [canvas.previewUrl])
   const linkProps = useEditorLinkProps(canvas)
   const { setLastSelectedItem } = useLastEditorItem()
-  const canDrag = hasAtLeastPermissionLevel(
-    canvas.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(canvas.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(canvas)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
@@ -118,11 +115,7 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
   )
 
   return (
-    <EditorContextMenu
-      ref={contextMenuRef}
-      viewContext="folder-view"
-      item={canvas}
-    >
+    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={canvas}>
       {cardContent}
     </EditorContextMenu>
   )

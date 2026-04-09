@@ -13,8 +13,8 @@ export function CampaignsHeader() {
         </div>
       </div>
       <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-        Manage your campaigns and share notes with your party. Create new
-        adventures or continue existing ones.
+        Manage your campaigns and share notes with your party. Create new adventures or continue
+        existing ones.
       </p>
     </div>
   )

@@ -61,13 +61,7 @@ function SheetContent({
           <SheetPrimitive.Close
             data-slot="sheet-close"
             nativeButton
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-3 right-3"
-              />
-            }
+            render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -108,10 +102,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   )
 }
 
-function SheetDescription({
-  className,
-  ...props
-}: SheetPrimitive.Description.Props) {
+function SheetDescription({ className, ...props }: SheetPrimitive.Description.Props) {
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"

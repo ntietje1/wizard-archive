@@ -42,12 +42,9 @@ async function collectItemsRecursively(
   const children = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const items: Array<DownloadItem> = []
   const permissionLevels = await Promise.all(
-    children.map((child) =>
-      getSidebarItemPermissionLevel(ctx, { item: child }),
-    ),
+    children.map((child) => getSidebarItemPermissionLevel(ctx, { item: child })),
   )
-  const buildPath = (name: string) =>
-    currentPath ? `${currentPath}/${name}` : name
+  const buildPath = (name: string) => (currentPath ? `${currentPath}/${name}` : name)
 
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -56,9 +53,7 @@ async function collectItemsRecursively(
 
     switch (child.type) {
       case SIDEBAR_ITEM_TYPES.files: {
-        const downloadUrl = child.storageId
-          ? await ctx.storage.getUrl(child.storageId)
-          : null
+        const downloadUrl = child.storageId ? await ctx.storage.getUrl(child.storageId) : null
         items.push({
           type: SIDEBAR_ITEM_TYPES.files,
           name: child.name,
@@ -68,21 +63,15 @@ async function collectItemsRecursively(
         break
       }
       case SIDEBAR_ITEM_TYPES.notes: {
-        const noteName = child.name.endsWith('.md')
-          ? child.name
-          : `${child.name}.md`
+        const noteName = child.name.endsWith('.md') ? child.name : `${child.name}.md`
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
         const results = await Promise.all(
-          topLevelBlocks.map((block) =>
-            enforceBlockSharePermissionsOrNull(ctx, { block }),
-          ),
+          topLevelBlocks.map((block) => enforceBlockSharePermissionsOrNull(ctx, { block })),
         )
         const content = results
-          .filter(
-            (result): result is NonNullable<typeof result> => result !== null,
-          )
+          .filter((result): result is NonNullable<typeof result> => result !== null)
           .map((result) => result.block.content)
         items.push({
           type: SIDEBAR_ITEM_TYPES.notes,

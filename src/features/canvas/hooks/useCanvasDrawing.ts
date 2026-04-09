@@ -11,10 +11,7 @@ interface UseCanvasDrawingOptions {
   setAwarenessDrawing: (drawing: DrawingState | null) => void
 }
 
-export function useCanvasDrawing({
-  nodesMap,
-  setAwarenessDrawing,
-}: UseCanvasDrawingOptions) {
+export function useCanvasDrawing({ nodesMap, setAwarenessDrawing }: UseCanvasDrawingOptions) {
   const pointsRef = useRef<Array<[number, number, number]>>([])
   const reactFlow = useReactFlow()
 

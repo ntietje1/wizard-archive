@@ -33,26 +33,21 @@ describe('sharing workflows', () => {
       permissionLevel: 'view',
     })
 
-    const noteAfterShare = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAfterShare = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: noteId,
+    })
     expect(noteAfterShare.myPermissionLevel).toBe('view')
 
-    await dmAuth.mutation(
-      api.sidebarShares.mutations.updateSidebarItemSharePermission,
-      {
-        sidebarItemId: noteId,
-        sidebarItemType: 'note',
-        campaignMemberId: ctx.player.memberId,
-        permissionLevel: 'edit',
-      },
-    )
+    await dmAuth.mutation(api.sidebarShares.mutations.updateSidebarItemSharePermission, {
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'edit',
+    })
 
-    const noteAfterUpgrade = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAfterUpgrade = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: noteId,
+    })
     expect(noteAfterUpgrade.myPermissionLevel).toBe('edit')
 
     await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
@@ -72,16 +67,8 @@ describe('sharing workflows', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId: note1Id } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: note2Id } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: note1Id } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: note2Id } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
@@ -93,9 +80,7 @@ describe('sharing workflows', () => {
       api.sidebarItems.queries.getSidebarItemsByLocation,
       { campaignId: ctx.campaignId, location: 'sidebar' },
     )
-    const visibleAfterFirst = itemsAfterFirst.filter(
-      (item) => item.myPermissionLevel !== 'none',
-    )
+    const visibleAfterFirst = itemsAfterFirst.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterFirst).toHaveLength(1)
     expect(visibleAfterFirst[0]._id).toBe(note1Id)
 
@@ -108,9 +93,7 @@ describe('sharing workflows', () => {
       api.sidebarItems.queries.getSidebarItemsByLocation,
       { campaignId: ctx.campaignId, location: 'sidebar' },
     )
-    const visibleAfterSecond = itemsAfterSecond.filter(
-      (item) => item.myPermissionLevel !== 'none',
-    )
+    const visibleAfterSecond = itemsAfterSecond.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterSecond).toHaveLength(2)
     const visibleIds = visibleAfterSecond.map((item) => item._id)
     expect(visibleIds).toContain(note1Id)
@@ -122,12 +105,11 @@ describe('sharing workflows', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { folders, leaf } = await setupFolderTree(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { depth: 3, inheritShares: [true, true, false], leafType: 'note' },
-    )
+    const { folders, leaf } = await setupFolderTree(t, ctx.campaignId, ctx.dm.profile._id, {
+      depth: 3,
+      inheritShares: [true, true, false],
+      leafType: 'note',
+    })
     const [folderA, folderB] = folders
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
@@ -137,10 +119,9 @@ describe('sharing workflows', () => {
       permissionLevel: 'view',
     })
 
-    const noteWithInheritance = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: leaf },
-    )
+    const noteWithInheritance = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: leaf,
+    })
     expect(noteWithInheritance.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
@@ -148,19 +129,16 @@ describe('sharing workflows', () => {
       inheritShares: false,
     })
 
-    await expectNotFound(
-      playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf }),
-    )
+    await expectNotFound(playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf }))
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
       folderId: folderA,
       inheritShares: true,
     })
 
-    const noteAfterReEnable = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: leaf },
-    )
+    const noteAfterReEnable = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: leaf,
+    })
     expect(noteAfterReEnable.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
@@ -168,10 +146,9 @@ describe('sharing workflows', () => {
       permissionLevel: 'edit',
     })
 
-    const noteAfterFolderBEdit = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: leaf },
-    )
+    const noteAfterFolderBEdit = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: leaf,
+    })
     expect(noteAfterFolderBEdit.myPermissionLevel).toBe('edit')
   })
 
@@ -195,16 +172,10 @@ describe('sharing workflows', () => {
       permissionLevel: 'edit',
     })
 
-    const noteAsP1 = await p1.authed.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAsP1 = await p1.authed.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
     expect(noteAsP1.myPermissionLevel).toBe('edit')
 
-    const noteAsP2 = await p2.authed.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAsP2 = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
     expect(noteAsP2.myPermissionLevel).toBe('view')
   })
 })

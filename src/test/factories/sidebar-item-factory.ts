@@ -1,7 +1,4 @@
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'

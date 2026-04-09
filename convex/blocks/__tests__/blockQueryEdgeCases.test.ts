@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  setupCampaignContext,
-  setupMultiPlayerContext,
-} from '../../_test/identities.helper'
+import { asDm, setupCampaignContext, setupMultiPlayerContext } from '../../_test/identities.helper'
 import {
   createBlock,
   createBlockShare,
@@ -118,13 +114,10 @@ describe('block query edge cases', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { blockId: 'soft-del', shareStatus: 'individually_shared' },
-    )
+    const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'soft-del',
+      shareStatus: 'individually_shared',
+    })
     await createBlockShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
       noteId,

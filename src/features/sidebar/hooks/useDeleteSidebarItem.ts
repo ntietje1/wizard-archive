@@ -14,22 +14,16 @@ export function useDeleteSidebarItem() {
   const permanentlyDeleteSidebarItemMutation = useAppMutation(
     api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
   )
-  const emptyTrashBinMutation = useAppMutation(
-    api.sidebarItems.mutations.emptyTrashBin,
-  )
+  const emptyTrashBinMutation = useAppMutation(api.sidebarItems.mutations.emptyTrashBin)
 
   const permanentlyDeleteItem = async (item: AnySidebarItem) => {
     if (!campaignId) return
 
     const previousTrash = cache.get(SIDEBAR_ITEM_LOCATION.trash)
-    const removedIds = isFolder(item)
-      ? collectDescendantIds(item._id, previousTrash)
-      : new Set()
+    const removedIds = isFolder(item) ? collectDescendantIds(item._id, previousTrash) : new Set()
     removedIds.add(item._id)
 
-    cache.update(SIDEBAR_ITEM_LOCATION.trash, (prev) =>
-      prev.filter((i) => !removedIds.has(i._id)),
-    )
+    cache.update(SIDEBAR_ITEM_LOCATION.trash, (prev) => prev.filter((i) => !removedIds.has(i._id)))
 
     try {
       await permanentlyDeleteSidebarItemMutation.mutateAsync({

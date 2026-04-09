@@ -2,10 +2,7 @@ import { v } from 'convex/values'
 import { authMutation, requireCampaignMembership } from '../functions'
 import { internal } from '../_generated/api'
 import { yjsDocumentIdValidator } from './schema'
-import {
-  checkYjsReadAccess,
-  checkYjsWriteAccess,
-} from './functions/checkYjsAccess'
+import { checkYjsReadAccess, checkYjsWriteAccess } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
 import { SNAPSHOT_IDLE_MS } from './constants'
 
@@ -34,11 +31,7 @@ export const pushUpdate = authMutation({
     })
 
     if (shouldCompact(seq)) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.yjsSync.internalMutations.compact,
-        { documentId },
-      )
+      await ctx.scheduler.runAfter(0, internal.yjsSync.internalMutations.compact, { documentId })
     }
 
     const { membership } = await requireCampaignMembership(ctx, doc.campaignId)

@@ -18,7 +18,5 @@ interface TestWrapperProps {
 
 export function TestWrapper({ children }: TestWrapperProps) {
   const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }

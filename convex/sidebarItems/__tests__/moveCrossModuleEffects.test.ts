@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
-import {
-  createFolder,
-  createNote,
-  createSidebarShare,
-} from '../../_test/factories.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
 import {
   expectNotFound,
   expectPermissionDenied,
@@ -26,12 +18,10 @@ describe('moveSidebarItem cross-module effects', () => {
     const playerAuth = asPlayer(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId: sharedFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      dmId,
-      { name: 'Shared Folder', inheritShares: true },
-    )
+    const { folderId: sharedFolder } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Shared Folder',
+      inheritShares: true,
+    })
     await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,
       sidebarItemId: sharedFolder,
@@ -55,10 +45,9 @@ describe('moveSidebarItem cross-module effects', () => {
       parentId: sharedFolder,
     })
 
-    const noteAfterMove = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAfterMove = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: noteId,
+    })
     expect(noteAfterMove.myPermissionLevel).toBe('view')
   })
 
@@ -68,12 +57,10 @@ describe('moveSidebarItem cross-module effects', () => {
     const playerAuth = asPlayer(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId: sharedFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      dmId,
-      { name: 'Shared Folder', inheritShares: true },
-    )
+    const { folderId: sharedFolder } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Shared Folder',
+      inheritShares: true,
+    })
     await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,
       sidebarItemId: sharedFolder,
@@ -87,10 +74,9 @@ describe('moveSidebarItem cross-module effects', () => {
       name: 'Inside Note',
     })
 
-    const noteBefore = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteBefore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: noteId,
+    })
     expect(noteBefore.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {

@@ -9,9 +9,7 @@ export type CanvasFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.canvases>
 
 export type Canvas = SidebarItem<typeof SIDEBAR_ITEM_TYPES.canvases>
 
-export type CanvasWithContent = SidebarItemWithContent<
-  typeof SIDEBAR_ITEM_TYPES.canvases
->
+export type CanvasWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.canvases>
 
 export const CANVAS_SNAPSHOT_TYPE = 'yjs_state' as const
 

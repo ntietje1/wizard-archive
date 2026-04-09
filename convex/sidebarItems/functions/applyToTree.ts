@@ -3,10 +3,7 @@ import { collectDescendants } from './collectDescendants'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemFromDb } from '../types/types'
 
-type ItemOperation = (
-  ctx: MutationCtx,
-  item: AnySidebarItemFromDb,
-) => Promise<void>
+type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemFromDb) => Promise<void>
 
 export async function applyToTree(
   ctx: MutationCtx,

@@ -34,10 +34,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
           ctx.db
             .query(table)
             .withIndex('by_campaign_deletionTime', (q) =>
-              q
-                .eq('campaignId', campaignId)
-                .gt('deletionTime', 0)
-                .lt('deletionTime', cutoff),
+              q.eq('campaignId', campaignId).gt('deletionTime', 0).lt('deletionTime', cutoff),
             )
             .collect(),
         ),
@@ -70,9 +67,6 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
   }
 
   if (deleted >= BATCH_SIZE) {
-    await ctx.scheduler.runAfter(
-      1000,
-      internal.sidebarItems.internalMutations.purgeExpiredTrash,
-    )
+    await ctx.scheduler.runAfter(1000, internal.sidebarItems.internalMutations.purgeExpiredTrash)
   }
 }

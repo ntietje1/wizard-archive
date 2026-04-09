@@ -3,12 +3,7 @@ import { createContext } from 'react'
 export type RemoteHighlight = { color: string; name: string }
 
 type Position = { x: number; y: number }
-type ResizeHandler = (
-  nodeId: string,
-  width: number,
-  height: number,
-  position: Position,
-) => void
+type ResizeHandler = (nodeId: string, width: number, height: number, position: Position) => void
 
 export interface CanvasContextValue {
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void

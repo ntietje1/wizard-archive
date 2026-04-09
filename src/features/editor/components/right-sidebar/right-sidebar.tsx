@@ -7,11 +7,7 @@ import { OutlinePanel } from './outline-panel'
 import type { RightSidebarContentId } from './constants'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
 import { assertNever } from '~/shared/utils/utils'
 

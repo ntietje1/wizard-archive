@@ -3,11 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { testId } from '../../_test/test-id.helper'
-import {
-  checkNameConflict,
-  validateItemName,
-  validateNoCircularParent,
-} from '../sharedValidation'
+import { checkNameConflict, validateItemName, validateNoCircularParent } from '../sharedValidation'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -115,11 +111,7 @@ describe('validateNoCircularParent', () => {
   })
 
   it('returns valid for null parent', () => {
-    const result = validateNoCircularParent(
-      testId<'folders'>('f1'),
-      null,
-      () => undefined,
-    )
+    const result = validateNoCircularParent(testId<'folders'>('f1'), null, () => undefined)
     expect(result).toEqual({ valid: true })
   })
 
@@ -180,14 +172,9 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'container',
-      },
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'container',
+    })
 
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'test',
@@ -220,20 +207,14 @@ describe('cross-table slug uniqueness', () => {
       slug: 'shared-name',
     })
 
-    const item1 = await dm1.query(
-      api.sidebarItems.queries.getSidebarItemBySlug,
-      {
-        campaignId: ctx1.campaignId,
-        slug: 'shared-name',
-      },
-    )
-    const item2 = await dm2.query(
-      api.sidebarItems.queries.getSidebarItemBySlug,
-      {
-        campaignId: ctx2.campaignId,
-        slug: 'shared-name',
-      },
-    )
+    const item1 = await dm1.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx1.campaignId,
+      slug: 'shared-name',
+    })
+    const item2 = await dm2.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx2.campaignId,
+      slug: 'shared-name',
+    })
 
     expect(item1).not.toBeNull()
     expect(item2).not.toBeNull()

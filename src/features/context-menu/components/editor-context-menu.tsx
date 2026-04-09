@@ -88,10 +88,8 @@ const EditorMenuContent = forwardRef<
 
   useImperativeHandle(ref, () => ({
     open: (position?: { x: number; y: number }) => {
-      const clientX =
-        position?.x ?? triggerRef.current?.getBoundingClientRect().left ?? 0
-      const clientY =
-        position?.y ?? triggerRef.current?.getBoundingClientRect().bottom ?? 0
+      const clientX = position?.x ?? triggerRef.current?.getBoundingClientRect().left ?? 0
+      const clientY = position?.y ?? triggerRef.current?.getBoundingClientRect().bottom ?? 0
 
       if (triggerRef.current) {
         triggerRef.current.dispatchEvent(
@@ -137,16 +135,12 @@ const EditorMenuContent = forwardRef<
     const disabled = menuItem.isDisabled?.(menuContext) || false
     const checked = menuItem.isChecked?.(menuContext)
     const label =
-      typeof menuItem.label === 'function'
-        ? menuItem.label(menuContext)
-        : menuItem.label
+      typeof menuItem.label === 'function' ? menuItem.label(menuContext) : menuItem.label
     const IconComponent = menuItem.icon
 
     // Resolve children (can be static array or dynamic function)
     const menuChildren =
-      typeof menuItem.children === 'function'
-        ? menuItem.children(menuContext)
-        : menuItem.children
+      typeof menuItem.children === 'function' ? menuItem.children(menuContext) : menuItem.children
 
     // If item has children, render as submenu
     if (menuChildren && menuChildren.length > 0) {
@@ -154,8 +148,7 @@ const EditorMenuContent = forwardRef<
         <ContextMenuSub key={menuItem.id}>
           <ContextMenuSubTrigger
             className={cn(
-              menuItem.variant === 'danger' &&
-                'text-destructive focus:text-destructive',
+              menuItem.variant === 'danger' && 'text-destructive focus:text-destructive',
               menuItem.variant === 'share' && 'text-primary focus:text-primary',
               menuItem.className,
             )}
@@ -164,9 +157,7 @@ const EditorMenuContent = forwardRef<
             {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
             <span className="flex-1">{label}</span>
             {menuItem.shortcut && (
-              <span className="text-xs text-muted-foreground ml-2">
-                {menuItem.shortcut}
-              </span>
+              <span className="text-xs text-muted-foreground ml-2">{menuItem.shortcut}</span>
             )}
             {checked && <CheckIcon className="ml-2 h-4 w-4" />}
           </ContextMenuSubTrigger>
@@ -198,9 +189,7 @@ const EditorMenuContent = forwardRef<
         {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}
         <span className="flex-1">{label}</span>
         {menuItem.shortcut && (
-          <span className="text-xs text-muted-foreground ml-2">
-            {menuItem.shortcut}
-          </span>
+          <span className="text-xs text-muted-foreground ml-2">{menuItem.shortcut}</span>
         )}
         {checked && <CheckIcon className="ml-2 h-4 w-4" />}
       </ContextMenuItem>

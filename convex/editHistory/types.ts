@@ -9,10 +9,7 @@ import type { FolderHistoryMetadataMap } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
 import type { MapHistoryMetadataMap } from '../gameMaps/types'
 import type { NoteHistoryMetadataMap } from '../notes/types'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 export const SHARED_HISTORY_ACTION = {
   created: 'created',
@@ -73,8 +70,7 @@ export type EditHistoryMetadataMap = SharedHistoryMetadataMap &
   FileHistoryMetadataMap &
   CanvasHistoryMetadataMap
 
-export type EditHistoryAction =
-  (typeof EDIT_HISTORY_ACTION)[keyof typeof EDIT_HISTORY_ACTION]
+export type EditHistoryAction = (typeof EDIT_HISTORY_ACTION)[keyof typeof EDIT_HISTORY_ACTION]
 
 export type EditHistoryChange = {
   [K in Exclude<EditHistoryAction, 'updated'>]: {

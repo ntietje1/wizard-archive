@@ -39,8 +39,6 @@ export async function openItem(page: Page, name: string) {
 
 export async function openContextMenu(page: Page, itemName: string) {
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await sidebar
-    .getByRole('link', { name: itemName, exact: true })
-    .click({ button: 'right' })
+  await sidebar.getByRole('link', { name: itemName, exact: true }).click({ button: 'right' })
   await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 }

@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import {
-  USERNAME_MAX_LENGTH,
-  USERNAME_MIN_LENGTH,
-} from 'convex/users/constants'
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from 'convex/users/constants'
 import { getClientErrorMessage } from 'convex/errors'
 import { slugify, validateUsername } from 'convex/common/slug'
 import { AlertTriangle, Loader2 } from 'lucide-react'
@@ -37,19 +34,10 @@ function useUsernameValidation(raw: string, currentUsername: string) {
   const slugified = slugify(raw)
   const isUnchanged = slugified === currentUsername
 
-  const localError = validateUsername(
-    slugified,
-    raw,
-    USERNAME_MIN_LENGTH,
-    USERNAME_MAX_LENGTH,
-  )
+  const localError = validateUsername(slugified, raw, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH)
 
-  const shouldCheckRemote =
-    !localError && !isUnchanged && slugified.length >= USERNAME_MIN_LENGTH
-  const debouncedSlug = useDebouncedValue(
-    shouldCheckRemote ? slugified : '',
-    300,
-  )
+  const shouldCheckRemote = !localError && !isUnchanged && slugified.length >= USERNAME_MIN_LENGTH
+  const debouncedSlug = useDebouncedValue(shouldCheckRemote ? slugified : '', 300)
   const isWaitingForDebounce = shouldCheckRemote && debouncedSlug !== slugified
 
   const existsQuery = useAuthQuery(
@@ -58,26 +46,15 @@ function useUsernameValidation(raw: string, currentUsername: string) {
   )
 
   const isTaken = existsQuery.data === true
-  const isChecking =
-    shouldCheckRemote && (isWaitingForDebounce || existsQuery.isLoading)
+  const isChecking = shouldCheckRemote && (isWaitingForDebounce || existsQuery.isLoading)
 
   const error = localError ?? (isTaken ? 'Username is already taken' : null)
-  const canSubmit =
-    !error &&
-    !isUnchanged &&
-    !isChecking &&
-    slugified.length >= USERNAME_MIN_LENGTH
+  const canSubmit = !error && !isUnchanged && !isChecking && slugified.length >= USERNAME_MIN_LENGTH
 
   return { slugified, error, canSubmit, isChecking }
 }
 
-function UsernameChangeDialog({
-  profile,
-  onClose,
-}: {
-  profile: UserProfile
-  onClose: () => void
-}) {
+function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [username, setUsername] = useState(profile.username)
@@ -107,7 +84,7 @@ function UsernameChangeDialog({
       const oldPrefix = `/campaigns/${profile.username}/`
       if (location.pathname.startsWith(oldPrefix)) {
         const rest = location.pathname.slice(oldPrefix.length)
-        navigate({
+        void navigate({
           to: `/campaigns/${newUsername}/${rest}`,
           replace: true,
         })
@@ -115,9 +92,7 @@ function UsernameChangeDialog({
     } catch (error) {
       setSubmitError(
         getClientErrorMessage(error) ??
-          (error instanceof Error
-            ? error.message
-            : 'Failed to update username'),
+          (error instanceof Error ? error.message : 'Failed to update username'),
       )
     }
     setIsLoading(false)
@@ -158,8 +133,8 @@ function UsernameChangeDialog({
       <div className="flex items-start gap-2 rounded-md bg-accent p-3">
         <AlertTriangle className="size-4 shrink-0 text-muted-foreground mt-0.5" />
         <p className="text-xs text-muted-foreground">
-          Changing your username will update the URL for all campaigns you own.
-          Any shared links using your old username will stop working.
+          Changing your username will update the URL for all campaigns you own. Any shared links
+          using your old username will stop working.
         </p>
       </div>
       <DialogFooter showCloseButton>
@@ -184,10 +159,7 @@ export function UsernameRow({ profile }: { profile: UserProfile }) {
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <SettingsSubDialogContent>
           {isEditing && (
-            <UsernameChangeDialog
-              profile={profile}
-              onClose={() => setIsEditing(false)}
-            />
+            <UsernameChangeDialog profile={profile} onClose={() => setIsEditing(false)} />
           )}
         </SettingsSubDialogContent>
       </Dialog>

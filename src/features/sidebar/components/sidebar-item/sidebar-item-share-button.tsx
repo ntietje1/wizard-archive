@@ -2,11 +2,7 @@ import { useState } from 'react'
 import { Share2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SharePermissionMenu } from '~/features/sharing/components/share-permission-menu'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -77,12 +73,7 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
             </Button>
           }
         />
-        <PopoverContent
-          align="start"
-          side="right"
-          sideOffset={4}
-          className="w-auto p-2"
-        >
+        <PopoverContent align="start" side="right" sideOffset={4} className="w-auto p-2">
           {open && <SharePopoverContent item={item} />}
         </PopoverContent>
       </Popover>

@@ -1,12 +1,5 @@
 import { useState } from 'react'
-import {
-  ArrowLeftRight,
-  History,
-  Play,
-  Settings,
-  Square,
-  UserPlus,
-} from 'lucide-react'
+import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import type { Session } from 'convex/sessions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -21,13 +14,8 @@ function formatSessionDate(s: Session): string {
 
 export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
   const { campaign, campaignId, isDm } = useCampaign()
-  const {
-    currentSession,
-    sessions,
-    startSession,
-    endCurrentSession,
-    setCurrentSession,
-  } = useSession()
+  const { currentSession, sessions, startSession, endCurrentSession, setCurrentSession } =
+    useSession()
   const openSettings = useSettingsStore((s) => s.open)
   const navigate = useNavigate()
   const [showResume, setShowResume] = useState(false)
@@ -71,9 +59,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
         <div className="border-t" />
         <div className="max-h-64 overflow-y-auto p-1">
           {previousSessions.length === 0 && (
-            <div className="px-2 py-1.5 text-sm text-muted-foreground">
-              No previous sessions
-            </div>
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">No previous sessions</div>
           )}
           {previousSessions.map((s) => (
             <button
@@ -83,12 +69,8 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
               onClick={() => handleResume(s._id)}
             >
               <div className="flex flex-col">
-                <span className="truncate font-medium">
-                  {s.name || 'Unnamed Session'}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatSessionDate(s)}
-                </span>
+                <span className="truncate font-medium">{s.name || 'Unnamed Session'}</span>
+                <span className="text-xs text-muted-foreground">{formatSessionDate(s)}</span>
               </div>
             </button>
           ))}
@@ -101,12 +83,9 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
     <div className="flex flex-col">
       {/* Header */}
       <div className="px-3 py-2">
-        <div className="text-sm font-medium truncate">
-          {campaign.data?.name ?? 'Campaign'}
-        </div>
+        <div className="text-sm font-medium truncate">{campaign.data?.name ?? 'Campaign'}</div>
         <div className="text-xs text-muted-foreground">
-          Free Plan &middot; {memberCount}{' '}
-          {memberCount === 1 ? 'member' : 'members'}
+          Free Plan &middot; {memberCount} {memberCount === 1 ? 'member' : 'members'}
         </div>
       </div>
 
@@ -193,7 +172,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
           type="button"
           className={menuItemClass}
           onClick={() => {
-            navigate({ to: '/campaigns' })
+            void navigate({ to: '/campaigns' })
             onClose()
           }}
         >

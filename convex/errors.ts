@@ -20,10 +20,7 @@ type ClientConvexError = ConvexError<ClientErrorData> & {
   data: ClientErrorData
 }
 
-export function throwClientError(
-  code: ClientErrorCode,
-  message: string,
-): never {
+export function throwClientError(code: ClientErrorCode, message: string): never {
   throw new ConvexError<ClientErrorData>({ kind: 'client', code, message })
 }
 
@@ -72,10 +69,7 @@ export function isClientError(
 ): error is ClientConvexError & {
   data: ClientErrorData & { code: typeof code }
 }
-export function isClientError(
-  error: unknown,
-  code?: ClientErrorCode,
-): error is ClientConvexError {
+export function isClientError(error: unknown, code?: ClientErrorCode): error is ClientConvexError {
   const clientError = toClientError(error)
   if (!clientError) return false
   return code === undefined || clientError.data.code === code

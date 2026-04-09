@@ -5,9 +5,7 @@ import { testId } from '~/test/helpers/test-id'
 
 let shareCounter = 0
 
-export function createSidebarItemShare(
-  overrides?: Partial<SidebarItemShare>,
-): SidebarItemShare {
+export function createSidebarItemShare(overrides?: Partial<SidebarItemShare>): SidebarItemShare {
   shareCounter++
   return {
     _id: testId(`share_${shareCounter}`),

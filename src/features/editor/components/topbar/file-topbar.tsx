@@ -12,10 +12,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import {
-  useActiveSidebarItems,
-  useSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_DEFAULTS,
@@ -34,30 +31,20 @@ export function FileTopbar() {
 
   const isTrashView = editorSearch.trash === true && !item
 
-  const { parentItemsMap: trashedParentItemsMap } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { parentItemsMap: trashedParentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
 
   const canRename =
-    !!item &&
-    canEdit &&
-    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.FULL_ACCESS, permOpts)
+    !!item && canEdit && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.FULL_ACCESS, permOpts)
 
   const isNotSharedWithPlayer =
-    item &&
-    viewAsPlayerId &&
-    !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
+    item && viewAsPlayerId && !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
 
-  const rightPanel = usePanelPreference(
-    RIGHT_SIDEBAR_PANEL_ID,
-    RIGHT_SIDEBAR_DEFAULTS,
-  )
+  const rightPanel = usePanelPreference(RIGHT_SIDEBAR_PANEL_ID, RIGHT_SIDEBAR_DEFAULTS)
   const toggleHistory = () => {
     const isShowingHistory =
-      rightPanel.visible &&
-      rightPanel.activeContentId === RIGHT_SIDEBAR_CONTENT.history
+      rightPanel.visible && rightPanel.activeContentId === RIGHT_SIDEBAR_CONTENT.history
     if (isShowingHistory) {
       rightPanel.setVisible(false)
     } else {
@@ -79,18 +66,9 @@ export function FileTopbar() {
   )
 
   return (
-    <EditorContextMenu
-      viewContext="topbar"
-      item={item ?? undefined}
-      isTrashView={isTrashView}
-    >
+    <EditorContextMenu viewContext="topbar" item={item ?? undefined} isTrashView={isTrashView}>
       <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
-        <div
-          className={cn(
-            'flex-1 min-w-0',
-            isNotSharedWithPlayer && 'opacity-50',
-          )}
-        >
+        <div className={cn('flex-1 min-w-0', isNotSharedWithPlayer && 'opacity-50')}>
           {isLoading && <div className="bg-muted rounded-md h-5 w-32 my-0.5" />}
           {isTrashView && (
             <div className="flex items-center gap-2 min-w-0">

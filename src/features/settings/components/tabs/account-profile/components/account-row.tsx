@@ -17,9 +17,7 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
   const [isUploading, setIsUploading] = useState(false)
   const [name, setName] = useState(profile.name ?? '')
 
-  const updateProfileImage = useAppMutation(
-    api.users.mutations.updateProfileImage,
-  )
+  const updateProfileImage = useAppMutation(api.users.mutations.updateProfileImage)
 
   const updateNameMutation = useAppMutation(api.users.mutations.updateName)
 
@@ -41,7 +39,7 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value)
-    debouncedSaveName(e.target.value)
+    void debouncedSaveName(e.target.value)
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,10 +93,7 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
         </div>
       </button>
       <div className="min-w-0 flex flex-col gap-1 max-w-56">
-        <Label
-          htmlFor="preferred-name"
-          className="text-xs text-muted-foreground"
-        >
+        <Label htmlFor="preferred-name" className="text-xs text-muted-foreground">
           Preferred name
         </Label>
         <Input

@@ -22,7 +22,7 @@ export function ProfileTab() {
 
   useEffect(() => {
     if (deletionPending && !profileQuery.isLoading && !profile) {
-      navigate({ to: '/sign-in', replace: true })
+      void navigate({ to: '/sign-in', replace: true })
     }
   }, [deletionPending, profileQuery.isLoading, profile, navigate])
 
@@ -44,9 +44,7 @@ export function ProfileTab() {
         </div>
       )}
 
-      {profileQuery.isError && (
-        <p className="text-sm text-destructive">Failed to load profile</p>
-      )}
+      {profileQuery.isError && <p className="text-sm text-destructive">Failed to load profile</p>}
 
       {profile && (
         <>
@@ -63,9 +61,7 @@ export function ProfileTab() {
             <Separator />
             <TwoFactorRow profile={profile} />
             <Separator />
-            <DeleteAccountRow
-              onDeletionEmailSent={() => setDeletionPending(true)}
-            />
+            <DeleteAccountRow onDeletionEmailSent={() => setDeletionPending(true)} />
           </SettingsSection>
 
           <ActiveSessionsSection />

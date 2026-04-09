@@ -28,44 +28,38 @@ export function ThemeProvider({
     { placeholderData: keepPreviousData },
   )
 
-  const setThemeMutation = useAppMutation(
-    api.userPreferences.mutations.setUserPreferences,
-    {
-      onMutate: async ({ theme: newTheme }) => {
-        if (!newTheme) return
-        await queryClient.cancelQueries({
-          queryKey: userPreferencesQueryOptions.queryKey,
-        })
-        const previous = queryClient.getQueryData<UserPreferences>(
-          userPreferencesQueryOptions.queryKey,
-        )
-        queryClient.setQueryData(
-          userPreferencesQueryOptions.queryKey,
-          (old: UserPreferences | null | undefined) => {
-            if (!old) return old
-            return { ...old, theme: newTheme }
-          },
-        )
-        applyThemeClass(resolveTheme(newTheme))
-        return { previous }
-      },
-      onError: (err, _vars, context) => {
-        if (context?.previous) {
-          queryClient.setQueryData(
-            userPreferencesQueryOptions.queryKey,
-            context.previous,
-          )
-          applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
-        }
-        handleError(err, 'Failed to update theme')
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: userPreferencesQueryOptions.queryKey,
-        })
-      },
+  const setThemeMutation = useAppMutation(api.userPreferences.mutations.setUserPreferences, {
+    onMutate: async ({ theme: newTheme }) => {
+      if (!newTheme) return
+      await queryClient.cancelQueries({
+        queryKey: userPreferencesQueryOptions.queryKey,
+      })
+      const previous = queryClient.getQueryData<UserPreferences>(
+        userPreferencesQueryOptions.queryKey,
+      )
+      queryClient.setQueryData(
+        userPreferencesQueryOptions.queryKey,
+        (old: UserPreferences | null | undefined) => {
+          if (!old) return old
+          return { ...old, theme: newTheme }
+        },
+      )
+      applyThemeClass(resolveTheme(newTheme))
+      return { previous }
     },
-  )
+    onError: (err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(userPreferencesQueryOptions.queryKey, context.previous)
+        applyThemeClass(resolveTheme(context.previous.theme ?? 'system'))
+      }
+      handleError(err, 'Failed to update theme')
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: userPreferencesQueryOptions.queryKey,
+      })
+    },
+  })
 
   const theme: Theme = prefs?.theme ?? initialTheme ?? 'system'
   const resolved = resolveTheme(theme)

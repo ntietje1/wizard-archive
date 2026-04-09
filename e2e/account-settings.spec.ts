@@ -43,9 +43,7 @@ test.describe.serial('account settings', () => {
 
   test('account security section is visible', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: /settings/i })
-    await expect(
-      dialog.getByRole('heading', { name: /account security/i }),
-    ).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: /account security/i })).toBeVisible()
     await expect(dialog.getByText(/email/i).first()).toBeVisible()
   })
 

@@ -21,12 +21,7 @@ interface NoteViewProps {
   children?: ReactNode
 }
 
-export function NoteView({
-  editor,
-  editable,
-  className,
-  children,
-}: NoteViewProps) {
+export function NoteView({ editor, editable, className, children }: NoteViewProps) {
   const resolvedTheme = useResolvedTheme()
   useWikiLinkExtension(editor)
   useMdLinkExtension(editor)

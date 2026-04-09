@@ -41,9 +41,7 @@ export function PreferencesTab() {
           Account
         </p>
         <h2 className="text-lg font-semibold">Preferences</h2>
-        <p className="text-sm text-muted-foreground">
-          Customize the look and feel of the app
-        </p>
+        <p className="text-sm text-muted-foreground">Customize the look and feel of the app</p>
       </div>
 
       <Separator />
@@ -60,30 +58,22 @@ export function PreferencesTab() {
               className={cn(
                 'flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer',
                 'hover:bg-accent/50',
-                theme === value
-                  ? 'border-primary bg-accent/30'
-                  : 'border-border',
+                theme === value ? 'border-primary bg-accent/30' : 'border-border',
               )}
             >
               <div
                 className={cn(
                   'flex items-center justify-center rounded-lg p-2.5',
-                  theme === value
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground',
+                  theme === value ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
                 )}
               >
                 <Icon className="size-5" />
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium">{label}</span>
-                {theme === value && (
-                  <CheckIcon className="size-3.5 text-primary" />
-                )}
+                {theme === value && <CheckIcon className="size-3.5 text-primary" />}
               </div>
-              <span className="text-xs text-muted-foreground text-center">
-                {description}
-              </span>
+              <span className="text-xs text-muted-foreground text-center">{description}</span>
             </button>
           ))}
         </div>

@@ -84,11 +84,7 @@ describe('hard delete YJS cleanup', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,

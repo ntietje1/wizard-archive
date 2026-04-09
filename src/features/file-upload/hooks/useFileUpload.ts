@@ -18,9 +18,7 @@ export const useFileUpload = () => {
     percentage: 0,
   })
 
-  const generateUploadUrl = useAppMutation(
-    api.storage.mutations.generateUploadUrl,
-  )
+  const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)
 
   const trackUploadMutation = useAppMutation(api.storage.mutations.trackUpload)
 
@@ -34,19 +32,16 @@ export const useFileUpload = () => {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
 
-        xhr.upload.addEventListener(
-          'progress',
-          (event: ProgressEvent<XMLHttpRequestUpload>) => {
-            if (event.lengthComputable) {
-              const percentComplete = (event.loaded / event.total) * 100
-              setUploadProgress({
-                loaded: event.loaded,
-                total: event.total,
-                percentage: Math.round(percentComplete),
-              })
-            }
-          },
-        )
+        xhr.upload.addEventListener('progress', (event: ProgressEvent<XMLHttpRequestUpload>) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100
+            setUploadProgress({
+              loaded: event.loaded,
+              total: event.total,
+              percentage: Math.round(percentComplete),
+            })
+          }
+        })
 
         xhr.addEventListener('load', async () => {
           if (xhr.status === 200) {
@@ -93,8 +88,7 @@ export const useFileUpload = () => {
   return {
     uploadFile,
     uploadProgress,
-    resetProgress: () =>
-      setUploadProgress({ loaded: 0, total: 0, percentage: 0 }),
+    resetProgress: () => setUploadProgress({ loaded: 0, total: 0, percentage: 0 }),
     commitUpload,
   }
 }

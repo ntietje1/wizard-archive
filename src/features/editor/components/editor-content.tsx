@@ -99,18 +99,14 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget &&
-          !isFileDragTarget &&
-          'ring-2 ring-inset ring-ring/60 bg-ring/5',
+        isDropTarget && !isFileDragTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
         isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >
       {!isCampaignLoaded ? null : isDm ? (
         <CreateNewDashboard parentId={null} />
       ) : (
-        <p className="text-muted-foreground">
-          Select an item from the sidebar to view it.
-        </p>
+        <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
       )}
     </div>
   )
@@ -131,21 +127,16 @@ function NotSharedContent() {
   const requestedSlug = getSlug(editorSearch)
 
   // Check if the item exists in the full sidebar list (DM sees all items)
-  const itemExists =
-    requestedSlug && allItems.some((i) => i.slug === requestedSlug)
+  const itemExists = requestedSlug && allItems.some((i) => i.slug === requestedSlug)
 
   // Resolve the viewed player's display name
   const viewAsPlayerName = (() => {
     if (!viewAsPlayerId) return undefined
-    const member = campaignMembersQuery.data?.find(
-      (m) => m._id === viewAsPlayerId,
-    )
+    const member = campaignMembersQuery.data?.find((m) => m._id === viewAsPlayerId)
     if (!member) return undefined
     return (
       member.userProfile.name ||
-      (member.userProfile.username
-        ? `@${member.userProfile.username}`
-        : undefined)
+      (member.userProfile.username ? `@${member.userProfile.username}` : undefined)
     )
   })()
 
@@ -161,7 +152,7 @@ function NotSharedContent() {
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
       openParentFolders(result.id)
-      navigateToItem(result.slug)
+      void navigateToItem(result.slug)
     } catch (error) {
       handleError(error, 'Failed to create note')
     }

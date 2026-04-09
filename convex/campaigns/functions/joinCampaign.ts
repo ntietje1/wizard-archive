@@ -1,8 +1,4 @@
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-  CAMPAIGN_STATUS,
-} from '../types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCampaignBySlug } from './getCampaign'
 import type { CampaignMemberStatus } from '../types'
@@ -16,10 +12,7 @@ export async function joinCampaign(
   const campaign = await getCampaignBySlug(ctx, { dmUsername, slug })
 
   if (campaign.status !== CAMPAIGN_STATUS.Active) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'This campaign is not accepting new members',
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'This campaign is not accepting new members')
   }
 
   const existingMember = await ctx.db

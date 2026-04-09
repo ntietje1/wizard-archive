@@ -4,10 +4,7 @@ import { useEffect, useReducer } from 'react'
 type ProgressState = 'idle' | 'loading' | 'completing' | 'fading'
 type ProgressAction = 'start' | 'loaded' | 'fade' | 'reset'
 
-function progressReducer(
-  state: ProgressState,
-  action: ProgressAction,
-): ProgressState {
+function progressReducer(state: ProgressState, action: ProgressAction): ProgressState {
   switch (action) {
     case 'start':
       return 'loading'
@@ -63,9 +60,7 @@ export function NavigationProgress() {
     >
       <div
         className={`h-full w-full origin-left bg-primary ${
-          state === 'loading'
-            ? 'animate-progress-load'
-            : 'animate-progress-complete'
+          state === 'loading' ? 'animate-progress-load' : 'animate-progress-complete'
         }`}
       />
     </div>

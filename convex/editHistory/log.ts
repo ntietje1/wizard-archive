@@ -8,10 +8,7 @@ import type {
   EditHistoryMetadataMap,
   LogEditHistoryArgs,
 } from './types'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 type LogEditHistoryBase = {
   itemId: SidebarItemId
@@ -47,9 +44,7 @@ function toLogEditHistoryArgs<T extends EditHistoryAction>(
 
 export async function logEditHistory(
   ctx: AuthMutationCtx,
-  args:
-    | LogEditHistoryArgs
-    | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
+  args: LogEditHistoryArgs | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
   options?: { hasSnapshot?: boolean },
 ): Promise<Id<'editHistory'>> {
   if ('action' in args) {

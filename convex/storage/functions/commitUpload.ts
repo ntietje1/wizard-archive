@@ -15,17 +15,11 @@ export async function commitUpload(
     )
     .unique()
   if (!fileStorage) {
-    throwClientError(
-      ERROR_CODE.NOT_FOUND,
-      'The uploaded file could not be found',
-    )
+    throwClientError(ERROR_CODE.NOT_FOUND, 'The uploaded file could not be found')
   }
 
   if (fileStorage.status === FILE_STORAGE_STATUS.Committed) {
-    throwClientError(
-      ERROR_CODE.CONFLICT,
-      'This file has already been committed',
-    )
+    throwClientError(ERROR_CODE.CONFLICT, 'This file has already been committed')
   }
 
   // Validate file before committing

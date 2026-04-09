@@ -48,10 +48,7 @@ export function FolderDeleteConfirmDialog({
               {`This folder contains ${descendantCount} ${descendantCount === 1 ? 'item' : 'items'}!`}
             </strong>
             <br />
-            <span>
-              Are you sure you want to move it and all its contents to the
-              trash?
-            </span>
+            <span>Are you sure you want to move it and all its contents to the trash?</span>
           </>
         ) : (
           <>Are you sure you want to move this folder to the trash?</>

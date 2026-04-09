@@ -1,9 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
-import {
-  DEFAULT_SIDEBAR_ITEM_ICONS,
-  getIconByName,
-} from '~/shared/utils/category-icons'
+import { DEFAULT_SIDEBAR_ITEM_ICONS, getIconByName } from '~/shared/utils/category-icons'
 import {
   DEFAULT_ITEM_COLOR,
   validateHexColorOrDefault,
@@ -17,8 +14,7 @@ export type PinDisplayData = {
 
 export function resolvePinIcon(pin: PinDisplayData): LucideIcon {
   if (pin.iconName) return getIconByName(pin.iconName)
-  if (pin.itemType)
-    return DEFAULT_SIDEBAR_ITEM_ICONS[pin.itemType] ?? getIconByName()
+  if (pin.itemType) return DEFAULT_SIDEBAR_ITEM_ICONS[pin.itemType] ?? getIconByName()
   return getIconByName()
 }
 

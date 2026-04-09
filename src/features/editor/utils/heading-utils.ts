@@ -15,9 +15,7 @@ interface BlockLike {
   children?: Array<BlockLike>
 }
 
-function extractText(
-  content: Array<{ type: string; text?: string }> | undefined,
-): string {
+function extractText(content: Array<{ type: string; text?: string }> | undefined): string {
   if (!content) return ''
   return content
     .filter((c) => c.type === 'text' && c.text)
@@ -75,9 +73,7 @@ export function resolveHeadingPath(
 
   for (const text of path) {
     const normalized = normalizeHeadingText(text)
-    const idx = headings.findIndex(
-      (h, i) => i >= startIdx && h.normalizedText === normalized,
-    )
+    const idx = headings.findIndex((h, i) => i >= startIdx && h.normalizedText === normalized)
     if (idx === -1) return undefined
     result = headings[idx]
     startIdx = idx + 1

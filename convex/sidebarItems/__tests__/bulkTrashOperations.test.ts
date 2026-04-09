@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  setupCampaignContext,
-  setupUser,
-} from '../../_test/identities.helper'
+import { asDm, setupCampaignContext, setupUser } from '../../_test/identities.helper'
 import {
   createBlock,
   createBookmark,
@@ -129,9 +125,7 @@ describe('bulk trash operations', () => {
     })
 
     for (const item of items) {
-      const result = await t.run(async (dbCtx) =>
-        dbCtx.db.get(item.id as never),
-      )
+      const result = await t.run(async (dbCtx) => dbCtx.db.get(item.id as never))
       expect(result).toBeNull()
     }
   })
@@ -142,20 +136,14 @@ describe('bulk trash operations', () => {
     const dmId = ctx.dm.profile._id
 
     const dm2 = await setupUser(t)
-    const { campaignId: campaign2Id } = await createCampaignWithDm(
-      t,
-      dm2.profile,
-    )
+    const { campaignId: campaign2Id } = await createCampaignWithDm(t, dm2.profile)
 
     const { noteId: note1 } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Campaign1 Note',
     })
-    const { noteId: note2 } = await createNote(
-      t,
-      campaign2Id,
-      dm2.profile._id,
-      { name: 'Campaign2 Note' },
-    )
+    const { noteId: note2 } = await createNote(t, campaign2Id, dm2.profile._id, {
+      name: 'Campaign2 Note',
+    })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
       itemId: note1,
@@ -218,12 +206,10 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folders, leaf: leafId } = await setupFolderTree(
-      t,
-      ctx.campaignId,
-      dmId,
-      { depth: 5, leafType: 'note' },
-    )
+    const { folders, leaf: leafId } = await setupFolderTree(t, ctx.campaignId, dmId, {
+      depth: 5,
+      leafType: 'note',
+    })
     const leaf = leafId as Id<'notes'>
 
     const { blockDbId } = await createBlock(t, leaf, ctx.campaignId, dmId, {
@@ -249,13 +235,11 @@ describe('bulk trash operations', () => {
       const result = await t.run(async (dbCtx) => dbCtx.db.get(fId))
       expect(result).toBeNull()
     }
-    const [leafResult, blockResult, shareResult] = await t.run(
-      async (dbCtx) => [
-        await dbCtx.db.get(leaf),
-        await dbCtx.db.get(blockDbId),
-        await dbCtx.db.get(shareId),
-      ],
-    )
+    const [leafResult, blockResult, shareResult] = await t.run(async (dbCtx) => [
+      await dbCtx.db.get(leaf),
+      await dbCtx.db.get(blockDbId),
+      await dbCtx.db.get(shareId),
+    ])
     expect(leafResult).toBeNull()
     expect(blockResult).toBeNull()
     expect(shareResult).toBeNull()

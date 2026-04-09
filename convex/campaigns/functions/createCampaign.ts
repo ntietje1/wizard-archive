@@ -1,9 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-  CAMPAIGN_STATUS,
-} from '../types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import { validateCampaignName, validateCampaignSlug } from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
@@ -34,16 +30,11 @@ export async function createCampaign(
 
   const conflict = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) =>
-      q.eq('slug', slug).eq('dmUserId', profile._id),
-    )
+    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', profile._id))
     .unique()
 
   if (conflict) {
-    throwClientError(
-      ERROR_CODE.CONFLICT,
-      'A campaign with this slug already exists',
-    )
+    throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
   }
 
   const campaignId = await ctx.db.insert('campaigns', {

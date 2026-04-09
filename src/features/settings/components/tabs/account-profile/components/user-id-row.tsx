@@ -22,18 +22,13 @@ export function UserIdRow({ userId }: { userId: Id<'userProfiles'> }) {
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">User ID</p>
-        <p className="text-sm text-muted-foreground truncate font-mono">
-          {userId}
-        </p>
+        <p className="text-sm text-muted-foreground truncate font-mono">{userId}</p>
       </div>
       <Button
         variant="outline"
         size="sm"
         onClick={handleCopy}
-        className={cn(
-          'shrink-0',
-          copied && 'text-green-600 hover:text-green-600',
-        )}
+        className={cn('shrink-0', copied && 'text-green-600 hover:text-green-600')}
       >
         {copied ? (
           <>

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createSidebarShare } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
@@ -43,11 +39,7 @@ describe('createNote', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
@@ -99,11 +91,7 @@ describe('createNote', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -125,11 +113,7 @@ describe('createNote', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -216,11 +200,7 @@ describe('createNote', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,

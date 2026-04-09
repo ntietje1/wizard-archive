@@ -35,10 +35,7 @@ export function useCanvasSelectionSync({
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
         onHistorySelectionChange(nodeIds)
 
-        if (
-          editingEmbedIdRef.current &&
-          !nodeIds.includes(editingEmbedIdRef.current)
-        ) {
+        if (editingEmbedIdRef.current && !nodeIds.includes(editingEmbedIdRef.current)) {
           setEditingEmbedId(null)
         }
 
@@ -52,12 +49,7 @@ export function useCanvasSelectionSync({
         )
       }
     },
-    [
-      setLocalSelection,
-      reactFlowInstance,
-      onHistorySelectionChange,
-      setEditingEmbedId,
-    ],
+    [setLocalSelection, reactFlowInstance, onHistorySelectionChange, setEditingEmbedId],
   )
 
   useOnSelectionChange({ onChange: handleSelectionChange })

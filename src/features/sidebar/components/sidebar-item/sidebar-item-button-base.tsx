@@ -83,9 +83,7 @@ function SidebarItemButtonBaseComponent({
 
       {/* Item Name */}
       {isRenaming || !linkProps ? (
-        <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">
-          {nameContent}
-        </div>
+        <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">{nameContent}</div>
       ) : (
         <Link
           {...linkProps}

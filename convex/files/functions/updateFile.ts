@@ -1,8 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import {
-  requireItemAccess,
-  validateSidebarItemRename,
-} from '../../sidebarItems/validation'
+import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'

@@ -24,12 +24,7 @@ export const canvasesTables = {
   canvases: defineTable({
     ...canvasTableFields,
   })
-    .index('by_campaign_location_parent_name', [
-      'campaignId',
-      'location',
-      'parentId',
-      'name',
-    ])
+    .index('by_campaign_location_parent_name', ['campaignId', 'location', 'parentId', 'name'])
     .index('by_campaign_slug', ['campaignId', 'slug'])
     .index('by_campaign_deletionTime', ['campaignId', 'deletionTime']),
 }

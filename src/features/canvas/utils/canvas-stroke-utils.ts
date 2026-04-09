@@ -30,10 +30,7 @@ export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
   }
 }
 
-export function pointsToPathD(
-  points: Array<[number, number, number]>,
-  size: number,
-): string {
+export function pointsToPathD(points: Array<[number, number, number]>, size: number): string {
   const outline = getStroke(points, { ...STROKE_OPTIONS_BASE, size })
   if (outline.length < 2) return ''
 
@@ -58,8 +55,7 @@ export function getStrokeBounds(
   size: number,
   precomputedOutline?: Array<Array<number>>,
 ): Bounds {
-  const outline =
-    precomputedOutline ?? getStroke(points, { ...STROKE_OPTIONS_BASE, size })
+  const outline = precomputedOutline ?? getStroke(points, { ...STROKE_OPTIONS_BASE, size })
   if (outline.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
 
   let minX = Infinity
@@ -200,12 +196,7 @@ export function strokeInsidePolygon(
 export function strokeInsideRect(stroke: StrokeData, rect: Bounds): boolean {
   if (stroke.points.length === 0) return false
   for (const [px, py] of stroke.points) {
-    if (
-      px < rect.x ||
-      px > rect.x + rect.width ||
-      py < rect.y ||
-      py > rect.y + rect.height
-    ) {
+    if (px < rect.x || px > rect.x + rect.width || py < rect.y || py > rect.y + rect.height) {
       return false
     }
   }
@@ -254,14 +245,8 @@ export function pointNearStrokePath(
   for (let i = 0; i < outline.length; i++) {
     const j = (i + 1) % outline.length
     if (
-      pointToSegmentDistSq(
-        px,
-        py,
-        outline[i][0],
-        outline[i][1],
-        outline[j][0],
-        outline[j][1],
-      ) <= thresholdSq
+      pointToSegmentDistSq(px, py, outline[i][0], outline[i][1], outline[j][0], outline[j][1]) <=
+      thresholdSq
     ) {
       return true
     }

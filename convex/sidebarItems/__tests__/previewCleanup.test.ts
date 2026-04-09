@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import {
-  createFile,
-  createFolder,
-  createGameMap,
-  createNote,
-} from '../../_test/factories.helper'
+import { createFile, createFolder, createGameMap, createNote } from '../../_test/factories.helper'
 import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { api } from '../../_generated/api'
 import type { TestConvex } from 'convex-test'
@@ -47,10 +42,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: storageId,
     })
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: noteId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: noteId,
+    })
 
     await t.run(async (dbCtx) => {
       const note = await dbCtx.db.get(noteId)
@@ -79,10 +73,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: previewBlob,
     })
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: fileId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: fileId,
+    })
 
     await t.run(async (dbCtx) => {
       const file = await dbCtx.db.get(fileId)
@@ -110,10 +103,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: sharedBlob,
     })
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: mapId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: mapId,
+    })
 
     await t.run(async (dbCtx) => {
       const map = await dbCtx.db.get(mapId)
@@ -142,10 +134,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: previewBlob,
     })
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: mapId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: mapId,
+    })
 
     await t.run(async (dbCtx) => {
       const map = await dbCtx.db.get(mapId)
@@ -165,10 +156,9 @@ describe('preview cleanup on hard delete', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await trashItem(t, noteId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: noteId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: noteId,
+    })
 
     await t.run(async (dbCtx) => {
       const note = await dbCtx.db.get(noteId)
@@ -180,17 +170,12 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
     await trashItem(t, folderId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: folderId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: folderId,
+    })
 
     await t.run(async (dbCtx) => {
       const folder = await dbCtx.db.get(folderId)

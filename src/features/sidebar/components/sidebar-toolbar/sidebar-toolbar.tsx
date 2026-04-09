@@ -15,10 +15,7 @@ import {
 } from '~/features/sidebar/components/sidebar-toolbar/constants'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
-  const { visible } = usePanelPreference(
-    LEFT_SIDEBAR_PANEL_ID,
-    LEFT_SIDEBAR_DEFAULTS,
-  )
+  const { visible } = usePanelPreference(LEFT_SIDEBAR_PANEL_ID, LEFT_SIDEBAR_DEFAULTS)
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -41,9 +38,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {visible && <div className="w-[1px] bg-border" />}
-        <div className={`flex-1 flex flex-col min-h-0 min-w-0 border-t`}>
-          {children}
-        </div>
+        <div className={`flex-1 flex flex-col min-h-0 min-w-0 border-t`}>{children}</div>
       </div>
     </div>
   )

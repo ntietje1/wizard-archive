@@ -38,9 +38,7 @@ export function useNotePreview({
       isGeneratingRef.current = true
       try {
         if (cancelled) return
-        await claimAndUploadRef.current(noteIdRef.current, () =>
-          captureElementPreview(el),
-        )
+        await claimAndUploadRef.current(noteIdRef.current, () => captureElementPreview(el))
       } catch (error) {
         logger.error('Failed to generate note preview:', error)
       } finally {
@@ -62,5 +60,6 @@ export function useNotePreview({
       doc.off('update', scheduleGeneration)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, noteId])
 }

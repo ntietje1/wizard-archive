@@ -22,10 +22,7 @@ export function EmbedFolderContent({ folderId }: { folderId: Id<'folders'> }) {
       {children.map((child) => {
         const Icon = getSidebarItemIcon(child)
         return (
-          <li
-            key={child._id}
-            className="flex items-center gap-1.5 px-1.5 py-1 rounded text-xs"
-          >
+          <li key={child._id} className="flex items-center gap-1.5 px-1.5 py-1 rounded text-xs">
             <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{child.name}</span>
           </li>

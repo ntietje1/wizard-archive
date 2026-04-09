@@ -5,9 +5,7 @@ const VALID_PANEL_IDS = ['left-sidebar', 'editor-right-sidebar'] as const
 
 export const setUserPreferences = authMutation({
   args: {
-    theme: v.optional(
-      v.union(v.literal('light'), v.literal('dark'), v.literal('system')),
-    ),
+    theme: v.optional(v.union(v.literal('light'), v.literal('dark'), v.literal('system'))),
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {
@@ -50,11 +48,7 @@ export const setPanelPreference = authMutation({
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {
-    if (
-      !VALID_PANEL_IDS.includes(
-        args.panelId as (typeof VALID_PANEL_IDS)[number],
-      )
-    ) {
+    if (!VALID_PANEL_IDS.includes(args.panelId as (typeof VALID_PANEL_IDS)[number])) {
       throw new Error(`Invalid panelId: ${args.panelId}`)
     }
 

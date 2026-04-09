@@ -2,10 +2,7 @@ import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import {
-  validateCampaignName,
-  validateCampaignSlug,
-} from 'convex/campaigns/validation'
+import { validateCampaignName, validateCampaignSlug } from 'convex/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
 import type { RefObject } from 'react'
 import type { Campaign } from 'convex/campaigns/types'
@@ -47,23 +44,13 @@ export function CampaignDialog({
       icon={Sword}
     >
       {isOpen && (
-        <CampaignForm
-          mode={mode}
-          onClose={onClose}
-          campaign={campaign}
-          campaigns={campaigns}
-        />
+        <CampaignForm mode={mode} onClose={onClose} campaign={campaign} campaigns={campaigns} />
       )}
     </FormDialog>
   )
 }
 
-function CampaignForm({
-  mode,
-  onClose,
-  campaign,
-  campaigns,
-}: Omit<CampaignDialogProps, 'isOpen'>) {
+function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialogProps, 'isOpen'>) {
   const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
   const createCampaign = useAppMutation(api.campaigns.mutations.createCampaign)
   const updateCampaign = useAppMutation(api.campaigns.mutations.updateCampaign)
@@ -71,9 +58,7 @@ function CampaignForm({
   const campaignsRef: RefObject<Array<Campaign>> = useRef(campaigns)
   campaignsRef.current = campaigns
 
-  const [initialSlug] = useState(() =>
-    Math.random().toString(36).substring(2, 15),
-  )
+  const [initialSlug] = useState(() => Math.random().toString(36).substring(2, 15))
 
   const form = useForm({
     defaultValues:
@@ -130,7 +115,7 @@ function CampaignForm({
       onSubmit={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        form.handleSubmit()
+        void form.handleSubmit()
       }}
       className="space-y-4"
     >
@@ -152,11 +137,8 @@ function CampaignForm({
               placeholder="Enter campaign name"
               disabled={form.state.isSubmitting}
             />
-            {field.state.meta.errors.length > 0 &&
-            field.state.meta.isTouched ? (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
+            {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
+              <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
             ) : null}
           </div>
         )}
@@ -211,11 +193,8 @@ function CampaignForm({
               maxLength={30}
               disabled={form.state.isSubmitting}
             />
-            {field.state.meta.errors.length > 0 &&
-            field.state.meta.isTouched ? (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
+            {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
+              <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
             ) : null}
 
             {userProfile.data?.username ? (
@@ -235,13 +214,7 @@ function CampaignForm({
           isSubmitting: s.isSubmitting,
         })}
       >
-        {({
-          canSubmit,
-          isSubmitting,
-        }: {
-          canSubmit: boolean
-          isSubmitting: boolean
-        }) => {
+        {({ canSubmit, isSubmitting }: { canSubmit: boolean; isSubmitting: boolean }) => {
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={handleClose}>

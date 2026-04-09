@@ -2,11 +2,7 @@ import { useState } from 'react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SharePermissionMenu } from '~/features/sharing/components/share-permission-menu'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -42,13 +38,7 @@ export function ShareButton() {
 
   const dmUserProfile = campaign.data?.dmUserProfile
   const isItemTrashed = item?.location === SIDEBAR_ITEM_LOCATION.trash
-  const isDisabled =
-    isItemLoading ||
-    !item ||
-    isItemTrashed ||
-    !canShare ||
-    isMutating ||
-    isPending
+  const isDisabled = isItemLoading || !item || isItemTrashed || !canShare || isMutating || isPending
   const isShared = item && aggregateShareStatus !== 'not_shared'
   const hasShareData = Boolean(item)
 
@@ -70,12 +60,7 @@ export function ShareButton() {
         }
       />
       {hasShareData && (
-        <PopoverContent
-          align="start"
-          side="bottom"
-          sideOffset={4}
-          className="w-auto p-2"
-        >
+        <PopoverContent align="start" side="bottom" sideOffset={4} className="w-auto p-2">
           <SharePermissionMenu
             dmUserProfile={dmUserProfile}
             isPending={isPending}

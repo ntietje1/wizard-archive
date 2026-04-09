@@ -31,15 +31,12 @@ export async function onUpdateUser(
   }> = {}
   if (newUser.name !== oldUser.name) updates.name = newUser.name
   if (newUser.email !== oldUser.email) updates.email = newUser.email
-  if (newUser.emailVerified !== oldUser.emailVerified)
-    updates.emailVerified = newUser.emailVerified
+  if (newUser.emailVerified !== oldUser.emailVerified) updates.emailVerified = newUser.emailVerified
   // Only update profile image from OAuth if user hasn't uploaded their own
   if (newUser.image !== oldUser.image) {
     const hasUserUpload = profile.profileImage?.type === 'storage'
     if (!hasUserUpload) {
-      updates.profileImage = newUser.image
-        ? { type: 'external', url: newUser.image }
-        : null
+      updates.profileImage = newUser.image ? { type: 'external', url: newUser.image } : null
     }
   }
   if (newUser.twoFactorEnabled !== oldUser.twoFactorEnabled)

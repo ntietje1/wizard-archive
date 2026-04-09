@@ -13,19 +13,14 @@ interface DroppableFolderZoneProps {
   className?: string
 }
 
-export function DroppableFolderZone({
-  folder,
-  children,
-  className,
-}: DroppableFolderZoneProps) {
+export function DroppableFolderZone({ folder, children, className }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useSidebarItemDropTarget({ ref, item: folder })
 
   const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
   const isTrashAction = useDndStore(
-    (s) =>
-      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+    (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
 
   useExternalDropTarget({
@@ -48,9 +43,7 @@ export function DroppableFolderZone({
       ref={ref}
       className={cn(
         className,
-        folder.location !== SIDEBAR_ITEM_LOCATION.trash &&
-          isDropTarget &&
-          activeHighlight,
+        folder.location !== SIDEBAR_ITEM_LOCATION.trash && isDropTarget && activeHighlight,
         folder.location !== SIDEBAR_ITEM_LOCATION.trash &&
           isFileDragTarget &&
           'ring-2 ring-inset ring-ring/40 bg-ring/5',

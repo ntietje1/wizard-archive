@@ -3,11 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import zlib from 'node:zlib'
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote } from './helpers/sidebar-helpers'
 import { createMap, openMap, uploadMapImage } from './helpers/map-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -58,10 +54,7 @@ test.describe.serial('game maps', () => {
     mapName = `Test Map ${id}`
     noteName = `Pin Target ${id}`
 
-    testImagePath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      'test-map-image.png',
-    )
+    testImagePath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'test-map-image.png')
     fs.writeFileSync(testImagePath, createTestPng(200, 200))
 
     const context = await browser.newContext({
@@ -100,9 +93,7 @@ test.describe.serial('game maps', () => {
     await createMap(page, mapName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: mapName, exact: true }),
-    ).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: mapName, exact: true })).toBeVisible()
   })
 
   test('upload map image and view with zoom controls', async ({ page }) => {
@@ -127,9 +118,7 @@ test.describe.serial('game maps', () => {
 
     // Right-click the note in sidebar to pin it
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await sidebar
-      .getByRole('link', { name: noteName, exact: true })
-      .click({ button: 'right' })
+    await sidebar.getByRole('link', { name: noteName, exact: true }).click({ button: 'right' })
     await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 
     const pinMenuItem = page.getByRole('menuitem', { name: /pin to map/i })
@@ -165,12 +154,10 @@ test.describe.serial('game maps', () => {
     await expect(pin).toBeVisible({ timeout: 15000 })
     await pin.click({ button: 'right' })
 
-    await expect(
-      page.getByRole('menuitem', { name: 'Move Pin', exact: true }),
-    ).toBeVisible({ timeout: 3000 })
-    await expect(
-      page.getByRole('menuitem', { name: 'Remove Pin', exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Move Pin', exact: true })).toBeVisible({
+      timeout: 3000,
+    })
+    await expect(page.getByRole('menuitem', { name: 'Remove Pin', exact: true })).toBeVisible()
 
     await page.keyboard.press('Escape')
   })
@@ -215,9 +202,7 @@ test.describe.serial('game maps', () => {
     await expect(pin).toBeVisible({ timeout: 5000 })
     const pinCount = await page.locator('[data-pin-id]').count()
     await pin.click({ button: 'right' })
-    await page
-      .getByRole('menuitem', { name: 'Remove Pin', exact: true })
-      .click()
+    await page.getByRole('menuitem', { name: 'Remove Pin', exact: true }).click()
 
     await expect(page.locator('[data-pin-id]')).toHaveCount(pinCount - 1, {
       timeout: 5000,

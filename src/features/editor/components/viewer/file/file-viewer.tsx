@@ -77,9 +77,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
         <div className="text-center space-y-2">
           <File className="h-10 w-10 mx-auto text-muted-foreground" />
           <h2 className="text-lg font-medium">Upload File</h2>
-          <p className="text-sm text-muted-foreground">
-            Upload a file to add it to your campaign.
-          </p>
+          <p className="text-sm text-muted-foreground">Upload a file to add it to your campaign.</p>
         </div>
 
         <div className="space-y-4">
@@ -92,9 +90,7 @@ function FileUpload({ fileId }: { fileId: Id<'files'> }) {
           />
 
           {fileUpload.uploadError && (
-            <p className="text-sm text-destructive text-center">
-              {fileUpload.uploadError}
-            </p>
+            <p className="text-sm text-destructive text-center">{fileUpload.uploadError}</p>
           )}
         </div>
       </div>
@@ -112,11 +108,7 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
   switch (fileType) {
     case 'image':
       return (
-        <ImageFileViewer
-          key={file._id}
-          imageUrl={file.downloadUrl}
-          alt={file.name || 'File'}
-        />
+        <ImageFileViewer key={file._id} imageUrl={file.downloadUrl} alt={file.name || 'File'} />
       )
     case 'pdf':
       return (
@@ -129,12 +121,7 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
     case 'audio':
       return <AudioFileViewer audioUrl={file.downloadUrl} />
     case 'other':
-      return (
-        <OtherFileViewer
-          fileUrl={file.downloadUrl}
-          fileName={file.name || 'File'}
-        />
-      )
+      return <OtherFileViewer fileUrl={file.downloadUrl} fileName={file.name || 'File'} />
     default:
       return assertNever(fileType)
   }

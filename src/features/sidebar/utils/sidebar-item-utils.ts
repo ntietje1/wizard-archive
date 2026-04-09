@@ -1,8 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -26,9 +23,7 @@ export function isSidebarItemType<T extends AnySidebarItem['type']>(
   item: AnySidebarItem | null | undefined,
   type: T,
 ): item is Extract<AnySidebarItem, { type: T }> {
-  return (
-    item !== null && item !== undefined && 'type' in item && item.type === type
-  )
+  return item !== null && item !== undefined && 'type' in item && item.type === type
 }
 
 /**
@@ -41,18 +36,14 @@ export function isNote(item: AnySidebarItem | null | undefined): item is Note {
 /**
  * Type guard to check if a sidebar item is a Folder.
  */
-export function isFolder(
-  item: AnySidebarItem | null | undefined,
-): item is Folder {
+export function isFolder(item: AnySidebarItem | null | undefined): item is Folder {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.folders)
 }
 
 /**
  * Type guard to check if a sidebar item is a GameMap.
  */
-export function isGameMap(
-  item: AnySidebarItem | null | undefined,
-): item is GameMap {
+export function isGameMap(item: AnySidebarItem | null | undefined): item is GameMap {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.gameMaps)
 }
 
@@ -60,15 +51,11 @@ export function isGameMap(
 /**
  * Type guard to check if a sidebar item is a SidebarFile.
  */
-export function isFile(
-  item: AnySidebarItem | null | undefined,
-): item is SidebarFile {
+export function isFile(item: AnySidebarItem | null | undefined): item is SidebarFile {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
 }
 
-export function isCanvas(
-  item: AnySidebarItem | null | undefined,
-): item is Canvas {
+export function isCanvas(item: AnySidebarItem | null | undefined): item is Canvas {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.canvases)
 }
 

@@ -18,11 +18,7 @@ export function NotesNavButton() {
         activeOptions={{ includeSearch: false }}
       >
         {({ isActive }) => (
-          <Button
-            variant={isActive ? 'secondary' : 'ghost'}
-            size="icon"
-            aria-label="Notes"
-          >
+          <Button variant={isActive ? 'secondary' : 'ghost'} size="icon" aria-label="Notes">
             <FileText className="h-4 w-4" />
           </Button>
         )}

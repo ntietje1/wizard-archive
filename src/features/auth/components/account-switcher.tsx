@@ -31,20 +31,14 @@ export function AccountRow({
       <UserProfileImage imageUrl={imageUrl} name={name} email={email} />
       <div className="flex flex-col min-w-0 flex-1">
         {name && <span className="text-sm font-medium truncate">{name}</span>}
-        <span className="text-xs text-muted-foreground truncate">
-          {subtitle}
-        </span>
+        <span className="text-xs text-muted-foreground truncate">{subtitle}</span>
       </div>
       {rightSlot}
     </div>
   )
 }
 
-export function AccountSwitcher({
-  otherAccounts,
-  onAddAccount,
-  onSwitch,
-}: AccountSwitcherProps) {
+export function AccountSwitcher({ otherAccounts, onAddAccount, onSwitch }: AccountSwitcherProps) {
   const [switching, setSwitching] = useState<string | null>(null)
 
   const handleSwitch = async (sessionToken: string) => {
@@ -90,9 +84,7 @@ export function AccountSwitcher({
               imageUrl={ds.user.image}
               email={ds.user.email}
               rightSlot={
-                isSwitching ? (
-                  <Loader2 className="size-3.5 animate-spin shrink-0" />
-                ) : undefined
+                isSwitching ? <Loader2 className="size-3.5 animate-spin shrink-0" /> : undefined
               }
             />
           </button>

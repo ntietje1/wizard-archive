@@ -30,25 +30,16 @@ function getFileTypeIcon(
     fileName = fileMetadata.name.toLowerCase()
   }
 
-  if (
-    mimeType.startsWith('image/') ||
-    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)) {
     return Image
   }
   if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
     return FileText
   }
-  if (
-    mimeType.startsWith('video/') ||
-    /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('video/') || /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)) {
     return Video
   }
-  if (
-    mimeType.startsWith('audio/') ||
-    /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)) {
     return Music
   }
   return File
@@ -126,10 +117,7 @@ export function FileUploadSection({
                         {fileSize}
                       </Badge>
                       {fileName && getFileExtension(fileName) && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs font-mono shrink-0"
-                        >
+                        <Badge variant="secondary" className="text-xs font-mono shrink-0">
                           {getFileExtension(fileName)}
                         </Badge>
                       )}
@@ -138,10 +126,7 @@ export function FileUploadSection({
                 </div>
                 {/* Upload Progress */}
                 {fileUpload.isUploading && (
-                  <Progress
-                    value={fileUpload.uploadProgress.percentage}
-                    className="h-1.5"
-                  />
+                  <Progress value={fileUpload.uploadProgress.percentage} className="h-1.5" />
                 )}
               </div>
 
@@ -201,9 +186,7 @@ export function FileUploadSection({
                 <div className="flex justify-center mb-3">
                   <Upload className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-sm font-medium text-foreground">
-                  {dragDropText}
-                </p>
+                <p className="text-sm font-medium text-foreground">{dragDropText}</p>
               </div>
               <input
                 ref={fileUpload.fileInputRef}

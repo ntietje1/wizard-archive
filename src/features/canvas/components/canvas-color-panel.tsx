@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
 import { CanvasContext } from '../utils/canvas-context'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
@@ -82,9 +75,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
     [flushNodeUpdates, colorRelevantNodes],
   )
 
-  const activeColor = hasColorSelection
-    ? getSelectionColor(colorRelevantNodes)
-    : strokeColor
+  const activeColor = hasColorSelection ? getSelectionColor(colorRelevantNodes) : strokeColor
 
   const activeOpacity = hasColorSelection
     ? (getSelectionOpacity(colorRelevantNodes) ?? strokeOpacity)
@@ -133,8 +124,7 @@ export function CanvasColorPanel({ canEdit }: CanvasColorPanelProps) {
           className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           style={{
             backgroundColor: color,
-            outline:
-              activeColor === color ? '2px solid var(--primary)' : 'none',
+            outline: activeColor === color ? '2px solid var(--primary)' : 'none',
             outlineOffset: '1px',
           }}
           onClick={() => handleColorChange(color)}

@@ -35,20 +35,7 @@ describe('validateSidebarItemName', () => {
   })
 
   it('rejects names with forbidden characters', () => {
-    for (const char of [
-      '/',
-      '\\',
-      ':',
-      '*',
-      '?',
-      '"',
-      '<',
-      '>',
-      '[',
-      ']',
-      '#',
-      '|',
-    ]) {
+    for (const char of ['/', '\\', ':', '*', '?', '"', '<', '>', '[', ']', '#', '|']) {
       const result = validateSidebarItemName({ name: `test${char}name` })
       expect(result.valid).toBe(false)
     }
@@ -92,21 +79,13 @@ describe('validateSidebarItemName', () => {
 describe('validateNoCircularParent', () => {
   it('allows moving to root', () => {
     const folder = createFolder({ _id: testId<'folders'>('folder_c1') })
-    const result = validateNoCircularParent(
-      folder._id,
-      null,
-      buildMap([folder]),
-    )
+    const result = validateNoCircularParent(folder._id, null, buildMap([folder]))
     expect(result).toEqual({ valid: true })
   })
 
   it('rejects self as parent', () => {
     const folder = createFolder({ _id: testId<'folders'>('folder_c2') })
-    const result = validateNoCircularParent(
-      folder._id,
-      folder._id,
-      buildMap([folder]),
-    )
+    const result = validateNoCircularParent(folder._id, folder._id, buildMap([folder]))
     expect(result.valid).toBe(false)
   })
 
@@ -119,11 +98,7 @@ describe('validateNoCircularParent', () => {
       _id: testId<'folders'>('folder_cc'),
       parentId: parent._id,
     })
-    const result = validateNoCircularParent(
-      parent._id,
-      child._id,
-      buildMap([parent, child]),
-    )
+    const result = validateNoCircularParent(parent._id, child._id, buildMap([parent, child]))
     expect(result.valid).toBe(false)
   })
 })
@@ -150,9 +125,7 @@ describe('getAncestorIds', () => {
   })
 
   it('returns empty for item not in map', () => {
-    expect(getAncestorIds(testId<'notes'>('nonexistent'), new Map())).toEqual(
-      [],
-    )
+    expect(getAncestorIds(testId<'notes'>('nonexistent'), new Map())).toEqual([])
   })
 })
 
@@ -175,9 +148,7 @@ describe('validateParentChange', () => {
   })
 
   it('returns valid when no itemId provided', () => {
-    expect(validateParentChange({ itemId: undefined, parentId: null })).toEqual(
-      { valid: true },
-    )
+    expect(validateParentChange({ itemId: undefined, parentId: null })).toEqual({ valid: true })
   })
 
   it('returns valid when no itemsMap provided', () => {

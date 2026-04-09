@@ -9,19 +9,9 @@ interface ZoomControlsProps {
   className?: string
 }
 
-export function ZoomControls({
-  onZoomIn,
-  onZoomOut,
-  onReset,
-  className,
-}: ZoomControlsProps) {
+export function ZoomControls({ onZoomIn, onZoomOut, onReset, className }: ZoomControlsProps) {
   return (
-    <div
-      className={cn(
-        'absolute top-4 right-4 z-[1000] flex flex-col gap-2',
-        className,
-      )}
-    >
+    <div className={cn('absolute top-4 right-4 z-[1000] flex flex-col gap-2', className)}>
       <Button
         variant="outline"
         size="icon"

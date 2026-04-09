@@ -7,11 +7,7 @@ import type * as Y from 'yjs'
 
 const MIN_RECT_SIZE = 10
 
-export function useCanvasRectangleDraw({
-  nodesMap,
-}: {
-  nodesMap: Y.Map<Node>
-}) {
+export function useCanvasRectangleDraw({ nodesMap }: { nodesMap: Y.Map<Node> }) {
   const startRef = useRef<XYPosition | null>(null)
   const activeRef = useRef(false)
   const lastClientPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })

@@ -38,8 +38,7 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
         color: data.color,
         size: data.size,
         points: data.points.map(
-          ([x, y, p]) =>
-            [x + offsetX, y + offsetY, p] as [number, number, number],
+          ([x, y, p]) => [x + offsetX, y + offsetY, p] as [number, number, number],
         ),
       }
 
@@ -49,9 +48,7 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
       }
     }
     if (changed) {
-      useCanvasToolStore
-        .getState()
-        .setErasingStrokeIds(new Set(markedRef.current))
+      useCanvasToolStore.getState().setErasingStrokeIds(new Set(markedRef.current))
     }
   }, [reactFlow])
 
@@ -99,9 +96,7 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
     (e: React.PointerEvent) => {
       if (pointerIdRef.current !== null) {
         try {
-          ;(e.currentTarget as Element).releasePointerCapture(
-            pointerIdRef.current,
-          )
+          ;(e.currentTarget as Element).releasePointerCapture(pointerIdRef.current)
         } catch {
           /* already released */
         }

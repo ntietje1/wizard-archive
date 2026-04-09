@@ -1,14 +1,6 @@
 import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import {
-  File,
-  FileText,
-  Folder,
-  Grid2x2Plus,
-  Loader2,
-  MapPin,
-  Plus,
-} from 'lucide-react'
+import { File, FileText, Folder, Grid2x2Plus, Loader2, MapPin, Plus } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
@@ -53,11 +45,7 @@ function CreateNewButton({
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground group-hover:text-foreground">
-        {isCreating ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Plus className="h-4 w-4" />
-        )}
+        {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
       </div>
     </Button>
   )
@@ -68,10 +56,7 @@ interface CreateNewDashboardProps {
   folderPath?: string
 }
 
-export function CreateNewDashboard({
-  parentId,
-  folderPath,
-}: CreateNewDashboardProps) {
+export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardProps) {
   const { campaignId } = useCampaign()
   const { createItem } = useCreateSidebarItem()
   const { getDefaultName } = useSidebarValidation()
@@ -107,9 +92,7 @@ export function CreateNewDashboard({
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               Create New
             </h2>
-            {folderPath && (
-              <p className="text-xs text-muted-foreground mt-1">{folderPath}</p>
-            )}
+            {folderPath && <p className="text-xs text-muted-foreground mt-1">{folderPath}</p>}
           </div>
           <div className="space-y-2">
             <CreateNewButton

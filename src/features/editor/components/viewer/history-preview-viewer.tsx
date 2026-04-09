@@ -20,21 +20,13 @@ import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { canvasNodeTypes } from '~/features/canvas/components/nodes/canvas-node-types'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
-import {
-  resolvePinColor,
-  resolvePinIcon,
-} from '~/features/editor/components/viewer/map/pin-utils'
+import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
 import { logger } from '~/shared/utils/logger'
 
-export function HistoryPreviewViewer({
-  entryId,
-}: {
-  entryId: Id<'editHistory'>
-}) {
-  const snapshotQuery = useAuthQuery(
-    api.documentSnapshots.queries.getSnapshotForHistoryEntry,
-    { editHistoryId: entryId },
-  )
+export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
+  const snapshotQuery = useAuthQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
+    editHistoryId: entryId,
+  })
   const { canEdit } = useEditorMode()
 
   const historyEntry = useAuthQuery(api.editHistory.queries.getHistoryEntry, {
@@ -54,15 +46,9 @@ export function HistoryPreviewViewer({
   if (!snapshotQuery.data) {
     return (
       <div className="flex flex-col h-full">
-        <HistoryPreviewBanner
-          entryId={entryId}
-          entryTime={entryTime}
-          canEdit={canEdit}
-        />
+        <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
         <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            Preview not available for this version.
-          </p>
+          <p className="text-sm text-muted-foreground">Preview not available for this version.</p>
         </div>
       </div>
     )
@@ -72,11 +58,7 @@ export function HistoryPreviewViewer({
 
   return (
     <div className="flex flex-col h-full">
-      <HistoryPreviewBanner
-        entryId={entryId}
-        entryTime={entryTime}
-        canEdit={canEdit}
-      />
+      <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
       {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
         snapshot.itemType === SIDEBAR_ITEM_TYPES.notes && (
           <NoteYjsSnapshotPreview data={snapshot.data} />
@@ -124,11 +106,7 @@ function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <ScrollArea className="flex-1 min-h-0">
-      <NoteContent
-        content={blocks}
-        editable={false}
-        className="mx-auto w-full max-w-3xl mt-2"
-      />
+      <NoteContent content={blocks} editable={false} className="mx-auto w-full max-w-3xl mt-2" />
     </ScrollArea>
   )
 }

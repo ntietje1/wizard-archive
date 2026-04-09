@@ -1,9 +1,7 @@
 import { toBlob } from 'html-to-image'
 import type * as PdfjsNamespace from 'pdfjs-dist'
 
-export async function captureElementPreview(
-  element: HTMLElement,
-): Promise<Blob> {
+export async function captureElementPreview(element: HTMLElement): Promise<Blob> {
   const blob = await toBlob(element, {
     width: element.clientWidth,
     height: element.clientHeight,
@@ -43,22 +41,16 @@ function initPdfWorker() {
   return pdfInitPromise
 }
 
-export async function generatePdfPreview(
-  source: string | ArrayBuffer,
-): Promise<Blob> {
+export async function generatePdfPreview(source: string | ArrayBuffer): Promise<Blob> {
   const pdfjsLib = await initPdfWorker()
 
-  const data =
-    source instanceof ArrayBuffer ? { data: new Uint8Array(source) } : source
+  const data = source instanceof ArrayBuffer ? { data: new Uint8Array(source) } : source
   const pdf = await pdfjsLib.getDocument(data).promise
   try {
     const page = await pdf.getPage(1)
 
     const pageSize = page.getViewport({ scale: 1 })
-    const scale = Math.min(
-      PDF_PREVIEW_WIDTH / pageSize.width,
-      PDF_PREVIEW_HEIGHT / pageSize.height,
-    )
+    const scale = Math.min(PDF_PREVIEW_WIDTH / pageSize.width, PDF_PREVIEW_HEIGHT / pageSize.height)
     const viewport = page.getViewport({ scale })
 
     const canvas = document.createElement('canvas')
@@ -81,6 +73,6 @@ export async function generatePdfPreview(
       )
     })
   } finally {
-    pdf.destroy()
+    void pdf.destroy()
   }
 }

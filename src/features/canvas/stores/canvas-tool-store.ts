@@ -2,13 +2,7 @@ import { create } from 'zustand'
 import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 
-export type CanvasTool =
-  | 'select'
-  | 'hand'
-  | 'draw'
-  | 'erase'
-  | 'lasso'
-  | 'rectangle'
+export type CanvasTool = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'rectangle'
 
 const TOOL_CURSORS: Record<CanvasTool, string | undefined> = {
   select: undefined,
@@ -74,38 +68,36 @@ const INITIAL_STATE: CanvasToolState = {
   redo: () => {},
 }
 
-export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>(
-  (set) => ({
-    ...INITIAL_STATE,
+export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((set) => ({
+  ...INITIAL_STATE,
 
-    setActiveTool: (tool) =>
-      set({
-        activeTool: tool,
-        erasingStrokeIds: new Set(),
-        rectDeselectedIds: new Set(),
-        localDrawing: null,
-        lassoPath: [],
-        selectionRect: null,
-      }),
+  setActiveTool: (tool) =>
+    set({
+      activeTool: tool,
+      erasingStrokeIds: new Set(),
+      rectDeselectedIds: new Set(),
+      localDrawing: null,
+      lassoPath: [],
+      selectionRect: null,
+    }),
 
-    setStrokeColor: (color) => set({ strokeColor: color }),
-    setStrokeSize: (size) => set({ strokeSize: size }),
-    setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
+  setStrokeColor: (color) => set({ strokeColor: color }),
+  setStrokeSize: (size) => set({ strokeSize: size }),
+  setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
-    setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
-    setRectDeselectedIds: (ids) => set({ rectDeselectedIds: ids }),
-    setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
-    setLassoPath: (path) => set({ lassoPath: path }),
-    setSelectionRect: (rect) => set({ selectionRect: rect }),
+  setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
+  setRectDeselectedIds: (ids) => set({ rectDeselectedIds: ids }),
+  setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
+  setLassoPath: (path) => set({ lassoPath: path }),
+  setSelectionRect: (rect) => set({ selectionRect: rect }),
 
-    setHistory: (history) => set(history),
+  setHistory: (history) => set(history),
 
-    reset: () =>
-      set({
-        ...INITIAL_STATE,
-        erasingStrokeIds: new Set(),
-        rectDeselectedIds: new Set(),
-        lassoPath: [],
-      }),
-  }),
-)
+  reset: () =>
+    set({
+      ...INITIAL_STATE,
+      erasingStrokeIds: new Set(),
+      rectDeselectedIds: new Set(),
+      lassoPath: [],
+    }),
+}))

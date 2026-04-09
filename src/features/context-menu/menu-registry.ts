@@ -36,8 +36,7 @@ import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 
 function isPanelContentActive(contentId: string): boolean {
-  const panel =
-    usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
+  const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
   return panel?.visible === true && panel?.activeContentId === contentId
 }
 
@@ -94,10 +93,7 @@ export type ActionHandlers = {
   endSession: (ctx: MenuContext) => void
 
   // Share actions
-  setGeneralAccessLevel: (
-    ctx: MenuContext,
-    level: PermissionLevel | null,
-  ) => void
+  setGeneralAccessLevel: (ctx: MenuContext, level: PermissionLevel | null) => void
 
   // Download actions
   downloadFile: (ctx: MenuContext) => void
@@ -149,8 +145,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: SquareArrowOutUpRight,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) =>
-        (p.inSidebar(ctx) || p.hasPinContext(ctx)) && ctx.item !== undefined,
+      shouldShow: (ctx) => (p.inSidebar(ctx) || p.hasPinContext(ctx)) && ctx.item !== undefined,
       action: actions.open,
     },
     {
@@ -360,8 +355,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
     },
     {
       id: 'toggle-pin-visibility',
-      label: (ctx) =>
-        ctx.activePin?.visible === true ? 'Hide Pin' : 'Show Pin',
+      label: (ctx) => (ctx.activePin?.visible === true ? 'Hide Pin' : 'Show Pin'),
       icon: EyeOff,
       group: 'pin-actions',
       priority: 49,
@@ -393,8 +387,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: MapPin,
       group: 'pin-actions',
       priority: 52,
-      shouldShow: (ctx) =>
-        p.hasEditAccess(ctx) && p.isActiveMap(ctx) && p.inView('map-view')(ctx),
+      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.isActiveMap(ctx) && p.inView('map-view')(ctx),
       action: actions.createMapPin,
     },
 
@@ -448,9 +441,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) &&
-        !p.hasPinContext(ctx),
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) && !p.hasPinContext(ctx),
       action: actions.downloadFile,
     },
     {
@@ -473,9 +464,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'download',
       priority: 80,
       shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) &&
-        !p.hasMapContext(ctx),
+        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) && !p.hasMapContext(ctx),
       action: actions.downloadMap,
     },
     {
@@ -509,10 +498,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 90,
       shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        p.inSidebar(ctx) &&
-        p.isItemNotTrashed(ctx) &&
-        p.isSidebarItem(ctx),
+        p.hasFullAccess(ctx) && p.inSidebar(ctx) && p.isItemNotTrashed(ctx) && p.isSidebarItem(ctx),
       action: actions.rename,
     },
     {
@@ -534,9 +520,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       group: 'edit',
       priority: 99,
       shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        p.isItemNotTrashed(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
+        p.hasFullAccess(ctx) && p.isItemNotTrashed(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
       action: actions.editFile,
     },
     {
@@ -565,9 +549,7 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
         p.hasFullAccess(ctx) &&
         p.isSidebarItem(ctx) &&
         p.isItemNotTrashed(ctx) &&
-        (p.inView('sidebar')(ctx) ||
-          p.inView('folder-view')(ctx) ||
-          p.inView('topbar')(ctx)),
+        (p.inView('sidebar')(ctx) || p.inView('folder-view')(ctx) || p.inView('topbar')(ctx)),
       action: actions.delete,
     },
 

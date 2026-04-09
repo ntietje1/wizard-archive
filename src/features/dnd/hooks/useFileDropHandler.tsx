@@ -1,19 +1,12 @@
 import { useRef } from 'react'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import {
-  isMediaFile,
-  isTextFile,
-  validateFileForUpload,
-} from 'convex/storage/validation'
+import { isMediaFile, isTextFile, validateFileForUpload } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  DropResult,
-  FolderStructure,
-} from '~/features/file-upload/utils/folder-reader'
+import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -28,10 +21,7 @@ import {
   ToastContent,
 } from '~/features/file-upload/components/file-progress-toasts'
 import { getDropResultStats } from '~/features/file-upload/utils/folder-reader'
-import {
-  getErrorMessage,
-  uploadFile,
-} from '~/features/file-upload/utils/file-upload'
+import { getErrorMessage, uploadFile } from '~/features/file-upload/utils/file-upload'
 import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 
 interface DropOptions {
@@ -66,16 +56,12 @@ export function useFileDropHandler() {
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
 
-  const generateUploadUrl = useAppMutation(
-    api.storage.mutations.generateUploadUrl,
-  )
+  const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)
   const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
   const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
   const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
 
-  const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(
-    new Map(),
-  )
+  const activeUploadsRef = useRef<Map<string, { toastId: string | number }>>(new Map())
 
   const uploadSingleFile = async (
     file: File,
@@ -101,11 +87,7 @@ export function useFileDropHandler() {
       toastId = toast.loading(
         <ToastContent
           title={fileName}
-          message={
-            isTextFile(file.type, file.name)
-              ? 'Processing...'
-              : 'Uploading... 0%'
-          }
+          message={isTextFile(file.type, file.name) ? 'Processing...' : 'Uploading... 0%'}
           progress={isTextFile(file.type, file.name) ? undefined : 0}
         />,
         { duration: Infinity, style: TOAST_STYLE },
@@ -128,10 +110,10 @@ export function useFileDropHandler() {
 
         if (!silent) {
           toast.dismiss(toastId)
-          toast.success(
-            <ToastContent title={fileName} message="Note created" />,
-            { duration: 3000, style: TOAST_STYLE },
-          )
+          toast.success(<ToastContent title={fileName} message="Note created" />, {
+            duration: 3000,
+            style: TOAST_STYLE,
+          })
         }
       } else if (isMediaFile(file.type)) {
         const uploadUrl = await generateUploadUrl.mutateAsync({})
@@ -169,16 +151,16 @@ export function useFileDropHandler() {
           parentId,
         })
 
-        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>).catch(
-          (err: unknown) => logger.error('PDF preview generation failed', err),
+        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>).catch((err: unknown) =>
+          logger.error('PDF preview generation failed', err),
         )
 
         if (!silent) {
           toast.dismiss(toastId)
-          toast.success(
-            <ToastContent title={fileName} message="File created" />,
-            { duration: 3000, style: TOAST_STYLE },
-          )
+          toast.success(<ToastContent title={fileName} message="File created" />, {
+            duration: 3000,
+            style: TOAST_STYLE,
+          })
         }
       } else {
         if (silent) {
@@ -190,17 +172,17 @@ export function useFileDropHandler() {
       if (!silent) activeUploadsRef.current.delete(uploadId)
       if (navigate) {
         openParentFolders(result.id)
-        navigateToItem(result.slug, isTextFile(file.type, file.name))
+        void navigateToItem(result.slug, isTextFile(file.type, file.name))
       }
       return result
     } catch (error) {
       if (!silent) activeUploadsRef.current.delete(uploadId)
       if (!silent && toastId) {
         toast.dismiss(toastId)
-        toast.error(
-          <ToastContent title={fileName} message={getErrorMessage(error)} />,
-          { duration: 5000, style: TOAST_STYLE },
-        )
+        toast.error(<ToastContent title={fileName} message={getErrorMessage(error)} />, {
+          duration: 5000,
+          style: TOAST_STYLE,
+        })
       }
       throw error
     }
@@ -262,10 +244,7 @@ export function useFileDropHandler() {
     return folderId
   }
 
-  const handleDrop = async (
-    dropResult: DropResult,
-    options?: DropOptions,
-  ): Promise<void> => {
+  const handleDrop = async (dropResult: DropResult, options?: DropOptions): Promise<void> => {
     if (!campaignId) {
       toast.error('No campaign selected')
       return
@@ -297,11 +276,7 @@ export function useFileDropHandler() {
           }}
         />
       ) : (
-        <FileProgressContent
-          totalFiles={stats.totalFiles}
-          processedFiles={0}
-          skippedFiles={0}
-        />
+        <FileProgressContent totalFiles={stats.totalFiles} processedFiles={0} skippedFiles={0} />
       ),
       { duration: Infinity, style: TOAST_STYLE },
     )
@@ -320,11 +295,10 @@ export function useFileDropHandler() {
       for (const { file } of files) {
         try {
           const validation = validateFileForUpload(file)
-          const result = await uploadSingleFile(
-            file,
-            options?.parentId ?? null,
-            { silent: true, navigate: false },
-          )
+          const result = await uploadSingleFile(file, options?.parentId ?? null, {
+            silent: true,
+            navigate: false,
+          })
           if (!result && validation.valid) {
             logger.warn(`${file.name}: unsupported file type`)
           }
@@ -354,38 +328,33 @@ export function useFileDropHandler() {
       // Process folders
       let lastFolderId: Id<'folders'> | undefined
       for (const folder of rootFolders) {
-        lastFolderId = await uploadFolderRecursive(
-          folder,
-          options?.parentId ?? null,
-          progress,
-        )
+        lastFolderId = await uploadFolderRecursive(folder, options?.parentId ?? null, progress)
       }
 
       // Show success
       toast.dismiss(toastId)
-      const skippedText =
-        progress.skippedFiles > 0 ? ` (${progress.skippedFiles} skipped)` : ''
+      const skippedText = progress.skippedFiles > 0 ? ` (${progress.skippedFiles} skipped)` : ''
       const message = hasFolders
         ? `Created ${progress.processedFolders} folder${progress.processedFolders !== 1 ? 's' : ''} and ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
         : `Uploaded ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
-      toast.success(
-        <ToastContent title="Upload complete" message={message} />,
-        { duration: 3000, style: TOAST_STYLE },
-      )
+      toast.success(<ToastContent title="Upload complete" message={message} />, {
+        duration: 3000,
+        style: TOAST_STYLE,
+      })
 
       // Open parent folders in sidebar
       if (lastFolderId) {
-        await openParentFolders(lastFolderId)
+        openParentFolders(lastFolderId)
       } else if (options?.parentId) {
-        await openParentFolders(options.parentId)
+        openParentFolders(options.parentId)
       }
     } catch (error) {
       logger.error(error)
       toast.dismiss(toastId)
-      toast.error(
-        <ToastContent title="Upload failed" message={getErrorMessage(error)} />,
-        { duration: 5000, style: TOAST_STYLE },
-      )
+      toast.error(<ToastContent title="Upload failed" message={getErrorMessage(error)} />, {
+        duration: 5000,
+        style: TOAST_STYLE,
+      })
     }
   }
 

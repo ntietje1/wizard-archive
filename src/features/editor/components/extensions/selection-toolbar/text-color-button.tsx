@@ -61,9 +61,7 @@ export const TextColorButton = () => {
           icon={<ColorIcon textColor={currentTextColor} size={20} />}
         />
       </Components.Generic.Menu.Trigger>
-      <Components.Generic.Menu.Dropdown
-        className={'bn-menu-dropdown bn-color-picker-dropdown'}
-      >
+      <Components.Generic.Menu.Dropdown className={'bn-menu-dropdown bn-color-picker-dropdown'}>
         <ColorPicker
           text={{
             color: currentTextColor,

@@ -3,11 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { TrashPopoverContent } from './trash-popover-content'
 import { SidebarRow } from './sidebar-row'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
@@ -64,12 +60,7 @@ export function TrashButton() {
           />
         }
       />
-      <PopoverContent
-        side="right"
-        sideOffset={8}
-        align="end"
-        className="p-2 w-auto"
-      >
+      <PopoverContent side="right" sideOffset={8} align="end" className="p-2 w-auto">
         <TrashPopoverContent onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

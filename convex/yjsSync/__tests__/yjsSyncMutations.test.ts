@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
@@ -278,9 +274,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) =>
-          q.eq('documentId', noteId).eq('clientId', 42),
-        )
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 42))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -316,9 +310,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) =>
-          q.eq('documentId', noteId).eq('clientId', 10),
-        )
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 10))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -385,9 +377,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) =>
-          q.eq('documentId', noteId).eq('clientId', 99),
-        )
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 99))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -435,9 +425,7 @@ describe('removeAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) =>
-          q.eq('documentId', noteId).eq('clientId', 5),
-        )
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 5))
         .collect()
 
       expect(rows).toHaveLength(0)
@@ -454,13 +442,10 @@ describe('removeAwareness', () => {
       parentId: null,
     })
 
-    const result = await dmAuth.mutation(
-      api.yjsSync.mutations.removeAwareness,
-      {
-        documentId: noteId,
-        clientId: 999,
-      },
-    )
+    const result = await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
+      documentId: noteId,
+      clientId: 999,
+    })
 
     expect(result).toBeNull()
   })

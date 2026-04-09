@@ -21,12 +21,7 @@ export function SettingsRow({
         <p className="text-sm font-medium">{label}</p>
         <p className="text-sm text-muted-foreground truncate">{value}</p>
       </div>
-      <Button
-        variant={variant}
-        size="sm"
-        onClick={onAction}
-        className="shrink-0"
-      >
+      <Button variant={variant} size="sm" onClick={onAction} className="shrink-0">
         {buttonLabel}
       </Button>
       {children}

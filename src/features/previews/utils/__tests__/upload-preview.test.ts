@@ -17,9 +17,7 @@ describe('uploadPreviewBlob', () => {
   }) => Promise<null>
 
   beforeEach(() => {
-    mockGenerateUploadUrl = vi
-      .fn<() => Promise<string>>()
-      .mockResolvedValue(MOCK_UPLOAD_URL)
+    mockGenerateUploadUrl = vi.fn<() => Promise<string>>().mockResolvedValue(MOCK_UPLOAD_URL)
     mockSetPreviewImage = vi.fn().mockResolvedValue(null)
 
     vi.stubGlobal(
@@ -149,10 +147,7 @@ describe('uploadPreviewBlob', () => {
   })
 
   it('throws on network error', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const blob = new Blob(['test'], { type: 'image/webp' })
 

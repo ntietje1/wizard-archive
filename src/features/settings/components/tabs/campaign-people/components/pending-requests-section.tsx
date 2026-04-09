@@ -17,13 +17,9 @@ export function PendingRequestsSection({
 }: {
   pendingPlayers: Array<CampaignMember>
 }) {
-  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
-    null,
-  )
+  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
 
-  const updateStatus = useAppMutation(
-    api.campaigns.mutations.updateCampaignMemberStatus,
-  )
+  const updateStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
 
   const handleStatusUpdate = async (
     memberId: Id<'campaignMembers'>,
@@ -42,9 +38,7 @@ export function PendingRequestsSection({
   return (
     <SettingsSection title={`Pending requests (${pendingPlayers.length})`}>
       {pendingPlayers.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-2">
-          No pending requests
-        </p>
+        <p className="text-sm text-muted-foreground text-center py-2">No pending requests</p>
       ) : (
         pendingPlayers.map((player, index) => (
           <div key={player._id}>
@@ -57,12 +51,7 @@ export function PendingRequestsSection({
                     size="sm"
                     variant="outline"
                     disabled={updatingId === player._id}
-                    onClick={() =>
-                      handleStatusUpdate(
-                        player._id,
-                        CAMPAIGN_MEMBER_STATUS.Rejected,
-                      )
-                    }
+                    onClick={() => handleStatusUpdate(player._id, CAMPAIGN_MEMBER_STATUS.Rejected)}
                   >
                     <X className="size-4" />
                     Reject
@@ -70,12 +59,7 @@ export function PendingRequestsSection({
                   <Button
                     size="sm"
                     disabled={updatingId === player._id}
-                    onClick={() =>
-                      handleStatusUpdate(
-                        player._id,
-                        CAMPAIGN_MEMBER_STATUS.Accepted,
-                      )
-                    }
+                    onClick={() => handleStatusUpdate(player._id, CAMPAIGN_MEMBER_STATUS.Accepted)}
                   >
                     <Check className="size-4" />
                     Accept

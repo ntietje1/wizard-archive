@@ -49,9 +49,7 @@ function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {
         <DialogTitle>Disable two-factor authentication</DialogTitle>
       </DialogHeader>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="disable-2fa-password">
-          Enter your password to confirm
-        </Label>
+        <Label htmlFor="disable-2fa-password">Enter your password to confirm</Label>
         <Input
           id="disable-2fa-password"
           type="password"
@@ -63,16 +61,8 @@ function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
       <DialogFooter showCloseButton>
-        <Button
-          variant="destructive"
-          onClick={handleDisable}
-          disabled={isDisabling}
-        >
-          {isDisabling ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            'Disable 2FA'
-          )}
+        <Button variant="destructive" onClick={handleDisable} disabled={isDisabling}>
+          {isDisabling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Disable 2FA'}
         </Button>
       </DialogFooter>
     </>
@@ -104,9 +94,7 @@ export function TwoFactorRow({ profile }: { profile: UserProfile }) {
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <SettingsSubDialogContent>
           {showDisableDialog && (
-            <DisableTwoFactorDialog
-              onClose={() => setShowDisableDialog(false)}
-            />
+            <DisableTwoFactorDialog onClose={() => setShowDisableDialog(false)} />
           )}
         </SettingsSubDialogContent>
       </Dialog>

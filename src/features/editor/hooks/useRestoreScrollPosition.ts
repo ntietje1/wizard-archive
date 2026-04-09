@@ -14,8 +14,10 @@ export function useRestoreScrollPosition(
   scrollAreaRef: RefObject<HTMLElement | null>,
   skipRestore = false,
 ) {
-  const [scrollPositions, setScrollPositions] =
-    usePersistedState<ScrollPositions>(SCROLL_POSITIONS_KEY, {})
+  const [scrollPositions, setScrollPositions] = usePersistedState<ScrollPositions>(
+    SCROLL_POSITIONS_KEY,
+    {},
+  )
   const hasRestoredRef = useRef(false)
   const itemIdRef = useRef(itemId)
   const [hasInitialized, setHasInitialized] = useState(false)
@@ -41,9 +43,7 @@ export function useRestoreScrollPosition(
       return
     }
 
-    const viewport = scrollAreaRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]',
-    )
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]')
     if (!viewport) return
 
     const savedPosition = scrollPositions[itemId]
@@ -58,9 +58,7 @@ export function useRestoreScrollPosition(
 
   // Save scroll position on scroll
   useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector(
-      '[data-slot="scroll-area-viewport"]',
-    )
+    const viewport = scrollAreaRef.current?.querySelector('[data-slot="scroll-area-viewport"]')
     if (!viewport) return
 
     let timeoutId: ReturnType<typeof setTimeout>

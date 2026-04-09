@@ -38,10 +38,7 @@ export async function openSlashMenu(page: Page) {
   return menu
 }
 
-export async function selectSlashMenuItem(
-  page: Page,
-  itemName: string | RegExp,
-) {
+export async function selectSlashMenuItem(page: Page, itemName: string | RegExp) {
   await openSlashMenu(page)
   await page.getByRole('option', { name: itemName }).click()
   await page.waitForTimeout(300)
@@ -50,8 +47,7 @@ export async function selectSlashMenuItem(
 export async function newParagraphAtEnd(page: Page) {
   const editor = await getEditor(page)
   await editor.click()
-  const endShortcut =
-    process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
+  const endShortcut = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
   await page.keyboard.press(endShortcut)
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')

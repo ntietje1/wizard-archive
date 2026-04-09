@@ -2,12 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { setupCampaignContext } from '../../_test/identities.helper'
-import {
-  createCanvas,
-  createGameMap,
-  createMapPin,
-  createNote,
-} from '../../_test/factories.helper'
+import { createCanvas, createGameMap, createMapPin, createNote } from '../../_test/factories.helper'
 import { SNAPSHOT_TYPE } from '../schema'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
@@ -43,11 +38,7 @@ describe('captureCanvasSnapshot', () => {
 
   it('captures Y.Doc state for a canvas', async () => {
     const ctx = await setupCampaignContext(t)
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const yjsUpdate = makeYjsUpdate()
     await t.run(async (dbCtx) => {
@@ -80,9 +71,7 @@ describe('captureCanvasSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
       expect(snapshot).not.toBeNull()
@@ -106,11 +95,7 @@ describe('captureCanvasSnapshot', () => {
 
   it('merges multiple yjs updates into snapshot', async () => {
     const ctx = await setupCampaignContext(t)
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const originalDoc = new Y.Doc()
     const fragment = originalDoc.getXmlFragment('document')
@@ -167,9 +152,7 @@ describe('captureCanvasSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
       const reconstructed = new Y.Doc()
@@ -220,9 +203,7 @@ describe('captureNoteSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
       expect(snapshot).not.toBeNull()
@@ -282,9 +263,7 @@ describe('captureGameMapSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
       expect(snapshot).not.toBeNull()
@@ -292,9 +271,7 @@ describe('captureGameMapSnapshot', () => {
       expect(snapshot!.itemId).toBe(mapId)
       expect(snapshot!.createdBy).toBe(ctx.dm.profile._id)
 
-      const parsed: GameMapSnapshotData = JSON.parse(
-        new TextDecoder().decode(snapshot!.data),
-      )
+      const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.imageStorageId).toBeNull()
       expect(parsed.pins).toHaveLength(1)
       expect(parsed.pins[0].x).toBe(10)
@@ -311,16 +288,8 @@ describe('captureGameMapSnapshot', () => {
   it('excludes soft-deleted pins', async () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: note1 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: note2 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: note1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: note2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createMapPin(t, mapId, ctx.dm.profile._id, {
       itemId: note1,
@@ -359,14 +328,10 @@ describe('captureGameMapSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
-      const parsed: GameMapSnapshotData = JSON.parse(
-        new TextDecoder().decode(snapshot!.data),
-      )
+      const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.pins).toHaveLength(1)
       expect(parsed.pins[0].itemId).toBe(note1)
       expect(parsed.pins[0].name).toEqual(expect.any(String))
@@ -431,14 +396,10 @@ describe('captureGameMapSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
-      const parsed: GameMapSnapshotData = JSON.parse(
-        new TextDecoder().decode(snapshot!.data),
-      )
+      const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.pins).toEqual([])
     })
   })
@@ -446,21 +407,9 @@ describe('captureGameMapSnapshot', () => {
   it('captures multiple pins with correct positions', async () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: n1 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: n2 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: n3 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createMapPin(t, mapId, ctx.dm.profile._id, {
       itemId: n1,
@@ -503,14 +452,10 @@ describe('captureGameMapSnapshot', () => {
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', editHistoryId),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
         .first()
 
-      const parsed: GameMapSnapshotData = JSON.parse(
-        new TextDecoder().decode(snapshot!.data),
-      )
+      const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.pins).toHaveLength(3)
 
       const pinsByItem = new Map(parsed.pins.map((p) => [p.itemId, p]))

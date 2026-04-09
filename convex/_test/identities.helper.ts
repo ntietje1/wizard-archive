@@ -1,8 +1,4 @@
-import {
-  addPlayerToCampaign,
-  createCampaignWithDm,
-  createUserProfile,
-} from './factories.helper'
+import { addPlayerToCampaign, createCampaignWithDm, createUserProfile } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type { DataModel } from '../_generated/dataModel'
 import type schema from '../schema'
@@ -21,11 +17,7 @@ export async function setupCampaignContext(t: T) {
   const player = await setupUser(t)
 
   const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
-  const { memberId: playerMemberId } = await addPlayerToCampaign(
-    t,
-    campaignId,
-    player.profile,
-  )
+  const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
 
   return {
     dm: { ...dm, memberId: dmMemberId },
@@ -52,14 +44,10 @@ export async function setupMultiPlayerContext(t: T, playerCount: number) {
   }
 }
 
-export function asDm<TCtx extends { dm: { authed: AuthedContext } }>(
-  ctx: TCtx,
-) {
+export function asDm<TCtx extends { dm: { authed: AuthedContext } }>(ctx: TCtx) {
   return ctx.dm.authed
 }
 
-export function asPlayer<TCtx extends { player: { authed: AuthedContext } }>(
-  ctx: TCtx,
-) {
+export function asPlayer<TCtx extends { player: { authed: AuthedContext } }>(ctx: TCtx) {
   return ctx.player.authed
 }

@@ -18,10 +18,7 @@ import { ErrorFallback } from '~/shared/components/error-fallback'
 export function EditorPage() {
   useSelectedItemSync()
   const { item } = useCurrentItem()
-  const rightPanel = usePanelPreference(
-    RIGHT_SIDEBAR_PANEL_ID,
-    RIGHT_SIDEBAR_DEFAULTS,
-  )
+  const rightPanel = usePanelPreference(RIGHT_SIDEBAR_PANEL_ID, RIGHT_SIDEBAR_DEFAULTS)
 
   const setRightPanelVisible = rightPanel.setVisible
   const prevItemIdRef = useRef(item?._id)
@@ -33,8 +30,7 @@ export function EditorPage() {
   }, [setRightPanelVisible, item?._id])
 
   const activeContentId =
-    (rightPanel.activeContentId as RightSidebarContentId | null) ??
-    RIGHT_SIDEBAR_CONTENT.history
+    (rightPanel.activeContentId as RightSidebarContentId | null) ?? RIGHT_SIDEBAR_CONTENT.history
 
   return (
     <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">

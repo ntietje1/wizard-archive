@@ -25,9 +25,7 @@ export function RemovePlayerDialog({
   isOpen: boolean
   onClose: () => void
 }) {
-  const updateMemberStatus = useAppMutation(
-    api.campaigns.mutations.updateCampaignMemberStatus,
-  )
+  const updateMemberStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
 
   const playerName = player?.userProfile.name ?? 'this player'
 
@@ -51,9 +49,8 @@ export function RemovePlayerDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove Player</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove {playerName} from the campaign? This
-            will revoke their access. You can undo this action in the player
-            requests section.
+            Are you sure you want to remove {playerName} from the campaign? This will revoke their
+            access. You can undo this action in the player requests section.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -62,7 +59,7 @@ export function RemovePlayerDialog({
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={(e) => {
               e.preventDefault()
-              handleConfirm()
+              void handleConfirm()
             }}
           >
             {updateMemberStatus.isPending ? (

@@ -7,10 +7,7 @@ import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
   ctx: AuthQueryCtx,
-  {
-    initialParentId,
-    isTrashed,
-  }: { initialParentId: Id<'folders'> | null; isTrashed?: boolean },
+  { initialParentId, isTrashed }: { initialParentId: Id<'folders'> | null; isTrashed?: boolean },
 ): Promise<Array<Folder>> {
   const ancestors: Array<Folder> = []
   let currentParentId: Id<'folders'> | null = initialParentId

@@ -1,9 +1,6 @@
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import {
-  enhanceBase,
-  enhanceSidebarItem,
-} from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase, enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { requireCampaignMembership } from '../../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignBookmarks } from '../../bookmarks/functions/getCampaignBookmarks'
@@ -14,13 +11,7 @@ import {
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
-import type {
-  GameMap,
-  GameMapFromDb,
-  GameMapWithContent,
-  MapPin,
-  MapPinWithItem,
-} from '../types'
+import type { GameMap, GameMapFromDb, GameMapWithContent, MapPin, MapPinWithItem } from '../types'
 
 export const enhanceGameMap = async (
   ctx: AuthQueryCtx,
@@ -76,10 +67,7 @@ export const enhanceGameMapWithContent = async (
   ctx: AuthQueryCtx,
   { gameMap }: { gameMap: GameMap },
 ): Promise<GameMapWithContent> => {
-  const { membership } = await requireCampaignMembership(
-    ctx,
-    gameMap.campaignId,
-  )
+  const { membership } = await requireCampaignMembership(ctx, gameMap.campaignId)
   const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
 
   const [ancestors, rawPins, bookmarkIds, sharesMap] = await Promise.all([
@@ -99,9 +87,7 @@ export const enhanceGameMapWithContent = async (
   ])
 
   const pins = (
-    await Promise.all(
-      rawPins.map((pin) => enhanceMapPin(ctx, { pin, sharesMap, bookmarkIds })),
-    )
+    await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, { pin, sharesMap, bookmarkIds })))
   ).filter((pin) => pin !== null)
 
   return {

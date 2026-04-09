@@ -6,10 +6,7 @@ import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { SNAPSHOT_TYPE } from '../schema'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import {
-  SNAPSHOT_IDLE_MS,
-  SNAPSHOT_MIN_INTERVAL_MS,
-} from '../../yjsSync/constants'
+import { SNAPSHOT_IDLE_MS, SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
 
 describe('pushUpdate trailing-edge snapshot scheduling', () => {
@@ -71,9 +68,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -121,9 +116,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -194,9 +187,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .collect()
 
         expect(historyEntries).toHaveLength(2)
@@ -237,9 +228,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -289,14 +278,11 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { canvasId } = await dmAuth.mutation(
-        api.canvases.mutations.createCanvas,
-        {
-          campaignId: ctx.campaignId,
-          name: 'Snapshot Canvas',
-          parentId: null,
-        },
-      )
+      const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+        campaignId: ctx.campaignId,
+        name: 'Snapshot Canvas',
+        parentId: null,
+      })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         documentId: canvasId,
@@ -364,9 +350,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .collect()
 
         expect(historyEntries).toHaveLength(0)
@@ -386,11 +370,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -411,18 +391,14 @@ describe('game map pin mutations — snapshot scheduling', () => {
         expect(snapshots).toHaveLength(1)
         expect(snapshots[0].snapshotType).toBe(SNAPSHOT_TYPE.game_map)
 
-        const parsed: GameMapSnapshotData = JSON.parse(
-          new TextDecoder().decode(snapshots[0].data),
-        )
+        const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshots[0].data))
         expect(parsed.pins).toHaveLength(1)
         expect(parsed.pins[0].x).toBe(10)
         expect(parsed.pins[0].y).toBe(20)
 
         const history = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_added'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
           .collect()
         expect(history).toHaveLength(1)
         expect(history[0].hasSnapshot).toBe(true)
@@ -438,21 +414,9 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const { noteId: n1 } = await createNote(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const { noteId: n2 } = await createNote(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
         mapId,
@@ -500,22 +464,15 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(
-        api.gameMaps.mutations.createItemPin,
-        {
-          mapId,
-          x: 10,
-          y: 20,
-          itemId: noteId,
-        },
-      )
+      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        mapId,
+        x: 10,
+        y: 20,
+        itemId: noteId,
+      })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
@@ -533,9 +490,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
         const removeHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_removed'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_removed'))
           .first()
         expect(removeHistory).not.toBeNull()
         expect(removeHistory!.hasSnapshot).toBe(true)
@@ -551,22 +506,15 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(
-        api.gameMaps.mutations.createItemPin,
-        {
-          mapId,
-          x: 10,
-          y: 20,
-          itemId: noteId,
-        },
-      )
+      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        mapId,
+        x: 10,
+        y: 20,
+        itemId: noteId,
+      })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
@@ -586,9 +534,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
         const moveHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_moved'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_moved'))
           .first()
         expect(moveHistory).not.toBeNull()
         expect(moveHistory!.hasSnapshot).toBe(true)
@@ -604,22 +550,15 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(
-        api.gameMaps.mutations.createItemPin,
-        {
-          mapId,
-          x: 10,
-          y: 20,
-          itemId: noteId,
-        },
-      )
+      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        mapId,
+        x: 10,
+        y: 20,
+        itemId: noteId,
+      })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
@@ -695,26 +634,10 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId: map1 } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const { mapId: map2 } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const { noteId: n1 } = await createNote(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const { noteId: n2 } = await createNote(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId: map1 } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId: map2 } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Pin on map1
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -762,11 +685,7 @@ describe('rollbackToSnapshot', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -780,19 +699,14 @@ describe('rollbackToSnapshot', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_added'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
           .first()
       })
       expect(historyEntry).not.toBeNull()
 
-      await dmAuth.mutation(
-        api.documentSnapshots.mutations.rollbackToSnapshot,
-        {
-          editHistoryId: historyEntry!._id,
-        },
-      )
+      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        editHistoryId: historyEntry!._id,
+      })
 
       await t.run(async (dbCtx) => {
         const allSnapshots = await dbCtx.db
@@ -804,9 +718,7 @@ describe('rollbackToSnapshot', () => {
 
         const rolledBackHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'rolled_back'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'rolled_back'))
           .first()
         expect(rolledBackHistory).not.toBeNull()
         expect(rolledBackHistory!.hasSnapshot).toBe(false)

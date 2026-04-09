@@ -9,11 +9,7 @@ import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import {
   Dialog,
   DialogFooter,
@@ -28,9 +24,7 @@ function useOAuthProvider() {
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await authClient.listAccounts()
       if (error || !data) throw new Error('Failed to load accounts')
-      const oauth = data.find(
-        (a: { providerId: string }) => a.providerId !== 'credential',
-      )
+      const oauth = data.find((a: { providerId: string }) => a.providerId !== 'credential')
       return oauth?.providerId ?? null
     },
     staleTime: Infinity,
@@ -39,13 +33,7 @@ function useOAuthProvider() {
   return query.data ?? null
 }
 
-function EmailChangeDialog({
-  profile,
-  onClose,
-}: {
-  profile: UserProfile
-  onClose: () => void
-}) {
+function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {
   const [newEmail, setNewEmail] = useState('')
   const [sentTo, setSentTo] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -79,9 +67,7 @@ function EmailChangeDialog({
       setNewEmail('')
     } catch (error) {
       logger.error(error)
-      setFormError(
-        error instanceof Error ? error.message : 'Failed to change email',
-      )
+      setFormError(error instanceof Error ? error.message : 'Failed to change email')
     }
     setIsLoading(false)
   }
@@ -96,9 +82,8 @@ function EmailChangeDialog({
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">Check your new email inbox</p>
             <p className="text-sm text-muted-foreground">
-              We sent a verification link to{' '}
-              <strong className="text-foreground">{sentTo}</strong>. Click the
-              link to complete the change.
+              We sent a verification link to <strong className="text-foreground">{sentTo}</strong>.
+              Click the link to complete the change.
             </p>
           </div>
         </div>
@@ -158,9 +143,7 @@ export function EmailRow({ profile }: { profile: UserProfile }) {
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">Email</p>
-        <p className="text-sm text-muted-foreground truncate">
-          {profile.email ?? 'Not set'}
-        </p>
+        <p className="text-sm text-muted-foreground truncate">{profile.email ?? 'Not set'}</p>
       </div>
       {isManagedByOAuth ? (
         <Tooltip>
@@ -188,17 +171,9 @@ export function EmailRow({ profile }: { profile: UserProfile }) {
           Change email
         </Button>
       )}
-      <Dialog
-        open={isEditing}
-        onOpenChange={(open) => !open && setIsEditing(false)}
-      >
+      <Dialog open={isEditing} onOpenChange={(open) => !open && setIsEditing(false)}>
         <SettingsSubDialogContent>
-          {isEditing && (
-            <EmailChangeDialog
-              profile={profile}
-              onClose={() => setIsEditing(false)}
-            />
-          )}
+          {isEditing && <EmailChangeDialog profile={profile} onClose={() => setIsEditing(false)} />}
         </SettingsSubDialogContent>
       </Dialog>
     </div>

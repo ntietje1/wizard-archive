@@ -10,10 +10,7 @@ export function shouldCompact(seq: number): boolean {
   return seq > 0 && seq % COMPACT_INTERVAL === 0
 }
 
-export async function compactUpdates(
-  ctx: MutationCtx,
-  documentId: YjsDocumentId,
-) {
+export async function compactUpdates(ctx: MutationCtx, documentId: YjsDocumentId) {
   const { doc, updates } = await reconstructYDoc(ctx, documentId)
 
   try {

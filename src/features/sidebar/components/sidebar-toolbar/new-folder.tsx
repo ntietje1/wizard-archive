@@ -29,7 +29,7 @@ export function NewFolderButton() {
         name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, null),
       })
       openParentFolders(result.id)
-      navigateToItem(result.slug)
+      void navigateToItem(result.slug)
     } catch (error) {
       handleError(error, 'Failed to create folder')
     }

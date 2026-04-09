@@ -1,9 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { api } from 'convex/_generated/api'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-} from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { useParams } from '@tanstack/react-router'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
@@ -32,23 +29,17 @@ export function PeopleTab() {
   )
 
   const dmMember = players.data?.find(
-    (p) =>
-      p.role === CAMPAIGN_MEMBER_ROLE.DM &&
-      p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+    (p) => p.role === CAMPAIGN_MEMBER_ROLE.DM && p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
   )
 
   const acceptedPlayers =
     players.data?.filter(
-      (p) =>
-        p.role === CAMPAIGN_MEMBER_ROLE.Player &&
-        p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+      (p) => p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
     ) ?? []
 
   const pendingPlayers =
     players.data?.filter(
-      (p) =>
-        p.role === CAMPAIGN_MEMBER_ROLE.Player &&
-        p.status === CAMPAIGN_MEMBER_STATUS.Pending,
+      (p) => p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Pending,
     ) ?? []
 
   const rejectedOrRemoved =

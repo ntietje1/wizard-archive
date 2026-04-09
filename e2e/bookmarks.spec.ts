@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -52,12 +48,10 @@ test.describe.serial('bookmarks', () => {
 
     await page.getByRole('button', { name: 'Show bookmarks' }).click()
 
-    await expect(
-      sidebar.getByRole('link', { name: bookmarkedNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
-    await expect(
-      sidebar.getByRole('link', { name: regularNote, exact: true }),
-    ).not.toBeVisible()
+    await expect(sidebar.getByRole('link', { name: bookmarkedNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).not.toBeVisible()
   })
 
   test('exit bookmarks filter shows all notes', async ({ page }) => {
@@ -68,18 +62,16 @@ test.describe.serial('bookmarks', () => {
 
     // Enter bookmarks mode
     await page.getByRole('button', { name: 'Show bookmarks' }).click()
-    await expect(
-      sidebar.getByRole('link', { name: regularNote, exact: true }),
-    ).not.toBeVisible()
+    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).not.toBeVisible()
 
     // Exit bookmarks mode
     await page.getByRole('button', { name: 'Exit bookmarks' }).click()
 
-    await expect(
-      sidebar.getByRole('link', { name: bookmarkedNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
-    await expect(
-      sidebar.getByRole('link', { name: regularNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: bookmarkedNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

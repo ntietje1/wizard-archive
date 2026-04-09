@@ -6,14 +6,10 @@ interface EditorContextMenuContextValue {
   menuContext: MenuContext
 }
 
-export const EditorContextMenuContext =
-  createContext<EditorContextMenuContextValue | null>(null)
+export const EditorContextMenuContext = createContext<EditorContextMenuContextValue | null>(null)
 
 export function useEditorContextMenu() {
   const ctx = useContext(EditorContextMenuContext)
-  if (!ctx)
-    throw new Error(
-      'useEditorContextMenu must be within EditorContextMenuProvider',
-    )
+  if (!ctx) throw new Error('useEditorContextMenu must be within EditorContextMenuProvider')
   return ctx
 }

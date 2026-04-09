@@ -46,11 +46,7 @@ export const getItemHistory = authQuery({
     isDone: v.boolean(),
     continueCursor: v.string(),
     splitCursor: v.union(v.string(), v.null()),
-    pageStatus: v.union(
-      v.literal('SplitRecommended'),
-      v.literal('SplitRequired'),
-      v.null(),
-    ),
+    pageStatus: v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null()),
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
     const itemFromDb = await ctx.db.get(itemId)

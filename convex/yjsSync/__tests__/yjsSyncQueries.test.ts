@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
-import {
-  expectNotAuthenticated,
-  expectPermissionDenied,
-} from '../../_test/assertions.helper'
+import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
 
@@ -26,9 +19,7 @@ describe('getUpdates', () => {
       parentId: null,
     })
 
-    await expectNotAuthenticated(
-      t.query(api.yjsSync.queries.getUpdates, { documentId: noteId }),
-    )
+    await expectNotAuthenticated(t.query(api.yjsSync.queries.getUpdates, { documentId: noteId }))
   })
 
   it('requires read access', async () => {
@@ -160,9 +151,7 @@ describe('getAwareness', () => {
       parentId: null,
     })
 
-    await expectNotAuthenticated(
-      t.query(api.yjsSync.queries.getAwareness, { documentId: noteId }),
-    )
+    await expectNotAuthenticated(t.query(api.yjsSync.queries.getAwareness, { documentId: noteId }))
   })
 
   it('requires read access', async () => {
@@ -270,10 +259,9 @@ describe('getAwareness', () => {
       state: new ArrayBuffer(4),
     })
 
-    const results = await asPlayer(ctx).query(
-      api.yjsSync.queries.getAwareness,
-      { documentId: noteId },
-    )
+    const results = await asPlayer(ctx).query(api.yjsSync.queries.getAwareness, {
+      documentId: noteId,
+    })
 
     expect(results).toHaveLength(1)
     expect(results[0].clientId).toBe(20)
@@ -305,11 +293,7 @@ describe('getAwareness', () => {
 
     expect(results).toHaveLength(1)
     for (const entry of results) {
-      expect(Object.keys(entry).sort()).toEqual([
-        'clientId',
-        'state',
-        'updatedAt',
-      ])
+      expect(Object.keys(entry).sort()).toEqual(['clientId', 'state', 'updatedAt'])
     }
   })
 })

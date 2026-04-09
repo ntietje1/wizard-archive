@@ -1,14 +1,7 @@
 import { useState } from 'react'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
-import {
-  getAvailableIconNames,
-  getIconByName,
-} from '~/shared/utils/category-icons'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
+import { getAvailableIconNames, getIconByName } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface IconPickerProps {

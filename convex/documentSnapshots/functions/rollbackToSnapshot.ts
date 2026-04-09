@@ -26,10 +26,7 @@ export async function rollbackToSnapshot(
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
-  const { membership } = await requireCampaignMembership(
-    ctx,
-    historyEntry.campaignId,
-  )
+  const { membership } = await requireCampaignMembership(ctx, historyEntry.campaignId)
 
   const snapshot = await ctx.db
     .query('documentSnapshots')
@@ -37,10 +34,7 @@ export async function rollbackToSnapshot(
     .first()
 
   if (!snapshot) {
-    throwClientError(
-      ERROR_CODE.NOT_FOUND,
-      'No snapshot found for this history entry',
-    )
+    throwClientError(ERROR_CODE.NOT_FOUND, 'No snapshot found for this history entry')
   }
 
   const itemType = historyEntry.itemType as SidebarItemType
@@ -57,10 +51,7 @@ export async function rollbackToSnapshot(
       break
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.files:
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        `${itemType} does not support rollback`,
-      )
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, `${itemType} does not support rollback`)
       break
     default:
       assertNever(itemType)

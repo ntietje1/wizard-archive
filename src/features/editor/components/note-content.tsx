@@ -6,10 +6,7 @@ import { NoteView } from './note-view'
 import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CustomBlock,
-  CustomBlockNoteEditor,
-} from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { logger } from '~/shared/utils/logger'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
@@ -26,10 +23,7 @@ type NoteContentProps = {
   editable: boolean
   className?: string
   children?: React.ReactNode
-  onEditorChange?: (
-    editor: CustomBlockNoteEditor | null,
-    doc: Doc | null,
-  ) => void
+  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }
 
 export function NoteContent({
@@ -70,10 +64,7 @@ function CollaborativeEditorLoader({
   noteId: Id<'notes'>
   content: Array<CustomBlock>
   children?: React.ReactNode
-  onEditorChange?: (
-    editor: CustomBlockNoteEditor | null,
-    doc: Doc | null,
-  ) => void
+  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
@@ -115,10 +106,7 @@ function StaticEditorInner({
 }: {
   content: Array<CustomBlock>
   children?: React.ReactNode
-  onEditorChange?: (
-    editor: CustomBlockNoteEditor | null,
-    doc: Doc | null,
-  ) => void
+  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const onEditorChangeRef = useRef(onEditorChange)
@@ -139,6 +127,7 @@ function StaticEditorInner({
       instance._tiptapEditor.destroy()
       onEditorChangeRef.current?.(null, null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -170,10 +159,7 @@ function CollaborativeEditorInner({
   provider: ConvexYjsProvider
   user: { name: string; color: string }
   children?: React.ReactNode
-  onEditorChange?: (
-    editor: CustomBlockNoteEditor | null,
-    doc: Doc | null,
-  ) => void
+  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const onEditorChangeRef = useRef(onEditorChange)
@@ -218,7 +204,8 @@ function CollaborativeEditorInner({
       instance._tiptapEditor.destroy()
       onEditorChangeRef.current?.(null, null)
     }
-  }, [doc, provider]) // purposely don't include user.name and user.color
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, provider])
 
   if (!editor) return null
 

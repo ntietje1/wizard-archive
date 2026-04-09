@@ -3,20 +3,13 @@ import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { ReactNode } from 'react'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
-import {
-  CampaignContext,
-  useCampaign,
-} from '~/features/campaigns/hooks/useCampaign'
+import { CampaignContext, useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { mockAuthQuery } from '~/test/mocks/convex-mocks'
 import { createCampaign } from '~/test/factories/campaign-factory'
 
 function createWrapper(value: CampaignContextType) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <CampaignContext.Provider value={value}>
-        {children}
-      </CampaignContext.Provider>
-    )
+    return <CampaignContext.Provider value={value}>{children}</CampaignContext.Provider>
   }
 }
 

@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -44,9 +40,9 @@ test.describe.serial('name validation', () => {
   test('duplicate name shows validation error', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: secondNoteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()
@@ -63,9 +59,9 @@ test.describe.serial('name validation', () => {
   test('empty name is rejected', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: secondNoteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()
@@ -75,17 +71,17 @@ test.describe.serial('name validation', () => {
     await renameInput.fill('')
     await renameInput.blur()
 
-    await expect(
-      page.getByRole('link', { name: secondNoteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('special characters in name', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: secondNoteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()

@@ -2,21 +2,14 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '~/features/shadcn/components/input-otp'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '~/features/shadcn/components/input-otp'
 
 type SignInTwoFactorFormProps = {
   onSuccess: () => void
   onBack: () => void
 }
 
-export function SignInTwoFactorForm({
-  onSuccess,
-  onBack,
-}: SignInTwoFactorFormProps) {
+export function SignInTwoFactorForm({ onSuccess, onBack }: SignInTwoFactorFormProps) {
   const [totpCode, setTotpCode] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -76,29 +69,16 @@ export function SignInTwoFactorForm({
         </div>
 
         {error && (
-          <p
-            id="totp-error"
-            role="alert"
-            className="text-sm text-destructive text-center"
-          >
+          <p id="totp-error" role="alert" className="text-sm text-destructive text-center">
             {error}
           </p>
         )}
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isLoading || totpCode.length !== 6}
-        >
+        <Button type="submit" className="w-full" disabled={isLoading || totpCode.length !== 6}>
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
         </Button>
 
-        <Button
-          type="button"
-          variant="ghost"
-          className="w-full"
-          onClick={onBack}
-        >
+        <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
           Back to sign in
         </Button>
       </form>

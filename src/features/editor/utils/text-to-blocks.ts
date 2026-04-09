@@ -3,18 +3,14 @@ import { editorSchema } from 'convex/notes/editorSpecs'
 import escapeHtml from 'escape-html'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 
-export function convertBlocksToMarkdown(
-  blocks: Array<CustomPartialBlock>,
-): string {
+export function convertBlocksToMarkdown(blocks: Array<CustomPartialBlock>): string {
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
   })
   return editor.blocksToMarkdownLossy(blocks)
 }
 
-export async function convertTextToBlocks(
-  file: File,
-): Promise<Array<CustomPartialBlock>> {
+export async function convertTextToBlocks(file: File): Promise<Array<CustomPartialBlock>> {
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
   })
@@ -30,10 +26,10 @@ export async function convertTextToBlocks(
     fileName.toLowerCase().endsWith('.markdown')
 
   if (isMarkdown) {
-    return await editor.tryParseMarkdownToBlocks(textContent)
+    return editor.tryParseMarkdownToBlocks(textContent)
   } else {
     const html = convertTextToHTML(textContent)
-    return await editor.tryParseHTMLToBlocks(html)
+    return editor.tryParseHTMLToBlocks(html)
   }
 }
 

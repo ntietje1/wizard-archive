@@ -2,10 +2,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function shareSidebarItemWithMember(
@@ -23,16 +20,12 @@ export async function shareSidebarItemWithMember(
   },
 ): Promise<Id<'sidebarItemShares'>> {
   const item = await ctx.db.get(sidebarItemId)
-  if (!item)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
+  if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
   const member = await ctx.db.get(campaignMemberId)
   if (!member || member.campaignId !== campaignId)
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Member does not belong to this campaign',
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
   // Check if share already exists
   const existingShare = await ctx.db
@@ -57,10 +50,7 @@ export async function shareSidebarItemWithMember(
       updates.deletionTime = null
       updates.deletedBy = null
     }
-    if (
-      permissionLevel !== null &&
-      existingShare.permissionLevel !== permissionLevel
-    ) {
+    if (permissionLevel !== null && existingShare.permissionLevel !== permissionLevel) {
       updates.permissionLevel = permissionLevel
     }
     if (Object.keys(updates).length > 0) {
@@ -102,16 +92,12 @@ export async function unshareSidebarItemFromMember(
   },
 ): Promise<void> {
   const item = await ctx.db.get(sidebarItemId)
-  if (!item)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
+  if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
   const member = await ctx.db.get(campaignMemberId)
   if (!member || member.campaignId !== campaignId)
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Member does not belong to this campaign',
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
   const share = await ctx.db
     .query('sidebarItemShares')

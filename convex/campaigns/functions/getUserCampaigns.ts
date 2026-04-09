@@ -3,9 +3,7 @@ import { getCampaign } from './getCampaign'
 import type { Campaign } from '../types'
 import type { AuthQueryCtx } from '../../functions'
 
-export async function getUserCampaigns(
-  ctx: AuthQueryCtx,
-): Promise<Array<Campaign>> {
+export async function getUserCampaigns(ctx: AuthQueryCtx): Promise<Array<Campaign>> {
   const profile = ctx.user.profile
 
   const campaignMemberships = await ctx.db
@@ -15,8 +13,7 @@ export async function getUserCampaigns(
     .then((memberships) =>
       memberships.filter(
         (membership) =>
-          membership.deletionTime === null &&
-          membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+          membership.deletionTime === null && membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
       ),
     )
 

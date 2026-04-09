@@ -23,19 +23,18 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: true
+      - run: vp install --frozen-lockfile
 
       - name: Deploy Convex Preview (Create on Open)
         if: github.event.action == 'opened'
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
-            --cmd 'npx vite build' \
+            --cmd 'vp build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
@@ -50,7 +49,7 @@ jobs:
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
-            --cmd 'npx vite build' \
+            --cmd 'vp build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
@@ -101,12 +100,11 @@ jobs:
     environment: preview
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: true
+      - run: vp install --frozen-lockfile
 
       # Convex previews are automatically deleted after 7 days, so we don't need to do anything here
 

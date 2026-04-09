@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
@@ -52,7 +48,7 @@ test.describe.serial('edit history', () => {
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
-      console.warn(`[afterAll] Failed to delete campaign: ${error}`)
+      console.warn(`[afterAll] Failed to delete campaign: ${String(error)}`)
     }
     await page.close()
     await context.close()
@@ -75,9 +71,7 @@ test.describe.serial('edit history', () => {
     await waitForHistoryEntry(page, /created/i)
   })
 
-  test('history panel shows edited content entry from setup', async ({
-    page,
-  }) => {
+  test('history panel shows edited content entry from setup', async ({ page }) => {
     await openNoteWithHistory(page)
     await waitForHistoryEntry(page, /edited content/i)
   })

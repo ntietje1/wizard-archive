@@ -11,17 +11,12 @@ export function makeYjsUpdate(): ArrayBuffer {
   // Side-effect: ensures the 'document' fragment exists in the Y.Doc state before encoding
   doc.getXmlFragment('document')
   const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  )
+  const ab = update.buffer.slice(update.byteOffset, update.byteOffset + update.byteLength)
   doc.destroy()
   return ab as ArrayBuffer
 }
 
-export function makeYjsUpdateWithBlocks(
-  blocks: Array<AnyPartialBlock>,
-): ArrayBuffer {
+export function makeYjsUpdateWithBlocks(blocks: Array<AnyPartialBlock>): ArrayBuffer {
   const editor = BlockNoteEditor.create({
     schema: editorSchema,
     _headless: true,

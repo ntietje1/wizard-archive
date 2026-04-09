@@ -3,15 +3,9 @@ import { v } from 'convex/values'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
 import { userProfileValidator } from '../users/schema'
 
-export const campaignStatusValidator = v.union(
-  v.literal('Active'),
-  v.literal('Inactive'),
-)
+export const campaignStatusValidator = v.union(v.literal('Active'), v.literal('Inactive'))
 
-export const campaignMemberRoleValidator = v.union(
-  v.literal('DM'),
-  v.literal('Player'),
-)
+export const campaignMemberRoleValidator = v.union(v.literal('DM'), v.literal('Player'))
 
 export const campaignMemberStatusValidator = v.union(
   v.literal('Pending'),

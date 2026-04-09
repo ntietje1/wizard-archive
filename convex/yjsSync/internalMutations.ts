@@ -51,9 +51,7 @@ export const maybeCreateSnapshot = internalMutation({
     const lastContentEdit = await ctx.db
       .query('editHistory')
       .withIndex('by_item_action', (q) =>
-        q
-          .eq('itemId', args.documentId)
-          .eq('action', EDIT_HISTORY_ACTION.content_edited),
+        q.eq('itemId', args.documentId).eq('action', EDIT_HISTORY_ACTION.content_edited),
       )
       .order('desc')
       .first()
@@ -67,10 +65,7 @@ export const maybeCreateSnapshot = internalMutation({
     const doc = await ctx.db.get(args.documentId)
     if (!doc) return null
 
-    if (
-      doc.type !== SIDEBAR_ITEM_TYPES.notes &&
-      doc.type !== SIDEBAR_ITEM_TYPES.canvases
-    ) {
+    if (doc.type !== SIDEBAR_ITEM_TYPES.notes && doc.type !== SIDEBAR_ITEM_TYPES.canvases) {
       logger.warn(
         `maybeCreateSnapshot: unexpected document type '${(doc as { type: string }).type}' for ${args.documentId}, skipping snapshot`,
       )

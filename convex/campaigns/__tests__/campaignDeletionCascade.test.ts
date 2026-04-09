@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  setupCampaignContext,
-  setupMultiPlayerContext,
-} from '../../_test/identities.helper'
+import { asDm, setupCampaignContext, setupMultiPlayerContext } from '../../_test/identities.helper'
 import {
   createBlock,
   createBlockShare,
@@ -132,27 +128,19 @@ describe('campaign deletion cascade', () => {
     const { noteId: activeNoteId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Active Note',
     })
-    const { noteId: trashedNoteId } = await createNote(
-      t,
-      ctx.campaignId,
-      dmId,
-      {
-        name: 'Trashed Note',
-        location: 'trash',
-        deletionTime: Date.now(),
-        deletedBy: dmId,
-      },
-    )
+    const { noteId: trashedNoteId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Trashed Note',
+      location: 'trash',
+      deletionTime: Date.now(),
+      deletedBy: dmId,
+    })
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignId,
     })
 
     const [active, trashed] = await t.run(async (dbCtx) => {
-      return [
-        await dbCtx.db.get(activeNoteId),
-        await dbCtx.db.get(trashedNoteId),
-      ]
+      return [await dbCtx.db.get(activeNoteId), await dbCtx.db.get(trashedNoteId)]
     })
     expect(active).toBeNull()
     expect(trashed).toBeNull()
@@ -182,10 +170,9 @@ describe('campaign deletion cascade', () => {
       campaignId: cId,
     })
 
-    const editorBefore = await dmAuth.query(
-      api.editors.queries.getCurrentEditor,
-      { campaignId: cId },
-    )
+    const editorBefore = await dmAuth.query(api.editors.queries.getCurrentEditor, {
+      campaignId: cId,
+    })
     expect(editorBefore).not.toBeNull()
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {

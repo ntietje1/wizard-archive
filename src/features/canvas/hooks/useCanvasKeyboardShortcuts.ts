@@ -21,14 +21,10 @@ export function useCanvasKeyboardShortcuts() {
       if (e.key === 'Escape') {
         e.preventDefault()
         reactFlow.setNodes((nodes) =>
-          nodes.map((node) =>
-            node.selected ? { ...node, selected: false } : node,
-          ),
+          nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
         )
         reactFlow.setEdges((edges) =>
-          edges.map((edge) =>
-            edge.selected ? { ...edge, selected: false } : edge,
-          ),
+          edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
         )
         return
       }

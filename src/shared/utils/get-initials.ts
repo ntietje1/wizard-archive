@@ -1,7 +1,4 @@
-export function getInitials(
-  name?: string | null,
-  email?: string | null,
-): string {
+export function getInitials(name?: string | null, email?: string | null): string {
   const trimmedName = name?.trim()
   const trimmedEmail = email?.trim()
   if (trimmedName) {

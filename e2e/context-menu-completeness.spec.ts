@@ -2,16 +2,8 @@ import os from 'node:os'
 import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
-import {
-  createFolder,
-  createNote,
-  openContextMenu,
-} from './helpers/sidebar-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { createFolder, createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E CtxMenu')
@@ -40,9 +32,7 @@ test.describe.serial('context menu completeness', () => {
     await page.getByRole('button', { name: /^File/ }).click()
     const fileInput = page.getByLabel('Upload file')
     await fileInput.setInputFiles(testFilePath)
-    await expect(
-      page.getByRole('link', { name: /untitled file/i }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
 
     await page.close()
     await context.close()
@@ -69,20 +59,13 @@ test.describe.serial('context menu completeness', () => {
   test('note context menu has expected items', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, noteName)
 
-    const expectedItems = [
-      'Open',
-      'Bookmark',
-      'Download',
-      'Rename',
-      'Edit Note',
-      'Move to Trash',
-    ]
+    const expectedItems = ['Open', 'Bookmark', 'Download', 'Rename', 'Edit Note', 'Move to Trash']
     for (const item of expectedItems) {
       await expect(page.getByRole('menuitem', { name: item })).toBeVisible()
     }
@@ -93,9 +76,9 @@ test.describe.serial('context menu completeness', () => {
   test('folder context menu has expected items', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: folderName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: folderName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, folderName)
 
@@ -124,14 +107,7 @@ test.describe.serial('context menu completeness', () => {
 
     await fileLink.click({ button: 'right' })
 
-    const expectedItems = [
-      'Open',
-      'Bookmark',
-      'Download',
-      'Rename',
-      'Edit File',
-      'Move to Trash',
-    ]
+    const expectedItems = ['Open', 'Bookmark', 'Download', 'Rename', 'Edit File', 'Move to Trash']
     for (const item of expectedItems) {
       await expect(page.getByRole('menuitem', { name: item })).toBeVisible()
     }
@@ -142,17 +118,17 @@ test.describe.serial('context menu completeness', () => {
   test('move to trash from context menu works', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    await expect(
-      page.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, noteName)
     await page.getByRole('menuitem', { name: 'Move to Trash' }).click()
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: noteName, exact: true }),
-    ).not.toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: noteName, exact: true })).not.toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('download menuitem is clickable for file', async ({ page }) => {

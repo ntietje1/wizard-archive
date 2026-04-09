@@ -23,11 +23,7 @@ export const sidebarShareTables = {
   })
     .index('by_campaign_session', ['campaignId', 'sessionId'])
     .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
-    .index('by_campaign_item_member', [
-      'campaignId',
-      'sidebarItemId',
-      'campaignMemberId',
-    ]),
+    .index('by_campaign_item_member', ['campaignId', 'sidebarItemId', 'campaignMemberId']),
 }
 
 const sidebarItemShareValidatorFields = {
@@ -35,6 +31,4 @@ const sidebarItemShareValidatorFields = {
   ...sidebarItemShareTableFields,
 }
 
-export const sidebarItemShareValidator = v.object(
-  sidebarItemShareValidatorFields,
-)
+export const sidebarItemShareValidator = v.object(sidebarItemShareValidatorFields)

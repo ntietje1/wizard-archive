@@ -1,11 +1,5 @@
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-} from '../campaigns/types'
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_TYPES,
-} from '../sidebarItems/types/baseTypes'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
 import type { TestConvex } from 'convex-test'
@@ -241,8 +235,7 @@ export async function createFile(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: CommonSidebarItemOverrides &
-    Partial<{ storageId: Id<'_storage'> | null }>,
+  overrides?: CommonSidebarItemOverrides & Partial<{ storageId: Id<'_storage'> | null }>,
 ) {
   const { id: fileId, ...data } = await insertSidebarItem(
     t,
@@ -260,8 +253,7 @@ export async function createGameMap(
   t: T,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  overrides?: CommonSidebarItemOverrides &
-    Partial<{ imageStorageId: Id<'_storage'> | null }>,
+  overrides?: CommonSidebarItemOverrides & Partial<{ imageStorageId: Id<'_storage'> | null }>,
 ) {
   const { id: mapId, ...data } = await insertSidebarItem(
     t,
@@ -501,7 +493,7 @@ export async function setupFolderTree(
     }
     default: {
       const _exhaustive: never = leafType
-      throw new Error(`Unknown leaf type: ${_exhaustive}`)
+      throw new Error(`Unknown leaf type: ${String(_exhaustive)}`)
     }
   }
 }

@@ -24,8 +24,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
-  const { editingEmbedId, setEditingEmbedId, canEdit } =
-    useContext(CanvasContext)
+  const { editingEmbedId, setEditingEmbedId, canEdit } = useContext(CanvasContext)
   const isEditing = editingEmbedId === id && !!selected
 
   const scrollTopRef = useRef(0)
@@ -79,11 +78,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           </div>
         )}
 
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-primary"
-        />
+        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

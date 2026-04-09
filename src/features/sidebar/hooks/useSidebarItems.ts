@@ -31,8 +31,7 @@ export interface SidebarItemsValue extends SidebarItemMaps {
 
 type SidebarItemsContextValue = Record<SidebarItemLocation, SidebarItemsValue>
 
-export const SidebarItemsContext =
-  createContext<SidebarItemsContextValue | null>(null)
+export const SidebarItemsContext = createContext<SidebarItemsContextValue | null>(null)
 
 function useSidebarItemQuery(location: SidebarItemLocation): SidebarItemsValue {
   const { campaignId } = useCampaign()
@@ -62,14 +61,10 @@ export const useSidebarItemsQueries = (): SidebarItemsContextValue => {
 // Consumer hooks
 // ---------------------------------------------------------------------------
 
-export const useSidebarItems = (
-  location: SidebarItemLocation,
-): SidebarItemsValue => {
+export const useSidebarItems = (location: SidebarItemLocation): SidebarItemsValue => {
   const ctx = useContext(SidebarItemsContext)
   if (!ctx) {
-    throw new Error(
-      'useSidebarItems must be used within a SidebarItemsProvider',
-    )
+    throw new Error('useSidebarItems must be used within a SidebarItemsProvider')
   }
   return ctx[location]
 }
@@ -102,10 +97,7 @@ export const useFilteredSidebarItems = (): SidebarItemsValue => {
 // Sorting utility
 // ---------------------------------------------------------------------------
 
-export const sortItemsByOptions = (
-  options: SortOptions,
-  items?: Array<AnySidebarItem>,
-) => {
+export const sortItemsByOptions = (options: SortOptions, items?: Array<AnySidebarItem>) => {
   if (!items) return undefined
 
   const sortFn = (a: AnySidebarItem, b: AnySidebarItem) => {
@@ -124,9 +116,7 @@ export const sortItemsByOptions = (
       case SORT_ORDERS.DateModified: {
         const aTime = a.updatedTime ?? a._creationTime
         const bTime = b.updatedTime ?? b._creationTime
-        return options.direction === SORT_DIRECTIONS.Ascending
-          ? aTime - bTime
-          : bTime - aTime
+        return options.direction === SORT_DIRECTIONS.Ascending ? aTime - bTime : bTime - aTime
       }
       default:
         return assertNever(options.order)

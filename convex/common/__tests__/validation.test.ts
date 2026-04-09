@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  appendSuffix,
-  findUniqueSlug,
-  slugify,
-  validateUsername,
-} from '../slug'
+import { appendSuffix, findUniqueSlug, slugify, validateUsername } from '../slug'
 
 describe('slugify', () => {
   it('lowercases input', () => {
@@ -73,9 +68,7 @@ describe('validateUsername', () => {
   })
 
   it('returns error for invalid characters', () => {
-    expect(validateUsername('alice', 'Alice!', 2, 30)).toContain(
-      'letters, numbers, and hyphens',
-    )
+    expect(validateUsername('alice', 'Alice!', 2, 30)).toContain('letters, numbers, and hyphens')
   })
 
   it('returns null at exact min length', () => {
@@ -111,9 +104,7 @@ describe('appendSuffix', () => {
 
 describe('findUniqueSlug', () => {
   it('returns base slug when no conflict', async () => {
-    const slug = await findUniqueSlug('Hello World', () =>
-      Promise.resolve(false),
-    )
+    const slug = await findUniqueSlug('Hello World', () => Promise.resolve(false))
     expect(slug).toBe('hello-world')
   })
 
@@ -127,9 +118,9 @@ describe('findUniqueSlug', () => {
   })
 
   it('throws after 100 attempts', async () => {
-    await expect(
-      findUniqueSlug('hello', () => Promise.resolve(true)),
-    ).rejects.toThrow('Failed to find unique slug')
+    await expect(findUniqueSlug('hello', () => Promise.resolve(true))).rejects.toThrow(
+      'Failed to find unique slug',
+    )
   })
 
   it('increments suffix until unique slug found', async () => {

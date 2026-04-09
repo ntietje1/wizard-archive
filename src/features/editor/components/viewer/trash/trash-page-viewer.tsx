@@ -16,9 +16,7 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
-  const { parentItemsMap, status } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { parentItemsMap, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = parentItemsMap.get(null) ?? []
 
   const { isDropTarget } = useDndDropTarget({
@@ -27,17 +25,11 @@ export function TrashPageViewer() {
     highlightId: TRASH_DROP_ZONE_TYPE,
   })
   const isTrashDrag = useDndStore(
-    (s) =>
-      isDropTarget &&
-      s.dragOutcome?.type === 'operation' &&
-      s.dragOutcome.action === 'trash',
+    (s) => isDropTarget && s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
 
   return (
-    <EditorContextMenu
-      viewContext="trash-view"
-      className="flex flex-col h-full w-full min-h-0"
-    >
+    <EditorContextMenu viewContext="trash-view" className="flex flex-col h-full w-full min-h-0">
       <div
         ref={dropRef}
         className={cn(

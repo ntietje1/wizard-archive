@@ -17,10 +17,7 @@ export const createFile = authMutation({
     fileId: v.id('files'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ fileId: Id<'files'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ fileId: Id<'files'>; slug: string }> => {
     return await createFileFn(ctx, {
       name: args.name,
       storageId: args.storageId,
@@ -44,10 +41,7 @@ export const updateFile = authMutation({
     fileId: v.id('files'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ fileId: Id<'files'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ fileId: Id<'files'>; slug: string }> => {
     return await updateFileFn(ctx, {
       fileId: args.fileId,
       name: args.name,

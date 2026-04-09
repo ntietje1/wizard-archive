@@ -21,19 +21,13 @@ export function usePanelPreference(
   defaults: { size: number; visible: boolean },
   initial?: { size: number | null; visible: boolean | null },
 ): PanelPreferenceState {
-  const prefsQuery = useAuthQuery(
-    api.userPreferences.queries.getUserPreferences,
-    {},
-  )
+  const prefsQuery = useAuthQuery(api.userPreferences.queries.getUserPreferences, {})
 
-  const setPanelPref = useAppMutation(
-    api.userPreferences.mutations.setPanelPreference,
-    {
-      onError: (error) => {
-        handleError(error, 'Failed to save panel preference')
-      },
+  const setPanelPref = useAppMutation(api.userPreferences.mutations.setPanelPreference, {
+    onError: (error) => {
+      handleError(error, 'Failed to save panel preference')
     },
-  )
+  })
 
   const store = usePanelPreferenceStore
   const initPanel = store((s) => s.initPanel)
@@ -49,8 +43,7 @@ export function usePanelPreference(
     })
   }
 
-  const serverPanel: PanelPreference | undefined =
-    prefsQuery.data?.panelPreferences?.[panelId]
+  const serverPanel: PanelPreference | undefined = prefsQuery.data?.panelPreferences?.[panelId]
 
   useEffect(() => {
     if (prefsQuery.isSuccess && hasInitialized.current !== panelId) {

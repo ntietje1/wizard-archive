@@ -86,6 +86,7 @@ export function useConvexYjsCollaboration(
       }
       if (isLoading) setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatesResult.data, updatesResult.isError, updatesResult.error, state])
 
   const awarenessResult = useAuthQuery(api.yjsSync.queries.getAwareness, {

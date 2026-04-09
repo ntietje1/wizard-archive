@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { signIn } from './helpers/auth-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { openSettingsPeopleTab } from './helpers/permission-helpers'
@@ -115,9 +111,7 @@ test.describe.serial('view-as-player', () => {
     const shareDialog = page.getByRole('dialog').filter({ hasText: 'Share' })
     await expect(shareDialog).toBeVisible({ timeout: 5000 })
 
-    const permSelect = shareDialog
-      .getByRole('combobox')
-      .filter({ hasNotText: /full access/i })
+    const permSelect = shareDialog.getByRole('combobox').filter({ hasNotText: /full access/i })
     await expect(permSelect).toContainText(/none/i, { timeout: 5000 })
     await permSelect.click()
     await page
@@ -145,12 +139,10 @@ test.describe.serial('view-as-player', () => {
     await playerItem.click()
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: sharedNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
-    await expect(
-      sidebar.getByRole('link', { name: unsharedNote, exact: true }),
-    ).not.toBeVisible()
+    await expect(sidebar.getByRole('link', { name: sharedNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(sidebar.getByRole('link', { name: unsharedNote, exact: true })).not.toBeVisible()
   })
 
   test('switching back to DM view shows both notes', async ({ page }) => {
@@ -172,11 +164,11 @@ test.describe.serial('view-as-player', () => {
     }
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: sharedNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
-    await expect(
-      sidebar.getByRole('link', { name: unsharedNote, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: sharedNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
+    await expect(sidebar.getByRole('link', { name: unsharedNote, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

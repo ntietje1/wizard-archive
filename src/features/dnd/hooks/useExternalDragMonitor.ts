@@ -35,11 +35,7 @@ export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         if (!target || !ctx?.campaignId) return
         try {
           const dropResult = await processDataTransferItems(source.items)
-          if (
-            dropResult.files.length === 0 &&
-            dropResult.rootFolders.length === 0
-          )
-            return
+          if (dropResult.files.length === 0 && dropResult.rootFolders.length === 0) return
 
           const override = useDndStore.getState().fileDropOverride
           if (override) {
@@ -54,5 +50,6 @@ export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         }
       },
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setIsDraggingFiles, setFileDragHoveredId])
 }

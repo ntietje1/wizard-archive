@@ -60,8 +60,7 @@ export function CanvasToolbar({ nodesMap, canEdit }: CanvasToolbarProps) {
       type,
       position,
       width: type === 'sticky' ? STICKY_DEFAULT_WIDTH : TEXT_NODE_DEFAULT_WIDTH,
-      height:
-        type === 'sticky' ? STICKY_DEFAULT_HEIGHT : TEXT_NODE_DEFAULT_HEIGHT,
+      height: type === 'sticky' ? STICKY_DEFAULT_HEIGHT : TEXT_NODE_DEFAULT_HEIGHT,
       data: {
         label: type === 'text' ? 'New text' : '',
         ...(type === 'sticky'

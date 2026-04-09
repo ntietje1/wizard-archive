@@ -1,10 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import {
-  pointInPolygon,
-  strokePathIntersectsPolygon,
-} from '../utils/canvas-stroke-utils'
+import { pointInPolygon, strokePathIntersectsPolygon } from '../utils/canvas-stroke-utils'
 import type { StrokeNodeData } from '../components/nodes/stroke-node'
 import type { Point2D, SelectingState } from '../utils/canvas-awareness-types'
 
@@ -12,9 +9,7 @@ interface UseCanvasLassoSelectionOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void
 }
 
-export function useCanvasLassoSelection({
-  setLocalSelecting,
-}: UseCanvasLassoSelectionOptions) {
+export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSelectionOptions) {
   const pointsRef = useRef<Array<Point2D>>([])
   const activeRef = useRef(false)
   const capturedRef = useRef<{
@@ -39,14 +34,10 @@ export function useCanvasLassoSelection({
       useCanvasToolStore.getState().setLassoPath([pos])
       setLocalSelecting({ type: 'lasso', points: [pos] })
       reactFlow.setNodes((nodes) =>
-        nodes.map((node) =>
-          node.selected ? { ...node, selected: false } : node,
-        ),
+        nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
       )
       reactFlow.setEdges((edges) =>
-        edges.map((edge) =>
-          edge.selected ? { ...edge, selected: false } : edge,
-        ),
+        edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
       )
     },
     [reactFlow, setLocalSelecting],
@@ -72,9 +63,7 @@ export function useCanvasLassoSelection({
     activeRef.current = false
     if (capturedRef.current) {
       try {
-        capturedRef.current.element.releasePointerCapture(
-          capturedRef.current.pointerId,
-        )
+        capturedRef.current.element.releasePointerCapture(capturedRef.current.pointerId)
       } catch {
         /* already released */
       }
@@ -104,8 +93,7 @@ export function useCanvasLassoSelection({
         const offsetX = position.x - strokeData.bounds.x
         const offsetY = position.y - strokeData.bounds.y
         const adjustedPoints = strokeData.points.map(
-          ([x, y, p]) =>
-            [x + offsetX, y + offsetY, p] as [number, number, number],
+          ([x, y, p]) => [x + offsetX, y + offsetY, p] as [number, number, number],
         )
         if (strokePathIntersectsPolygon(adjustedPoints, polygon)) {
           selectedNodeIds.add(nodeId)
@@ -133,11 +121,8 @@ export function useCanvasLassoSelection({
 
     reactFlow.setEdges((edges) =>
       edges.map((edge) => {
-        const isSelected =
-          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
-        return edge.selected === isSelected
-          ? edge
-          : { ...edge, selected: isSelected }
+        const isSelected = selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+        return edge.selected === isSelected ? edge : { ...edge, selected: isSelected }
       }),
     )
 

@@ -7,16 +7,12 @@ export type ThemeProviderState = {
   setTheme: (theme: Theme) => void
 }
 
-export const ThemeProviderContext = createContext<
-  ThemeProviderState | undefined
->(undefined)
+export const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
 
 export function resolveTheme(theme: Theme): 'dark' | 'light' {
   if (theme === 'system') {
     if (typeof window === 'undefined') return 'dark'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
   return theme
 }
@@ -29,14 +25,13 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
   root.classList.add('no-transitions', resolved)
   root.classList.remove(other)
   // Force a reflow so the class change paints without transitions, then re-enable
-  root.offsetHeight
+  void root.offsetHeight
   root.classList.remove('no-transitions')
 }
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext)
-  if (context === undefined)
-    throw new Error('useTheme must be used within a ThemeProvider')
+  if (context === undefined) throw new Error('useTheme must be used within a ThemeProvider')
   return context
 }
 
@@ -58,9 +53,5 @@ function subscribeToThemeClass(callback: () => void) {
 }
 
 export function useResolvedTheme(): 'dark' | 'light' {
-  return useSyncExternalStore(
-    subscribeToThemeClass,
-    getResolvedThemeFromDOM,
-    () => 'dark' as const,
-  )
+  return useSyncExternalStore(subscribeToThemeClass, getResolvedThemeFromDOM, () => 'dark' as const)
 }

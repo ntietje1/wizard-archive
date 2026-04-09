@@ -13,19 +13,11 @@ import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
 import { cn } from '~/features/shadcn/lib/utils'
 
-export function RejectedRemovedSection({
-  players,
-}: {
-  players: Array<CampaignMember>
-}) {
+export function RejectedRemovedSection({ players }: { players: Array<CampaignMember> }) {
   const [showRejected, setShowRejected] = useState(false)
-  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(
-    null,
-  )
+  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
 
-  const updateStatus = useAppMutation(
-    api.campaigns.mutations.updateCampaignMemberStatus,
-  )
+  const updateStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
 
   const handleStatusUpdate = async (
     memberId: Id<'campaignMembers'>,
@@ -49,12 +41,7 @@ export function RejectedRemovedSection({
         className="flex items-center gap-1 text-sm font-medium text-muted-foreground mb-3"
         onClick={() => setShowRejected((s) => !s)}
       >
-        <ChevronDown
-          className={cn(
-            'size-4 transition-transform',
-            !showRejected && '-rotate-90',
-          )}
-        />
+        <ChevronDown className={cn('size-4 transition-transform', !showRejected && '-rotate-90')} />
         {`Rejected & removed (${players.length})`}
       </button>
       {showRejected && (

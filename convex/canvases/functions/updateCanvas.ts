@@ -1,7 +1,4 @@
-import {
-  requireItemAccess,
-  validateSidebarItemRename,
-} from '../../sidebarItems/validation'
+import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'

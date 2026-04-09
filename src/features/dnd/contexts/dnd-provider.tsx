@@ -12,10 +12,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
-import {
-  useActiveSidebarItems,
-  useSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 import { DragOverlayPortal } from '~/features/dnd/components/drag-overlay'
@@ -28,11 +25,8 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { navigateToItem } = useEditorNavigation()
   const { moveItem } = useMoveSidebarItem()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
-  const { itemsMap, parentItemsMap, getAncestorSidebarItems } =
-    useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { itemsMap, parentItemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
@@ -47,9 +41,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   ): boolean => {
     const siblings = parentItemsMap.get(parentId) ?? []
     const normalized = name.trim().toLowerCase()
-    return siblings.some(
-      (s) => s.name.trim().toLowerCase() === normalized && s._id !== excludeId,
-    )
+    return siblings.some((s) => s.name.trim().toLowerCase() === normalized && s._id !== excludeId)
   }
 
   const dndContext: DndContext = {
@@ -65,8 +57,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const resolveItem = (id: SidebarItemId): AnySidebarItem | null =>
     itemsMap.get(id) ?? trashedItemsMap.get(id) ?? null
 
-  const getAncestorIds = (id: SidebarItemId) =>
-    getAncestorSidebarItems(id).map((a) => a._id)
+  const getAncestorIds = (id: SidebarItemId) => getAncestorSidebarItems(id).map((a) => a._id)
 
   const resolveDropTargetWrapped = (rawData: Record<string, unknown>) =>
     resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds)

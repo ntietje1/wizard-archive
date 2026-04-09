@@ -1,13 +1,5 @@
 import { api } from 'convex/_generated/api'
-import {
-  Cable,
-  CreditCard,
-  Import,
-  Paintbrush,
-  Settings,
-  Smile,
-  Users,
-} from 'lucide-react'
+import { Cable, CreditCard, Import, Paintbrush, Settings, Smile, Users } from 'lucide-react'
 import { useMatch } from '@tanstack/react-router'
 import { useSettingsStore } from '../hooks/settings-store'
 import { ProfileTab } from './tabs/account-profile/profile-tab'
@@ -17,16 +9,8 @@ import { StubTab } from './tabs/stub-tab'
 import type { SettingsTab } from '../hooks/settings-store'
 import type { LucideIcon } from 'lucide-react'
 import { getInitials } from '~/shared/utils/get-initials'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '~/features/shadcn/components/dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '~/features/shadcn/components/avatar'
+import { Dialog, DialogContent, DialogTitle } from '~/features/shadcn/components/dialog'
 import { Button } from '~/features/shadcn/components/button'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -166,18 +150,13 @@ export function SettingsDialog() {
                   >
                     <Avatar size="sm">
                       {profile?.imageUrl && (
-                        <AvatarImage
-                          src={profile.imageUrl}
-                          alt={profile.name ?? ''}
-                        />
+                        <AvatarImage src={profile.imageUrl} alt={profile.name ?? ''} />
                       )}
                       <AvatarFallback className="text-[10px]">
                         {getInitials(profile?.name, profile?.email)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate">
-                      {profile?.name ?? profile?.email ?? 'Profile'}
-                    </span>
+                    <span className="truncate">{profile?.name ?? profile?.email ?? 'Profile'}</span>
                   </Button>
                 )}
                 {group.tabs.map((tab) => (

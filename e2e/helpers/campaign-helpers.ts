@@ -21,9 +21,9 @@ export async function createCampaign(page: Page, name: string) {
   const createBtn = page.getByRole('button', { name: /^create campaign$/i })
   await expect(createBtn).toBeEnabled({ timeout: 5000 })
   await createBtn.click()
-  await expect(
-    page.getByRole('dialog', { name: /new campaign/i }),
-  ).not.toBeVisible({ timeout: 30000 })
+  await expect(page.getByRole('dialog', { name: /new campaign/i })).not.toBeVisible({
+    timeout: 30000,
+  })
   await expect(page.getByText(name)).toBeVisible({ timeout: 15000 })
 }
 

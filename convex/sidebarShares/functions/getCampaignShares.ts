@@ -3,10 +3,7 @@ import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemShare } from '../types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
-export type SharesMap = Map<
-  SidebarItemId,
-  Map<Id<'campaignMembers'>, SidebarItemShare>
->
+export type SharesMap = Map<SidebarItemId, Map<Id<'campaignMembers'>, SidebarItemShare>>
 
 function buildSharesMap(shares: Array<SidebarItemShare>): SharesMap {
   const map: SharesMap = new Map()

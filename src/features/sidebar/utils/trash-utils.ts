@@ -6,9 +6,7 @@ export function permanentDeleteDescription(
   item: AnySidebarItem,
   allTrashedItems: Array<AnySidebarItem>,
 ): string {
-  const descendantCount = isFolder(item)
-    ? collectDescendantIds(item._id, allTrashedItems).size
-    : 0
+  const descendantCount = isFolder(item) ? collectDescendantIds(item._id, allTrashedItems).size : 0
   const base = `Are you sure you want to permanently delete "${item.name}"?`
   const detail =
     descendantCount > 0

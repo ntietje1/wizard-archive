@@ -22,10 +22,7 @@ export const createMap = authMutation({
     mapId: v.id('gameMaps'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     return await createMapFn(ctx, {
       name: args.name,
       imageStorageId: args.imageStorageId,
@@ -49,10 +46,7 @@ export const updateMap = authMutation({
     mapId: v.id('gameMaps'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ mapId: Id<'gameMaps'>; slug: string }> => {
     return await updateMapFn(ctx, {
       mapId: args.mapId,
       name: args.name,

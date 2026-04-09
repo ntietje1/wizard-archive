@@ -45,8 +45,7 @@ export function useNameValidation({
   const trimmedInitialName = initialName.trim()
 
   const checkFormat = (trimmed: string) => {
-    if (trimmed === trimmedInitialName)
-      return { valid: true as const, error: undefined }
+    if (trimmed === trimmedInitialName) return { valid: true as const, error: undefined }
     return validateItemName(trimmed)
   }
 
@@ -72,8 +71,7 @@ export function useNameValidation({
 
   const validationError = (() => {
     if (!nameValidation.valid) return nameValidation.error
-    if (isNotUnique)
-      return uniquenessValidation.error ?? 'Name is already in use'
+    if (isNotUnique) return uniquenessValidation.error ?? 'Name is already in use'
     return undefined
   })()
   const hasError = !nameValidation.valid || isNotUnique
@@ -83,15 +81,12 @@ export function useNameValidation({
     const formatResult = checkFormat(trimmed)
     if (!formatResult.valid) return formatResult.error ?? 'Invalid name'
     const uniqueResult = checkUniqueness(trimmed)
-    return uniqueResult.valid
-      ? undefined
-      : (uniqueResult.error ?? 'Name is already in use')
+    return uniqueResult.valid ? undefined : (uniqueResult.error ?? 'Name is already in use')
   }
 
   return {
     debouncedName: trimmedDebouncedName,
-    shouldValidate:
-      isActive && !!trimmedName && trimmedName !== trimmedInitialName,
+    shouldValidate: isActive && !!trimmedName && trimmedName !== trimmedInitialName,
     isUnique,
     isNotUnique,
     checkNameUnique,

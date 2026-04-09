@@ -17,7 +17,5 @@ export type CommonValidatorFields<T extends TableNames> = CommonTableFields &
   ConvexValidatorFields<T>
 
 export function assertNever(value: never): never {
-  throw new Error(
-    `Unhandled discriminated union member: ${JSON.stringify(value)}`,
-  )
+  throw new Error(`Unhandled discriminated union member: ${JSON.stringify(value)}`)
 }

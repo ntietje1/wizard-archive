@@ -4,10 +4,7 @@ import { mkdir } from 'node:fs/promises'
 import { test as setup } from '@playwright/test'
 import { signIn } from './helpers/auth-helpers'
 
-const authFile = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '.auth/user.json',
-)
+const authFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '.auth/user.json')
 
 setup('authenticate', async ({ page }) => {
   const email = process.env.E2E_TEST_EMAIL

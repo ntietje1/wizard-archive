@@ -7,11 +7,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 import { Separator } from '~/features/shadcn/components/separator'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { GoogleIcon } from '~/features/auth/utils/custom-icons'
 import { isPreview } from '~/shared/utils/preview'
 
@@ -80,9 +76,7 @@ export function SignInCredentialsForm({
     }
   }
 
-  const handleSocialSignIn = async (
-    provider: 'github' | 'google' | 'discord',
-  ) => {
+  const handleSocialSignIn = async (provider: 'github' | 'google' | 'discord') => {
     setSocialLoading(provider)
     setError('')
     try {
@@ -102,17 +96,12 @@ export function SignInCredentialsForm({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Welcome back</h1>
-        <p className="text-sm text-muted-foreground text-balance">
-          Sign in to your account
-        </p>
+        <p className="text-sm text-muted-foreground text-balance">Sign in to your account</p>
       </div>
       <div className="flex flex-col gap-4">
         {/* Social login buttons */}
         <Tooltip>
-          <TooltipTrigger
-            render={<span className="w-full" />}
-            disabled={!isPreview}
-          >
+          <TooltipTrigger render={<span className="w-full" />} disabled={!isPreview}>
             <Button
               variant="outline"
               className="w-full"
@@ -128,8 +117,7 @@ export function SignInCredentialsForm({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            OAuth is unavailable on preview deployments. Use email and password
-            instead.
+            OAuth is unavailable on preview deployments. Use email and password instead.
           </TooltipContent>
         </Tooltip>
 
@@ -176,16 +164,10 @@ export function SignInCredentialsForm({
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={isDisabled}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Sign in'
-            )}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
           </Button>
         </form>
 
@@ -201,11 +183,7 @@ export function SignInCredentialsForm({
         <p
           className={`text-center text-sm transition-opacity ${sessionsLoaded && existingSessions.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <Button
-            type="button"
-            variant="link"
-            onClick={() => onPickAccount?.()}
-          >
+          <Button type="button" variant="link" onClick={() => onPickAccount?.()}>
             Switch to an existing account
           </Button>
         </p>

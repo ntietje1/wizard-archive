@@ -15,10 +15,7 @@ export const updateFolder = authMutation({
     folderId: v.id('folders'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     return await updateFolderFn(ctx, {
       folderId: args.folderId,
       name: args.name,
@@ -40,10 +37,7 @@ export const createFolder = authMutation({
     folderId: v.id('folders'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
     return await createFolderFn(ctx, {
       name: args.name,
       parentId: args.parentId,

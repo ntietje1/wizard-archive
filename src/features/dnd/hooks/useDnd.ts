@@ -5,9 +5,7 @@ import type { SidebarDropData } from '~/features/dnd/utils/dnd-registry'
 
 export interface DndValue {
   resolveItem: (id: SidebarItemId) => AnySidebarItem | null
-  resolveDropTarget: (
-    rawData: Record<string, unknown>,
-  ) => SidebarDropData | null
+  resolveDropTarget: (rawData: Record<string, unknown>) => SidebarDropData | null
 }
 
 export const DndProviderContext = createContext<DndValue | null>(null)

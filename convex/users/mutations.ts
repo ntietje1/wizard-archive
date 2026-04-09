@@ -48,10 +48,7 @@ export const updateProfileImage = authMutation({
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId)
     if (!url) {
-      throwClientError(
-        ERROR_CODE.NOT_FOUND,
-        'The uploaded file could not be found',
-      )
+      throwClientError(ERROR_CODE.NOT_FOUND, 'The uploaded file could not be found')
     }
 
     await ctx.db.patch(ctx.user.profile._id, {
@@ -72,10 +69,7 @@ export const updateName = authMutation({
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Name cannot be empty')
     }
     if (name.length > 100) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        'Name must be at most 100 characters',
-      )
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Name must be at most 100 characters')
     }
     if (name === ctx.user.profile.name) {
       return null

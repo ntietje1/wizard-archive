@@ -10,9 +10,7 @@ export interface SidebarItemMaps {
   getAncestorSidebarItems: (itemId: SidebarItemId) => Array<Folder>
 }
 
-export function buildSidebarItemMaps(
-  data: Array<AnySidebarItem>,
-): SidebarItemMaps {
+export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMaps {
   const itemsMap = new Map<SidebarItemId, AnySidebarItem>()
   for (const item of data) {
     itemsMap.set(item._id, item)
@@ -20,8 +18,7 @@ export function buildSidebarItemMaps(
 
   const parentItemsMap = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
   for (const item of data) {
-    const effectiveParentId =
-      item.parentId && !itemsMap.has(item.parentId) ? null : item.parentId
+    const effectiveParentId = item.parentId && !itemsMap.has(item.parentId) ? null : item.parentId
     const siblings = parentItemsMap.get(effectiveParentId)
     if (siblings) {
       siblings.push(item)

@@ -11,10 +11,7 @@ type AuthUserDoc = {
   twoFactorEnabled?: boolean | null
 }
 
-export async function onCreateUser(
-  ctx: MutationCtx,
-  user: AuthUserDoc,
-): Promise<void> {
+export async function onCreateUser(ctx: MutationCtx, user: AuthUserDoc): Promise<void> {
   const baseUsername =
     (user.email ? user.email.split('@')[0] : undefined) ||
     user.name?.toLowerCase().replace(/\s+/g, '') ||
@@ -34,9 +31,7 @@ export async function onCreateUser(
     email: user.email ?? null,
     emailVerified: user.emailVerified ?? null,
     name: user.name ?? null,
-    profileImage: user.image
-      ? { type: 'external' as const, url: user.image }
-      : null,
+    profileImage: user.image ? { type: 'external' as const, url: user.image } : null,
     twoFactorEnabled: user.twoFactorEnabled ?? null,
   })
 }

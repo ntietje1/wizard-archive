@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import {
-  PERSIST_INTERVAL_MS,
-  useNoteYjsCollaboration,
-} from '../useNoteYjsCollaboration'
+import { PERSIST_INTERVAL_MS, useNoteYjsCollaboration } from '../useNoteYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 
 const NOTE_ID = 'test-note-id' as Id<'notes'>
@@ -50,9 +47,7 @@ const mockApplyRemoteUpdates = vi.fn()
 const mockApplyRemoteAwareness = vi.fn()
 
 vi.mock('../../providers/convex-yjs-provider', () => ({
-  ConvexYjsProvider: vi.fn().mockImplementation(function (
-    this: Record<string, unknown>,
-  ) {
+  ConvexYjsProvider: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
     this.destroy = mockProviderDestroy
     this.applyRemoteUpdates = mockApplyRemoteUpdates
     this.applyRemoteAwareness = mockApplyRemoteAwareness
@@ -80,9 +75,7 @@ describe('useNoteYjsCollaboration', () => {
   })
 
   it('returns doc and provider when rendered', () => {
-    const { result } = renderHook(() =>
-      useNoteYjsCollaboration(NOTE_ID, USER, true),
-    )
+    const { result } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
     expect(result.current.doc).not.toBeNull()
     expect(result.current.provider).not.toBeNull()
   })
@@ -109,10 +102,7 @@ describe('useNoteYjsCollaboration', () => {
       renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, false))
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
-      expect(mockMutation).not.toHaveBeenCalledWith(
-        'persistNoteBlocks',
-        expect.anything(),
-      )
+      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('does not persist while still loading', () => {
@@ -121,10 +111,7 @@ describe('useNoteYjsCollaboration', () => {
       renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
-      expect(mockMutation).not.toHaveBeenCalledWith(
-        'persistNoteBlocks',
-        expect.anything(),
-      )
+      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('stops persist interval when canEdit changes to false', () => {
@@ -146,10 +133,7 @@ describe('useNoteYjsCollaboration', () => {
       rerender({ canEdit: false })
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS * 2)
-      expect(mockMutation).not.toHaveBeenCalledWith(
-        'persistNoteBlocks',
-        expect.anything(),
-      )
+      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('cleans up interval and destroys provider on unmount', () => {
@@ -157,9 +141,7 @@ describe('useNoteYjsCollaboration', () => {
         data: [{ seq: 0, update: new ArrayBuffer(0) }],
       })
 
-      const { unmount } = renderHook(() =>
-        useNoteYjsCollaboration(NOTE_ID, USER, true),
-      )
+      const { unmount } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
 
       unmount()
 
@@ -168,10 +150,7 @@ describe('useNoteYjsCollaboration', () => {
       mockMutation.mockClear()
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS * 2)
-      expect(mockMutation).not.toHaveBeenCalledWith(
-        'persistNoteBlocks',
-        expect.anything(),
-      )
+      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
   })
 })

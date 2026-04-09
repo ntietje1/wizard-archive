@@ -6,11 +6,7 @@ import type { MenuContext } from '~/features/context-menu/types'
 import { VIEW_CONTEXT } from '~/features/context-menu/constants'
 import { buildMenu } from '~/features/context-menu/menu-builder'
 import { createMenuItems } from '~/features/context-menu/menu-registry'
-import {
-  createFile,
-  createFolder,
-  createNote,
-} from '~/test/factories/sidebar-item-factory'
+import { createFile, createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 function createActions(): ActionHandlers {
   return {

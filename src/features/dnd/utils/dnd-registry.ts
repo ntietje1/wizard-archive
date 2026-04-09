@@ -1,7 +1,4 @@
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
 import { toast } from 'sonner'
@@ -30,9 +27,7 @@ export type SidebarDragData = {
 }
 
 /** Type-safe extraction of sidebarItemId from raw drag source data. */
-export function getDragItemId(
-  sourceData: Record<string, unknown>,
-): SidebarItemId | null {
+export function getDragItemId(sourceData: Record<string, unknown>): SidebarItemId | null {
   const id = sourceData.sidebarItemId
   return typeof id === 'string' ? (id as SidebarItemId) : null
 }
@@ -90,15 +85,7 @@ export type SidebarDropData =
   | NoteEditorDropZoneData
   | TrashDropZoneData
 
-export type DragDropAction =
-  | 'move'
-  | 'trash'
-  | 'restore'
-  | 'pin'
-  | 'embed'
-  | 'open'
-  | 'link'
-  | null
+export type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link' | null
 
 export type DropRejectionReason =
   | 'self_pin'
@@ -166,20 +153,14 @@ export interface DndContext {
 // ─── Drop Zone Config ───────────────────────────────────────────────
 
 export interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
-  resolve: (
-    item: AnySidebarItem,
-    target: T,
-    ctx: DndContext,
-  ) => DropOutcome | null
+  resolve: (item: AnySidebarItem, target: T, ctx: DndContext) => DropOutcome | null
   canAcceptFiles: boolean | ((target: T) => boolean)
   getHighlightId: (target: T) => string | null
   getTargetKey?: (rawTarget: Record<string, unknown>) => string
 }
 
 /** Creates a typed config — T is erased for the registry but enforced within methods. */
-function typedConfig<T extends SidebarDropData>(
-  c: DropZoneConfig<T>,
-): DropZoneConfig {
+function typedConfig<T extends SidebarDropData>(c: DropZoneConfig<T>): DropZoneConfig {
   return c as DropZoneConfig
 }
 
@@ -242,7 +223,7 @@ const mapConfig = typedConfig<MapDropZoneData>({
   },
   canAcceptFiles: false,
   getHighlightId: (t) => `map:${t.mapId}`,
-  getTargetKey: (raw) => `map:${raw.mapId}`,
+  getTargetKey: (raw) => `map:${String(raw.mapId)}`,
 })
 
 const emptyEditorConfig: DropZoneConfig = {
@@ -290,12 +271,8 @@ const rootConfig: DropZoneConfig = {
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
   resolve: (item, t, ctx) => {
     if (item._id === t._id) return null
-    if (t.location === SIDEBAR_ITEM_LOCATION.trash)
-      return rejection('trashed_folder')
-    if (
-      item.type === SIDEBAR_ITEM_TYPES.folders &&
-      t.ancestorIds?.includes(item._id)
-    ) {
+    if (t.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_folder')
+    if (item.type === SIDEBAR_ITEM_TYPES.folders && t.ancestorIds?.includes(item._id)) {
       return rejection('circular')
     }
     if (t.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
@@ -338,26 +315,23 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 
 const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
   resolve: (item) => {
-    if (item.location === SIDEBAR_ITEM_LOCATION.trash)
-      return rejection('trashed_item')
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_item')
     return operation('link', 'Add link here')
   },
   canAcceptFiles: false,
   getHighlightId: (t) => `note:${t.noteId}`,
-  getTargetKey: (raw) => `note:${raw.noteId}`,
+  getTargetKey: (raw) => `note:${String(raw.noteId)}`,
 })
 
 const canvasConfig = typedConfig<CanvasDropZoneData>({
   resolve: (item, target) => {
-    if (item.location === SIDEBAR_ITEM_LOCATION.trash)
-      return rejection('trashed_item')
-    if ((item._id as string) === (target.canvasId as string))
-      return rejection('self_embed')
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_item')
+    if ((item._id as string) === (target.canvasId as string)) return rejection('self_embed')
     return operation('embed', 'Add to canvas')
   },
   canAcceptFiles: true,
   getHighlightId: (t) => `canvas:${t.canvasId}`,
-  getTargetKey: (raw) => `canvas:${raw.canvasId}`,
+  getTargetKey: (raw) => `canvas:${String(raw.canvasId)}`,
 })
 
 const nonFolderItemConfig = typedConfig<ResolvedSidebarItemDropData>({
@@ -405,9 +379,7 @@ export function resolveDropOutcome(
   if (!outcome || outcome.type === 'rejection') return outcome
   // Source permission: move/trash/restore require FULL_ACCESS on the item
   if (
-    (outcome.action === 'move' ||
-      outcome.action === 'trash' ||
-      outcome.action === 'restore') &&
+    (outcome.action === 'move' || outcome.action === 'trash' || outcome.action === 'restore') &&
     item.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS
   ) {
     return rejection('no_permission')
@@ -423,9 +395,7 @@ export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {
     : config.canAcceptFiles
 }
 
-export function getDropTargetKey(
-  target: Record<string, unknown> | null,
-): string | null {
+export function getDropTargetKey(target: Record<string, unknown> | null): string | null {
   if (!target) return null
   const type = target.type as string
   const config = DROP_ZONE_REGISTRY[type as DropZoneType]

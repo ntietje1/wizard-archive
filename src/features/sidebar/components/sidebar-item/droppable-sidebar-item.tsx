@@ -10,18 +10,14 @@ interface DroppableSidebarItemProps {
   children: React.ReactNode
 }
 
-export function DroppableSidebarItem({
-  item,
-  children,
-}: DroppableSidebarItemProps) {
+export function DroppableSidebarItem({ item, children }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useSidebarItemDropTarget({ ref, item })
 
   const isDirectTarget = useDndStore((s) => s.sidebarDragTargetId === item._id)
   const isTrashAction = useDndStore(
-    (s) =>
-      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+    (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
   const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
 

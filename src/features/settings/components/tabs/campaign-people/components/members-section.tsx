@@ -24,8 +24,7 @@ export function MembersSection({
   acceptedPlayers: Array<CampaignMember>
   isDm: boolean
 }) {
-  const [deletingMemberId, setDeletingMemberId] =
-    useState<Id<'campaignMembers'> | null>(null)
+  const [deletingMemberId, setDeletingMemberId] = useState<Id<'campaignMembers'> | null>(null)
 
   const deletingPlayer = acceptedPlayers.find((p) => p._id === deletingMemberId)
 
@@ -46,9 +45,7 @@ export function MembersSection({
         </>
       )}
       {acceptedPlayers.length === 0 && !dmMember ? (
-        <p className="text-sm text-muted-foreground text-center py-2">
-          No members yet
-        </p>
+        <p className="text-sm text-muted-foreground text-center py-2">No members yet</p>
       ) : (
         acceptedPlayers.map((player, index) => (
           <div key={player._id}>

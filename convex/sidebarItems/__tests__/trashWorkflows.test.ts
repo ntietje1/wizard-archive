@@ -37,9 +37,7 @@ describe('trash workflows', () => {
         location: 'sidebar',
       })
 
-      const restored = await t.run(async (dbCtx) =>
-        dbCtx.db.get(original.noteId),
-      )
+      const restored = await t.run(async (dbCtx) => dbCtx.db.get(original.noteId))
       expect(restored).not.toBeNull()
       expect(restored!.location).toBe('sidebar')
       expect(restored!.name).not.toBe('Meeting Notes')
@@ -84,21 +82,16 @@ describe('trash workflows', () => {
         location: 'trash',
       })
 
-      const [
-        trashedFolder,
-        trashedNoteA,
-        trashedNoteB,
-        trashedShare,
-        trashedBookmark,
-      ] = await t.run(async (dbCtx) =>
-        Promise.all([
-          dbCtx.db.get(folder.folderId),
-          dbCtx.db.get(noteA.noteId),
-          dbCtx.db.get(noteB.noteId),
-          dbCtx.db.get(share.shareId),
-          dbCtx.db.get(bookmark.bookmarkId),
-        ]),
-      )
+      const [trashedFolder, trashedNoteA, trashedNoteB, trashedShare, trashedBookmark] =
+        await t.run(async (dbCtx) =>
+          Promise.all([
+            dbCtx.db.get(folder.folderId),
+            dbCtx.db.get(noteA.noteId),
+            dbCtx.db.get(noteB.noteId),
+            dbCtx.db.get(share.shareId),
+            dbCtx.db.get(bookmark.bookmarkId),
+          ]),
+        )
 
       expect(trashedFolder!.location).toBe('trash')
       expect(trashedFolder!.deletionTime).not.toBeNull()
@@ -114,21 +107,16 @@ describe('trash workflows', () => {
         location: 'sidebar',
       })
 
-      const [
-        restoredFolder,
-        restoredNoteA,
-        restoredNoteB,
-        restoredShare,
-        restoredBookmark,
-      ] = await t.run(async (dbCtx) =>
-        Promise.all([
-          dbCtx.db.get(folder.folderId),
-          dbCtx.db.get(noteA.noteId),
-          dbCtx.db.get(noteB.noteId),
-          dbCtx.db.get(share.shareId),
-          dbCtx.db.get(bookmark.bookmarkId),
-        ]),
-      )
+      const [restoredFolder, restoredNoteA, restoredNoteB, restoredShare, restoredBookmark] =
+        await t.run(async (dbCtx) =>
+          Promise.all([
+            dbCtx.db.get(folder.folderId),
+            dbCtx.db.get(noteA.noteId),
+            dbCtx.db.get(noteB.noteId),
+            dbCtx.db.get(share.shareId),
+            dbCtx.db.get(bookmark.bookmarkId),
+          ]),
+        )
 
       expect(restoredFolder!.location).toBe('sidebar')
       expect(restoredFolder!.deletionTime).toBeNull()
@@ -170,12 +158,7 @@ describe('trash workflows', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      const block = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       const blockShare = await createBlockShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -189,12 +172,9 @@ describe('trash workflows', () => {
         location: 'trash',
       })
 
-      await dmAuth.mutation(
-        api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-        {
-          itemId: folder.folderId,
-        },
-      )
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        itemId: folder.folderId,
+      })
 
       const [
         deletedFolder,
@@ -237,15 +217,10 @@ describe('trash workflows', () => {
       const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
         name: 'TrashFolder',
       })
-      const childNote = await createNote(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-        {
-          name: 'ChildInTrash',
-          parentId: folder.folderId,
-        },
-      )
+      const childNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ChildInTrash',
+        parentId: folder.folderId,
+      })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         itemId: note1.noteId,

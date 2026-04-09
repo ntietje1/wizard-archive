@@ -17,9 +17,7 @@ export interface SidebarItemState {
   isExpanded?: boolean
 }
 
-export interface SidebarItemButtonProps
-  extends SidebarItemHandlers,
-    SidebarItemState {
+export interface SidebarItemButtonProps extends SidebarItemHandlers, SidebarItemState {
   icon: LucideIcon
   name: string
   showChevron: boolean

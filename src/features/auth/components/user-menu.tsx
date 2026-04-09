@@ -3,28 +3,17 @@ import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 
-const avatarButtonClassName = cn(
-  buttonVariants({ variant: 'ghost', size: 'icon' }),
-  'rounded-full',
-)
+const avatarButtonClassName = cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'rounded-full')
 
 function AvatarPlaceholder() {
   return (
-    <button
-      className={avatarButtonClassName}
-      disabled
-      aria-label="User menu loading"
-    >
+    <button className={avatarButtonClassName} disabled aria-label="User menu loading">
       <Avatar size="sm">
         <AvatarFallback>U</AvatarFallback>
       </Avatar>
@@ -56,12 +45,7 @@ function UserMenuBase() {
           </button>
         }
       />
-      <PopoverContent
-        side="right"
-        align="end"
-        sideOffset={8}
-        className="p-0 min-w-56"
-      >
+      <PopoverContent side="right" align="end" sideOffset={8} className="p-0 min-w-56">
         <UserMenuContent onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

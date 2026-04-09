@@ -3,16 +3,13 @@ import type { Page } from '@playwright/test'
 
 export async function openHistoryPanel(page: Page) {
   await page.getByRole('button', { name: /toggle history panel/i }).click()
-  await expect(
-    page.getByText(/loading history|no history yet|created this item/i),
-  ).toBeVisible({ timeout: 10000 })
+  await expect(page.getByText(/loading history|no history yet|created this item/i)).toBeVisible({
+    timeout: 10000,
+  })
 }
 
 export function getHistoryEntry(page: Page, text: string | RegExp) {
-  return page
-    .getByTestId('history-panel')
-    .getByRole('button')
-    .filter({ hasText: text })
+  return page.getByTestId('history-panel').getByRole('button').filter({ hasText: text })
 }
 
 export async function waitForHistoryEntry(page: Page, text: string | RegExp) {
@@ -38,10 +35,7 @@ export async function exitPreview(page: Page) {
 export async function restoreFromPreview(page: Page) {
   await page.getByRole('button', { name: 'Restore' }).click()
   await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 5000 })
-  await page
-    .getByRole('alertdialog')
-    .getByRole('button', { name: 'Restore' })
-    .click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Restore' }).click()
   await expect(page.getByText(/version restored/i)).toBeVisible({
     timeout: 10000,
   })

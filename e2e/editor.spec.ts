@@ -37,9 +37,7 @@ test.describe.serial('editor workspace', () => {
     await page.goto('/campaigns')
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
-    await expect(
-      page.getByRole('navigation', { name: 'Sidebar' }),
-    ).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
   })
 
   test('create note appears in sidebar', async ({ page }) => {
@@ -47,9 +45,7 @@ test.describe.serial('editor workspace', () => {
     await page.getByText(campaignName).click()
     await page.waitForURL(/\/campaigns\//)
     await createNoteHelper(page, noteName)
-    await expect(
-      page.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible()
   })
 
   test('click note loads editor', async ({ page }) => {
@@ -59,8 +55,6 @@ test.describe.serial('editor workspace', () => {
     const localNote = `Editor Note ${Date.now()}`
     await createNoteHelper(page, localNote)
     await page.getByRole('link', { name: localNote, exact: true }).click()
-    await expect(
-      page.locator('[contenteditable], [data-testid="editor"]'),
-    ).toBeVisible()
+    await expect(page.locator('[contenteditable], [data-testid="editor"]')).toBeVisible()
   })
 })

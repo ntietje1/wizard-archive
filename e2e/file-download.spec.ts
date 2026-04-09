@@ -2,11 +2,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -17,10 +13,7 @@ test.describe.serial('file download', () => {
   let testFilePath: string | null = null
 
   test.beforeAll(async ({ browser }) => {
-    testFilePath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      testFileName,
-    )
+    testFilePath = path.join(path.dirname(fileURLToPath(import.meta.url)), testFileName)
     fs.writeFileSync(testFilePath, 'Test file content for E2E download')
 
     const context = await browser.newContext({
@@ -36,9 +29,7 @@ test.describe.serial('file download', () => {
     const fileInput = page.getByLabel('Upload file')
     await fileInput.setInputFiles(testFilePath)
 
-    await expect(
-      page.getByRole('link', { name: /untitled file/i }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
 
     await page.close()
     await context.close()
@@ -67,9 +58,9 @@ test.describe.serial('file download', () => {
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: /untitled file/i }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: /untitled file/i })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, 'Untitled File')
 

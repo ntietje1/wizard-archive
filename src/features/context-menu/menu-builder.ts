@@ -1,13 +1,9 @@
 import { groupConfig } from './menu-registry'
 import type { BuiltMenu, MenuContext, MenuGroup, MenuItemDef } from './types'
 
-function processMenuItem(
-  item: MenuItemDef,
-  ctx: MenuContext,
-): MenuItemDef | null {
+function processMenuItem(item: MenuItemDef, ctx: MenuContext): MenuItemDef | null {
   // Resolve children (can be static array or dynamic function)
-  const resolvedChildren =
-    typeof item.children === 'function' ? item.children(ctx) : item.children
+  const resolvedChildren = typeof item.children === 'function' ? item.children(ctx) : item.children
 
   const filteredChildren = resolvedChildren
     ? resolvedChildren
@@ -19,9 +15,7 @@ function processMenuItem(
 
   // If children resolve to empty, show the item without a submenu
   const finalChildren =
-    filteredChildren && filteredChildren.length > 0
-      ? filteredChildren
-      : undefined
+    filteredChildren && filteredChildren.length > 0 ? filteredChildren : undefined
 
   return {
     ...item,
@@ -29,10 +23,7 @@ function processMenuItem(
   }
 }
 
-export function buildMenu(
-  items: Array<MenuItemDef>,
-  ctx: MenuContext,
-): BuiltMenu {
+export function buildMenu(items: Array<MenuItemDef>, ctx: MenuContext): BuiltMenu {
   // filter to visible items and process submenus
   const visible = items
     .filter((item) => item.shouldShow(ctx))

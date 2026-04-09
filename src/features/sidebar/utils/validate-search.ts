@@ -4,15 +4,11 @@ export type EditorSearch = {
   trash?: boolean
 }
 
-export const validateSearch = (
-  search: Record<string, unknown>,
-): EditorSearch => {
+export const validateSearch = (search: Record<string, unknown>): EditorSearch => {
   const result: EditorSearch = {}
 
   const item =
-    'item' in search &&
-    typeof search.item === 'string' &&
-    search.item.trim().length > 0
+    'item' in search && typeof search.item === 'string' && search.item.trim().length > 0
       ? search.item.trim()
       : undefined
 
@@ -21,9 +17,7 @@ export const validateSearch = (
   }
 
   const heading =
-    'heading' in search &&
-    typeof search.heading === 'string' &&
-    search.heading.trim().length > 0
+    'heading' in search && typeof search.heading === 'string' && search.heading.trim().length > 0
       ? search.heading.trim()
       : undefined
 

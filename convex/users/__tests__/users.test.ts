@@ -222,17 +222,13 @@ describe('updateName', () => {
   it('rejects empty name', async () => {
     const { authed } = await setupAuthedUser(t)
 
-    await expectValidationFailed(
-      authed.mutation(api.users.mutations.updateName, { name: '' }),
-    )
+    await expectValidationFailed(authed.mutation(api.users.mutations.updateName, { name: '' }))
   })
 
   it('rejects whitespace-only name', async () => {
     const { authed } = await setupAuthedUser(t)
 
-    await expectValidationFailed(
-      authed.mutation(api.users.mutations.updateName, { name: '   ' }),
-    )
+    await expectValidationFailed(authed.mutation(api.users.mutations.updateName, { name: '   ' }))
   })
 
   it('rejects name longer than 100 characters', async () => {
@@ -256,9 +252,7 @@ describe('updateName', () => {
   })
 
   it('throws NOT_AUTHENTICATED when unauthenticated', async () => {
-    await expectNotAuthenticated(
-      t.mutation(api.users.mutations.updateName, { name: 'Test' }),
-    )
+    await expectNotAuthenticated(t.mutation(api.users.mutations.updateName, { name: 'Test' }))
   })
 })
 
@@ -270,9 +264,7 @@ describe('updateProfileImage', () => {
       return await ctx.storage.store(new Blob(['test']))
     })
 
-    await expectNotAuthenticated(
-      t.mutation(api.users.mutations.updateProfileImage, { storageId }),
-    )
+    await expectNotAuthenticated(t.mutation(api.users.mutations.updateProfileImage, { storageId }))
   })
 
   it('updates profile image when authenticated', async () => {

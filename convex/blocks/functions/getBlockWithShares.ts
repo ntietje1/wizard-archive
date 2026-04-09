@@ -49,9 +49,7 @@ export const getBlockWithShares = async (
   const allMembers = await getCampaignMembers(ctx, {
     campaignId: note.campaignId,
   })
-  const playerMembers = allMembers.filter(
-    (m) => m.role === CAMPAIGN_MEMBER_ROLE.Player,
-  )
+  const playerMembers = allMembers.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
 
   let shares: Array<BlockShare> = []
   if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {

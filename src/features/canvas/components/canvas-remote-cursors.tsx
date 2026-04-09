@@ -6,13 +6,7 @@ import { useSpringPosition } from '~/shared/hooks/useSpringPosition'
 
 function CursorIcon({ color }: { color: string }) {
   return (
-    <svg
-      width="16"
-      height="20"
-      viewBox="0 0 16 20"
-      fill="none"
-      style={{ display: 'block' }}
-    >
+    <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ display: 'block' }}>
       <path
         d="M0.928 0.32L15.168 10.688C15.552 10.944 15.36 11.552 14.896 11.552H8.448L5.216 19.168C5.072 19.52 4.576 19.52 4.432 19.168L0.576 0.896C0.464 0.48 0.608 0.112 0.928 0.32Z"
         fill={color}
@@ -31,9 +25,7 @@ const PIN_LERP_DURATION = 200
 
 function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
-  const isDragging = !!(
-    remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0
-  )
+  const isDragging = !!(remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0)
   const nodes = useNodes()
   const wasDraggingRef = useRef(false)
   const lerpRef = useRef<{
@@ -59,6 +51,9 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
     }
   }
 
+  const pinnedX = pinnedPosition?.x ?? null
+  const pinnedY = pinnedPosition?.y ?? null
+
   useLayoutEffect(() => {
     pinnedRef.current = pinnedPosition
 
@@ -69,7 +64,8 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
       }
     }
     wasDraggingRef.current = isDragging
-  }, [isDragging, pinnedPosition?.x ?? null, pinnedPosition?.y ?? null])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging, pinnedX, pinnedY])
 
   useSpringPosition(isDragging ? null : remoteUser.cursor, elementRef)
 
@@ -88,10 +84,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
       let x: number
       let y: number
       if (lerp) {
-        const t = Math.min(
-          (performance.now() - lerp.startTime) / PIN_LERP_DURATION,
-          1,
-        )
+        const t = Math.min((performance.now() - lerp.startTime) / PIN_LERP_DURATION, 1)
         const ease = t * (2 - t)
         x = lerp.from.x + (pinned.x - lerp.from.x) * ease
         y = lerp.from.y + (pinned.y - lerp.from.y) * ease
@@ -108,6 +101,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
 
     rafIdRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafIdRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging, remoteUser.cursor?.x, remoteUser.cursor?.y])
 
   if (!remoteUser.cursor) return null
@@ -152,11 +146,7 @@ export function NameLabel({ name, color }: { name: string; color: string }) {
   )
 }
 
-export function CanvasRemoteCursors({
-  remoteUsers,
-}: {
-  remoteUsers: Array<RemoteUser>
-}) {
+export function CanvasRemoteCursors({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
   return (
     <>
       {remoteUsers.map((user) => (

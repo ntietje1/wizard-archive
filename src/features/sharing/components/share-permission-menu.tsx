@@ -15,11 +15,7 @@ import {
   SelectValue,
 } from '~/features/shadcn/components/select'
 import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { Switch } from '~/features/shadcn/components/switch'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 
@@ -51,9 +47,7 @@ function RowTooltip({
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger render={<div className={className} />}>
-        {children}
-      </TooltipTrigger>
+      <TooltipTrigger render={<div className={className} />}>{children}</TooltipTrigger>
       <TooltipContent side="left" className="max-w-[220px]">
         {text}
       </TooltipContent>
@@ -73,10 +67,7 @@ interface SharePermissionMenuProps {
   inheritedFromFolderName: string | null
   isFolder?: boolean
   inheritShares?: boolean
-  onSetMemberPermission: (
-    memberId: Id<'campaignMembers'>,
-    level: PermissionLevel,
-  ) => Promise<void>
+  onSetMemberPermission: (memberId: Id<'campaignMembers'>, level: PermissionLevel) => Promise<void>
   onClearMemberPermission: (memberId: Id<'campaignMembers'>) => Promise<void>
   onSetAllPlayersPermission: (level: PermissionLevel | null) => Promise<void>
   onSetInheritShares?: (enabled: boolean) => Promise<void>
@@ -97,10 +88,7 @@ export function SharePermissionMenu({
   onSetAllPlayersPermission,
   onSetInheritShares,
 }: SharePermissionMenuProps) {
-  const [showPlayers, setShowPlayers] = usePersistedState(
-    'share-show-players',
-    false,
-  )
+  const [showPlayers, setShowPlayers] = usePersistedState('share-show-players', false)
   const isDisabled = isMutating || isPending
 
   if (isPending) {
@@ -125,14 +113,11 @@ export function SharePermissionMenu({
     return `${name}'s access is based on the All Players permission level`
   }
 
-  function handlePlayerChange(
-    memberId: Id<'campaignMembers'>,
-    value: PermissionLevelOrDefault,
-  ) {
+  function handlePlayerChange(memberId: Id<'campaignMembers'>, value: PermissionLevelOrDefault) {
     if (value === 'default') {
-      onClearMemberPermission(memberId)
+      void onClearMemberPermission(memberId)
     } else {
-      onSetMemberPermission(memberId, value)
+      void onSetMemberPermission(memberId, value)
     }
   }
 
@@ -141,8 +126,7 @@ export function SharePermissionMenu({
       ? permissionLabel(allPlayersPermissionLevel)
       : permissionLabel(inheritedAllPermissionLevel)
 
-  const isInheritingAll =
-    allPlayersPermissionLevel === null && inheritedAllPermissionLevel !== null
+  const isInheritingAll = allPlayersPermissionLevel === null && inheritedAllPermissionLevel !== null
 
   return (
     <div className="flex flex-col gap-0.5 min-w-[300px]">
@@ -174,16 +158,12 @@ export function SharePermissionMenu({
         inheritedLevel={inheritedAllPermissionLevel}
         disabled={isDisabled}
         expanded={showPlayers}
-        label={
-          explicitShareItems.length === 0 ? 'All Players' : 'Other Players'
-        }
+        label={explicitShareItems.length === 0 ? 'All Players' : 'Other Players'}
         inheritingMembers={inheritingShareItems.map((s) => s.member)}
         isInheriting={isInheritingAll}
         inheritedFromFolderName={inheritedFromFolderName}
         onToggleExpand={() => setShowPlayers((prev) => !prev)}
-        onChange={(val) =>
-          onSetAllPlayersPermission(val === 'default' ? null : val)
-        }
+        onChange={(val) => onSetAllPlayersPermission(val === 'default' ? null : val)}
       />
 
       {showPlayers && (
@@ -201,13 +181,9 @@ export function SharePermissionMenu({
           <div className="h-px bg-border my-0.5" />
           <Tooltip>
             <TooltipTrigger
-              render={
-                <div className="flex items-center justify-between px-1 py-1 gap-2" />
-              }
+              render={<div className="flex items-center justify-between px-1 py-1 gap-2" />}
             >
-              <span className="text-sm truncate flex-1">
-                Copy permissions to new items
-              </span>
+              <span className="text-sm truncate flex-1">Copy permissions to new items</span>
               <Switch
                 size="sm"
                 checked={inheritShares ?? false}
@@ -216,8 +192,7 @@ export function SharePermissionMenu({
               />
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-[220px]">
-              All items and folders inside this folder will share the same
-              permissions
+              All items and folders inside this folder will share the same permissions
             </TooltipContent>
           </Tooltip>
         </>
@@ -241,13 +216,9 @@ function DmRow({ profile }: { profile: UserProfile }) {
         size="sm"
       />
       <div className="flex flex-col flex-1 min-w-0 select-none">
-        <span className="text-sm font-medium truncate">
-          {getDisplayName(profile)}
-        </span>
+        <span className="text-sm font-medium truncate">{getDisplayName(profile)}</span>
         {profile.username && (
-          <span className="text-xs text-muted-foreground truncate">
-            @{profile.username}
-          </span>
+          <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
         )}
       </div>
       <Select value="full_access" disabled>
@@ -273,22 +244,12 @@ function PlayerRow({
   disabled: boolean
   onChange: (value: PermissionLevelOrDefault) => void
 }) {
-  const {
-    member,
-    hasExplicitShare,
-    permissionLevel,
-    inheritedPermissionLevel,
-  } = shareItem
+  const { member, hasExplicitShare, permissionLevel, inheritedPermissionLevel } = shareItem
   const profile = member.userProfile
-  const selectValue: PermissionLevelOrDefault = hasExplicitShare
-    ? permissionLevel
-    : 'default'
+  const selectValue: PermissionLevelOrDefault = hasExplicitShare ? permissionLevel : 'default'
 
   return (
-    <RowTooltip
-      text={infoText}
-      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-    >
+    <RowTooltip text={infoText} className="flex items-center gap-2.5 px-1 py-1.5 select-none">
       <UserProfileImage
         imageUrl={profile.imageUrl}
         name={profile.name}
@@ -296,13 +257,9 @@ function PlayerRow({
         size="sm"
       />
       <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-sm font-medium truncate">
-          {getDisplayName(profile)}
-        </span>
+        <span className="text-sm font-medium truncate">{getDisplayName(profile)}</span>
         {profile.username && (
-          <span className="text-xs text-muted-foreground truncate">
-            @{profile.username}
-          </span>
+          <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
         )}
       </div>
       <Select
@@ -366,11 +323,8 @@ function AllPlayersRow({
 }) {
   const Chevron = expanded ? ChevronUp : ChevronDown
   const showStack = !expanded && inheritingMembers.length > 0
-  const badgeCount =
-    Math.min(inheritingMembers.length, 3) +
-    (inheritingMembers.length > 3 ? 1 : 0)
-  const iconAreaWidth =
-    inheritingMembers.length > 0 ? 24 + (badgeCount - 1) * 16 : 24
+  const badgeCount = Math.min(inheritingMembers.length, 3) + (inheritingMembers.length > 3 ? 1 : 0)
+  const iconAreaWidth = inheritingMembers.length > 0 ? 24 + (badgeCount - 1) * 16 : 24
 
   let infoText = 'This is the default permission level for all players.'
   if (isInheriting && inheritedFromFolderName) {
@@ -386,19 +340,13 @@ function AllPlayersRow({
   ]
 
   return (
-    <RowTooltip
-      text={infoText}
-      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-    >
+    <RowTooltip text={infoText} className="flex items-center gap-2.5 px-1 py-1.5 select-none">
       <button
         type="button"
         className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity"
         onClick={onToggleExpand}
       >
-        <div
-          className="flex items-center justify-center shrink-0"
-          style={{ width: iconAreaWidth }}
-        >
+        <div className="flex items-center justify-center shrink-0" style={{ width: iconAreaWidth }}>
           {showStack ? (
             <AvatarStack members={inheritingMembers} />
           ) : (
@@ -469,19 +417,13 @@ function ExpandedPlayerList({
   hasAnyPlayers: boolean
   getInfoText: (item: ShareItemWithPermission) => string
   disabled: boolean
-  onPlayerChange: (
-    memberId: Id<'campaignMembers'>,
-    value: PermissionLevelOrDefault,
-  ) => void
+  onPlayerChange: (memberId: Id<'campaignMembers'>, value: PermissionLevelOrDefault) => void
 }) {
   if (inheritingItems.length > 0) {
     return (
       <div className="ml-4">
         {inheritingItems.map((item, index) => (
-          <TreeItem
-            key={item.key}
-            isLast={index === inheritingItems.length - 1}
-          >
+          <TreeItem key={item.key} isLast={index === inheritingItems.length - 1}>
             <PlayerRow
               shareItem={item}
               infoText={getInfoText(item)}
@@ -497,9 +439,7 @@ function ExpandedPlayerList({
   if (!hasAnyPlayers) {
     return (
       <div className="px-1 py-1">
-        <div className="text-xs text-muted-foreground">
-          No players in this campaign yet.
-        </div>
+        <div className="text-xs text-muted-foreground">No players in this campaign yet.</div>
       </div>
     )
   }
@@ -517,13 +457,7 @@ function ExpandedPlayerList({
   )
 }
 
-function TreeItem({
-  isLast,
-  children,
-}: {
-  isLast: boolean
-  children: React.ReactNode
-}) {
+function TreeItem({ isLast, children }: { isLast: boolean; children: React.ReactNode }) {
   return (
     <div className="relative flex items-center">
       <div

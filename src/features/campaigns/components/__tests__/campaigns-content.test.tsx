@@ -16,10 +16,7 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({}),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  Link: ({
-    children,
-    ...props
-  }: Record<string, unknown> & { children?: ReactNode }) =>
+  Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) =>
     createElement('a', { href: props.to, ...props }, children),
   useRouter: () => ({ navigate: vi.fn() }),
 }))
@@ -57,9 +54,7 @@ describe('CampaignsContent', () => {
   })
 
   it('renders error state when query fails', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(
-      mockAuthQueryError(new Error('Failed')),
-    )
+    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQueryError(new Error('Failed')))
 
     render(
       <TestWrapper>
@@ -80,9 +75,7 @@ describe('CampaignsContent', () => {
     )
 
     expect(screen.getByText(/no campaigns yet/i)).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /create your first campaign/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /create your first campaign/i })).toBeInTheDocument()
   })
 
   it('renders campaign cards with correct data', () => {
@@ -115,12 +108,8 @@ describe('CampaignsContent', () => {
       </TestWrapper>,
     )
 
-    expect(
-      screen.getByRole('button', { name: /edit campaign/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /delete campaign/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /edit campaign/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /delete campaign/i })).toBeInTheDocument()
   })
 
   it('hides edit and delete buttons for player campaigns', () => {
@@ -136,11 +125,7 @@ describe('CampaignsContent', () => {
       </TestWrapper>,
     )
 
-    expect(
-      screen.queryByRole('button', { name: /edit campaign/i }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: /delete campaign/i }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /edit campaign/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /delete campaign/i })).not.toBeInTheDocument()
   })
 })

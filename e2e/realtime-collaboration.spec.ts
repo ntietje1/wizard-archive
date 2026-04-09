@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { getEditor } from './helpers/editor-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -97,9 +93,9 @@ test.describe.serial('realtime collaboration', () => {
 
       // Tab 2 should see the note in sidebar
       const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
-      await expect(
-        sidebar2.getByRole('link', { name: noteName, exact: true }),
-      ).toBeVisible({ timeout: 10000 })
+      await expect(sidebar2.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+        timeout: 10000,
+      })
 
       // Rename in tab 1
       await openItem(page1, noteName)
@@ -111,9 +107,9 @@ test.describe.serial('realtime collaboration', () => {
       await nameInput.press('Enter')
 
       // Tab 2 should see the renamed item
-      await expect(
-        sidebar2.getByRole('link', { name: newName, exact: true }),
-      ).toBeVisible({ timeout: 15000 })
+      await expect(sidebar2.getByRole('link', { name: newName, exact: true })).toBeVisible({
+        timeout: 15000,
+      })
 
       // Rename back for cleanup
       await nameInput.click()
@@ -148,9 +144,9 @@ test.describe.serial('realtime collaboration', () => {
       await page2.goto('/campaigns')
       await navigateToCampaign(page2, campaignName)
       await openItem(page2, disposableNote)
-      await expect(
-        page2.locator('[contenteditable="true"]').first(),
-      ).toBeVisible({ timeout: 10000 })
+      await expect(page2.locator('[contenteditable="true"]').first()).toBeVisible({
+        timeout: 10000,
+      })
 
       // Tab 1 deletes the note via context menu
       const sidebar1 = page1.getByRole('navigation', { name: 'Sidebar' })

@@ -8,10 +8,7 @@ import {
   createNote,
   createSidebarShare,
 } from '../../_test/factories.helper'
-import {
-  expectPermissionDenied,
-  expectValidationFailed,
-} from '../../_test/assertions.helper'
+import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
 describe('multi-player share + membership removal cascade', () => {
@@ -42,16 +39,10 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    const p1Campaigns = await p1.authed.query(
-      api.campaigns.queries.getUserCampaigns,
-      {},
-    )
+    const p1Campaigns = await p1.authed.query(api.campaigns.queries.getUserCampaigns, {})
     expect(p1Campaigns).toHaveLength(0)
 
-    const p2Note = await p2.authed.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const p2Note = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
     expect(p2Note.myPermissionLevel).toBe('view')
   })
 
@@ -110,13 +101,10 @@ describe('multi-player share + membership removal cascade', () => {
     const p1 = players[0]
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
-    const { blockDbId } = await createBlock(
-      t,
-      noteId,
-      campaignId,
-      dm.profile._id,
-      { blockId: 'secret', shareStatus: 'individually_shared' },
-    )
+    const { blockDbId } = await createBlock(t, noteId, campaignId, dm.profile._id, {
+      blockId: 'secret',
+      shareStatus: 'individually_shared',
+    })
     const { blockShareId } = await createBlockShare(t, dm.profile._id, {
       campaignId,
       noteId,
@@ -135,9 +123,7 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    await expectPermissionDenied(
-      p1.authed.query(api.notes.queries.getNote, { noteId }),
-    )
+    await expectPermissionDenied(p1.authed.query(api.notes.queries.getNote, { noteId }))
 
     const blockShare = await t.run(async (dbCtx) => dbCtx.db.get(blockShareId))
     expect(blockShare).not.toBeNull()
@@ -158,10 +144,10 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    const items = await dmAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId, location: 'sidebar' },
-    )
+    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+      campaignId,
+      location: 'sidebar',
+    })
     const noteItem = items.find((i) => i._id === noteId)
     expect(noteItem).toBeDefined()
   })

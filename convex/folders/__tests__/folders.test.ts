@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createFile,
   createFolder,
@@ -73,11 +69,7 @@ describe('createFolder', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId: parentId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -100,11 +92,7 @@ describe('createFolder', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId: parentId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -127,11 +115,7 @@ describe('createFolder', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId: parentId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -141,10 +125,11 @@ describe('createFolder', () => {
       permissionLevel: 'full_access',
     })
 
-    const result = await playerAuth.mutation(
-      api.folders.mutations.createFolder,
-      { campaignId: ctx.campaignId, name: 'Child Folder', parentId },
-    )
+    const result = await playerAuth.mutation(api.folders.mutations.createFolder, {
+      campaignId: ctx.campaignId,
+      name: 'Child Folder',
+      parentId,
+    })
     expect(result.folderId).toBeDefined()
   })
 
@@ -200,12 +185,9 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Original' },
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Original',
+    })
 
     const result = await dmAuth.mutation(api.folders.mutations.updateFolder, {
       folderId,
@@ -225,11 +207,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.folders.mutations.updateFolder, {
       folderId,
@@ -246,11 +224,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.folders.mutations.updateFolder, {
       folderId,
@@ -267,11 +241,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -293,11 +263,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -307,20 +273,16 @@ describe('updateFolder', () => {
       permissionLevel: 'full_access',
     })
 
-    const result = await playerAuth.mutation(
-      api.folders.mutations.updateFolder,
-      { folderId, name: 'Player Updated' },
-    )
+    const result = await playerAuth.mutation(api.folders.mutations.updateFolder, {
+      folderId,
+      name: 'Player Updated',
+    })
     expect(result.folderId).toBe(folderId)
   })
 
   it('requires authentication', async () => {
     const ctx = await setupCampaignContext(t)
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
       t.mutation(api.folders.mutations.updateFolder, {
@@ -334,11 +296,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
       await dbCtx.db.delete(folderId)
     })
@@ -358,12 +316,9 @@ describe('updateFolder', () => {
     await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Alpha',
     })
-    const { folderId: secondId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Beta' },
-    )
+    const { folderId: secondId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Beta',
+    })
 
     await expectValidationFailed(
       dmAuth.mutation(api.folders.mutations.updateFolder, {
@@ -377,11 +332,7 @@ describe('updateFolder', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.folders.mutations.updateFolder, {
       folderId,
@@ -400,12 +351,9 @@ describe('getFolderContentsForDownload', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Downloads' },
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Downloads',
+    })
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       parentId: folderId,
       name: 'ReadMe',
@@ -415,27 +363,20 @@ describe('getFolderContentsForDownload', () => {
       name: 'data.csv',
     })
 
-    const result = await dmAuth.query(
-      api.folders.queries.getFolderContentsForDownload,
-      { folderId },
-    )
+    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      folderId,
+    })
 
     expect(result.folderName).toBe('Downloads')
     expect(result.items.length).toBe(2)
-    expect(
-      result.items.every((i) => 'name' in i && 'path' in i && 'type' in i),
-    ).toBe(true)
+    expect(result.items.every((i) => 'name' in i && 'path' in i && 'type' in i)).toBe(true)
   })
 
   it('requires VIEW permission', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
       playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
@@ -448,12 +389,10 @@ describe('getFolderContentsForDownload', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Shared Downloads', inheritShares: true },
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Shared Downloads',
+      inheritShares: true,
+    })
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       parentId: folderId,
       name: 'Shared Note',
@@ -467,10 +406,9 @@ describe('getFolderContentsForDownload', () => {
       permissionLevel: 'view',
     })
 
-    const result = await playerAuth.query(
-      api.folders.queries.getFolderContentsForDownload,
-      { folderId },
-    )
+    const result = await playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      folderId,
+    })
 
     expect(result.folderName).toBe('Shared Downloads')
     expect(result.items.length).toBe(1)
@@ -479,11 +417,7 @@ describe('getFolderContentsForDownload', () => {
 
   it('requires authentication', async () => {
     const ctx = await setupCampaignContext(t)
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
       t.query(api.folders.queries.getFolderContentsForDownload, { folderId }),
@@ -502,10 +436,9 @@ describe('getRootContentsForDownload', () => {
       name: 'Root Note',
     })
 
-    const result = await dmAuth.query(
-      api.folders.queries.getRootContentsForDownload,
-      { campaignId: ctx.campaignId },
-    )
+    const result = await dmAuth.query(api.folders.queries.getRootContentsForDownload, {
+      campaignId: ctx.campaignId,
+    })
 
     expect(result.items.some((i) => i.name === 'Root Note.md')).toBe(true)
   })
@@ -518,10 +451,9 @@ describe('getRootContentsForDownload', () => {
       name: 'Hidden Note',
     })
 
-    const result = await playerAuth.query(
-      api.folders.queries.getRootContentsForDownload,
-      { campaignId: ctx.campaignId },
-    )
+    const result = await playerAuth.query(api.folders.queries.getRootContentsForDownload, {
+      campaignId: ctx.campaignId,
+    })
 
     expect(result.items.some((i) => i.name === 'Hidden Note')).toBe(false)
   })

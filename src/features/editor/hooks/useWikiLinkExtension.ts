@@ -149,8 +149,7 @@ interface PluginState {
   selTo: number
 }
 
-export const WIKI_LINK_REGEX =
-  /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
+export const WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
 
 export interface WikiLinkResolver {
   resolve: (pathSegments: Array<string>) => WikiLinkItemInfo | undefined
@@ -158,9 +157,7 @@ export interface WikiLinkResolver {
   itemsMap: Map<SidebarItemId, AnySidebarItem>
 }
 
-export function useWikiLinkExtension(
-  editor: CustomBlockNoteEditor | undefined,
-) {
+export function useWikiLinkExtension(editor: CustomBlockNoteEditor | undefined) {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode, viewAsPlayerId } = useEditorMode()
@@ -169,11 +166,8 @@ export function useWikiLinkExtension(
 
   const allItems = sidebarItems || []
 
-  const resolve = (
-    pathSegments: Array<string>,
-  ): WikiLinkItemInfo | undefined => {
-    if (!dmUsername || !campaignSlug || pathSegments.length === 0)
-      return undefined
+  const resolve = (pathSegments: Array<string>): WikiLinkItemInfo | undefined => {
+    if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
 
     const item = resolveItemByPath(pathSegments, allItems, itemsMap)
     if (!item) return undefined
@@ -192,19 +186,16 @@ export function useWikiLinkExtension(
       tiptapEditor,
       pluginKey: PLUGIN_KEY,
       stabilizerKey: SELECTION_STABILIZER_KEY,
-      createDecorationPlugin: () =>
-        createWikiLinkPlugin(resolver, isViewerMode),
+      createDecorationPlugin: () => createWikiLinkPlugin(resolver, isViewerMode),
       pluginRef,
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, resolver, isViewerMode])
 
   return { resolver }
 }
 
-function findWikiLinks(
-  doc: ProseMirrorNode,
-  resolver: WikiLinkResolver,
-): Array<WikiLinkMatch> {
+function findWikiLinks(doc: ProseMirrorNode, resolver: WikiLinkResolver): Array<WikiLinkMatch> {
   const matches: Array<WikiLinkMatch> = []
   const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
 
@@ -235,13 +226,7 @@ function createWikiLinkPlugin(
       init(_, { doc, selection }) {
         const matches = findWikiLinks(doc, resolver)
         return {
-          decorations: buildDecorations(
-            doc,
-            matches,
-            isViewerMode,
-            selection.from,
-            selection.to,
-          ),
+          decorations: buildDecorations(doc, matches, isViewerMode, selection.from, selection.to),
           selFrom: selection.from,
           selTo: selection.to,
         }
@@ -277,9 +262,7 @@ function createWikiLinkPlugin(
           const overlappingChanged =
             oldOverlapping.length !== newOverlapping.length ||
             oldOverlapping.some(
-              (old, i) =>
-                old.from !== newOverlapping[i]?.from ||
-                old.to !== newOverlapping[i]?.to,
+              (old, i) => old.from !== newOverlapping[i]?.from || old.to !== newOverlapping[i]?.to,
             )
 
           if (overlappingChanged) {
@@ -322,12 +305,9 @@ function buildDecorations(
   const decorations: Array<Decoration> = []
 
   for (const { from, to, innerText, parsed, itemInfo } of matches) {
-    const color = itemInfo
-      ? validateHexColorOrDefault(itemInfo.item.color)
-      : undefined
+    const color = itemInfo ? validateHexColorOrDefault(itemInfo.item.color) : undefined
     const baseClass = itemInfo ? 'wiki-link-exists' : 'wiki-link-ghost'
-    const isActive =
-      !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
+    const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
     const classes = `${baseClass}${isViewerMode ? ' wiki-link-viewer' : ''}${isActive ? ' wiki-link-active' : ''}`
 
     let href = itemInfo?.href

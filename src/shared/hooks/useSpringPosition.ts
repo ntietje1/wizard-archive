@@ -100,10 +100,7 @@ export function useSpringPosition(
         return
       }
 
-      const dt = Math.min(
-        (time - (prevTimeRef.current || time)) / 1000,
-        SPRING_DEFAULTS.maxDt,
-      )
+      const dt = Math.min((time - (prevTimeRef.current || time)) / 1000, SPRING_DEFAULTS.maxDt)
       prevTimeRef.current = time
 
       const state: SpringState = { pos: posRef.current, vel: velRef.current }
@@ -131,5 +128,6 @@ export function useSpringPosition(
 
   useEffect(() => {
     if (target) startLoopRef.current?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target?.x, target?.y])
 }

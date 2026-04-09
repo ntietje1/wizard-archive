@@ -20,10 +20,7 @@ export function resolvePermissionLevel(
     return { level: memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW }
   }
 
-  if (
-    item.allPermissionLevel !== null &&
-    item.allPermissionLevel !== undefined
-  ) {
+  if (item.allPermissionLevel !== null && item.allPermissionLevel !== undefined) {
     return { level: item.allPermissionLevel }
   }
 
@@ -43,9 +40,7 @@ export function resolvePermissionLevel(
     }
 
     if (memberId) {
-      const folderShare = folder.shares.find(
-        (s) => s.campaignMemberId === memberId,
-      )
+      const folderShare = folder.shares.find((s) => s.campaignMemberId === memberId)
       if (folderShare) {
         return {
           level: folderShare.permissionLevel ?? PERMISSION_LEVEL.VIEW,
@@ -54,10 +49,7 @@ export function resolvePermissionLevel(
       }
     }
 
-    if (
-      folder.allPermissionLevel !== null &&
-      folder.allPermissionLevel !== undefined
-    ) {
+    if (folder.allPermissionLevel !== null && folder.allPermissionLevel !== undefined) {
       return { level: folder.allPermissionLevel, source: folder.name }
     }
 
@@ -98,12 +90,7 @@ export function effectiveHasAtLeastPermission(
 ): boolean {
   if (opts.isDm && !opts.viewAsPlayerId) return true
   if (opts.isDm && opts.viewAsPlayerId) {
-    return memberHasAtLeastPermission(
-      item,
-      opts.viewAsPlayerId,
-      opts.allItemsMap,
-      requiredLevel,
-    )
+    return memberHasAtLeastPermission(item, opts.viewAsPlayerId, opts.allItemsMap, requiredLevel)
   }
   return hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)
 }

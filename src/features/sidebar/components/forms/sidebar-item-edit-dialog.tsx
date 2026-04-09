@@ -32,21 +32,15 @@ interface SidebarItemEditDialogProps {
   onClose: () => void
 }
 
-export function SidebarItemEditDialog({
-  item,
-  isOpen,
-  onClose,
-}: SidebarItemEditDialogProps) {
+export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEditDialogProps) {
   const { editItem } = useEditSidebarItem()
 
-  const getInitialValues = (): SidebarItemEditFormValues => ({
-    name: item.name ?? '',
-    iconName: item.iconName ?? null,
-    color: item.color ?? null,
-  })
-
   const form = useForm({
-    defaultValues: getInitialValues(),
+    defaultValues: {
+      name: item.name ?? '',
+      iconName: item.iconName ?? null,
+      color: item.color ?? null,
+    } satisfies SidebarItemEditFormValues,
     onSubmit: async ({ value }) => {
       try {
         await editItem({
@@ -73,10 +67,13 @@ export function SidebarItemEditDialog({
     excludeId: item._id,
   })
 
-  // Reset form when item changes
   useEffect(() => {
-    form.reset(getInitialValues())
-  }, [item._id, form, getInitialValues])
+    form.reset({
+      name: item.name ?? '',
+      iconName: item.iconName ?? null,
+      color: item.color ?? null,
+    })
+  }, [item._id, item.name, item.iconName, item.color, form])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return
@@ -100,7 +97,7 @@ export function SidebarItemEditDialog({
         onSubmit={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          form.handleSubmit()
+          void form.handleSubmit()
         }}
         className="space-y-4"
       >
@@ -134,9 +131,7 @@ export function SidebarItemEditDialog({
                 )}
               </InputGroup>
               {field.state.meta.errors[0] && (
-                <p className="text-sm text-destructive">
-                  {field.state.meta.errors[0]}
-                </p>
+                <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
               )}
             </div>
           )}
@@ -176,9 +171,7 @@ export function SidebarItemEditDialog({
             <Label className="text-muted-foreground text-xs">Preview</Label>
             <form.Subscribe selector={(s) => s.values}>
               {(values) => {
-                const PreviewIcon = getIconByName(
-                  values.iconName ?? defaultIconName,
-                )
+                const PreviewIcon = getIconByName(values.iconName ?? defaultIconName)
                 return (
                   <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
                     <PreviewIcon
@@ -207,10 +200,7 @@ export function SidebarItemEditDialog({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={form.state.isSubmitting || !canSubmit}
-              >
+              <Button type="submit" disabled={form.state.isSubmitting || !canSubmit}>
                 {form.state.isSubmitting ? 'Saving...' : 'Save'}
               </Button>
             </div>

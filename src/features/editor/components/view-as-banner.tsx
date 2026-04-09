@@ -9,16 +9,12 @@ export function ViewAsBanner() {
   const campaignMembersQuery = useCampaignMembers()
 
   const playerMember = campaignMembersQuery.data?.find(
-    (member) =>
-      member._id === viewAsPlayerId &&
-      member.role === CAMPAIGN_MEMBER_ROLE.Player,
+    (member) => member._id === viewAsPlayerId && member.role === CAMPAIGN_MEMBER_ROLE.Player,
   )
 
   const displayName = playerMember
     ? playerMember.userProfile.name ||
-      (playerMember.userProfile.username
-        ? `@${playerMember.userProfile.username}`
-        : 'Player')
+      (playerMember.userProfile.username ? `@${playerMember.userProfile.username}` : 'Player')
     : null
 
   const isActive = !!(viewAsPlayerId && displayName)

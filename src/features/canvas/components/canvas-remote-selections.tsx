@@ -20,11 +20,7 @@ type HighlightRect = {
   name: string | null
 }
 
-export function CanvasRemoteSelections({
-  remoteUsers,
-}: {
-  remoteUsers: Array<RemoteUser>
-}) {
+export function CanvasRemoteSelections({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
   const nodes = useNodes()
 
   const rects = useMemo(() => {
@@ -32,15 +28,10 @@ export function CanvasRemoteSelections({
     const result: Array<HighlightRect> = []
 
     for (const remoteUser of remoteUsers) {
-      const draggedIds = remoteUser.dragging
-        ? new Set(Object.keys(remoteUser.dragging))
-        : null
-      const resizedIds = remoteUser.resizing
-        ? new Set(Object.keys(remoteUser.resizing))
-        : null
+      const draggedIds = remoteUser.dragging ? new Set(Object.keys(remoteUser.dragging)) : null
+      const resizedIds = remoteUser.resizing ? new Set(Object.keys(remoteUser.resizing)) : null
       const showNameOnDrag = draggedIds && draggedIds.size > 0
-      const showNameOnResize =
-        !showNameOnDrag && resizedIds && resizedIds.size > 0
+      const showNameOnResize = !showNameOnDrag && resizedIds && resizedIds.size > 0
 
       if (draggedIds) {
         let first = true
@@ -93,9 +84,7 @@ export function CanvasRemoteSelections({
             height: node.measured?.height ?? DEFAULT_NODE_HEIGHT,
             color: remoteUser.user.color,
             name:
-              !showNameOnDrag && !showNameOnResize && firstSelected
-                ? remoteUser.user.name
-                : null,
+              !showNameOnDrag && !showNameOnResize && firstSelected ? remoteUser.user.name : null,
           })
           firstSelected = false
         }

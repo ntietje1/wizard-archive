@@ -22,33 +22,23 @@ export const getSidebarItemBySlug = async (
   const [note, folder, map, file, canvas] = await Promise.all([
     ctx.db
       .query('notes')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
       .unique(),
     ctx.db
       .query('folders')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
       .unique(),
     ctx.db
       .query('gameMaps')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
       .unique(),
     ctx.db
       .query('files')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
       .unique(),
     ctx.db
       .query('canvases')
-      .withIndex('by_campaign_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('slug', slug),
-      )
+      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
       .unique(),
   ])
 

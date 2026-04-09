@@ -61,9 +61,7 @@ export function ShareMenuContent({
       <ContextMenuLabel className="pb-0 pt-0.5">{label}</ContextMenuLabel>
       {unsharableMessage && (
         <div className="px-2 py-1">
-          <div className="text-xs text-muted-foreground">
-            {unsharableMessage}
-          </div>
+          <div className="text-xs text-muted-foreground">{unsharableMessage}</div>
         </div>
       )}
       <ContextMenuSeparator />
@@ -73,9 +71,7 @@ export function ShareMenuContent({
         </div>
       ) : shareItems.length === 0 ? (
         <div className="px-2 py-2">
-          <div className="text-xs text-muted-foreground">
-            No players in this campaign yet.
-          </div>
+          <div className="text-xs text-muted-foreground">No players in this campaign yet.</div>
         </div>
       ) : (
         shareItems.map((shareItem) => (
@@ -99,12 +95,7 @@ interface ShareMenuItemProps {
   onToggle: (memberId: Id<'campaignMembers'>) => Promise<void>
 }
 
-function ShareMenuItem({
-  shareItem,
-  isMutating,
-  isDisabled,
-  onToggle,
-}: ShareMenuItemProps) {
+function ShareMenuItem({ shareItem, isMutating, isDisabled, onToggle }: ShareMenuItemProps) {
   const profile = shareItem.member.userProfile
   const displayText = profile.name
     ? profile.name
@@ -128,9 +119,7 @@ function ShareMenuItem({
       <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
         <span className="truncate font-medium">{displayText}</span>
         {profile.name && profile.username && (
-          <span className="truncate text-xs text-muted-foreground">
-            @{profile.username}
-          </span>
+          <span className="truncate text-xs text-muted-foreground">@{profile.username}</span>
         )}
       </span>
       {isIndeterminate && (

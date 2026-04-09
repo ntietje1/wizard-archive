@@ -13,12 +13,11 @@ jobs:
     environment: preview
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: true
+      - run: vp install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
       - run: pnpm test:e2e
         env:

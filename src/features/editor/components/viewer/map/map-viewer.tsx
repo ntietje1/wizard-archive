@@ -123,10 +123,7 @@ interface MapImageContextMenuWrapperProps {
   map: GameMapWithContent
 }
 
-function MapImageContextMenuWrapper({
-  contextMenuRef,
-  map,
-}: MapImageContextMenuWrapperProps) {
+function MapImageContextMenuWrapper({ contextMenuRef, map }: MapImageContextMenuWrapperProps) {
   const { setActivePinId } = useMapView()
 
   return (
@@ -149,10 +146,7 @@ interface MapPinProps {
   isDragging: boolean
   isInMoveMode: boolean
   onHover: (pinId: Id<'mapPins'> | null) => void
-  onClick: (
-    e: React.MouseEvent | React.KeyboardEvent,
-    pin: MapPinWithItem,
-  ) => void
+  onClick: (e: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onContextMenu: (e: React.MouseEvent, pin: MapPinWithItem) => void
   onDragStart: (e: React.MouseEvent, pin: MapPinWithItem) => void
 }
@@ -172,9 +166,7 @@ function MapPin({
   const visibleItem = ghost ? undefined : (pin.item ?? undefined)
   const icon = getSidebarItemIcon(visibleItem)
   const color = ghost
-    ? getComputedStyle(document.documentElement)
-        .getPropertyValue('--muted-foreground')
-        .trim()
+    ? getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()
     : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
   const isHidden = pin.visible !== true
   const baseName = ghost ? '???' : (visibleItem?.name ?? '')
@@ -234,9 +226,7 @@ function MapPin({
           'bg-popover text-popover-foreground px-2 py-1 rounded-md shadow-md',
           'text-xs font-medium whitespace-nowrap',
           'transition-all duration-100 ease-out pointer-events-none',
-          isHovered && !isDragging
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-1',
+          isHovered && !isDragging ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
         )}
       >
         {itemName}
@@ -258,9 +248,7 @@ const DEFAULT_TRANSFORM: MapTransformState = {
   positionY: 0,
 }
 
-export function MapViewer({
-  item: map,
-}: EditorViewerProps<GameMapWithContent>) {
+export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
@@ -293,40 +281,25 @@ export function MapViewer({
     data: mapDropData,
     highlightId: `map:${map._id}`,
   })
-  const mapDragOutcome = useDndStore((s) =>
-    isMapDropTarget ? s.dragOutcome : null,
-  )
+  const mapDragOutcome = useDndStore((s) => (isMapDropTarget ? s.dragOutcome : null))
 
   const permOpts = { isDm, viewAsPlayerId, allItemsMap }
 
   // Users with edit access see all pins (hidden ones are dimmed); view-only users only see visible pins
-  const canEditMap = effectiveHasAtLeastPermission(
-    map,
-    PERMISSION_LEVEL.EDIT,
-    permOpts,
-  )
+  const canEditMap = effectiveHasAtLeastPermission(map, PERMISSION_LEVEL.EDIT, permOpts)
 
-  const pins = canEditMap
-    ? map.pins
-    : map.pins.filter((pin) => pin.visible === true)
+  const pins = canEditMap ? map.pins : map.pins.filter((pin) => pin.visible === true)
 
   const isPinGhost = (pin: MapPinWithItem): boolean => {
     if (!pin.item) return true
-    return !effectiveHasAtLeastPermission(
-      pin.item,
-      PERMISSION_LEVEL.VIEW,
-      permOpts,
-    )
+    return !effectiveHasAtLeastPermission(pin.item, PERMISSION_LEVEL.VIEW, permOpts)
   }
 
-  const [savedTransform, setSavedTransform] =
-    usePersistedState<MapTransformState>(
-      `map-transform-${map._id}`,
-      DEFAULT_TRANSFORM,
-    )
-  const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+  const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
+    `map-transform-${map._id}`,
+    DEFAULT_TRANSFORM,
   )
+  const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
@@ -360,23 +333,16 @@ export function MapViewer({
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const createItemPinMutation = useAppMutation(
-    api.gameMaps.mutations.createItemPin,
-  )
+  const createItemPinMutation = useAppMutation(api.gameMaps.mutations.createItemPin)
 
-  const updateItemPinMutation = useAppMutation(
-    api.gameMaps.mutations.updateItemPin,
-  )
+  const updateItemPinMutation = useAppMutation(api.gameMaps.mutations.updateItemPin)
 
   const handleTransformChange = (
     _: unknown,
     state: { scale: number; positionX: number; positionY: number },
   ) => {
     if (pinsContainerRef.current) {
-      pinsContainerRef.current.style.setProperty(
-        '--pin-scale',
-        String(1 / state.scale),
-      )
+      pinsContainerRef.current.style.setProperty('--pin-scale', String(1 / state.scale))
     }
 
     if (transformDebounceRef.current) {
@@ -421,9 +387,7 @@ export function MapViewer({
   }, [pendingPinItem, pendingPinMove, draggingPin])
 
   useEffect(() => {
-    const handlePinPlacementRequest = (
-      event: CustomEvent<{ itemId: SidebarItemId }>,
-    ) => {
+    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: SidebarItemId }>) => {
       if (imageError) {
         toast.error('Cannot place pin: map image failed to load')
         return
@@ -431,10 +395,7 @@ export function MapViewer({
       setPendingPinItem(event.detail)
     }
 
-    window.addEventListener(
-      'map-pin-placement-request',
-      handlePinPlacementRequest as EventListener,
-    )
+    window.addEventListener('map-pin-placement-request', handlePinPlacementRequest as EventListener)
     return () => {
       window.removeEventListener(
         'map-pin-placement-request',
@@ -444,21 +405,13 @@ export function MapViewer({
   }, [imageError])
 
   useEffect(() => {
-    const handlePinMoveRequest = (
-      event: CustomEvent<{ pinId: Id<'mapPins'> }>,
-    ) => {
+    const handlePinMoveRequest = (event: CustomEvent<{ pinId: Id<'mapPins'> }>) => {
       setPendingPinMove(event.detail)
     }
 
-    window.addEventListener(
-      'map-pin-move-request',
-      handlePinMoveRequest as EventListener,
-    )
+    window.addEventListener('map-pin-move-request', handlePinMoveRequest as EventListener)
     return () => {
-      window.removeEventListener(
-        'map-pin-move-request',
-        handlePinMoveRequest as EventListener,
-      )
+      window.removeEventListener('map-pin-move-request', handlePinMoveRequest as EventListener)
     }
   }, [])
 
@@ -534,10 +487,7 @@ export function MapViewer({
     }
   }
 
-  const createPinAtPosition = async (
-    itemId: SidebarItemId,
-    position: PinPosition,
-  ) => {
+  const createPinAtPosition = async (itemId: SidebarItemId, position: PinPosition) => {
     try {
       await createItemPinMutation.mutateAsync({
         mapId: map._id,
@@ -566,11 +516,7 @@ export function MapViewer({
         if (!itemId) return
 
         const existingPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
-        const pinError = validatePinTarget(
-          mapRef.current._id,
-          itemId,
-          existingPinItemIds,
-        )
+        const pinError = validatePinTarget(mapRef.current._id, itemId, existingPinItemIds)
         if (pinError) {
           toast.error(pinError)
           return
@@ -591,7 +537,7 @@ export function MapViewer({
           y: Math.max(0, Math.min(100, y)),
         }
 
-        createPinAtPositionRef.current(itemId, position)
+        void createPinAtPositionRef.current(itemId, position)
       },
     })
   }, [])
@@ -627,16 +573,13 @@ export function MapViewer({
     const position = getPercentageFromClick(e)
 
     if (pendingPinItem) {
-      handlePlacePin(position)
+      void handlePlacePin(position)
     } else if (pendingPinMove) {
-      handleMovePin(position)
+      void handleMovePin(position)
     }
   }
 
-  const handlePinClick = (
-    e: React.MouseEvent | React.KeyboardEvent,
-    pin: MapPinWithItem,
-  ) => {
+  const handlePinClick = (e: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => {
     e.preventDefault()
     e.stopPropagation()
     if (justFinishedDraggingRef.current === pin._id) {
@@ -716,8 +659,7 @@ export function MapViewer({
     lastMousePositionRef.current = { clientX: e.clientX, clientY: e.clientY }
   }
 
-  const shouldDisablePanning =
-    !!pendingPinItem || !!pendingPinMove || !!draggingPin
+  const shouldDisablePanning = !!pendingPinItem || !!pendingPinMove || !!draggingPin
 
   return (
     <ClientOnly fallback={<MapViewerSkeleton />}>
@@ -747,9 +689,7 @@ export function MapViewer({
                 <div
                   className={cn(
                     'absolute inset-0 z-[998] ring-2 ring-offset-2 pointer-events-none',
-                    mapDragOutcome.type === 'operation'
-                      ? 'ring-ring'
-                      : 'ring-destructive',
+                    mapDragOutcome.type === 'operation' ? 'ring-ring' : 'ring-destructive',
                   )}
                 />
                 <div
@@ -761,9 +701,7 @@ export function MapViewer({
                   )}
                 >
                   <p className="text-sm font-medium flex items-center gap-1.5">
-                    {mapDragOutcome.type === 'rejection' && (
-                      <Ban className="w-4 h-4 shrink-0" />
-                    )}
+                    {mapDragOutcome.type === 'rejection' && <Ban className="w-4 h-4 shrink-0" />}
                     {mapDragOutcome.type === 'operation'
                       ? 'Release to place pin here'
                       : rejectionReasonMessage(mapDragOutcome.reason)}
@@ -800,21 +738,17 @@ export function MapViewer({
                     role="application"
                     aria-label="Map canvas"
                     className="relative"
-                    onClick={
-                      pendingPinItem || pendingPinMove
-                        ? handleMapClick
-                        : undefined
-                    }
+                    onClick={pendingPinItem || pendingPinMove ? handleMapClick : undefined}
                     onMouseMove={handleMouseMove}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                       if (pendingPinItem) {
                         const position = getPercentageFromClick(e)
-                        handlePlacePin(position)
+                        void handlePlacePin(position)
                       } else if (pendingPinMove) {
                         const position = getPercentageFromClick(e)
-                        handleMovePin(position)
+                        void handleMovePin(position)
                       } else {
                         handleMapImageContextMenu(e)
                       }
@@ -842,13 +776,9 @@ export function MapViewer({
                     {/* Pins container — only render after the image has loaded so
                         percentage-based positions resolve correctly */}
                     {imageLoaded && (
-                      <div
-                        ref={pinsContainerRef}
-                        className="absolute inset-0 pointer-events-none"
-                      >
+                      <div ref={pinsContainerRef} className="absolute inset-0 pointer-events-none">
                         {pins.map((pin) => {
-                          const isDraggingThis =
-                            draggingPin?.pin._id === pin._id
+                          const isDraggingThis = draggingPin?.pin._id === pin._id
                           const isInMoveMode = pendingPinMove?.pinId === pin._id
 
                           return (
@@ -897,9 +827,7 @@ export function MapViewer({
           {/* Pin dragging mode banner */}
           {draggingPin && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg">
-              <p className="text-sm font-medium">
-                Release to move pin. Press Escape to cancel.
-              </p>
+              <p className="text-sm font-medium">Release to move pin. Press Escape to cancel.</p>
             </div>
           )}
 
@@ -912,10 +840,7 @@ export function MapViewer({
             />
           )}
 
-          <MapImageContextMenuWrapper
-            contextMenuRef={mapImageContextMenuRef}
-            map={map}
-          />
+          <MapImageContextMenuWrapper contextMenuRef={mapImageContextMenuRef} map={map} />
         </div>
       </MapViewProvider>
     </ClientOnly>
@@ -981,9 +906,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
           />
 
           {fileUpload.uploadError && (
-            <p className="text-sm text-destructive text-center">
-              {fileUpload.uploadError}
-            </p>
+            <p className="text-sm text-destructive text-center">{fileUpload.uploadError}</p>
           )}
         </div>
       </div>

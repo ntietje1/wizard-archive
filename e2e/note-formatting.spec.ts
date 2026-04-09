@@ -1,15 +1,7 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
-import {
-  getEditor,
-  newParagraphAtEnd,
-  selectSlashMenuItem,
-} from './helpers/editor-helpers'
+import { getEditor, newParagraphAtEnd, selectSlashMenuItem } from './helpers/editor-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Formatting')
@@ -78,9 +70,7 @@ test.describe.serial('note formatting', () => {
     await page.keyboard.press(`${mod}+u`)
 
     await expect(
-      page.locator(
-        '[contenteditable="true"] [style*="underline"], [contenteditable="true"] u',
-      ),
+      page.locator('[contenteditable="true"] [style*="underline"], [contenteditable="true"] u'),
     ).toBeVisible({ timeout: 5000 })
   })
 
@@ -116,9 +106,9 @@ test.describe.serial('note formatting', () => {
     await page.keyboard.type('First bullet item')
 
     const editor = await getEditor(page)
-    await expect(
-      editor.locator('li, [data-content-type="bulletListItem"]'),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(editor.locator('li, [data-content-type="bulletListItem"]')).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('numbered list via slash menu', async ({ page }) => {
@@ -132,9 +122,7 @@ test.describe.serial('note formatting', () => {
     await page.keyboard.type('First numbered item')
 
     const editor = page.locator('[contenteditable="true"]').first()
-    await expect(
-      editor.locator('ol, [data-content-type="numberedListItem"]'),
-    ).toBeVisible({
+    await expect(editor.locator('ol, [data-content-type="numberedListItem"]')).toBeVisible({
       timeout: 5000,
     })
   })
@@ -150,9 +138,9 @@ test.describe.serial('note formatting', () => {
     await page.keyboard.type('A wise quote')
 
     const editor = page.locator('[contenteditable="true"]').first()
-    await expect(
-      editor.locator('[data-content-type="quote"]').first(),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(editor.locator('[data-content-type="quote"]').first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('code block via slash menu', async ({ page }) => {
@@ -166,9 +154,9 @@ test.describe.serial('note formatting', () => {
     await page.keyboard.type('const x = 42')
 
     const editor = page.locator('[contenteditable="true"]').first()
-    await expect(
-      editor.locator('[data-content-type="codeBlock"]').first(),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(editor.locator('[data-content-type="codeBlock"]').first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('table via slash menu', async ({ page }) => {
@@ -181,8 +169,8 @@ test.describe.serial('note formatting', () => {
     await selectSlashMenuItem(page, /table/i)
 
     const editor = page.locator('[contenteditable="true"]').first()
-    await expect(
-      editor.locator('[data-content-type="table"]').first(),
-    ).toBeVisible({ timeout: 5000 })
+    await expect(editor.locator('[data-content-type="table"]').first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 })

@@ -33,14 +33,9 @@ export function useCanvasPreview({
 
       isGeneratingRef.current = true
       try {
-        await claimAndUploadRef.current(canvasIdRef.current, () =>
-          captureElementPreview(el),
-        )
+        await claimAndUploadRef.current(canvasIdRef.current, () => captureElementPreview(el))
       } catch (error) {
-        logger.error(
-          `Canvas preview generation failed for ${canvasIdRef.current}:`,
-          error,
-        )
+        logger.error(`Canvas preview generation failed for ${canvasIdRef.current}:`, error)
       } finally {
         isGeneratingRef.current = false
       }
@@ -58,5 +53,6 @@ export function useCanvasPreview({
       doc.off('update', scheduleGeneration)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, canvasId])
 }

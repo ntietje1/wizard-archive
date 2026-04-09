@@ -39,10 +39,8 @@ const ScrollArea = React.forwardRef<
     },
     ref,
   ) => {
-    const hasVertical =
-      scrollOrientation === 'vertical' || scrollOrientation === 'both'
-    const hasHorizontal =
-      scrollOrientation === 'horizontal' || scrollOrientation === 'both'
+    const hasVertical = scrollOrientation === 'vertical' || scrollOrientation === 'both'
+    const hasHorizontal = scrollOrientation === 'horizontal' || scrollOrientation === 'both'
     const hasBothAxes = hasVertical && hasHorizontal
 
     return (
@@ -64,10 +62,7 @@ const ScrollArea = React.forwardRef<
             )}
           >
             <ScrollAreaPrimitive.Content
-              className={cn(
-                !hasHorizontal && 'w-full max-w-full',
-                contentClassName,
-              )}
+              className={cn(!hasHorizontal && 'w-full max-w-full', contentClassName)}
               style={!hasHorizontal ? { minWidth: 0 } : undefined}
             >
               {children}
@@ -98,11 +93,9 @@ const ScrollBar = React.forwardRef<
       className={cn(
         'flex touch-none transition-[colors,opacity] duration-150 ease-out select-none shrink-0 absolute',
         orientation === 'vertical' && 'top-0 right-0 w-1 mr-[1px]',
-        orientation === 'vertical' &&
-          (hasBothAxes ? 'bottom-[5px]' : 'bottom-0'),
+        orientation === 'vertical' && (hasBothAxes ? 'bottom-[5px]' : 'bottom-0'),
         orientation === 'horizontal' && 'left-0 bottom-0 h-1 flex-col mb-[1px]',
-        orientation === 'horizontal' &&
-          (hasBothAxes ? 'right-[5px]' : 'right-0'),
+        orientation === 'horizontal' && (hasBothAxes ? 'right-[5px]' : 'right-0'),
         type === 'hover' && 'opacity-0 data-[hovering]:opacity-100',
         type === 'scroll' && 'opacity-0 data-[scrolling]:opacity-100',
         className,

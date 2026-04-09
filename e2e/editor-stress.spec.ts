@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { getEditor } from './helpers/editor-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -12,10 +8,7 @@ import type { Browser, Locator, Page } from '@playwright/test'
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 const campaignName = testName('E2E EdStress')
 
-async function setupCampaignWithNotes(
-  browser: Browser,
-  noteNames: Array<string>,
-) {
+async function setupCampaignWithNotes(browser: Browser, noteNames: Array<string>) {
   const ctx = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
   const page = await ctx.newPage()
   await page.goto('/campaigns')
@@ -45,12 +38,7 @@ async function selectSlashItem(page: Page, itemName: string | RegExp) {
 async function withDualEditors(
   browser: Browser,
   noteName: string,
-  testFn: (ctx: {
-    page1: Page
-    page2: Page
-    editor1: Locator
-    editor2: Locator
-  }) => Promise<void>,
+  testFn: (ctx: { page1: Page; page2: Page; editor1: Locator; editor2: Locator }) => Promise<void>,
 ) {
   const context1 = await browser.newContext({
     storageState: AUTH_STORAGE_PATH,
@@ -110,10 +98,7 @@ test.describe.serial('editor stress tests', () => {
     try {
       await deleteCampaign(page, campaignName)
     } catch (err) {
-      console.warn(
-        `[cleanup] Failed to delete campaign "${campaignName}":`,
-        err,
-      )
+      console.warn(`[cleanup] Failed to delete campaign "${campaignName}":`, err)
     }
     await page.close()
     await ctx.close()
@@ -182,9 +167,7 @@ test.describe.serial('editor stress tests', () => {
     await expect(editor).toContainText(added, { timeout: 5000 })
   })
 
-  test('redo works after undo to empty doc and sync round-trips', async ({
-    page,
-  }) => {
+  test('redo works after undo to empty doc and sync round-trips', async ({ page }) => {
     const editor = await navigateToNote(page, notes.redoAfterSync)
     await editor.click()
 
@@ -276,33 +259,26 @@ test.describe.serial('editor stress tests', () => {
     await expect(editorAfter).toContainText(text, { timeout: 15000 })
   })
 
-  test('select all and delete clears document and syncs', async ({
-    browser,
-  }) => {
-    await withDualEditors(
-      browser,
-      notes.selectAll,
-      async ({ page1, editor1, editor2 }) => {
-        await editor1.click()
-        const text = `FillContent-${Date.now()}`
-        await page1.keyboard.type(text)
-        await page1.keyboard.press('Enter')
-        await page1.keyboard.type('More content here')
+  test('select all and delete clears document and syncs', async ({ browser }) => {
+    await withDualEditors(browser, notes.selectAll, async ({ page1, editor1, editor2 }) => {
+      await editor1.click()
+      const text = `FillContent-${Date.now()}`
+      await page1.keyboard.type(text)
+      await page1.keyboard.press('Enter')
+      await page1.keyboard.type('More content here')
 
-        await expect(editor2).toContainText(text, { timeout: 15000 })
+      await expect(editor2).toContainText(text, { timeout: 15000 })
 
-        await editor1.click()
-        await page1.keyboard.press(`${MOD}+a`)
-        await page1.waitForFunction(
-          () => (window.getSelection()?.toString()?.length ?? 0) > 0,
-          { timeout: 3000 },
-        )
-        await page1.keyboard.press('Backspace')
+      await editor1.click()
+      await page1.keyboard.press(`${MOD}+a`)
+      await page1.waitForFunction(() => (window.getSelection()?.toString()?.length ?? 0) > 0, {
+        timeout: 3000,
+      })
+      await page1.keyboard.press('Backspace')
 
-        await expect(editor1).not.toContainText(text, { timeout: 10000 })
-        await expect(editor2).not.toContainText(text, { timeout: 15000 })
-      },
-    )
+      await expect(editor1).not.toContainText(text, { timeout: 10000 })
+      await expect(editor2).not.toContainText(text, { timeout: 15000 })
+    })
   })
 
   test('slash menu filters items by query', async ({ page }) => {
@@ -319,9 +295,7 @@ test.describe.serial('editor stress tests', () => {
 
     await page.keyboard.type('head')
 
-    await expect(
-      menu.getByRole('option', { name: /heading/i }).first(),
-    ).toBeVisible()
+    await expect(menu.getByRole('option', { name: /heading/i }).first()).toBeVisible()
     const filteredCount = await allOptions.count()
     expect(filteredCount).toBeLessThan(initialCount)
 
@@ -329,8 +303,7 @@ test.describe.serial('editor stress tests', () => {
     await expect(menu).not.toBeVisible()
 
     const filterText = 'head'
-    for (let i = 0; i < filterText.length + 1; i++)
-      await page.keyboard.press('Backspace')
+    for (let i = 0; i < filterText.length + 1; i++) await page.keyboard.press('Backspace')
 
     await page.keyboard.type('/')
     await expect(menu).toBeVisible({ timeout: 5000 })
@@ -374,49 +347,37 @@ test.describe.serial('editor stress tests', () => {
     await expect(editor).toContainText('Step one')
     await expect(editor).toContainText('Step two')
     await expect(editor).toContainText('A notable quote')
-    await expect(
-      editor.locator('[data-content-type="table"]').first(),
-    ).toBeVisible()
+    await expect(editor.locator('[data-content-type="table"]').first()).toBeVisible()
 
     const headings = editor.locator('[data-content-type="heading"]')
     await expect(headings).toHaveCount(2)
   })
 
   test('formatted text syncs correctly between tabs', async ({ browser }) => {
-    await withDualEditors(
-      browser,
-      notes.formatSync,
-      async ({ page1, editor1, editor2 }) => {
-        await editor1.click()
+    await withDualEditors(browser, notes.formatSync, async ({ page1, editor1, editor2 }) => {
+      await editor1.click()
 
-        await page1.keyboard.press(`${MOD}+b`)
-        const boldText = `BoldSync-${Date.now()}`
-        await page1.keyboard.type(boldText)
-        await page1.keyboard.press(`${MOD}+b`)
+      await page1.keyboard.press(`${MOD}+b`)
+      const boldText = `BoldSync-${Date.now()}`
+      await page1.keyboard.type(boldText)
+      await page1.keyboard.press(`${MOD}+b`)
 
-        await page1.keyboard.type(' ')
+      await page1.keyboard.type(' ')
 
-        await page1.keyboard.press(`${MOD}+i`)
-        const italicText = `ItalicSync-${Date.now()}`
-        await page1.keyboard.type(italicText)
-        await page1.keyboard.press(`${MOD}+i`)
+      await page1.keyboard.press(`${MOD}+i`)
+      const italicText = `ItalicSync-${Date.now()}`
+      await page1.keyboard.type(italicText)
+      await page1.keyboard.press(`${MOD}+i`)
 
-        await expect(editor2).toContainText(boldText, { timeout: 15000 })
-        await expect(editor2).toContainText(italicText, { timeout: 15000 })
+      await expect(editor2).toContainText(boldText, { timeout: 15000 })
+      await expect(editor2).toContainText(italicText, { timeout: 15000 })
 
-        await expect(
-          editor2.locator('strong', { hasText: boldText }),
-        ).toBeVisible({ timeout: 5000 })
-        await expect(
-          editor2.locator('em', { hasText: italicText }),
-        ).toBeVisible({ timeout: 5000 })
-      },
-    )
+      await expect(editor2.locator('strong', { hasText: boldText })).toBeVisible({ timeout: 5000 })
+      await expect(editor2.locator('em', { hasText: italicText })).toBeVisible({ timeout: 5000 })
+    })
   })
 
-  test('collaborative editing with formatting does not corrupt document', async ({
-    browser,
-  }) => {
+  test('collaborative editing with formatting does not corrupt document', async ({ browser }) => {
     await withDualEditors(
       browser,
       notes.collabFormat,
@@ -457,30 +418,24 @@ test.describe.serial('editor stress tests', () => {
   })
 
   test('rapid multi-paragraph typing syncs completely', async ({ browser }) => {
-    await withDualEditors(
-      browser,
-      notes.multiParagraph,
-      async ({ page1, editor1, editor2 }) => {
-        await editor1.click()
+    await withDualEditors(browser, notes.multiParagraph, async ({ page1, editor1, editor2 }) => {
+      await editor1.click()
 
-        const paragraphs: Array<string> = []
-        for (let i = 0; i < 10; i++) {
-          const p = `Para-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-          paragraphs.push(p)
-          await page1.keyboard.type(p, { delay: 0 })
-          await page1.keyboard.press('Enter')
-        }
+      const paragraphs: Array<string> = []
+      for (let i = 0; i < 10; i++) {
+        const p = `Para-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        paragraphs.push(p)
+        await page1.keyboard.type(p, { delay: 0 })
+        await page1.keyboard.press('Enter')
+      }
 
-        for (const p of paragraphs) {
-          await expect(editor2).toContainText(p, { timeout: 20000 })
-        }
-      },
-    )
+      for (const p of paragraphs) {
+        await expect(editor2).toContainText(p, { timeout: 20000 })
+      }
+    })
   })
 
-  test('complex document with mixed block types persists across navigation', async ({
-    page,
-  }) => {
+  test('complex document with mixed block types persists across navigation', async ({ page }) => {
     const editor = await navigateToNote(page, notes.complex)
     await editor.click()
 
@@ -523,14 +478,10 @@ test.describe.serial('editor stress tests', () => {
     await expect(editorAfter).toContainText(bullet2, { timeout: 15000 })
     await expect(editorAfter).toContainText(code, { timeout: 15000 })
 
-    await expect(
-      editorAfter.locator('[data-content-type="heading"]').first(),
-    ).toBeVisible()
+    await expect(editorAfter.locator('[data-content-type="heading"]').first()).toBeVisible()
     await expect(
       editorAfter.locator('li, [data-content-type="bulletListItem"]').first(),
     ).toBeVisible()
-    await expect(
-      editorAfter.locator('[data-content-type="codeBlock"]').first(),
-    ).toBeVisible()
+    await expect(editorAfter.locator('[data-content-type="codeBlock"]').first()).toBeVisible()
   })
 })

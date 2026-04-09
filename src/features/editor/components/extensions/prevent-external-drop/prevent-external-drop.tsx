@@ -16,8 +16,7 @@ export function PreventExternalDrop() {
   useEffect(() => {
     if (!domElement) return
 
-    const isFileDrag = (e: DragEvent) =>
-      e.dataTransfer?.types.includes('Files') ?? false
+    const isFileDrag = (e: DragEvent) => e.dataTransfer?.types.includes('Files') ?? false
 
     const stop = (e: DragEvent) => {
       if (isFileDrag(e)) e.stopPropagation()

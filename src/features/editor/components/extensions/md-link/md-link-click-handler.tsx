@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -30,10 +30,7 @@ function getMdLinkAt(x: number, y: number) {
   if (!displayEl) return null
   return {
     element: displayEl,
-    type: displayEl.getAttribute('data-md-link-type') as
-      | 'external'
-      | 'internal'
-      | null,
+    type: displayEl.getAttribute('data-md-link-type') as 'external' | 'internal' | null,
     exists: displayEl.getAttribute('data-md-link-exists') === 'true',
     itemName: displayEl.getAttribute('data-md-link-item-name'),
     target: displayEl.getAttribute('data-md-link-target'),
@@ -42,11 +39,7 @@ function getMdLinkAt(x: number, y: number) {
   }
 }
 
-export function MdLinkClickHandler({
-  editor,
-}: {
-  editor: CustomBlockNoteEditor | undefined
-}) {
+export function MdLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const navigate = useNavigate()
   const { navigateToItem } = useEditorNavigation()
   const { campaign } = useCampaign()
@@ -57,19 +50,14 @@ export function MdLinkClickHandler({
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
-    null,
-  )
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
 
-  const { mutateAsync: createNote } = useAppMutation(
-    api.notes.mutations.createNote,
-  )
+  const { mutateAsync: createNote } = useAppMutation(api.notes.mutations.createNote)
 
-  const hideTooltip = () => setTooltip(HIDDEN_TOOLTIP)
+  const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
-  const showTooltipFor = (link: ReturnType<typeof getMdLinkAt>) => {
-    if (!link || link.type !== 'internal' || link.exists || !link.itemName)
-      return
+  const showTooltipFor = useCallback((link: ReturnType<typeof getMdLinkAt>) => {
+    if (!link || link.type !== 'internal' || link.exists || !link.itemName) return
     const rect = link.element.getBoundingClientRect()
     setTooltip({
       show: true,
@@ -77,7 +65,7 @@ export function MdLinkClickHandler({
       x: rect.left,
       y: rect.bottom + 4,
     })
-  }
+  }, [])
 
   // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {
@@ -183,7 +171,7 @@ export function MdLinkClickHandler({
           if (!isCtrlClick) return
           e.preventDefault()
           e.stopPropagation()
-          navigate({ to: url.pathname, search: searchParams })
+          void navigate({ to: url.pathname, search: searchParams })
         } else {
           e.preventDefault()
           e.stopPropagation()
@@ -191,7 +179,7 @@ export function MdLinkClickHandler({
             if (mdLink.heading) url.searchParams.set('heading', mdLink.heading)
             window.open(url.toString(), '_blank', 'noopener,noreferrer')
           } else {
-            navigate({ to: url.pathname, search: searchParams })
+            void navigate({ to: url.pathname, search: searchParams })
           }
         }
         return
@@ -223,7 +211,7 @@ export function MdLinkClickHandler({
             name: mdLink.itemName,
             parentId: null,
           })
-          if (result) navigateToItem(result.slug)
+          if (result) void navigateToItem(result.slug)
         } catch (error) {
           handleError(error, 'Failed to create note')
         }

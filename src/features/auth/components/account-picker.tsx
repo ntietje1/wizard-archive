@@ -13,11 +13,7 @@ type AccountPickerProps = {
   onUseOtherAccount: () => void
 }
 
-export function AccountPicker({
-  sessions,
-  redirectTo,
-  onUseOtherAccount,
-}: AccountPickerProps) {
+export function AccountPicker({ sessions, redirectTo, onUseOtherAccount }: AccountPickerProps) {
   const navigate = useNavigate()
   const [switchingToken, setSwitchingToken] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -29,7 +25,7 @@ export function AccountPicker({
       await authClient.multiSession.setActive({
         sessionToken: session.session.token,
       })
-      navigate({ to: redirectTo, reloadDocument: true })
+      void navigate({ to: redirectTo, reloadDocument: true })
     } catch (err) {
       handleError(err, 'Failed to switch account')
       setError('Failed to switch account. Please try signing in again.')
@@ -64,12 +60,8 @@ export function AccountPicker({
                 size="sm"
               />
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-medium truncate">
-                  {ds.user.name}
-                </span>
-                <span className="text-xs text-muted-foreground truncate">
-                  {ds.user.email}
-                </span>
+                <span className="text-sm font-medium truncate">{ds.user.name}</span>
+                <span className="text-xs text-muted-foreground truncate">{ds.user.email}</span>
               </div>
               {isSwitching ? (
                 <Loader2 className="size-4 animate-spin shrink-0 text-muted-foreground" />
@@ -81,12 +73,7 @@ export function AccountPicker({
         })}
       </div>
       {error && <p className="text-sm text-destructive text-center">{error}</p>}
-      <Button
-        type="button"
-        variant="ghost"
-        className="w-full"
-        onClick={onUseOtherAccount}
-      >
+      <Button type="button" variant="ghost" className="w-full" onClick={onUseOtherAccount}>
         Sign in with a different account
       </Button>
     </div>

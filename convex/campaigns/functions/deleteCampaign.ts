@@ -15,9 +15,7 @@ export async function deleteCampaign(
   for (const table of SIDEBAR_TABLES) {
     const items = await ctx.db
       .query(table)
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId),
-      )
+      .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
       .collect()
 
     for (const item of items) {

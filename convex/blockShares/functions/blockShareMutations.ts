@@ -63,16 +63,12 @@ async function addBlockShare(
   },
 ): Promise<Id<'blockShares'>> {
   const block = await ctx.db.get(blockId)
-  if (!block)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
+  if (!block) throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
   const member = await ctx.db.get(campaignMemberId)
   if (!member || member.campaignId !== campaignId)
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Member does not belong to this campaign',
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
   const existingShare = await ctx.db
     .query('blockShares')
@@ -115,10 +111,7 @@ async function addBlockShare(
 
 async function removeBlockShare(
   ctx: AuthMutationCtx,
-  {
-    blockId,
-    campaignMemberId,
-  }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
+  { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
   const block = await ctx.db.get(blockId)
   if (!block) return
@@ -234,11 +227,7 @@ export async function unshareBlockFromMemberHelper(
 
 export async function setBlockShareStatusHelper(
   ctx: AuthMutationCtx,
-  {
-    note,
-    blockItem,
-    status,
-  }: { note: NoteFromDb; blockItem: BlockItem; status: ShareStatus },
+  { note, blockItem, status }: { note: NoteFromDb; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
   const blockId = await upsertBlockForSharing(ctx, {
     note,
