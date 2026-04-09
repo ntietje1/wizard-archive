@@ -7,6 +7,8 @@ import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_TYPES,
 } from '../../sidebarItems/types/baseTypes'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -72,6 +74,13 @@ export async function createFile(
     updatedTime: null,
     updatedBy: null,
     createdBy: profileId,
+  })
+
+  await logEditHistory(ctx, {
+    itemId: fileId,
+    itemType: SIDEBAR_ITEM_TYPES.files,
+    campaignId,
+    action: EDIT_HISTORY_ACTION.created,
   })
 
   return { fileId, slug: uniqueSlug }

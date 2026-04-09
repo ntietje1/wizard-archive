@@ -8,7 +8,7 @@ import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
 
 export function CampaignLayout() {
-  const { initialSidebarWidth, initialSidebarExpanded } = useRouteContext({
+  const { initialPanelPreferences } = useRouteContext({
     from: '__root__',
   })
 
@@ -18,8 +18,7 @@ export function CampaignLayout() {
         <DndProvider>
           <div className="flex flex-col flex-1 min-h-0">
             <SidebarLayout
-              initialSidebarWidth={initialSidebarWidth}
-              initialSidebarExpanded={initialSidebarExpanded}
+              initialPanel={initialPanelPreferences?.['left-sidebar'] ?? null}
             >
               <ErrorBoundary FallbackComponent={ErrorFallback}>
                 <Outlet />

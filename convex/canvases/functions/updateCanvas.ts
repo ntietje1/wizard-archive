@@ -3,8 +3,12 @@ import {
   validateSidebarItemRename,
 } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
+import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -33,24 +37,39 @@ export async function updateCanvas(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'canvases'>>> = {}
+  const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: canvas,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
+    if (trimmedName !== canvas.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: canvas,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: canvas.name, to: trimmedName },
+      })
+    }
   }
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== canvas.iconName) {
     updates.iconName = iconName
+    changes.push({
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: canvas.iconName, to: iconName },
+    })
   }
-  if (color !== undefined) {
+  if (color !== undefined && color !== canvas.color) {
     updates.color = color
+    changes.push({
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: canvas.color, to: color },
+    })
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (changes.length === 0) {
     return { canvasId: canvas._id, slug: canvas.slug }
   }
 
@@ -59,5 +78,13 @@ export async function updateCanvas(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  await logEditHistory(ctx, {
+    itemId: canvas._id,
+    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    campaignId: canvas.campaignId,
+    changes,
+  })
+
   return { canvasId: canvas._id, slug: newSlug ?? canvas.slug }
 }

@@ -12,3 +12,9 @@ export type Canvas = SidebarItem<typeof SIDEBAR_ITEM_TYPES.canvases>
 export type CanvasWithContent = SidebarItemWithContent<
   typeof SIDEBAR_ITEM_TYPES.canvases
 >
+
+export const CANVAS_SNAPSHOT_TYPE = 'yjs_state' as const
+
+export const CANVAS_HISTORY_ACTION = {} as const
+
+export type CanvasHistoryMetadataMap = Record<string, never>

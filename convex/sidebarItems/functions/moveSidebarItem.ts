@@ -9,6 +9,8 @@ import {
   validateSidebarParentChange,
 } from '../validation'
 import { requireCampaignMembership } from '../../functions'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
@@ -108,6 +110,13 @@ export async function moveSidebarItem(
         ...(isRoot ? { parentId: null } : {}),
       })
     })
+
+    await logEditHistory(ctx, {
+      itemId: item._id,
+      itemType: item.type,
+      campaignId,
+      action: EDIT_HISTORY_ACTION.trashed,
+    })
   }
 
   // --- Relocate: leaving trash ---
@@ -165,16 +174,37 @@ export async function moveSidebarItem(
         })
       })
     }
+
+    await logEditHistory(ctx, {
+      itemId: item._id,
+      itemType: item.type,
+      campaignId,
+      action: EDIT_HISTORY_ACTION.restored,
+    })
   }
 
   // --- Move (within same location) ---
   if (isMoving && !isRelocating) {
     await validateSidebarMove(ctx, { item, newParentId: parentId })
 
+    const oldParent = item.parentId ? await ctx.db.get(item.parentId) : null
+    const newParent = parentId ? await ctx.db.get(parentId) : null
+
     await ctx.db.patch(itemId, {
       parentId: parentId,
       updatedTime: Date.now(),
       updatedBy: ctx.user.profile._id,
+    })
+
+    await logEditHistory(ctx, {
+      itemId: item._id,
+      itemType: item.type,
+      campaignId,
+      action: EDIT_HISTORY_ACTION.moved,
+      metadata: {
+        from: oldParent?.name ?? null,
+        to: newParent?.name ?? null,
+      },
     })
   }
 

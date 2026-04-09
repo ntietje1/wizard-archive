@@ -5,6 +5,10 @@ import {
 } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
+import { logEditHistory } from '../../editHistory/log'
+import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { AuthMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -35,15 +39,22 @@ export async function updateFile(
 
   let newSlug: string | undefined
   const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {}
+  const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
     const trimmedName = name.trim()
-    updates.name = trimmedName
-    newSlug = await validateSidebarItemRename(ctx, {
-      item: file,
-      newName: trimmedName,
-    })
-    updates.slug = newSlug
+    if (trimmedName !== file.name) {
+      updates.name = trimmedName
+      newSlug = await validateSidebarItemRename(ctx, {
+        item: file,
+        newName: trimmedName,
+      })
+      updates.slug = newSlug
+      changes.push({
+        action: EDIT_HISTORY_ACTION.renamed,
+        metadata: { from: file.name, to: trimmedName },
+      })
+    }
   }
   if (storageId !== undefined) {
     updates.storageId = storageId
@@ -56,19 +67,35 @@ export async function updateFile(
         updates.previewStorageId = null
         updates.previewUpdatedAt = null
       }
+      changes.push({
+        action: EDIT_HISTORY_ACTION.file_replaced,
+        metadata: null,
+      })
     } else {
       updates.previewStorageId = null
       updates.previewUpdatedAt = null
+      changes.push({
+        action: EDIT_HISTORY_ACTION.file_removed,
+        metadata: null,
+      })
     }
   }
-  if (iconName !== undefined) {
+  if (iconName !== undefined && iconName !== file.iconName) {
     updates.iconName = iconName
+    changes.push({
+      action: EDIT_HISTORY_ACTION.icon_changed,
+      metadata: { from: file.iconName, to: iconName },
+    })
   }
-  if (color !== undefined) {
+  if (color !== undefined && color !== file.color) {
     updates.color = color
+    changes.push({
+      action: EDIT_HISTORY_ACTION.color_changed,
+      metadata: { from: file.color, to: color },
+    })
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (changes.length === 0) {
     return { fileId: file._id, slug: file.slug }
   }
 
@@ -77,5 +104,13 @@ export async function updateFile(
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
+
+  await logEditHistory(ctx, {
+    itemId: file._id,
+    itemType: SIDEBAR_ITEM_TYPES.files,
+    campaignId: file.campaignId,
+    changes,
+  })
+
   return { fileId: file._id, slug: newSlug ?? file.slug }
 }

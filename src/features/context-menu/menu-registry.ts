@@ -1,5 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
+  ArrowUpLeft,
+  ArrowUpRight,
   Bookmark,
   Download,
   Eye,
@@ -11,6 +13,8 @@ import {
   FolderDown,
   FolderPlus,
   Grid2x2Plus,
+  History,
+  List,
   MapPin,
   Move,
   Navigation,
@@ -23,8 +27,25 @@ import {
 import * as p from './predicates'
 import type { MenuContext, MenuItemDef } from './types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import {
+  RIGHT_SIDEBAR_CONTENT,
+  RIGHT_SIDEBAR_PANEL_ID,
+} from '~/features/editor/components/right-sidebar/constants'
+import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
+
+function isPanelContentActive(contentId: string): boolean {
+  const panel =
+    usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
+  return panel?.visible === true && panel?.activeContentId === contentId
+}
+
+function activatePanelContent(contentId: string): void {
+  const store = usePanelPreferenceStore.getState()
+  store.setActiveContent(RIGHT_SIDEBAR_PANEL_ID, contentId)
+  store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
+}
 
 // Helper to get a friendly type name for the item
 function getTypeName(ctx: MenuContext): string {
@@ -377,6 +398,48 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       action: actions.createMapPin,
     },
 
+    // ========== PANELS GROUP ==========
+    {
+      id: 'panel-history',
+      label: 'Edit History',
+      icon: History,
+      group: 'panels',
+      priority: 70,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.history),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.history),
+    },
+    {
+      id: 'panel-backlinks',
+      label: 'Back Links',
+      icon: ArrowUpLeft,
+      group: 'panels',
+      priority: 71,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.backlinks),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.backlinks),
+    },
+    {
+      id: 'panel-outgoing',
+      label: 'Outgoing Links',
+      icon: ArrowUpRight,
+      group: 'panels',
+      priority: 72,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outgoing),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outgoing),
+    },
+    {
+      id: 'panel-outline',
+      label: 'Outline',
+      icon: List,
+      group: 'panels',
+      priority: 73,
+      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
+      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outline),
+      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outline),
+    },
+
     // ========== DOWNLOAD GROUP ==========
     {
       id: 'download-file',
@@ -549,5 +612,6 @@ export const groupConfig = {
   edit: { label: null, priority: 4 },
   navigation: { label: null, priority: 5 },
   'pin-actions': { label: null, priority: 6 },
+  panels: { label: null, priority: 7 },
   danger: { label: null, priority: 99 },
 }

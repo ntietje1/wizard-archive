@@ -1,5 +1,6 @@
 import type { Plugin } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
+import { logger } from '~/shared/utils/logger'
 
 /**
  * y-prosemirror's yUndoPlugin unconditionally destroys the UndoManager
@@ -36,7 +37,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
     const umAny = um as Record<string, any>
 
     if (typeof umAny.afterTransactionHandler !== 'function') {
-      console.warn(
+      logger.warn(
         '[patchYUndoPluginDestroy] afterTransactionHandler not found, skipping patch',
       )
       return
@@ -103,7 +104,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
       | Array<{ destroy?: () => void }>
       | undefined
     if (!pluginViews) {
-      console.warn(
+      logger.warn(
         '[patchYUndoPluginDestroy] pluginViews not found, skipping pluginView patch',
       )
       return
@@ -123,7 +124,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
       originalDestroy?.call(existingPluginView)
     }
   } catch (err) {
-    console.warn(
+    logger.warn(
       '[patchYUndoPluginDestroy] Unexpected error, undo patch skipped:',
       err,
     )
@@ -180,7 +181,7 @@ export function patchYSyncAfterTypeChanged(view: EditorView) {
       }
     }
   } catch (err) {
-    console.warn(
+    logger.warn(
       '[patchYSyncAfterTypeChanged] Unexpected error, patch skipped:',
       err,
     )

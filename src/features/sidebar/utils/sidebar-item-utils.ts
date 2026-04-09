@@ -66,9 +66,6 @@ export function isFile(
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
 }
 
-/**
- * Type guard to check if a sidebar item is a Canvas.
- */
 export function isCanvas(
   item: AnySidebarItem | null | undefined,
 ): item is Canvas {

@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
+import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
@@ -15,6 +16,13 @@ import {
   useActiveSidebarItems,
   useSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  RIGHT_SIDEBAR_CONTENT,
+  RIGHT_SIDEBAR_DEFAULTS,
+  RIGHT_SIDEBAR_PANEL_ID,
+} from '~/features/editor/components/right-sidebar/constants'
+import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
+import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
@@ -42,6 +50,28 @@ export function FileTopbar() {
     !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts)
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
 
+  const rightPanel = usePanelPreference(
+    RIGHT_SIDEBAR_PANEL_ID,
+    RIGHT_SIDEBAR_DEFAULTS,
+  )
+  const toggleHistory = () => {
+    const isShowingHistory =
+      rightPanel.visible &&
+      rightPanel.activeContentId === RIGHT_SIDEBAR_CONTENT.history
+    if (isShowingHistory) {
+      rightPanel.setVisible(false)
+    } else {
+      rightPanel.setActiveContent(RIGHT_SIDEBAR_CONTENT.history)
+      rightPanel.setVisible(true)
+    }
+  }
+
+  const timestampLabel = item
+    ? item.updatedTime
+      ? `Edited ${formatRelativeTime(item.updatedTime)}`
+      : `Created ${formatRelativeTime(item._creationTime)}`
+    : null
+
   const middleContent = (
     <ItemButtonWrapper isTrashView={isTrashView}>
       {canEdit && <EditorViewModeToggleButton disabled={!item} />}
@@ -54,7 +84,7 @@ export function FileTopbar() {
       item={item ?? undefined}
       isTrashView={isTrashView}
     >
-      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4">
+      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
         <div
           className={cn(
             'flex-1 min-w-0',
@@ -89,6 +119,17 @@ export function FileTopbar() {
             />
           )}
         </div>
+
+        {timestampLabel && (
+          <Button
+            variant="ghost"
+            onClick={toggleHistory}
+            aria-label={`Toggle history panel, ${timestampLabel}`}
+            className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
+          >
+            {timestampLabel}
+          </Button>
+        )}
 
         {middleContent}
       </div>

@@ -7,6 +7,7 @@ import {
   removeAwarenessStates,
 } from 'y-protocols/awareness'
 import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
+import { logger } from '~/shared/utils/logger'
 
 type AwarenessEntry = {
   clientId: number
@@ -223,7 +224,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         if (seq > this.lastAppliedSeq) this.lastAppliedSeq = seq
       })
       .catch((err: unknown) => {
-        console.error('[YJS] push failed for', this.documentId, err)
+        logger.error('[YJS] push failed for', this.documentId, err)
         if (this._writable && !this.destroyed) {
           this.pendingUpdates.unshift(merged)
         }
@@ -322,7 +323,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       })
       .then(() => {})
       .catch((err: unknown) => {
-        console.error('[YJS] awareness push failed for', this.documentId, err)
+        logger.error('[YJS] awareness push failed for', this.documentId, err)
       })
       .finally(() => {
         this.awarenessInFlight = false

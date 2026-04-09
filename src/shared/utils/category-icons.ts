@@ -81,7 +81,7 @@ export const getAvailableIconNames = (): Array<string> => {
 }
 
 // Default icons for each sidebar item type
-const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
+export const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
   [SIDEBAR_ITEM_TYPES.folders]: Folder,
   [SIDEBAR_ITEM_TYPES.notes]: FileText,
   [SIDEBAR_ITEM_TYPES.gameMaps]: MapPin,
