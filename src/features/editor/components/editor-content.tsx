@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react'
+import { Suspense, lazy, useRef, useState } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { SidebarItemEditor } from './viewer/sidebar-item-editor'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -24,6 +23,20 @@ import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidat
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { handleError } from '~/shared/utils/logger'
 
+const SidebarItemEditor = lazy(() =>
+  import('./viewer/sidebar-item-editor').then((m) => ({
+    default: m.SidebarItemEditor,
+  })),
+)
+
+function EditorLoading() {
+  return (
+    <div className="flex-1 min-h-0 flex items-center justify-center">
+      <LoadingSpinner size="lg" />
+    </div>
+  )
+}
+
 export function EditorContent() {
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
@@ -39,11 +52,7 @@ export function EditorContent() {
     })
 
   if (isLoading) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
+    return <EditorLoading />
   }
 
   // Show trash page when ?trash=true and no specific item selected
@@ -58,7 +67,11 @@ export function EditorContent() {
     return <EmptyEditorContent />
   }
 
-  return <SidebarItemEditor item={item} search={editorSearch} />
+  return (
+    <Suspense fallback={<EditorLoading />}>
+      <SidebarItemEditor item={item} search={editorSearch} />
+    </Suspense>
+  )
 }
 
 function EmptyEditorContent() {
