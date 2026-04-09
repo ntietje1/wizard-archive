@@ -32,7 +32,7 @@ describe('createFolder', () => {
     expect(result.slug).toContain('my-folder')
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(result.folderId)
+      const folder = await dbCtx.db.get("folders", result.folderId)
       expect(folder).not.toBeNull()
       expect(folder!.name).toBe('My Folder')
       expect(folder!.parentId).toBeNull()
@@ -198,7 +198,7 @@ describe('updateFolder', () => {
     expect(result.slug).toContain('renamed-folder')
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(folderId)
+      const folder = await dbCtx.db.get("folders", folderId)
       expect(folder!.name).toBe('Renamed Folder')
     })
   })
@@ -215,7 +215,7 @@ describe('updateFolder', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(folderId)
+      const folder = await dbCtx.db.get("folders", folderId)
       expect(folder!.iconName).toBe('treasure-chest')
     })
   })
@@ -232,7 +232,7 @@ describe('updateFolder', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(folderId)
+      const folder = await dbCtx.db.get("folders", folderId)
       expect(folder!.color).toBe('#00ff00')
     })
   })
@@ -298,7 +298,7 @@ describe('updateFolder', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(folderId)
+      await dbCtx.db.delete("folders", folderId)
     })
 
     await expectNotFound(

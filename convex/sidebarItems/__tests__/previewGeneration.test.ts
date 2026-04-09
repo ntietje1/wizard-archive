@@ -35,7 +35,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note!.previewLockedUntil).not.toBeNull()
       expect(note!.previewLockedUntil).toBeGreaterThan(now)
       expect(note!.previewClaimToken).toBe(result.claimToken)
@@ -118,7 +118,7 @@ describe('claimPreviewGeneration', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(noteId)
+      await dbCtx.db.delete("notes", noteId)
     })
 
     await expectNotFound(
@@ -153,7 +153,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch("notes", noteId, {
         previewLockedUntil: Date.now() - 1,
       })
     })
@@ -171,7 +171,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch("notes", noteId, {
         previewUpdatedAt: Date.now() - COOLDOWN_MS / 2,
       })
     })
@@ -190,7 +190,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch("notes", noteId, {
         previewUpdatedAt: Date.now() - (COOLDOWN_MS + 1),
       })
     })
@@ -216,7 +216,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get("canvases", canvasId)
       expect(canvas!.previewLockedUntil).not.toBeNull()
       expect(canvas!.previewLockedUntil).toBeGreaterThan(now)
       expect(canvas!.previewClaimToken).toBe(result.claimToken)
@@ -316,7 +316,7 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note!.previewStorageId).toBe(storageId)
       expect(note!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(1000)
@@ -336,7 +336,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch("notes", noteId, { previewStorageId: oldStorageId })
     })
 
     const newStorageId = await t.run(async (dbCtx) => {
@@ -355,7 +355,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -393,7 +393,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note!.previewStorageId).toBe(storageId)
     })
   })
@@ -469,7 +469,7 @@ describe('setPreviewImage', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(noteId)
+      await dbCtx.db.delete("notes", noteId)
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -520,7 +520,7 @@ describe('setPreviewImage', () => {
     )
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewLockedUntil: Date.now() - 1 })
+      await dbCtx.db.patch("notes", noteId, { previewLockedUntil: Date.now() - 1 })
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -559,7 +559,7 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get("canvases", canvasId)
       expect(canvas!.previewStorageId).toBe(storageId)
       expect(canvas!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - canvas!.previewUpdatedAt!)).toBeLessThan(1000)
@@ -579,7 +579,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(canvasId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch("canvases", canvasId, { previewStorageId: oldStorageId })
     })
 
     const newStorageId = await t.run(async (dbCtx) => {
@@ -598,7 +598,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get("canvases", canvasId)
       expect(canvas!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -636,7 +636,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get("canvases", canvasId)
       expect(canvas!.previewStorageId).toBe(storageId)
     })
   })
@@ -693,7 +693,7 @@ describe('setPreviewImage', () => {
 
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(canvasId)
+      await dbCtx.db.delete("canvases", canvasId)
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -767,7 +767,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewStorageId: storageId })
+      await dbCtx.db.patch("notes", noteId, { previewStorageId: storageId })
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
@@ -792,7 +792,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(canvasId, { previewStorageId: storageId })
+      await dbCtx.db.patch("canvases", canvasId, { previewStorageId: storageId })
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {

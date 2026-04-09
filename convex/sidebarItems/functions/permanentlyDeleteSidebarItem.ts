@@ -13,6 +13,7 @@ export async function permanentlyDeleteSidebarItem(
   ctx: AuthMutationCtx,
   { itemId }: { itemId: SidebarItemId },
 ): Promise<void> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const rawItem = await ctx.db.get(itemId)
   if (!rawItem) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')

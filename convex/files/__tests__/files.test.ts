@@ -26,7 +26,7 @@ describe('createFile', () => {
     expect(result.slug).toContain('my-file')
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get(result.fileId)
+      const file = await dbCtx.db.get("files", result.fileId)
       expect(file).not.toBeNull()
       expect(file!.name).toBe('My File')
       expect(file!.storageId).toBeNull()
@@ -105,7 +105,7 @@ describe('updateFile', () => {
     expect(result.slug).toContain('renamed-file')
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get(fileId)
+      const file = await dbCtx.db.get("files", fileId)
       expect(file!.name).toBe('Renamed File')
     })
   })
@@ -218,7 +218,7 @@ describe('getFile', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(fileId, {
+      await dbCtx.db.patch("files", fileId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })
@@ -238,7 +238,7 @@ describe('getFile', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(fileId)
+      await dbCtx.db.delete("files", fileId)
     })
 
     const result = await dmAuth.query(api.files.queries.getFile, { fileId })

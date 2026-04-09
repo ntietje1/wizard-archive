@@ -16,11 +16,12 @@ export async function rollbackToSnapshot(
   ctx: AuthMutationCtx,
   { editHistoryId }: { editHistoryId: Id<'editHistory'> },
 ): Promise<void> {
-  const historyEntry = await ctx.db.get(editHistoryId)
+  const historyEntry = await ctx.db.get("editHistory", editHistoryId)
   if (!historyEntry) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'History entry not found')
   }
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
   const itemFromDb = await ctx.db.get(historyEntry.itemId)
   await requireItemAccess(ctx, {
     rawItem: itemFromDb,
@@ -60,6 +61,7 @@ export async function rollbackToSnapshot(
   const now = Date.now()
   const profileId = ctx.user.profile._id
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
   await ctx.db.patch(historyEntry.itemId, {
     updatedTime: now,
     updatedBy: profileId,

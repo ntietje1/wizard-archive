@@ -44,10 +44,11 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
 
       for (const folder of expiredFolders) {
         if (deleted >= BATCH_SIZE) break
+        // eslint-disable-next-line @convex-dev/explicit-table-ids
         const currentFolder = await ctx.db.get(folder._id)
         if (!currentFolder) continue
         if (currentFolder.parentId) {
-          const parent = await ctx.db.get(currentFolder.parentId)
+          const parent = await ctx.db.get("folders", currentFolder.parentId)
           if (parent?.deletionTime && parent.deletionTime < cutoff) continue
         }
         const count = await applyToTree(ctx, currentFolder, hardDeleteItem)
@@ -57,6 +58,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
       leafLoop: for (const items of expiredLeafItems) {
         for (const item of items) {
           if (deleted >= BATCH_SIZE) break leafLoop
+          // eslint-disable-next-line @convex-dev/explicit-table-ids
           const current = await ctx.db.get(item._id)
           if (!current) continue
           await hardDeleteItem(ctx, current)

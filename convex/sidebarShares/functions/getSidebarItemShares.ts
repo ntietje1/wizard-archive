@@ -10,6 +10,7 @@ export const getSidebarItemShares = async (
   ctx: AuthQueryCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Array<SidebarItemShare>> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,

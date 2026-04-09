@@ -61,7 +61,7 @@ export async function getCampaign(
   ctx: AuthQueryCtx,
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Campaign | null> {
-  const campaign = await ctx.db.get(campaignId)
+  const campaign = await ctx.db.get("campaigns", campaignId)
   if (!campaign || campaign.deletionTime !== null) return null
   return enhanceCampaign(ctx, { campaign })
 }

@@ -48,6 +48,7 @@ const enhanceMapPin = async (
     bookmarkIds: Set<SidebarItemId>
   },
 ): Promise<MapPinWithItem | null> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
   const item = await ctx.db.get(pin.itemId)
   if (item) {
     const enhancedItem = await enhanceSidebarItem(ctx, {

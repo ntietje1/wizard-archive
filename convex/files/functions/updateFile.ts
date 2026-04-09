@@ -26,7 +26,7 @@ export async function updateFile(
     color?: string | null
   },
 ): Promise<{ fileId: Id<'files'>; slug: string }> {
-  const fileFromDb = await ctx.db.get(fileId)
+  const fileFromDb = await ctx.db.get("files", fileId)
   if (!fileFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
   await requireCampaignMembership(ctx, fileFromDb.campaignId)
   const file = await requireItemAccess(ctx, {
@@ -56,7 +56,7 @@ export async function updateFile(
   if (storageId !== undefined) {
     updates.storageId = storageId
     if (storageId) {
-      const metadata = await ctx.db.system.get(storageId)
+      const metadata = await ctx.db.system.get("_storage", storageId)
       if (metadata?.contentType?.startsWith('image/')) {
         updates.previewStorageId = storageId
         updates.previewUpdatedAt = Date.now()
@@ -96,7 +96,7 @@ export async function updateFile(
     return { fileId: file._id, slug: file.slug }
   }
 
-  await ctx.db.patch(fileId, {
+  await ctx.db.patch("files", fileId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

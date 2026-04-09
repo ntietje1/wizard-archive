@@ -6,7 +6,7 @@ export async function removeBlockIfNotNeeded(
   ctx: AuthMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
-  const block = await ctx.db.get(blockId)
+  const block = await ctx.db.get("blocks", blockId)
   if (
     !block ||
     block.isTopLevel ||
@@ -16,7 +16,7 @@ export async function removeBlockIfNotNeeded(
     return
   }
   const now = Date.now()
-  await ctx.db.patch(blockId, {
+  await ctx.db.patch("blocks", blockId, {
     deletionTime: now,
     deletedBy: ctx.user.profile._id,
     updatedTime: now,

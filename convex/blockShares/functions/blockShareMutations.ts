@@ -62,11 +62,11 @@ async function addBlockShare(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<Id<'blockShares'>> {
-  const block = await ctx.db.get(blockId)
+  const block = await ctx.db.get("blocks", blockId)
   if (!block) throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
-  const member = await ctx.db.get(campaignMemberId)
+  const member = await ctx.db.get("campaignMembers", campaignMemberId)
   if (!member || member.campaignId !== campaignId)
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
@@ -83,7 +83,7 @@ async function addBlockShare(
   if (existingShare) {
     if (existingShare.deletionTime !== null) {
       const now = Date.now()
-      await ctx.db.patch(existingShare._id, {
+      await ctx.db.patch("blockShares", existingShare._id, {
         deletionTime: null,
         deletedBy: null,
         updatedTime: now,
@@ -113,7 +113,7 @@ async function removeBlockShare(
   ctx: AuthMutationCtx,
   { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
-  const block = await ctx.db.get(blockId)
+  const block = await ctx.db.get("blocks", blockId)
   if (!block) return
 
   const share = await ctx.db
@@ -128,7 +128,7 @@ async function removeBlockShare(
 
   if (share && share.deletionTime === null) {
     const now = Date.now()
-    await ctx.db.patch(share._id, {
+    await ctx.db.patch("blockShares", share._id, {
       deletionTime: now,
       deletedBy: ctx.user.profile._id,
       updatedTime: now,
@@ -141,7 +141,7 @@ async function clearBlockShares(
   ctx: AuthMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
-  const block = await ctx.db.get(blockId)
+  const block = await ctx.db.get("blocks", blockId)
   if (!block) return
 
   const shares = await ctx.db
@@ -156,7 +156,7 @@ async function clearBlockShares(
   const profileId = ctx.user.profile._id
   await Promise.all(
     shares.map((share) =>
-      ctx.db.patch(share._id, {
+      ctx.db.patch("blockShares", share._id, {
         deletionTime: now,
         deletedBy: profileId,
         updatedTime: now,
@@ -216,7 +216,7 @@ export async function unshareBlockFromMemberHelper(
     .first()
 
   if (!remainingShares) {
-    await ctx.db.patch(block._id, {
+    await ctx.db.patch("blocks", block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
       updatedTime: Date.now(),
       updatedBy: ctx.user.profile._id,

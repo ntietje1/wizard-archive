@@ -9,11 +9,12 @@ export async function getSnapshotForHistoryEntry(
   ctx: AuthQueryCtx,
   { editHistoryId }: { editHistoryId: Id<'editHistory'> },
 ): Promise<DocumentSnapshot | null> {
-  const historyEntry = await ctx.db.get(editHistoryId)
+  const historyEntry = await ctx.db.get("editHistory", editHistoryId)
   if (!historyEntry) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'History entry not found')
   }
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
   const item = await ctx.db.get(historyEntry.itemId)
   await requireItemAccess(ctx, {
     rawItem: item,

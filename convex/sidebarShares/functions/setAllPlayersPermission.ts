@@ -17,6 +17,7 @@ export const setAllPlayersPermission = async (
     permissionLevel: PermissionLevel | null
   },
 ): Promise<null> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
@@ -24,6 +25,7 @@ export const setAllPlayersPermission = async (
   })
   const { membership } = await requireDmRole(ctx, item.campaignId)
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   await ctx.db.patch(sidebarItemId, {
     allPermissionLevel: permissionLevel,
     updatedBy: membership.userId,

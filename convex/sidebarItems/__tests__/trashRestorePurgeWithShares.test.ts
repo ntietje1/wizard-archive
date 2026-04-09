@@ -50,10 +50,10 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify soft-deletes on dependents
     const afterTrash = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get(folderId),
-        note: await dbCtx.db.get(noteId),
-        share: await dbCtx.db.get(shareId),
-        bookmark: await dbCtx.db.get(bookmarkId),
+        folder: await dbCtx.db.get("folders", folderId),
+        note: await dbCtx.db.get("notes", noteId),
+        share: await dbCtx.db.get("sidebarItemShares", shareId),
+        bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
       }
     })
     expect(afterTrash.folder!.location).toBe('trash')
@@ -79,10 +79,10 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify everything is restored
     const afterRestore = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get(folderId),
-        note: await dbCtx.db.get(noteId),
-        share: await dbCtx.db.get(shareId),
-        bookmark: await dbCtx.db.get(bookmarkId),
+        folder: await dbCtx.db.get("folders", folderId),
+        note: await dbCtx.db.get("notes", noteId),
+        share: await dbCtx.db.get("sidebarItemShares", shareId),
+        bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
       }
     })
     expect(afterRestore.folder!.location).toBe('sidebar')
@@ -110,10 +110,10 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify all hard-deleted
     const afterPurge = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get(folderId),
-        note: await dbCtx.db.get(noteId),
-        share: await dbCtx.db.get(shareId),
-        bookmark: await dbCtx.db.get(bookmarkId),
+        folder: await dbCtx.db.get("folders", folderId),
+        note: await dbCtx.db.get("notes", noteId),
+        share: await dbCtx.db.get("sidebarItemShares", shareId),
+        bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
       }
     })
     expect(afterPurge.folder).toBeNull()
@@ -173,7 +173,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       location: 'trash',
     })
 
-    const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get(blockShareId))
+    const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get("blockShares", blockShareId))
     expect(afterTrash!.deletionTime).not.toBeNull()
 
     // Permanently delete
@@ -181,7 +181,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       itemId: noteId,
     })
 
-    const afterPurge = await t.run(async (dbCtx) => dbCtx.db.get(blockShareId))
+    const afterPurge = await t.run(async (dbCtx) => dbCtx.db.get("blockShares", blockShareId))
     expect(afterPurge).toBeNull()
   })
 })

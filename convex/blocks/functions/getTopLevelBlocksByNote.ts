@@ -8,7 +8,7 @@ export async function getTopLevelBlocksByNote(
   ctx: AuthQueryCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<Array<Block>> {
-  const note = await ctx.db.get(noteId)
+  const note = await ctx.db.get("notes", noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireCampaignMembership(ctx, note.campaignId)
 

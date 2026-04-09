@@ -45,7 +45,7 @@ export async function createFile(
 
   let previewStorageId: Id<'_storage'> | null = null
   if (storageId) {
-    const metadata = await ctx.db.system.get(storageId)
+    const metadata = await ctx.db.system.get("_storage", storageId)
     if (metadata?.contentType?.toLowerCase().startsWith('image/')) {
       previewStorageId = storageId
     }

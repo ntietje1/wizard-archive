@@ -8,6 +8,7 @@ export async function rollbackYjsDocument(
   documentId: Id<'notes'> | Id<'canvases'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const doc = await ctx.db.get(documentId)
   if (!doc) {
     throw new Error(`rollbackYjsDocument: document ${documentId} not found`)
@@ -23,7 +24,7 @@ export async function rollbackYjsDocument(
     if (batch.length === 0) {
       hasMore = false
     } else {
-      await Promise.all(batch.map((row) => ctx.db.delete(row._id)))
+      await Promise.all(batch.map((row) => ctx.db.delete("yjsUpdates", row._id)))
       if (batch.length < DELETE_BATCH_SIZE) hasMore = false
     }
   }

@@ -26,7 +26,7 @@ export async function createItemPin(
     itemId: SidebarItemId
   },
 ): Promise<Id<'mapPins'>> {
-  const mapFromDb = await ctx.db.get(mapId)
+  const mapFromDb = await ctx.db.get("gameMaps", mapId)
   if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, mapFromDb.campaignId)
   await requireItemAccess(ctx, {
@@ -34,6 +34,7 @@ export async function createItemPin(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a polymorphic SidebarItemId
   const item = await ctx.db.get(itemId)
   if (!item) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
@@ -73,7 +74,7 @@ export async function createItemPin(
     createdBy: profileId,
   })
 
-  await ctx.db.patch(mapId, {
+  await ctx.db.patch("gameMaps", mapId, {
     updatedTime: Date.now(),
     updatedBy: profileId,
   })
@@ -97,7 +98,7 @@ export async function createItemPin(
       campaignId: mapFromDb.campaignId,
       createdBy: profileId,
     })
-    await ctx.db.patch(editHistoryId, { hasSnapshot: true })
+    await ctx.db.patch("editHistory", editHistoryId, { hasSnapshot: true })
   } catch (error) {
     logger.warn(`createItemPin: failed to capture snapshot for map ${mapId}`, error)
   }

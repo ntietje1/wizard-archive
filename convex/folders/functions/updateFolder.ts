@@ -24,7 +24,7 @@ export async function updateFolder(
     color?: string | null
   },
 ): Promise<{ folderId: Id<'folders'>; slug: string }> {
-  const folderFromDb = await ctx.db.get(folderId)
+  const folderFromDb = await ctx.db.get("folders", folderId)
   if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   await requireCampaignMembership(ctx, folderFromDb.campaignId)
   const folder = await requireItemAccess(ctx, {
@@ -72,7 +72,7 @@ export async function updateFolder(
     return { folderId: folder._id, slug: folder.slug }
   }
 
-  await ctx.db.patch(folderId, {
+  await ctx.db.patch("folders", folderId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

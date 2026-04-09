@@ -9,6 +9,7 @@ async function checkYjsAccess(
   documentId: YjsDocumentId,
   requiredLevel: (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL],
 ) {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const doc = await ctx.db.get(documentId)
   if (!doc) throwClientError(ERROR_CODE.NOT_FOUND, 'Document not found')
   await requireItemAccess(ctx, {

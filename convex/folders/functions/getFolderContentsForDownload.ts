@@ -117,7 +117,7 @@ export async function getFolderContentsForDownload(
   ctx: AuthQueryCtx,
   folderId: Id<'folders'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
-  const folderFromDb = await ctx.db.get(folderId)
+  const folderFromDb = await ctx.db.get("folders", folderId)
   if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const campaignId = folderFromDb.campaignId
   await requireCampaignMembership(ctx, campaignId)

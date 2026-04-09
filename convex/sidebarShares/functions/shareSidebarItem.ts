@@ -23,6 +23,7 @@ export const shareSidebarItem = async (
     permissionLevel: PermissionLevel | null
   },
 ): Promise<Id<'sidebarItemShares'>> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
@@ -49,8 +50,8 @@ export const shareSidebarItem = async (
     permissionLevel,
   })
 
-  const member = await ctx.db.get(campaignMemberId)
-  const memberProfile = member ? await ctx.db.get(member.userId) : null
+  const member = await ctx.db.get("campaignMembers", campaignMemberId)
+  const memberProfile = member ? await ctx.db.get("userProfiles", member.userId) : null
   await logEditHistory(ctx, {
     itemId: sidebarItemId,
     itemType: item.type,

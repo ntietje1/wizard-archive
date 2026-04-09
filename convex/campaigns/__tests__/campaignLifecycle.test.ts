@@ -82,7 +82,7 @@ describe('campaign lifecycle', () => {
     })
 
     const campaign = await t.run(async (ctx) => {
-      return await ctx.db.get(campaignId)
+      return await ctx.db.get("campaigns", campaignId)
     })
     expect(campaign).toBeNull()
 

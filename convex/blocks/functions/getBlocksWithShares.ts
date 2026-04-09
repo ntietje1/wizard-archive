@@ -25,7 +25,7 @@ export const getBlocksWithShares = async (
   blocks: Array<BlockShareInfo>
   playerMembers: Array<CampaignMember>
 }> => {
-  const note = await ctx.db.get(noteId)
+  const note = await ctx.db.get("notes", noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireDmRole(ctx, note.campaignId)
   await checkItemAccess(ctx, {

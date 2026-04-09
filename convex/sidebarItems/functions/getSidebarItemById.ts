@@ -28,6 +28,7 @@ export const getSidebarItemById = async (
   ctx: AuthQueryCtx,
   { id }: { id: SidebarItemId },
 ): Promise<AnySidebarItemWithContent | null> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const item = await ctx.db.get(id)
   if (!item) return null
 

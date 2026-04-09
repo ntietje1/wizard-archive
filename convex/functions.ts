@@ -30,7 +30,7 @@ async function checkMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
-  const campaign = await ctx.db.get(campaignId)
+  const campaign = await ctx.db.get("campaigns", campaignId)
   const member = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) =>
@@ -66,6 +66,7 @@ export async function requireCampaignMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   let cache = membershipCache.get(ctx.db)
   if (!cache) {
     cache = new Map()

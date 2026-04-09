@@ -23,6 +23,7 @@ export async function captureYjsState(
     createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const doc = await ctx.db.get(documentId)
   if (!doc) {
     logger.warn(`captureYjsState: document not found: ${documentId}`)

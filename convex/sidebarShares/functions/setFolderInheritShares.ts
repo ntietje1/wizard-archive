@@ -17,7 +17,7 @@ export const setFolderInheritShares = async (
     inheritShares: boolean
   },
 ): Promise<null> => {
-  const folderFromDb = await ctx.db.get(folderId)
+  const folderFromDb = await ctx.db.get("folders", folderId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -26,7 +26,7 @@ export const setFolderInheritShares = async (
 
   if (folder.inheritShares === inheritShares) return null
 
-  await ctx.db.patch(folderId, {
+  await ctx.db.patch("folders", folderId, {
     inheritShares,
   })
 

@@ -56,7 +56,7 @@ export async function rollbackGameMap(
     throw new Error(`rollbackMap: expected a note but got ${String(map.type)}`)
   }
 
-  await ctx.db.patch(map._id, {
+  await ctx.db.patch("gameMaps", map._id, {
     imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
     previewStorageId: null,
   })
@@ -70,12 +70,13 @@ export async function rollbackGameMap(
   const profileId = ctx.user.profile._id
 
   await Promise.all(
-    existingPins.map((pin) => ctx.db.patch(pin._id, { deletionTime: now, deletedBy: profileId })),
+    existingPins.map((pin) => ctx.db.patch("mapPins", pin._id, { deletionTime: now, deletedBy: profileId })),
   )
 
   const pinTargetChecks = await Promise.all(
     parsed.pins.map(async (pin) => {
       try {
+        // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
         const item = await ctx.db.get(pin.itemId)
         return { pin, exists: item !== null && !item.deletionTime }
       } catch (e) {

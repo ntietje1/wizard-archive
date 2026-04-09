@@ -27,7 +27,7 @@ export const cleanupStaleAwareness = internalMutation({
       .query('yjsAwareness')
       .withIndex('by_updatedAt', (q) => q.lt('updatedAt', staleThreshold))
       .collect()
-    await Promise.all(stale.map((row) => ctx.db.delete(row._id)))
+    await Promise.all(stale.map((row) => ctx.db.delete("yjsAwareness", row._id)))
   },
 })
 
@@ -62,6 +62,7 @@ export const maybeCreateSnapshot = internalMutation({
     )
       return null
 
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     const doc = await ctx.db.get(args.documentId)
     if (!doc) return null
 
@@ -72,6 +73,7 @@ export const maybeCreateSnapshot = internalMutation({
       return null
     }
 
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     await ctx.db.patch(args.documentId, {
       updatedTime: Date.now(),
       updatedBy: args.createdBy,
@@ -105,7 +107,7 @@ export const maybeCreateSnapshot = internalMutation({
       })
     }
 
-    await ctx.db.patch(editHistoryId, { hasSnapshot: true })
+    await ctx.db.patch("editHistory", editHistoryId, { hasSnapshot: true })
 
     return null
   },

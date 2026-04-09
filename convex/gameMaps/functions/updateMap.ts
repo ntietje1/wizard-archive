@@ -26,7 +26,7 @@ export async function updateMap(
     color?: string | null
   },
 ): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
-  const mapFromDb = await ctx.db.get(mapId)
+  const mapFromDb = await ctx.db.get("gameMaps", mapId)
   if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, mapFromDb.campaignId)
   const map = await requireItemAccess(ctx, {
@@ -83,7 +83,7 @@ export async function updateMap(
     return { mapId: map._id, slug: map.slug }
   }
 
-  await ctx.db.patch(mapId, {
+  await ctx.db.patch("gameMaps", mapId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

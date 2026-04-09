@@ -29,6 +29,7 @@ export async function hardDeleteItem(ctx: MutationCtx, item: AnySidebarItemFromD
   }
 
   await applyToDependents(ctx, item, async (_, doc) => {
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     await ctx.db.delete(doc._id)
   })
 
@@ -36,5 +37,6 @@ export async function hardDeleteItem(ctx: MutationCtx, item: AnySidebarItemFromD
     await deleteYjsDocument(ctx, item._id)
   }
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   await ctx.db.delete(item._id)
 }

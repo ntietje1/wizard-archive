@@ -10,7 +10,7 @@ export const getMap = async (
   ctx: AuthQueryCtx,
   { mapId }: { mapId: Id<'gameMaps'> },
 ): Promise<GameMapWithContent | null> => {
-  const rawMap = await ctx.db.get(mapId)
+  const rawMap = await ctx.db.get("gameMaps", mapId)
   if (!rawMap) return null
   await requireCampaignMembership(ctx, rawMap.campaignId)
   const map = await checkItemAccess(ctx, {

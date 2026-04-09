@@ -70,7 +70,7 @@ export const pushAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("yjsAwareness", existing._id, {
         state,
         updatedAt: Date.now(),
       })
@@ -105,7 +105,7 @@ export const removeAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.delete(existing._id)
+      await ctx.db.delete("yjsAwareness", existing._id)
     }
 
     return null

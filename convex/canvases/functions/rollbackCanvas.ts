@@ -12,7 +12,7 @@ export async function rollbackCanvas(
   itemId: SidebarItemId,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  const canvas = await ctx.db.get(itemId)
+  const canvas = await ctx.db.get("canvases", itemId as Id<'canvases'>)
   if (!canvas || canvas.type !== SIDEBAR_ITEM_TYPES.canvases)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
 

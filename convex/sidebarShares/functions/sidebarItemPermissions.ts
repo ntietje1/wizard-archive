@@ -47,7 +47,7 @@ export async function resolveInheritedPermissions(
 
   let currentParentId = parentId
   while (currentParentId) {
-    const folder = await ctx.db.get(currentParentId)
+    const folder = await ctx.db.get("folders", currentParentId)
     if (!folder) break
 
     if (!folder.inheritShares) {

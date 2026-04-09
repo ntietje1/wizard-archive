@@ -339,7 +339,7 @@ describe('getSessionsByCampaign', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(sessionId, {
+      await dbCtx.db.patch("sessions", sessionId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })

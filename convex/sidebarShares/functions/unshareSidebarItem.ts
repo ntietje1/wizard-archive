@@ -18,14 +18,15 @@ export const unshareSidebarItem = async (
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
   await requireDmRole(ctx, item.campaignId)
-  const member = await ctx.db.get(campaignMemberId)
-  const memberProfile = member ? await ctx.db.get(member.userId) : null
+  const member = await ctx.db.get("campaignMembers", campaignMemberId)
+  const memberProfile = member ? await ctx.db.get("userProfiles", member.userId) : null
 
   await unshareSidebarItemFromMember(ctx, {
     sidebarItemId,

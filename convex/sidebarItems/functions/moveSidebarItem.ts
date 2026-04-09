@@ -62,6 +62,7 @@ export async function moveSidebarItem(
     parentId?: Id<'folders'> | null
   },
 ): Promise<SidebarItemId> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(itemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
@@ -91,9 +92,11 @@ export async function moveSidebarItem(
 
     await applyToTree(ctx, item, async (_, i) => {
       await applyToDependents(ctx, i, async (_, doc) => {
+        // eslint-disable-next-line @convex-dev/explicit-table-ids
         await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
       })
       const isRoot = i._id === item._id
+      // eslint-disable-next-line @convex-dev/explicit-table-ids
       await ctx.db.patch(i._id, {
         location: SIDEBAR_ITEM_LOCATION.trash,
         deletionTime: now,
@@ -128,8 +131,10 @@ export async function moveSidebarItem(
 
     // Restore root item + its dependents
     await applyToDependents(ctx, item, async (_, doc) => {
+      // eslint-disable-next-line @convex-dev/explicit-table-ids
       await ctx.db.patch(doc._id, clearDeletion)
     })
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     await ctx.db.patch(itemId, {
       ...clearDeletion,
       ...conflictPatch,
@@ -144,6 +149,7 @@ export async function moveSidebarItem(
         if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
         await applyToDependents(ctx, i, async (_, doc) => {
+          // eslint-disable-next-line @convex-dev/explicit-table-ids
           await ctx.db.patch(doc._id, clearDeletion)
         })
 
@@ -152,6 +158,7 @@ export async function moveSidebarItem(
           itemId: i._id,
           name: i.name,
         })
+        // eslint-disable-next-line @convex-dev/explicit-table-ids
         await ctx.db.patch(i._id, {
           ...clearDeletion,
           location: location,
@@ -172,9 +179,10 @@ export async function moveSidebarItem(
   if (isMoving && !isRelocating) {
     await validateSidebarMove(ctx, { item, newParentId: parentId })
 
-    const oldParent = item.parentId ? await ctx.db.get(item.parentId) : null
-    const newParent = parentId ? await ctx.db.get(parentId) : null
+    const oldParent = item.parentId ? await ctx.db.get("folders", item.parentId) : null
+    const newParent = parentId ? await ctx.db.get("folders", parentId) : null
 
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     await ctx.db.patch(itemId, {
       parentId: parentId,
       updatedTime: Date.now(),

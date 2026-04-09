@@ -14,17 +14,17 @@ describe('session + editor state interaction', () => {
       campaignId: ctx.campaignId,
     })
 
-    const campaignAfterStart = await t.run(async (dbCtx) => dbCtx.db.get(ctx.campaignId))
+    const campaignAfterStart = await t.run(async (dbCtx) => dbCtx.db.get("campaigns", ctx.campaignId))
     expect(campaignAfterStart!.currentSessionId).toBe(sessionId)
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
       campaignId: ctx.campaignId,
     })
 
-    const campaignAfterEnd = await t.run(async (dbCtx) => dbCtx.db.get(ctx.campaignId))
+    const campaignAfterEnd = await t.run(async (dbCtx) => dbCtx.db.get("campaigns", ctx.campaignId))
     expect(campaignAfterEnd!.currentSessionId).toBeNull()
 
-    const session = await t.run(async (dbCtx) => dbCtx.db.get(sessionId))
+    const session = await t.run(async (dbCtx) => dbCtx.db.get("sessions", sessionId))
     expect(session!.endedAt).not.toBeNull()
   })
 
@@ -83,16 +83,16 @@ describe('session + editor state interaction', () => {
     })
 
     const [session1, session2, session3] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(s1),
-      await dbCtx.db.get(s2),
-      await dbCtx.db.get(s3),
+      await dbCtx.db.get("sessions", s1),
+      await dbCtx.db.get("sessions", s2),
+      await dbCtx.db.get("sessions", s3),
     ])
 
     expect(session1!.endedAt).not.toBeNull()
     expect(session2!.endedAt).not.toBeNull()
     expect(session3!.endedAt).toBeNull()
 
-    const campaign = await t.run(async (dbCtx) => dbCtx.db.get(ctx.campaignId))
+    const campaign = await t.run(async (dbCtx) => dbCtx.db.get("campaigns", ctx.campaignId))
     expect(campaign!.currentSessionId).toBe(s3)
   })
 
@@ -118,9 +118,9 @@ describe('session + editor state interaction', () => {
     })
 
     const [r1, r2, r3] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(s1),
-      await dbCtx.db.get(s2),
-      await dbCtx.db.get(s3),
+      await dbCtx.db.get("sessions", s1),
+      await dbCtx.db.get("sessions", s2),
+      await dbCtx.db.get("sessions", s3),
     ])
     expect(r1).toBeNull()
     expect(r2).toBeNull()

@@ -26,6 +26,7 @@ export const getSidebarItemWithShares = async (
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
 }> => {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const itemFromDb = await ctx.db.get(sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,

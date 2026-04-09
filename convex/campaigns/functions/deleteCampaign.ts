@@ -30,7 +30,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const session of sessions) {
-    await ctx.db.delete(session._id)
+    await ctx.db.delete("sessions", session._id)
   }
 
   // Delete campaign members
@@ -40,10 +40,10 @@ export async function deleteCampaign(
     .collect()
 
   for (const member of campaignMembers) {
-    await ctx.db.delete(member._id)
+    await ctx.db.delete("campaignMembers", member._id)
   }
 
-  await ctx.db.delete(campaignId)
+  await ctx.db.delete("campaigns", campaignId)
 
   return campaignId
 }

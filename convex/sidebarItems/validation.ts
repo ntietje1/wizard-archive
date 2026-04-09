@@ -84,7 +84,7 @@ export async function validateNoCircularParent(
       }
     }
 
-    const current: FolderFromDb | null = await ctx.db.get(currentId)
+    const current: FolderFromDb | null = await ctx.db.get("folders", currentId)
     currentId = current?.parentId ?? null
   }
 
@@ -150,7 +150,7 @@ export async function validateSidebarParentChange(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
   if (newParentId) {
-    const parentFromDb = await ctx.db.get(newParentId)
+    const parentFromDb = await ctx.db.get("folders", newParentId)
     if (parentFromDb && parentFromDb.location !== item.location) {
       throwClientError(
         ERROR_CODE.VALIDATION_FAILED,

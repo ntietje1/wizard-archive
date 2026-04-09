@@ -251,7 +251,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       })
 
       const beforeNote = await t.run(async (dbCtx) => {
-        return await dbCtx.db.get(noteId)
+        return await dbCtx.db.get("notes", noteId)
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -262,7 +262,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await t.run(async (dbCtx) => {
-        const note = await dbCtx.db.get(noteId)
+        const note = await dbCtx.db.get("notes", noteId)
         expect(note!.updatedBy).toBe(ctx.dm.profile._id)
         expect(note!.updatedTime).not.toBeNull()
         expect(note!.updatedTime).toBeGreaterThan(beforeNote!.updatedTime ?? 0)
@@ -335,7 +335,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
       // Hard-delete the document before the scheduled function fires
       await t.run(async (dbCtx) => {
-        await dbCtx.db.delete(noteId)
+        await dbCtx.db.delete("notes", noteId)
       })
 
       await t.finishAllScheduledFunctions(vi.runAllTimers)

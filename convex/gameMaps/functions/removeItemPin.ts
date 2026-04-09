@@ -13,18 +13,19 @@ export async function removeItemPin(
   const { pin, map } = await requirePinAccess(ctx, { mapPinId })
 
   const now = Date.now()
-  await ctx.db.patch(mapPinId, {
+  await ctx.db.patch("mapPins", mapPinId, {
     deletionTime: now,
     deletedBy: ctx.user.profile._id,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })
 
-  await ctx.db.patch(pin.mapId, {
+  await ctx.db.patch("gameMaps", pin.mapId, {
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
   const pinnedItem = await ctx.db.get(pin.itemId)
 
   const editHistoryId = await logEditHistory(

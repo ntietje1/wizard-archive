@@ -22,7 +22,7 @@ export async function captureGameMapSnapshot(
   },
 ): Promise<void> {
   const [map, pins] = await Promise.all([
-    ctx.db.get(mapId),
+    ctx.db.get("gameMaps", mapId),
     ctx.db
       .query('mapPins')
       .withIndex('by_map_deletionTime', (q) => q.eq('mapId', mapId).eq('deletionTime', null))
@@ -34,6 +34,7 @@ export async function captureGameMapSnapshot(
     throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
   }
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
   const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
 
   const validPins: Array<{

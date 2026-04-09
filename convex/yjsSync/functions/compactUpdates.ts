@@ -19,7 +19,7 @@ export async function compactUpdates(ctx: MutationCtx, documentId: YjsDocumentId
     const encoded = Y.encodeStateAsUpdate(doc)
     const maxSeq = updates[updates.length - 1].seq
 
-    await Promise.all(updates.map((row) => ctx.db.delete(row._id)))
+    await Promise.all(updates.map((row) => ctx.db.delete("yjsUpdates", row._id)))
 
     await ctx.db.insert('yjsUpdates', {
       documentId,

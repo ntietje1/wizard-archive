@@ -16,6 +16,7 @@ async function trashItem(
   patches?: Record<string, unknown>,
 ) {
   await t.run(async (dbCtx) => {
+    // eslint-disable-next-line @convex-dev/explicit-table-ids
     await dbCtx.db.patch(itemId, {
       ...patches,
       location: SIDEBAR_ITEM_LOCATION.trash,
@@ -47,7 +48,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note).toBeNull()
 
       const url = await dbCtx.storage.getUrl(storageId)
@@ -78,7 +79,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get(fileId)
+      const file = await dbCtx.db.get("files", fileId)
       expect(file).toBeNull()
 
       const fileUrl = await dbCtx.storage.getUrl(fileBlob)
@@ -108,7 +109,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get(mapId)
+      const map = await dbCtx.db.get("gameMaps", mapId)
       expect(map).toBeNull()
 
       const url = await dbCtx.storage.getUrl(sharedBlob)
@@ -139,7 +140,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get(mapId)
+      const map = await dbCtx.db.get("gameMaps", mapId)
       expect(map).toBeNull()
 
       const imageUrl = await dbCtx.storage.getUrl(imageBlob)
@@ -161,7 +162,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get("notes", noteId)
       expect(note).toBeNull()
     })
   })
@@ -178,7 +179,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(folderId)
+      const folder = await dbCtx.db.get("folders", folderId)
       expect(folder).toBeNull()
     })
   })

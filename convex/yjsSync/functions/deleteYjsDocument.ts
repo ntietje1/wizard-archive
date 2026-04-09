@@ -14,7 +14,7 @@ export async function deleteYjsDocument(ctx: MutationCtx, documentId: YjsDocumen
   ])
 
   await Promise.all([
-    ...updates.map((row) => ctx.db.delete(row._id)),
-    ...awareness.map((row) => ctx.db.delete(row._id)),
+    ...updates.map((row) => ctx.db.delete("yjsUpdates", row._id)),
+    ...awareness.map((row) => ctx.db.delete("yjsAwareness", row._id)),
   ])
 }

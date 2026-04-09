@@ -23,9 +23,10 @@ export const getHistoryEntry = authQuery({
   },
   returns: v.union(historyEntryValidator, v.null()),
   handler: async (ctx, { editHistoryId }) => {
-    const entry = await ctx.db.get(editHistoryId)
+    const entry = await ctx.db.get("editHistory", editHistoryId)
     if (!entry) return null
 
+    // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
     const item = await ctx.db.get(entry.itemId)
     await requireItemAccess(ctx, {
       rawItem: item,
@@ -49,6 +50,7 @@ export const getItemHistory = authQuery({
     pageStatus: v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null()),
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
+    // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
     const itemFromDb = await ctx.db.get(itemId)
     await requireItemAccess(ctx, {
       rawItem: itemFromDb,

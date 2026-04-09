@@ -114,7 +114,7 @@ describe('rollback error handling', () => {
         metadata: null,
         hasSnapshot: false,
       })
-      await dbCtx.db.delete(id)
+      await dbCtx.db.delete("editHistory", id)
       return id
     })
 
@@ -408,7 +408,7 @@ describe('rollback metadata integrity', () => {
       })
 
       const beforeRollback = await t.run(async (dbCtx) => {
-        return await dbCtx.db.get(noteId)
+        return await dbCtx.db.get("notes", noteId)
       })
 
       vi.advanceTimersByTime(1000)
@@ -418,7 +418,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const afterRollback = await dbCtx.db.get(noteId)
+        const afterRollback = await dbCtx.db.get("notes", noteId)
         expect(afterRollback!.updatedTime).toBeGreaterThan(beforeRollback!.updatedTime ?? 0)
         expect(afterRollback!.updatedBy).toBe(ctx.dm.profile._id)
       })
@@ -467,7 +467,7 @@ describe('map rollback with deleted pin targets', () => {
       })
 
       await t.run(async (dbCtx) => {
-        await dbCtx.db.delete(n1)
+        await dbCtx.db.delete("notes", n1)
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
@@ -664,7 +664,7 @@ describe('map rollback restores image state', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const map = await dbCtx.db.get(mapId)
+        const map = await dbCtx.db.get("gameMaps", mapId)
         expect(map!.imageStorageId).not.toBe(snapshotData.imageStorageId ?? null)
       })
 
@@ -673,7 +673,7 @@ describe('map rollback restores image state', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const map = await dbCtx.db.get(mapId)
+        const map = await dbCtx.db.get("gameMaps", mapId)
         expect(map!.imageStorageId).toBe(snapshotData.imageStorageId ?? null)
       })
     } finally {

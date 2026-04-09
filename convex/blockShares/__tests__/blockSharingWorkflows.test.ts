@@ -176,7 +176,7 @@ describe('block sharing workflows', () => {
       expect(afterUnshare).not.toBeNull()
       expect(afterUnshare!.deletionTime).not.toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get("blocks", block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -216,7 +216,7 @@ describe('block sharing workflows', () => {
       })
       expect(shareRow).toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get("blocks", block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })

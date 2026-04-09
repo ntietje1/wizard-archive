@@ -84,18 +84,18 @@ describe('campaign deletion cascade', () => {
     const cId = ctx.campaignId
     const results = await t.run(async (dbCtx) => {
       return {
-        campaign: await dbCtx.db.get(cId),
-        folder: await dbCtx.db.get(folderId),
-        note: await dbCtx.db.get(noteId),
-        file: await dbCtx.db.get(fileId),
-        map: await dbCtx.db.get(mapId),
-        block: await dbCtx.db.get(blockDbId),
-        blockShare: await dbCtx.db.get(blockShareId),
-        folderShare: await dbCtx.db.get(folderShareId),
-        noteShare: await dbCtx.db.get(noteShareId),
-        bookmark: await dbCtx.db.get(bookmarkId),
-        pin: await dbCtx.db.get(pinId),
-        session: await dbCtx.db.get(sessionId),
+        campaign: await dbCtx.db.get("campaigns", cId),
+        folder: await dbCtx.db.get("folders", folderId),
+        note: await dbCtx.db.get("notes", noteId),
+        file: await dbCtx.db.get("files", fileId),
+        map: await dbCtx.db.get("gameMaps", mapId),
+        block: await dbCtx.db.get("blocks", blockDbId),
+        blockShare: await dbCtx.db.get("blockShares", blockShareId),
+        folderShare: await dbCtx.db.get("sidebarItemShares", folderShareId),
+        noteShare: await dbCtx.db.get("sidebarItemShares", noteShareId),
+        bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
+        pin: await dbCtx.db.get("mapPins", pinId),
+        session: await dbCtx.db.get("sessions", sessionId),
       }
     })
 
@@ -140,7 +140,7 @@ describe('campaign deletion cascade', () => {
     })
 
     const [active, trashed] = await t.run(async (dbCtx) => {
-      return [await dbCtx.db.get(activeNoteId), await dbCtx.db.get(trashedNoteId)]
+      return [await dbCtx.db.get("notes", activeNoteId), await dbCtx.db.get("notes", trashedNoteId)]
     })
     expect(active).toBeNull()
     expect(trashed).toBeNull()
@@ -156,7 +156,7 @@ describe('campaign deletion cascade', () => {
     })
 
     const campaign = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get(cId)
+      return await dbCtx.db.get("campaigns", cId)
     })
     expect(campaign).toBeNull()
   })

@@ -10,7 +10,7 @@ export const getFile = async (
   ctx: AuthQueryCtx,
   { fileId }: { fileId: Id<'files'> },
 ): Promise<FileWithContent | null> => {
-  const rawFile = await ctx.db.get(fileId)
+  const rawFile = await ctx.db.get("files", fileId)
   if (!rawFile) return null
   await requireCampaignMembership(ctx, rawFile.campaignId)
   const file = await checkItemAccess(ctx, {

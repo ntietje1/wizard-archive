@@ -25,7 +25,7 @@ export const setBlocksShareStatus = async (
     return null
   }
 
-  const rawNote = await ctx.db.get(noteId)
+  const rawNote = await ctx.db.get("notes", noteId)
   const note = await requireItemAccess(ctx, {
     rawItem: rawNote,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

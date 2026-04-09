@@ -24,7 +24,7 @@ export async function updateNote(
     color?: string | null
   },
 ): Promise<{ noteId: Id<'notes'>; slug: string }> {
-  const noteFromDb = await ctx.db.get(noteId)
+  const noteFromDb = await ctx.db.get("notes", noteId)
   if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireCampaignMembership(ctx, noteFromDb.campaignId)
   const note = await requireItemAccess(ctx, {
@@ -72,7 +72,7 @@ export async function updateNote(
     return { noteId: note._id, slug: note.slug }
   }
 
-  await ctx.db.patch(noteId, {
+  await ctx.db.patch("notes", noteId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

@@ -11,7 +11,7 @@ export async function rollbackNote(
   itemId: SidebarItemId,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  const note = await ctx.db.get(itemId)
+  const note = await ctx.db.get("notes", itemId as Id<'notes'>)
   if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
     throw new Error(`rollbackNote: expected a note but got ${note?.type}`)
   }

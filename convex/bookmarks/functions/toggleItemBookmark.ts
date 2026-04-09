@@ -9,6 +9,7 @@ export async function toggleItemBookmark(
   ctx: AuthMutationCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ) {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids -- SidebarItemId is a union across multiple tables
   const item = await ctx.db.get(sidebarItemId)
   if (!item) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
@@ -39,7 +40,7 @@ export async function toggleItemBookmark(
 
   if (existingBookmark) {
     if (existingBookmark.deletionTime === null) {
-      await ctx.db.patch(existingBookmark._id, {
+      await ctx.db.patch("bookmarks", existingBookmark._id, {
         deletionTime: now,
         deletedBy: profileId,
         updatedTime: now,
@@ -47,7 +48,7 @@ export async function toggleItemBookmark(
       })
       return { isBookmarked: false }
     }
-    await ctx.db.patch(existingBookmark._id, {
+    await ctx.db.patch("bookmarks", existingBookmark._id, {
       deletionTime: null,
       deletedBy: null,
       updatedTime: now,

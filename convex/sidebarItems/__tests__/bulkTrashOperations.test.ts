@@ -77,16 +77,16 @@ describe('bulk trash operations', () => {
     })
 
     const results = await t.run(async (dbCtx) => ({
-      root: await dbCtx.db.get(root),
-      sub1: await dbCtx.db.get(sub1),
-      sub2: await dbCtx.db.get(sub2),
-      note: await dbCtx.db.get(noteId),
-      file: await dbCtx.db.get(fileId),
-      map: await dbCtx.db.get(mapId),
-      block: await dbCtx.db.get(blockDbId),
-      share: await dbCtx.db.get(shareId),
-      bookmark: await dbCtx.db.get(bookmarkId),
-      pin: await dbCtx.db.get(pinId),
+      root: await dbCtx.db.get("folders", root),
+      sub1: await dbCtx.db.get("folders", sub1),
+      sub2: await dbCtx.db.get("folders", sub2),
+      note: await dbCtx.db.get("notes", noteId),
+      file: await dbCtx.db.get("files", fileId),
+      map: await dbCtx.db.get("gameMaps", mapId),
+      block: await dbCtx.db.get("blocks", blockDbId),
+      share: await dbCtx.db.get("sidebarItemShares", shareId),
+      bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
+      pin: await dbCtx.db.get("mapPins", pinId),
     }))
 
     for (const [key, value] of Object.entries(results)) {
@@ -125,6 +125,7 @@ describe('bulk trash operations', () => {
     })
 
     for (const item of items) {
+      // eslint-disable-next-line @convex-dev/explicit-table-ids
       const result = await t.run(async (dbCtx) => dbCtx.db.get(item.id as never))
       expect(result).toBeNull()
     }
@@ -159,8 +160,8 @@ describe('bulk trash operations', () => {
     })
 
     const [r1, r2] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(note1),
-      await dbCtx.db.get(note2),
+      await dbCtx.db.get("notes", note1),
+      await dbCtx.db.get("notes", note2),
     ])
     expect(r1).toBeNull()
     expect(r2).not.toBeNull()
@@ -194,8 +195,8 @@ describe('bulk trash operations', () => {
     })
 
     const [folder, note] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(folderId),
-      await dbCtx.db.get(noteId),
+      await dbCtx.db.get("folders", folderId),
+      await dbCtx.db.get("notes", noteId),
     ])
     expect(folder).toBeNull()
     expect(note).toBeNull()
@@ -232,13 +233,13 @@ describe('bulk trash operations', () => {
     })
 
     for (const fId of folders) {
-      const result = await t.run(async (dbCtx) => dbCtx.db.get(fId))
+      const result = await t.run(async (dbCtx) => dbCtx.db.get("folders", fId))
       expect(result).toBeNull()
     }
     const [leafResult, blockResult, shareResult] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(leaf),
-      await dbCtx.db.get(blockDbId),
-      await dbCtx.db.get(shareId),
+      await dbCtx.db.get("notes", leaf),
+      await dbCtx.db.get("blocks", blockDbId),
+      await dbCtx.db.get("sidebarItemShares", shareId),
     ])
     expect(leafResult).toBeNull()
     expect(blockResult).toBeNull()

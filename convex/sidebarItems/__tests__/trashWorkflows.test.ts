@@ -37,7 +37,7 @@ describe('trash workflows', () => {
         location: 'sidebar',
       })
 
-      const restored = await t.run(async (dbCtx) => dbCtx.db.get(original.noteId))
+      const restored = await t.run(async (dbCtx) => dbCtx.db.get("notes", original.noteId))
       expect(restored).not.toBeNull()
       expect(restored!.location).toBe('sidebar')
       expect(restored!.name).not.toBe('Meeting Notes')
@@ -85,11 +85,11 @@ describe('trash workflows', () => {
       const [trashedFolder, trashedNoteA, trashedNoteB, trashedShare, trashedBookmark] =
         await t.run(async (dbCtx) =>
           Promise.all([
-            dbCtx.db.get(folder.folderId),
-            dbCtx.db.get(noteA.noteId),
-            dbCtx.db.get(noteB.noteId),
-            dbCtx.db.get(share.shareId),
-            dbCtx.db.get(bookmark.bookmarkId),
+            dbCtx.db.get("folders", folder.folderId),
+            dbCtx.db.get("notes", noteA.noteId),
+            dbCtx.db.get("notes", noteB.noteId),
+            dbCtx.db.get("sidebarItemShares", share.shareId),
+            dbCtx.db.get("bookmarks", bookmark.bookmarkId),
           ]),
         )
 
@@ -110,11 +110,11 @@ describe('trash workflows', () => {
       const [restoredFolder, restoredNoteA, restoredNoteB, restoredShare, restoredBookmark] =
         await t.run(async (dbCtx) =>
           Promise.all([
-            dbCtx.db.get(folder.folderId),
-            dbCtx.db.get(noteA.noteId),
-            dbCtx.db.get(noteB.noteId),
-            dbCtx.db.get(share.shareId),
-            dbCtx.db.get(bookmark.bookmarkId),
+            dbCtx.db.get("folders", folder.folderId),
+            dbCtx.db.get("notes", noteA.noteId),
+            dbCtx.db.get("notes", noteB.noteId),
+            dbCtx.db.get("sidebarItemShares", share.shareId),
+            dbCtx.db.get("bookmarks", bookmark.bookmarkId),
           ]),
         )
 
@@ -185,12 +185,12 @@ describe('trash workflows', () => {
         deletedBlockShare,
       ] = await t.run(async (dbCtx) =>
         Promise.all([
-          dbCtx.db.get(folder.folderId),
-          dbCtx.db.get(note.noteId),
-          dbCtx.db.get(share.shareId),
-          dbCtx.db.get(bookmark.bookmarkId),
-          dbCtx.db.get(block.blockDbId),
-          dbCtx.db.get(blockShare.blockShareId),
+          dbCtx.db.get("folders", folder.folderId),
+          dbCtx.db.get("notes", note.noteId),
+          dbCtx.db.get("sidebarItemShares", share.shareId),
+          dbCtx.db.get("bookmarks", bookmark.bookmarkId),
+          dbCtx.db.get("blocks", block.blockDbId),
+          dbCtx.db.get("blockShares", blockShare.blockShareId),
         ]),
       )
 
@@ -241,10 +241,10 @@ describe('trash workflows', () => {
 
       const [gone1, gone2, goneFolder, goneChild] = await t.run(async (dbCtx) =>
         Promise.all([
-          dbCtx.db.get(note1.noteId),
-          dbCtx.db.get(note2.noteId),
-          dbCtx.db.get(folder.folderId),
-          dbCtx.db.get(childNote.noteId),
+          dbCtx.db.get("notes", note1.noteId),
+          dbCtx.db.get("notes", note2.noteId),
+          dbCtx.db.get("folders", folder.folderId),
+          dbCtx.db.get("notes", childNote.noteId),
         ]),
       )
 

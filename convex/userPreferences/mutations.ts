@@ -29,7 +29,7 @@ export const setUserPreferences = authMutation({
         createdBy: userId,
       })
     } else {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("userPreferences", existing._id, {
         ...args,
         updatedTime: now,
         updatedBy: userId,
@@ -89,7 +89,7 @@ export const setPanelPreference = authMutation({
         createdBy: userId,
       })
     } else {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("userPreferences", existing._id, {
         panelPreferences: updatedPrefs,
         updatedTime: now,
         updatedBy: userId,

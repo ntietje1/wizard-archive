@@ -18,7 +18,7 @@ export async function getSidebarItemAncestors(
       break
     }
     visited.add(currentParentId)
-    const rawFolder = await ctx.db.get(currentParentId)
+    const rawFolder = await ctx.db.get("folders", currentParentId)
     if (!rawFolder) {
       break
     }

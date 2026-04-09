@@ -9,7 +9,7 @@ export const getNote = async (
   ctx: AuthQueryCtx,
   { noteId }: { noteId: Id<'notes'> },
 ): Promise<NoteWithContent | null> => {
-  const rawNote = await ctx.db.get(noteId)
+  const rawNote = await ctx.db.get("notes", noteId)
   const note = await checkItemAccess(ctx, {
     rawItem: rawNote,
     requiredLevel: PERMISSION_LEVEL.VIEW,

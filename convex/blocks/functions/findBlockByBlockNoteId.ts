@@ -8,7 +8,7 @@ export const findBlockByBlockNoteId = async (
   ctx: AuthQueryCtx,
   { noteId, blockId }: { noteId: Id<'notes'>; blockId: string },
 ): Promise<Block | null> => {
-  const note = await ctx.db.get(noteId)
+  const note = await ctx.db.get("notes", noteId)
   if (!note) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   }

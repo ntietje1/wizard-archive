@@ -20,6 +20,7 @@ export async function setPreviewImage(
     claimToken: string
   },
 ): Promise<void> {
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   const item = await ctx.db.get(itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   await requireCampaignMembership(ctx, item.campaignId)
@@ -48,6 +49,7 @@ export async function setPreviewImage(
 
   const oldPreviewStorageId = item.previewStorageId
 
+  // eslint-disable-next-line @convex-dev/explicit-table-ids
   await ctx.db.patch(itemId, {
     previewStorageId,
     previewUpdatedAt: Date.now(),

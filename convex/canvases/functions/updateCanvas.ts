@@ -24,7 +24,7 @@ export async function updateCanvas(
     color?: string | null
   },
 ): Promise<{ canvasId: Id<'canvases'>; slug: string }> {
-  const canvasFromDb = await ctx.db.get(canvasId)
+  const canvasFromDb = await ctx.db.get("canvases", canvasId)
   if (!canvasFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
   await requireCampaignMembership(ctx, canvasFromDb.campaignId)
   const canvas = await requireItemAccess(ctx, {
@@ -70,7 +70,7 @@ export async function updateCanvas(
     return { canvasId: canvas._id, slug: canvas.slug }
   }
 
-  await ctx.db.patch(canvas._id, {
+  await ctx.db.patch("canvases", canvas._id, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
