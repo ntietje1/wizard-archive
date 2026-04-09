@@ -60,6 +60,15 @@ export function isCanvas(item: AnySidebarItem | null | undefined): item is Canva
 }
 
 /**
+ * Type guard to check if a sidebar item is a Canvas.
+ */
+export function isCanvas(
+  item: AnySidebarItem | null | undefined,
+): item is Canvas {
+  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.canvases)
+}
+
+/**
  * Safely extracts a typed sidebar item from a union type.
  * Returns the item if it matches the specified type, undefined otherwise.
  */
