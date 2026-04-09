@@ -82,7 +82,15 @@ export const Route = createRootRouteWithContext<{
       }
     }
 
-    const token = await fetchAuthToken()
+    let token: string | undefined = undefined
+    try {
+      token = await fetchAuthToken()
+    } catch (error) {
+      logger.debug(
+        '[auth] fetchAuthToken failed, falling back to client-side auth:',
+        error,
+      )
+    }
     let initialTheme: Theme | null = null
     let initialPanelPreferences: Record<string, PanelPreference> | null = null
     if (token) {
