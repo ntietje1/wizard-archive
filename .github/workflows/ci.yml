@@ -34,6 +34,7 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
       - run: vp check
+      - run: vp run lint:convex # TODO: remove this once plugins exist for oxlint
 
   knip:
     name: Knip
@@ -47,7 +48,7 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
       # TODO: remove --include flag once unused exports/types are cleaned up
-      - run: pnpm knip --include dependencies,unlisted
+      - run: vp run knip --include dependencies,unlisted
 
   react-compiler:
     name: React Compiler Health
