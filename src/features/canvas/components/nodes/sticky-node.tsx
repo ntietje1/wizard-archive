@@ -6,10 +6,7 @@ import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 
-export type StickyNodeType = Node<
-  { label: string; color: string; opacity?: number },
-  'sticky'
->
+export type StickyNodeType = Node<{ label: string; color: string; opacity?: number }, 'sticky'>
 
 export function StickyPreview({
   label,
@@ -29,19 +26,12 @@ export function StickyPreview({
         opacity: (opacity ?? 100) / 100,
       }}
     >
-      <p className="text-sm whitespace-pre-wrap select-none">
-        {label || 'Double-click to edit'}
-      </p>
+      <p className="text-sm whitespace-pre-wrap select-none">{label || 'Double-click to edit'}</p>
     </div>
   )
 }
 
-export function StickyNode({
-  id,
-  data,
-  selected,
-  dragging,
-}: NodeProps<StickyNodeType>) {
+export function StickyNode({ id, data, selected, dragging }: NodeProps<StickyNodeType>) {
   const [editValue, setEditValue] = useState('')
   const { updateNodeData } = useContext(CanvasContext)
   const label = data.label || ''
@@ -116,11 +106,7 @@ export function StickyNode({
             {label || 'Double-click to edit'}
           </p>
         )}
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-primary"
-        />
+        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

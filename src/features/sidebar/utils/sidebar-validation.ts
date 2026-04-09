@@ -17,9 +17,7 @@ export function validateNoCircularParent(
   newParentId: Id<'folders'> | null,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): ValidationResult {
-  return validateNoCircularParentShared(itemId, newParentId, (id) =>
-    itemsMap.get(id),
-  )
+  return validateNoCircularParentShared(itemId, newParentId, (id) => itemsMap.get(id))
 }
 
 /**
@@ -85,10 +83,7 @@ export function validateSidebarItemName(
  * Checks for circular references.
  */
 export function validateParentChange(
-  options: Pick<
-    SidebarItemValidationOptions,
-    'itemId' | 'parentId' | 'itemsMap'
-  >,
+  options: Pick<SidebarItemValidationOptions, 'itemId' | 'parentId' | 'itemsMap'>,
 ): ValidationResult {
   const { itemId, parentId, itemsMap } = options
 
@@ -103,9 +98,7 @@ export function validateParentChange(
  * Combined validation for sidebar item operations.
  * Use this for comprehensive validation on create/update/move.
  */
-export function validateSidebarItem(
-  options: SidebarItemValidationOptions,
-): ValidationResult {
+export function validateSidebarItem(options: SidebarItemValidationOptions): ValidationResult {
   const { name, parentId, itemId, siblings, itemsMap, isMove } = options
 
   const nameResult = validateSidebarItemName({ name, siblings, itemId })

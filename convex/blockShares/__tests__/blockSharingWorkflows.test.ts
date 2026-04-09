@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupMultiPlayerContext } from '../../_test/identities.helper'
-import {
-  createBlock,
-  createNote,
-  createSidebarShare,
-} from '../../_test/factories.helper'
+import { createBlock, createNote, createSidebarShare } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('block sharing workflows', () => {
@@ -19,18 +15,8 @@ describe('block sharing workflows', () => {
       const p2 = ctx.players[1]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block1 = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
-      const block2 = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block1 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block2 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -71,24 +57,17 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const dmResult = await dmAuth.query(
-        api.blocks.queries.getBlocksWithShares,
-        {
-          noteId: note.noteId,
-          blockIds: [block1.blockId, block2.blockId],
-        },
-      )
+      const dmResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        noteId: note.noteId,
+        blockIds: [block1.blockId, block2.blockId],
+      })
 
-      const b1Info = dmResult.blocks.find(
-        (b) => b.blockNoteId === block1.blockId,
-      )!
+      const b1Info = dmResult.blocks.find((b) => b.blockNoteId === block1.blockId)!
       expect(b1Info.shareStatus).toBe('individually_shared')
       expect(b1Info.sharedMemberIds).toContain(p1.memberId)
       expect(b1Info.sharedMemberIds).not.toContain(p2.memberId)
 
-      const b2Info = dmResult.blocks.find(
-        (b) => b.blockNoteId === block2.blockId,
-      )!
+      const b2Info = dmResult.blocks.find((b) => b.blockNoteId === block2.blockId)!
       expect(b2Info.shareStatus).toBe('individually_shared')
       expect(b2Info.sharedMemberIds).toHaveLength(0)
 
@@ -101,13 +80,10 @@ describe('block sharing workflows', () => {
         status: 'all_shared',
       })
 
-      const allSharedResult = await dmAuth.query(
-        api.blocks.queries.getBlocksWithShares,
-        {
-          noteId: note.noteId,
-          blockIds: [block1.blockId, block2.blockId],
-        },
-      )
+      const allSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        noteId: note.noteId,
+        blockIds: [block1.blockId, block2.blockId],
+      })
       for (const b of allSharedResult.blocks) {
         expect(b.shareStatus).toBe('all_shared')
       }
@@ -121,13 +97,10 @@ describe('block sharing workflows', () => {
         status: 'not_shared',
       })
 
-      const notSharedResult = await dmAuth.query(
-        api.blocks.queries.getBlocksWithShares,
-        {
-          noteId: note.noteId,
-          blockIds: [block1.blockId, block2.blockId],
-        },
-      )
+      const notSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        noteId: note.noteId,
+        blockIds: [block1.blockId, block2.blockId],
+      })
       for (const b of notSharedResult.blocks) {
         expect(b.shareStatus).toBe('not_shared')
         expect(b.sharedMemberIds).toHaveLength(0)
@@ -142,12 +115,7 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -208,9 +176,7 @@ describe('block sharing workflows', () => {
       expect(afterUnshare).not.toBeNull()
       expect(afterUnshare!.deletionTime).not.toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) =>
-        dbCtx.db.get(block.blockDbId),
-      )
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -222,12 +188,7 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -255,9 +216,7 @@ describe('block sharing workflows', () => {
       })
       expect(shareRow).toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) =>
-        dbCtx.db.get(block.blockDbId),
-      )
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -269,12 +228,7 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -321,19 +275,12 @@ describe('block sharing workflows', () => {
       const activeShares = allShares.filter((s) => s.deletionTime === null)
       expect(activeShares).toHaveLength(1)
 
-      const result = await dmAuth.query(
-        api.blocks.queries.getBlocksWithShares,
-        {
-          noteId: note.noteId,
-          blockIds: [block.blockId],
-        },
-      )
-      const blockInfo = result.blocks.find(
-        (b) => b.blockNoteId === block.blockId,
-      )!
-      expect(
-        blockInfo.sharedMemberIds.filter((id) => id === p1.memberId),
-      ).toHaveLength(1)
+      const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        noteId: note.noteId,
+        blockIds: [block.blockId],
+      })
+      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockId)!
+      expect(blockInfo.sharedMemberIds.filter((id) => id === p1.memberId)).toHaveLength(1)
     })
   })
 
@@ -344,12 +291,7 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(
-        t,
-        note.noteId,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
       const blockContent = {
         id: block.blockId,
@@ -369,16 +311,11 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const result = await dmAuth.query(
-        api.blocks.queries.getBlocksWithShares,
-        {
-          noteId: note.noteId,
-          blockIds: [block.blockId],
-        },
-      )
-      const blockInfo = result.blocks.find(
-        (b) => b.blockNoteId === block.blockId,
-      )!
+      const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        noteId: note.noteId,
+        blockIds: [block.blockId],
+      })
+      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockId)!
       expect(blockInfo.sharedMemberIds).toContain(p1.memberId)
     })
   })

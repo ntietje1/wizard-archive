@@ -1,8 +1,5 @@
 import { useRef } from 'react'
-import {
-  SIDEBAR_ROOT_DROP_TYPE,
-  canDropFilesOnTarget,
-} from '~/features/dnd/utils/dnd-registry'
+import { SIDEBAR_ROOT_DROP_TYPE, canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
@@ -39,9 +36,7 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
       ref={ref}
       className={cn(
         className,
-        isDropTarget &&
-          !isFileDragTarget &&
-          'ring-2 ring-inset ring-ring/60 bg-ring/5',
+        isDropTarget && !isFileDragTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
         isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >

@@ -25,29 +25,20 @@ type ProviderEvents = {
 }
 
 export type ConvexYjsProviderConfig = {
-  pushUpdate: (args: {
-    documentId: string
-    update: ArrayBuffer
-  }) => Promise<{ seq: number }>
+  pushUpdate: (args: { documentId: string; update: ArrayBuffer }) => Promise<{ seq: number }>
   pushAwareness: (args: {
     documentId: string
     clientId: number
     state: ArrayBuffer
   }) => Promise<null>
-  removeAwareness: (args: {
-    documentId: string
-    clientId: number
-  }) => Promise<null>
+  removeAwareness: (args: { documentId: string; clientId: number }) => Promise<null>
 }
 
 function uint8ToArrayBuffer(uint8: Uint8Array): ArrayBuffer {
   if (uint8.byteOffset === 0 && uint8.byteLength === uint8.buffer.byteLength) {
     return uint8.buffer as ArrayBuffer
   }
-  return uint8.buffer.slice(
-    uint8.byteOffset,
-    uint8.byteOffset + uint8.byteLength,
-  ) as ArrayBuffer
+  return uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength) as ArrayBuffer
 }
 
 const UPDATE_DEBOUNCE_MS = 50
@@ -75,11 +66,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   private awarenessInFlightPromise: Promise<void> = Promise.resolve()
   private awarenessDirty = false
 
-  constructor(
-    doc: Y.Doc,
-    documentId: YjsDocumentId,
-    config: ConvexYjsProviderConfig,
-  ) {
+  constructor(doc: Y.Doc, documentId: YjsDocumentId, config: ConvexYjsProviderConfig) {
     super()
     this.doc = doc
     this.documentId = documentId
@@ -94,7 +81,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (this._writable === value) return
 
     if (!value) {
-      this.flushUpdates()
+      void this.flushUpdates()
       this._writable = false
       this.clearUpdateTimers()
     } else {
@@ -169,11 +156,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     teardown()
       .catch(() => {})
       .finally(() => {
-        removeAwarenessStates(
-          this.awareness,
-          [this.doc.clientID],
-          'local-disconnect',
-        )
+        removeAwarenessStates(this.awareness, [this.doc.clientID], 'local-disconnect')
 
         this.doc.off('update', this.handleDocUpdate)
         this.awareness.off('update', this.handleAwarenessUpdate)
@@ -190,16 +173,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     this.pendingUpdates.push(update)
 
     if (this.debounceTimer) clearTimeout(this.debounceTimer)
-    this.debounceTimer = setTimeout(
-      () => this.flushUpdates(),
-      UPDATE_DEBOUNCE_MS,
-    )
+    this.debounceTimer = setTimeout(() => this.flushUpdates(), UPDATE_DEBOUNCE_MS)
 
     if (!this.maxWaitTimer) {
-      this.maxWaitTimer = setTimeout(
-        () => this.flushUpdates(),
-        UPDATE_MAX_BATCH_MS,
-      )
+      this.maxWaitTimer = setTimeout(() => this.flushUpdates(), UPDATE_MAX_BATCH_MS)
     }
   }
 
@@ -240,16 +217,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (this.destroyed || !this._writable) return
 
     if (!this.debounceTimer) {
-      this.debounceTimer = setTimeout(
-        () => this.flushUpdates(),
-        UPDATE_DEBOUNCE_MS,
-      )
+      this.debounceTimer = setTimeout(() => this.flushUpdates(), UPDATE_DEBOUNCE_MS)
     }
     if (!this.maxWaitTimer) {
-      this.maxWaitTimer = setTimeout(
-        () => this.flushUpdates(),
-        UPDATE_MAX_BATCH_MS,
-      )
+      this.maxWaitTimer = setTimeout(() => this.flushUpdates(), UPDATE_MAX_BATCH_MS)
     }
   }
 
@@ -267,10 +238,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   // -- Awareness throttling --
 
   private handleAwarenessUpdate = (
-    {
-      added,
-      updated,
-    }: { added: Array<number>; updated: Array<number>; removed: Array<number> },
+    { added, updated }: { added: Array<number>; updated: Array<number>; removed: Array<number> },
     origin: unknown,
   ) => {
     if (origin === this || this.destroyed) return
@@ -287,7 +255,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       return
     }
 
-    this.flushAwareness()
+    void this.flushAwareness()
     this.awarenessTimer = setTimeout(() => {
       this.awarenessTimer = null
       if (this.awarenessDirty) {

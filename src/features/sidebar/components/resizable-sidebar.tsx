@@ -14,9 +14,7 @@ function computeWidths(
   extraWidth: number,
 ) {
   const clamped =
-    rawWidth < SNAP_CLOSED_THRESHOLD
-      ? 0
-      : Math.min(maxWidth, Math.max(minWidth, rawWidth))
+    rawWidth < SNAP_CLOSED_THRESHOLD ? 0 : Math.min(maxWidth, Math.max(minWidth, rawWidth))
   const contentWidth = clamped > 0 ? clamped : fallbackContentWidth
   return {
     displayWidth: clamped,
@@ -201,11 +199,7 @@ export function ResizableSidebar({
         className={`shrink-0 overflow-hidden ${borderClass}`}
         style={{ width: totalDisplayWidth, order: side === 'left' ? 0 : 2 }}
       >
-        <div
-          ref={innerRef}
-          className="h-full"
-          style={{ width: totalContentWidth }}
-        >
+        <div ref={innerRef} className="h-full" style={{ width: totalContentWidth }}>
           {children}
         </div>
       </div>

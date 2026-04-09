@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -53,16 +49,16 @@ test.describe.serial('trash: empty & permanent delete', () => {
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(
-      sidebar.getByRole('link', { name: note1, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: note1, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, note1)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
 
-    await expect(
-      sidebar.getByRole('link', { name: note1, exact: true }),
-    ).not.toBeVisible({ timeout: 10000 })
+    await expect(sidebar.getByRole('link', { name: note1, exact: true })).not.toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('permanently delete one item from trash', async ({ page }) => {
@@ -94,15 +90,15 @@ test.describe.serial('trash: empty & permanent delete', () => {
     // Move remaining notes to trash
     await openContextMenu(page, note2)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(
-      page.getByRole('link', { name: note2, exact: true }),
-    ).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: note2, exact: true })).not.toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, note3)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(
-      page.getByRole('link', { name: note3, exact: true }),
-    ).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: note3, exact: true })).not.toBeVisible({
+      timeout: 10000,
+    })
 
     // Open trash popover and empty
     await page.getByRole('button', { name: /^trash/i }).click()

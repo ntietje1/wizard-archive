@@ -20,11 +20,7 @@ interface SidebarUIState {
 
 interface SidebarUIActions {
   setRenamingId: (id: SidebarItemId | null) => void
-  setFolderState: (
-    campaignId: string,
-    folderId: string,
-    isOpen: boolean,
-  ) => void
+  setFolderState: (campaignId: string, folderId: string, isOpen: boolean) => void
   toggleFolderState: (campaignId: string, folderId: string) => void
   clearAllFolderStates: (campaignId: string) => void
   toggleCloseAllFoldersMode: (campaignId: string) => void
@@ -41,10 +37,7 @@ const defaultCampaignState: CampaignState = {
   bookmarksOnlyMode: false,
 }
 
-function getCampaignState(
-  state: SidebarUIState,
-  campaignId: string,
-): CampaignState {
+function getCampaignState(state: SidebarUIState, campaignId: string): CampaignState {
   return state.campaignStates[campaignId] ?? defaultCampaignState
 }
 
@@ -172,13 +165,10 @@ export function useCampaignSidebarActions(campaignId: string | undefined) {
       useSidebarUIStore.getState().setFolderState(campaignId, folderId, isOpen),
     toggleFolderState: (folderId: string) =>
       useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
-    clearAllFolderStates: () =>
-      useSidebarUIStore.getState().clearAllFolderStates(campaignId),
+    clearAllFolderStates: () => useSidebarUIStore.getState().clearAllFolderStates(campaignId),
     toggleCloseAllFoldersMode: () =>
       useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId),
-    exitCloseAllMode: () =>
-      useSidebarUIStore.getState().exitCloseAllMode(campaignId),
-    toggleBookmarksOnlyMode: () =>
-      useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
+    exitCloseAllMode: () => useSidebarUIStore.getState().exitCloseAllMode(campaignId),
+    toggleBookmarksOnlyMode: () => useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
   }
 }

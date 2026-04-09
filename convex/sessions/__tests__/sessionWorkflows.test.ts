@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
-import {
-  expectConflict,
-  expectPermissionDenied,
-} from '../../_test/assertions.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { expectConflict, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
 describe('session workflows', () => {
@@ -86,12 +79,9 @@ describe('session workflows', () => {
         }),
       )
 
-      const sessionId = await dmAuth.mutation(
-        api.sessions.mutations.startSession,
-        {
-          campaignId: ctx.campaignId,
-        },
-      )
+      const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+        campaignId: ctx.campaignId,
+      })
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.endCurrentSession, {
@@ -116,21 +106,15 @@ describe('session workflows', () => {
         name: 'Visible Session',
       })
 
-      const current = await playerAuth.query(
-        api.sessions.queries.getCurrentSession,
-        {
-          campaignId: ctx.campaignId,
-        },
-      )
+      const current = await playerAuth.query(api.sessions.queries.getCurrentSession, {
+        campaignId: ctx.campaignId,
+      })
       expect(current).not.toBeNull()
       expect(current!.name).toBe('Visible Session')
 
-      const allSessions = await playerAuth.query(
-        api.sessions.queries.getSessionsByCampaign,
-        {
-          campaignId: ctx.campaignId,
-        },
-      )
+      const allSessions = await playerAuth.query(api.sessions.queries.getSessionsByCampaign, {
+        campaignId: ctx.campaignId,
+      })
       expect(allSessions.length).toBeGreaterThanOrEqual(1)
     })
   })

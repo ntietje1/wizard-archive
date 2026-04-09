@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createCanvas,
   createFolder,
@@ -30,10 +26,9 @@ describe('claimPreviewGeneration', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
 
     expect(result.claimed).toBe(true)
     expect(typeof result.claimToken).toBe('string')
@@ -51,16 +46,11 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: folderId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: folderId,
+    })
 
     expect(result.claimed).toBe(false)
     expect(result.claimToken).toBeNull()
@@ -80,10 +70,9 @@ describe('claimPreviewGeneration', () => {
       permissionLevel: 'edit',
     })
 
-    const result = await playerAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
 
     expect(result.claimed).toBe(true)
     expect(typeof result.claimToken).toBe('string')
@@ -145,16 +134,14 @@ describe('claimPreviewGeneration', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const first = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
     expect(first.claimed).toBe(true)
 
-    const second = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
     expect(second.claimed).toBe(false)
     expect(second.claimToken).toBeNull()
   })
@@ -171,10 +158,9 @@ describe('claimPreviewGeneration', () => {
       })
     })
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
     expect(result.claimed).toBe(true)
   })
 
@@ -190,10 +176,9 @@ describe('claimPreviewGeneration', () => {
       })
     })
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
     expect(result.claimed).toBe(false)
     expect(result.claimToken).toBeNull()
   })
@@ -210,10 +195,9 @@ describe('claimPreviewGeneration', () => {
       })
     })
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: noteId,
+    })
     expect(result.claimed).toBe(true)
   })
 
@@ -221,16 +205,11 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: canvasId },
-    )
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: canvasId,
+    })
 
     expect(result.claimed).toBe(true)
     expect(typeof result.claimToken).toBe('string')
@@ -248,11 +227,7 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -262,10 +237,9 @@ describe('claimPreviewGeneration', () => {
       permissionLevel: 'edit',
     })
 
-    const result = await playerAuth.mutation(
-      api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: canvasId },
-    )
+    const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      itemId: canvasId,
+    })
 
     expect(result.claimed).toBe(true)
   })
@@ -274,11 +248,7 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -299,11 +269,7 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
@@ -463,11 +429,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const storageId = await t.run(async (dbCtx) => {
       return await dbCtx.storage.store(new Blob(['preview']))
@@ -578,11 +540,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const storageId = await t.run(async (dbCtx) => {
       return await dbCtx.storage.store(new Blob(['test-preview']))
@@ -614,11 +572,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const oldStorageId = await t.run(async (dbCtx) => {
       return await dbCtx.storage.store(new Blob(['old-preview']))
@@ -656,11 +610,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -695,11 +645,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -726,11 +672,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const storageId = await t.run(async (dbCtx) => {
       return await dbCtx.storage.store(new Blob(['preview']))
@@ -749,11 +691,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
       await dbCtx.db.delete(canvasId)
     })
@@ -832,10 +770,10 @@ describe('enhanceBase previewUrl resolution', () => {
       await dbCtx.db.patch(noteId, { previewStorageId: storageId })
     })
 
-    const items = await dmAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
-    )
+    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+      campaignId: ctx.campaignId,
+      location: 'sidebar',
+    })
 
     const note = items.find((i) => i._id === noteId)
     expect(note).toBeDefined()
@@ -847,11 +785,7 @@ describe('enhanceBase previewUrl resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const storageId = await t.run(async (dbCtx) => {
       return await dbCtx.storage.store(new Blob(['canvas-preview']))
@@ -861,10 +795,10 @@ describe('enhanceBase previewUrl resolution', () => {
       await dbCtx.db.patch(canvasId, { previewStorageId: storageId })
     })
 
-    const items = await dmAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
-    )
+    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+      campaignId: ctx.campaignId,
+      location: 'sidebar',
+    })
 
     const canvas = items.find((i) => i._id === canvasId)
     expect(canvas).toBeDefined()
@@ -876,16 +810,12 @@ describe('enhanceBase previewUrl resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const items = await dmAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
-    )
+    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+      campaignId: ctx.campaignId,
+      location: 'sidebar',
+    })
 
     const canvas = items.find((i) => i._id === canvasId)
     expect(canvas).toBeDefined()
@@ -898,10 +828,10 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const items = await dmAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
-    )
+    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+      campaignId: ctx.campaignId,
+      location: 'sidebar',
+    })
 
     const note = items.find((i) => i._id === noteId)
     expect(note).toBeDefined()

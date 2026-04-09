@@ -75,7 +75,7 @@ export function EditableName({
       // Validate the name before submitting
       setIsSubmitting(true)
       try {
-        const error = await checkNameUnique(trimmedName)
+        const error = checkNameUnique(trimmedName)
         if (error) {
           toast.error(error)
           setName(initialName)
@@ -125,10 +125,7 @@ export function EditableName({
             isSubmitting && 'opacity-50',
           )}
         />
-        <NameValidationFeedback
-          errorMessage={validationError}
-          anchorRef={inputRef}
-        />
+        <NameValidationFeedback errorMessage={validationError} anchorRef={inputRef} />
       </div>
     )
   }

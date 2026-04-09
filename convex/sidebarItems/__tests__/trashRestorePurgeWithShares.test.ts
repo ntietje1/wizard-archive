@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createBlock,
   createBlockShare,
@@ -97,10 +93,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterRestore.bookmark!.deletionTime).toBeNull()
 
     // Player can see note again
-    const noteAfterRestore = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const noteAfterRestore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      id: noteId,
+    })
     expect(noteAfterRestore.myPermissionLevel).toBe('view')
 
     // Trash again and permanently delete
@@ -108,10 +103,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       itemId: folderId,
       location: 'trash',
     })
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: folderId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: folderId,
+    })
 
     // Verify all hard-deleted
     const afterPurge = await t.run(async (dbCtx) => {
@@ -152,10 +146,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       location: 'sidebar',
     })
 
-    const note = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItem,
-      { id: noteId },
-    )
+    const note = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
     expect(note.myPermissionLevel).toBe('edit')
   })
 
@@ -186,10 +177,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterTrash!.deletionTime).not.toBeNull()
 
     // Permanently delete
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: noteId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: noteId,
+    })
 
     const afterPurge = await t.run(async (dbCtx) => dbCtx.db.get(blockShareId))
     expect(afterPurge).toBeNull()

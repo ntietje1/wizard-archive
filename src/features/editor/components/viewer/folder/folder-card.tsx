@@ -66,17 +66,9 @@ function FolderSvg({
         : isSelected
           ? 'stroke-ring'
           : 'stroke-border'
-  const strokeWidth = isDrop
-    ? 'stroke-[3]'
-    : isSelected
-      ? 'stroke-[2.5]'
-      : 'stroke-2'
+  const strokeWidth = isDrop ? 'stroke-[3]' : isSelected ? 'stroke-[2.5]' : 'stroke-2'
   const tintClass =
-    dropState === 'trash'
-      ? 'fill-destructive/5'
-      : dropState === 'valid'
-        ? 'fill-ring/5'
-        : undefined
+    dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
 
   return (
     <svg className={cn('absolute inset-0 w-full h-full overflow-visible')}>
@@ -85,16 +77,9 @@ function FolderSvg({
         width="100%"
         height={H - TAB_H}
         rx={R}
-        className={cn(
-          'fill-card [paint-order:stroke]',
-          strokeWidth,
-          strokeClass,
-        )}
+        className={cn('fill-card [paint-order:stroke]', strokeWidth, strokeClass)}
       />
-      <path
-        d={TAB_STROKE}
-        className={cn('fill-none', strokeWidth, strokeClass)}
-      />
+      <path d={TAB_STROKE} className={cn('fill-none', strokeWidth, strokeClass)} />
       <path d={TAB_FILL} className="fill-card" />
       {tintClass && (
         <>
@@ -116,10 +101,7 @@ function FolderSvg({
         rx={R}
         className="fill-muted/70 stroke-none opacity-0 group-hover:opacity-100"
       />
-      <path
-        d={TAB_FILL}
-        className="fill-muted/70 opacity-0 group-hover:opacity-100"
-      />
+      <path d={TAB_FILL} className="fill-muted/70 opacity-0 group-hover:opacity-100" />
     </svg>
   )
 }
@@ -146,14 +128,10 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
 
   const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
   const isTrashAction = useDndStore(
-    (s) =>
-      s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
+    (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
 
-  const canDrag = hasAtLeastPermissionLevel(
-    folder.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -175,11 +153,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
 
   const dropState: DropState =
-    !isDropTarget && !isFileDragTarget
-      ? 'none'
-      : isDropTarget && isTrashAction
-        ? 'trash'
-        : 'valid'
+    !isDropTarget && !isFileDragTarget ? 'none' : isDropTarget && isTrashAction ? 'trash' : 'valid'
 
   const cardContent = (
     <div ref={ref} className="h-[140px]">
@@ -231,11 +205,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
   )
 
   return (
-    <EditorContextMenu
-      ref={contextMenuRef}
-      viewContext="folder-view"
-      item={folder}
-    >
+    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={folder}>
       {cardContent}
     </EditorContextMenu>
   )

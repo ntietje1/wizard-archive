@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { signIn } from './helpers/auth-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -44,9 +40,7 @@ test.describe.serial('player invite flow', () => {
     await context.close()
   })
 
-  test('DM opens campaign settings and sees invite section', async ({
-    page,
-  }) => {
+  test('DM opens campaign settings and sees invite section', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
@@ -62,10 +56,7 @@ test.describe.serial('player invite flow', () => {
     await expect(dialog.getByText(/invite/i)).toBeVisible({ timeout: 10000 })
   })
 
-  test('player navigates to join URL and requests to join', async ({
-    browser,
-    page,
-  }) => {
+  test('player navigates to join URL and requests to join', async ({ browser, page }) => {
     // DM navigates to campaign to extract the URL
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)

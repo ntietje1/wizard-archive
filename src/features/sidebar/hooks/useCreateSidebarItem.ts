@@ -1,9 +1,6 @@
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -57,18 +54,12 @@ export type CreateItemResult = {
 export function useCreateSidebarItem() {
   const validation = useSidebarValidation()
   const createNoteMutation = useAppMutation(api.notes.mutations.createNote)
-  const createFolderMutation = useAppMutation(
-    api.folders.mutations.createFolder,
-  )
+  const createFolderMutation = useAppMutation(api.folders.mutations.createFolder)
   const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap)
   const createFileMutation = useAppMutation(api.files.mutations.createFile)
-  const createCanvasMutation = useAppMutation(
-    api.canvases.mutations.createCanvas,
-  )
+  const createCanvasMutation = useAppMutation(api.canvases.mutations.createCanvas)
 
-  const createItem = async (
-    args: CreateItemArgs,
-  ): Promise<CreateItemResult> => {
+  const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
     const trimmedName = args.name.trim()
     const nameResult = validation.validateName(trimmedName, args.parentId)
     if (!nameResult.valid) throw new Error(nameResult.error)

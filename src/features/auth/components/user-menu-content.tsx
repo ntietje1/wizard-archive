@@ -7,10 +7,7 @@ import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
 import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
-import {
-  AccountRow,
-  AccountSwitcher,
-} from '~/features/auth/components/account-switcher'
+import { AccountRow, AccountSwitcher } from '~/features/auth/components/account-switcher'
 import { useDeviceSessions } from '~/features/auth/hooks/useAuthSessions'
 
 const menuItemClass =
@@ -27,7 +24,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
   const handleSwitchAccount = async (sessionToken: string) => {
     try {
       await authClient.multiSession.setActive({ sessionToken })
-      navigate({ to: '/campaigns', reloadDocument: true })
+      void navigate({ to: '/campaigns', reloadDocument: true })
     } catch (error) {
       handleError(error, 'Failed to switch account')
       deviceSessions.refresh()
@@ -45,7 +42,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
       queryClient.clear()
 
       const remaining = await fetchDeviceSessions()
-      navigate({
+      void navigate({
         to: '/sign-in',
         search: remaining.length > 0 ? { view: 'picker' } : {},
       })
@@ -76,7 +73,7 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
         <AccountSwitcher
           otherAccounts={otherAccounts}
           onAddAccount={() => {
-            navigate({
+            void navigate({
               to: '/sign-in',
               search: { view: 'form' },
             })

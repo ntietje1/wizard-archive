@@ -20,10 +20,7 @@ const VALID_STATUS_TRANSITIONS: Record<
 
 export async function updateCampaignMemberStatus(
   ctx: AuthMutationCtx,
-  {
-    memberId,
-    status,
-  }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
+  { memberId, status }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get(memberId)
   if (!member || member.deletionTime !== null) {
@@ -33,10 +30,7 @@ export async function updateCampaignMemberStatus(
   await requireDmRole(ctx, member.campaignId)
 
   if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) {
-    throwClientError(
-      ERROR_CODE.PERMISSION_DENIED,
-      'Only player membership status can be changed',
-    )
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only player membership status can be changed')
   }
 
   const allowedTransitions = VALID_STATUS_TRANSITIONS[member.status]

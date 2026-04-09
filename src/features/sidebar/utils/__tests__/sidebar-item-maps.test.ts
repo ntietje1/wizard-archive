@@ -3,11 +3,7 @@ import {
   buildSidebarItemMaps,
   collectDescendantIds,
 } from '~/features/sidebar/utils/sidebar-item-maps'
-import {
-  createFile,
-  createFolder,
-  createNote,
-} from '~/test/factories/sidebar-item-factory'
+import { createFile, createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
 describe('buildSidebarItemMaps', () => {
@@ -28,12 +24,7 @@ describe('buildSidebarItemMaps', () => {
     const child1 = createNote({ parentId: folder._id })
     const child2 = createNote({ parentId: folder._id })
     const rootNote = createNote({ parentId: null })
-    const { parentItemsMap } = buildSidebarItemMaps([
-      folder,
-      child1,
-      child2,
-      rootNote,
-    ])
+    const { parentItemsMap } = buildSidebarItemMaps([folder, child1, child2, rootNote])
     expect(parentItemsMap.get(folder._id)?.length).toBe(2)
     expect(parentItemsMap.get(null)?.length).toBe(2)
   })
@@ -130,10 +121,7 @@ describe('collectDescendantIds', () => {
   })
 
   it('returns empty set for non-existent folder', () => {
-    const result = collectDescendantIds(
-      testId<'folders'>('folder_nonexistent'),
-      [],
-    )
+    const result = collectDescendantIds(testId<'folders'>('folder_nonexistent'), [])
     expect(result.size).toBe(0)
   })
 })

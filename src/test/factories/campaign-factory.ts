@@ -33,9 +33,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     deletionTime: null,
     deletedBy: null,
     dmUserProfile: dmUser,
-    myMembership: memberOverrides
-      ? createCampaignMember({ ...memberOverrides, campaignId })
-      : null,
+    myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,
     playerCount: 0,
     ...rest,
   }

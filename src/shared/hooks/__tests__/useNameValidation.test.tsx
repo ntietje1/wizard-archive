@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import {
-  NAME_VALIDATION_DEBOUNCE_MS,
-  useNameValidation,
-} from '~/shared/hooks/useNameValidation'
+import { NAME_VALIDATION_DEBOUNCE_MS, useNameValidation } from '~/shared/hooks/useNameValidation'
 import { testId } from '~/test/helpers/test-id'
 
 const mockValidateName = vi.fn()
@@ -93,7 +90,7 @@ describe('useNameValidation', () => {
     expect(result.current.validationError).toMatch(/dot/)
   })
 
-  it('debounces uniqueness check', async () => {
+  it('debounces uniqueness check', () => {
     const { result, rerender } = renderHook(
       ({ name }: { name: string }) =>
         useNameValidation({
@@ -115,15 +112,13 @@ describe('useNameValidation', () => {
 
     expect(result.current.isNotUnique).toBe(false)
 
-    await act(() => {
+    act(() => {
       vi.advanceTimersByTime(NAME_VALIDATION_DEBOUNCE_MS)
     })
 
     expect(result.current.isNotUnique).toBe(true)
     expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toBe(
-      'An item with this name already exists here',
-    )
+    expect(result.current.validationError).toBe('An item with this name already exists here')
   })
 
   it('returns no errors when not active', () => {

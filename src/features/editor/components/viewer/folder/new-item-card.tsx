@@ -61,7 +61,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         name: getDefaultName(type, parentId),
       })
       openParentFolders(result.id)
-      navigateToItem(result.slug)
+      void navigateToItem(result.slug)
     } catch (error) {
       handleError(error, 'Failed to create item')
     }
@@ -81,10 +81,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   const rect = e.currentTarget.getBoundingClientRect()
-                  openMenuAt(
-                    rect.left + rect.width / 2,
-                    rect.top + rect.height / 2,
-                  )
+                  openMenuAt(rect.left + rect.width / 2, rect.top + rect.height / 2)
                 }
               }}
             >
@@ -98,15 +95,11 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
           <FilePlus className="h-4 w-4 mr-2" />
           New Note
         </ContextMenuItem>
-        <ContextMenuItem
-          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
-        >
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}>
           <FolderPlus className="h-4 w-4 mr-2" />
           New Folder
         </ContextMenuItem>
-        <ContextMenuItem
-          onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
-        >
+        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}>
           <MapPin className="h-4 w-4 mr-2" />
           New Map
         </ContextMenuItem>

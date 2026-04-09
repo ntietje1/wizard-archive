@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
-import {
-  createBlock,
-  createNote,
-  createSidebarShare,
-} from '../../_test/factories.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createBlock, createNote, createSidebarShare } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
   expectPermissionDenied,
@@ -45,11 +37,7 @@ describe('getNote', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: realNoteId } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: realNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
       await dbCtx.db.delete(realNoteId)
     })

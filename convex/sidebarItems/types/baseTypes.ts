@@ -9,8 +9,7 @@ export const SIDEBAR_ITEM_LOCATION = {
   trash: 'trash',
 } as const
 
-export type SidebarItemLocation =
-  (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
+export type SidebarItemLocation = (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
 
 export const SIDEBAR_ITEM_TYPES = {
   notes: 'note',
@@ -28,8 +27,7 @@ type SidebarItemTypeToTableNameMap = {
   [K in SidebarItemTable as (typeof SIDEBAR_ITEM_TYPES)[K]]: K
 }
 
-type SidebarItemTypeToTableName<T extends SidebarItemType> =
-  SidebarItemTypeToTableNameMap[T]
+type SidebarItemTypeToTableName<T extends SidebarItemType> = SidebarItemTypeToTableNameMap[T]
 
 export type SidebarItemId = {
   [K in SidebarItemTable]: Id<K>
@@ -61,7 +59,6 @@ export type SidebarItem<T extends SidebarItemType> = SidebarItemFromDb<T> & {
   previewUrl: string | null
 }
 
-export type SidebarItemWithContent<T extends SidebarItemType> =
-  SidebarItem<T> & {
-    ancestors: Array<Folder>
-  }
+export type SidebarItemWithContent<T extends SidebarItemType> = SidebarItem<T> & {
+  ancestors: Array<Folder>
+}

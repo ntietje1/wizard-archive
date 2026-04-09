@@ -12,9 +12,7 @@ export const ToastContent = ({
 }) => (
   <div className="space-y-2 w-full min-w-[300px]">
     <div className="font-medium text-sm">{title}</div>
-    {progress !== undefined && (
-      <Progress value={progress} className="h-1.5 w-full" />
-    )}
+    {progress !== undefined && <Progress value={progress} className="h-1.5 w-full" />}
     <div className="text-xs text-muted-foreground">{message}</div>
   </div>
 )
@@ -28,8 +26,7 @@ export const FileProgressContent = ({
   processedFiles: number
   skippedFiles: number
 }) => {
-  const percentage =
-    totalFiles > 0 ? Math.round((processedFiles / totalFiles) * 100) : 0
+  const percentage = totalFiles > 0 ? Math.round((processedFiles / totalFiles) * 100) : 0
 
   return (
     <div className="space-y-2 w-full min-w-[300px]">
@@ -43,20 +40,9 @@ export const FileProgressContent = ({
   )
 }
 
-export const FolderProgressContent = ({
-  progress,
-}: {
-  progress: UploadProgress
-}) => {
-  const {
-    totalFiles,
-    totalFolders,
-    processedFiles,
-    processedFolders,
-    skippedFiles,
-  } = progress
-  const percentage =
-    totalFiles > 0 ? Math.round((processedFiles / totalFiles) * 100) : 0
+export const FolderProgressContent = ({ progress }: { progress: UploadProgress }) => {
+  const { totalFiles, totalFolders, processedFiles, processedFolders, skippedFiles } = progress
+  const percentage = totalFiles > 0 ? Math.round((processedFiles / totalFiles) * 100) : 0
 
   return (
     <div className="space-y-2 w-full min-w-[300px]">

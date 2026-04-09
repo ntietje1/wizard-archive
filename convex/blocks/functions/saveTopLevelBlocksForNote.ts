@@ -18,17 +18,12 @@ export async function saveTopLevelBlocksForNote(
   const existingTopLevelBlocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_topLevel', (q) =>
-      q
-        .eq('campaignId', campaignId)
-        .eq('noteId', noteId)
-        .eq('isTopLevel', true),
+      q.eq('campaignId', campaignId).eq('noteId', noteId).eq('isTopLevel', true),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
-  const existingBlocksMap = new Map(
-    existingTopLevelBlocks.map((block) => [block.blockId, block]),
-  )
+  const existingBlocksMap = new Map(existingTopLevelBlocks.map((block) => [block.blockId, block]))
 
   const positions = new Map<string, number>()
   content.forEach((block, index) => positions.set(block.id, index))

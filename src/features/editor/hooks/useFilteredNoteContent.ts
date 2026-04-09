@@ -10,10 +10,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { assertNever } from '~/shared/utils/utils'
 
-function canViewBlock(
-  meta: BlockMeta,
-  viewAsPlayerId: Id<'campaignMembers'>,
-): boolean {
+function canViewBlock(meta: BlockMeta, viewAsPlayerId: Id<'campaignMembers'>): boolean {
   switch (meta.shareStatus) {
     case SHARE_STATUS.ALL_SHARED:
       return true

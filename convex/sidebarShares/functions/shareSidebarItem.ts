@@ -7,10 +7,7 @@ import { shareSidebarItemWithMember } from './sidebarItemShareMutations'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../../sidebarItems/types/baseTypes'
 
 export const shareSidebarItem = async (
   ctx: AuthMutationCtx,
@@ -43,9 +40,7 @@ export const shareSidebarItem = async (
     )
     .unique()
   const previousLevel =
-    existingShare && existingShare.deletionTime === null
-      ? existingShare.permissionLevel
-      : null
+    existingShare && existingShare.deletionTime === null ? existingShare.permissionLevel : null
 
   const result = await shareSidebarItemWithMember(ctx, {
     sidebarItemId,

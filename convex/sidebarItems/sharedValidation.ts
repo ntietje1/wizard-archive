@@ -52,9 +52,7 @@ export function checkNameConflict(
 ): ValidationResult {
   const normalizedName = name.trim().toLowerCase()
   const conflict = siblings.find(
-    (item) =>
-      item.name.trim().toLowerCase() === normalizedName &&
-      item._id !== excludeId,
+    (item) => item.name.trim().toLowerCase() === normalizedName && item._id !== excludeId,
   )
 
   if (conflict) {
@@ -75,9 +73,7 @@ export function checkNameConflict(
 export function validateNoCircularParent(
   itemId: SidebarItemId,
   newParentId: Id<'folders'> | null,
-  getParent: (
-    id: Id<'folders'>,
-  ) => { parentId: Id<'folders'> | null } | undefined,
+  getParent: (id: Id<'folders'>) => { parentId: Id<'folders'> | null } | undefined,
 ): ValidationResult {
   if (!newParentId) {
     return { valid: true }

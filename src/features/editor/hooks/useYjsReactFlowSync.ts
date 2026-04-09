@@ -36,10 +36,7 @@ export function useYjsReactFlowSync(
   remoteResizeRef.current = remoteResizeDimensions
 
   const springStates = useRef(
-    new Map<
-      string,
-      { spring: SpringState; target: { x: number; y: number } }
-    >(),
+    new Map<string, { spring: SpringState; target: { x: number; y: number } }>(),
   )
   const springActiveIds = useRef(new Set<string>())
 
@@ -118,10 +115,7 @@ export function useYjsReactFlowSync(
     }
 
     const animate = (time: number) => {
-      const dt = Math.min(
-        (time - (prevTimeRef.current || time)) / 1000,
-        SPRING_DEFAULTS.maxDt,
-      )
+      const dt = Math.min((time - (prevTimeRef.current || time)) / 1000, SPRING_DEFAULTS.maxDt)
       prevTimeRef.current = time
 
       const targets = remoteDragRef.current

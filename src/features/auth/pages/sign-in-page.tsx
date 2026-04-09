@@ -27,18 +27,14 @@ export function SignInPage({ view }: { view?: 'form' | 'picker' }) {
         <AccountPicker
           sessions={allSessions}
           redirectTo="/campaigns"
-          onUseOtherAccount={() =>
-            navigate({ to: '/sign-in', search: { view: 'form' } })
-          }
+          onUseOtherAccount={() => navigate({ to: '/sign-in', search: { view: 'form' } })}
         />
       ) : (
         <SignInForm
           redirectTo="/campaigns"
           existingSessions={allSessions}
           sessionsLoaded={isLoaded}
-          onPickAccount={() =>
-            navigate({ to: '/sign-in', search: { view: 'picker' } })
-          }
+          onPickAccount={() => navigate({ to: '/sign-in', search: { view: 'picker' } })}
         />
       )}
     </AuthPageLayout>

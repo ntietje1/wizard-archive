@@ -33,45 +33,39 @@ export function useEditorMode(): EditorModeContextType {
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
-  const setEditorMutation = useAppMutation(
-    api.editors.mutations.setCurrentEditor,
-    {
-      onMutate: async ({ editorMode: newMode }) => {
-        if (!campaignData?._id || !newMode) return
+  const setEditorMutation = useAppMutation(api.editors.mutations.setCurrentEditor, {
+    onMutate: async ({ editorMode: newMode }) => {
+      if (!campaignData?._id || !newMode) return
 
-        const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
-          campaignId: campaignData._id,
-        })
+      const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
+        campaignId: campaignData._id,
+      })
 
-        await queryClient.cancelQueries({ queryKey: queryOptions.queryKey })
+      await queryClient.cancelQueries({ queryKey: queryOptions.queryKey })
 
-        const previous = queryClient.getQueryData<Editor>(queryOptions.queryKey)
+      const previous = queryClient.getQueryData<Editor>(queryOptions.queryKey)
 
-        queryClient.setQueryData(
-          queryOptions.queryKey,
-          (old: Editor | null | undefined) => {
-            if (!old) return old
-            return { ...old, editorMode: newMode }
-          },
-        )
+      queryClient.setQueryData(queryOptions.queryKey, (old: Editor | null | undefined) => {
+        if (!old) return old
+        return { ...old, editorMode: newMode }
+      })
 
-        return { previous, queryKey: queryOptions.queryKey }
-      },
-      onError: (err, _vars, context) => {
-        if (context?.previous) {
-          queryClient.setQueryData(context.queryKey, context.previous)
-        }
-        handleError(err, 'Failed to update editor mode')
-      },
-      onSettled: () => {
-        if (!campaignData?._id) return
-        const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
-          campaignId: campaignData._id,
-        })
-        queryClient.invalidateQueries({ queryKey: queryOptions.queryKey })
-      },
+      return { previous, queryKey: queryOptions.queryKey }
     },
-  )
+    onError: (err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(context.queryKey, context.previous)
+      }
+      handleError(err, 'Failed to update editor mode')
+    },
+    onSettled: () => {
+      if (!campaignData?._id) return
+      const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
+        campaignId: campaignData._id,
+      })
+      void queryClient.invalidateQueries({ queryKey: queryOptions.queryKey })
+    },
+  })
 
   const viewAsPlayerId = useSidebarUIStore((s) => s.viewAsPlayerId)
   const setViewAsPlayerIdStore = useSidebarUIStore((s) => s.setViewAsPlayerId)

@@ -3,14 +3,8 @@ import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog
 import { XIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  DialogOverlay,
-  DialogPortal,
-} from '~/features/shadcn/components/dialog'
-import {
-  AlertDialogOverlay,
-  AlertDialogPortal,
-} from '~/features/shadcn/components/alert-dialog'
+import { DialogOverlay, DialogPortal } from '~/features/shadcn/components/dialog'
+import { AlertDialogOverlay, AlertDialogPortal } from '~/features/shadcn/components/alert-dialog'
 
 /**
  * Dark backdrop rendered inside the dialog's portal
@@ -49,13 +43,7 @@ export function SettingsSubDialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             nativeButton
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-2 right-2"
-              />
-            }
+            render={<Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" />}
           >
             <XIcon />
             <span className="sr-only">Close</span>

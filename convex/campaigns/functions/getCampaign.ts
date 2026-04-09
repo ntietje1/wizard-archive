@@ -6,12 +6,7 @@ import {
   getUserProfileByUsername,
 } from '../../users/functions/getUserProfile'
 import type { AuthQueryCtx } from '../../functions'
-import type {
-  Campaign,
-  CampaignFromDb,
-  CampaignMember,
-  CampaignMemberFromDb,
-} from '../types'
+import type { Campaign, CampaignFromDb, CampaignMember, CampaignMemberFromDb } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 
@@ -24,8 +19,7 @@ async function countAcceptedPlayers(
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
   return members.filter(
-    (m) =>
-      m.deletionTime === null && m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+    (m) => m.deletionTime === null && m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
   ).length
 }
 
@@ -80,13 +74,10 @@ export async function getCampaignBySlug(
   const dmUserProfile = await getUserProfileByUsername(ctx, {
     username: dmUsername,
   })
-  if (!dmUserProfile)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
+  if (!dmUserProfile) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) =>
-      q.eq('slug', slug).eq('dmUserId', dmUserProfile._id),
-    )
+    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', dmUserProfile._id))
     .unique()
   if (!campaign || campaign.deletionTime !== null)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')

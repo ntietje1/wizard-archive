@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import {
-  createFile,
-  createFolder,
-  createGameMap,
-} from '../../_test/factories.helper'
+import { createFile, createFolder, createGameMap } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('storage lifecycle with file/map deletion', () => {
@@ -23,10 +19,9 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: fileId,
       location: 'trash',
     })
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: fileId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: fileId,
+    })
 
     const file = await t.run(async (dbCtx) => dbCtx.db.get(fileId))
     expect(file).toBeNull()
@@ -36,21 +31,17 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Delete Map' },
-    )
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Delete Map',
+    })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
       itemId: mapId,
       location: 'trash',
     })
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: mapId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: mapId,
+    })
 
     const map = await t.run(async (dbCtx) => dbCtx.db.get(mapId))
     expect(map).toBeNull()
@@ -118,10 +109,9 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: fileId,
       location: 'trash',
     })
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: fileId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: fileId,
+    })
 
     const file = await t.run(async (dbCtx) => dbCtx.db.get(fileId))
     expect(file).toBeNull()
@@ -131,21 +121,18 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'No Storage Map', imageStorageId: null },
-    )
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'No Storage Map',
+      imageStorageId: null,
+    })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
       itemId: mapId,
       location: 'trash',
     })
-    await dmAuth.mutation(
-      api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
-      { itemId: mapId },
-    )
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      itemId: mapId,
+    })
 
     const map = await t.run(async (dbCtx) => dbCtx.db.get(mapId))
     expect(map).toBeNull()

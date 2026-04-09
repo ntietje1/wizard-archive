@@ -86,10 +86,7 @@ export const Route = createRootRouteWithContext<{
     try {
       token = await fetchAuthToken()
     } catch (error) {
-      logger.debug(
-        '[auth] fetchAuthToken failed, falling back to client-side auth:',
-        error,
-      )
+      logger.debug('[auth] fetchAuthToken failed, falling back to client-side auth:', error)
     }
     let initialTheme: Theme | null = null
     let initialPanelPreferences: Record<string, PanelPreference> | null = null
@@ -151,10 +148,7 @@ function RootDocument({
           {isPreview && <PreviewBanner />}
           {children}
           <Toaster />
-          <ReactQueryDevtools
-            initialIsOpen={false}
-            buttonPosition="bottom-right"
-          />
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
           <TanStackRouterDevtools position="bottom-right" />
         </LazyMotion>
         <Scripts />

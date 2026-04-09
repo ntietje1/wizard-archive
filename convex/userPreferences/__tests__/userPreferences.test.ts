@@ -8,19 +8,13 @@ describe('getUserPreferences', () => {
   const t = createTestContext()
 
   it('returns null when not authenticated', async () => {
-    const result = await t.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await t.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result).toBeNull()
   })
 
   it('returns null when no preferences set', async () => {
     const { authed } = await setupUser(t)
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result).toBeNull()
   })
 
@@ -31,10 +25,7 @@ describe('getUserPreferences', () => {
       theme: 'dark',
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result).not.toBeNull()
     expect(result!.theme).toBe('dark')
     expect(result!.panelPreferences).toBeNull()
@@ -47,10 +38,7 @@ describe('getUserPreferences', () => {
       theme: 'system',
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result).toHaveProperty('_id')
     expect(result).toHaveProperty('_creationTime')
     expect(result).toHaveProperty('userId')
@@ -65,16 +53,12 @@ describe('setUserPreferences', () => {
   it('creates preferences when none exist', async () => {
     const { authed } = await setupUser(t)
 
-    const id = await authed.mutation(
-      api.userPreferences.mutations.setUserPreferences,
-      { theme: 'light' },
-    )
+    const id = await authed.mutation(api.userPreferences.mutations.setUserPreferences, {
+      theme: 'light',
+    })
     expect(id).toBeDefined()
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.theme).toBe('light')
     expect(result!.panelPreferences).toBeNull()
   })
@@ -90,10 +74,7 @@ describe('setUserPreferences', () => {
       theme: 'dark',
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.theme).toBe('dark')
   })
 
@@ -116,10 +97,7 @@ describe('setPanelPreference', () => {
       theme: 'dark',
     })
 
-    const before = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const before = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(before!.panelPreferences).toBeNull()
 
     await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
@@ -128,10 +106,7 @@ describe('setPanelPreference', () => {
       visible: true,
     })
 
-    const after = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const after = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(after!.theme).toBe('dark')
     expect(after!.panelPreferences).toEqual({
       'left-sidebar': { size: 300, visible: true },
@@ -141,16 +116,14 @@ describe('setPanelPreference', () => {
   it('creates preferences with panel data when none exist', async () => {
     const { authed } = await setupUser(t)
 
-    const id = await authed.mutation(
-      api.userPreferences.mutations.setPanelPreference,
-      { panelId: 'left-sidebar', size: 300, visible: true },
-    )
+    const id = await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
+      panelId: 'left-sidebar',
+      size: 300,
+      visible: true,
+    })
     expect(id).toBeDefined()
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.theme).toBeNull()
     expect(result!.panelPreferences).toEqual({
       'left-sidebar': { size: 300, visible: true },
@@ -172,10 +145,7 @@ describe('setPanelPreference', () => {
       visible: false,
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.panelPreferences).toEqual({
       'left-sidebar': { size: 280, visible: true },
       'editor-right-sidebar': { size: 350, visible: false },
@@ -196,10 +166,7 @@ describe('setPanelPreference', () => {
       size: 200,
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.panelPreferences!['left-sidebar']).toEqual({
       size: 200,
       visible: true,
@@ -220,10 +187,7 @@ describe('setPanelPreference', () => {
       visible: false,
     })
 
-    const result = await authed.query(
-      api.userPreferences.queries.getUserPreferences,
-      {},
-    )
+    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.panelPreferences!['left-sidebar']).toEqual({
       size: 280,
       visible: false,

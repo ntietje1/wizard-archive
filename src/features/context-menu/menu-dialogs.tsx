@@ -1,8 +1,5 @@
 import { toast } from 'sonner'
-import {
-  EmptyTrashConfirmDialog,
-  PermanentDeleteConfirmDialog,
-} from './hooks/trash-utils'
+import { EmptyTrashConfirmDialog, PermanentDeleteConfirmDialog } from './hooks/trash-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'

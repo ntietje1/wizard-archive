@@ -37,9 +37,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
     const umAny = um as Record<string, any>
 
     if (typeof umAny.afterTransactionHandler !== 'function') {
-      logger.warn(
-        '[patchYUndoPluginDestroy] afterTransactionHandler not found, skipping patch',
-      )
+      logger.warn('[patchYUndoPluginDestroy] afterTransactionHandler not found, skipping patch')
       return
     }
 
@@ -74,9 +72,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
         if (saved.hasTrackedSelf) currentUm.trackedOrigins.add(currentUm)
         const savedHandler = currentUmAny.afterTransactionHandler
         if (savedHandler) {
-          const obs = currentUm.doc._observers as
-            | Map<string, Set<any>>
-            | undefined
+          const obs = currentUm.doc._observers as Map<string, Set<any>> | undefined
           const txSet = obs?.get?.('afterTransaction')
           if (!txSet || !txSet.has(savedHandler)) {
             currentUm.doc.on('afterTransaction', savedHandler)
@@ -104,9 +100,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
       | Array<{ destroy?: () => void }>
       | undefined
     if (!pluginViews) {
-      logger.warn(
-        '[patchYUndoPluginDestroy] pluginViews not found, skipping pluginView patch',
-      )
+      logger.warn('[patchYUndoPluginDestroy] pluginViews not found, skipping pluginView patch')
       return
     }
 
@@ -124,10 +118,7 @@ export function patchYUndoPluginDestroy(view: EditorView) {
       originalDestroy?.call(existingPluginView)
     }
   } catch (err) {
-    logger.warn(
-      '[patchYUndoPluginDestroy] Unexpected error, undo patch skipped:',
-      err,
-    )
+    logger.warn('[patchYUndoPluginDestroy] Unexpected error, undo patch skipped:', err)
   }
 }
 
@@ -162,10 +153,7 @@ export function patchYSyncAfterTypeChanged(view: EditorView) {
           binding.__typeChangedPatched = true
 
           const origTypeChanged = binding._typeChanged.bind(binding)
-          binding._typeChanged = (
-            events: Array<unknown>,
-            transaction: Record<string, any>,
-          ) => {
+          binding._typeChanged = (events: Array<unknown>, transaction: Record<string, any>) => {
             origTypeChanged(events, transaction)
             if (binding.prosemirrorView) {
               binding.mux(() => {
@@ -181,9 +169,6 @@ export function patchYSyncAfterTypeChanged(view: EditorView) {
       }
     }
   } catch (err) {
-    logger.warn(
-      '[patchYSyncAfterTypeChanged] Unexpected error, patch skipped:',
-      err,
-    )
+    logger.warn('[patchYSyncAfterTypeChanged] Unexpected error, patch skipped:', err)
   }
 }

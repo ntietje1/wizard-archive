@@ -171,36 +171,21 @@ describe('memberHasAtLeastPermission', () => {
   it('returns true when resolved level meets requirement', () => {
     const note = createNote({ allPermissionLevel: PERMISSION_LEVEL.EDIT })
     expect(
-      memberHasAtLeastPermission(
-        note,
-        memberId,
-        buildMap([note]),
-        PERMISSION_LEVEL.VIEW,
-      ),
+      memberHasAtLeastPermission(note, memberId, buildMap([note]), PERMISSION_LEVEL.VIEW),
     ).toBe(true)
   })
 
   it('returns false when resolved level is below requirement', () => {
     const note = createNote({ allPermissionLevel: PERMISSION_LEVEL.VIEW })
     expect(
-      memberHasAtLeastPermission(
-        note,
-        memberId,
-        buildMap([note]),
-        PERMISSION_LEVEL.EDIT,
-      ),
+      memberHasAtLeastPermission(note, memberId, buildMap([note]), PERMISSION_LEVEL.EDIT),
     ).toBe(false)
   })
 
   it('returns true for equal levels', () => {
     const note = createNote({ allPermissionLevel: PERMISSION_LEVEL.VIEW })
     expect(
-      memberHasAtLeastPermission(
-        note,
-        memberId,
-        buildMap([note]),
-        PERMISSION_LEVEL.VIEW,
-      ),
+      memberHasAtLeastPermission(note, memberId, buildMap([note]), PERMISSION_LEVEL.VIEW),
     ).toBe(true)
   })
 })

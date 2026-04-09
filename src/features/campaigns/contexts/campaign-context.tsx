@@ -25,15 +25,9 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     campaignSlug,
     campaign,
     isCampaignLoaded: campaign.data !== undefined,
-    isDm: campaign.data
-      ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
-      : undefined,
+    isDm: campaign.data ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM : undefined,
     campaignId: campaign.data?._id,
   }
 
-  return (
-    <CampaignContext.Provider value={value}>
-      {children}
-    </CampaignContext.Provider>
-  )
+  return <CampaignContext.Provider value={value}>{children}</CampaignContext.Provider>
 }

@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -45,9 +41,9 @@ test.describe.serial('error states', () => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
-    await expect(
-      page.getByRole('link', { name: note1, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: note1, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, note1)
     await page.getByRole('menuitem', { name: /rename/i }).click()
@@ -66,17 +62,11 @@ test.describe.serial('error states', () => {
     await expect(errorToast.or(invalidInput)).toBeVisible({ timeout: 5000 })
   })
 
-  test('campaign slug validation shows error for empty slug', async ({
-    page,
-  }) => {
+  test('campaign slug validation shows error for empty slug', async ({ page }) => {
     await page.goto('/campaigns')
     await page
       .getByRole('heading', { level: 1 })
-      .or(
-        page
-          .getByRole('button', { name: /new campaign|create.*campaign/i })
-          .first(),
-      )
+      .or(page.getByRole('button', { name: /new campaign|create.*campaign/i }).first())
       .waitFor({ timeout: 10000 })
 
     await page

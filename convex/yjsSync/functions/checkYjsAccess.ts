@@ -18,16 +18,10 @@ async function checkYjsAccess(
   return doc
 }
 
-export async function checkYjsReadAccess(
-  ctx: AuthQueryCtx,
-  documentId: YjsDocumentId,
-) {
+export async function checkYjsReadAccess(ctx: AuthQueryCtx, documentId: YjsDocumentId) {
   return await checkYjsAccess(ctx, documentId, PERMISSION_LEVEL.VIEW)
 }
 
-export async function checkYjsWriteAccess(
-  ctx: AuthQueryCtx,
-  documentId: YjsDocumentId,
-) {
+export async function checkYjsWriteAccess(ctx: AuthQueryCtx, documentId: YjsDocumentId) {
   return await checkYjsAccess(ctx, documentId, PERMISSION_LEVEL.EDIT)
 }

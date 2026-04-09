@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
-import {
-  createGameMap,
-  createNote,
-  createSidebarShare,
-} from '../../_test/factories.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
   expectPermissionDenied,
@@ -88,12 +80,9 @@ describe('updateMap', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Original Map' },
-    )
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Original Map',
+    })
 
     const result = await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
       mapId,
@@ -398,10 +387,12 @@ describe('pin CRUD', () => {
       permissionLevel: 'edit',
     })
 
-    const pinId = await playerAuth.mutation(
-      api.gameMaps.mutations.createItemPin,
-      { mapId, x: 10, y: 20, itemId: noteId },
-    )
+    const pinId = await playerAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      mapId,
+      x: 10,
+      y: 20,
+      itemId: noteId,
+    })
     expect(pinId).toBeDefined()
   })
 })
@@ -413,12 +404,9 @@ describe('getMap', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Test Map' },
-    )
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Test Map',
+    })
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -445,12 +433,10 @@ describe('getMap', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { mapId } = await createGameMap(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { deletionTime: Date.now(), deletedBy: ctx.dm.profile._id },
-    )
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+      deletionTime: Date.now(),
+      deletedBy: ctx.dm.profile._id,
+    })
 
     const result = await playerAuth.query(api.gameMaps.queries.getMap, {
       mapId,
@@ -475,8 +461,6 @@ describe('getMap', () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await expectNotAuthenticated(
-      t.query(api.gameMaps.queries.getMap, { mapId }),
-    )
+    await expectNotAuthenticated(t.query(api.gameMaps.queries.getMap, { mapId }))
   })
 })

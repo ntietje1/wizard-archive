@@ -6,11 +6,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 import { Separator } from '~/features/shadcn/components/separator'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { GoogleIcon } from '~/features/auth/utils/custom-icons'
 import { isPreview } from '~/shared/utils/preview'
 
@@ -101,8 +97,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
         },
       )
       .catch(() => {
-        if (!handled)
-          dispatch({ type: 'ERROR', error: 'Failed to create account' })
+        if (!handled) dispatch({ type: 'ERROR', error: 'Failed to create account' })
       })
       .finally(() => {
         dispatch({ type: 'DONE' })
@@ -134,8 +129,8 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
         <div className="flex flex-col items-center gap-2 text-center">
           <h1 className="text-2xl font-bold">Check your email</h1>
           <p className="text-sm text-muted-foreground text-balance">
-            We sent a verification link to <strong>{email}</strong>. Click the
-            link to verify your account.
+            We sent a verification link to <strong>{email}</strong>. Click the link to verify your
+            account.
           </p>
         </div>
         <Link
@@ -159,10 +154,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
       <div className="flex flex-col gap-4">
         {/* Social login buttons */}
         <Tooltip>
-          <TooltipTrigger
-            render={<span className="w-full" />}
-            disabled={!isPreview}
-          >
+          <TooltipTrigger render={<span className="w-full" />} disabled={!isPreview}>
             <Button
               variant="outline"
               className="w-full"
@@ -178,8 +170,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            OAuth is unavailable on preview deployments. Use email and password
-            instead.
+            OAuth is unavailable on preview deployments. Use email and password instead.
           </TooltipContent>
         </Tooltip>
 
@@ -229,21 +220,13 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               disabled={isDisabled}
               autoComplete="new-password"
             />
-            <p className="text-xs text-muted-foreground">
-              Must be at least 8 characters
-            </p>
+            <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={isDisabled}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Create account'
-            )}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
           </Button>
         </form>
 

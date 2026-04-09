@@ -3,17 +3,14 @@ import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
 import { ERROR_CODE, isClientError } from 'convex/errors'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
-import type {
-  FunctionArgs,
-  FunctionReference,
-  FunctionReturnType,
-} from 'convex/server'
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server'
 
-type TData<TQuery extends FunctionReference<'query', 'public'>> =
-  FunctionReturnType<TQuery>
+type TData<TQuery extends FunctionReference<'query', 'public'>> = FunctionReturnType<TQuery>
 
-type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> =
-  Omit<UseQueryOptions<TData<TQuery>>, 'queryKey' | 'queryFn' | 'retry'>
+type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> = Omit<
+  UseQueryOptions<TData<TQuery>>,
+  'queryKey' | 'queryFn' | 'retry'
+>
 
 /**
  * Like `useQuery(convexQuery(...))` but gates execution behind auth.
@@ -21,9 +18,7 @@ type AuthQueryOptions<TQuery extends FunctionReference<'query', 'public'>> =
  * Auth errors (NOT_AUTHENTICATED) are swallowed — the query appears as
  * "pending" instead of "error"
  */
-export function useAuthQuery<
-  TQuery extends FunctionReference<'query', 'public'>,
->(
+export function useAuthQuery<TQuery extends FunctionReference<'query', 'public'>>(
   query: TQuery,
   args: FunctionArgs<TQuery> | 'skip',
   options?: AuthQueryOptions<TQuery>,
@@ -39,8 +34,7 @@ export function useAuthQuery<
     enabled: !shouldSkip && (options?.enabled ?? true),
   } as UseQueryOptions<TData<TQuery>>)
 
-  const isAuthError =
-    result.error && isClientError(result.error, ERROR_CODE.NOT_AUTHENTICATED)
+  const isAuthError = result.error && isClientError(result.error, ERROR_CODE.NOT_AUTHENTICATED)
 
   if (!isAuthError) return result
   return {

@@ -14,29 +14,26 @@ import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { cn } from '~/features/shadcn/lib/utils'
 
-function formatSingleAction(
-  action: string,
-  metadata: Record<string, unknown> | null,
-): string {
+function str(value: unknown, fallback = '(unknown)'): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+function formatSingleAction(action: string, metadata: Record<string, unknown> | null): string {
   switch (action) {
     case 'created':
       return 'created this item'
     case 'renamed':
-      return `renamed "${metadata?.from ?? '(unknown)'}" to "${metadata?.to ?? '(unknown)'}"`
+      return `renamed "${str(metadata?.from)}" to "${str(metadata?.to)}"`
     case 'moved':
-      return `moved from ${metadata?.from ? `"${metadata.from}"` : 'root'} to ${metadata?.to ? `"${metadata.to}"` : 'root'}`
+      return `moved from ${metadata?.from ? `"${str(metadata.from)}"` : 'root'} to ${metadata?.to ? `"${str(metadata.to)}"` : 'root'}`
     case 'trashed':
       return 'moved to trash'
     case 'restored':
       return 'restored from trash'
     case 'icon_changed':
-      return metadata?.to
-        ? `changed icon to "${metadata.to}"`
-        : 'removed the icon'
+      return metadata?.to ? `changed icon to "${str(metadata.to)}"` : 'removed the icon'
     case 'color_changed':
-      return metadata?.to
-        ? `changed color to "${metadata.to}"`
-        : 'removed the color'
+      return metadata?.to ? `changed color to "${str(metadata.to)}"` : 'removed the color'
     case 'content_edited':
       return 'edited content'
     case 'rolled_back':
@@ -50,24 +47,20 @@ function formatSingleAction(
     case 'file_removed':
       return 'removed the file'
     case 'map_pin_added':
-      return `added pin "${metadata?.pinItemName || '(unnamed)'}"`
+      return `added pin "${str(metadata?.pinItemName, '(unnamed)')}"`
     case 'map_pin_moved':
-      return `moved pin "${metadata?.pinItemName || '(unnamed)'}"`
+      return `moved pin "${str(metadata?.pinItemName, '(unnamed)')}"`
     case 'map_pin_removed':
-      return `removed pin "${metadata?.pinItemName || '(unnamed)'}"`
+      return `removed pin "${str(metadata?.pinItemName, '(unnamed)')}"`
     case 'map_pin_visibility_changed':
-      return `${metadata?.visible ? 'showed' : 'hid'} pin "${metadata?.pinItemName || '(unnamed)'}"`
+      return `${metadata?.visible ? 'showed' : 'hid'} pin "${str(metadata?.pinItemName, '(unnamed)')}"`
     case 'permission_changed': {
       const memberName = metadata?.memberName as string | null
       const level = metadata?.level as string | null
       if (memberName) {
-        return level
-          ? `set ${memberName}'s access to ${level}`
-          : `removed ${memberName}'s access`
+        return level ? `set ${memberName}'s access to ${level}` : `removed ${memberName}'s access`
       }
-      return level
-        ? `set all players' access to ${level}`
-        : `removed all players' access`
+      return level ? `set all players' access to ${level}` : `removed all players' access`
     }
     case 'block_share_changed':
       return metadata?.status === 'shared'
@@ -82,9 +75,7 @@ function formatSingleAction(
   }
 }
 
-function formatActionDescription(
-  entry: EditHistoryEntry,
-): string | Array<string> {
+function formatActionDescription(entry: EditHistoryEntry): string | Array<string> {
   if (entry.action === 'updated') {
     const changes = Array.isArray(entry.metadata?.changes)
       ? (entry.metadata.changes as Array<{
@@ -93,20 +84,14 @@ function formatActionDescription(
         }>)
       : []
     if (changes.length === 0) {
-      return formatSingleAction(
-        entry.action,
-        entry.metadata as Record<string, unknown> | null,
-      )
+      return formatSingleAction(entry.action, entry.metadata as Record<string, unknown> | null)
     }
     if (changes.length === 1) {
       return formatSingleAction(changes[0].action, changes[0].metadata)
     }
     return changes.map((c) => formatSingleAction(c.action, c.metadata))
   }
-  return formatSingleAction(
-    entry.action,
-    entry.metadata as Record<string, unknown> | null,
-  )
+  return formatSingleAction(entry.action, entry.metadata as Record<string, unknown> | null)
 }
 
 function groupByDay(
@@ -188,29 +173,20 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
   }, [status, loadMore])
 
   return (
-    <div
-      data-testid="history-panel"
-      className="flex flex-col h-full bg-background"
-    >
+    <div data-testid="history-panel" className="flex flex-col h-full bg-background">
       <ScrollArea className="flex-1 min-h-0" viewportRef={viewportRef}>
         {status === 'LoadingFirstPage' && (
-          <p className="text-sm text-muted-foreground p-4 text-center">
-            Loading history...
-          </p>
+          <p className="text-sm text-muted-foreground p-4 text-center">Loading history...</p>
         )}
 
         {status !== 'LoadingFirstPage' && entries.length === 0 && (
-          <p className="text-sm text-muted-foreground p-4 text-center">
-            No history yet.
-          </p>
+          <p className="text-sm text-muted-foreground p-4 text-center">No history yet.</p>
         )}
 
         {dayGroups.map((group) => (
           <div key={group.label}>
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-3 py-1.5 border-b border-border/50">
-              <span className="text-xs font-medium text-muted-foreground">
-                {group.label}
-              </span>
+              <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
             </div>
             {group.entries.map((entry) => {
               const member = membersMap.get(entry.campaignMemberId)
@@ -218,14 +194,11 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
               const isCurrentUser = entry.campaignMemberId === myMemberId
               const displayName = isCurrentUser
                 ? 'You'
-                : (profile?.name ??
-                  (profile?.username ? `@${profile.username}` : 'Unknown'))
+                : (profile?.name ?? (profile?.username ? `@${profile.username}` : 'Unknown'))
               const description = formatActionDescription(entry)
               const isSelected = previewingEntryId === entry._id
               const hasSnapshot = entry.hasSnapshot
-              const descriptions = Array.isArray(description)
-                ? description
-                : [description]
+              const descriptions = Array.isArray(description) ? description : [description]
 
               return (
                 <div
@@ -235,11 +208,8 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                   aria-pressed={hasSnapshot ? isSelected : undefined}
                   className={cn(
                     'relative flex items-start gap-2.5 px-3 py-2',
-                    hasSnapshot
-                      ? 'cursor-pointer hover:bg-muted/50'
-                      : 'hover:bg-muted/30',
-                    isSelected &&
-                      'bg-accent shadow-[inset_2px_0_0_0_var(--primary)]',
+                    hasSnapshot ? 'cursor-pointer hover:bg-muted/50' : 'hover:bg-muted/30',
+                    isSelected && 'bg-accent shadow-[inset_2px_0_0_0_var(--primary)]',
                   )}
                   onClick={
                     hasSnapshot
@@ -267,9 +237,7 @@ export function HistoryPanel({ itemId }: { itemId: SidebarItemId }) {
                     {descriptions.length === 1 ? (
                       <p className="text-sm leading-snug">
                         <span className="font-medium">{displayName}</span>{' '}
-                        <span className="text-muted-foreground">
-                          {descriptions[0]}
-                        </span>
+                        <span className="text-muted-foreground">{descriptions[0]}</span>
                       </p>
                     ) : (
                       <>

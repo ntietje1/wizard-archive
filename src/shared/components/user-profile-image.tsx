@@ -1,8 +1,4 @@
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '~/features/shadcn/components/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '~/features/shadcn/components/avatar'
 import { getInitials } from '~/shared/utils/get-initials'
 
 type UserProfileImageProps = {
@@ -22,9 +18,7 @@ export function UserProfileImage({
 }: UserProfileImageProps) {
   return (
     <Avatar size={size} className={className}>
-      {imageUrl && (
-        <AvatarImage src={imageUrl} alt={name ?? 'User profile picture'} />
-      )}{' '}
+      {imageUrl && <AvatarImage src={imageUrl} alt={name ?? 'User profile picture'} />}{' '}
       <AvatarFallback>{getInitials(name, email)}</AvatarFallback>
     </Avatar>
   )

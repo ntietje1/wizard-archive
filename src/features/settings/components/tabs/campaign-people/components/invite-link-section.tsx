@@ -6,9 +6,7 @@ import { Input } from '~/features/shadcn/components/input'
 export function InviteLinkSection({ joinUrl }: { joinUrl: string }) {
   return (
     <div className="flex flex-col gap-0">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3">
-        Invite players
-      </h3>
+      <h3 className="text-sm font-medium text-muted-foreground mb-3">Invite players</h3>
       <ButtonGroup className="w-full">
         <Input
           readOnly

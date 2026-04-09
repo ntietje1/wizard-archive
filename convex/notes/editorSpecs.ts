@@ -16,8 +16,7 @@ import type {
 } from '@blocknote/core'
 
 // remove link from inline content specs
-const { link: _link, ...remainingInlineContentSpecs } =
-  defaultInlineContentSpecs
+const { link: _link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
 
 export const customInlineContentSpecs = {
   ...remainingInlineContentSpecs,
@@ -41,11 +40,7 @@ export type CustomBlockSchema = typeof editorSchema.blockSchema
 export type CustomInlineContentSchema = typeof editorSchema.inlineContentSchema
 export type CustomStyleSchema = typeof editorSchema.styleSchema
 
-export type CustomBlock = Block<
-  CustomBlockSchema,
-  CustomInlineContentSchema,
-  CustomStyleSchema
->
+export type CustomBlock = Block<CustomBlockSchema, CustomInlineContentSchema, CustomStyleSchema>
 
 export type CustomPartialBlock = PartialBlock<
   CustomBlockSchema,
@@ -53,10 +48,7 @@ export type CustomPartialBlock = PartialBlock<
   CustomStyleSchema
 >
 
-export type CustomInlineContent = InlineContent<
-  CustomInlineContentSchema,
-  CustomStyleSchema
->
+export type CustomInlineContent = InlineContent<CustomInlineContentSchema, CustomStyleSchema>
 
 export type CustomPartialInlineContent = PartialInlineContent<
   CustomInlineContentSchema,

@@ -17,10 +17,7 @@ interface UseCanvasHistoryOptions {
   edgesMap: Y.Map<Edge>
 }
 
-export function useCanvasHistory({
-  nodesMap,
-  edgesMap,
-}: UseCanvasHistoryOptions) {
+export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions) {
   const reactFlow = useReactFlow()
   const undoStackRef = useRef<Array<ActionEntry>>([])
   const redoStackRef = useRef<Array<ActionEntry>>([])
@@ -44,9 +41,7 @@ export function useCanvasHistory({
   const restoreSelection = useCallback(
     (nodeIds: Array<string>) => {
       const idSet = new Set(nodeIds)
-      reactFlow.setNodes((nodes) =>
-        nodes.map((n) => ({ ...n, selected: idSet.has(n.id) })),
-      )
+      reactFlow.setNodes((nodes) => nodes.map((n) => ({ ...n, selected: idSet.has(n.id) })))
       selectionRef.current = nodeIds
     },
     [reactFlow],
@@ -62,17 +57,13 @@ export function useCanvasHistory({
         const um = undoManagerRef.current
         if (um && um.undoStack.length > 0) {
           const stackItem = um.undoStack[um.undoStack.length - 1]
-          const selBefore = stackItem.meta.get('selection-before') as
-            | Array<string>
-            | undefined
+          const selBefore = stackItem.meta.get('selection-before') as Array<string> | undefined
           stackItem.meta.set('selection-after', selectionRef.current.slice())
           um.undo()
           if (selBefore) restoreSelection(selBefore)
           redoStackRef.current.push({ type: 'doc' })
         } else {
-          logger.warn(
-            'Discarding orphaned doc undo entry (no matching Yjs stack item)',
-          )
+          logger.warn('Discarding orphaned doc undo entry (no matching Yjs stack item)')
         }
       } else {
         restoreSelection(entry.before)
@@ -94,9 +85,7 @@ export function useCanvasHistory({
         const um = undoManagerRef.current
         if (um && um.redoStack.length > 0) {
           const stackItem = um.redoStack[um.redoStack.length - 1]
-          const selAfter = stackItem.meta.get('selection-after') as
-            | Array<string>
-            | undefined
+          const selAfter = stackItem.meta.get('selection-after') as Array<string> | undefined
           um.redo()
           if (selAfter) restoreSelection(selAfter)
           undoStackRef.current.push({ type: 'doc' })
@@ -168,8 +157,7 @@ export function useCanvasHistory({
       if (docMutatedRef.current) return
 
       const nodeIdSet = new Set(nodeIds)
-      const same =
-        prev.length === nodeIds.length && prev.every((id) => nodeIdSet.has(id))
+      const same = prev.length === nodeIds.length && prev.every((id) => nodeIdSet.has(id))
       if (same) return
 
       undoStackRef.current.push({

@@ -15,18 +15,14 @@ export type AuthMutationCtx = MutationCtx & { user: AuthUser }
 
 // --- Context enrichment ---
 
-export async function authenticate(
-  ctx: QueryCtx | MutationCtx,
-): Promise<AuthUser> {
+export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
-  if (!identity)
-    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
+  if (!identity) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
   const profile = await ctx.db
     .query('userProfiles')
     .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
-  if (!profile)
-    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
+  if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return { identity, profile }
 }
 
@@ -48,15 +44,11 @@ async function checkMembership(
     member.deletionTime !== null ||
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   )
-    throwClientError(
-      ERROR_CODE.PERMISSION_DENIED,
-      "You don't have access to this campaign",
-    )
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
   const userProfile = await getUserProfileById(ctx, {
     profileId: ctx.user.profile._id,
   })
-  if (!userProfile)
-    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
+  if (!userProfile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return {
     campaign,
     membership: { ...member, userProfile },
@@ -91,10 +83,7 @@ export async function requireDmRole(
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
   const result = await requireCampaignMembership(ctx, campaignId)
   if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    throwClientError(
-      ERROR_CODE.PERMISSION_DENIED,
-      'Only the DM can perform this action',
-    )
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
   }
   return result
 }

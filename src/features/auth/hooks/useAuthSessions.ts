@@ -53,7 +53,7 @@ export function useActiveSessions() {
     },
     onSuccess: () => {
       toast.success('Session revoked')
-      queryClient.invalidateQueries({ queryKey: ACTIVE_SESSIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_SESSIONS_KEY })
     },
     onError: () => toast.error('Failed to revoke session'),
   })
@@ -65,7 +65,7 @@ export function useActiveSessions() {
     },
     onSuccess: () => {
       toast.success('All other sessions revoked')
-      queryClient.invalidateQueries({ queryKey: ACTIVE_SESSIONS_KEY })
+      void queryClient.invalidateQueries({ queryKey: ACTIVE_SESSIONS_KEY })
     },
     onError: () => toast.error('Failed to revoke sessions'),
   })
@@ -90,7 +90,7 @@ export function useDeviceSessions() {
   })
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: DEVICE_SESSIONS_KEY })
+    void queryClient.invalidateQueries({ queryKey: DEVICE_SESSIONS_KEY })
   }
 
   return {

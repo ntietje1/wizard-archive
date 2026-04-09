@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type {
-  CustomBlock,
-  CustomBlockNoteEditor,
-} from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import {
   extractHeadingsFromContent,
@@ -61,22 +58,14 @@ export function useScrollToHeading(
         .querySelector(`[data-id="${target.blockId}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
-      navigate({
+      void navigate({
         to: EDITOR_ROUTE,
         params: { dmUsername, campaignSlug },
         search: restSearch,
         replace: true,
       })
     })
-  }, [
-    editorSearch,
-    content,
-    isContentLoaded,
-    navigate,
-    editor,
-    dmUsername,
-    campaignSlug,
-  ])
+  }, [editorSearch, content, isContentLoaded, navigate, editor, dmUsername, campaignSlug])
 
   return { isScrollingToHeading: hasHeadingParam }
 }

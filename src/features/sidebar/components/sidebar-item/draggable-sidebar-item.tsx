@@ -9,16 +9,10 @@ interface DraggableSidebarItemProps {
   children: React.ReactNode
 }
 
-export function DraggableSidebarItem({
-  item,
-  children,
-}: DraggableSidebarItemProps) {
+export function DraggableSidebarItem({ item, children }: DraggableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
-  const canDrag = hasAtLeastPermissionLevel(
-    item.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
 
   useDraggable({
     ref,

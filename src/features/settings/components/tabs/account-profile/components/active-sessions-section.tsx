@@ -21,8 +21,7 @@ const deviceIcons = {
 } as const
 
 export function ActiveSessionsSection() {
-  const { sessions, isLoading, revokeSession, revokeOtherSessions } =
-    useActiveSessions()
+  const { sessions, isLoading, revokeSession, revokeOtherSessions } = useActiveSessions()
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [isRevokingAll, setIsRevokingAll] = useState(false)
 
@@ -71,21 +70,15 @@ export function ActiveSessionsSection() {
                     <DeviceIcon className="size-4 shrink-0 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">{session.device}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {session.browser}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{session.browser}</p>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="py-2.5">
-                  <p className="text-sm text-muted-foreground">
-                    {session.lastActive}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{session.lastActive}</p>
                 </TableCell>
                 <TableCell className="py-2.5">
-                  <p className="text-sm text-muted-foreground">
-                    {session.ipAddress ?? 'Unknown'}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{session.ipAddress ?? 'Unknown'}</p>
                 </TableCell>
                 <TableCell className="py-2.5 text-right">
                   {session.isCurrent ? (
@@ -100,11 +93,7 @@ export function ActiveSessionsSection() {
                       disabled={revokingId === session.token || isRevokingAll}
                     >
                       <span className="relative inline-flex items-center justify-center">
-                        <span
-                          className={cn(
-                            revokingId === session.token && 'invisible',
-                          )}
-                        >
+                        <span className={cn(revokingId === session.token && 'invisible')}>
                           Log out
                         </span>
                         {revokingId === session.token && (
@@ -137,12 +126,8 @@ export function ActiveSessionsSection() {
               disabled={isRevokingAll}
             >
               <span className="relative inline-flex items-center justify-center">
-                <span className={cn(isRevokingAll && 'invisible')}>
-                  Log out of all devices
-                </span>
-                {isRevokingAll && (
-                  <Loader2 className="size-3.5 animate-spin absolute" />
-                )}
+                <span className={cn(isRevokingAll && 'invisible')}>Log out of all devices</span>
+                {isRevokingAll && <Loader2 className="size-3.5 animate-spin absolute" />}
               </span>
             </Button>
           </div>

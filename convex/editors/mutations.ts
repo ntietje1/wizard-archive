@@ -1,10 +1,6 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import {
-  editorModeValidator,
-  sortDirectionValidator,
-  sortOrderValidator,
-} from './schema'
+import { editorModeValidator, sortDirectionValidator, sortOrderValidator } from './schema'
 import { setCurrentEditor as setCurrentEditorFn } from './functions/setCurrentEditor'
 import type { Id } from '../_generated/dataModel'
 

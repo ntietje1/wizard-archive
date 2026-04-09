@@ -13,11 +13,7 @@ import {
 } from '~/features/shadcn/components/alert-dialog'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
-function DeleteAccountDialogContent({
-  onDeletionEmailSent,
-}: {
-  onDeletionEmailSent: () => void
-}) {
+function DeleteAccountDialogContent({ onDeletionEmailSent }: { onDeletionEmailSent: () => void }) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [error, setError] = useState('')
@@ -55,8 +51,8 @@ function DeleteAccountDialogContent({
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">Check your email</p>
             <p className="text-sm text-muted-foreground">
-              We sent a verification link to confirm account deletion. Click the
-              link in the email to permanently delete your account.
+              We sent a verification link to confirm account deletion. Click the link in the email
+              to permanently delete your account.
             </p>
           </div>
         </div>
@@ -72,9 +68,8 @@ function DeleteAccountDialogContent({
       <AlertDialogHeader>
         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
         <AlertDialogDescription>
-          This will permanently delete your account and remove all of your data.
-          This action cannot be undone. We'll send a verification email to
-          confirm.
+          This will permanently delete your account and remove all of your data. This action cannot
+          be undone. We'll send a verification email to confirm.
         </AlertDialogDescription>
       </AlertDialogHeader>
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -83,36 +78,26 @@ function DeleteAccountDialogContent({
         <AlertDialogAction
           onClick={(e) => {
             e.preventDefault()
-            handleDelete()
+            void handleDelete()
           }}
           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           disabled={isDeleting}
         >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            'Delete account'
-          )}
+          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete account'}
         </AlertDialogAction>
       </AlertDialogFooter>
     </>
   )
 }
 
-export function DeleteAccountRow({
-  onDeletionEmailSent,
-}: {
-  onDeletionEmailSent: () => void
-}) {
+export function DeleteAccountRow({ onDeletionEmailSent }: { onDeletionEmailSent: () => void }) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-destructive">Delete account</p>
-        <p className="text-sm text-destructive/70">
-          Permanently delete your account and all data
-        </p>
+        <p className="text-sm text-destructive/70">Permanently delete your account and all data</p>
       </div>
       <Button
         variant="destructive"
@@ -122,16 +107,9 @@ export function DeleteAccountRow({
       >
         Delete account
       </Button>
-      <AlertDialog
-        open={showConfirm}
-        onOpenChange={(open) => !open && setShowConfirm(false)}
-      >
+      <AlertDialog open={showConfirm} onOpenChange={(open) => !open && setShowConfirm(false)}>
         <SettingsSubAlertDialogContent>
-          {showConfirm && (
-            <DeleteAccountDialogContent
-              onDeletionEmailSent={onDeletionEmailSent}
-            />
-          )}
+          {showConfirm && <DeleteAccountDialogContent onDeletionEmailSent={onDeletionEmailSent} />}
         </SettingsSubAlertDialogContent>
       </AlertDialog>
     </div>

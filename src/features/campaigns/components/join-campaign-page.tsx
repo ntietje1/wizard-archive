@@ -3,10 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexAuth } from 'convex/react'
-import {
-  CAMPAIGN_MEMBER_ROLE,
-  CAMPAIGN_MEMBER_STATUS,
-} from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { useEffect, useState } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import {
@@ -61,18 +58,18 @@ export function JoinCampaignPage() {
   }
 
   const goToHome = () => {
-    navigate({ to: '/campaigns' })
+    void navigate({ to: '/campaigns' })
   }
 
   const goToCampaignHome = () => {
-    navigate({
+    void navigate({
       to: '/campaigns/$dmUsername/$campaignSlug',
       params: { dmUsername, campaignSlug },
     })
   }
 
   const goToPlayers = () => {
-    navigate({
+    void navigate({
       to: '/campaigns/$dmUsername/$campaignSlug',
       params: { dmUsername, campaignSlug },
     })
@@ -99,8 +96,7 @@ export function JoinCampaignPage() {
         title: "You've Been Invited!",
         description: campaign ? (
           <>
-            {campaign.dmUserProfile.name} has invited you to join{' '}
-            <strong>{campaign.name}</strong>
+            {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
           </>
         ) : (
           "You've been invited to join a campaign."
@@ -111,9 +107,7 @@ export function JoinCampaignPage() {
           <div className="space-y-6">
             <div className="relative p-6 bg-muted rounded-lg border border-border">
               <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
-              <h3 className="font-bold text-foreground mb-3 text-lg text-left">
-                {campaign.name}
-              </h3>
+              <h3 className="font-bold text-foreground mb-3 text-lg text-left">{campaign.name}</h3>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed text-left">
                 {campaign.description || 'No description provided'}
               </p>
@@ -165,8 +159,7 @@ export function JoinCampaignPage() {
     if (campaignQuery.isError || !campaignQuery.data || !campaign) {
       return {
         title: 'Campaign Not Found',
-        description:
-          "The campaign link you're trying to access doesn't exist or has been removed.",
+        description: "The campaign link you're trying to access doesn't exist or has been removed.",
         statusVariant: 'error' as const,
         titleColor: 'text-destructive',
         children: (
@@ -186,8 +179,8 @@ export function JoinCampaignPage() {
         title: "You're the DM",
         description: (
           <>
-            This is your campaign, <strong>{campaign.name}</strong>. Share the
-            link with your players so they can join.
+            This is your campaign, <strong>{campaign.name}</strong>. Share the link with your
+            players so they can join.
           </>
         ),
         statusVariant: 'warning' as const,
@@ -219,8 +212,8 @@ export function JoinCampaignPage() {
           title: 'Request Sent',
           description: (
             <>
-              Your request to join <strong>{campaign.name}</strong> has been
-              sent. {"You'll gain access once the DM confirms your request."}
+              Your request to join <strong>{campaign.name}</strong> has been sent.{' '}
+              {"You'll gain access once the DM confirms your request."}
             </>
           ),
           statusVariant: 'warning' as const,
@@ -265,8 +258,7 @@ export function JoinCampaignPage() {
           title: 'Request Rejected',
           description: (
             <>
-              Your request to join <strong>{campaign.name}</strong> has been
-              rejected.
+              Your request to join <strong>{campaign.name}</strong> has been rejected.
             </>
           ),
           statusVariant: 'error' as const,
@@ -309,8 +301,7 @@ export function JoinCampaignPage() {
       case 'error':
         return {
           title: 'Failed to Join',
-          description:
-            'Something went wrong while trying to join. Please try again.',
+          description: 'Something went wrong while trying to join. Please try again.',
           statusVariant: 'error' as const,
           titleColor: 'text-destructive',
           children: (
@@ -327,8 +318,7 @@ export function JoinCampaignPage() {
       case 'success':
       case 'idle':
       default: {
-        const isLoading =
-          joinCampaign.status === 'pending' || joinCampaign.status === 'success'
+        const isLoading = joinCampaign.status === 'pending' || joinCampaign.status === 'success'
 
         if (isLoading) {
           return {
@@ -348,8 +338,7 @@ export function JoinCampaignPage() {
           title: "You've Been Invited!",
           description: (
             <>
-              {campaign.dmUserProfile.name} has invited you to join{' '}
-              <strong>{campaign.name}</strong>
+              {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
             </>
           ),
           statusVariant: 'warning' as const,
@@ -406,17 +395,11 @@ export function JoinCampaignPage() {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground mb-3 tracking-tight">
               Sign in to join{' '}
-              <span className="text-primary">
-                {campaign?.name || 'this campaign'}
-              </span>
+              <span className="text-primary">{campaign?.name || 'this campaign'}</span>
             </h1>
           </div>
           <div className="flex justify-center">
-            <SignInForm
-              redirectTo={
-                typeof window !== 'undefined' ? window.location.href : ''
-              }
-            />
+            <SignInForm redirectTo={typeof window !== 'undefined' ? window.location.href : ''} />
           </div>
           <div className="text-center mt-4">
             <Button

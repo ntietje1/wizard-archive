@@ -11,10 +11,7 @@ import type { AnySidebarItemFromDb } from '../types/types'
  * Does NOT walk the tree — caller is responsible for that.
  * Does NOT check permissions — caller must have already authorized.
  */
-export async function hardDeleteItem(
-  ctx: MutationCtx,
-  item: AnySidebarItemFromDb,
-): Promise<void> {
+export async function hardDeleteItem(ctx: MutationCtx, item: AnySidebarItemFromDb): Promise<void> {
   // Clean up storage for files and maps
   if (item.type === SIDEBAR_ITEM_TYPES.files && item.storageId) {
     await ctx.storage.delete(item.storageId)
@@ -26,10 +23,7 @@ export async function hardDeleteItem(
   // Clean up preview image (skip maps where preview === image, already deleted above)
   if (
     item.previewStorageId &&
-    !(
-      item.type === SIDEBAR_ITEM_TYPES.gameMaps &&
-      item.previewStorageId === item.imageStorageId
-    )
+    !(item.type === SIDEBAR_ITEM_TYPES.gameMaps && item.previewStorageId === item.imageStorageId)
   ) {
     await ctx.storage.delete(item.previewStorageId)
   }
@@ -38,10 +32,7 @@ export async function hardDeleteItem(
     await ctx.db.delete(doc._id)
   })
 
-  if (
-    item.type === SIDEBAR_ITEM_TYPES.notes ||
-    item.type === SIDEBAR_ITEM_TYPES.canvases
-  ) {
+  if (item.type === SIDEBAR_ITEM_TYPES.notes || item.type === SIDEBAR_ITEM_TYPES.canvases) {
     await deleteYjsDocument(ctx, item._id)
   }
 

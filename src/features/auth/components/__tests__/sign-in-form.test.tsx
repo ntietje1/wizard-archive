@@ -12,10 +12,7 @@ vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({}),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
-  Link: ({
-    children,
-    ...props
-  }: Record<string, unknown> & { children?: ReactNode }) =>
+  Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) =>
     createElement('a', { href: props.to, ...props }, children),
   useRouter: () => ({ navigate: vi.fn() }),
 }))
@@ -58,18 +55,13 @@ describe('SignInForm', () => {
     render(<SignInForm />)
 
     expect(screen.getByText('Sign up')).toBeInTheDocument()
-    expect(screen.getByText('Sign up').closest('a')).toHaveAttribute(
-      'href',
-      '/sign-up',
-    )
+    expect(screen.getByText('Sign up').closest('a')).toHaveAttribute('href', '/sign-up')
   })
 
   it('renders Google OAuth button', () => {
     render(<SignInForm />)
 
-    expect(
-      screen.getByRole('button', { name: /continue with google/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
   })
 
   it('calls authClient.signIn.email on form submit', async () => {

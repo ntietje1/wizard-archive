@@ -23,10 +23,7 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
-function DialogOverlay({
-  className,
-  ...props
-}: DialogPrimitive.Backdrop.Props) {
+function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
@@ -63,13 +60,7 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             nativeButton
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="absolute top-2 right-2"
-              />
-            }
+            render={<Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" />}
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -82,11 +73,7 @@ function DialogContent({
 
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
-      data-slot="dialog-header"
-      className={cn('gap-2 flex flex-col', className)}
-      {...props}
-    />
+    <div data-slot="dialog-header" className={cn('gap-2 flex flex-col', className)} {...props} />
   )
 }
 
@@ -131,10 +118,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   )
 }
 
-function DialogDescription({
-  className,
-  ...props
-}: DialogPrimitive.Description.Props) {
+function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"

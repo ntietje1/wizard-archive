@@ -19,23 +19,14 @@ export async function permanentlyDeleteSidebarItem(
   }
 
   if (rawItem.location !== SIDEBAR_ITEM_LOCATION.trash) {
-    throwClientError(
-      ERROR_CODE.NOT_FOUND,
-      'This item is no longer in the trash',
-    )
+    throwClientError(ERROR_CODE.NOT_FOUND, 'This item is no longer in the trash')
   }
 
-  const { membership } = await requireCampaignMembership(
-    ctx,
-    rawItem.campaignId,
-  )
+  const { membership } = await requireCampaignMembership(ctx, rawItem.campaignId)
 
   if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     if (rawItem.type === SIDEBAR_ITEM_TYPES.folders) {
-      throwClientError(
-        ERROR_CODE.PERMISSION_DENIED,
-        'Only the DM can permanently delete folders',
-      )
+      throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can permanently delete folders')
     }
 
     const share = await ctx.db

@@ -2,11 +2,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E FileTypes')
@@ -19,17 +15,14 @@ test.describe.serial('file type handling', () => {
 
   test.beforeAll(async ({ browser }) => {
     // Create test PNG (minimal valid 1x1 PNG)
-    const pngHeader = Buffer.from([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    ])
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const ihdr = Buffer.from([
-      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01,
-      0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-      0xde, 0x00,
+      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, 0x00,
     ])
     const idat = Buffer.from([
-      0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8,
-      0xcf, 0xc0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33,
+      0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+      0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33,
     ])
     const iend = Buffer.from([
       0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
@@ -95,9 +88,7 @@ startxref
     await page.getByRole('button', { name: /^file upload/i }).click()
     await page.getByLabel('Upload file').setInputFiles(pngPath)
 
-    await expect(
-      page.getByRole('link', { name: /untitled file/i }),
-    ).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 15000 })
 
     await page
       .getByRole('link', { name: /untitled file/i })
@@ -120,9 +111,9 @@ startxref
     await page.getByLabel('Upload file').setInputFiles(pdfPath)
 
     // Second file upload creates "Untitled File 2"
-    await expect(
-      page.getByRole('link', { name: /untitled file 2/i }),
-    ).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('link', { name: /untitled file 2/i })).toBeVisible({
+      timeout: 15000,
+    })
   })
 
   test('oversized file shows error', async ({ page }) => {
@@ -132,8 +123,8 @@ startxref
     await page.getByRole('button', { name: /^file upload/i }).click()
     await page.getByLabel('Upload file').setInputFiles(oversizedPath)
 
-    await expect(
-      page.getByText(/file must be less than|too large|size limit/i),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/file must be less than|too large|size limit/i)).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

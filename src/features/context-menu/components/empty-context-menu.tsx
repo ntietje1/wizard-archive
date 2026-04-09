@@ -26,22 +26,15 @@ export function EmptyContextMenu({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function PlaceHolderContextMenu({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export function PlaceHolderContextMenu({ children }: { children: React.ReactNode }) {
   if (import.meta.env.DEV) {
     return (
       <ShadcnContextMenu>
-        <ContextMenuTrigger
-          render={<div style={{ display: 'contents' }}>{children}</div>}
-        />
+        <ContextMenuTrigger render={<div style={{ display: 'contents' }}>{children}</div>} />
         <ContextMenuContent side="bottom" align="center" sideOffset={4}>
           <ContextMenuGroup>
             <ContextMenuLabel>
-              ⚠️ DEV WARNING: PlaceHolderContextMenu shown (no context menu
-              registered)
+              ⚠️ DEV WARNING: PlaceHolderContextMenu shown (no context menu registered)
             </ContextMenuLabel>
           </ContextMenuGroup>
         </ContextMenuContent>

@@ -20,10 +20,7 @@ import {
   emptyTrashDescription,
   permanentDeleteDescription,
 } from '~/features/sidebar/utils/trash-utils'
-import {
-  EDITOR_ROUTE,
-  useEditorLinkProps,
-} from '~/features/sidebar/hooks/useEditorLinkProps'
+import { EDITOR_ROUTE, useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 
 interface TrashPopoverContentProps {
   onClose: () => void
@@ -33,16 +30,13 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const { data: allTrashedItems, parentItemsMap } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { data: allTrashedItems, parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = parentItemsMap.get(null) ?? []
 
   const { moveItem } = useMoveSidebarItem()
   const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
 
-  const [confirmDeleteItem, setConfirmDeleteItem] =
-    useState<AnySidebarItem | null>(null)
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const handleRestore = async (item: AnySidebarItem) => {
@@ -134,8 +128,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       {/* Footer */}
       <div className="border-t mt-1.5 pt-1.5 px-2 flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground leading-tight">
-          Items older than {TRASH_RETENTION_DAYS} days are automatically
-          deleted.
+          Items older than {TRASH_RETENTION_DAYS} days are automatically deleted.
         </p>
         {isDm && rootTrashedItems.length > 0 && (
           <Button
@@ -155,10 +148,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
           onClose={() => setConfirmDeleteItem(null)}
           onConfirm={() => handlePermanentDelete(confirmDeleteItem)}
           title="Permanently Delete"
-          description={permanentDeleteDescription(
-            confirmDeleteItem,
-            allTrashedItems,
-          )}
+          description={permanentDeleteDescription(confirmDeleteItem, allTrashedItems)}
           confirmLabel="Delete Forever"
           confirmVariant="destructive"
         />

@@ -19,9 +19,7 @@ export const useSortOptions = () => {
     api.editors.queries.getCurrentEditor,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
-  const setCurrentEditor = useAppMutation(
-    api.editors.mutations.setCurrentEditor,
-  )
+  const setCurrentEditor = useAppMutation(api.editors.mutations.setCurrentEditor)
 
   const [sortOptions, setSortOptions] = useState(defaultSortOptions)
 
@@ -35,8 +33,7 @@ export const useSortOptions = () => {
     }
 
     setSortOptions((prev) =>
-      prev.order === nextOptions.order &&
-      prev.direction === nextOptions.direction
+      prev.order === nextOptions.order && prev.direction === nextOptions.direction
         ? prev
         : nextOptions,
     )

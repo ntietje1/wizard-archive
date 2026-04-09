@@ -11,9 +11,7 @@ function translateStrokePoints(
   points: Array<[number, number, number]>,
   offset: { x: number; y: number },
 ): Array<[number, number, number]> {
-  return points.map(
-    ([x, y, p]) => [x + offset.x, y + offset.y, p] as [number, number, number],
-  )
+  return points.map(([x, y, p]) => [x + offset.x, y + offset.y, p] as [number, number, number])
 }
 
 function screenToFlowRect(
@@ -91,11 +89,7 @@ export function useCanvasSelectionRect({
         if (wasActive && lastScreenRect) {
           const current = storeApi.getState()
           const selRect = current.domNode
-            ? screenToFlowRect(
-                lastScreenRect,
-                current.domNode.getBoundingClientRect(),
-                reactFlow,
-              )
+            ? screenToFlowRect(lastScreenRect, current.domNode.getBoundingClientRect(), reactFlow)
             : lastFlowRectRef.current
           if (selRect) {
             reactFlow.setNodes((nodes) =>
@@ -106,17 +100,8 @@ export function useCanvasSelectionRect({
                   x: n.position.x - strokeData.bounds.x,
                   y: n.position.y - strokeData.bounds.y,
                 }
-                const adjustedPoints = translateStrokePoints(
-                  strokeData.points,
-                  offset,
-                )
-                if (
-                  !strokePathIntersectsRect(
-                    adjustedPoints,
-                    strokeData.size,
-                    selRect,
-                  )
-                ) {
+                const adjustedPoints = translateStrokePoints(strokeData.points, offset)
+                if (!strokePathIntersectsRect(adjustedPoints, strokeData.size, selRect)) {
                   return { ...n, selected: false }
                 }
                 return n
@@ -158,13 +143,8 @@ export function useCanvasSelectionRect({
             x: n.position.x - strokeData.bounds.x,
             y: n.position.y - strokeData.bounds.y,
           }
-          const adjustedPoints = translateStrokePoints(
-            strokeData.points,
-            offset,
-          )
-          if (
-            !strokePathIntersectsRect(adjustedPoints, strokeData.size, flowRect)
-          ) {
+          const adjustedPoints = translateStrokePoints(strokeData.points, offset)
+          if (!strokePathIntersectsRect(adjustedPoints, strokeData.size, flowRect)) {
             deselected.add(n.id)
           }
         }

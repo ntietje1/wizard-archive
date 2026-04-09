@@ -19,9 +19,7 @@ export type BlockMeta = {
   sharedWith: Array<Id<'campaignMembers'>>
 }
 
-export type NoteWithContent = SidebarItemWithContent<
-  typeof SIDEBAR_ITEM_TYPES.notes
-> & {
+export type NoteWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.notes> & {
   content: Array<CustomBlock>
   blockMeta: Record<string, BlockMeta>
 }

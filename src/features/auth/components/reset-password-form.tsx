@@ -139,9 +139,7 @@ export function ResetPasswordForm() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-2xl font-bold">Reset password</h1>
-        <p className="text-sm text-muted-foreground text-balance">
-          Enter your new password
-        </p>
+        <p className="text-sm text-muted-foreground text-balance">Enter your new password</p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">

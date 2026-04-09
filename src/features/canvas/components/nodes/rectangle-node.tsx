@@ -1,18 +1,9 @@
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 
-export type RectangleNodeType = Node<
-  { color: string; opacity?: number },
-  'rectangle'
->
+export type RectangleNodeType = Node<{ color: string; opacity?: number }, 'rectangle'>
 
-export function RectanglePreview({
-  color,
-  opacity,
-}: {
-  color: string
-  opacity?: number
-}) {
+export function RectanglePreview({ color, opacity }: { color: string; opacity?: number }) {
   return (
     <div className="flex h-full w-full items-center justify-center">
       <div
@@ -26,12 +17,7 @@ export function RectanglePreview({
   )
 }
 
-export function RectangleNode({
-  id,
-  selected,
-  dragging,
-  data,
-}: NodeProps<RectangleNodeType>) {
+export function RectangleNode({ id, selected, dragging, data }: NodeProps<RectangleNodeType>) {
   return (
     <ResizableNodeWrapper
       id={id}

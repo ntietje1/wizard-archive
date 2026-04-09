@@ -58,6 +58,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const doc = new Y.Doc()
       Y.applyUpdate(doc, new Uint8Array(snapshot!.data))
       const fragment = doc.getXmlFragment('document')
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       expect(fragment.toString()).toContain('Hello world')
       doc.destroy()
     } finally {
@@ -83,21 +84,9 @@ describe('game map operations are rollbackable after every operation', () => {
 
   it('every pin operation should be rollbackable', async () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: n1 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: n2 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: n3 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     // Add 3 pins in quick succession
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -141,16 +130,8 @@ describe('game map operations are rollbackable after every operation', () => {
 
   it('each pin operation should have a corresponding snapshot', async () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: n1 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: n2 } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     // Add pin
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -190,7 +171,7 @@ describe('game map operations are rollbackable after every operation', () => {
           return JSON.parse(new TextDecoder().decode(snapshot.data))
         } catch (e) {
           throw new Error(
-            `Failed to parse snapshot at index ${index} (id=${snapshot._id}, createdAt=${snapshot._creationTime}): ${e}`,
+            `Failed to parse snapshot at index ${index} (id=${snapshot._id}, createdAt=${snapshot._creationTime}): ${String(e)}`,
           )
         }
       }
@@ -227,9 +208,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.run(async (dbCtx) => {
       const moveEntry = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) =>
-          q.eq('itemId', mapId).eq('action', 'map_pin_moved'),
-        )
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_moved'))
         .first()
 
       expect(moveEntry).not.toBeNull()
@@ -238,9 +217,7 @@ describe('game map operations are rollbackable after every operation', () => {
       // And the snapshot should exist
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', moveEntry!._id),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', moveEntry!._id))
         .first()
       expect(snapshot).not.toBeNull()
     })
@@ -266,9 +243,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.run(async (dbCtx) => {
       const removeEntry = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) =>
-          q.eq('itemId', mapId).eq('action', 'map_pin_removed'),
-        )
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_removed'))
         .first()
 
       expect(removeEntry).not.toBeNull()
@@ -276,9 +251,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', removeEntry!._id),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', removeEntry!._id))
         .first()
       expect(snapshot).not.toBeNull()
     })
@@ -315,9 +288,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_editHistory', (q) =>
-          q.eq('editHistoryId', visEntry!._id),
-        )
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', visEntry!._id))
         .first()
       expect(snapshot).not.toBeNull()
     })
@@ -333,11 +304,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
@@ -353,9 +320,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       await t.run(async (dbCtx) => {
         const history = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_added'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
           .first()
 
         expect(history).not.toBeNull()
@@ -363,9 +328,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
 
         const snapshot = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_editHistory', (q) =>
-            q.eq('editHistoryId', history!._id),
-          )
+          .withIndex('by_editHistory', (q) => q.eq('editHistoryId', history!._id))
           .first()
 
         expect(snapshot).not.toBeNull()
@@ -397,9 +360,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', noteId).eq('action', 'content_edited'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
           .first()
       })
 
@@ -427,32 +388,23 @@ describe('rollback data integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(
-        t,
-        ctx.campaignId,
-        ctx.dm.profile._id,
-      )
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Add pin at original position
-      const pinId = await dmAuth.mutation(
-        api.gameMaps.mutations.createItemPin,
-        {
-          mapId,
-          x: 10,
-          y: 20,
-          itemId: noteId,
-        },
-      )
+      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        mapId,
+        x: 10,
+        y: 20,
+        itemId: noteId,
+      })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Get the history entry for the pin add
       const addEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_added'),
-          )
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
           .first()
       })
       expect(addEntry!.hasSnapshot).toBe(true)
@@ -466,10 +418,9 @@ describe('rollback data integrity', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Rollback to the pin add snapshot
-      await dmAuth.mutation(
-        api.documentSnapshots.mutations.rollbackToSnapshot,
-        { editHistoryId: addEntry!._id },
-      )
+      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        editHistoryId: addEntry!._id,
+      })
 
       // Verify the pin is back at original position
       await t.run(async (dbCtx) => {
@@ -538,19 +489,16 @@ describe('rollback edge cases', () => {
     const historyEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) =>
-          q.eq('itemId', noteId).eq('action', 'created'),
-        )
+        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
         .first()
     })
 
     expect(historyEntry).not.toBeNull()
     expect(historyEntry!.hasSnapshot).toBe(false)
 
-    const snapshot = await dmAuth.query(
-      api.documentSnapshots.queries.getSnapshotForHistoryEntry,
-      { editHistoryId: historyEntry!._id },
-    )
+    const snapshot = await dmAuth.query(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
+      editHistoryId: historyEntry!._id,
+    })
 
     expect(snapshot).toBeNull()
   })
@@ -570,9 +518,7 @@ describe('rollback edge cases', () => {
     const snapshotEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) =>
-          q.eq('itemId', mapId).eq('action', 'map_pin_added'),
-        )
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
         .first()
     })
     expect(snapshotEntry!.hasSnapshot).toBe(true)
@@ -584,10 +530,9 @@ describe('rollback edge cases', () => {
       })
     })
 
-    const result = await dmAuth.mutation(
-      api.documentSnapshots.mutations.rollbackToSnapshot,
-      { editHistoryId: snapshotEntry!._id },
-    )
+    const result = await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      editHistoryId: snapshotEntry!._id,
+    })
 
     expect(result).toBeNull()
   })

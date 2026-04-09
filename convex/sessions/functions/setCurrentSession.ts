@@ -19,10 +19,7 @@ export async function setCurrentSession(
 
   const currentSession = await getCurrentSession(ctx, { campaignId })
   if (currentSession) {
-    throwClientError(
-      ERROR_CODE.CONFLICT,
-      'Cannot resume a session while another session is active',
-    )
+    throwClientError(ERROR_CODE.CONFLICT, 'Cannot resume a session while another session is active')
   }
 
   const now = Date.now()

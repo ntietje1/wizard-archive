@@ -23,9 +23,7 @@ export const ViewAsPlayerButton = () => {
   const campaignMembersQuery = useCampaignMembers()
   const { isDm } = useCampaign()
   const playerMembers =
-    campaignMembersQuery.data?.filter(
-      (member) => member.role === CAMPAIGN_MEMBER_ROLE.Player,
-    ) ?? []
+    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
   const { viewAsPlayerId, setViewAsPlayerId } = useEditorMode()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -46,9 +44,7 @@ export const ViewAsPlayerButton = () => {
                 variant="ghost"
                 size="icon"
                 className={
-                  viewAsPlayerId
-                    ? 'text-primary hover:text-primary aria-expanded:text-primary'
-                    : ''
+                  viewAsPlayerId ? 'text-primary hover:text-primary aria-expanded:text-primary' : ''
                 }
                 disabled={isPending}
                 aria-label={label}
@@ -60,15 +56,11 @@ export const ViewAsPlayerButton = () => {
           />
           <DropdownMenuContent className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto z-[9999]">
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="pb-0 pt-0.5">
-                View as player
-              </DropdownMenuLabel>
+              <DropdownMenuLabel className="pb-0 pt-0.5">View as player</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {isPending ? (
                 <div className="px-2 py-2">
-                  <div className="text-xs text-muted-foreground">
-                    Loading players...
-                  </div>
+                  <div className="text-xs text-muted-foreground">Loading players...</div>
                 </div>
               ) : playerMembers.length === 0 ? (
                 <div className="px-2 py-2">
@@ -80,8 +72,7 @@ export const ViewAsPlayerButton = () => {
                 <>
                   {playerMembers.map((member) => {
                     const profile = member.userProfile
-                    const displayName =
-                      profile.name || profile.username || 'Player'
+                    const displayName = profile.name || profile.username || 'Player'
                     const displayText = profile.name
                       ? profile.name
                       : profile.username
@@ -101,10 +92,7 @@ export const ViewAsPlayerButton = () => {
                         className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
                       >
                         <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                          <span
-                            className="truncate font-medium"
-                            title={displayName}
-                          >
+                          <span className="truncate font-medium" title={displayName}>
                             {displayText}
                           </span>
                           {profile.name && profile.username && (

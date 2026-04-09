@@ -1,43 +1,30 @@
-//  @ts-check
-
 import path from 'node:path'
+import { defineConfig } from 'eslint/config'
 import { includeIgnoreFile } from '@eslint/compat'
-import { tanstackConfig } from '@tanstack/eslint-config'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 import convexPlugin from '@convex-dev/eslint-plugin'
 
-const recommendedConvexConfig = convexPlugin.configs.recommended[0]
-const recommendedConvexRules = recommendedConvexConfig.rules
-
-export default [
+// TODO: remove this once oxlint has plugins API
+export default defineConfig([
   includeIgnoreFile(path.resolve(import.meta.dirname, '.gitignore')),
   {
-    ignores: [
-      'convex/_generated/**',
-      'src/routeTree.gen.ts',
-      'src/features/shadcn/**',
-    ],
+    ignores: ['convex/_generated/**'],
   },
-  ...tanstackConfig,
   {
+    files: ['convex/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tseslint.parser,
+    },
     plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
       '@convex-dev': convexPlugin,
+      '@typescript-eslint': tseslint.plugin,
     },
     rules: {
-      ...recommendedConvexRules,
+      '@convex-dev/no-old-registered-function-syntax': 'error',
+      '@convex-dev/require-args-validator': 'error',
       '@convex-dev/import-wrong-runtime': 'error',
-      '@convex-dev/explicit-table-ids': 'off', // TODO: enable this
-      'react-hooks/rules-of-hooks': 'error',
-      'react-refresh/only-export-components': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      'no-shadow': ['warn', { allow: ['_'] }],
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      '@convex-dev/no-collect-in-query': 'warn',
+      '@convex-dev/explicit-table-ids': 'off',
     },
   },
-]
+])

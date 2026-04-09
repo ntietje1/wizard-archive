@@ -1,7 +1,4 @@
-import {
-  requireItemAccess,
-  validateSidebarItemRename,
-} from '../../sidebarItems/validation'
+import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'

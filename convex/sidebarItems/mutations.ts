@@ -1,9 +1,6 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import {
-  sidebarItemIdValidator,
-  sidebarItemLocationValidator,
-} from './schema/baseValidators'
+import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
@@ -57,10 +54,7 @@ export const claimPreviewGeneration = authMutation({
     claimed: v.boolean(),
     claimToken: v.union(v.string(), v.null()),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ claimed: boolean; claimToken: string | null }> => {
+  handler: async (ctx, args): Promise<{ claimed: boolean; claimToken: string | null }> => {
     return await claimPreviewGenerationFn(ctx, { itemId: args.itemId })
   },
 })

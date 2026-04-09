@@ -10,18 +10,13 @@ if (!convexUrl || !convexSiteUrl) {
   )
 }
 
-export const {
-  handler,
-  getToken,
-  fetchAuthQuery,
-  fetchAuthMutation,
-  fetchAuthAction,
-} = convexBetterAuthReactStart({
-  convexUrl,
-  convexSiteUrl,
-  jwtCache: {
-    enabled: true,
-    expirationToleranceSeconds: 60,
-    isAuthError: (error) => isClientError(error, ERROR_CODE.NOT_AUTHENTICATED),
-  },
-})
+export const { handler, getToken, fetchAuthQuery, fetchAuthMutation, fetchAuthAction } =
+  convexBetterAuthReactStart({
+    convexUrl,
+    convexSiteUrl,
+    jwtCache: {
+      enabled: true,
+      expirationToleranceSeconds: 60,
+      isAuthError: (error) => isClientError(error, ERROR_CODE.NOT_AUTHENTICATED),
+    },
+  })

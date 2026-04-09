@@ -44,12 +44,8 @@ export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-destructive">
-            Invalid Image URL
-          </p>
-          <p className="text-sm mt-2">
-            The image URL does not meet security requirements.
-          </p>
+          <p className="text-lg font-medium text-destructive">Invalid Image URL</p>
+          <p className="text-sm mt-2">The image URL does not meet security requirements.</p>
         </div>
       </div>
     )

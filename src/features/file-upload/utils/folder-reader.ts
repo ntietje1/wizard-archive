@@ -60,9 +60,7 @@ async function readDirectoryRecursively(
   directoryEntry: FileSystemDirectoryEntry,
   parentPath: string = '',
 ): Promise<FolderStructure> {
-  const relativePath = parentPath
-    ? `${parentPath}/${directoryEntry.name}`
-    : directoryEntry.name
+  const relativePath = parentPath ? `${parentPath}/${directoryEntry.name}` : directoryEntry.name
 
   const folder: FolderStructure = {
     name: directoryEntry.name,
@@ -126,9 +124,7 @@ export async function processDataTransferItems(
         relativePath: entry.name,
       })
     } else if (entry.isDirectory) {
-      const folder = await readDirectoryRecursively(
-        entry as FileSystemDirectoryEntry,
-      )
+      const folder = await readDirectoryRecursively(entry as FileSystemDirectoryEntry)
       result.rootFolders.push(folder)
     }
   }

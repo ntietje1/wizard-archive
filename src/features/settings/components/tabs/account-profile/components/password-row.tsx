@@ -60,8 +60,8 @@ function PasswordChangeDialog({ onClose }: { onClose: () => void }) {
         <DialogTitle>Change password</DialogTitle>
       </DialogHeader>
       <p className="text-sm text-muted-foreground">
-        Passwords must be at least 8 characters long. We recommend using a mix
-        of letters, numbers, and symbols.
+        Passwords must be at least 8 characters long. We recommend using a mix of letters, numbers,
+        and symbols.
       </p>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
@@ -104,11 +104,7 @@ function PasswordChangeDialog({ onClose }: { onClose: () => void }) {
       </div>
       <DialogFooter showCloseButton>
         <Button onClick={handleSave} disabled={isLoading}>
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            'Change password'
-          )}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Change password'}
         </Button>
       </DialogFooter>
     </>
@@ -127,9 +123,7 @@ export function PasswordRow() {
     >
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <SettingsSubDialogContent>
-          {isEditing && (
-            <PasswordChangeDialog onClose={() => setIsEditing(false)} />
-          )}
+          {isEditing && <PasswordChangeDialog onClose={() => setIsEditing(false)} />}
         </SettingsSubDialogContent>
       </Dialog>
     </SettingsRow>

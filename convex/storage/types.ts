@@ -6,8 +6,7 @@ export const FILE_STORAGE_STATUS = {
   Committed: 'committed',
 } as const
 
-export type FileStorageStatus =
-  (typeof FILE_STORAGE_STATUS)[keyof typeof FILE_STORAGE_STATUS]
+export type FileStorageStatus = (typeof FILE_STORAGE_STATUS)[keyof typeof FILE_STORAGE_STATUS]
 
 export type FileStorage = CommonValidatorFields<'fileStorage'> & {
   userId: Id<'userProfiles'>

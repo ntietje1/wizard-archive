@@ -35,21 +35,15 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const query = useAuthQuery(
     api.blocks.queries.getBlocksWithShares,
-    isNote(item) && blockIds.length > 0 && campaignData
-      ? { noteId: item._id, blockIds }
-      : 'skip',
+    isNote(item) && blockIds.length > 0 && campaignData ? { noteId: item._id, blockIds } : 'skip',
   )
 
-  const setBlocksShareStatus = useAppMutation(
-    api.blockShares.mutations.setBlocksShareStatus,
-  )
+  const setBlocksShareStatus = useAppMutation(api.blockShares.mutations.setBlocksShareStatus)
   const shareBlocks = useAppMutation(api.blockShares.mutations.shareBlocks)
   const unshareBlocks = useAppMutation(api.blockShares.mutations.unshareBlocks)
 
   const isMutating =
-    setBlocksShareStatus.isPending ||
-    shareBlocks.isPending ||
-    unshareBlocks.isPending
+    setBlocksShareStatus.isPending || shareBlocks.isPending || unshareBlocks.isPending
 
   const blockInfoMap = (() => {
     const map = new Map<string, BlockShareInfo>()
@@ -59,16 +53,12 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     return map
   })()
 
-  const hasCompleteData =
-    query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id))
+  const hasCompleteData = query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id))
 
-  const topLevelBlocks = blocks.filter(
-    (b) => blockInfoMap.get(b.id)?.isTopLevel !== false,
-  )
+  const topLevelBlocks = blocks.filter((b) => blockInfoMap.get(b.id)?.isTopLevel !== false)
 
   const aggregateShareStatus: AggregateShareStatus = (() => {
-    if (!hasCompleteData || topLevelBlocks.length === 0)
-      return AGGREGATE_SHARE_STATUS.NOT_SHARED
+    if (!hasCompleteData || topLevelBlocks.length === 0) return AGGREGATE_SHARE_STATUS.NOT_SHARED
 
     const statuses = topLevelBlocks.map(
       (b) => blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
@@ -87,15 +77,12 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const unsharedBlocks = topLevelBlocks.filter(
     (b) =>
-      (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) ===
-      SHARE_STATUS.NOT_SHARED,
+      (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) === SHARE_STATUS.NOT_SHARED,
   )
 
   const playerMembers = query.data?.playerMembers ?? []
 
-  const getShareState = (
-    memberId: Id<'campaignMembers'>,
-  ): 'all' | 'some' | 'none' => {
+  const getShareState = (memberId: Id<'campaignMembers'>): 'all' | 'some' | 'none' => {
     if (topLevelBlocks.length === 0) return 'none'
     let count = 0
     for (const block of topLevelBlocks) {
@@ -103,8 +90,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
       if (
         status === SHARE_STATUS.ALL_SHARED ||
-        (status === SHARE_STATUS.INDIVIDUALLY_SHARED &&
-          info?.sharedMemberIds.includes(memberId))
+        (status === SHARE_STATUS.INDIVIDUALLY_SHARED && info?.sharedMemberIds.includes(memberId))
       ) {
         count++
       }
@@ -115,20 +101,11 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   }
 
   const toggleShareStatus = async () => {
-    if (
-      !campaignData?._id ||
-      !isNote(item) ||
-      isMutating ||
-      topLevelBlocks.length === 0
-    )
-      return
+    if (!campaignData?._id || !isNote(item) || isMutating || topLevelBlocks.length === 0) return
     try {
-      const blocksToUpdate =
-        unsharedBlocks.length > 0 ? unsharedBlocks : topLevelBlocks
+      const blocksToUpdate = unsharedBlocks.length > 0 ? unsharedBlocks : topLevelBlocks
       const newStatus =
-        unsharedBlocks.length > 0
-          ? SHARE_STATUS.ALL_SHARED
-          : SHARE_STATUS.NOT_SHARED
+        unsharedBlocks.length > 0 ? SHARE_STATUS.ALL_SHARED : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
         noteId: item._id,
@@ -141,13 +118,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   }
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
-    if (
-      !campaignData?._id ||
-      !isNote(item) ||
-      isMutating ||
-      topLevelBlocks.length === 0
-    )
-      return
+    if (!campaignData?._id || !isNote(item) || isMutating || topLevelBlocks.length === 0) return
     try {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({

@@ -5,10 +5,7 @@ type AuthUserDoc = {
   _creationTime: number
 }
 
-export async function onDeleteUser(
-  ctx: MutationCtx,
-  user: AuthUserDoc,
-): Promise<void> {
+export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise<void> {
   const profile = await ctx.db
     .query('userProfiles')
     .withIndex('by_user', (q) => q.eq('authUserId', user._id))

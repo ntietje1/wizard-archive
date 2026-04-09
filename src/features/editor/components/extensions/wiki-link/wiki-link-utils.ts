@@ -65,8 +65,7 @@ export function getWikiLinkContext(
 
   // Extract the full query (content between [[ and ]] or end of available text)
   const contentBefore = textBefore.slice(openBracketPos + 2)
-  const contentAfter =
-    closeBracketPos >= 0 ? textAfter.slice(0, closeBracketPos) : ''
+  const contentAfter = closeBracketPos >= 0 ? textAfter.slice(0, closeBracketPos) : ''
   const query = contentBefore + contentAfter
 
   const startPos = blockStart + openBracketPos

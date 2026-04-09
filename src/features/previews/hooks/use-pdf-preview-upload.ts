@@ -5,9 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { logger } from '~/shared/utils/logger'
 
 function isPdfFile(file: File): boolean {
-  return (
-    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-  )
+  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 }
 
 const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
@@ -28,10 +26,7 @@ export function usePdfPreviewUpload() {
         const buffer = await file.arrayBuffer()
         await claimAndUpload(fileId, () => generatePdfPreview(buffer))
       } catch (error) {
-        logger.error(
-          `PDF preview generation failed for fileId=${fileId}:`,
-          error,
-        )
+        logger.error(`PDF preview generation failed for fileId=${fileId}:`, error)
       }
     },
     [claimAndUpload],

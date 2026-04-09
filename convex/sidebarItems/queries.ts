@@ -6,10 +6,7 @@ import { requireSidebarItemById } from './functions/getSidebarItemById'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/schema'
-import {
-  sidebarItemIdValidator,
-  sidebarItemLocationValidator,
-} from './schema/baseValidators'
+import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { anySidebarItemWithContentValidator } from './schema/contentSchema'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 

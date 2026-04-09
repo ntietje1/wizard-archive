@@ -10,10 +10,7 @@ import {
 import { ResizableSidebar } from './resizable-sidebar'
 import type { PanelPreference } from 'convex/userPreferences/types'
 import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
-import {
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '~/features/shadcn/components/resizable'
+import { ResizablePanel, ResizablePanelGroup } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
@@ -32,11 +29,7 @@ function SidebarContent() {
           className="flex-1"
           autoSaveId="notes-sidebar-layout-vertical"
         >
-          <ResizablePanel
-            defaultSize={75}
-            minSize={50}
-            className="flex flex-col min-h-0 min-w-0"
-          >
+          <ResizablePanel defaultSize={75} minSize={50} className="flex flex-col min-h-0 min-w-0">
             <FileSidebar />
           </ResizablePanel>
           <div className="shrink-0 p-1 border-t">

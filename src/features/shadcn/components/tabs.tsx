@@ -6,19 +6,12 @@ import type { VariantProps } from 'class-variance-authority'
 
 import { cn } from '~/features/shadcn/lib/utils'
 
-function Tabs({
-  className,
-  orientation = 'horizontal',
-  ...props
-}: TabsPrimitive.Root.Props) {
+function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive.Root.Props) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
       data-orientation={orientation}
-      className={cn(
-        'gap-2 group/tabs flex data-[orientation=horizontal]:flex-col',
-        className,
-      )}
+      className={cn('gap-2 group/tabs flex data-[orientation=horizontal]:flex-col', className)}
       {...props}
     />
   )

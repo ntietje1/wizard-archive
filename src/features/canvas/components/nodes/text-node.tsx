@@ -5,8 +5,7 @@ import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { NodeProps } from '@xyflow/react'
 
-const TEXT_CONTAINER_CLASS =
-  'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
+const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
 
 export function TextPreview({ label }: { label: string }) {
   return (
@@ -20,13 +19,11 @@ export function TextNode({ id, data, selected, dragging }: NodeProps) {
   const { updateNodeData } = useContext(CanvasContext)
   const label = (data.label as string) || 'Text'
 
-  const {
-    isEditing,
-    startEditing,
-    handleBlur,
-    handleKeyDown,
-    containerKeyDown,
-  } = useNodeEditing({ id, currentValue: label, updateNodeData })
+  const { isEditing, startEditing, handleBlur, handleKeyDown, containerKeyDown } = useNodeEditing({
+    id,
+    currentValue: label,
+    updateNodeData,
+  })
 
   return (
     <ResizableNodeWrapper
@@ -55,11 +52,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps) {
         ) : (
           <p className="text-sm select-none">{label}</p>
         )}
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-primary"
-        />
+        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

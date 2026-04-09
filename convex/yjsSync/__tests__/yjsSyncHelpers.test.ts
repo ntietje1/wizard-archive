@@ -76,9 +76,7 @@ describe('createYjsDocument', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) =>
-          q.eq('documentId', result.noteId).eq('seq', 0),
-        )
+        .withIndex('by_document_seq', (q) => q.eq('documentId', result.noteId).eq('seq', 0))
         .collect()
       expect(rows).toHaveLength(1)
       expect(rows[0].isSnapshot).toBe(true)
@@ -101,9 +99,7 @@ describe('createYjsDocument', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) =>
-          q.eq('documentId', noteId).eq('seq', 0),
-        )
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId).eq('seq', 0))
         .collect()
       expect(rows).toHaveLength(1)
     })
@@ -160,16 +156,8 @@ describe('deleteYjsDocument', () => {
 
   it('does not affect other documents rows', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId: noteA } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
-    const { noteId: noteB } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-    )
+    const { noteId: noteA } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: noteB } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     await t.run(async (dbCtx) => {

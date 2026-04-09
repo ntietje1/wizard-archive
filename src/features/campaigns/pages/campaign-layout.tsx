@@ -17,9 +17,7 @@ export function CampaignLayout() {
       <SidebarItemsProvider>
         <DndProvider>
           <div className="flex flex-col flex-1 min-h-0">
-            <SidebarLayout
-              initialPanel={initialPanelPreferences?.['left-sidebar'] ?? null}
-            >
+            <SidebarLayout initialPanel={initialPanelPreferences?.['left-sidebar'] ?? null}>
               <ErrorBoundary FallbackComponent={ErrorFallback}>
                 <Outlet />
               </ErrorBoundary>

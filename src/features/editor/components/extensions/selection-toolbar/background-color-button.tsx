@@ -28,9 +28,7 @@ export const BackgroundColorButton = () => {
   )
 
   useEditorSelectionChange(() => {
-    setCurrentBackgroundColor(
-      editor.getActiveStyles().backgroundColor || 'default',
-    )
+    setCurrentBackgroundColor(editor.getActiveStyles().backgroundColor || 'default')
   }, editor)
 
   const setBackgroundColor = (color: string) => {
@@ -60,17 +58,10 @@ export const BackgroundColorButton = () => {
           data-test="background-colors"
           label={'Highlight Color'}
           mainTooltip={'Highlight Color'}
-          icon={
-            <BackgroundColorIcon
-              backgroundColor={currentBackgroundColor}
-              size={20}
-            />
-          }
+          icon={<BackgroundColorIcon backgroundColor={currentBackgroundColor} size={20} />}
         />
       </Components.Generic.Menu.Trigger>
-      <Components.Generic.Menu.Dropdown
-        className={'bn-menu-dropdown bn-color-picker-dropdown'}
-      >
+      <Components.Generic.Menu.Dropdown className={'bn-menu-dropdown bn-color-picker-dropdown'}>
         <ColorPicker
           background={{
             color: currentBackgroundColor,

@@ -25,9 +25,7 @@ export async function captureGameMapSnapshot(
     ctx.db.get(mapId),
     ctx.db
       .query('mapPins')
-      .withIndex('by_map_deletionTime', (q) =>
-        q.eq('mapId', mapId).eq('deletionTime', null),
-      )
+      .withIndex('by_map_deletionTime', (q) => q.eq('mapId', mapId).eq('deletionTime', null))
       .order('asc')
       .collect(),
   ])

@@ -19,9 +19,11 @@ describe('validateSearch', () => {
   })
 
   it('extracts all fields together', () => {
-    expect(
-      validateSearch({ item: 'note', heading: 'h1', trash: true }),
-    ).toEqual({ item: 'note', heading: 'h1', trash: true })
+    expect(validateSearch({ item: 'note', heading: 'h1', trash: true })).toEqual({
+      item: 'note',
+      heading: 'h1',
+      trash: true,
+    })
   })
 
   it('trims whitespace from strings', () => {

@@ -10,9 +10,7 @@ export interface FileWithPreviewOptions {
   isOpen: boolean
   fileStorageId?: Id<'_storage'>
   uploadOnSelect?: boolean
-  fileTypeValidator?: (
-    file: File,
-  ) => { valid: true } | { valid: false; error: string }
+  fileTypeValidator?: (file: File) => { valid: true } | { valid: false; error: string }
   maxFileSize?: number
   onUploadComplete?: (storageId: Id<'_storage'>) => void | Promise<void>
 }
@@ -25,31 +23,20 @@ export interface FileMetadata {
 
 export type UseFileWithPreviewReturn = ReturnType<typeof useFileWithPreview>
 
-function getFileType(
-  file: File,
-): 'image' | 'pdf' | 'video' | 'audio' | 'other' {
+function getFileType(file: File): 'image' | 'pdf' | 'video' | 'audio' | 'other' {
   const mimeType = file.type.toLowerCase()
   const fileName = file.name.toLowerCase()
 
-  if (
-    mimeType.startsWith('image/') ||
-    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(fileName)) {
     return 'image'
   }
   if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
     return 'pdf'
   }
-  if (
-    mimeType.startsWith('video/') ||
-    /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('video/') || /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(fileName)) {
     return 'video'
   }
-  if (
-    mimeType.startsWith('audio/') ||
-    /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)
-  ) {
+  if (mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(fileName)) {
     return 'audio'
   }
   return 'other'
@@ -133,9 +120,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
     }
   }, [isOpen])
 
-  const verifyFile = (
-    fileToVerify: File,
-  ): { valid: true } | { valid: false; error: string } => {
+  const verifyFile = (fileToVerify: File): { valid: true } | { valid: false; error: string } => {
     if (fileTypeValidator) {
       return fileTypeValidator(fileToVerify)
     }
@@ -160,9 +145,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
       return storageIdResult
     } catch (error) {
       logger.error(error)
-      setUploadError(
-        error instanceof Error ? error.message : 'Failed to upload file',
-      )
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload file')
       throw error
     } finally {
       setIsUploading(false)
@@ -222,9 +205,7 @@ export const useFileWithPreview = (options: FileWithPreviewOptions) => {
         })
         .catch((error) => {
           logger.error(error)
-          setUploadError(
-            error instanceof Error ? error.message : 'Upload failed',
-          )
+          setUploadError(error instanceof Error ? error.message : 'Upload failed')
           setIsUploading(false)
         })
     }

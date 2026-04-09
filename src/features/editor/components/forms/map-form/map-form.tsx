@@ -46,21 +46,12 @@ const defaultMapFormValues: MapFormValues = {
   color: null,
 }
 
-export function MapForm({
-  mapId,
-  campaignId,
-  parentId,
-  onClose,
-  onSuccess,
-}: MapFormProps) {
+export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
-  const map = useAuthQuery(
-    api.gameMaps.queries.getMap,
-    mapId ? { mapId } : 'skip',
-  )
+  const map = useAuthQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip')
 
   const imageUpload = useFileWithPreview({
     isOpen: true,
@@ -169,8 +160,8 @@ export function MapForm({
           imageStorageId: finalImageStorageId,
           parentId: parentId ?? null,
         })
-        await openParentFolders(newMapId)
-        navigateToItem(newMapSlug)
+        openParentFolders(newMapId)
+        void navigateToItem(newMapSlug)
         toast.success('Map created')
         onSuccess?.(newMapSlug)
         onClose()
@@ -183,23 +174,18 @@ export function MapForm({
     }
   }
 
-  const hasImage = !!(
-    imageUpload.file ||
-    (map.data?.imageStorageId && !imageUpload.removed)
-  )
+  const hasImage = !!(imageUpload.file || (map.data?.imageStorageId && !imageUpload.removed))
 
-  const isLoadingMap =
-    mapId !== undefined && map.data === undefined && map.isPending
+  const isLoadingMap = mapId !== undefined && map.data === undefined && map.isPending
 
-  const isDisabled =
-    form.state.isSubmitting || imageUpload.isUploading || isLoadingMap
+  const isDisabled = form.state.isSubmitting || imageUpload.isUploading || isLoadingMap
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        form.handleSubmit()
+        void form.handleSubmit()
       }}
       className="space-y-4"
     >
@@ -239,9 +225,7 @@ export function MapForm({
               )}
             </InputGroup>
             {field.state.meta.errors[0] && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
+              <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
             )}
           </div>
         )}
@@ -285,9 +269,7 @@ export function MapForm({
               return (
                 <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
                   <PreviewIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate text-sm">
-                    {values.name || 'Untitled Map'}
-                  </span>
+                  <span className="truncate text-sm">{values.name || 'Untitled Map'}</span>
                 </div>
               )
             }}
@@ -303,9 +285,7 @@ export function MapForm({
           handleFileSelect={imageUpload.handleFileSelect}
           isSubmitting={isDisabled}
         />
-        {!hasImage && (
-          <p className="text-sm text-destructive">Map image is required</p>
-        )}
+        {!hasImage && <p className="text-sm text-destructive">Map image is required</p>}
       </div>
 
       <form.Subscribe
@@ -315,16 +295,10 @@ export function MapForm({
         })}
       >
         {({ name, canSubmit }) => {
-          const isSubmitDisabled =
-            !name || !hasImage || isDisabled || (mapId && !canSubmit)
+          const isSubmitDisabled = !name || !hasImage || isDisabled || (mapId && !canSubmit)
           return (
             <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isDisabled}
-              >
+              <Button type="button" variant="outline" onClick={onClose} disabled={isDisabled}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitDisabled}>

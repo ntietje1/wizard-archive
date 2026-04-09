@@ -17,10 +17,7 @@ export const findBlockByBlockNoteId = async (
   const block = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
-      q
-        .eq('campaignId', note.campaignId)
-        .eq('noteId', noteId)
-        .eq('blockId', blockId),
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('blockId', blockId),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()

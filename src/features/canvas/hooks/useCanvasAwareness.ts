@@ -8,15 +8,10 @@ import type {
   SelectingState,
 } from '../utils/canvas-awareness-types'
 
-function buildRemoteUsers(
-  awareness: Awareness,
-  localClientId: number,
-): Array<RemoteUser> {
+function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<RemoteUser> {
   const states = awareness.getStates()
   const localState = states.get(localClientId)
-  const localUser = localState?.user as
-    | { name: string; color: string }
-    | undefined
+  const localUser = localState?.user as { name: string; color: string } | undefined
   const users: Array<RemoteUser> = []
   states.forEach((state, clientId) => {
     if (clientId === localClientId || !state.user) return
@@ -32,13 +27,9 @@ function buildRemoteUsers(
       clientId,
       user: state.user as { name: string; color: string },
       cursor: (state.cursor as { x: number; y: number } | undefined) ?? null,
-      dragging:
-        (state.dragging as
-          | Record<string, { x: number; y: number }>
-          | undefined) ?? null,
+      dragging: (state.dragging as Record<string, { x: number; y: number }> | undefined) ?? null,
       resizing: (state.resizing as ResizingState | undefined) ?? null,
-      selectedNodeIds:
-        (state.selectedNodeIds as Array<string> | undefined) ?? null,
+      selectedNodeIds: (state.selectedNodeIds as Array<string> | undefined) ?? null,
       drawing: (state.drawing as DrawingState | undefined) ?? null,
       selecting: (state.selecting as SelectingState | undefined) ?? null,
     })

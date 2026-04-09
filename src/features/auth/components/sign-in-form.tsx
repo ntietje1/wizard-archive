@@ -31,19 +31,9 @@ export function SignInForm({
 
   switch (view) {
     case 'two-factor':
-      return (
-        <SignInTwoFactorForm
-          onSuccess={handleSuccess}
-          onBack={() => setView('credentials')}
-        />
-      )
+      return <SignInTwoFactorForm onSuccess={handleSuccess} onBack={() => setView('credentials')} />
     case 'email-not-verified':
-      return (
-        <SignInEmailNotVerified
-          email={email}
-          onBack={() => setView('credentials')}
-        />
-      )
+      return <SignInEmailNotVerified email={email} onBack={() => setView('credentials')} />
     case 'credentials':
       return (
         <SignInCredentialsForm

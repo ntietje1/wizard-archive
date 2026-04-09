@@ -55,9 +55,7 @@ describe('type guards', () => {
 
   it('isSidebarItemType works with explicit type parameter', () => {
     expect(isSidebarItemType(createNote(), SIDEBAR_ITEM_TYPES.notes)).toBe(true)
-    expect(isSidebarItemType(createNote(), SIDEBAR_ITEM_TYPES.folders)).toBe(
-      false,
-    )
+    expect(isSidebarItemType(createNote(), SIDEBAR_ITEM_TYPES.folders)).toBe(false)
     expect(isSidebarItemType(null, SIDEBAR_ITEM_TYPES.notes)).toBe(false)
     expect(isSidebarItemType(undefined, SIDEBAR_ITEM_TYPES.notes)).toBe(false)
   })
@@ -76,9 +74,7 @@ describe('getSidebarItemAs', () => {
 
   it('returns undefined for null/undefined', () => {
     expect(getSidebarItemAs(null, SIDEBAR_ITEM_TYPES.notes)).toBeUndefined()
-    expect(
-      getSidebarItemAs(undefined, SIDEBAR_ITEM_TYPES.notes),
-    ).toBeUndefined()
+    expect(getSidebarItemAs(undefined, SIDEBAR_ITEM_TYPES.notes)).toBeUndefined()
   })
 })
 
@@ -196,9 +192,7 @@ describe('buildBreadcrumbs', () => {
       parentId: gp._id,
     })
     const note = createNote({ parentId: parent._id })
-    expect(buildBreadcrumbs(note, buildMap([gp, parent, note]))).toBe(
-      'Grandparent/Parent/',
-    )
+    expect(buildBreadcrumbs(note, buildMap([gp, parent, note]))).toBe('Grandparent/Parent/')
   })
 
   it('stops at missing parent (orphaned parentId)', () => {

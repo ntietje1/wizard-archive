@@ -15,8 +15,7 @@ const DEFAULT_NODE_WIDTH = 150
 const DEFAULT_NODE_HEIGHT = 40
 
 function getNodeDimensions(node: Node): { w: number; h: number } {
-  const bounds = (node.data as { bounds?: { width: number; height: number } })
-    .bounds
+  const bounds = (node.data as { bounds?: { width: number; height: number } }).bounds
   return {
     w: node.width ?? bounds?.width ?? DEFAULT_NODE_WIDTH,
     h: node.height ?? bounds?.height ?? DEFAULT_NODE_HEIGHT,
@@ -49,13 +48,7 @@ export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
   )
 }
 
-function StaticCanvasRenderer({
-  nodes,
-  edges,
-}: {
-  nodes: Array<Node>
-  edges: Array<Edge>
-}) {
+function StaticCanvasRenderer({ nodes, edges }: { nodes: Array<Node>; edges: Array<Edge> }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
 
@@ -91,10 +84,7 @@ function StaticCanvasRenderer({
     offsetY = (size.h - bh * scale) / 2 - (bounds.minY - padding) * scale
   }
 
-  const nodePositions = new Map<
-    string,
-    { cx: number; cy: number; w: number; h: number }
-  >()
+  const nodePositions = new Map<string, { cx: number; cy: number; w: number; h: number }>()
   for (const node of nodes) {
     const { w, h } = getNodeDimensions(node)
     nodePositions.set(node.id, {
@@ -158,10 +148,7 @@ function StaticNode({ node }: { node: Node }) {
   if (!content) return null
 
   return (
-    <div
-      className="absolute"
-      style={{ left: position.x, top: position.y, width: w, height: h }}
-    >
+    <div className="absolute" style={{ left: position.x, top: position.y, width: w, height: h }}>
       {content}
     </div>
   )

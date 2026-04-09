@@ -1,8 +1,7 @@
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
-export const EDITOR_ROUTE =
-  '/campaigns/$dmUsername/$campaignSlug/editor' as const
+export const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
 export interface EditorLinkProps {
   to: typeof EDITOR_ROUTE

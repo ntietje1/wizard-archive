@@ -29,11 +29,7 @@ export const blocksTables = {
   })
     .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId'])
     .index('by_campaign_note_topLevel', ['campaignId', 'noteId', 'isTopLevel'])
-    .index('by_campaign_note_shareStatus', [
-      'campaignId',
-      'noteId',
-      'shareStatus',
-    ]),
+    .index('by_campaign_note_shareStatus', ['campaignId', 'noteId', 'shareStatus']),
 }
 
 const blockValidatorFields = {

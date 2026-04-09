@@ -1,11 +1,7 @@
 import { useState } from 'react'
 import { Palette } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { cn } from '~/features/shadcn/lib/utils'
 import {
   DEFAULT_ITEM_COLOR,
@@ -70,10 +66,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                   }}
                   title={color.name}
                 >
-                  <div
-                    className="h-5 w-5 rounded-full"
-                    style={{ backgroundColor: color.hex }}
-                  />
+                  <div className="h-5 w-5 rounded-full" style={{ backgroundColor: color.hex }} />
                 </button>
               )
             })}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+// eslint-disable-next-line import/default
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
@@ -36,11 +37,7 @@ function PdfPage({
   }
 
   return (
-    <div
-      ref={setRef}
-      data-page-number={pageNumber}
-      className="flex justify-center py-2"
-    >
+    <div ref={setRef} data-page-number={pageNumber} className="flex justify-center py-2">
       <Page
         pageNumber={pageNumber}
         scale={scale}
@@ -62,11 +59,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
 
   const isValid = isValidFileUrl(pdfUrl)
 
-  const handleDocumentLoadSuccess = ({
-    numPages: pages,
-  }: {
-    numPages: number
-  }) => {
+  const handleDocumentLoadSuccess = ({ numPages: pages }: { numPages: number }) => {
     setNumPages(pages)
   }
 
@@ -176,22 +169,15 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-destructive">
-            Invalid PDF URL
-          </p>
-          <p className="text-sm mt-2">
-            The PDF URL does not meet security requirements.
-          </p>
+          <p className="text-lg font-medium text-destructive">Invalid PDF URL</p>
+          <p className="text-sm mt-2">The PDF URL does not meet security requirements.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full min-h-0 bg-background flex flex-col"
-    >
+    <div ref={containerRef} className="relative w-full h-full min-h-0 bg-background flex flex-col">
       {numPages === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <LoadingSpinner size="lg" />

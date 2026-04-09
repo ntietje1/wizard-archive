@@ -4,11 +4,7 @@ import { cva } from 'class-variance-authority'
 import { ChevronDownIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
 
-function NavigationMenu({
-  className,
-  children,
-  ...props
-}: NavigationMenuPrimitive.Root.Props) {
+function NavigationMenu({ className, children, ...props }: NavigationMenuPrimitive.Root.Props) {
   return (
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
@@ -24,26 +20,17 @@ function NavigationMenu({
   )
 }
 
-function NavigationMenuList({
-  className,
-  ...props
-}: NavigationMenuPrimitive.List.Props) {
+function NavigationMenuList({ className, ...props }: NavigationMenuPrimitive.List.Props) {
   return (
     <NavigationMenuPrimitive.List
       data-slot="navigation-menu-list"
-      className={cn(
-        'gap-0 group flex flex-1 list-none items-center justify-center',
-        className,
-      )}
+      className={cn('gap-0 group flex flex-1 list-none items-center justify-center', className)}
       {...props}
     />
   )
 }
 
-function NavigationMenuItem({
-  className,
-  ...props
-}: NavigationMenuPrimitive.Item.Props) {
+function NavigationMenuItem({ className, ...props }: NavigationMenuPrimitive.Item.Props) {
   return (
     <NavigationMenuPrimitive.Item
       data-slot="navigation-menu-item"
@@ -77,10 +64,7 @@ function NavigationMenuTrigger({
   )
 }
 
-function NavigationMenuContent({
-  className,
-  ...props
-}: NavigationMenuPrimitive.Content.Props) {
+function NavigationMenuContent({ className, ...props }: NavigationMenuPrimitive.Content.Props) {
   return (
     <NavigationMenuPrimitive.Content
       data-slot="navigation-menu-content"
@@ -122,10 +106,7 @@ function NavigationMenuPositioner({
   )
 }
 
-function NavigationMenuLink({
-  className,
-  ...props
-}: NavigationMenuPrimitive.Link.Props) {
+function NavigationMenuLink({ className, ...props }: NavigationMenuPrimitive.Link.Props) {
   return (
     <NavigationMenuPrimitive.Link
       data-slot="navigation-menu-link"
@@ -138,10 +119,7 @@ function NavigationMenuLink({
   )
 }
 
-function NavigationMenuIndicator({
-  className,
-  ...props
-}: NavigationMenuPrimitive.Icon.Props) {
+function NavigationMenuIndicator({ className, ...props }: NavigationMenuPrimitive.Icon.Props) {
   return (
     <NavigationMenuPrimitive.Icon
       data-slot="navigation-menu-indicator"

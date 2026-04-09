@@ -1,15 +1,9 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { ERROR_CODE, isClientError } from 'convex/errors'
 import type { QueryClient } from '@tanstack/react-query'
-import type {
-  FunctionArgs,
-  FunctionReference,
-  FunctionReturnType,
-} from 'convex/server'
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server'
 
-export async function prefetchQuery<
-  TQuery extends FunctionReference<'query', 'public'>,
->(
+export async function prefetchQuery<TQuery extends FunctionReference<'query', 'public'>>(
   queryClient: QueryClient,
   query: TQuery,
   args: FunctionArgs<TQuery>,

@@ -16,9 +16,7 @@ export function useCanvasStrokeClick() {
       })
 
       const threshold = STROKE_HIT_PADDING_PX / reactFlow.getZoom()
-      const strokeNodes = reactFlow
-        .getNodes()
-        .filter((n) => n.type === 'stroke')
+      const strokeNodes = reactFlow.getNodes().filter((n) => n.type === 'stroke')
 
       for (let i = strokeNodes.length - 1; i >= 0; i--) {
         const node = strokeNodes[i]
@@ -46,19 +44,10 @@ export function useCanvasStrokeClick() {
           continue
 
         const adjustedPoints = data.points.map(
-          ([x, y, p]) =>
-            [x + offsetX, y + offsetY, p] as [number, number, number],
+          ([x, y, p]) => [x + offsetX, y + offsetY, p] as [number, number, number],
         )
 
-        if (
-          pointNearStrokePath(
-            flowPos.x,
-            flowPos.y,
-            adjustedPoints,
-            data.size,
-            threshold,
-          )
-        ) {
+        if (pointNearStrokePath(flowPos.x, flowPos.y, adjustedPoints, data.size, threshold)) {
           // microtask needed to prevent ReactFlow's internal pane-click handler
           // from immediately deselecting the node we just selected here
           const isMultiSelect = event.shiftKey
@@ -68,8 +57,7 @@ export function useCanvasStrokeClick() {
             reactFlow.setNodes((nodes) =>
               nodes.map((n) => ({
                 ...n,
-                selected:
-                  n.id === targetId ? true : isMultiSelect && !!n.selected,
+                selected: n.id === targetId ? true : isMultiSelect && !!n.selected,
               })),
             )
           })

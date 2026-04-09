@@ -35,9 +35,7 @@ export async function createYjsDocument(
 
   const existing = await ctx.db
     .query('yjsUpdates')
-    .withIndex('by_document_seq', (q) =>
-      q.eq('documentId', documentId).eq('seq', 0),
-    )
+    .withIndex('by_document_seq', (q) => q.eq('documentId', documentId).eq('seq', 0))
     .first()
 
   if (!existing) {

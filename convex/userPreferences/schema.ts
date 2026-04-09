@@ -9,16 +9,8 @@ const panelPreferenceValidator = v.object({
 
 const userPreferencesTableFields = {
   userId: v.id('userProfiles'),
-  theme: v.union(
-    v.literal('light'),
-    v.literal('dark'),
-    v.literal('system'),
-    v.null(),
-  ),
-  panelPreferences: v.union(
-    v.record(v.string(), panelPreferenceValidator),
-    v.null(),
-  ),
+  theme: v.union(v.literal('light'), v.literal('dark'), v.literal('system'), v.null()),
+  panelPreferences: v.union(v.record(v.string(), panelPreferenceValidator), v.null()),
 }
 
 export { panelPreferenceValidator }

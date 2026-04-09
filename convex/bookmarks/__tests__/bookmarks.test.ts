@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
-import {
-  createBookmark,
-  createNote,
-  createSidebarShare,
-} from '../../_test/factories.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createBookmark, createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
@@ -22,10 +14,9 @@ describe('toggleBookmark', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result.isBookmarked).toBe(true)
   })
@@ -40,10 +31,9 @@ describe('toggleBookmark', () => {
       sidebarItemId: noteId,
     })
 
-    const result = await dmAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result.isBookmarked).toBe(false)
   })
@@ -61,10 +51,9 @@ describe('toggleBookmark', () => {
       sidebarItemId: noteId,
     })
 
-    const result = await dmAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result.isBookmarked).toBe(true)
   })
@@ -75,10 +64,9 @@ describe('toggleBookmark', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await playerAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await playerAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result.isBookmarked).toBe(true)
   })
@@ -97,10 +85,9 @@ describe('toggleBookmark', () => {
       permissionLevel: 'view',
     })
 
-    const result = await playerAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await playerAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result.isBookmarked).toBe(true)
   })
@@ -127,10 +114,9 @@ describe('toggleBookmark', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.mutation(
-      api.bookmarks.mutations.toggleBookmark,
-      { sidebarItemId: noteId },
-    )
+    const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      sidebarItemId: noteId,
+    })
 
     expect(result).toHaveProperty('isBookmarked')
     expect(typeof result.isBookmarked).toBe('boolean')

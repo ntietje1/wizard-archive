@@ -40,7 +40,7 @@ export function useDraggable<T extends Record<string, unknown>>({
         el.removeAttribute('data-item-dragging')
       },
     })
-  }, [ref, canDrag])
+  }, [ref, canDrag, dragOpacity])
 
   return { isDraggingRef }
 }

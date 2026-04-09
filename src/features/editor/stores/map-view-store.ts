@@ -9,10 +9,7 @@ interface MapViewState {
 }
 
 interface MapViewActions {
-  setActiveMap: (
-    map: GameMapWithContent | null,
-    pins: Array<MapPinWithItem>,
-  ) => void
+  setActiveMap: (map: GameMapWithContent | null, pins: Array<MapPinWithItem>) => void
   setActivePinId: (pinId: Id<'mapPins'> | null) => void
   clearMapView: () => void
 }
@@ -26,9 +23,7 @@ export const useMapViewStore = create<MapViewState & MapViewActions>((set) => ({
   setActivePinId: (pinId) =>
     set((state) => ({
       activePinId:
-        pinId === null || state.pins.some((p) => p._id === pinId)
-          ? pinId
-          : state.activePinId,
+        pinId === null || state.pins.some((p) => p._id === pinId) ? pinId : state.activePinId,
     })),
   clearMapView: () => set({ activeMap: null, pins: [], activePinId: null }),
 }))

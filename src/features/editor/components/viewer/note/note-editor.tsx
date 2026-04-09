@@ -39,17 +39,11 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const noteEditorRef = useRef<HTMLElement | null>(null)
 
-  const { isScrollingToHeading } = useScrollToHeading(
-    note.content,
-    true,
-    editor ?? undefined,
-  )
+  const { isScrollingToHeading } = useScrollToHeading(note.content, true, editor ?? undefined)
   useRestoreScrollPosition(note._id, scrollAreaRef, isScrollingToHeading)
 
   useEffect(() => {
-    noteEditorRef.current = wrapperRef.current?.querySelector(
-      '.bn-editor',
-    ) as HTMLElement | null
+    noteEditorRef.current = wrapperRef.current?.querySelector('.bn-editor') as HTMLElement | null
   }, [editor])
 
   useNotePreview({ noteId: note._id, doc, editorContainerRef: noteEditorRef })

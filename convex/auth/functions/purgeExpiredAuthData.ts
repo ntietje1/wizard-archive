@@ -30,13 +30,9 @@ export async function purgeExpiredAuthData(ctx: MutationCtx): Promise<void> {
 
   const sessionsResult = sessions as DeleteManyResult
   const verificationsResult = verifications as DeleteManyResult
-  const hasMore =
-    sessionsResult.isDone === false || verificationsResult.isDone === false
+  const hasMore = sessionsResult.isDone === false || verificationsResult.isDone === false
 
   if (hasMore) {
-    await ctx.scheduler.runAfter(
-      1000,
-      internal.auth.internalMutations.purgeExpiredAuthData,
-    )
+    await ctx.scheduler.runAfter(1000, internal.auth.internalMutations.purgeExpiredAuthData)
   }
 }

@@ -13,10 +13,7 @@ export function BookmarksFilterButton() {
   const { toggleBookmarksOnlyMode } = useCampaignSidebarActions(campaignId)
 
   return (
-    <TooltipButton
-      tooltip={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'}
-      side="bottom"
-    >
+    <TooltipButton tooltip={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'} side="bottom">
       <Button
         variant="ghost"
         size="icon"

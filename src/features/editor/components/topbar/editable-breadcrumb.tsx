@@ -3,10 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import type {
-  AnySidebarItem,
-  AnySidebarItemWithContent,
-} from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -16,11 +13,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
 import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { handleError } from '~/shared/utils/logger'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '~/features/shadcn/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 
 interface EditableNameProps {
   initialName: string
@@ -79,7 +72,7 @@ export function EditableName({
     // Validate the name before submitting
     setIsSubmitting(true)
     try {
-      const error = await checkNameUnique(trimmedName)
+      const error = checkNameUnique(trimmedName)
       if (error) {
         toast.error(error)
         setName(initialName)
@@ -151,31 +144,20 @@ export function EditableName({
           {defaultName}
         </span>
       )}
-      <NameValidationFeedback
-        errorMessage={validationError}
-        anchorRef={inputRef}
-      />
+      <NameValidationFeedback errorMessage={validationError} anchorRef={inputRef} />
     </>
   )
 
   if (!showNotSharedTooltip) {
-    return (
-      <div className="truncate min-w-0 flex-shrink-0 relative">
-        {innerContent}
-      </div>
-    )
+    return <div className="truncate min-w-0 flex-shrink-0 relative">{innerContent}</div>
   }
 
   return (
     <Tooltip>
-      <TooltipTrigger
-        render={<div className="truncate min-w-0 flex-shrink-0 relative" />}
-      >
+      <TooltipTrigger render={<div className="truncate min-w-0 flex-shrink-0 relative" />}>
         {innerContent}
       </TooltipTrigger>
-      <TooltipContent side="bottom">
-        This item is not visible to the current player
-      </TooltipContent>
+      <TooltipContent side="bottom">This item is not visible to the current player</TooltipContent>
     </Tooltip>
   )
 }
@@ -186,11 +168,7 @@ interface BreadcrumbAncestorProps {
   onClick: () => void
 }
 
-function BreadcrumbAncestor({
-  ancestor,
-  linkProps,
-  onClick,
-}: BreadcrumbAncestorProps) {
+function BreadcrumbAncestor({ ancestor, linkProps, onClick }: BreadcrumbAncestorProps) {
   return (
     <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
       <Link

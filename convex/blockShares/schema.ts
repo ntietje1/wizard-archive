@@ -18,11 +18,7 @@ export const blockShareTables = {
     .index('by_campaign_note', ['campaignId', 'noteId'])
     .index('by_campaign_session', ['campaignId', 'sessionId'])
     .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
-    .index('by_campaign_block_member', [
-      'campaignId',
-      'blockId',
-      'campaignMemberId',
-    ]),
+    .index('by_campaign_block_member', ['campaignId', 'blockId', 'campaignMemberId']),
 }
 
 const blockShareValidatorFields = {

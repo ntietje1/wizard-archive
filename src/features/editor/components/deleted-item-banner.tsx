@@ -63,9 +63,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   const { moveItem } = useMoveSidebarItem()
   const { permanentlyDeleteItem } = useDeleteSidebarItem()
   const { clearEditorContent } = useEditorNavigation()
-  const { data: trashedItems = [] } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { data: trashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const deletionTime = item.deletionTime
@@ -80,8 +78,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
     const typeLabel = getItemTypeLabel(item.type).toLowerCase()
 
     const who = deletedByName ?? 'Someone'
-    const when =
-      days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`
+    const when = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`
     const autoDelete =
       daysLeft <= 0
         ? 'It will be automatically deleted soon.'
@@ -105,7 +102,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
     try {
       await permanentlyDeleteItem(item)
       toast.success('Item permanently deleted')
-      clearEditorContent()
+      await clearEditorContent()
     } catch (error) {
       handleError(error, 'Failed to delete item')
     }
@@ -167,9 +164,7 @@ function RootTrashBanner() {
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
   const { emptyTrashBin } = useDeleteSidebarItem()
-  const { data: allTrashedItems = [] } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { data: allTrashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const handleEmptyTrash = async () => {
@@ -186,9 +181,7 @@ function EmptyTrashButton() {
 
   return (
     <>
-      <BannerButton onClick={() => setConfirmEmptyTrash(true)}>
-        Empty Trash
-      </BannerButton>
+      <BannerButton onClick={() => setConfirmEmptyTrash(true)}>Empty Trash</BannerButton>
       {confirmEmptyTrash && (
         <ConfirmationDialog
           isOpen={true}
@@ -204,33 +197,19 @@ function EmptyTrashButton() {
   )
 }
 
-function BannerBar({
-  message,
-  actions,
-}: {
-  message: string
-  actions?: React.ReactNode
-}) {
+function BannerBar({ message, actions }: { message: string; actions?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-3 h-8 border-b border-destructive/40 bg-destructive/10 text-destructive dark:bg-destructive/20 dark:border-destructive/60 dark:text-destructive/70">
       <div className="flex items-center gap-1.5 text-xs font-medium min-w-0">
         <Trash2 className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{message}</span>
       </div>
-      {actions && (
-        <div className="flex items-center gap-1 shrink-0">{actions}</div>
-      )}
+      {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
     </div>
   )
 }
 
-function BannerButton({
-  onClick,
-  children,
-}: {
-  onClick: () => void
-  children: React.ReactNode
-}) {
+function BannerButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
     <Button
       variant="ghost"

@@ -49,9 +49,9 @@ test.describe.serial('campaign editing', () => {
     const card = page.getByRole('article', { name: campaignName })
     await card.getByRole('button', { name: /edit campaign/i }).click()
 
-    await expect(
-      page.getByRole('heading', { name: /edit campaign/i }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: /edit campaign/i })).toBeVisible({
+      timeout: 10000,
+    })
 
     const nameField = page.getByLabel(/campaign name/i)
     await nameField.fill(updatedName)
@@ -61,9 +61,9 @@ test.describe.serial('campaign editing', () => {
 
     await page.getByRole('button', { name: /update campaign/i }).click()
 
-    await expect(
-      page.getByRole('heading', { name: /edit campaign/i }),
-    ).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: /edit campaign/i })).not.toBeVisible({
+      timeout: 10000,
+    })
 
     await expect(page.getByText(updatedName)).toBeVisible({ timeout: 10000 })
   })

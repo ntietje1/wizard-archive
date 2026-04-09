@@ -15,9 +15,7 @@ export function useMoveSidebarItem() {
   const { campaignId, campaign } = useCampaign()
   const cache = useSidebarItemsCache()
 
-  const moveSidebarItemMutation = useAppMutation(
-    api.sidebarItems.mutations.moveSidebarItem,
-  )
+  const moveSidebarItemMutation = useAppMutation(api.sidebarItems.mutations.moveSidebarItem)
 
   const moveItem = async (
     item: AnySidebarItem,
@@ -29,8 +27,7 @@ export function useMoveSidebarItem() {
     if (!campaignId || !campaign.data?.myMembership) return
     const { parentId, location } = options
     const isTrashing =
-      location === SIDEBAR_ITEM_LOCATION.trash &&
-      item.location !== SIDEBAR_ITEM_LOCATION.trash
+      location === SIDEBAR_ITEM_LOCATION.trash && item.location !== SIDEBAR_ITEM_LOCATION.trash
     const isRestoring =
       location !== undefined &&
       location !== SIDEBAR_ITEM_LOCATION.trash &&
@@ -41,11 +38,7 @@ export function useMoveSidebarItem() {
         throw new Error('Cannot move item: circular reference detected')
       }
       if (!isRestoring) {
-        const nameResult = validation.validateName(
-          item.name,
-          parentId,
-          item._id,
-        )
+        const nameResult = validation.validateName(item.name, parentId, item._id)
         if (!nameResult.valid) throw new Error(nameResult.error)
       }
     }
@@ -58,9 +51,7 @@ export function useMoveSidebarItem() {
         ? collectDescendantIds(item._id, previousTrash)
         : new Set()
 
-      const trashedDescendants = previousTrash.filter((i) =>
-        descendantIds.has(i._id),
-      )
+      const trashedDescendants = previousTrash.filter((i) => descendantIds.has(i._id))
 
       cache.update(SIDEBAR_ITEM_LOCATION.trash, (prev) =>
         prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
@@ -89,9 +80,7 @@ export function useMoveSidebarItem() {
         ? collectDescendantIds(item._id, previousSidebar)
         : new Set()
 
-      const descendants = previousSidebar.filter((i) =>
-        descendantIds.has(i._id),
-      )
+      const descendants = previousSidebar.filter((i) => descendantIds.has(i._id))
 
       cache.update(SIDEBAR_ITEM_LOCATION.sidebar, (prev) =>
         prev.filter((i) => i._id !== item._id && !descendantIds.has(i._id)),
@@ -118,9 +107,7 @@ export function useMoveSidebarItem() {
           ? SIDEBAR_ITEM_LOCATION.trash
           : SIDEBAR_ITEM_LOCATION.sidebar
       cache.update(cacheLocation, (prev) =>
-        prev.map((i) =>
-          i._id === item._id ? { ...i, parentId: parentId ?? null } : i,
-        ),
+        prev.map((i) => (i._id === item._id ? { ...i, parentId: parentId ?? null } : i)),
       )
     }
 

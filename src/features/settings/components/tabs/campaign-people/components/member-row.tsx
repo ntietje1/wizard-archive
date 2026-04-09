@@ -23,15 +23,11 @@ export function MemberRow({
         <p className="text-xs text-muted-foreground truncate">
           @{member.userProfile.username}
           {member.userProfile.email && (
-            <span className="before:content-['·'] before:mx-1">
-              {member.userProfile.email}
-            </span>
+            <span className="before:content-['·'] before:mx-1">{member.userProfile.email}</span>
           )}
         </p>
       </div>
-      {actions && (
-        <div className="flex items-center gap-2 shrink-0">{actions}</div>
-      )}
+      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
     </div>
   )
 }

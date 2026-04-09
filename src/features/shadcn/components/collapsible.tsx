@@ -10,9 +10,7 @@ type CollapsibleContextType = {
   setIsOpen: (open: boolean) => void
 }
 
-const CollapsibleContext = React.createContext<
-  CollapsibleContextType | undefined
->(undefined)
+const CollapsibleContext = React.createContext<CollapsibleContextType | undefined>(undefined)
 
 function useCollapsible() {
   const context = React.useContext(CollapsibleContext)
@@ -22,20 +20,14 @@ function useCollapsible() {
   return context
 }
 
-function Collapsible({
-  open,
-  onOpenChange,
-  ...props
-}: CollapsiblePrimitive.Root.Props) {
+function Collapsible({ open, onOpenChange, ...props }: CollapsiblePrimitive.Root.Props) {
   const [internalOpen, setInternalOpen] = React.useState(open ?? false)
   const isOpen = open ?? internalOpen
 
   const handleOpenChange = React.useCallback(
     (
       newOpen: boolean,
-      eventDetails: Parameters<
-        NonNullable<CollapsiblePrimitive.Root.Props['onOpenChange']>
-      >[1],
+      eventDetails: Parameters<NonNullable<CollapsiblePrimitive.Root.Props['onOpenChange']>>[1],
     ) => {
       if (open === undefined) {
         setInternalOpen(newOpen)
@@ -55,9 +47,7 @@ function Collapsible({
         isCanceled: false,
         isPropagationAllowed: true,
         trigger: undefined,
-      } as Parameters<
-        NonNullable<CollapsiblePrimitive.Root.Props['onOpenChange']>
-      >[1])
+      } as Parameters<NonNullable<CollapsiblePrimitive.Root.Props['onOpenChange']>>[1])
     },
     [handleOpenChange],
   )
@@ -75,15 +65,10 @@ function Collapsible({
 }
 
 function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
-  return (
-    <CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...props} />
-  )
+  return <CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...props} />
 }
 
-type CollapsibleContentProps = Omit<
-  CollapsiblePrimitive.Panel.Props,
-  'keepMounted' | 'render'
-> &
+type CollapsibleContentProps = Omit<CollapsiblePrimitive.Panel.Props, 'keepMounted' | 'render'> &
   HTMLMotionProps<'div'> & {
     keepRendered?: boolean
   }

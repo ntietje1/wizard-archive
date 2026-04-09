@@ -12,10 +12,7 @@ export type DrawingState = {
   opacity: number
 }
 
-export type ResizingState = Record<
-  string,
-  { width: number; height: number; x: number; y: number }
->
+export type ResizingState = Record<string, { width: number; height: number; x: number; y: number }>
 
 export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }

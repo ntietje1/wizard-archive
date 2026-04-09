@@ -60,14 +60,8 @@ export const getSidebarItemWithShares = async (
     memberIds: playerMemberIds,
   })
 
-  const memberInheritedPermissions: Record<
-    Id<'campaignMembers'>,
-    PermissionLevel
-  > = {}
-  const memberInheritedFromFolderNames: Record<
-    Id<'campaignMembers'>,
-    string
-  > = {}
+  const memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel> = {}
+  const memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string> = {}
   for (const memberId of playerMemberIds) {
     const entry = inherited.members[memberId]
     if (entry) {

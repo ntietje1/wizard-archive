@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -72,8 +68,6 @@ test.describe.serial('sharing', () => {
     const viewAsButton = page.getByRole('button', { name: /view as/i })
     await expect(viewAsButton).toBeVisible()
     await viewAsButton.click()
-    await expect(
-      page.getByText(/no other players in this campaign/i),
-    ).toBeVisible()
+    await expect(page.getByText(/no other players in this campaign/i)).toBeVisible()
   })
 })

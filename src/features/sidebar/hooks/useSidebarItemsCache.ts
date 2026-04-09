@@ -23,9 +23,7 @@ export function useSidebarItemsCache() {
   ) => {
     const key = getQueryKey(location)
     if (!key) return
-    queryClient.setQueryData<Array<AnySidebarItem>>(key, (prev) =>
-      prev ? updater(prev) : prev,
-    )
+    queryClient.setQueryData<Array<AnySidebarItem>>(key, (prev) => (prev ? updater(prev) : prev))
   }
 
   const get = (location: SidebarItemLocation): Array<AnySidebarItem> => {

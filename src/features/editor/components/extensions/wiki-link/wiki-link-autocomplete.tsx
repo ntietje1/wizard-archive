@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { getWikiLinkContext } from './wiki-link-utils'
@@ -7,10 +7,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { HeadingEntry } from '~/features/editor/utils/heading-utils'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-  buildBreadcrumbs,
-  getItemTypeLabel,
-} from '~/features/sidebar/utils/sidebar-item-utils'
+import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -187,9 +184,7 @@ function buildHeadingItems(
     // Clear deeper levels
     for (const [lvl] of parentAt) if (lvl > h.level) parentAt.delete(lvl)
 
-    const fullPath = [...parentAt.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([, text]) => text)
+    const fullPath = [...parentAt.entries()].sort(([a], [b]) => a - b).map(([, text]) => text)
 
     items.push({
       key: h.blockId,
@@ -208,11 +203,7 @@ function buildHeadingItems(
   return items
 }
 
-export function WikiLinkAutocomplete({
-  editor,
-}: {
-  editor: CustomBlockNoteEditor | undefined
-}) {
+export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
 
   const [menu, setMenu] = useState<{
@@ -228,9 +219,7 @@ export function WikiLinkAutocomplete({
   const [isDragging, setIsDragging] = useState(false)
   const hasEditedRef = useRef(false)
 
-  const context = menu.show
-    ? getAutocompleteContext(menu.query, sidebarItems, itemsMap)
-    : null
+  const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
 
   const noteQuery = useAuthQuery(
     api.notes.queries.getNote,
@@ -239,17 +228,14 @@ export function WikiLinkAutocomplete({
       : 'skip',
   )
 
-  const headings = noteQuery.data
-    ? extractHeadingsFromContent(noteQuery.data.content)
-    : []
+  const headings = noteQuery.data ? extractHeadingsFromContent(noteQuery.data.content) : []
 
   // Build filtered items
   const fileResult = ((): {
     items: Array<FileItem>
     totalCount: number
   } => {
-    if (!sidebarItems || !itemsMap || context?.mode !== 'file')
-      return { items: [], totalCount: 0 }
+    if (!sidebarItems || !itemsMap || context?.mode !== 'file') return { items: [], totalCount: 0 }
 
     // Filter items by parent folder if we have a completed folder path
     let itemsToShow = sidebarItems
@@ -261,13 +247,9 @@ export function WikiLinkAutocomplete({
         )
       } else {
         // No valid parent folder found, filter by path prefix match
-        const normalizedPath = context.completedFolderPath.map((s) =>
-          s.toLowerCase(),
-        )
+        const normalizedPath = context.completedFolderPath.map((s) => s.toLowerCase())
         itemsToShow = sidebarItems.filter((item) => {
-          const itemPath = getItemPath(item, itemsMap).map((s) =>
-            s.toLowerCase(),
-          )
+          const itemPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
           // Item path must start with the completed folder path
           if (itemPath.length <= normalizedPath.length) return false
           return normalizedPath.every((segment, i) => itemPath[i] === segment)
@@ -284,9 +266,7 @@ export function WikiLinkAutocomplete({
       // Calculate the minimum path needed to uniquely identify this item
       linkPath: getMinDisambiguationPath(item, sidebarItems, itemsMap),
     }))
-    const filtered = context.fileQuery
-      ? filterSuggestionItems(all, context.fileQuery)
-      : all
+    const filtered = context.fileQuery ? filterSuggestionItems(all, context.fileQuery) : all
     return { items: filtered.slice(0, 10), totalCount: filtered.length }
   })()
 
@@ -295,21 +275,14 @@ export function WikiLinkAutocomplete({
     totalCount: number
   } => {
     if (context?.mode !== 'heading') return { items: [], totalCount: 0 }
-    const all = buildHeadingItems(
-      headings,
-      context.completedHeadingPath,
-      context.headingQuery,
-    )
+    const all = buildHeadingItems(headings, context.completedHeadingPath, context.headingQuery)
     return { items: all.slice(0, 10), totalCount: all.length }
   })()
 
   const fileItems = fileResult.items
   const headingItems = headingResult.items
   const items = context?.mode === 'heading' ? headingItems : fileItems
-  const totalCount =
-    context?.mode === 'heading'
-      ? headingResult.totalCount
-      : fileResult.totalCount
+  const totalCount = context?.mode === 'heading' ? headingResult.totalCount : fileResult.totalCount
   const truncatedCount = totalCount - items.length
 
   // Reset selection on mode/path change
@@ -355,11 +328,7 @@ export function WikiLinkAutocomplete({
     const tiptap = editor?._tiptapEditor
     if (!tiptap) return
 
-    const onTransaction = ({
-      transaction,
-    }: {
-      transaction: { docChanged: boolean }
-    }) => {
+    const onTransaction = ({ transaction }: { transaction: { docChanged: boolean } }) => {
       if (isDragging) return
       const ctx = getWikiLinkContext(editor)
       if (ctx) {
@@ -382,100 +351,84 @@ export function WikiLinkAutocomplete({
     }
   }, [editor, isDragging])
 
-  const insertLink = (
-    item: FileItem | HeadingItem,
-    ctx: AutocompleteContext | null,
-  ) => {
-    if (!editor || !ctx) return
-    const wikiCtx = getWikiLinkContext(editor)
-    if (!wikiCtx) return
-    const tiptap = editor._tiptapEditor
-    if (!tiptap) return
+  const insertLink = useCallback(
+    (item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
+      if (!editor || !ctx) return
+      const wikiCtx = getWikiLinkContext(editor)
+      if (!wikiCtx) return
+      const tiptap = editor._tiptapEditor
+      if (!tiptap) return
 
-    const from = wikiCtx.startPos
-    const to = wikiCtx.endPos
+      const from = wikiCtx.startPos
+      const to = wikiCtx.endPos
 
-    // Build link text
-    let linkText: string
-    if (ctx.mode === 'file') {
-      const fileItem = item as FileItem
-      // Preserve the user's typed folder path + item name, or use min disambiguation path
-      const pathParts =
-        ctx.completedFolderPath.length > 0
-          ? [...ctx.completedFolderPath, fileItem.title]
-          : fileItem.linkPath
-      const path = pathParts.join('/')
-      // Add display name if path includes folders
-      linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
-    } else {
-      const headingPath = [
-        ...ctx.completedHeadingPath,
-        ...(item as HeadingItem).fullPath,
-      ].join('#')
-      linkText = `${ctx.fileQuery}#${headingPath}`
-    }
+      let linkText: string
+      if (ctx.mode === 'file') {
+        const fileItem = item as FileItem
+        const pathParts =
+          ctx.completedFolderPath.length > 0
+            ? [...ctx.completedFolderPath, fileItem.title]
+            : fileItem.linkPath
+        const path = pathParts.join('/')
+        linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
+      } else {
+        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join(
+          '#',
+        )
+        linkText = `${ctx.fileQuery}#${headingPath}`
+      }
 
-    tiptap
-      .chain()
-      .focus()
-      .insertContentAt({ from, to }, `[[${linkText}]]`)
-      .run()
-    setMenu({ show: false, query: '', pos: null })
-  }
+      tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}]]`).run()
+      setMenu({ show: false, query: '', pos: null })
+    },
+    [editor],
+  )
 
-  const continueLink = (
-    item: FileItem | HeadingItem,
-    ctx: AutocompleteContext | null,
-  ) => {
-    if (!editor || !ctx) return
-    const wikiCtx = getWikiLinkContext(editor)
-    if (!wikiCtx) return
-    const tiptap = editor._tiptapEditor
-    if (!tiptap) return
+  const continueLink = useCallback(
+    (item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
+      if (!editor || !ctx) return
+      const wikiCtx = getWikiLinkContext(editor)
+      if (!wikiCtx) return
+      const tiptap = editor._tiptapEditor
+      if (!tiptap) return
 
-    const from = wikiCtx.startPos
-    const to = wikiCtx.endPos
+      const from = wikiCtx.startPos
+      const to = wikiCtx.endPos
 
-    // Build link text with trailing # to continue
-    let linkText: string
-    if (ctx.mode === 'file') {
-      const fileItem = item as FileItem
-      // Preserve the user's typed folder path + item name
-      const pathParts = [...ctx.completedFolderPath, fileItem.title]
-      linkText = pathParts.join('/')
-    } else {
-      const headingPath = [
-        ...ctx.completedHeadingPath,
-        ...(item as HeadingItem).fullPath,
-      ].join('#')
-      linkText = `${ctx.fileQuery}#${headingPath}`
-    }
+      let linkText: string
+      if (ctx.mode === 'file') {
+        const fileItem = item as FileItem
+        const pathParts = [...ctx.completedFolderPath, fileItem.title]
+        linkText = pathParts.join('/')
+      } else {
+        const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join(
+          '#',
+        )
+        linkText = `${ctx.fileQuery}#${headingPath}`
+      }
 
-    tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}#`).run()
-  }
+      tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}#`).run()
+    },
+    [editor],
+  )
 
-  const continueFolderPath = (
-    item: FileItem,
-    ctx: AutocompleteContext | null,
-  ) => {
-    if (!editor || !ctx) return
-    const wikiCtx = getWikiLinkContext(editor)
-    if (!wikiCtx) return
-    const tiptap = editor._tiptapEditor
-    if (!tiptap) return
+  const continueFolderPath = useCallback(
+    (item: FileItem, ctx: AutocompleteContext | null) => {
+      if (!editor || !ctx) return
+      const wikiCtx = getWikiLinkContext(editor)
+      if (!wikiCtx) return
+      const tiptap = editor._tiptapEditor
+      if (!tiptap) return
 
-    const from = wikiCtx.startPos
-    const to = wikiCtx.endPos
+      const from = wikiCtx.startPos
+      const to = wikiCtx.endPos
 
-    // Build folder path with trailing / to continue
-    const folderPath = item.linkPath.join('/')
+      const folderPath = item.linkPath.join('/')
 
-    tiptap
-      .chain()
-      .focus()
-      .insertContentAt({ from, to }, `[[${folderPath}/`)
-      .run()
-  }
+      tiptap.chain().focus().insertContentAt({ from, to }, `[[${folderPath}/`).run()
+    },
+    [editor],
+  )
 
   // Keyboard navigation
   useEffect(() => {
@@ -510,10 +463,7 @@ export function WikiLinkAutocomplete({
             } else {
               insertLink(selectedItem, context)
             }
-          } else if (
-            context?.mode === 'heading' &&
-            headingItems[selectedIndex]
-          ) {
+          } else if (context?.mode === 'heading' && headingItems[selectedIndex]) {
             continueLink(headingItems[selectedIndex], context)
           } else {
             setMenu({ show: false, query: '', pos: null })
@@ -541,8 +491,7 @@ export function WikiLinkAutocomplete({
     headingItems,
   ])
 
-  if (!editor || !menu.show || !menu.pos || context?.mode === 'display-name')
-    return null
+  if (!editor || !menu.show || !menu.pos || context?.mode === 'display-name') return null
 
   const isHeading = context?.mode === 'heading'
   const loading = isHeading && noteQuery.isPending
@@ -623,15 +572,11 @@ export function WikiLinkAutocomplete({
                   className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
                 >
                   <div className="wiki-link-menu-item-title-row">
-                    <span className="wiki-link-menu-item-title">
-                      {item.title}
-                    </span>
+                    <span className="wiki-link-menu-item-title">{item.title}</span>
                     <span className="wiki-link-menu-badge">{item.badge}</span>
                   </div>
                   {item.subtext && (
-                    <div className="wiki-link-menu-item-subtext">
-                      {item.subtext}
-                    </div>
+                    <div className="wiki-link-menu-item-subtext">{item.subtext}</div>
                   )}
                 </div>
               ))}

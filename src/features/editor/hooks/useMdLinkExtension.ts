@@ -96,8 +96,7 @@ export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
   const allItems = sidebarItems || []
 
   const resolve = (pathSegments: Array<string>): MdLinkItemInfo | undefined => {
-    if (!dmUsername || !campaignSlug || pathSegments.length === 0)
-      return undefined
+    if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
 
     const item = resolveItemByPath(pathSegments, allItems, itemsMap)
     if (!item) return undefined
@@ -119,6 +118,7 @@ export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
       createDecorationPlugin: () => createMdLinkPlugin(resolver, isViewerMode),
       pluginRef,
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, resolver, isViewerMode])
 
   return { resolver }
@@ -133,10 +133,7 @@ const TEXT_BLOCK_TYPES = new Set([
   'toggleListItem',
 ])
 
-function findMdLinks(
-  doc: ProseMirrorNode,
-  resolver: MdLinkResolver,
-): Array<MdLinkMatch> {
+function findMdLinks(doc: ProseMirrorNode, resolver: MdLinkResolver): Array<MdLinkMatch> {
   const matches: Array<MdLinkMatch> = []
   const regex = new RegExp(MD_LINK_REGEX.source, 'g')
 
@@ -156,9 +153,7 @@ function findMdLinks(
       const displayText = match[1]
       const target = match[2]
       const parsed: ParsedMdLink = { displayText, ...parseMdLinkTarget(target) }
-      const itemInfo = parsed.isExternal
-        ? undefined
-        : resolver.resolve(parsed.itemPath)
+      const itemInfo = parsed.isExternal ? undefined : resolver.resolve(parsed.itemPath)
       matches.push({ from, to, displayText, target, parsed, itemInfo })
     }
   })
@@ -166,23 +161,14 @@ function findMdLinks(
   return matches
 }
 
-function createMdLinkPlugin(
-  resolver: MdLinkResolver,
-  isViewerMode: boolean,
-): Plugin<PluginState> {
+function createMdLinkPlugin(resolver: MdLinkResolver, isViewerMode: boolean): Plugin<PluginState> {
   return new Plugin<PluginState>({
     key: PLUGIN_KEY,
     state: {
       init(_, { doc, selection }) {
         const matches = findMdLinks(doc, resolver)
         return {
-          decorations: buildDecorations(
-            doc,
-            matches,
-            isViewerMode,
-            selection.from,
-            selection.to,
-          ),
+          decorations: buildDecorations(doc, matches, isViewerMode, selection.from, selection.to),
           selFrom: selection.from,
           selTo: selection.to,
         }
@@ -218,9 +204,7 @@ function createMdLinkPlugin(
           const overlappingChanged =
             oldOverlapping.length !== newOverlapping.length ||
             oldOverlapping.some(
-              (old, i) =>
-                old.from !== newOverlapping[i]?.from ||
-                old.to !== newOverlapping[i]?.to,
+              (old, i) => old.from !== newOverlapping[i]?.from || old.to !== newOverlapping[i]?.to,
             )
 
           if (overlappingChanged) {
@@ -269,11 +253,8 @@ function buildDecorations(
         ? 'md-link-exists'
         : 'md-link-ghost'
     const color =
-      !parsed.isExternal && itemInfo
-        ? validateHexColorOrDefault(itemInfo.item.color)
-        : undefined
-    const isActive =
-      !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
+      !parsed.isExternal && itemInfo ? validateHexColorOrDefault(itemInfo.item.color) : undefined
+    const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
     const classes = `${baseClass}${isViewerMode ? ' md-link-viewer' : ''}${isActive ? ' md-link-active' : ''}`
 
     let href = parsed.isExternal ? target : itemInfo?.href
@@ -306,8 +287,7 @@ function buildDecorations(
         'data-md-link-target': target,
         'data-md-link-exists': parsed.isExternal || itemInfo ? 'true' : 'false',
         ...(href && { 'data-href': href }),
-        ...(!parsed.isExternal &&
-          parsed.itemName && { 'data-md-link-item-name': parsed.itemName }),
+        ...(!parsed.isExternal && parsed.itemName && { 'data-md-link-item-name': parsed.itemName }),
         ...(!parsed.isExternal &&
           parsed.headingPath.length > 0 && {
             'data-md-link-heading': parsed.headingPath.join('#'),

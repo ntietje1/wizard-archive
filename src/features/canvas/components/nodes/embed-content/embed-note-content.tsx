@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TextSelection } from '@tiptap/pm/state'
-import type {
-  CustomBlock,
-  CustomBlockNoteEditor,
-} from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import { NoteContent } from '~/features/editor/components/note-content'
@@ -75,9 +72,7 @@ export function EmbedNoteContent({
       if (coords) {
         const pos = view.posAtCoords({ left: coords.x, top: coords.y })
         if (pos) {
-          const tr = view.state.tr.setSelection(
-            TextSelection.create(view.state.doc, pos.pos),
-          )
+          const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
           view.dispatch(tr)
         }
         clickCoordsRef.current = null
@@ -87,16 +82,11 @@ export function EmbedNoteContent({
     })
 
     return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, editable, doc])
 
   return (
-    <div
-      className={cn(
-        'h-full',
-        editable && 'nodrag nopan',
-        selected && 'nowheel',
-      )}
-    >
+    <div className={cn('h-full', editable && 'nodrag nopan', selected && 'nowheel')}>
       <ScrollArea ref={scrollAreaRef} className="h-full">
         <NoteContent
           noteId={noteId}

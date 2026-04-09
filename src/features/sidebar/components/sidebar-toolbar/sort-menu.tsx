@@ -27,11 +27,11 @@ export function SortMenu() {
   const { sortOptions, setSortOptions } = useSortOptions()
 
   const handleSortOrderChange = (value: string) => {
-    setSortOptions({ ...sortOptions, order: value as SortOrder })
+    void setSortOptions({ ...sortOptions, order: value as SortOrder })
   }
 
   const handleSortDirectionChange = (value: string) => {
-    setSortOptions({ ...sortOptions, direction: value as SortDirection })
+    void setSortOptions({ ...sortOptions, direction: value as SortDirection })
   }
 
   return (
@@ -47,14 +47,8 @@ export function SortMenu() {
             }
           />
           <DropdownMenuContent align="start" className="min-w-48">
-            <DropdownMenuRadioGroup
-              value={sortOptions.order}
-              onValueChange={handleSortOrderChange}
-            >
-              <DropdownMenuRadioItem
-                value={SORT_ORDERS.Alphabetical}
-                className="whitespace-nowrap"
-              >
+            <DropdownMenuRadioGroup value={sortOptions.order} onValueChange={handleSortOrderChange}>
+              <DropdownMenuRadioItem value={SORT_ORDERS.Alphabetical} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                   <ArrowUpAZ className="mr-2 h-4 w-4" />
                 ) : (
@@ -62,10 +56,7 @@ export function SortMenu() {
                 )}
                 Alphabetical
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem
-                value={SORT_ORDERS.DateCreated}
-                className="whitespace-nowrap"
-              >
+              <DropdownMenuRadioItem value={SORT_ORDERS.DateCreated} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                   <CalendarArrowUp className="mr-2 h-4 w-4" />
                 ) : (
@@ -73,10 +64,7 @@ export function SortMenu() {
                 )}
                 Date Created
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem
-                value={SORT_ORDERS.DateModified}
-                className="whitespace-nowrap"
-              >
+              <DropdownMenuRadioItem value={SORT_ORDERS.DateModified} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
                   <ClockArrowUp className="mr-2 h-4 w-4" />
                 ) : (

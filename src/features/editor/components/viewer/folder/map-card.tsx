@@ -35,10 +35,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(map)
   const { setLastSelectedItem } = useLastEditorItem()
-  const canDrag = hasAtLeastPermissionLevel(
-    map.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(map.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(map)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
@@ -99,11 +96,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
           {/* Image Section */}
           <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
             {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt={map.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={previewUrl} alt={map.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <MapPin className="w-12 h-12 text-muted-foreground" />
@@ -117,11 +110,7 @@ function MapCardInner({ item: map, onClick }: ItemCardProps<GameMap>) {
   )
 
   return (
-    <EditorContextMenu
-      ref={contextMenuRef}
-      viewContext="folder-view"
-      item={map}
-    >
+    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={map}>
       {cardContent}
     </EditorContextMenu>
   )

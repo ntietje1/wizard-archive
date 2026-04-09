@@ -35,9 +35,7 @@ async function resolveRestoreConflicts(
     campaignId,
     parentId: item.parentId,
   })
-  const otherNames = siblings
-    .filter((s) => s._id !== item._id)
-    .map((s) => s.name)
+  const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
   const uniqueName = deduplicateName(item.name, otherNames)
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
@@ -75,8 +73,7 @@ export async function moveSidebarItem(
 
   const isRelocating = location !== undefined && location !== item.location
   const isTrashing = isRelocating && location === SIDEBAR_ITEM_LOCATION.trash
-  const isRestoring =
-    isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
+  const isRestoring = isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
   const isMoving = parentId !== undefined
 
   if (isRelocating && !isTrashing && !isRestoring) {
@@ -85,14 +82,8 @@ export async function moveSidebarItem(
 
   // --- Relocate: entering trash ---
   if (isTrashing) {
-    if (
-      item.type === SIDEBAR_ITEM_TYPES.folders &&
-      membership.role !== CAMPAIGN_MEMBER_ROLE.DM
-    ) {
-      throwClientError(
-        ERROR_CODE.PERMISSION_DENIED,
-        'Only the DM can trash folders',
-      )
+    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+      throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can trash folders')
     }
 
     const now = Date.now()
@@ -121,14 +112,8 @@ export async function moveSidebarItem(
 
   // --- Relocate: leaving trash ---
   if (isRestoring) {
-    if (
-      item.type === SIDEBAR_ITEM_TYPES.folders &&
-      membership.role !== CAMPAIGN_MEMBER_ROLE.DM
-    ) {
-      throwClientError(
-        ERROR_CODE.PERMISSION_DENIED,
-        'Only the DM can restore folders',
-      )
+    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+      throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can restore folders')
     }
 
     const restoreParentId = parentId ?? null

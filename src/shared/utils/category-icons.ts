@@ -88,9 +88,7 @@ export const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
   [SIDEBAR_ITEM_TYPES.files]: File,
 }
 
-export const getSidebarItemIcon = (
-  item: AnySidebarItem | undefined,
-): LucideIcon => {
+export const getSidebarItemIcon = (item: AnySidebarItem | undefined): LucideIcon => {
   if (!item) return HelpCircle
   if (item.iconName) {
     return getIconByName(item.iconName)

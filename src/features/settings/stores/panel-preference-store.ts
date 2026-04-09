@@ -14,44 +14,42 @@ export interface PanelPreferenceStore {
   setActiveContent: (panelId: string, contentId: string | null) => void
 }
 
-export const usePanelPreferenceStore = create<PanelPreferenceStore>()(
-  (set) => ({
-    panels: {},
+export const usePanelPreferenceStore = create<PanelPreferenceStore>()((set) => ({
+  panels: {},
 
-    initPanel: (panelId, state) =>
-      set((prev) => {
-        if (prev.panels[panelId]) return prev
-        return { panels: { ...prev.panels, [panelId]: state } }
-      }),
+  initPanel: (panelId, state) =>
+    set((prev) => {
+      if (prev.panels[panelId]) return prev
+      return { panels: { ...prev.panels, [panelId]: state } }
+    }),
 
-    setSize: (panelId, size) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: { ...prev.panels, [panelId]: { ...panel, size } },
-        }
-      }),
+  setSize: (panelId, size) =>
+    set((prev) => {
+      const panel = prev.panels[panelId]
+      if (!panel) return prev
+      return {
+        panels: { ...prev.panels, [panelId]: { ...panel, size } },
+      }
+    }),
 
-    setVisible: (panelId, visible) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: { ...prev.panels, [panelId]: { ...panel, visible } },
-        }
-      }),
+  setVisible: (panelId, visible) =>
+    set((prev) => {
+      const panel = prev.panels[panelId]
+      if (!panel) return prev
+      return {
+        panels: { ...prev.panels, [panelId]: { ...panel, visible } },
+      }
+    }),
 
-    setActiveContent: (panelId, contentId) =>
-      set((prev) => {
-        const panel = prev.panels[panelId]
-        if (!panel) return prev
-        return {
-          panels: {
-            ...prev.panels,
-            [panelId]: { ...panel, activeContentId: contentId },
-          },
-        }
-      }),
-  }),
-)
+  setActiveContent: (panelId, contentId) =>
+    set((prev) => {
+      const panel = prev.panels[panelId]
+      if (!panel) return prev
+      return {
+        panels: {
+          ...prev.panels,
+          [panelId]: { ...panel, activeContentId: contentId },
+        },
+      }
+    }),
+}))

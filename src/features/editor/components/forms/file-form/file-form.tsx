@@ -48,22 +48,13 @@ const defaultFileFormValues: FileFormValues = {
   color: null,
 }
 
-export function FileForm({
-  fileId,
-  campaignId,
-  parentId,
-  onClose,
-  onSuccess,
-}: FileFormProps) {
+export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
-  const file = useAuthQuery(
-    api.files.queries.getFile,
-    fileId ? { fileId } : 'skip',
-  )
+  const file = useAuthQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip')
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -162,9 +153,8 @@ export function FileForm({
           })
 
           if (fileUpload.file) {
-            generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch(
-              (err: unknown) =>
-                handleError(err, 'PDF preview generation failed'),
+            generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch((err: unknown) =>
+              handleError(err, 'PDF preview generation failed'),
             )
           }
 
@@ -183,16 +173,13 @@ export function FileForm({
           parentId: parentId ?? null,
         })
         if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(
-            fileUpload.file,
-            newFileId as Id<'files'>,
-          ).catch((err: unknown) =>
-            handleError(err, 'PDF preview generation failed'),
+          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'files'>).catch(
+            (err: unknown) => handleError(err, 'PDF preview generation failed'),
           )
         }
 
-        await openParentFolders(newFileId)
-        navigateToItem(newFileSlug)
+        openParentFolders(newFileId)
+        void navigateToItem(newFileSlug)
         toast.success('File created')
         onSuccess?.(newFileSlug)
         onClose()
@@ -205,23 +192,18 @@ export function FileForm({
     }
   }
 
-  const isLoadingFile =
-    fileId !== undefined && file.data === undefined && file.isPending
+  const isLoadingFile = fileId !== undefined && file.data === undefined && file.isPending
 
-  const hasFile = !!(
-    fileUpload.file ||
-    (file.data?.storageId && !fileUpload.removed)
-  )
+  const hasFile = !!(fileUpload.file || (file.data?.storageId && !fileUpload.removed))
 
-  const isDisabled =
-    form.state.isSubmitting || fileUpload.isUploading || isLoadingFile
+  const isDisabled = form.state.isSubmitting || fileUpload.isUploading || isLoadingFile
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        form.handleSubmit()
+        void form.handleSubmit()
       }}
       className="space-y-4"
     >
@@ -255,9 +237,7 @@ export function FileForm({
               )}
             </InputGroup>
             {field.state.meta.errors[0] && (
-              <p className="text-sm text-destructive">
-                {field.state.meta.errors[0]}
-              </p>
+              <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
             )}
           </div>
         )}
@@ -297,9 +277,7 @@ export function FileForm({
               return (
                 <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
                   <PreviewIcon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate text-sm">
-                    {values.name || 'Untitled File'}
-                  </span>
+                  <span className="truncate text-sm">{values.name || 'Untitled File'}</span>
                 </div>
               )
             }}
@@ -325,18 +303,10 @@ export function FileForm({
       <form.Subscribe selector={(s) => s.canSubmit}>
         {(canSubmit) => (
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isDisabled}
-            >
+            <Button type="button" variant="outline" onClick={onClose} disabled={isDisabled}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={!hasFile || isDisabled || (fileId && !canSubmit)}
-            >
+            <Button type="submit" disabled={!hasFile || isDisabled || (fileId && !canSubmit)}>
               {form.state.isSubmitting
                 ? fileId
                   ? 'Updating...'

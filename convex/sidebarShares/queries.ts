@@ -34,14 +34,8 @@ export const getSidebarItemWithShares = authQuery({
     shares: v.array(sidebarItemShareValidator),
     inheritedAllPermissionLevel: v.union(permissionLevelValidator, v.null()),
     inheritedFromFolderName: v.union(v.string(), v.null()),
-    memberInheritedPermissions: v.record(
-      v.id('campaignMembers'),
-      permissionLevelValidator,
-    ),
-    memberInheritedFromFolderNames: v.record(
-      v.id('campaignMembers'),
-      v.string(),
-    ),
+    memberInheritedPermissions: v.record(v.id('campaignMembers'), permissionLevelValidator),
+    memberInheritedFromFolderNames: v.record(v.id('campaignMembers'), v.string()),
   }),
   handler: async (ctx, args) => {
     return await getSidebarItemWithSharesFn(ctx, {

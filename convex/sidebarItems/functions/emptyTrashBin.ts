@@ -21,33 +21,25 @@ export async function emptyTrashBin(
     ctx.db
       .query('folders')
       .withIndex('by_campaign_location_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
+        q.eq('campaignId', campaignId).eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('notes')
       .withIndex('by_campaign_location_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
+        q.eq('campaignId', campaignId).eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('gameMaps')
       .withIndex('by_campaign_location_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
+        q.eq('campaignId', campaignId).eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
     ctx.db
       .query('files')
       .withIndex('by_campaign_location_parent_name', (q) =>
-        q
-          .eq('campaignId', campaignId)
-          .eq('location', SIDEBAR_ITEM_LOCATION.trash),
+        q.eq('campaignId', campaignId).eq('location', SIDEBAR_ITEM_LOCATION.trash),
       )
       .collect(),
   ])
@@ -59,9 +51,9 @@ export async function emptyTrashBin(
     !item.parentId || !trashedFolderIds.has(item.parentId)
 
   const rootFolders = (folders as Array<AnySidebarItemFromDb>).filter(isRoot)
-  const rootNonFolders = (
-    [...notes, ...maps, ...files] as Array<AnySidebarItemFromDb>
-  ).filter(isRoot)
+  const rootNonFolders = ([...notes, ...maps, ...files] as Array<AnySidebarItemFromDb>).filter(
+    isRoot,
+  )
 
   // Delete root folders (applyToTree handles their descendants)
   for (const folder of rootFolders) {

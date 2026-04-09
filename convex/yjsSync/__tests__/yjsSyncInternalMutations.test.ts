@@ -177,10 +177,7 @@ describe('cleanupStaleAwareness', () => {
       })
     })
 
-    await t.mutation(
-      internal.yjsSync.internalMutations.cleanupStaleAwareness,
-      {},
-    )
+    await t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {})
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
@@ -205,10 +202,7 @@ describe('cleanupStaleAwareness', () => {
       })
     })
 
-    await t.mutation(
-      internal.yjsSync.internalMutations.cleanupStaleAwareness,
-      {},
-    )
+    await t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {})
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
@@ -243,10 +237,7 @@ describe('cleanupStaleAwareness', () => {
       })
     })
 
-    await t.mutation(
-      internal.yjsSync.internalMutations.cleanupStaleAwareness,
-      {},
-    )
+    await t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {})
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db

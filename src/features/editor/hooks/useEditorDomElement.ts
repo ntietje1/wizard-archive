@@ -9,12 +9,8 @@ import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
  * polls with requestAnimationFrame until the element is ready,
  * then triggers a re-render so consumers always get a stable value.
  */
-export function useEditorDomElement(
-  editor: CustomBlockNoteEditor | undefined,
-): HTMLElement | null {
-  const [domElement, setDomElement] = useState<HTMLElement | null>(
-    () => editor?.domElement ?? null,
-  )
+export function useEditorDomElement(editor: CustomBlockNoteEditor | undefined): HTMLElement | null {
+  const [domElement, setDomElement] = useState<HTMLElement | null>(() => editor?.domElement ?? null)
 
   useEffect(() => {
     if (!editor) {

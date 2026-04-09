@@ -8,17 +8,12 @@ describe('generateUploadUrl', () => {
   const t = createTestContext()
 
   it('requires authentication', async () => {
-    await expectNotAuthenticated(
-      t.mutation(api.storage.mutations.generateUploadUrl, {}),
-    )
+    await expectNotAuthenticated(t.mutation(api.storage.mutations.generateUploadUrl, {}))
   })
 
   it('generates a url for authenticated users', async () => {
     const { authed } = await setupUser(t)
-    const url = await authed.mutation(
-      api.storage.mutations.generateUploadUrl,
-      {},
-    )
+    const url = await authed.mutation(api.storage.mutations.generateUploadUrl, {})
     expect(url).toBeTypeOf('string')
   })
 })
@@ -30,9 +25,7 @@ describe('trackUpload', () => {
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(['test']))
     })
-    await expectNotAuthenticated(
-      t.mutation(api.storage.mutations.trackUpload, { storageId }),
-    )
+    await expectNotAuthenticated(t.mutation(api.storage.mutations.trackUpload, { storageId }))
   })
 
   it('tracks an upload', async () => {
@@ -55,9 +48,7 @@ describe('commitUpload', () => {
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(['test']))
     })
-    await expectNotAuthenticated(
-      t.mutation(api.storage.mutations.commitUpload, { storageId }),
-    )
+    await expectNotAuthenticated(t.mutation(api.storage.mutations.commitUpload, { storageId }))
   })
 
   // convex-test storage mock does not preserve Blob contentType in system metadata
@@ -79,9 +70,7 @@ describe('getDownloadUrl', () => {
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(['test']))
     })
-    await expectNotAuthenticated(
-      t.query(api.storage.queries.getDownloadUrl, { storageId }),
-    )
+    await expectNotAuthenticated(t.query(api.storage.queries.getDownloadUrl, { storageId }))
   })
 
   it('returns a download url for authenticated users', async () => {
@@ -116,9 +105,7 @@ describe('getStorageMetadata', () => {
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(['test']))
     })
-    await expectNotAuthenticated(
-      t.query(api.storage.queries.getStorageMetadata, { storageId }),
-    )
+    await expectNotAuthenticated(t.query(api.storage.queries.getStorageMetadata, { storageId }))
   })
 
   it('returns metadata for authenticated users', async () => {
@@ -126,10 +113,7 @@ describe('getStorageMetadata', () => {
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(['test']))
     })
-    const metadata = await authed.query(
-      api.storage.queries.getStorageMetadata,
-      { storageId },
-    )
+    const metadata = await authed.query(api.storage.queries.getStorageMetadata, { storageId })
     expect(metadata).toBeDefined()
   })
 })

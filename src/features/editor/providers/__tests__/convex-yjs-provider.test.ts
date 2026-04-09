@@ -53,9 +53,7 @@ function encodeAwareness(awareness: Awareness, doc: Y.Doc): ArrayBuffer {
   ) as ArrayBuffer
 }
 
-function createConfig(
-  overrides?: Partial<ConvexYjsProviderConfig>,
-): ConvexYjsProviderConfig {
+function createConfig(overrides?: Partial<ConvexYjsProviderConfig>): ConvexYjsProviderConfig {
   return {
     pushUpdate: vi.fn().mockResolvedValue({ seq: 0 }),
     pushAwareness: vi.fn().mockResolvedValue(null),
@@ -185,9 +183,7 @@ describe('ConvexYjsProvider', () => {
     it('skips own clientId in remote awareness', () => {
       const state = encodeAwareness(provider.awareness, doc)
       expect(() => {
-        provider.applyRemoteAwareness([
-          { clientId: doc.clientID, state, updatedAt: Date.now() },
-        ])
+        provider.applyRemoteAwareness([{ clientId: doc.clientID, state, updatedAt: Date.now() }])
       }).not.toThrow()
     })
 
@@ -346,9 +342,7 @@ describe('ConvexYjsProvider', () => {
 
       const state = encodeAwareness(otherAwareness, otherDoc)
 
-      provider.applyRemoteAwareness([
-        { clientId: otherDoc.clientID, state, updatedAt: Date.now() },
-      ])
+      provider.applyRemoteAwareness([{ clientId: otherDoc.clientID, state, updatedAt: Date.now() }])
 
       vi.advanceTimersByTime(200)
 

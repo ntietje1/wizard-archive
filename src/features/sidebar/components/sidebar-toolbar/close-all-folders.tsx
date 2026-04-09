@@ -20,9 +20,7 @@ export function CloseAllFoldersButton() {
         onClick={toggleCloseAllFoldersMode}
         data-state={closeAllFoldersMode ? 'active' : 'inactive'}
         aria-label={
-          closeAllFoldersMode
-            ? 'Exit close-all-folders mode'
-            : 'Enter close-all-folders mode'
+          closeAllFoldersMode ? 'Exit close-all-folders mode' : 'Enter close-all-folders mode'
         }
       >
         {closeAllFoldersMode ? (

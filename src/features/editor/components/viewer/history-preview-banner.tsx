@@ -24,9 +24,7 @@ export function HistoryPreviewBanner({
           {entryTime != null ? (
             <>
               Previewing version from{' '}
-              <span className="font-semibold">
-                {formatRelativeTime(entryTime)}
-              </span>
+              <span className="font-semibold">{formatRelativeTime(entryTime)}</span>
             </>
           ) : (
             'Previewing version'

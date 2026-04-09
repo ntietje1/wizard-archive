@@ -10,9 +10,7 @@ import type {
 } from '../sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
 
-export type GameMapFromDb = SidebarItemFromDb<
-  typeof SIDEBAR_ITEM_TYPES.gameMaps
-> & {
+export type GameMapFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
   imageStorageId: Id<'_storage'> | null
 }
 
@@ -21,9 +19,7 @@ export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
   imageUrl: string | null
 }
 
-export type GameMapWithContent = SidebarItemWithContent<
-  typeof SIDEBAR_ITEM_TYPES.gameMaps
-> & {
+export type GameMapWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
   imageStorageId: Id<'_storage'> | null
   imageUrl: string | null
   pins: Array<MapPinWithItem>
@@ -68,8 +64,7 @@ export const MAP_HISTORY_ACTION = {
   map_pin_visibility_changed: 'map_pin_visibility_changed',
 } as const
 
-export type MapHistoryAction =
-  (typeof MAP_HISTORY_ACTION)[keyof typeof MAP_HISTORY_ACTION]
+export type MapHistoryAction = (typeof MAP_HISTORY_ACTION)[keyof typeof MAP_HISTORY_ACTION]
 
 export type MapHistoryMetadataMap = {
   [MAP_HISTORY_ACTION.map_image_changed]: null

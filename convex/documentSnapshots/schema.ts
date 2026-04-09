@@ -33,9 +33,7 @@ const documentSnapshotValidatorFields = {
   ...documentSnapshotTableFields,
 }
 
-export const documentSnapshotValidator = v.object(
-  documentSnapshotValidatorFields,
-)
+export const documentSnapshotValidator = v.object(documentSnapshotValidatorFields)
 
 export const documentSnapshotsTables = {
   documentSnapshots: defineTable({

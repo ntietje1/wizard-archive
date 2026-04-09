@@ -7,16 +7,14 @@ export const CAMPAIGN_STATUS = {
   Inactive: 'Inactive',
 } as const
 
-export type CampaignStatus =
-  (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS]
+export type CampaignStatus = (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS]
 
 export const CAMPAIGN_MEMBER_ROLE = {
   DM: 'DM',
   Player: 'Player',
 } as const
 
-export type CampaignMemberRole =
-  (typeof CAMPAIGN_MEMBER_ROLE)[keyof typeof CAMPAIGN_MEMBER_ROLE]
+export type CampaignMemberRole = (typeof CAMPAIGN_MEMBER_ROLE)[keyof typeof CAMPAIGN_MEMBER_ROLE]
 
 export const CAMPAIGN_MEMBER_STATUS = {
   Accepted: 'Accepted',

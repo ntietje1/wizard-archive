@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import {
-  asDm,
-  asPlayer,
-  setupCampaignContext,
-} from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { api } from '../../_generated/api'
 
 describe('session + editor state interaction', () => {
@@ -14,23 +10,18 @@ describe('session + editor state interaction', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(
-      api.sessions.mutations.startSession,
-      { campaignId: ctx.campaignId },
-    )
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignId,
+    })
 
-    const campaignAfterStart = await t.run(async (dbCtx) =>
-      dbCtx.db.get(ctx.campaignId),
-    )
+    const campaignAfterStart = await t.run(async (dbCtx) => dbCtx.db.get(ctx.campaignId))
     expect(campaignAfterStart!.currentSessionId).toBe(sessionId)
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
       campaignId: ctx.campaignId,
     })
 
-    const campaignAfterEnd = await t.run(async (dbCtx) =>
-      dbCtx.db.get(ctx.campaignId),
-    )
+    const campaignAfterEnd = await t.run(async (dbCtx) => dbCtx.db.get(ctx.campaignId))
     expect(campaignAfterEnd!.currentSessionId).toBeNull()
 
     const session = await t.run(async (dbCtx) => dbCtx.db.get(sessionId))
@@ -70,10 +61,9 @@ describe('session + editor state interaction', () => {
     expect(dmEditor!.sortOrder).toBe('Alphabetical')
     expect(dmEditor!.sortDirection).toBe('Ascending')
 
-    const playerEditor = await playerAuth.query(
-      api.editors.queries.getCurrentEditor,
-      { campaignId: ctx.campaignId },
-    )
+    const playerEditor = await playerAuth.query(api.editors.queries.getCurrentEditor, {
+      campaignId: ctx.campaignId,
+    })
     expect(playerEditor!.sortOrder).toBe('DateCreated')
     expect(playerEditor!.sortDirection).toBe('Descending')
   })

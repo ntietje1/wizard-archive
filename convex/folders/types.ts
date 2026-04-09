@@ -5,9 +5,7 @@ import type {
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
 
-export type FolderFromDb = SidebarItemFromDb<
-  typeof SIDEBAR_ITEM_TYPES.folders
-> & {
+export type FolderFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.folders> & {
   inheritShares: boolean
 }
 
@@ -15,9 +13,7 @@ export type Folder = SidebarItem<typeof SIDEBAR_ITEM_TYPES.folders> & {
   inheritShares: boolean
 }
 
-export type FolderWithContent = SidebarItemWithContent<
-  typeof SIDEBAR_ITEM_TYPES.folders
-> & {
+export type FolderWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.folders> & {
   inheritShares: boolean
 }
 

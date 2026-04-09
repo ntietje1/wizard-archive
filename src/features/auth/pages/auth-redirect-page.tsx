@@ -16,7 +16,7 @@ export function AuthRedirectPage() {
           if (url.origin !== window.location.origin) {
             logger.error('Invalid redirect URL origin:', joinUrl)
             sessionStorage.removeItem('joinCampaignRedirectUrl')
-            navigate({ to: '/', replace: true })
+            void navigate({ to: '/', replace: true })
             return
           }
           sessionStorage.removeItem('joinCampaignRedirectUrl')
@@ -25,12 +25,12 @@ export function AuthRedirectPage() {
         } catch {
           logger.error('Invalid redirect URL format:', joinUrl)
           sessionStorage.removeItem('joinCampaignRedirectUrl')
-          navigate({ to: '/', replace: true })
+          void navigate({ to: '/', replace: true })
           return
         }
       }
 
-      navigate({ to: '/', replace: true })
+      void navigate({ to: '/', replace: true })
     }
   }, [navigate])
 

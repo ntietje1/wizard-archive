@@ -2,17 +2,13 @@ import type { QueryCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 import type { UserProfile, UserProfileFromDb } from '../types'
 
-async function enhanceProfile(
-  ctx: QueryCtx,
-  profile: UserProfileFromDb,
-): Promise<UserProfile> {
+async function enhanceProfile(ctx: QueryCtx, profile: UserProfileFromDb): Promise<UserProfile> {
   let imageUrl: string | null = null
   if (profile.profileImage) {
     if (profile.profileImage.type === 'external') {
       imageUrl = profile.profileImage.url
     } else {
-      imageUrl =
-        (await ctx.storage.getUrl(profile.profileImage.storageId)) ?? null
+      imageUrl = (await ctx.storage.getUrl(profile.profileImage.storageId)) ?? null
     }
   }
   const { profileImage: _, ...rest } = profile

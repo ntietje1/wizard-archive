@@ -14,8 +14,7 @@ export const SORT_DIRECTIONS = {
   Descending: 'Descending',
 } as const
 
-export type SortDirection =
-  (typeof SORT_DIRECTIONS)[keyof typeof SORT_DIRECTIONS]
+export type SortDirection = (typeof SORT_DIRECTIONS)[keyof typeof SORT_DIRECTIONS]
 
 export interface SortOptions {
   order: SortOrder

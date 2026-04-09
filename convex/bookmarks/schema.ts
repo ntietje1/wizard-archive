@@ -14,11 +14,7 @@ export const bookmarkTables = {
     ...commonTableFields,
     ...bookmarkTableFields,
   })
-    .index('by_campaign_member_item', [
-      'campaignId',
-      'campaignMemberId',
-      'sidebarItemId',
-    ])
+    .index('by_campaign_member_item', ['campaignId', 'campaignMemberId', 'sidebarItemId'])
     .index('by_campaign_item', ['campaignId', 'sidebarItemId']),
 }
 

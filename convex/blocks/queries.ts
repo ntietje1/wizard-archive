@@ -2,11 +2,7 @@ import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { blockShareValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
-import {
-  blockNoteIdValidator,
-  blockShareStatusValidator,
-  blockValidator,
-} from './schema'
+import { blockNoteIdValidator, blockShareStatusValidator, blockValidator } from './schema'
 import { getBlockWithShares as getBlockWithSharesFn } from './functions/getBlockWithShares'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 

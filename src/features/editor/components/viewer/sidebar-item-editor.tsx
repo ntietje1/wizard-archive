@@ -1,9 +1,6 @@
 import { useEffect } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type {
-  AnySidebarItem,
-  AnySidebarItemWithContent,
-} from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { assertNever } from '~/shared/utils/utils'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
@@ -22,10 +19,7 @@ export interface EditorViewerProps<T extends AnySidebarItem> {
   search?: unknown
 }
 
-export function SidebarItemEditor({
-  item,
-  search,
-}: EditorViewerProps<AnySidebarItemWithContent>) {
+export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebarItemWithContent>) {
   const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
 
@@ -36,10 +30,7 @@ export function SidebarItemEditor({
   if (previewingEntryId) {
     return (
       <>
-        <ErrorBoundary
-          FallbackComponent={ErrorFallback}
-          key={`preview-${previewingEntryId}`}
-        >
+        <ErrorBoundary FallbackComponent={ErrorFallback} key={`preview-${previewingEntryId}`}>
           <HistoryPreviewViewer entryId={previewingEntryId} />
         </ErrorBoundary>
         <RollbackConfirmDialog />

@@ -164,9 +164,7 @@ describe('resolveHeadingPath', () => {
   })
 
   it('resolves chained path', () => {
-    expect(
-      resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.blockId,
-    ).toBe('b3')
+    expect(resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.blockId).toBe('b3')
   })
 
   it('returns undefined for empty path', () => {
@@ -188,14 +186,10 @@ describe('resolveHeadingPath', () => {
         normalizedText: 'overview',
       },
     ]
-    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.blockId).toBe(
-      'b1',
-    )
+    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.blockId).toBe('b1')
   })
 
   it('returns undefined when path segment not found', () => {
-    expect(
-      resolveHeadingPath(headings, ['Chapter 1', 'Missing']),
-    ).toBeUndefined()
+    expect(resolveHeadingPath(headings, ['Chapter 1', 'Missing'])).toBeUndefined()
   })
 })

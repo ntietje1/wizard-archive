@@ -61,8 +61,8 @@ test.describe.serial('trash operations', () => {
     await trashItem.hover()
     const restoreBtn = trashItem.getByRole('button', { name: /restore/i })
     await restoreBtn.click()
-    await expect(
-      page.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

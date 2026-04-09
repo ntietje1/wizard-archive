@@ -53,7 +53,7 @@ export async function rollbackGameMap(
   })
 
   if (map.type !== SIDEBAR_ITEM_TYPES.gameMaps) {
-    throw new Error(`rollbackMap: expected a note but got ${map.type}`)
+    throw new Error(`rollbackMap: expected a note but got ${String(map.type)}`)
   }
 
   await ctx.db.patch(map._id, {
@@ -63,18 +63,14 @@ export async function rollbackGameMap(
 
   const existingPins = await ctx.db
     .query('mapPins')
-    .withIndex('by_map_deletionTime', (q) =>
-      q.eq('mapId', map._id).eq('deletionTime', null),
-    )
+    .withIndex('by_map_deletionTime', (q) => q.eq('mapId', map._id).eq('deletionTime', null))
     .collect()
 
   const now = Date.now()
   const profileId = ctx.user.profile._id
 
   await Promise.all(
-    existingPins.map((pin) =>
-      ctx.db.patch(pin._id, { deletionTime: now, deletedBy: profileId }),
-    ),
+    existingPins.map((pin) => ctx.db.patch(pin._id, { deletionTime: now, deletedBy: profileId })),
   )
 
   const pinTargetChecks = await Promise.all(
@@ -97,9 +93,7 @@ export async function rollbackGameMap(
   const validPins = pinTargetChecks.filter((p) => p.exists).map((p) => p.pin)
   const skippedCount = pinTargetChecks.length - validPins.length
   if (skippedCount > 0) {
-    const skippedIds = pinTargetChecks
-      .filter((p) => !p.exists)
-      .map((p) => p.pin.itemId)
+    const skippedIds = pinTargetChecks.filter((p) => !p.exists).map((p) => p.pin.itemId)
     logger.warn(
       `rollbackGameMap: skipped ${skippedCount} pins with missing targets: ${skippedIds.join(', ')}`,
     )

@@ -45,9 +45,7 @@ export async function uploadPreviewBlob(
   try {
     json = await response.json()
   } catch {
-    throw new Error(
-      `Preview upload failed: invalid JSON response (status ${response.status})`,
-    )
+    throw new Error(`Preview upload failed: invalid JSON response (status ${response.status})`)
   }
   if (typeof json.storageId !== 'string') {
     throw new Error('Preview upload failed: missing storageId in response')

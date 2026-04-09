@@ -12,14 +12,9 @@ import {
 } from '~/features/dnd/utils/dnd-registry'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
-function resolveDraggedItem(
-  sourceData: Record<string, unknown>,
-  ctx: DndMonitorCtx,
-) {
+function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
-  return sid
-    ? (ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null)
-    : null
+  return sid ? (ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null) : null
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -44,10 +39,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
       return false
     }
     const handleDragOver = (e: DragEvent) => {
-      if (
-        isElementDragRef.current &&
-        !(e.target as Element)?.closest?.('.bn-editor')
-      ) {
+      if (isElementDragRef.current && !(e.target as Element)?.closest?.('.bn-editor')) {
         ;(e as unknown as Record<string, unknown>).synthetic = true
       }
       if (!isFileDrag(e)) return
@@ -55,10 +47,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
     }
     const handleDrop = (e: DragEvent) => {
-      if (
-        isElementDragRef.current &&
-        !(e.target as Element)?.closest?.('.bn-editor')
-      ) {
+      if (isElementDragRef.current && !(e.target as Element)?.closest?.('.bn-editor')) {
         ;(e as unknown as Record<string, unknown>).synthetic = true
       }
       if (isFileDrag(e)) e.preventDefault()
@@ -75,10 +64,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
       return false
     }
     const handleDragLeave = (e: DragEvent) => {
-      if (
-        isBogusLeave(e) &&
-        (e.target as Element)?.closest?.('.bn-editor,.tiptap')
-      ) {
+      if (isBogusLeave(e) && (e.target as Element)?.closest?.('.bn-editor,.tiptap')) {
         e.stopImmediatePropagation()
       }
     }
@@ -138,11 +124,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
 
           const draggedItem = resolveDraggedItem(source.data, ctx)
 
-          const outcome = resolveDropOutcome(
-            draggedItem,
-            dropTarget,
-            ctx.dndContext,
-          )
+          const outcome = resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
 
           setDragState((prev) => {
             if (!prev) return null
@@ -178,11 +160,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         )
         if (!targetData) return
 
-        const outcome = resolveDropOutcome(
-          draggedItem,
-          targetData,
-          ctx.dndContext,
-        )
+        const outcome = resolveDropOutcome(draggedItem, targetData, ctx.dndContext)
         if (outcome?.type !== 'operation' || !outcome.execute) return
 
         try {
@@ -192,6 +170,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         }
       },
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setSidebarDragTargetId, setDragOutcome, setIsDraggingElement])
 
   return { overlayRef, dragState }

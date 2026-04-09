@@ -2,11 +2,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Upload')
@@ -16,10 +12,7 @@ test.describe.serial('file upload', () => {
   let testFilePath: string
 
   test.beforeAll(async ({ browser }) => {
-    testFilePath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      testFileName,
-    )
+    testFilePath = path.join(path.dirname(fileURLToPath(import.meta.url)), testFileName)
     fs.writeFileSync(testFilePath, 'Test file content for E2E upload')
 
     const context = await browser.newContext({
@@ -69,9 +62,7 @@ test.describe.serial('file upload', () => {
       await submitButton.click()
     }
 
-    await expect(
-      page.getByRole('link', { name: /untitled file/i }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
   })
 
   test('click uploaded file loads viewer', async ({ page }) => {
@@ -81,9 +72,8 @@ test.describe.serial('file upload', () => {
     const fileItem = page.getByRole('link', { name: /untitled file/i })
     await expect(fileItem).toBeVisible({ timeout: 5000 })
     await fileItem.click()
-    await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(
-      /untitled file/i,
-      { timeout: 5000 },
-    )
+    await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(/untitled file/i, {
+      timeout: 5000,
+    })
   })
 })

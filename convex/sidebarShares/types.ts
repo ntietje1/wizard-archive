@@ -1,7 +1,4 @@
-import type {
-  SidebarItemId,
-  SidebarItemType,
-} from '../sidebarItems/types/baseTypes'
+import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { Id } from '../_generated/dataModel'
 

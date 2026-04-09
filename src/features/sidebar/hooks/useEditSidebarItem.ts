@@ -1,10 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -72,18 +69,12 @@ export function useEditSidebarItem() {
   const { navigateToItem } = useEditorNavigation()
 
   const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote)
-  const updateFolderMutation = useAppMutation(
-    api.folders.mutations.updateFolder,
-  )
+  const updateFolderMutation = useAppMutation(api.folders.mutations.updateFolder)
   const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap)
   const updateFileMutation = useAppMutation(api.files.mutations.updateFile)
-  const updateCanvasMutation = useAppMutation(
-    api.canvases.mutations.updateCanvas,
-  )
+  const updateCanvasMutation = useAppMutation(api.canvases.mutations.updateCanvas)
 
-  const optimisticUpdate = (
-    updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>,
-  ) => {
+  const optimisticUpdate = (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
     if (!campaignId) return
     queryClient.setQueryData<Array<AnySidebarItem>>(
       convexQuery(api.sidebarItems.queries.getSidebarItemsByLocation, {
@@ -101,11 +92,7 @@ export function useEditSidebarItem() {
 
     const trimmedName = name?.trim()
     if (trimmedName !== undefined) {
-      const result = validation.validateName(
-        trimmedName,
-        item.parentId,
-        item._id,
-      )
+      const result = validation.validateName(trimmedName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
     }
 
@@ -119,9 +106,7 @@ export function useEditSidebarItem() {
 
     if (Object.keys(optimisticFields).length > 0) {
       optimisticUpdate((prev) =>
-        prev.map((i) =>
-          i._id === item._id ? { ...i, ...optimisticFields } : i,
-        ),
+        prev.map((i) => (i._id === item._id ? { ...i, ...optimisticFields } : i)),
       )
     }
 
@@ -188,9 +173,7 @@ export function useEditSidebarItem() {
       }
 
       if (slug !== item.slug) {
-        optimisticUpdate((prev) =>
-          prev.map((i) => (i._id === item._id ? { ...i, slug } : i)),
-        )
+        optimisticUpdate((prev) => prev.map((i) => (i._id === item._id ? { ...i, slug } : i)))
         if (isCurrentItem) {
           await navigateToItem(slug, true)
         }

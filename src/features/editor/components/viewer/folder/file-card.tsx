@@ -2,14 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import {
-  File as FileIconLucide,
-  FileText,
-  Image,
-  MoreVertical,
-  Music,
-  Video,
-} from 'lucide-react'
+import { File as FileIconLucide, FileText, Image, MoreVertical, Music, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { SidebarFile } from 'convex/files/types'
@@ -34,25 +27,16 @@ function getFileTypeIcon(
   const mimeType = contentType?.toLowerCase() ?? ''
   const name = fileName?.toLowerCase() ?? ''
 
-  if (
-    mimeType.startsWith('image/') ||
-    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(name)
-  ) {
+  if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(name)) {
     return Image
   }
   if (mimeType === 'application/pdf' || name.endsWith('.pdf')) {
     return FileText
   }
-  if (
-    mimeType.startsWith('video/') ||
-    /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(name)
-  ) {
+  if (mimeType.startsWith('video/') || /\.(mp4|webm|ogg|mov|avi|wmv|flv)$/i.test(name)) {
     return Video
   }
-  if (
-    mimeType.startsWith('audio/') ||
-    /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(name)
-  ) {
+  if (mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(name)) {
     return Music
   }
   return FileIconLucide
@@ -78,10 +62,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(file)
   const { setLastSelectedItem } = useLastEditorItem()
-  const canDrag = hasAtLeastPermissionLevel(
-    file.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(file.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(file)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
@@ -161,11 +142,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   )
 
   return (
-    <EditorContextMenu
-      ref={contextMenuRef}
-      viewContext="folder-view"
-      item={file}
-    >
+    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={file}>
       {cardContent}
     </EditorContextMenu>
   )

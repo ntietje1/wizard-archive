@@ -25,8 +25,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
   triggers: {
     user: {
       onCreate: async (ctx, user) => onCreateUser(ctx, user),
-      onUpdate: async (ctx, newUser, oldUser) =>
-        onUpdateUser(ctx, newUser, oldUser),
+      onUpdate: async (ctx, newUser, oldUser) => onUpdateUser(ctx, newUser, oldUser),
       onDelete: async (ctx, user) => onDeleteUser(ctx, user),
     },
   },
@@ -63,10 +62,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       enabled: true,
       requireEmailVerification: true,
       async sendResetPassword({ user, url }) {
-        await resend.sendEmail(
-          requireRunMutationCtx(ctx),
-          passwordResetEmail(user.email, url),
-        )
+        await resend.sendEmail(requireRunMutationCtx(ctx), passwordResetEmail(user.email, url))
       },
     },
     emailVerification: {
@@ -74,10 +70,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       autoSignInAfterVerification: true,
       async sendVerificationEmail({ user, url }) {
         if (user.emailVerified) return
-        await resend.sendEmail(
-          requireRunMutationCtx(ctx),
-          verificationEmail(user.email, url),
-        )
+        await resend.sendEmail(requireRunMutationCtx(ctx), verificationEmail(user.email, url))
       },
     },
     user: {

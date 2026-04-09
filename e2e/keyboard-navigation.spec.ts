@@ -1,15 +1,6 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
-import {
-  createFolder,
-  createNote,
-  openContextMenu,
-  openItem,
-} from './helpers/sidebar-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { createFolder, createNote, openContextMenu, openItem } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Keyboard')
@@ -64,9 +55,9 @@ test.describe.serial('keyboard navigation', () => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
 
-    await expect(
-      page.getByRole('link', { name: noteName, exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
 
     await openContextMenu(page, noteName)
     const menu = page.getByRole('menuitem').first()

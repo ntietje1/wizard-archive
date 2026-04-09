@@ -22,10 +22,7 @@ export const updateNote = authMutation({
     noteId: v.id('notes'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     return await updateNoteFn(ctx, {
       noteId: args.noteId,
       name: args.name,
@@ -48,10 +45,7 @@ export const createNote = authMutation({
     noteId: v.id('notes'),
     slug: v.string(),
   }),
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
     return await createNoteFn(ctx, {
       name: args.name,
       parentId: args.parentId,
@@ -72,6 +66,7 @@ export const persistNoteBlocks = authMutation({
     await checkYjsWriteAccess(ctx, documentId)
 
     const { doc } = await reconstructYDoc(ctx, documentId)
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
     let editor: ReturnType<typeof BlockNoteEditor.create> | undefined
     try {
       editor = BlockNoteEditor.create({

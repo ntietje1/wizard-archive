@@ -35,10 +35,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(note)
   const { setLastSelectedItem } = useLastEditorItem()
-  const canDrag = hasAtLeastPermissionLevel(
-    note.myPermissionLevel,
-    PERMISSION_LEVEL.FULL_ACCESS,
-  )
+  const canDrag = hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const [imgError, setImgError] = useState(false)
@@ -119,11 +116,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   )
 
   return (
-    <EditorContextMenu
-      ref={contextMenuRef}
-      viewContext="folder-view"
-      item={note}
-    >
+    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={note}>
       {cardContent}
     </EditorContextMenu>
   )

@@ -28,9 +28,7 @@
 .wiki-link-bracket-open:hover,
 .wiki-link-bracket-close:hover,
 .wiki-link-bracket-open:has(+ .wiki-link-content:hover),
-.wiki-link-bracket-open:has(
-  + .wiki-link-content + .wiki-link-bracket-close:hover
-),
+.wiki-link-bracket-open:has(+ .wiki-link-content + .wiki-link-bracket-close:hover),
 .wiki-link-content:hover + .wiki-link-bracket-close,
 .wiki-link-bracket-open:hover + .wiki-link-content + .wiki-link-bracket-close {
   font-size: inherit;
@@ -56,11 +54,8 @@
 /* Reveal full text on active/hover in editor mode */
 .wiki-link-content.wiki-link-active[data-display-name],
 .wiki-link-content[data-display-name]:not(.wiki-link-viewer):hover,
-.wiki-link-bracket-open:not(.wiki-link-viewer):hover
-  + .wiki-link-content[data-display-name],
-.wiki-link-content[data-display-name]:has(
-    + .wiki-link-bracket-close:not(.wiki-link-viewer):hover
-  ) {
+.wiki-link-bracket-open:not(.wiki-link-viewer):hover + .wiki-link-content[data-display-name],
+.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:not(.wiki-link-viewer):hover) {
   font-size: inherit;
 }
 

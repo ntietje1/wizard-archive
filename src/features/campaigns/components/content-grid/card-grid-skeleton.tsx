@@ -1,9 +1,5 @@
 import { ContentGrid } from './content-grid'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '~/features/shadcn/components/card'
+import { Card, CardContent, CardHeader } from '~/features/shadcn/components/card'
 
 interface CardGridSkeletonProps {
   count?: number

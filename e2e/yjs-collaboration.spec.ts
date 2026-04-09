@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { getEditor } from './helpers/editor-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -14,12 +10,7 @@ const campaignName = testName('E2E YJS Collab')
 async function withDualEditorContexts(
   browser: Browser,
   campaign: string,
-  testFn: (ctx: {
-    page1: Page
-    page2: Page
-    editor1: Locator
-    editor2: Locator
-  }) => Promise<void>,
+  testFn: (ctx: { page1: Page; page2: Page; editor1: Locator; editor2: Locator }) => Promise<void>,
 ) {
   const noteName = `Test ${Date.now()}`
 
@@ -148,9 +139,7 @@ test.describe.serial('yjs collaboration', () => {
     await context.close()
   })
 
-  test('concurrent typing in two tabs merges without conflict', async ({
-    browser,
-  }) => {
+  test('concurrent typing in two tabs merges without conflict', async ({ browser }) => {
     await withDualEditorContexts(
       browser,
       campaignName,
@@ -206,18 +195,14 @@ test.describe.serial('yjs collaboration', () => {
   })
 
   test('rapid typing syncs reliably', async ({ browser }) => {
-    await withDualEditorContexts(
-      browser,
-      campaignName,
-      async ({ page1, editor1, editor2 }) => {
-        await editor1.click()
+    await withDualEditorContexts(browser, campaignName, async ({ page1, editor1, editor2 }) => {
+      await editor1.click()
 
-        const rapidText = `RapidBurst-${Date.now()}-TheQuickBrownFoxJumpsOverTheLazyDogRepeatedly`
-        await page1.keyboard.type(rapidText, { delay: 0 })
+      const rapidText = `RapidBurst-${Date.now()}-TheQuickBrownFoxJumpsOverTheLazyDogRepeatedly`
+      await page1.keyboard.type(rapidText, { delay: 0 })
 
-        await expect(editor2).toContainText(rapidText, { timeout: 15000 })
-      },
-    )
+      await expect(editor2).toContainText(rapidText, { timeout: 15000 })
+    })
   })
 
   test('reconnection after brief disconnect', async ({ browser }) => {

@@ -15,10 +15,7 @@ import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import {
-  Collapsible,
-  CollapsibleContent,
-} from '~/features/shadcn/components/collapsible'
+import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/collapsible'
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 
@@ -95,11 +92,7 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
             keepRendered
           >
             {sortedChildren.map((childItem) => (
-              <SidebarItem
-                key={childItem._id}
-                item={childItem}
-                parentItemsMap={parentItemsMap}
-              />
+              <SidebarItem key={childItem._id} item={childItem} parentItemsMap={parentItemsMap} />
             ))}
           </CollapsibleContent>
         </Collapsible>

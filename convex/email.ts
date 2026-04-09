@@ -104,11 +104,7 @@ export function deleteAccountVerificationEmail(to: string, url: string) {
   }
 }
 
-export function changeEmailConfirmationEmail(
-  currentEmail: string,
-  newEmail: string,
-  url: string,
-) {
+export function changeEmailConfirmationEmail(currentEmail: string, newEmail: string, url: string) {
   return {
     from: FROM_EMAIL,
     to: newEmail,

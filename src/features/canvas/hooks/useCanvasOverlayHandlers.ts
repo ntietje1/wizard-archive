@@ -19,10 +19,7 @@ function toReactPointerEvent(e: PointerEvent) {
   return e as unknown as React.PointerEvent
 }
 
-export function useCanvasOverlayHandlers(
-  wrapper: HTMLDivElement | null,
-  tools: ToolHandlers,
-) {
+export function useCanvasOverlayHandlers(wrapper: HTMLDivElement | null, tools: ToolHandlers) {
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const handlersRef = useRef<PointerHandlers | null>(null)
 
@@ -44,12 +41,7 @@ export function useCanvasOverlayHandlers(
     const onPointerDown = (e: PointerEvent) => {
       const handlers = handlersRef.current
       if (!handlers || e.button !== 0) return
-      if (
-        !e.target ||
-        !(e.target instanceof Element) ||
-        !e.target.closest('.react-flow')
-      )
-        return
+      if (!e.target || !(e.target instanceof Element) || !e.target.closest('.react-flow')) return
       handlers.onPointerDown(toReactPointerEvent(e))
     }
     const onPointerMove = (e: PointerEvent) => {

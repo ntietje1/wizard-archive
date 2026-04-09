@@ -3,9 +3,7 @@ import { signIn } from './helpers/auth-helpers'
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-test('sign in with valid credentials redirects to campaigns', async ({
-  page,
-}) => {
+test('sign in with valid credentials redirects to campaigns', async ({ page }) => {
   const email = process.env.E2E_TEST_EMAIL
   const password = process.env.E2E_TEST_PASSWORD
   if (!email || !password) {
@@ -27,7 +25,5 @@ test('sign in with wrong credentials shows error', async ({ page }) => {
 
 test('protected route requires authentication', async ({ page }) => {
   await page.goto('/campaigns', { waitUntil: 'networkidle' })
-  await expect(
-    page.getByRole('heading', { name: /welcome back|sign in/i }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: /welcome back|sign in/i })).toBeVisible()
 })

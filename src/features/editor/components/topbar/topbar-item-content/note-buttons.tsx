@@ -5,23 +5,13 @@ import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 
-export const EditorViewModeToggleButton = ({
-  disabled,
-}: {
-  disabled?: boolean
-}) => {
+export const EditorViewModeToggleButton = ({ disabled }: { disabled?: boolean }) => {
   const { editorMode, canEdit, setEditorMode } = useEditorMode()
   const handleEditorModeToggle = () => {
-    setEditorMode(
-      editorMode === EDITOR_MODE.EDITOR
-        ? EDITOR_MODE.VIEWER
-        : EDITOR_MODE.EDITOR,
-    )
+    setEditorMode(editorMode === EDITOR_MODE.EDITOR ? EDITOR_MODE.VIEWER : EDITOR_MODE.EDITOR)
   }
   const label =
-    editorMode === EDITOR_MODE.EDITOR
-      ? 'Switch to viewer mode'
-      : 'Switch to editor mode'
+    editorMode === EDITOR_MODE.EDITOR ? 'Switch to viewer mode' : 'Switch to editor mode'
   if (!canEdit) {
     return null
   }

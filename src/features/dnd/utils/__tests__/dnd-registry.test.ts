@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type {
   CanvasDropZoneData,
@@ -65,9 +62,7 @@ function emptyEditorTarget(): EmptyEditorDropZoneData {
   return { type: EMPTY_EDITOR_DROP_TYPE }
 }
 
-function noteEditorTarget(
-  noteId = testId<'notes'>('note_99'),
-): NoteEditorDropZoneData {
+function noteEditorTarget(noteId = testId<'notes'>('note_99')): NoteEditorDropZoneData {
   return { type: NOTE_EDITOR_DROP_TYPE, noteId }
 }
 
@@ -84,9 +79,7 @@ function mapTarget(
   }
 }
 
-function canvasTarget(
-  canvasId = testId<'canvases'>('canvas_99'),
-): CanvasDropZoneData {
+function canvasTarget(canvasId = testId<'canvases'>('canvas_99')): CanvasDropZoneData {
   return { type: CANVAS_DROP_ZONE_TYPE, canvasId }
 }
 
@@ -121,31 +114,19 @@ describe('getDragItemId', () => {
 
 describe('rejectionReasonMessage', () => {
   it('returns message for each rejection reason', () => {
-    expect(rejectionReasonMessage('no_permission')).toBe(
-      'No permission to move here',
-    )
-    expect(rejectionReasonMessage('circular')).toBe(
-      'Cannot move folder into itself',
-    )
+    expect(rejectionReasonMessage('no_permission')).toBe('No permission to move here')
+    expect(rejectionReasonMessage('circular')).toBe('Cannot move folder into itself')
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
-    expect(rejectionReasonMessage('self_embed')).toBe(
-      'Cannot embed canvas into itself',
-    )
-    expect(rejectionReasonMessage('already_pinned')).toBe(
-      'Already pinned to this map',
-    )
+    expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed canvas into itself')
+    expect(rejectionReasonMessage('already_pinned')).toBe('Already pinned to this map')
     expect(rejectionReasonMessage('not_folder')).toBe('Cannot drop here')
     expect(rejectionReasonMessage('missing_data')).toBe('Missing data')
-    expect(rejectionReasonMessage('trashed_folder')).toBe(
-      'Trashed folders are uneditable',
-    )
+    expect(rejectionReasonMessage('trashed_folder')).toBe('Trashed folders are uneditable')
     expect(rejectionReasonMessage('name_conflict')).toBe(
       'An item with this name already exists here',
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
-    expect(rejectionReasonMessage('trashed_item')).toBe(
-      'The item is trashed and cannot be used',
-    )
+    expect(rejectionReasonMessage('trashed_item')).toBe('The item is trashed and cannot be used')
   })
 })
 
@@ -559,33 +540,23 @@ describe('getDropTargetKey', () => {
   })
 
   it('returns type string for zones without custom getTargetKey', () => {
-    expect(getDropTargetKey({ type: TRASH_DROP_ZONE_TYPE })).toBe(
-      TRASH_DROP_ZONE_TYPE,
-    )
-    expect(getDropTargetKey({ type: EMPTY_EDITOR_DROP_TYPE })).toBe(
-      EMPTY_EDITOR_DROP_TYPE,
-    )
-    expect(getDropTargetKey({ type: SIDEBAR_ROOT_DROP_TYPE })).toBe(
-      SIDEBAR_ROOT_DROP_TYPE,
-    )
+    expect(getDropTargetKey({ type: TRASH_DROP_ZONE_TYPE })).toBe(TRASH_DROP_ZONE_TYPE)
+    expect(getDropTargetKey({ type: EMPTY_EDITOR_DROP_TYPE })).toBe(EMPTY_EDITOR_DROP_TYPE)
+    expect(getDropTargetKey({ type: SIDEBAR_ROOT_DROP_TYPE })).toBe(SIDEBAR_ROOT_DROP_TYPE)
   })
 
   it('returns custom key for canvas zone', () => {
-    expect(
-      getDropTargetKey({ type: CANVAS_DROP_ZONE_TYPE, canvasId: 'canvas_5' }),
-    ).toBe('canvas:canvas_5')
-  })
-
-  it('returns custom key for map zone', () => {
-    expect(getDropTargetKey({ type: MAP_DROP_ZONE_TYPE, mapId: 'map_5' })).toBe(
-      'map:map_5',
+    expect(getDropTargetKey({ type: CANVAS_DROP_ZONE_TYPE, canvasId: 'canvas_5' })).toBe(
+      'canvas:canvas_5',
     )
   })
 
+  it('returns custom key for map zone', () => {
+    expect(getDropTargetKey({ type: MAP_DROP_ZONE_TYPE, mapId: 'map_5' })).toBe('map:map_5')
+  })
+
   it('returns custom key for note editor zone', () => {
-    expect(
-      getDropTargetKey({ type: NOTE_EDITOR_DROP_TYPE, noteId: 'note_5' }),
-    ).toBe('note:note_5')
+    expect(getDropTargetKey({ type: NOTE_EDITOR_DROP_TYPE, noteId: 'note_5' })).toBe('note:note_5')
   })
 
   it('returns sidebarItemId for folder target', () => {
@@ -618,15 +589,11 @@ describe('getHighlightId', () => {
   })
 
   it('returns canvas:id for canvas zone', () => {
-    expect(getHighlightId(canvasTarget(testId<'canvases'>('canvas_7')))).toBe(
-      'canvas:canvas_7',
-    )
+    expect(getHighlightId(canvasTarget(testId<'canvases'>('canvas_7')))).toBe('canvas:canvas_7')
   })
 
   it('returns map:id for map zone', () => {
-    expect(getHighlightId(mapTarget(testId<'gameMaps'>('map_7')))).toBe(
-      'map:map_7',
-    )
+    expect(getHighlightId(mapTarget(testId<'gameMaps'>('map_7')))).toBe('map:map_7')
   })
 
   it('returns item id for folder target', () => {
@@ -637,17 +604,12 @@ describe('getHighlightId', () => {
 
 // ─── resolveDropTarget ─────────────────────────────────────────────
 
-const emptyMap: ReadonlyMap<SidebarItemId, never> = new Map<
-  SidebarItemId,
-  never
->()
+const emptyMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
 
 describe('resolveDropTarget', () => {
   it('resolves sidebar item from itemsMap', () => {
     const note = createNote()
-    const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([
-      [note._id, note],
-    ])
+    const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([[note._id, note]])
     const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map()
     const getAncestorIds = vi.fn(() => [testId<'folders'>('folder_1')])
 
@@ -659,17 +621,13 @@ describe('resolveDropTarget', () => {
     )
 
     expect(result).toMatchObject({ _id: note._id, type: note.type })
-    expect((result as { ancestorIds: Array<string> }).ancestorIds).toEqual([
-      'folder_1',
-    ])
+    expect((result as { ancestorIds: Array<string> }).ancestorIds).toEqual(['folder_1'])
   })
 
   it('resolves sidebar item from trashedItemsMap', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map()
-    const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([
-      [note._id, note],
-    ])
+    const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([[note._id, note]])
     const getAncestorIds = vi.fn(() => [])
 
     const result = resolveDropTarget(
@@ -683,14 +641,8 @@ describe('resolveDropTarget', () => {
   })
 
   it('returns null for unknown sidebar item id', () => {
-    const itemsMap: ReadonlyMap<SidebarItemId, never> = new Map<
-      SidebarItemId,
-      never
-    >()
-    const trashedMap: ReadonlyMap<SidebarItemId, never> = new Map<
-      SidebarItemId,
-      never
-    >()
+    const itemsMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
+    const trashedMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
 
     const result = resolveDropTarget(
       { sidebarItemId: 'note_unknown' },
@@ -717,23 +669,13 @@ describe('resolveDropTarget', () => {
   })
 
   it('returns null for unknown zone type', () => {
-    const result = resolveDropTarget(
-      { type: 'something-unknown' },
-      emptyMap,
-      emptyMap,
-      vi.fn(),
-    )
+    const result = resolveDropTarget({ type: 'something-unknown' }, emptyMap, emptyMap, vi.fn())
 
     expect(result).toBeNull()
   })
 
   it('returns null for data with no type and no sidebarItemId', () => {
-    const result = resolveDropTarget(
-      { foo: 'bar' },
-      emptyMap,
-      emptyMap,
-      vi.fn(),
-    )
+    const result = resolveDropTarget({ foo: 'bar' }, emptyMap, emptyMap, vi.fn())
 
     expect(result).toBeNull()
   })

@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  createCampaign,
-  deleteCampaign,
-  navigateToCampaign,
-} from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const testCampaignName = testName('E2E Campaign')
@@ -23,9 +19,7 @@ test.describe.serial('campaign operations', () => {
   test('navigate to campaign editor', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, testCampaignName)
-    await expect(
-      page.getByRole('navigation', { name: 'Sidebar' }),
-    ).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible()
   })
 
   test.afterAll(async ({ browser }) => {

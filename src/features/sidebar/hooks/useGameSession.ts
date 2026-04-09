@@ -15,16 +15,8 @@ export type SessionContextValue = {
     Error,
     { campaignId: Id<'campaigns'>; name?: string }
   >
-  endCurrentSession: UseMutationResult<
-    Id<'sessions'>,
-    Error,
-    { campaignId: Id<'campaigns'> }
-  >
-  setCurrentSession: UseMutationResult<
-    Id<'sessions'>,
-    Error,
-    { sessionId: Id<'sessions'> }
-  >
+  endCurrentSession: UseMutationResult<Id<'sessions'>, Error, { campaignId: Id<'campaigns'> }>
+  setCurrentSession: UseMutationResult<Id<'sessions'>, Error, { sessionId: Id<'sessions'> }>
   nextSessionNumber: number
 }
 
@@ -45,15 +37,13 @@ export function useSession(): SessionContextValue {
     onError: (error) => handleError(error, 'Failed to start session'),
   })
 
-  const endCurrentSession = useAppMutation(
-    api.sessions.mutations.endCurrentSession,
-    { onError: (error) => handleError(error, 'Failed to end session') },
-  )
+  const endCurrentSession = useAppMutation(api.sessions.mutations.endCurrentSession, {
+    onError: (error) => handleError(error, 'Failed to end session'),
+  })
 
-  const setCurrentSession = useAppMutation(
-    api.sessions.mutations.setCurrentSession,
-    { onError: (error) => handleError(error, 'Failed to set session') },
-  )
+  const setCurrentSession = useAppMutation(api.sessions.mutations.setCurrentSession, {
+    onError: (error) => handleError(error, 'Failed to set session'),
+  })
 
   const nextSessionNumber = (sessions.data?.length ?? 0) + 1
 

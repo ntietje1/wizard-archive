@@ -29,21 +29,21 @@ export function useCanvasWheel(ref: React.RefObject<HTMLDivElement | null>) {
           Math.max(MIN_ZOOM, currentZoom * (1 - deltaY * ZOOM_SENSITIVITY)),
         )
         const scale = newZoom / currentZoom
-        reactFlowInstance.setViewport({
+        void reactFlowInstance.setViewport({
           x: mouseX - (mouseX - viewport.x) * scale,
           y: mouseY - (mouseY - viewport.y) * scale,
           zoom: newZoom,
         })
       } else if (shiftKey) {
         const viewport = reactFlowInstance.getViewport()
-        reactFlowInstance.setViewport({
+        void reactFlowInstance.setViewport({
           x: viewport.x - deltaY * PAN_SENSITIVITY,
           y: viewport.y,
           zoom: viewport.zoom,
         })
       } else {
         const viewport = reactFlowInstance.getViewport()
-        reactFlowInstance.setViewport({
+        void reactFlowInstance.setViewport({
           x: viewport.x - deltaX * PAN_SENSITIVITY,
           y: viewport.y - deltaY * PAN_SENSITIVITY,
           zoom: viewport.zoom,

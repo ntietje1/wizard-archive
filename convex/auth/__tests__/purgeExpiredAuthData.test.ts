@@ -9,17 +9,11 @@ describe('purgeExpiredAuthData cron', () => {
   it('active users are unaffected after purge runs', async () => {
     const user = await setupUser(t)
 
-    const profileBefore = await user.authed.query(
-      api.users.queries.getUserProfile,
-      {},
-    )
+    const profileBefore = await user.authed.query(api.users.queries.getUserProfile, {})
     expect(profileBefore).not.toBeNull()
     expect(profileBefore!.username).toBe(user.profile.username)
 
-    const profileAfter = await user.authed.query(
-      api.users.queries.getUserProfile,
-      {},
-    )
+    const profileAfter = await user.authed.query(api.users.queries.getUserProfile, {})
     expect(profileAfter).not.toBeNull()
     expect(profileAfter!._id).toBe(profileBefore!._id)
   })

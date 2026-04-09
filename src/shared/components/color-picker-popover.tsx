@@ -6,11 +6,7 @@ import {
   ColorPickerHue,
   ColorPickerSelection,
 } from '~/features/shadcn/components/color-picker'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '~/features/shadcn/components/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 
 const CHECKERBOARD_PATTERN =
   'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
@@ -75,11 +71,7 @@ export function ColorPickerPopover({
           </span>
         )}
       />
-      <PopoverContent
-        side="bottom"
-        align="end"
-        className="w-56 p-3 allow-motion"
-      >
+      <PopoverContent side="bottom" align="end" className="w-56 p-3 allow-motion">
         <ColorPicker value={value} onChange={onChange}>
           <ColorPickerSelection className="h-32 rounded-md" />
           <ColorPickerHue />

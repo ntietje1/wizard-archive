@@ -12,12 +12,8 @@ export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
         <div className="text-center p-4">
-          <p className="text-lg font-medium text-destructive">
-            Invalid File URL
-          </p>
-          <p className="text-sm mt-2">
-            The file URL does not meet security requirements.
-          </p>
+          <p className="text-lg font-medium text-destructive">Invalid File URL</p>
+          <p className="text-sm mt-2">The file URL does not meet security requirements.</p>
         </div>
       </div>
     )
@@ -42,9 +38,7 @@ export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
           </div>
           <div>
             <p className="text-lg font-medium">{fileName || 'File'}</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              This file type cannot be previewed
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">This file type cannot be previewed</p>
           </div>
           <a
             href={fileUrl}

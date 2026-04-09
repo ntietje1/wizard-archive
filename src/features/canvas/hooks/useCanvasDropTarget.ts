@@ -11,10 +11,7 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import {
-  CANVAS_DROP_ZONE_TYPE,
-  getDragItemId,
-} from '~/features/dnd/utils/dnd-registry'
+import { CANVAS_DROP_ZONE_TYPE, getDragItemId } from '~/features/dnd/utils/dnd-registry'
 
 const EMBED_SIDEBAR_WIDTH = 320
 const EMBED_SIDEBAR_HEIGHT = 240
@@ -78,8 +75,7 @@ export function useCanvasDropTarget({
 
         const sidebarItemId = getDragItemId(source.data)
         if (!sidebarItemId) return
-        if ((sidebarItemId as string) === (canvasIdRef.current as string))
-          return
+        if ((sidebarItemId as string) === (canvasIdRef.current as string)) return
 
         const { clientX, clientY } = location.current.input
         const position = reactFlowRef.current.screenToFlowPosition({
@@ -108,14 +104,11 @@ export function useCanvasDropTarget({
   useEffect(() => {
     if (!enabled) return
     const handler: FileDropOverride = async (dropResult, clientCoords) => {
-      const basePosition =
-        reactFlowRef.current.screenToFlowPosition(clientCoords)
+      const basePosition = reactFlowRef.current.screenToFlowPosition(clientCoords)
       try {
         const files = dropResult.files
         const results = await Promise.allSettled(
-          files.map((f) =>
-            uploadRef.current(f.file, null, { navigate: false }),
-          ),
+          files.map((f) => uploadRef.current(f.file, null, { navigate: false })),
         )
         results.forEach((result, i) => {
           if (result.status === 'rejected') {

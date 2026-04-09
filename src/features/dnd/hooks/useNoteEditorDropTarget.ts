@@ -3,10 +3,7 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-  NOTE_EDITOR_DROP_TYPE,
-  getDragItemId,
-} from '~/features/dnd/utils/dnd-registry'
+import { NOTE_EDITOR_DROP_TYPE, getDragItemId } from '~/features/dnd/utils/dnd-registry'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from '~/features/editor/hooks/useWikiLinkExtension'
@@ -62,19 +59,11 @@ export function useNoteEditorDropTarget({
         })
         if (!posResult) return
 
-        const pathParts = getMinDisambiguationPath(
-          item,
-          allItemsRef.current,
-          itemsMapRef.current,
-        )
+        const pathParts = getMinDisambiguationPath(item, allItemsRef.current, itemsMapRef.current)
         const path = pathParts.join('/')
         const linkText = pathParts.length > 1 ? `${path}|${item.name}` : path
 
-        tiptap
-          .chain()
-          .focus()
-          .insertContentAt(posResult.pos, `[[${linkText}]]`)
-          .run()
+        tiptap.chain().focus().insertContentAt(posResult.pos, `[[${linkText}]]`).run()
       },
     })
   }, [noteId])

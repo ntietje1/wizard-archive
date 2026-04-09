@@ -27,11 +27,7 @@ export function MapDialog({
       isOpen={isOpen}
       onClose={onClose}
       title={mapId ? 'Edit Map' : 'Create Map'}
-      description={
-        mapId
-          ? 'Update map settings and image'
-          : 'Create a new map for your campaign'
-      }
+      description={mapId ? 'Update map settings and image' : 'Create a new map for your campaign'}
       icon={MapPin}
     >
       <MapForm

@@ -29,10 +29,7 @@ export async function setPreviewImage(
   })
 
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Folders do not support preview images',
-    )
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders do not support preview images')
   }
 
   if (

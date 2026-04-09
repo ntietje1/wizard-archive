@@ -7,21 +7,17 @@ import { DroppableFolderZone } from './droppable-folder-zone'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
 import { CreateNewDashboard } from '~/features/editor/components/create-new-dashboard'
-import {
-  useFilteredSidebarItems,
-  useSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 
-export function FolderViewer({
-  item: folder,
-}: EditorViewerProps<FolderWithContent>) {
+export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
-  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } =
-    useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useSidebarItems(
+    SIDEBAR_ITEM_LOCATION.trash,
+  )
 
   const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
   const effectiveStatus = isDeleted ? trashedStatus : status
@@ -30,15 +26,9 @@ export function FolderViewer({
     : (parentItemsMap.get(folder._id) ?? [])
 
   const hasFullAccess =
-    !isDeleted &&
-    hasAtLeastPermissionLevel(
-      folder.myPermissionLevel,
-      PERMISSION_LEVEL.FULL_ACCESS,
-    )
+    !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
 
-  const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(
-    ' / ',
-  )
+  const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(' / ')
 
   if (effectiveStatus === 'pending') {
     return (
@@ -55,10 +45,7 @@ export function FolderViewer({
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
       >
-        <DroppableFolderZone
-          folder={folder}
-          className="flex flex-col h-full w-full min-h-0"
-        >
+        <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
           ) : (
@@ -77,21 +64,12 @@ export function FolderViewer({
       className="flex flex-col h-full w-full min-h-0"
       item={folder}
     >
-      <DroppableFolderZone
-        folder={folder}
-        className="flex flex-col h-full w-full min-h-0"
-      >
+      <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
         <ScrollArea className="flex-1 min-h-0">
           <div className="w-full min-w-0">
             <ContentGrid className="p-6 min-h-0">
               {children.map((childItem) => {
-                return (
-                  <ItemCard
-                    key={childItem._id}
-                    item={childItem}
-                    parentId={folder._id}
-                  />
-                )
+                return <ItemCard key={childItem._id} item={childItem} parentId={folder._id} />
               })}
               {hasFullAccess && <NewItemCard parentId={folder._id} />}
             </ContentGrid>
