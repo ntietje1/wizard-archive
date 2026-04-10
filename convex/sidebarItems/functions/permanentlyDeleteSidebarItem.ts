@@ -6,7 +6,7 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
-import { getSidebarItem } from './loadExtensionData'
+import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 

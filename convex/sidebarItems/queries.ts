@@ -2,13 +2,14 @@ import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { SIDEBAR_ITEM_LOCATION } from './types/baseTypes'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
-import { requireSidebarItemById } from './functions/getSidebarItemById'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/schema'
 import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { anySidebarItemWithContentValidator } from './schema/contentSchema'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
+import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
+import { ERROR_CODE, throwClientError } from '../errors'
 
 export const getSidebarItemsByLocation = authQuery({
   args: {
@@ -48,7 +49,11 @@ export const getSidebarItem = authQuery({
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    return await requireSidebarItemById(ctx, { id: args.id })
+    const res = await getSidebarItemWithContent(ctx, args.id)
+    if (!res) {
+      throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
+    }
+    return res
   },
 })
 

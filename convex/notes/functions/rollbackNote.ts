@@ -1,6 +1,6 @@
 import { rollbackYjsDocument } from '../../yjsSync/functions/rollbackYjsDocument'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -11,17 +11,15 @@ export async function rollbackNote(
   itemId: SidebarItemId,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  const rawItem = await ctx.db.get('sidebarItems', itemId)
+  const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.notes) {
     throw new Error(`rollbackNote: expected a note but got ${rawItem?.type}`)
   }
 
-  const note = await loadSingleExtensionData(ctx, rawItem)
-
   await requireItemAccess(ctx, {
-    rawItem: note,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  await rollbackYjsDocument(ctx, note._id, snapshotData)
+  await rollbackYjsDocument(ctx, rawItem._id, snapshotData)
 }

@@ -1,6 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logger } from '../../common/logger'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -47,11 +47,10 @@ export async function rollbackGameMap(
     }
   }
 
-  const rawItem = await ctx.db.get('sidebarItems', itemId)
+  const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  const mapFromDb = await loadSingleExtensionData(ctx, rawItem)
   const map = await requireItemAccess(ctx, {
-    rawItem: mapFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 

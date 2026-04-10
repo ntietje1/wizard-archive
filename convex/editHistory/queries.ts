@@ -4,7 +4,7 @@ import { authQuery } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { requireItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../permissions/types'
-import { getSidebarItem } from '../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
 
 const historyEntryValidator = v.object({
   _id: v.id('editHistory'),

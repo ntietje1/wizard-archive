@@ -1,6 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
@@ -27,12 +27,11 @@ export async function updateFile(
     color?: string | null
   },
 ): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
-  const rawItem = await ctx.db.get('sidebarItems', fileId)
+  const rawItem = await getSidebarItem(ctx, fileId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
   await requireCampaignMembership(ctx, rawItem.campaignId)
-  const fileFromDb = await loadSingleExtensionData(ctx, rawItem)
   const file = await requireItemAccess(ctx, {
-    rawItem: fileFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 

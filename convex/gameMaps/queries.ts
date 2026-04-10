@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
-import { getMap as getMapFn } from './functions/getMap'
+import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { GameMapWithContent } from './types'
 
 export const getMap = authQuery({
@@ -10,6 +10,6 @@ export const getMap = authQuery({
   },
   returns: v.union(mapWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<GameMapWithContent | null> => {
-    return getMapFn(ctx, { mapId: args.mapId })
+    return (await getSidebarItemWithContent(ctx, args.mapId)) as GameMapWithContent | null
   },
 })

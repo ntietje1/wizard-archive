@@ -14,7 +14,7 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
-import { loadSingleExtensionData } from './loadExtensionData'
+import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
@@ -62,8 +62,7 @@ export async function moveSidebarItem(
     parentId?: Id<'sidebarItems'> | null
   },
 ): Promise<SidebarItemId> {
-  const raw = await ctx.db.get('sidebarItems', itemId)
-  const itemFromDb = raw ? await loadSingleExtensionData(ctx, raw) : null
+  const itemFromDb = await getSidebarItem(ctx, itemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

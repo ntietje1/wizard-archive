@@ -1,6 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
@@ -25,12 +25,11 @@ export async function updateFolder(
     color?: string | null
   },
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
-  const rawItem = await ctx.db.get('sidebarItems', folderId)
+  const rawItem = await getSidebarItem(ctx, folderId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   await requireCampaignMembership(ctx, rawItem.campaignId)
-  const folderFromDb = await loadSingleExtensionData(ctx, rawItem)
   const folder = await requireItemAccess(ctx, {
-    rawItem: folderFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 

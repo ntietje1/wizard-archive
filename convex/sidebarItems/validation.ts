@@ -6,7 +6,6 @@ import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { requireCampaignMembership } from '../functions'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
-import { getSidebarItemById } from './functions/getSidebarItemById'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
 import type { ValidationResult } from './sharedValidation'
@@ -15,6 +14,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { AuthQueryCtx } from '../functions'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemFromDb, EnhancedSidebarItem } from './types/types'
+import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 
 /**
  * Checks if a name is unique under a parent (case-insensitive).
@@ -177,7 +177,7 @@ export async function validateSidebarCreateParent(
 ): Promise<void> {
   const { membership } = await requireCampaignMembership(ctx, campaignId)
   if (parentId) {
-    const parentItem = await getSidebarItemById(ctx, { id: parentId })
+    const parentItem = await getSidebarItemWithContent(ctx, parentId)
     if (!parentItem) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }

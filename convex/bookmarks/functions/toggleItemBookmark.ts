@@ -2,7 +2,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
-import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 

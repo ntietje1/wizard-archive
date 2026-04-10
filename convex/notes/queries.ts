@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
-import { getNote as getNoteFn } from './functions/getNote'
+import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { NoteWithContent } from './types'
 
 export const getNote = authQuery({
@@ -10,6 +10,6 @@ export const getNote = authQuery({
   },
   returns: v.union(noteWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<NoteWithContent | null> => {
-    return await getNoteFn(ctx, { noteId: args.noteId })
+    return (await getSidebarItemWithContent(ctx, args.noteId)) as NoteWithContent | null
   },
 })

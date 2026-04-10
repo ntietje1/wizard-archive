@@ -1,5 +1,5 @@
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
-import { loadExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
@@ -15,10 +15,10 @@ export async function deleteCampaign(
     .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const items = await loadExtensionData(ctx, rawItems)
+  const items = await Promise.all(rawItems.map((raw) => getSidebarItem(ctx, raw._id)))
 
   for (const item of items) {
-    await hardDeleteItem(ctx, item)
+    if (item) await hardDeleteItem(ctx, item)
   }
 
   // Delete sessions

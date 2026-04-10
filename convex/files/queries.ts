@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { authQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
-import { getFile as getFileFn } from './functions/getFile'
+import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { FileWithContent } from './types'
 
 export const getFile = authQuery({
@@ -10,6 +10,6 @@ export const getFile = authQuery({
   },
   returns: v.union(fileWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<FileWithContent | null> => {
-    return getFileFn(ctx, { fileId: args.fileId })
+    return (await getSidebarItemWithContent(ctx, args.fileId)) as FileWithContent | null
   },
 })

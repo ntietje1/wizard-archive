@@ -1,5 +1,5 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
@@ -16,10 +16,9 @@ export async function requirePinAccess(
     throwClientError(ERROR_CODE.NOT_FOUND, 'Pin not found')
   }
 
-  const rawItem = await ctx.db.get('sidebarItems', pin.mapId)
-  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
-  const map = (await loadSingleExtensionData(ctx, rawItem)) as GameMapFromDb
+  const map = await getSidebarItem<'gameMaps'>(ctx, pin.mapId)
+  if (!map) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
+  await requireCampaignMembership(ctx, map.campaignId)
   await requireItemAccess(ctx, {
     rawItem: map,
     requiredLevel: PERMISSION_LEVEL.EDIT,

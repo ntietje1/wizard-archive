@@ -3,22 +3,39 @@ import type { Note, NoteFromDb, NoteWithContent } from '../../notes/types'
 import type { Folder, FolderFromDb, FolderWithContent } from '../../folders/types'
 import type { FileFromDb, FileWithContent, SidebarFile } from '../../files/types'
 import type { Canvas, CanvasFromDb, CanvasWithContent } from '../../canvases/types'
+import type { SIDEBAR_ITEM_TYPES } from './baseTypes'
 
-export type AnySidebarItemFromDb =
-  | NoteFromDb
-  | FolderFromDb
-  | GameMapFromDb
-  | FileFromDb
-  | CanvasFromDb
+export type SidebarItemTypeKey = keyof typeof SIDEBAR_ITEM_TYPES
 
-export type AnySidebarItem = Note | Folder | GameMap | SidebarFile | Canvas
+export type FromDbByType = {
+  notes: NoteFromDb
+  folders: FolderFromDb
+  gameMaps: GameMapFromDb
+  files: FileFromDb
+  canvases: CanvasFromDb
+}
 
-export type AnySidebarItemWithContent =
-  | NoteWithContent
-  | GameMapWithContent
-  | FolderWithContent
-  | FileWithContent
-  | CanvasWithContent
+export type EnhancedByType = {
+  notes: Note
+  folders: Folder
+  gameMaps: GameMap
+  files: SidebarFile
+  canvases: Canvas
+}
+
+export type WithContentByType = {
+  notes: NoteWithContent
+  folders: FolderWithContent
+  gameMaps: GameMapWithContent
+  files: FileWithContent
+  canvases: CanvasWithContent
+}
+
+export type AnySidebarItemFromDb = FromDbByType[SidebarItemTypeKey]
+
+export type AnySidebarItem = EnhancedByType[SidebarItemTypeKey]
+
+export type AnySidebarItemWithContent = WithContentByType[SidebarItemTypeKey]
 
 export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> = T extends NoteFromDb
   ? Note

@@ -1,5 +1,5 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -27,12 +27,11 @@ export async function createItemPin(
     itemId: SidebarItemId
   },
 ): Promise<Id<'mapPins'>> {
-  const rawItem = await ctx.db.get('sidebarItems', mapId)
+  const rawItem = await getSidebarItem(ctx, mapId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, rawItem.campaignId)
-  const mapFromDb = await loadSingleExtensionData(ctx, rawItem)
   await requireItemAccess(ctx, {
-    rawItem: mapFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 

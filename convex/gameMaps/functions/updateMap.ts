@@ -1,5 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
-import { getGameMap } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
@@ -27,11 +27,12 @@ export async function updateMap(
     color?: string | null
   },
 ): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
-  const mapFromDb = await getGameMap(ctx, mapId)
-  if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  await requireCampaignMembership(ctx, mapFromDb.campaignId)
+  const rawItem = await getSidebarItem(ctx, mapId)
+  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.gameMaps)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
   const map = await requireItemAccess(ctx, {
-    rawItem: mapFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 

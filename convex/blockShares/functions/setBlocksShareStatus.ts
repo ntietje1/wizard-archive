@@ -5,7 +5,8 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { setBlockShareStatusHelper } from './blockShareMutations'
-import { getNote } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { ShareStatus } from '../types'
@@ -26,9 +27,11 @@ export const setBlocksShareStatus = async (
     return null
   }
 
-  const rawNote = await getNote(ctx, noteId)
+  const rawItem = await getSidebarItem(ctx, noteId)
+  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.notes)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const note = await requireItemAccess(ctx, {
-    rawItem: rawNote,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 

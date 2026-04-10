@@ -2,32 +2,22 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
-import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
-import type { SharesMap } from './getCampaignShares'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { PermissionLevel } from '../../permissions/types'
 
-/**
- * Walk the ancestor folder chain once and resolve inherited permissions
- * for all provided members + the "all players" level.
- *
- * When sharesMap is provided, uses in-memory lookups (batch path).
- * When omitted, queries shares per-folder (single-item path).
- */
 export async function resolveInheritedPermissions(
   ctx: AuthQueryCtx,
   {
     parentId,
     campaignId,
     memberIds,
-    sharesMap,
   }: {
     parentId: Id<'sidebarItems'> | null
     campaignId: Id<'campaigns'>
     memberIds: Array<Id<'campaignMembers'>>
-    sharesMap?: SharesMap
   },
 ): Promise<{
   allPlayers: { level: PermissionLevel | null; folderName: string | null }
@@ -59,36 +49,20 @@ export async function resolveInheritedPermissions(
     }
 
     if (unresolvedMembers.size > 0) {
-      if (sharesMap) {
-        const folderShares = sharesMap.get(currentParentId)
-        if (folderShares) {
-          for (const memberId of unresolvedMembers) {
-            const share = folderShares.get(memberId)
-            if (share) {
-              result.members[memberId] = {
-                level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-                folderName: folder.name,
-              }
-              unresolvedMembers.delete(memberId)
-            }
+      const folderShares = await ctx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q.eq('campaignId', campaignId).eq('sidebarItemId', currentParentId!),
+        )
+        .filter((q) => q.eq(q.field('deletionTime'), null))
+        .collect()
+      for (const share of folderShares) {
+        if (unresolvedMembers.has(share.campaignMemberId)) {
+          result.members[share.campaignMemberId] = {
+            level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+            folderName: folder.name,
           }
-        }
-      } else {
-        const folderShares = await ctx.db
-          .query('sidebarItemShares')
-          .withIndex('by_campaign_item_member', (q) =>
-            q.eq('campaignId', campaignId).eq('sidebarItemId', currentParentId!),
-          )
-          .filter((q) => q.eq(q.field('deletionTime'), null))
-          .collect()
-        for (const share of folderShares) {
-          if (unresolvedMembers.has(share.campaignMemberId)) {
-            result.members[share.campaignMemberId] = {
-              level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-              folderName: folder.name,
-            }
-            unresolvedMembers.delete(share.campaignMemberId)
-          }
+          unresolvedMembers.delete(share.campaignMemberId)
         }
       }
     }
@@ -128,13 +102,7 @@ export async function resolveInheritedPermissions(
 
 export async function getSidebarItemPermissionLevel(
   ctx: AuthQueryCtx,
-  {
-    item,
-    sharesMap,
-  }: {
-    item: AnySidebarItem | AnySidebarItemFromDb
-    sharesMap?: SharesMap
-  },
+  { item }: { item: AnySidebarItem | AnySidebarItemFromDb },
 ): Promise<PermissionLevel> {
   const campaignId = item.campaignId
   const { membership } = await requireCampaignMembership(ctx, campaignId)
@@ -145,23 +113,6 @@ export async function getSidebarItemPermissionLevel(
 
   const checkId = membership._id
 
-  if (sharesMap) {
-    // Batch path: use pre-loaded shares map
-    const share = sharesMap.get(item._id)?.get(checkId)
-    if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
-
-    if (item.allPermissionLevel !== null) return item.allPermissionLevel
-
-    const inherited = await resolveInheritedPermissions(ctx, {
-      parentId: item.parentId ?? null,
-      campaignId,
-      memberIds: [checkId],
-      sharesMap,
-    })
-    return inherited.members[checkId]?.level ?? PERMISSION_LEVEL.NONE
-  }
-
-  // Single-item path: direct queries
   const share = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>

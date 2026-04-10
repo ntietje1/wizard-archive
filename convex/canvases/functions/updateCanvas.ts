@@ -1,5 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -25,12 +25,11 @@ export async function updateCanvas(
     color?: string | null
   },
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
-  const rawItem = await ctx.db.get('sidebarItems', canvasId)
+  const rawItem = await getSidebarItem(ctx, canvasId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
   await requireCampaignMembership(ctx, rawItem.campaignId)
-  const canvasFromDb = await loadSingleExtensionData(ctx, rawItem)
   const canvas = await requireItemAccess(ctx, {
-    rawItem: canvasFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 

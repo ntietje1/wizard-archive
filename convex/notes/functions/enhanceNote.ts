@@ -6,24 +6,14 @@ import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { requireCampaignMembership } from '../../functions'
-import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 
 export const enhanceNote = async (
   ctx: AuthQueryCtx,
-  {
-    note,
-    sharesMap,
-    bookmarkIds,
-  }: {
-    note: NoteFromDb
-    sharesMap?: SharesMap
-    bookmarkIds?: Set<SidebarItemId>
-  },
+  { note }: { note: NoteFromDb },
 ): Promise<Note> => {
-  return enhanceBase(ctx, { item: note, sharesMap, bookmarkIds })
+  return enhanceBase(ctx, { item: note })
 }
 
 export const enhanceNoteWithContent = async (

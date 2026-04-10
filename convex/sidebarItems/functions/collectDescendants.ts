@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { loadExtensionData } from './loadExtensionData'
+import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
@@ -30,12 +30,14 @@ export async function collectDescendants(
     const childFolders = children.filter((c) => c.type === SIDEBAR_ITEM_TYPES.folders)
     const nonFolders = children.filter((c) => c.type !== SIDEBAR_ITEM_TYPES.folders)
 
-    const enhanced = await loadExtensionData(ctx, nonFolders)
-    result.push(...enhanced)
+    const enhanced = await Promise.all(nonFolders.map((raw) => getSidebarItem(ctx, raw._id)))
+    for (const item of enhanced) {
+      if (item) result.push(item)
+    }
 
     for (const folder of childFolders) {
-      const enhancedFolder = (await loadExtensionData(ctx, [folder]))[0]!
-      result.push(enhancedFolder)
+      const enhancedFolder = await getSidebarItem(ctx, folder._id)
+      if (enhancedFolder) result.push(enhancedFolder)
       await collectFromFolder(folder._id)
     }
   }

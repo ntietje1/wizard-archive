@@ -33,7 +33,6 @@ import type * as blocks_functions_saveTopLevelBlocksForNote from "../blocks/func
 import type * as blocks_functions_updateBlock from "../blocks/functions/updateBlock.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
-import type * as bookmarks_functions_getCampaignBookmarks from "../bookmarks/functions/getCampaignBookmarks.js";
 import type * as bookmarks_functions_getItemBookmark from "../bookmarks/functions/getItemBookmark.js";
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_mutations from "../bookmarks/mutations.js";
@@ -83,6 +82,7 @@ import type * as errors from "../errors.js";
 import type * as files_functions_createFile from "../files/functions/createFile.js";
 import type * as files_functions_enhanceFile from "../files/functions/enhanceFile.js";
 import type * as files_functions_getFile from "../files/functions/getFile.js";
+import type * as files_functions_loadFileExtension from "../files/functions/loadFileExtension.js";
 import type * as files_functions_updateFile from "../files/functions/updateFile.js";
 import type * as files_mutations from "../files/mutations.js";
 import type * as files_queries from "../files/queries.js";
@@ -93,6 +93,7 @@ import type * as folders_functions_enhanceFolder from "../folders/functions/enha
 import type * as folders_functions_getFolder from "../folders/functions/getFolder.js";
 import type * as folders_functions_getFolderContentsForDownload from "../folders/functions/getFolderContentsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
+import type * as folders_functions_loadFolderExtension from "../folders/functions/loadFolderExtension.js";
 import type * as folders_functions_updateFolder from "../folders/functions/updateFolder.js";
 import type * as folders_mutations from "../folders/mutations.js";
 import type * as folders_queries from "../folders/queries.js";
@@ -104,6 +105,7 @@ import type * as gameMaps_functions_createItemPin from "../gameMaps/functions/cr
 import type * as gameMaps_functions_createMap from "../gameMaps/functions/createMap.js";
 import type * as gameMaps_functions_enhanceMap from "../gameMaps/functions/enhanceMap.js";
 import type * as gameMaps_functions_getMap from "../gameMaps/functions/getMap.js";
+import type * as gameMaps_functions_loadGameMapExtension from "../gameMaps/functions/loadGameMapExtension.js";
 import type * as gameMaps_functions_removeItemPin from "../gameMaps/functions/removeItemPin.js";
 import type * as gameMaps_functions_requirePinAccess from "../gameMaps/functions/requirePinAccess.js";
 import type * as gameMaps_functions_rollbackGameMap from "../gameMaps/functions/rollbackGameMap.js";
@@ -144,11 +146,11 @@ import type * as sidebarItems_functions_defaultItemName from "../sidebarItems/fu
 import type * as sidebarItems_functions_emptyTrashBin from "../sidebarItems/functions/emptyTrashBin.js";
 import type * as sidebarItems_functions_enhanceSidebarItem from "../sidebarItems/functions/enhanceSidebarItem.js";
 import type * as sidebarItems_functions_fetchCampaignSidebarItems from "../sidebarItems/functions/fetchCampaignSidebarItems.js";
+import type * as sidebarItems_functions_getSidebarItem from "../sidebarItems/functions/getSidebarItem.js";
 import type * as sidebarItems_functions_getSidebarItemById from "../sidebarItems/functions/getSidebarItemById.js";
 import type * as sidebarItems_functions_getSidebarItemBySlug from "../sidebarItems/functions/getSidebarItemBySlug.js";
 import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebarItems/functions/getSidebarItemsByParent.js";
 import type * as sidebarItems_functions_hardDeleteItem from "../sidebarItems/functions/hardDeleteItem.js";
-import type * as sidebarItems_functions_loadExtensionData from "../sidebarItems/functions/loadExtensionData.js";
 import type * as sidebarItems_functions_moveSidebarItem from "../sidebarItems/functions/moveSidebarItem.js";
 import type * as sidebarItems_functions_permanentlyDeleteSidebarItem from "../sidebarItems/functions/permanentlyDeleteSidebarItem.js";
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
@@ -164,7 +166,6 @@ import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValid
 import type * as sidebarItems_types_baseTypes from "../sidebarItems/types/baseTypes.js";
 import type * as sidebarItems_types_types from "../sidebarItems/types/types.js";
 import type * as sidebarItems_validation from "../sidebarItems/validation.js";
-import type * as sidebarShares_functions_getCampaignShares from "../sidebarShares/functions/getCampaignShares.js";
 import type * as sidebarShares_functions_getSidebarItemShares from "../sidebarShares/functions/getSidebarItemShares.js";
 import type * as sidebarShares_functions_getSidebarItemSharesForItem from "../sidebarShares/functions/getSidebarItemSharesForItem.js";
 import type * as sidebarShares_functions_getSidebarItemWithShares from "../sidebarShares/functions/getSidebarItemWithShares.js";
@@ -242,7 +243,6 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/updateBlock": typeof blocks_functions_updateBlock;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;
-  "bookmarks/functions/getCampaignBookmarks": typeof bookmarks_functions_getCampaignBookmarks;
   "bookmarks/functions/getItemBookmark": typeof bookmarks_functions_getItemBookmark;
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/mutations": typeof bookmarks_mutations;
@@ -292,6 +292,7 @@ declare const fullApi: ApiFromModules<{
   "files/functions/createFile": typeof files_functions_createFile;
   "files/functions/enhanceFile": typeof files_functions_enhanceFile;
   "files/functions/getFile": typeof files_functions_getFile;
+  "files/functions/loadFileExtension": typeof files_functions_loadFileExtension;
   "files/functions/updateFile": typeof files_functions_updateFile;
   "files/mutations": typeof files_mutations;
   "files/queries": typeof files_queries;
@@ -302,6 +303,7 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/getFolder": typeof folders_functions_getFolder;
   "folders/functions/getFolderContentsForDownload": typeof folders_functions_getFolderContentsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
+  "folders/functions/loadFolderExtension": typeof folders_functions_loadFolderExtension;
   "folders/functions/updateFolder": typeof folders_functions_updateFolder;
   "folders/mutations": typeof folders_mutations;
   "folders/queries": typeof folders_queries;
@@ -313,6 +315,7 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/functions/createMap": typeof gameMaps_functions_createMap;
   "gameMaps/functions/enhanceMap": typeof gameMaps_functions_enhanceMap;
   "gameMaps/functions/getMap": typeof gameMaps_functions_getMap;
+  "gameMaps/functions/loadGameMapExtension": typeof gameMaps_functions_loadGameMapExtension;
   "gameMaps/functions/removeItemPin": typeof gameMaps_functions_removeItemPin;
   "gameMaps/functions/requirePinAccess": typeof gameMaps_functions_requirePinAccess;
   "gameMaps/functions/rollbackGameMap": typeof gameMaps_functions_rollbackGameMap;
@@ -353,11 +356,11 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/emptyTrashBin": typeof sidebarItems_functions_emptyTrashBin;
   "sidebarItems/functions/enhanceSidebarItem": typeof sidebarItems_functions_enhanceSidebarItem;
   "sidebarItems/functions/fetchCampaignSidebarItems": typeof sidebarItems_functions_fetchCampaignSidebarItems;
+  "sidebarItems/functions/getSidebarItem": typeof sidebarItems_functions_getSidebarItem;
   "sidebarItems/functions/getSidebarItemById": typeof sidebarItems_functions_getSidebarItemById;
   "sidebarItems/functions/getSidebarItemBySlug": typeof sidebarItems_functions_getSidebarItemBySlug;
   "sidebarItems/functions/getSidebarItemsByParent": typeof sidebarItems_functions_getSidebarItemsByParent;
   "sidebarItems/functions/hardDeleteItem": typeof sidebarItems_functions_hardDeleteItem;
-  "sidebarItems/functions/loadExtensionData": typeof sidebarItems_functions_loadExtensionData;
   "sidebarItems/functions/moveSidebarItem": typeof sidebarItems_functions_moveSidebarItem;
   "sidebarItems/functions/permanentlyDeleteSidebarItem": typeof sidebarItems_functions_permanentlyDeleteSidebarItem;
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
@@ -373,7 +376,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/types/baseTypes": typeof sidebarItems_types_baseTypes;
   "sidebarItems/types/types": typeof sidebarItems_types_types;
   "sidebarItems/validation": typeof sidebarItems_validation;
-  "sidebarShares/functions/getCampaignShares": typeof sidebarShares_functions_getCampaignShares;
   "sidebarShares/functions/getSidebarItemShares": typeof sidebarShares_functions_getSidebarItemShares;
   "sidebarShares/functions/getSidebarItemSharesForItem": typeof sidebarShares_functions_getSidebarItemSharesForItem;
   "sidebarShares/functions/getSidebarItemWithShares": typeof sidebarShares_functions_getSidebarItemWithShares;

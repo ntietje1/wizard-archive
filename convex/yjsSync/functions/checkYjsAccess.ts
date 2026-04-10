@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthQueryCtx } from '../../functions'
 import type { YjsDocumentId } from './types'
 

@@ -1,5 +1,5 @@
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
-import { getFolder } from '../../sidebarItems/functions/loadExtensionData'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { requireCampaignMembership } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
@@ -22,15 +22,15 @@ export async function getSidebarItemAncestors(
       break
     }
     visited.add(currentParentId)
-    const folderFromDb = await getFolder(ctx, currentParentId)
-    if (!folderFromDb) {
+    const item = await getSidebarItem(ctx, currentParentId)
+    if (!item || item.type !== SIDEBAR_ITEM_TYPES.folders) {
       break
     }
-    await requireCampaignMembership(ctx, folderFromDb.campaignId)
-    if (isTrashed && folderFromDb.location !== SIDEBAR_ITEM_LOCATION.trash) {
+    await requireCampaignMembership(ctx, item.campaignId)
+    if (isTrashed && item.location !== SIDEBAR_ITEM_LOCATION.trash) {
       break
     }
-    const folder = await enhanceSidebarItem(ctx, { item: folderFromDb })
+    const folder = await enhanceSidebarItem(ctx, { item })
 
     ancestors.unshift(folder)
     currentParentId = folder.parentId

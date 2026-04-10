@@ -4,7 +4,8 @@ import { requireDmRole } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { getFolder } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -18,9 +19,11 @@ export const setFolderInheritShares = async (
     inheritShares: boolean
   },
 ): Promise<null> => {
-  const folderFromDb = await getFolder(ctx, folderId)
+  const rawItem = await getSidebarItem(ctx, folderId)
+  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.folders)
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const folder = await requireItemAccess(ctx, {
-    rawItem: folderFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
   await requireDmRole(ctx, folder.campaignId)

@@ -3,7 +3,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireCampaignMembership } from '../../functions'
 import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { getSidebarItem } from './loadExtensionData'
+import { getSidebarItem } from './getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { SidebarItemId } from '../types/baseTypes'
 

@@ -2,7 +2,7 @@ import { requireDmRole } from '../../functions'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
-import { loadExtensionData } from './loadExtensionData'
+import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -26,7 +26,9 @@ export async function emptyTrashBin(
   const isRoot = (item: AnySidebarItemFromDb) =>
     !item.parentId || !trashedFolderIds.has(item.parentId)
 
-  const enhanced = await loadExtensionData(ctx, allTrashed)
+  const enhanced = (
+    await Promise.all(allTrashed.map((raw) => getSidebarItem(ctx, raw._id)))
+  ).filter((item): item is NonNullable<typeof item> => item !== null)
 
   const rootFolders = enhanced.filter((i) => i.type === SIDEBAR_ITEM_TYPES.folders && isRoot(i))
   const rootNonFolders = enhanced.filter((i) => i.type !== SIDEBAR_ITEM_TYPES.folders && isRoot(i))

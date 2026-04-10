@@ -1,5 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
-import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -25,12 +25,11 @@ export async function updateNote(
     color?: string | null
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
-  const rawItem = await ctx.db.get('sidebarItems', noteId)
+  const rawItem = await getSidebarItem(ctx, noteId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireCampaignMembership(ctx, rawItem.campaignId)
-  const noteFromDb = await loadSingleExtensionData(ctx, rawItem)
   const note = await requireItemAccess(ctx, {
-    rawItem: noteFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
