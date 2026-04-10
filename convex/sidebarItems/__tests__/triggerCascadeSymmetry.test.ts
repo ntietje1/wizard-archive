@@ -15,6 +15,7 @@ import {
 } from '../../_test/factories.helper'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { api } from '../../_generated/api'
+import type { SidebarItemId, SidebarItemType } from '../types/baseTypes'
 
 describe('trigger cascade symmetry', () => {
   const t = createTestContext()
@@ -394,11 +395,11 @@ describe('trigger cascade symmetry', () => {
   })
 
   describe('shares and bookmarks round-trip for all types', () => {
+    type CampaignCtx = Awaited<ReturnType<typeof setupCampaignContext>>
+
     async function testShareBookmarkRoundTrip(
-      createItem: (
-        ctx: Awaited<ReturnType<typeof setupCampaignContext>>,
-      ) => Promise<{ itemId: string }>,
-      itemType: string,
+      createItem: (ctx: CampaignCtx) => Promise<{ itemId: SidebarItemId }>,
+      itemType: SidebarItemType,
     ) {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
@@ -408,19 +409,19 @@ describe('trigger cascade symmetry', () => {
 
       const { shareId } = await createSidebarShare(t, dmId, {
         campaignId: ctx.campaignId,
-        sidebarItemId: itemId as any,
-        sidebarItemType: itemType as any,
+        sidebarItemId: itemId,
+        sidebarItemType: itemType,
         campaignMemberId: ctx.player.memberId,
         permissionLevel: 'edit',
       })
       const { bookmarkId } = await createBookmark(t, ctx.player.profile._id, {
         campaignId: ctx.campaignId,
-        sidebarItemId: itemId as any,
+        sidebarItemId: itemId,
         campaignMemberId: ctx.player.memberId,
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        itemId: itemId as any,
+        itemId,
         location: 'trash',
       })
 
@@ -434,7 +435,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        itemId: itemId as any,
+        itemId,
         location: 'sidebar',
       })
 
@@ -447,6 +448,48 @@ describe('trigger cascade symmetry', () => {
       expect(afterRestore[0]!.deletionTime).toBeNull()
       expect(afterRestore[0]!.permissionLevel).toBe('edit')
       expect(afterRestore[1]!.deletionTime).toBeNull()
+    }
+
+    async function testShareBookmarkHardDelete(
+      createItem: (ctx: CampaignCtx) => Promise<{ itemId: SidebarItemId }>,
+      itemType: SidebarItemType,
+    ) {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+      const dmId = ctx.dm.profile._id
+
+      const { itemId } = await createItem(ctx)
+
+      const { shareId } = await createSidebarShare(t, dmId, {
+        campaignId: ctx.campaignId,
+        sidebarItemId: itemId,
+        sidebarItemType: itemType,
+        campaignMemberId: ctx.player.memberId,
+      })
+      const { bookmarkId } = await createBookmark(t, ctx.player.profile._id, {
+        campaignId: ctx.campaignId,
+        sidebarItemId: itemId,
+        campaignMemberId: ctx.player.memberId,
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        itemId,
+        location: 'trash',
+      })
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        itemId,
+      })
+
+      const afterDelete = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', itemId),
+          dbCtx.db.get('sidebarItemShares', shareId),
+          dbCtx.db.get('bookmarks', bookmarkId),
+        ]),
+      )
+      expect(afterDelete[0]).toBeNull()
+      expect(afterDelete[1]).toBeNull()
+      expect(afterDelete[2]).toBeNull()
     }
 
     it('note: shares and bookmarks survive trash round-trip', async () => {
@@ -491,6 +534,56 @@ describe('trigger cascade symmetry', () => {
 
     it('folder: shares and bookmarks survive trash round-trip', async () => {
       await testShareBookmarkRoundTrip(
+        async (ctx) => {
+          const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+          return { itemId: folderId }
+        },
+        'folder',
+      )
+    })
+
+    it('note: hard-delete removes shares and bookmarks', async () => {
+      await testShareBookmarkHardDelete(
+        async (ctx) => {
+          const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+          return { itemId: noteId }
+        },
+        'note',
+      )
+    })
+
+    it('canvas: hard-delete removes shares and bookmarks', async () => {
+      await testShareBookmarkHardDelete(
+        async (ctx) => {
+          const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+          return { itemId: canvasId }
+        },
+        'canvas',
+      )
+    })
+
+    it('gameMap: hard-delete removes shares and bookmarks', async () => {
+      await testShareBookmarkHardDelete(
+        async (ctx) => {
+          const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+          return { itemId: mapId }
+        },
+        'gameMap',
+      )
+    })
+
+    it('file: hard-delete removes shares and bookmarks', async () => {
+      await testShareBookmarkHardDelete(
+        async (ctx) => {
+          const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+          return { itemId: fileId }
+        },
+        'file',
+      )
+    })
+
+    it('folder: hard-delete removes shares and bookmarks', async () => {
+      await testShareBookmarkHardDelete(
         async (ctx) => {
           const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
           return { itemId: folderId }

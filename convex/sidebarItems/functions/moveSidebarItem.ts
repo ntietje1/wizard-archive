@@ -104,6 +104,8 @@ export async function moveSidebarItem(
     if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can restore folders')
     }
+    if (location === undefined)
+      throw new Error('Invariant: location must be defined when restoring')
 
     const restoreParentId = parentId ?? null
 
@@ -123,7 +125,7 @@ export async function moveSidebarItem(
     })
 
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      await restoreTreeDescendants(ctx, item, location!)
+      await restoreTreeDescendants(ctx, item, location)
     }
 
     await logEditHistory(ctx, {
