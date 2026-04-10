@@ -38,19 +38,19 @@ export type SidebarItemDropData = {
 }
 
 export type ResolvedSidebarItemDropData = AnySidebarItem & {
-  ancestorIds?: Array<Id<'folders'>>
+  ancestorIds?: Array<Id<'sidebarItems'>>
 }
 
 export interface CanvasDropZoneData {
   [key: string | symbol]: unknown
   type: typeof CANVAS_DROP_ZONE_TYPE
-  canvasId: Id<'canvases'>
+  canvasId: Id<'sidebarItems'>
 }
 
 export interface MapDropZoneData {
   [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
-  mapId: Id<'gameMaps'>
+  mapId: Id<'sidebarItems'>
   mapName: string
   pinnedItemIds?: ReadonlyArray<SidebarItemId>
 }
@@ -68,7 +68,7 @@ export interface EmptyEditorDropZoneData {
 export interface NoteEditorDropZoneData {
   [key: string | symbol]: unknown
   type: typeof NOTE_EDITOR_DROP_TYPE
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
 }
 
 export interface TrashDropZoneData {
@@ -134,7 +134,7 @@ export interface DndContext {
   moveItem: (
     item: AnySidebarItem,
     options: {
-      parentId?: Id<'folders'> | null
+      parentId?: Id<'sidebarItems'> | null
       location?: SidebarItemLocation
     },
   ) => Promise<unknown>
@@ -142,10 +142,10 @@ export interface DndContext {
   campaignId: Id<'campaigns'> | null
   campaignName: string | undefined
   isDm: boolean
-  setFolderOpen: (folderId: Id<'folders'>) => void
+  setFolderOpen: (folderId: Id<'sidebarItems'>) => void
   hasSiblingNameConflict: (
     name: string,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     excludeId?: SidebarItemId,
   ) => boolean
 }
@@ -279,7 +279,7 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       return rejection('no_permission')
     }
 
-    const folderId = t._id as Id<'folders'>
+    const folderId = t._id as Id<'sidebarItems'>
 
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
@@ -412,7 +412,7 @@ export function resolveDropTarget(
   rawData: Record<string, unknown>,
   itemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
   trashedItemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
-  getAncestorIds: (id: SidebarItemId) => Array<Id<'folders'>>,
+  getAncestorIds: (id: SidebarItemId) => Array<Id<'sidebarItems'>>,
 ): SidebarDropData | null {
   if ('sidebarItemId' in rawData) {
     const sid = rawData.sidebarItemId as SidebarItemId

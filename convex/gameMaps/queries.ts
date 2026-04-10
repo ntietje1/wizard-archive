@@ -6,7 +6,7 @@ import type { GameMapWithContent } from './types'
 
 export const getMap = authQuery({
   args: {
-    mapId: v.id('gameMaps'),
+    mapId: v.id('sidebarItems'),
   },
   returns: v.union(mapWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<GameMapWithContent | null> => {

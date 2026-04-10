@@ -181,7 +181,7 @@ describe('getSidebarItem', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("notes", noteId)
+      await dbCtx.db.delete('sidebarItems', noteId)
     })
 
     await expectNotFound(dmAuth.query(api.sidebarItems.queries.getSidebarItem, { id: noteId }))
@@ -451,7 +451,7 @@ describe('permanentlyDeleteSidebarItem', () => {
     })
 
     const deleted = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get("notes", noteId)
+      return await dbCtx.db.get('sidebarItems', noteId)
     })
     expect(deleted).toBeNull()
   })
@@ -501,7 +501,7 @@ describe('permanentlyDeleteSidebarItem', () => {
       itemId: noteId,
     })
 
-    const deleted = await t.run(async (dbCtx) => dbCtx.db.get("notes", noteId))
+    const deleted = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', noteId))
     expect(deleted).toBeNull()
   })
 })
@@ -535,8 +535,8 @@ describe('emptyTrashBin', () => {
     })
     expect(trashItems.length).toBe(0)
 
-    const d1 = await t.run(async (dbCtx) => dbCtx.db.get("notes", n1))
-    const d2 = await t.run(async (dbCtx) => dbCtx.db.get("notes", n2))
+    const d1 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n1))
+    const d2 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n2))
     expect(d1).toBeNull()
     expect(d2).toBeNull()
   })

@@ -137,7 +137,6 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
-import type * as sidebarItems_functions_applyToDependents from "../sidebarItems/functions/applyToDependents.js";
 import type * as sidebarItems_functions_applyToTree from "../sidebarItems/functions/applyToTree.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
@@ -149,6 +148,7 @@ import type * as sidebarItems_functions_getSidebarItemById from "../sidebarItems
 import type * as sidebarItems_functions_getSidebarItemBySlug from "../sidebarItems/functions/getSidebarItemBySlug.js";
 import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebarItems/functions/getSidebarItemsByParent.js";
 import type * as sidebarItems_functions_hardDeleteItem from "../sidebarItems/functions/hardDeleteItem.js";
+import type * as sidebarItems_functions_loadExtensionData from "../sidebarItems/functions/loadExtensionData.js";
 import type * as sidebarItems_functions_moveSidebarItem from "../sidebarItems/functions/moveSidebarItem.js";
 import type * as sidebarItems_functions_permanentlyDeleteSidebarItem from "../sidebarItems/functions/permanentlyDeleteSidebarItem.js";
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
@@ -159,6 +159,7 @@ import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_schema_baseFields from "../sidebarItems/schema/baseFields.js";
 import type * as sidebarItems_schema_baseValidators from "../sidebarItems/schema/baseValidators.js";
 import type * as sidebarItems_schema_contentSchema from "../sidebarItems/schema/contentSchema.js";
+import type * as sidebarItems_schema_sidebarItemsTable from "../sidebarItems/schema/sidebarItemsTable.js";
 import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValidation.js";
 import type * as sidebarItems_types_baseTypes from "../sidebarItems/types/baseTypes.js";
 import type * as sidebarItems_types_types from "../sidebarItems/types/types.js";
@@ -184,6 +185,7 @@ import type * as storage_mutations from "../storage/mutations.js";
 import type * as storage_queries from "../storage/queries.js";
 import type * as storage_types from "../storage/types.js";
 import type * as storage_validation from "../storage/validation.js";
+import type * as triggers from "../triggers.js";
 import type * as userPreferences_mutations from "../userPreferences/mutations.js";
 import type * as userPreferences_queries from "../userPreferences/queries.js";
 import type * as userPreferences_types from "../userPreferences/types.js";
@@ -344,7 +346,6 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
-  "sidebarItems/functions/applyToDependents": typeof sidebarItems_functions_applyToDependents;
   "sidebarItems/functions/applyToTree": typeof sidebarItems_functions_applyToTree;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
@@ -356,6 +357,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/getSidebarItemBySlug": typeof sidebarItems_functions_getSidebarItemBySlug;
   "sidebarItems/functions/getSidebarItemsByParent": typeof sidebarItems_functions_getSidebarItemsByParent;
   "sidebarItems/functions/hardDeleteItem": typeof sidebarItems_functions_hardDeleteItem;
+  "sidebarItems/functions/loadExtensionData": typeof sidebarItems_functions_loadExtensionData;
   "sidebarItems/functions/moveSidebarItem": typeof sidebarItems_functions_moveSidebarItem;
   "sidebarItems/functions/permanentlyDeleteSidebarItem": typeof sidebarItems_functions_permanentlyDeleteSidebarItem;
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
@@ -366,6 +368,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/schema/baseFields": typeof sidebarItems_schema_baseFields;
   "sidebarItems/schema/baseValidators": typeof sidebarItems_schema_baseValidators;
   "sidebarItems/schema/contentSchema": typeof sidebarItems_schema_contentSchema;
+  "sidebarItems/schema/sidebarItemsTable": typeof sidebarItems_schema_sidebarItemsTable;
   "sidebarItems/sharedValidation": typeof sidebarItems_sharedValidation;
   "sidebarItems/types/baseTypes": typeof sidebarItems_types_baseTypes;
   "sidebarItems/types/types": typeof sidebarItems_types_types;
@@ -391,6 +394,7 @@ declare const fullApi: ApiFromModules<{
   "storage/queries": typeof storage_queries;
   "storage/types": typeof storage_types;
   "storage/validation": typeof storage_validation;
+  triggers: typeof triggers;
   "userPreferences/mutations": typeof userPreferences_mutations;
   "userPreferences/queries": typeof userPreferences_queries;
   "userPreferences/types": typeof userPreferences_types;

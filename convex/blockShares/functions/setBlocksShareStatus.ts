@@ -5,6 +5,7 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { setBlockShareStatusHelper } from './blockShareMutations'
+import { getNote } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { ShareStatus } from '../types'
@@ -16,7 +17,7 @@ export const setBlocksShareStatus = async (
     blocks,
     status,
   }: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     blocks: Array<{ blockNoteId: string; content: any }>
     status: ShareStatus
   },
@@ -25,7 +26,7 @@ export const setBlocksShareStatus = async (
     return null
   }
 
-  const rawNote = await ctx.db.get("notes", noteId)
+  const rawNote = await getNote(ctx, noteId)
   const note = await requireItemAccess(ctx, {
     rawItem: rawNote,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,

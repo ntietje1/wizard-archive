@@ -4,6 +4,7 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
@@ -26,8 +27,7 @@ export const getSidebarItemWithShares = async (
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
 }> => {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const itemFromDb = await ctx.db.get(sidebarItemId)
+  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,

@@ -1,9 +1,10 @@
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
 import { logger } from '../../common/logger'
-import type { GameMapSnapshotData } from '../types'
+import type { GameMapFromDb, GameMapSnapshotData } from '../types'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 
@@ -15,14 +16,14 @@ export async function captureGameMapSnapshot(
     campaignId,
     createdBy,
   }: {
-    mapId: Id<'gameMaps'>
+    mapId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
     createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
-  const [map, pins] = await Promise.all([
-    ctx.db.get("gameMaps", mapId),
+  const [rawItem, pins] = await Promise.all([
+    ctx.db.get('sidebarItems', mapId),
     ctx.db
       .query('mapPins')
       .withIndex('by_map_deletionTime', (q) => q.eq('mapId', mapId).eq('deletionTime', null))
@@ -30,12 +31,13 @@ export async function captureGameMapSnapshot(
       .collect(),
   ])
 
-  if (!map) {
+  if (!rawItem) {
     throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
   }
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
-  const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
+  const map = (await loadSingleExtensionData(ctx, rawItem)) as GameMapFromDb
+
+  const pinItems = await Promise.all(pins.map((pin) => ctx.db.get('sidebarItems', pin.itemId)))
 
   const validPins: Array<{
     pin: (typeof pins)[number]

@@ -8,6 +8,7 @@ import { assertNever } from '../../common/types'
 import { rollbackNote } from '../../notes/functions/rollbackNote'
 import { rollbackCanvas } from '../../canvases/functions/rollbackCanvas'
 import { rollbackGameMap } from '../../gameMaps/functions/rollbackGameMap'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
@@ -16,13 +17,12 @@ export async function rollbackToSnapshot(
   ctx: AuthMutationCtx,
   { editHistoryId }: { editHistoryId: Id<'editHistory'> },
 ): Promise<void> {
-  const historyEntry = await ctx.db.get("editHistory", editHistoryId)
+  const historyEntry = await ctx.db.get('editHistory', editHistoryId)
   if (!historyEntry) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'History entry not found')
   }
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
-  const itemFromDb = await ctx.db.get(historyEntry.itemId)
+  const itemFromDb = await getSidebarItem(ctx, historyEntry.itemId)
   await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.EDIT,
@@ -61,8 +61,7 @@ export async function rollbackToSnapshot(
   const now = Date.now()
   const profileId = ctx.user.profile._id
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
-  await ctx.db.patch(historyEntry.itemId, {
+  await ctx.db.patch('sidebarItems', historyEntry.itemId, {
     updatedTime: now,
     updatedBy: profileId,
   })

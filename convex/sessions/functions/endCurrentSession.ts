@@ -18,12 +18,12 @@ export async function endCurrentSession(
   const now = Date.now()
 
   await Promise.all([
-    ctx.db.patch("sessions", currentSession._id, {
+    ctx.db.patch('sessions', currentSession._id, {
       endedAt: now,
       updatedTime: now,
       updatedBy: ctx.user.profile._id,
     }),
-    ctx.db.patch("campaigns", campaignId, {
+    ctx.db.patch('campaigns', campaignId, {
       currentSessionId: null,
       updatedTime: now,
       updatedBy: ctx.user.profile._id,

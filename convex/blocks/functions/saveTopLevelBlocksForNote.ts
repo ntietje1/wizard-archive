@@ -9,9 +9,9 @@ import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function saveTopLevelBlocksForNote(
   ctx: AuthMutationCtx,
-  { noteId, content }: { noteId: Id<'notes'>; content: Array<CustomBlock> },
+  { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
 ): Promise<void> {
-  const note = await ctx.db.get("notes", noteId)
+  const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const campaignId = note.campaignId
 
@@ -55,7 +55,7 @@ export async function saveTopLevelBlocksForNote(
   )
   await Promise.all(
     remainingBlocks.map(async (block) => {
-      await ctx.db.patch("blocks", block._id, { isTopLevel: false })
+      await ctx.db.patch('blocks', block._id, { isTopLevel: false })
       await removeBlockIfNotNeeded(ctx, { blockId: block._id })
     }),
   )

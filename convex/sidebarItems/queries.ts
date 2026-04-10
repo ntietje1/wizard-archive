@@ -31,7 +31,7 @@ export const getSidebarItemsByLocation = authQuery({
 export const getSidebarItemsByParent = authQuery({
   args: {
     campaignId: v.id('campaigns'),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.union(v.id('sidebarItems'), v.null()),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {

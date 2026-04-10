@@ -35,9 +35,9 @@ export interface FileFormValues {
 }
 
 interface FileFormProps {
-  fileId?: Id<'files'>
+  fileId?: Id<'sidebarItems'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'> | null
+  parentId?: Id<'sidebarItems'> | null
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
 }
@@ -173,7 +173,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           parentId: parentId ?? null,
         })
         if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'files'>).catch(
+          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'sidebarItems'>).catch(
             (err: unknown) => handleError(err, 'PDF preview generation failed'),
           )
         }

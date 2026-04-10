@@ -43,7 +43,7 @@ export async function getUserProfileById(
   ctx: QueryCtx,
   { profileId }: { profileId: Id<'userProfiles'> },
 ): Promise<UserProfile | null> {
-  const profile = await ctx.db.get("userProfiles", profileId)
+  const profile = await ctx.db.get('userProfiles', profileId)
   if (!profile) return null
   return enhanceProfile(ctx, profile)
 }

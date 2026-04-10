@@ -110,8 +110,8 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     const afterTrash = await t.run(async (dbCtx) => ({
-      folder: await dbCtx.db.get("folders", folderId),
-      note: await dbCtx.db.get("notes", noteId),
+      folder: await dbCtx.db.get('sidebarItems', folderId),
+      note: await dbCtx.db.get('sidebarItems', noteId),
     }))
     expect(afterTrash.folder!.parentId).toBeNull()
     expect(afterTrash.note!.parentId).toBe(folderId)

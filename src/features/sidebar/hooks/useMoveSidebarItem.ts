@@ -20,7 +20,7 @@ export function useMoveSidebarItem() {
   const moveItem = async (
     item: AnySidebarItem,
     options: {
-      parentId?: Id<'folders'> | null
+      parentId?: Id<'sidebarItems'> | null
       location?: SidebarItemLocation
     },
   ) => {

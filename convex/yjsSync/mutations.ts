@@ -24,7 +24,7 @@ export const pushUpdate = authMutation({
     const seq = (latest?.seq ?? -1) + 1
 
     await ctx.db.insert('yjsUpdates', {
-      documentId,
+      documentId: documentId,
       update,
       seq,
       isSnapshot: false,
@@ -70,13 +70,13 @@ export const pushAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.patch("yjsAwareness", existing._id, {
+      await ctx.db.patch('yjsAwareness', existing._id, {
         state,
         updatedAt: Date.now(),
       })
     } else {
       await ctx.db.insert('yjsAwareness', {
-        documentId,
+        documentId: documentId,
         clientId,
         userId: ctx.user.profile._id,
         state,
@@ -105,7 +105,7 @@ export const removeAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.delete("yjsAwareness", existing._id)
+      await ctx.db.delete('yjsAwareness', existing._id)
     }
 
     return null

@@ -11,7 +11,7 @@ export function createSidebarItemShare(overrides?: Partial<SidebarItemShare>): S
     _id: testId(`share_${shareCounter}`),
     _creationTime: 1700000000000,
     campaignId: testId('campaign_1'),
-    sidebarItemId: testId<'notes'>('note_1'),
+    sidebarItemId: testId<'sidebarItems'>('note_1'),
     sidebarItemType: SIDEBAR_ITEM_TYPES.notes,
     campaignMemberId: testId('member_1'),
     sessionId: null,

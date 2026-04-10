@@ -14,7 +14,7 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { applyToTree } from './applyToTree'
-import { applyToDependents } from './applyToDependents'
+import { loadSingleExtensionData } from './loadExtensionData'
 import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
@@ -59,11 +59,11 @@ export async function moveSidebarItem(
   }: {
     itemId: SidebarItemId
     location?: SidebarItemLocation
-    parentId?: Id<'folders'> | null
+    parentId?: Id<'sidebarItems'> | null
   },
 ): Promise<SidebarItemId> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const itemFromDb = await ctx.db.get(itemId)
+  const raw = await ctx.db.get('sidebarItems', itemId)
+  const itemFromDb = raw ? await loadSingleExtensionData(ctx, raw) : null
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -91,13 +91,8 @@ export async function moveSidebarItem(
     const deletedBy = ctx.user.profile._id
 
     await applyToTree(ctx, item, async (_, i) => {
-      await applyToDependents(ctx, i, async (_, doc) => {
-        // eslint-disable-next-line @convex-dev/explicit-table-ids
-        await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
-      })
       const isRoot = i._id === item._id
-      // eslint-disable-next-line @convex-dev/explicit-table-ids
-      await ctx.db.patch(i._id, {
+      await ctx.db.patch('sidebarItems', i._id, {
         location: SIDEBAR_ITEM_LOCATION.trash,
         deletionTime: now,
         deletedBy,
@@ -129,13 +124,7 @@ export async function moveSidebarItem(
     const itemForRestore = { ...item, parentId: restoreParentId }
     const conflictPatch = await resolveRestoreConflicts(ctx, itemForRestore)
 
-    // Restore root item + its dependents
-    await applyToDependents(ctx, item, async (_, doc) => {
-      // eslint-disable-next-line @convex-dev/explicit-table-ids
-      await ctx.db.patch(doc._id, clearDeletion)
-    })
-    // eslint-disable-next-line @convex-dev/explicit-table-ids
-    await ctx.db.patch(itemId, {
+    await ctx.db.patch('sidebarItems', itemId, {
       ...clearDeletion,
       ...conflictPatch,
       location: location,
@@ -148,18 +137,12 @@ export async function moveSidebarItem(
         if (i._id === item._id) return
         if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
-        await applyToDependents(ctx, i, async (_, doc) => {
-          // eslint-disable-next-line @convex-dev/explicit-table-ids
-          await ctx.db.patch(doc._id, clearDeletion)
-        })
-
         const descSlug = await findUniqueSidebarItemSlug(ctx, {
           campaignId,
           itemId: i._id,
           name: i.name,
         })
-        // eslint-disable-next-line @convex-dev/explicit-table-ids
-        await ctx.db.patch(i._id, {
+        await ctx.db.patch('sidebarItems', i._id, {
           ...clearDeletion,
           location: location,
           ...(descSlug !== i.slug ? { slug: descSlug } : {}),
@@ -179,11 +162,10 @@ export async function moveSidebarItem(
   if (isMoving && !isRelocating) {
     await validateSidebarMove(ctx, { item, newParentId: parentId })
 
-    const oldParent = item.parentId ? await ctx.db.get("folders", item.parentId) : null
-    const newParent = parentId ? await ctx.db.get("folders", parentId) : null
+    const oldParent = item.parentId ? await ctx.db.get('sidebarItems', item.parentId) : null
+    const newParent = parentId ? await ctx.db.get('sidebarItems', parentId) : null
 
-    // eslint-disable-next-line @convex-dev/explicit-table-ids
-    await ctx.db.patch(itemId, {
+    await ctx.db.patch('sidebarItems', itemId, {
       parentId: parentId,
       updatedTime: Date.now(),
       updatedBy: ctx.user.profile._id,

@@ -13,7 +13,7 @@ export const blockShareStatusValidator = v.union(
 )
 
 const blockTableFields = {
-  noteId: v.id('notes'),
+  noteId: v.id('sidebarItems'),
   blockId: v.string(),
   position: v.union(v.number(), v.null()),
   content: customBlockValidator,

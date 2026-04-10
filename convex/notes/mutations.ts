@@ -13,16 +13,16 @@ import type { Id } from '../_generated/dataModel'
 
 export const updateNote = authMutation({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     return await updateNoteFn(ctx, {
       noteId: args.noteId,
       name: args.name,
@@ -36,16 +36,16 @@ export const createNote = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.union(v.id('sidebarItems'), v.null()),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
   },
   returns: v.object({
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     return await createNoteFn(ctx, {
       name: args.name,
       parentId: args.parentId,
@@ -59,7 +59,7 @@ export const createNote = authMutation({
 
 export const persistNoteBlocks = authMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: v.id('sidebarItems'),
   },
   returns: v.null(),
   handler: async (ctx, { documentId }) => {

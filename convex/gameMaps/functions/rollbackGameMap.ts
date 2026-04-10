@@ -1,5 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logger } from '../../common/logger'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -46,18 +47,29 @@ export async function rollbackGameMap(
     }
   }
 
-  const mapFromDb = await ctx.db.get('gameMaps', itemId as Id<'gameMaps'>)
+  const rawItem = await ctx.db.get('sidebarItems', itemId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
+  const mapFromDb = await loadSingleExtensionData(ctx, rawItem)
   const map = await requireItemAccess(ctx, {
     rawItem: mapFromDb,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
   if (map.type !== SIDEBAR_ITEM_TYPES.gameMaps) {
-    throw new Error(`rollbackMap: expected a note but got ${String(map.type)}`)
+    throw new Error(`rollbackMap: expected a map but got ${String(map.type)}`)
   }
 
-  await ctx.db.patch("gameMaps", map._id, {
-    imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+  const ext = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map._id))
+    .unique()
+  if (ext) {
+    await ctx.db.patch('gameMaps', ext._id, {
+      imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+    })
+  }
+
+  await ctx.db.patch('sidebarItems', map._id, {
     previewStorageId: null,
   })
 
@@ -70,14 +82,15 @@ export async function rollbackGameMap(
   const profileId = ctx.user.profile._id
 
   await Promise.all(
-    existingPins.map((pin) => ctx.db.patch("mapPins", pin._id, { deletionTime: now, deletedBy: profileId })),
+    existingPins.map((pin) =>
+      ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: profileId }),
+    ),
   )
 
   const pinTargetChecks = await Promise.all(
     parsed.pins.map(async (pin) => {
       try {
-        // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
-        const item = await ctx.db.get(pin.itemId)
+        const item = await ctx.db.get('sidebarItems', pin.itemId)
         return { pin, exists: item !== null && !item.deletionTime }
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)

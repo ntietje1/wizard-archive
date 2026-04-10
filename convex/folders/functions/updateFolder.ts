@@ -1,5 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
@@ -18,22 +19,23 @@ export async function updateFolder(
     iconName,
     color,
   }: {
-    folderId: Id<'folders'>
+    folderId: Id<'sidebarItems'>
     name?: string
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ folderId: Id<'folders'>; slug: string }> {
-  const folderFromDb = await ctx.db.get("folders", folderId)
-  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
-  await requireCampaignMembership(ctx, folderFromDb.campaignId)
+): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await ctx.db.get('sidebarItems', folderId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
+  const folderFromDb = await loadSingleExtensionData(ctx, rawItem)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -72,7 +74,7 @@ export async function updateFolder(
     return { folderId: folder._id, slug: folder.slug }
   }
 
-  await ctx.db.patch("folders", folderId, {
+  await ctx.db.patch('sidebarItems', folderId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

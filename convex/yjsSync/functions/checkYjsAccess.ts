@@ -1,6 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthQueryCtx } from '../../functions'
 import type { YjsDocumentId } from './types'
 
@@ -9,8 +10,7 @@ async function checkYjsAccess(
   documentId: YjsDocumentId,
   requiredLevel: (typeof PERMISSION_LEVEL)[keyof typeof PERMISSION_LEVEL],
 ) {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const doc = await ctx.db.get(documentId)
+  const doc = await getSidebarItem(ctx, documentId)
   if (!doc) throwClientError(ERROR_CODE.NOT_FOUND, 'Document not found')
   await requireItemAccess(ctx, {
     rawItem: doc,

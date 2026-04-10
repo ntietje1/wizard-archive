@@ -7,11 +7,11 @@ import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 export interface DndMonitorCtx {
   itemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>
   trashedItemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>
-  getAncestorIds: (id: SidebarItemId) => Array<Id<'folders'>>
+  getAncestorIds: (id: SidebarItemId) => Array<Id<'sidebarItems'>>
   dndContext: DndContext
   handleDropFiles: (
     dropResult: DropResult,
-    options?: { parentId: Id<'folders'> | null },
+    options?: { parentId: Id<'sidebarItems'> | null },
   ) => Promise<void>
   campaignId: Id<'campaigns'> | null
 }

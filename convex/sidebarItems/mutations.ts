@@ -11,7 +11,7 @@ import type { SidebarItemId } from './types/baseTypes'
 export const moveSidebarItem = authMutation({
   args: {
     itemId: sidebarItemIdValidator,
-    parentId: v.optional(v.union(v.id('folders'), v.null())),
+    parentId: v.optional(v.union(v.id('sidebarItems'), v.null())),
     location: v.optional(sidebarItemLocationValidator),
   },
   returns: sidebarItemIdValidator,

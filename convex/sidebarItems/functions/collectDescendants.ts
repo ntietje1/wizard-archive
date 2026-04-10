@@ -1,3 +1,5 @@
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { loadExtensionData } from './loadExtensionData'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
@@ -12,47 +14,28 @@ export async function collectDescendants(
   }: {
     campaignId: Id<'campaigns'>
     location: SidebarItemLocation
-    folderId: Id<'folders'>
+    folderId: Id<'sidebarItems'>
   },
 ): Promise<Array<AnySidebarItemFromDb>> {
   const result: Array<AnySidebarItemFromDb> = []
 
-  async function collectFromFolder(parentId: Id<'folders'>) {
-    const [childFolders, childNotes, childMaps, childFiles] = await Promise.all([
-      ctx.db
-        .query('folders')
-        .withIndex('by_campaign_location_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
-        )
-        .collect(),
-      ctx.db
-        .query('notes')
-        .withIndex('by_campaign_location_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
-        )
-        .collect(),
-      ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_location_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
-        )
-        .collect(),
-      ctx.db
-        .query('files')
-        .withIndex('by_campaign_location_parent_name', (q) =>
-          q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
-        )
-        .collect(),
-    ])
+  async function collectFromFolder(parentId: Id<'sidebarItems'>) {
+    const children = await ctx.db
+      .query('sidebarItems')
+      .withIndex('by_campaign_location_parent_name', (q) =>
+        q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
+      )
+      .collect()
 
-    result.push(
-      ...(childNotes as Array<AnySidebarItemFromDb>),
-      ...(childMaps as Array<AnySidebarItemFromDb>),
-      ...(childFiles as Array<AnySidebarItemFromDb>),
-    )
+    const childFolders = children.filter((c) => c.type === SIDEBAR_ITEM_TYPES.folders)
+    const nonFolders = children.filter((c) => c.type !== SIDEBAR_ITEM_TYPES.folders)
+
+    const enhanced = await loadExtensionData(ctx, nonFolders)
+    result.push(...enhanced)
 
     for (const folder of childFolders) {
-      result.push(folder as AnySidebarItemFromDb)
+      const enhancedFolder = (await loadExtensionData(ctx, [folder]))[0]!
+      result.push(enhancedFolder)
       await collectFromFolder(folder._id)
     }
   }

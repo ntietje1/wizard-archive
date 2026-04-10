@@ -78,24 +78,24 @@ describe('validateSidebarItemName', () => {
 
 describe('validateNoCircularParent', () => {
   it('allows moving to root', () => {
-    const folder = createFolder({ _id: testId<'folders'>('folder_c1') })
+    const folder = createFolder({ _id: testId<'sidebarItems'>('folder_c1') })
     const result = validateNoCircularParent(folder._id, null, buildMap([folder]))
     expect(result).toEqual({ valid: true })
   })
 
   it('rejects self as parent', () => {
-    const folder = createFolder({ _id: testId<'folders'>('folder_c2') })
+    const folder = createFolder({ _id: testId<'sidebarItems'>('folder_c2') })
     const result = validateNoCircularParent(folder._id, folder._id, buildMap([folder]))
     expect(result.valid).toBe(false)
   })
 
   it('detects circular references', () => {
     const parent = createFolder({
-      _id: testId<'folders'>('folder_cp'),
+      _id: testId<'sidebarItems'>('folder_cp'),
       parentId: null,
     })
     const child = createFolder({
-      _id: testId<'folders'>('folder_cc'),
+      _id: testId<'sidebarItems'>('folder_cc'),
       parentId: parent._id,
     })
     const result = validateNoCircularParent(parent._id, child._id, buildMap([parent, child]))
@@ -106,11 +106,11 @@ describe('validateNoCircularParent', () => {
 describe('getAncestorIds', () => {
   it('returns ancestor IDs for nested item', () => {
     const gp = createFolder({
-      _id: testId<'folders'>('folder_anc_gp'),
+      _id: testId<'sidebarItems'>('folder_anc_gp'),
       parentId: null,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_anc_p'),
+      _id: testId<'sidebarItems'>('folder_anc_p'),
       parentId: gp._id,
     })
     const note = createNote({ parentId: parent._id })
@@ -125,18 +125,18 @@ describe('getAncestorIds', () => {
   })
 
   it('returns empty for item not in map', () => {
-    expect(getAncestorIds(testId<'notes'>('nonexistent'), new Map())).toEqual([])
+    expect(getAncestorIds(testId<'sidebarItems'>('nonexistent'), new Map())).toEqual([])
   })
 })
 
 describe('validateParentChange', () => {
   it('allows valid parent change to non-descendant', () => {
     const folderA = createFolder({
-      _id: testId<'folders'>('folder_pc_a'),
+      _id: testId<'sidebarItems'>('folder_pc_a'),
       parentId: null,
     })
     const folderB = createFolder({
-      _id: testId<'folders'>('folder_pc_b'),
+      _id: testId<'sidebarItems'>('folder_pc_b'),
       parentId: null,
     })
     const result = validateParentChange({
@@ -152,11 +152,11 @@ describe('validateParentChange', () => {
   })
 
   it('returns valid when no itemsMap provided', () => {
-    const folder = createFolder({ _id: testId<'folders'>('folder_pc1') })
+    const folder = createFolder({ _id: testId<'sidebarItems'>('folder_pc1') })
     expect(
       validateParentChange({
         itemId: folder._id,
-        parentId: testId<'folders'>('folder_other'),
+        parentId: testId<'sidebarItems'>('folder_other'),
         itemsMap: undefined,
       }),
     ).toEqual({ valid: true })
@@ -164,11 +164,11 @@ describe('validateParentChange', () => {
 
   it('detects circular reference via validateNoCircularParent', () => {
     const parent = createFolder({
-      _id: testId<'folders'>('folder_pc_p'),
+      _id: testId<'sidebarItems'>('folder_pc_p'),
       parentId: null,
     })
     const child = createFolder({
-      _id: testId<'folders'>('folder_pc_c'),
+      _id: testId<'sidebarItems'>('folder_pc_c'),
       parentId: parent._id,
     })
     const result = validateParentChange({
@@ -183,7 +183,7 @@ describe('validateParentChange', () => {
 describe('validateSidebarItem', () => {
   it('rejects self-parenting when isMove is true', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_v1'),
+      _id: testId<'sidebarItems'>('folder_v1'),
       parentId: null,
     })
     const result = validateSidebarItem({
@@ -198,7 +198,7 @@ describe('validateSidebarItem', () => {
 
   it('skips parent validation when not a move', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_v2'),
+      _id: testId<'sidebarItems'>('folder_v2'),
       parentId: null,
     })
     const result = validateSidebarItem({

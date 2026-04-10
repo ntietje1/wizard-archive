@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { PERSIST_INTERVAL_MS, useNoteYjsCollaboration } from '../useNoteYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 
-const NOTE_ID = 'test-note-id' as Id<'notes'>
+const NOTE_ID = 'test-note-id' as Id<'sidebarItems'>
 const USER = { name: 'Test User', color: '#ff0000' }
 
 const { mockMutation, mockConvexClient, mockUseAuthQuery } = vi.hoisted(() => {

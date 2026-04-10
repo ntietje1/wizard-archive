@@ -22,7 +22,7 @@ export interface ShareItemWithPermission extends ShareItem {
 }
 
 interface SidebarItemShareInfo {
-  itemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'> | Id<'canvases'>
+  itemId: Id<'sidebarItems'>
   allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>

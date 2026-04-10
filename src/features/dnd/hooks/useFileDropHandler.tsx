@@ -25,7 +25,7 @@ import { getErrorMessage, uploadFile } from '~/features/file-upload/utils/file-u
 import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 
 interface DropOptions {
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
 }
 
 interface UploadSingleFileOptions {
@@ -65,7 +65,7 @@ export function useFileDropHandler() {
 
   const uploadSingleFile = async (
     file: File,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     { silent = false, navigate = true }: UploadSingleFileOptions = {},
   ): Promise<UploadSingleFileResult | null> => {
     if (!campaignId) {
@@ -151,7 +151,7 @@ export function useFileDropHandler() {
           parentId,
         })
 
-        generatePdfPreviewIfNeeded(file, result.id as Id<'files'>).catch((err: unknown) =>
+        generatePdfPreviewIfNeeded(file, result.id as Id<'sidebarItems'>).catch((err: unknown) =>
           logger.error('PDF preview generation failed', err),
         )
 
@@ -190,9 +190,9 @@ export function useFileDropHandler() {
 
   const uploadFolderRecursive = async (
     folder: FolderStructure,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     progress: UploadProgress,
-  ): Promise<Id<'folders'>> => {
+  ): Promise<Id<'sidebarItems'>> => {
     if (!campaignId) {
       throw new Error('Campaign data missing')
     }
@@ -202,7 +202,7 @@ export function useFileDropHandler() {
       name: folder.name,
       parentId,
     })
-    const folderId = result.id as Id<'folders'>
+    const folderId = result.id as Id<'sidebarItems'>
 
     progress.processedFolders++
     toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
@@ -326,7 +326,7 @@ export function useFileDropHandler() {
       }
 
       // Process folders
-      let lastFolderId: Id<'folders'> | undefined
+      let lastFolderId: Id<'sidebarItems'> | undefined
       for (const folder of rootFolders) {
         lastFolderId = await uploadFolderRecursive(folder, options?.parentId ?? null, progress)
       }

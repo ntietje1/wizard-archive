@@ -1,4 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -18,22 +19,23 @@ export async function updateCanvas(
     iconName,
     color,
   }: {
-    canvasId: Id<'canvases'>
+    canvasId: Id<'sidebarItems'>
     name?: string
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ canvasId: Id<'canvases'>; slug: string }> {
-  const canvasFromDb = await ctx.db.get("canvases", canvasId)
-  if (!canvasFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
-  await requireCampaignMembership(ctx, canvasFromDb.campaignId)
+): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await ctx.db.get('sidebarItems', canvasId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
+  const canvasFromDb = await loadSingleExtensionData(ctx, rawItem)
   const canvas = await requireItemAccess(ctx, {
     rawItem: canvasFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'canvases'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -70,7 +72,7 @@ export async function updateCanvas(
     return { canvasId: canvas._id, slug: canvas.slug }
   }
 
-  await ctx.db.patch("canvases", canvas._id, {
+  await ctx.db.patch('sidebarItems', canvas._id, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

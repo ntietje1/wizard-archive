@@ -6,5 +6,5 @@ export async function getSession(
   ctx: QueryCtx,
   { sessionId }: { sessionId: Id<'sessions'> },
 ): Promise<Session | null> {
-  return await ctx.db.get("sessions", sessionId)
+  return await ctx.db.get('sessions', sessionId)
 }

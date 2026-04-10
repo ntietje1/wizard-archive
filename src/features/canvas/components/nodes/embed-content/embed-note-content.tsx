@@ -15,7 +15,7 @@ export function EmbedNoteContent({
   scrollTopRef,
   clickCoordsRef,
 }: {
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
   editable: boolean
   selected: boolean

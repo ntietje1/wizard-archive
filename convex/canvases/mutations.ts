@@ -7,12 +7,12 @@ export const createCanvas = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.union(v.id('sidebarItems'), v.null()),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     slug: v.string(),
   }),
   handler: async (ctx, args) => {
@@ -28,13 +28,13 @@ export const createCanvas = authMutation({
 
 export const updateCanvas = authMutation({
   args: {
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     slug: v.string(),
   }),
   handler: async (ctx, args) => {

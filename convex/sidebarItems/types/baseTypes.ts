@@ -19,22 +19,12 @@ export const SIDEBAR_ITEM_TYPES = {
   canvases: 'canvas',
 } as const
 
-export type SidebarItemTable = keyof typeof SIDEBAR_ITEM_TYPES
+export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
 
-export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[SidebarItemTable]
-
-type SidebarItemTypeToTableNameMap = {
-  [K in SidebarItemTable as (typeof SIDEBAR_ITEM_TYPES)[K]]: K
-}
-
-type SidebarItemTypeToTableName<T extends SidebarItemType> = SidebarItemTypeToTableNameMap[T]
-
-export type SidebarItemId = {
-  [K in SidebarItemTable]: Id<K>
-}[SidebarItemTable]
+export type SidebarItemId = Id<'sidebarItems'>
 
 export type SidebarItemFromDb<T extends SidebarItemType> = {
-  _id: Id<SidebarItemTypeToTableName<T>>
+  _id: Id<'sidebarItems'>
   _creationTime: number
 
   name: string
@@ -42,7 +32,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = {
   color: string | null
   slug: string
   campaignId: Id<'campaigns'>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   type: T
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation

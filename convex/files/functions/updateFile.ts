@@ -1,5 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
@@ -19,23 +20,24 @@ export async function updateFile(
     iconName,
     color,
   }: {
-    fileId: Id<'files'>
+    fileId: Id<'sidebarItems'>
     name?: string
     storageId?: Id<'_storage'> | null
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ fileId: Id<'files'>; slug: string }> {
-  const fileFromDb = await ctx.db.get("files", fileId)
-  if (!fileFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
-  await requireCampaignMembership(ctx, fileFromDb.campaignId)
+): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await ctx.db.get('sidebarItems', fileId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
+  const fileFromDb = await loadSingleExtensionData(ctx, rawItem)
   const file = await requireItemAccess(ctx, {
     rawItem: fileFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'files'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -54,9 +56,15 @@ export async function updateFile(
     }
   }
   if (storageId !== undefined) {
-    updates.storageId = storageId
+    const ext = await ctx.db
+      .query('files')
+      .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+      .unique()
+    if (ext) {
+      await ctx.db.patch('files', ext._id, { storageId })
+    }
     if (storageId) {
-      const metadata = await ctx.db.system.get("_storage", storageId)
+      const metadata = await ctx.db.system.get('_storage', storageId)
       if (metadata?.contentType?.startsWith('image/')) {
         updates.previewStorageId = storageId
         updates.previewUpdatedAt = Date.now()
@@ -96,7 +104,7 @@ export async function updateFile(
     return { fileId: file._id, slug: file.slug }
   }
 
-  await ctx.db.patch("files", fileId, {
+  await ctx.db.patch('sidebarItems', fileId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

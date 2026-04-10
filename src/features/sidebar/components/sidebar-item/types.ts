@@ -24,7 +24,7 @@ export interface SidebarItemButtonProps extends SidebarItemHandlers, SidebarItem
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
   campaignId?: Id<'campaigns'>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   excludeId?: SidebarItemId
   shareButton?: ReactNode
 }

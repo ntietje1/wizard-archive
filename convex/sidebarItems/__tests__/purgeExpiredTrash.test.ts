@@ -23,7 +23,7 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const result = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get("notes", noteId)
+      return await dbCtx.db.get('sidebarItems', noteId)
     })
     expect(result).toBeNull()
   })
@@ -41,7 +41,7 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const result = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get("notes", noteId)
+      return await dbCtx.db.get('sidebarItems', noteId)
     })
     expect(result).not.toBeNull()
   })
@@ -68,8 +68,8 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const { folder: folderResult, note: noteResult } = await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get("folders", folderId)
-      const note = await dbCtx.db.get("notes", noteId)
+      const folder = await dbCtx.db.get('sidebarItems', folderId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       return { folder, note }
     })
     expect(folderResult).toBeNull()
@@ -96,8 +96,8 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const { expired, recent } = await t.run(async (dbCtx) => {
-      const expiredResult = await dbCtx.db.get("notes", expiredNote)
-      const recentResult = await dbCtx.db.get("notes", recentNote)
+      const expiredResult = await dbCtx.db.get('sidebarItems', expiredNote)
+      const recentResult = await dbCtx.db.get('sidebarItems', recentNote)
       return { expired: expiredResult, recent: recentResult }
     })
     expect(expired).toBeNull()

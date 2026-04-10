@@ -44,7 +44,7 @@ function getFileType(
   }
 }
 
-function FileUpload({ fileId }: { fileId: Id<'files'> }) {
+function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
   const updateFile = useAppMutation(api.files.mutations.updateFile)
 
   const fileUpload = useFileWithPreview({

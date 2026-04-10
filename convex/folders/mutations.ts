@@ -6,16 +6,16 @@ import type { Id } from '../_generated/dataModel'
 
 export const updateFolder = authMutation({
   args: {
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     name: v.optional(v.string()),
     iconName: v.optional(v.union(v.string(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await updateFolderFn(ctx, {
       folderId: args.folderId,
       name: args.name,
@@ -29,15 +29,15 @@ export const createFolder = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.union(v.id('sidebarItems'), v.null()),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await createFolderFn(ctx, {
       name: args.name,
       parentId: args.parentId,

@@ -8,8 +8,6 @@ import { logger } from '../common/logger'
 import { yjsDocumentIdValidator } from './schema'
 import { compactUpdates } from './functions/compactUpdates'
 import { AWARENESS_TTL_MS, SNAPSHOT_MIN_INTERVAL_MS } from './constants'
-import type { Id } from '../_generated/dataModel'
-
 export const compact = internalMutation({
   args: {
     documentId: yjsDocumentIdValidator,
@@ -27,7 +25,7 @@ export const cleanupStaleAwareness = internalMutation({
       .query('yjsAwareness')
       .withIndex('by_updatedAt', (q) => q.lt('updatedAt', staleThreshold))
       .collect()
-    await Promise.all(stale.map((row) => ctx.db.delete("yjsAwareness", row._id)))
+    await Promise.all(stale.map((row) => ctx.db.delete('yjsAwareness', row._id)))
   },
 })
 
@@ -62,8 +60,7 @@ export const maybeCreateSnapshot = internalMutation({
     )
       return null
 
-    // eslint-disable-next-line @convex-dev/explicit-table-ids
-    const doc = await ctx.db.get(args.documentId)
+    const doc = await ctx.db.get('sidebarItems', args.documentId)
     if (!doc) return null
 
     if (doc.type !== SIDEBAR_ITEM_TYPES.notes && doc.type !== SIDEBAR_ITEM_TYPES.canvases) {
@@ -73,8 +70,7 @@ export const maybeCreateSnapshot = internalMutation({
       return null
     }
 
-    // eslint-disable-next-line @convex-dev/explicit-table-ids
-    await ctx.db.patch(args.documentId, {
+    await ctx.db.patch('sidebarItems', args.documentId, {
       updatedTime: Date.now(),
       updatedBy: args.createdBy,
     })
@@ -97,17 +93,17 @@ export const maybeCreateSnapshot = internalMutation({
 
     if (doc.type === SIDEBAR_ITEM_TYPES.notes) {
       await captureNoteSnapshot(ctx, {
-        noteId: args.documentId as Id<'notes'>,
+        noteId: args.documentId,
         ...snapshotArgs,
       })
     } else {
       await captureCanvasSnapshot(ctx, {
-        canvasId: args.documentId as Id<'canvases'>,
+        canvasId: args.documentId,
         ...snapshotArgs,
       })
     }
 
-    await ctx.db.patch("editHistory", editHistoryId, { hasSnapshot: true })
+    await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
 
     return null
   },

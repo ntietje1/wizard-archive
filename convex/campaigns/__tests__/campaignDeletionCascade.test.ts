@@ -84,18 +84,18 @@ describe('campaign deletion cascade', () => {
     const cId = ctx.campaignId
     const results = await t.run(async (dbCtx) => {
       return {
-        campaign: await dbCtx.db.get("campaigns", cId),
-        folder: await dbCtx.db.get("folders", folderId),
-        note: await dbCtx.db.get("notes", noteId),
-        file: await dbCtx.db.get("files", fileId),
-        map: await dbCtx.db.get("gameMaps", mapId),
-        block: await dbCtx.db.get("blocks", blockDbId),
-        blockShare: await dbCtx.db.get("blockShares", blockShareId),
-        folderShare: await dbCtx.db.get("sidebarItemShares", folderShareId),
-        noteShare: await dbCtx.db.get("sidebarItemShares", noteShareId),
-        bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
-        pin: await dbCtx.db.get("mapPins", pinId),
-        session: await dbCtx.db.get("sessions", sessionId),
+        campaign: await dbCtx.db.get('campaigns', cId),
+        folder: await dbCtx.db.get('sidebarItems', folderId),
+        note: await dbCtx.db.get('sidebarItems', noteId),
+        file: await dbCtx.db.get('sidebarItems', fileId),
+        map: await dbCtx.db.get('sidebarItems', mapId),
+        block: await dbCtx.db.get('blocks', blockDbId),
+        blockShare: await dbCtx.db.get('blockShares', blockShareId),
+        folderShare: await dbCtx.db.get('sidebarItemShares', folderShareId),
+        noteShare: await dbCtx.db.get('sidebarItemShares', noteShareId),
+        bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
+        pin: await dbCtx.db.get('mapPins', pinId),
+        session: await dbCtx.db.get('sessions', sessionId),
       }
     })
 
@@ -140,7 +140,10 @@ describe('campaign deletion cascade', () => {
     })
 
     const [active, trashed] = await t.run(async (dbCtx) => {
-      return [await dbCtx.db.get("notes", activeNoteId), await dbCtx.db.get("notes", trashedNoteId)]
+      return [
+        await dbCtx.db.get('sidebarItems', activeNoteId),
+        await dbCtx.db.get('sidebarItems', trashedNoteId),
+      ]
     })
     expect(active).toBeNull()
     expect(trashed).toBeNull()
@@ -156,7 +159,7 @@ describe('campaign deletion cascade', () => {
     })
 
     const campaign = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get("campaigns", cId)
+      return await dbCtx.db.get('campaigns', cId)
     })
     expect(campaign).toBeNull()
   })

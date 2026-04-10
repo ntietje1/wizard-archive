@@ -1,4 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -18,22 +19,23 @@ export async function updateNote(
     iconName,
     color,
   }: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     name?: string
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ noteId: Id<'notes'>; slug: string }> {
-  const noteFromDb = await ctx.db.get("notes", noteId)
-  if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  await requireCampaignMembership(ctx, noteFromDb.campaignId)
+): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await ctx.db.get('sidebarItems', noteId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
+  const noteFromDb = await loadSingleExtensionData(ctx, rawItem)
   const note = await requireItemAccess(ctx, {
     rawItem: noteFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'notes'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -72,7 +74,7 @@ export async function updateNote(
     return { noteId: note._id, slug: note.slug }
   }
 
-  await ctx.db.patch("notes", noteId, {
+  await ctx.db.patch('sidebarItems', noteId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

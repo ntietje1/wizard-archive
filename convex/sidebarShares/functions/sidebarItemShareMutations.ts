@@ -19,12 +19,11 @@ export async function shareSidebarItemWithMember(
     permissionLevel: PermissionLevel | null
   },
 ): Promise<Id<'sidebarItemShares'>> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
-  const member = await ctx.db.get("campaignMembers", campaignMemberId)
+  const member = await ctx.db.get('campaignMembers', campaignMemberId)
   if (!member || member.campaignId !== campaignId)
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
@@ -55,7 +54,7 @@ export async function shareSidebarItemWithMember(
       updates.permissionLevel = permissionLevel
     }
     if (Object.keys(updates).length > 0) {
-      await ctx.db.patch("sidebarItemShares", existingShare._id, {
+      await ctx.db.patch('sidebarItemShares', existingShare._id, {
         ...updates,
         updatedTime: now,
         updatedBy: ctx.user.profile._id,
@@ -92,12 +91,11 @@ export async function unshareSidebarItemFromMember(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
 
-  const member = await ctx.db.get("campaignMembers", campaignMemberId)
+  const member = await ctx.db.get('campaignMembers', campaignMemberId)
   if (!member || member.campaignId !== campaignId)
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
@@ -113,7 +111,7 @@ export async function unshareSidebarItemFromMember(
 
   if (share && share.deletionTime === null) {
     const now = Date.now()
-    await ctx.db.patch("sidebarItemShares", share._id, {
+    await ctx.db.patch('sidebarItemShares', share._id, {
       deletionTime: now,
       deletedBy: ctx.user.profile._id,
       updatedTime: now,

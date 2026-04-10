@@ -21,7 +21,7 @@ import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 
 interface SidebarItemProps {
   item: AnySidebarItem
-  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
+  parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
 }
 
 function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {

@@ -189,7 +189,7 @@ describe('setCurrentEditor', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("editor", id)
+      await dbCtx.db.delete('editor', id)
     })
 
     const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {

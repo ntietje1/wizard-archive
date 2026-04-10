@@ -8,7 +8,7 @@ import { logger } from '~/shared/utils/logger'
 export const PERSIST_INTERVAL_MS = 10_000
 
 export function useNoteYjsCollaboration(
-  noteId: Id<'notes'>,
+  noteId: Id<'sidebarItems'>,
   user: { name: string; color: string },
   canEdit: boolean,
 ) {

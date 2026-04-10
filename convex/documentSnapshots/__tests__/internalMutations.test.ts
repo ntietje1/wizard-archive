@@ -356,7 +356,7 @@ describe('captureGameMapSnapshot', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("gameMaps", mapId)
+      await dbCtx.db.delete('sidebarItems', mapId)
     })
 
     await expect(

@@ -6,7 +6,7 @@ import type { NoteWithContent } from './types'
 
 export const getNote = authQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
   },
   returns: v.union(noteWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<NoteWithContent | null> => {

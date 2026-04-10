@@ -8,8 +8,7 @@ export async function getSidebarItemSharesForItem(
   ctx: AuthQueryCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Array<SidebarItemShare>> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   await requireCampaignMembership(ctx, item.campaignId)
 

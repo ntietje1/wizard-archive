@@ -62,12 +62,12 @@ function emptyEditorTarget(): EmptyEditorDropZoneData {
   return { type: EMPTY_EDITOR_DROP_TYPE }
 }
 
-function noteEditorTarget(noteId = testId<'notes'>('note_99')): NoteEditorDropZoneData {
+function noteEditorTarget(noteId = testId<'sidebarItems'>('note_99')): NoteEditorDropZoneData {
   return { type: NOTE_EDITOR_DROP_TYPE, noteId }
 }
 
 function mapTarget(
-  mapId = testId<'gameMaps'>('map_99'),
+  mapId = testId<'sidebarItems'>('map_99'),
   overrides?: Partial<MapDropZoneData>,
 ): MapDropZoneData {
   return {
@@ -79,7 +79,7 @@ function mapTarget(
   }
 }
 
-function canvasTarget(canvasId = testId<'canvases'>('canvas_99')): CanvasDropZoneData {
+function canvasTarget(canvasId = testId<'sidebarItems'>('canvas_99')): CanvasDropZoneData {
   return { type: CANVAS_DROP_ZONE_TYPE, canvasId }
 }
 
@@ -203,7 +203,7 @@ describe('resolveDropOutcome', () => {
 
   describe('root zone', () => {
     it('allows moving nested item to root', () => {
-      const note = createNote({ parentId: testId<'folders'>('folder_1') })
+      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
       const result = resolveDropOutcome(note, rootTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'move' })
@@ -233,7 +233,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('rejects move when name conflicts at root', () => {
-      const note = createNote({ parentId: testId<'folders'>('folder_1') })
+      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
       const ctx = createCtx({ hasSiblingNameConflict: () => true })
       const result = resolveDropOutcome(note, rootTarget(), ctx)
 
@@ -273,7 +273,7 @@ describe('resolveDropOutcome', () => {
 
     it('returns null when item is already in target folder', () => {
       const target = folderTarget()
-      const note = createNote({ parentId: testId<'folders'>(target._id) })
+      const note = createNote({ parentId: testId<'sidebarItems'>(target._id) })
       const result = resolveDropOutcome(note, target, createCtx())
 
       expect(result).toBeNull()
@@ -302,7 +302,7 @@ describe('resolveDropOutcome', () => {
     it('does not reject circular for non-folder items', () => {
       const note = createNote()
       const target = folderTarget({
-        ancestorIds: [testId<'folders'>(note._id)],
+        ancestorIds: [testId<'sidebarItems'>(note._id)],
       })
       const result = resolveDropOutcome(note, target, createCtx())
 
@@ -376,7 +376,7 @@ describe('resolveDropOutcome', () => {
 
     it('rejects pinning an already-pinned item', () => {
       const note = createNote()
-      const target = mapTarget(testId<'gameMaps'>('map_99'), {
+      const target = mapTarget(testId<'sidebarItems'>('map_99'), {
         pinnedItemIds: [note._id],
       })
       const result = resolveDropOutcome(note, target, createCtx())
@@ -426,7 +426,7 @@ describe('resolveDropOutcome', () => {
 
     it('rejects embedding a canvas into itself', () => {
       const canvas = createNote()
-      const target = canvasTarget(testId<'canvases'>(canvas._id))
+      const target = canvasTarget(testId<'sidebarItems'>(canvas._id))
       const result = resolveDropOutcome(canvas, target, createCtx())
 
       expect(result).toEqual({ type: 'rejection', reason: 'self_embed' })
@@ -589,11 +589,11 @@ describe('getHighlightId', () => {
   })
 
   it('returns canvas:id for canvas zone', () => {
-    expect(getHighlightId(canvasTarget(testId<'canvases'>('canvas_7')))).toBe('canvas:canvas_7')
+    expect(getHighlightId(canvasTarget(testId<'sidebarItems'>('canvas_7')))).toBe('canvas:canvas_7')
   })
 
   it('returns map:id for map zone', () => {
-    expect(getHighlightId(mapTarget(testId<'gameMaps'>('map_7')))).toBe('map:map_7')
+    expect(getHighlightId(mapTarget(testId<'sidebarItems'>('map_7')))).toBe('map:map_7')
   })
 
   it('returns item id for folder target', () => {
@@ -611,7 +611,7 @@ describe('resolveDropTarget', () => {
     const note = createNote()
     const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([[note._id, note]])
     const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map()
-    const getAncestorIds = vi.fn(() => [testId<'folders'>('folder_1')])
+    const getAncestorIds = vi.fn(() => [testId<'sidebarItems'>('folder_1')])
 
     const result = resolveDropTarget(
       { sidebarItemId: note._id },
@@ -697,7 +697,7 @@ describe('operation execution', () => {
   })
 
   it('root move operation calls moveItem with null parentId', async () => {
-    const note = createNote({ parentId: testId<'folders'>('folder_1') })
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
     const ctx = createCtx()
     const result = resolveDropOutcome(note, rootTarget(), ctx)
 

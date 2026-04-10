@@ -468,7 +468,7 @@ describe('rollback edge cases', () => {
         metadata: null,
         hasSnapshot: false,
       })
-      await dbCtx.db.delete("editHistory", id)
+      await dbCtx.db.delete('editHistory', id)
       return id
     })
 
@@ -524,7 +524,7 @@ describe('rollback edge cases', () => {
     expect(snapshotEntry!.hasSnapshot).toBe(true)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch("gameMaps", mapId, {
+      await dbCtx.db.patch('sidebarItems', mapId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })

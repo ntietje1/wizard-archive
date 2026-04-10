@@ -21,12 +21,12 @@ export async function createMap(
   }: {
     name: string
     imageStorageId?: Id<'_storage'>
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     campaignId: Id<'campaigns'>
   },
-): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
+): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
@@ -43,13 +43,12 @@ export async function createMap(
 
   const profileId = ctx.user.profile._id
 
-  const mapId = await ctx.db.insert('gameMaps', {
+  const mapId = await ctx.db.insert('sidebarItems', {
     campaignId,
     name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    imageStorageId: imageStorageId ?? null,
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.gameMaps,
@@ -58,6 +57,16 @@ export async function createMap(
     previewLockedUntil: null,
     previewClaimToken: null,
     previewUpdatedAt: null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+
+  await ctx.db.insert('gameMaps', {
+    sidebarItemId: mapId,
+    imageStorageId: imageStorageId ?? null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

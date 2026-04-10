@@ -4,6 +4,7 @@ import { requireDmRole } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { getFolder } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -13,11 +14,11 @@ export const setFolderInheritShares = async (
     folderId,
     inheritShares,
   }: {
-    folderId: Id<'folders'>
+    folderId: Id<'sidebarItems'>
     inheritShares: boolean
   },
 ): Promise<null> => {
-  const folderFromDb = await ctx.db.get("folders", folderId)
+  const folderFromDb = await getFolder(ctx, folderId)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -26,9 +27,13 @@ export const setFolderInheritShares = async (
 
   if (folder.inheritShares === inheritShares) return null
 
-  await ctx.db.patch("folders", folderId, {
-    inheritShares,
-  })
+  const ext = await ctx.db
+    .query('folders')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
+    .unique()
+  if (ext) {
+    await ctx.db.patch('folders', ext._id, { inheritShares })
+  }
 
   await logEditHistory(ctx, {
     itemId: folderId,

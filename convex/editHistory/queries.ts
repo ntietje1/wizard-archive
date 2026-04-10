@@ -4,6 +4,7 @@ import { authQuery } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { requireItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../permissions/types'
+import { getSidebarItem } from '../sidebarItems/functions/loadExtensionData'
 
 const historyEntryValidator = v.object({
   _id: v.id('editHistory'),
@@ -23,11 +24,10 @@ export const getHistoryEntry = authQuery({
   },
   returns: v.union(historyEntryValidator, v.null()),
   handler: async (ctx, { editHistoryId }) => {
-    const entry = await ctx.db.get("editHistory", editHistoryId)
+    const entry = await ctx.db.get('editHistory', editHistoryId)
     if (!entry) return null
 
-    // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
-    const item = await ctx.db.get(entry.itemId)
+    const item = await getSidebarItem(ctx, entry.itemId)
     await requireItemAccess(ctx, {
       rawItem: item,
       requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -46,12 +46,13 @@ export const getItemHistory = authQuery({
     page: v.array(historyEntryValidator),
     isDone: v.boolean(),
     continueCursor: v.string(),
-    splitCursor: v.union(v.string(), v.null()),
-    pageStatus: v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null()),
+    splitCursor: v.optional(v.union(v.string(), v.null())),
+    pageStatus: v.optional(
+      v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null()),
+    ),
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
-    // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a SidebarItemId union
-    const itemFromDb = await ctx.db.get(itemId)
+    const itemFromDb = await getSidebarItem(ctx, itemId)
     await requireItemAccess(ctx, {
       rawItem: itemFromDb,
       requiredLevel: PERMISSION_LEVEL.EDIT,

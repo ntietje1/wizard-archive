@@ -1,9 +1,8 @@
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
+import { loadExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
-
-const SIDEBAR_TABLES = ['folders', 'notes', 'gameMaps', 'files'] as const
 
 export async function deleteCampaign(
   ctx: AuthMutationCtx,
@@ -11,16 +10,15 @@ export async function deleteCampaign(
 ): Promise<Id<'campaigns'>> {
   await requireDmRole(ctx, campaignId)
 
-  // Delete all sidebar items (both active and trashed) with their dependents
-  for (const table of SIDEBAR_TABLES) {
-    const items = await ctx.db
-      .query(table)
-      .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
-      .collect()
+  const rawItems = await ctx.db
+    .query('sidebarItems')
+    .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
+    .collect()
 
-    for (const item of items) {
-      await hardDeleteItem(ctx, item)
-    }
+  const items = await loadExtensionData(ctx, rawItems)
+
+  for (const item of items) {
+    await hardDeleteItem(ctx, item)
   }
 
   // Delete sessions
@@ -30,7 +28,7 @@ export async function deleteCampaign(
     .collect()
 
   for (const session of sessions) {
-    await ctx.db.delete("sessions", session._id)
+    await ctx.db.delete('sessions', session._id)
   }
 
   // Delete campaign members
@@ -40,10 +38,10 @@ export async function deleteCampaign(
     .collect()
 
   for (const member of campaignMembers) {
-    await ctx.db.delete("campaignMembers", member._id)
+    await ctx.db.delete('campaignMembers', member._id)
   }
 
-  await ctx.db.delete("campaigns", campaignId)
+  await ctx.db.delete('campaigns', campaignId)
 
   return campaignId
 }

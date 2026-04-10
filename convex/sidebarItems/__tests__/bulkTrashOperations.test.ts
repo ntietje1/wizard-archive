@@ -14,7 +14,6 @@ import {
   setupFolderTree,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import type { Id } from '../../_generated/dataModel'
 
 describe('bulk trash operations', () => {
   const t = createTestContext()
@@ -77,16 +76,16 @@ describe('bulk trash operations', () => {
     })
 
     const results = await t.run(async (dbCtx) => ({
-      root: await dbCtx.db.get("folders", root),
-      sub1: await dbCtx.db.get("folders", sub1),
-      sub2: await dbCtx.db.get("folders", sub2),
-      note: await dbCtx.db.get("notes", noteId),
-      file: await dbCtx.db.get("files", fileId),
-      map: await dbCtx.db.get("gameMaps", mapId),
-      block: await dbCtx.db.get("blocks", blockDbId),
-      share: await dbCtx.db.get("sidebarItemShares", shareId),
-      bookmark: await dbCtx.db.get("bookmarks", bookmarkId),
-      pin: await dbCtx.db.get("mapPins", pinId),
+      root: await dbCtx.db.get('sidebarItems', root),
+      sub1: await dbCtx.db.get('sidebarItems', sub1),
+      sub2: await dbCtx.db.get('sidebarItems', sub2),
+      note: await dbCtx.db.get('sidebarItems', noteId),
+      file: await dbCtx.db.get('sidebarItems', fileId),
+      map: await dbCtx.db.get('sidebarItems', mapId),
+      block: await dbCtx.db.get('blocks', blockDbId),
+      share: await dbCtx.db.get('sidebarItemShares', shareId),
+      bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
+      pin: await dbCtx.db.get('mapPins', pinId),
     }))
 
     for (const [key, value] of Object.entries(results)) {
@@ -160,8 +159,8 @@ describe('bulk trash operations', () => {
     })
 
     const [r1, r2] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("notes", note1),
-      await dbCtx.db.get("notes", note2),
+      await dbCtx.db.get('sidebarItems', note1),
+      await dbCtx.db.get('sidebarItems', note2),
     ])
     expect(r1).toBeNull()
     expect(r2).not.toBeNull()
@@ -195,8 +194,8 @@ describe('bulk trash operations', () => {
     })
 
     const [folder, note] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("folders", folderId),
-      await dbCtx.db.get("notes", noteId),
+      await dbCtx.db.get('sidebarItems', folderId),
+      await dbCtx.db.get('sidebarItems', noteId),
     ])
     expect(folder).toBeNull()
     expect(note).toBeNull()
@@ -211,14 +210,13 @@ describe('bulk trash operations', () => {
       depth: 5,
       leafType: 'note',
     })
-    const leaf = leafId as Id<'notes'>
 
-    const { blockDbId } = await createBlock(t, leaf, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, dmId, {
       blockId: 'deep-block',
     })
     const { shareId } = await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,
-      sidebarItemId: leaf,
+      sidebarItemId: leafId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
     })
@@ -233,13 +231,13 @@ describe('bulk trash operations', () => {
     })
 
     for (const fId of folders) {
-      const result = await t.run(async (dbCtx) => dbCtx.db.get("folders", fId))
+      const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fId))
       expect(result).toBeNull()
     }
     const [leafResult, blockResult, shareResult] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("notes", leaf),
-      await dbCtx.db.get("blocks", blockDbId),
-      await dbCtx.db.get("sidebarItemShares", shareId),
+      await dbCtx.db.get('sidebarItems', leafId),
+      await dbCtx.db.get('blocks', blockDbId),
+      await dbCtx.db.get('sidebarItemShares', shareId),
     ])
     expect(leafResult).toBeNull()
     expect(blockResult).toBeNull()

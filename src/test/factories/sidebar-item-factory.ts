@@ -19,7 +19,7 @@ interface BaseFields {
   color: string | null
   slug: string
   campaignId: Id<'campaigns'>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
   previewUrl: string | null
@@ -69,7 +69,7 @@ export function createNote(overrides?: Partial<Note>): Note {
   const base = baseFields()
   return {
     ...base,
-    _id: testId<'notes'>(`note_${itemCounter}`),
+    _id: testId<'sidebarItems'>(`note_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.notes,
     ...overrides,
   }
@@ -79,7 +79,7 @@ export function createFolder(overrides?: Partial<Folder>): Folder {
   const base = baseFields()
   return {
     ...base,
-    _id: testId<'folders'>(`folder_${itemCounter}`),
+    _id: testId<'sidebarItems'>(`folder_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.folders,
     inheritShares: true,
     ...overrides,
@@ -90,7 +90,7 @@ export function createGameMap(overrides?: Partial<GameMap>): GameMap {
   const base = baseFields()
   return {
     ...base,
-    _id: testId<'gameMaps'>(`map_${itemCounter}`),
+    _id: testId<'sidebarItems'>(`map_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     imageStorageId: null,
     imageUrl: null,
@@ -102,7 +102,7 @@ export function createFile(overrides?: Partial<SidebarFile>): SidebarFile {
   const base = baseFields()
   return {
     ...base,
-    _id: testId<'files'>(`file_${itemCounter}`),
+    _id: testId<'sidebarItems'>(`file_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.files,
     storageId: null,
     downloadUrl: null,

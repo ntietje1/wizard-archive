@@ -25,12 +25,12 @@ export async function setCurrentSession(
   const now = Date.now()
 
   await Promise.all([
-    ctx.db.patch("sessions", sessionId, {
+    ctx.db.patch('sessions', sessionId, {
       endedAt: null,
       updatedTime: now,
       updatedBy: ctx.user.profile._id,
     }),
-    ctx.db.patch("campaigns", campaignId, {
+    ctx.db.patch('campaigns', campaignId, {
       currentSessionId: sessionId,
       updatedTime: now,
       updatedBy: ctx.user.profile._id,

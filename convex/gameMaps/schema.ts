@@ -7,7 +7,7 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { mapPinTableFields } from './baseSchema'
 
 const mapWithContentValidatorFields = {
-  ...commonValidatorFields('gameMaps'),
+  ...commonValidatorFields('sidebarItems'),
   ...commonSidebarItemValidatorFields,
   imageStorageId: v.union(v.id('_storage'), v.null()),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),

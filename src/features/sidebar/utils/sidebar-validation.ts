@@ -14,7 +14,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
  */
 export function validateNoCircularParent(
   itemId: SidebarItemId,
-  newParentId: Id<'folders'> | null,
+  newParentId: Id<'sidebarItems'> | null,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,
 ): ValidationResult {
   return validateNoCircularParentShared(itemId, newParentId, (id) => itemsMap.get(id))
@@ -31,8 +31,8 @@ export function getAncestorIds(
   const item = itemsMap.get(itemId)
   if (!item) return []
 
-  const ancestors: Array<Id<'folders'>> = []
-  const seen = new Set<Id<'folders'>>()
+  const ancestors: Array<Id<'sidebarItems'>> = []
+  const seen = new Set<Id<'sidebarItems'>>()
   let currentId = item.parentId
 
   while (currentId && !seen.has(currentId)) {
@@ -47,7 +47,7 @@ export function getAncestorIds(
 
 export interface SidebarItemValidationOptions {
   name: string
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   itemId?: SidebarItemId
   siblings?: Array<AnySidebarItem>
   itemsMap?: Map<SidebarItemId, AnySidebarItem>

@@ -19,12 +19,12 @@ export async function createFolder(
     campaignId,
   }: {
     name: string
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     campaignId: Id<'campaigns'>
   },
-): Promise<{ folderId: Id<'folders'>; slug: string }> {
+): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
@@ -41,14 +41,13 @@ export async function createFolder(
 
   const profileId = ctx.user.profile._id
 
-  const folderId = await ctx.db.insert('folders', {
+  const folderId = await ctx.db.insert('sidebarItems', {
     name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId,
     allPermissionLevel: null,
-    inheritShares: false,
     campaignId,
     type: SIDEBAR_ITEM_TYPES.folders,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
@@ -56,6 +55,16 @@ export async function createFolder(
     previewLockedUntil: null,
     previewClaimToken: null,
     previewUpdatedAt: null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+
+  await ctx.db.insert('folders', {
+    sidebarItemId: folderId,
+    inheritShares: false,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

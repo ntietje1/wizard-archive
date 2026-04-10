@@ -4,7 +4,7 @@ import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 const blockShareTableFields = {
   campaignId: v.id('campaigns'),
-  noteId: v.id('notes'),
+  noteId: v.id('sidebarItems'),
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.union(v.id('sessions'), v.null()),

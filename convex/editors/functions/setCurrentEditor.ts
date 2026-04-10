@@ -43,7 +43,7 @@ export async function setCurrentEditor(
     })
   }
 
-  await ctx.db.patch("editor", editor._id, {
+  await ctx.db.patch('editor', editor._id, {
     ...(sortOrder !== undefined && { sortOrder }),
     ...(sortDirection !== undefined && { sortDirection }),
     ...(editorMode !== undefined && { editorMode }),

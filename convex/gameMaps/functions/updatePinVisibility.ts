@@ -15,21 +15,20 @@ export async function updatePinVisibility(
 
   if (visible === pin.visible) return mapPinId
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
-  const pinnedItem = await ctx.db.get(pin.itemId)
+  const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
 
   if (!pinnedItem) {
     logger.warn(`Pin ${mapPinId} references missing item ${pin.itemId}`)
   }
 
   const now = Date.now()
-  await ctx.db.patch("mapPins", mapPinId, {
+  await ctx.db.patch('mapPins', mapPinId, {
     visible,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })
 
-  await ctx.db.patch("gameMaps", map._id, {
+  await ctx.db.patch('sidebarItems', map._id, {
     updatedTime: now,
     updatedBy: ctx.user.profile._id,
   })

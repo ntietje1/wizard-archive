@@ -35,7 +35,7 @@ export const updateUsername = authMutation({
       throwClientError(ERROR_CODE.CONFLICT, 'Username is already taken')
     }
 
-    await ctx.db.patch("userProfiles", ctx.user.profile._id, { username })
+    await ctx.db.patch('userProfiles', ctx.user.profile._id, { username })
     return username
   },
 })
@@ -51,7 +51,7 @@ export const updateProfileImage = authMutation({
       throwClientError(ERROR_CODE.NOT_FOUND, 'The uploaded file could not be found')
     }
 
-    await ctx.db.patch("userProfiles", ctx.user.profile._id, {
+    await ctx.db.patch('userProfiles', ctx.user.profile._id, {
       profileImage: { type: 'storage', storageId: args.storageId },
     })
     return null
@@ -75,7 +75,7 @@ export const updateName = authMutation({
       return null
     }
 
-    await ctx.db.patch("userProfiles", ctx.user.profile._id, { name })
+    await ctx.db.patch('userProfiles', ctx.user.profile._id, { name })
     return null
   },
 })

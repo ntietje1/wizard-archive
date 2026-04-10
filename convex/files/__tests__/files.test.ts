@@ -26,11 +26,15 @@ describe('createFile', () => {
     expect(result.slug).toContain('my-file')
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get("files", result.fileId)
+      const file = await dbCtx.db.get('sidebarItems', result.fileId)
       expect(file).not.toBeNull()
       expect(file!.name).toBe('My File')
-      expect(file!.storageId).toBeNull()
       expect(file!.parentId).toBeNull()
+      const ext = await dbCtx.db
+        .query('files')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', result.fileId))
+        .first()
+      expect(ext!.storageId).toBeNull()
     })
   })
 
@@ -105,7 +109,7 @@ describe('updateFile', () => {
     expect(result.slug).toContain('renamed-file')
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get("files", fileId)
+      const file = await dbCtx.db.get('sidebarItems', fileId)
       expect(file!.name).toBe('Renamed File')
     })
   })
@@ -218,7 +222,7 @@ describe('getFile', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch("files", fileId, {
+      await dbCtx.db.patch('sidebarItems', fileId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })
@@ -238,7 +242,7 @@ describe('getFile', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("files", fileId)
+      await dbCtx.db.delete('sidebarItems', fileId)
     })
 
     const result = await dmAuth.query(api.files.queries.getFile, { fileId })

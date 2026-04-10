@@ -31,11 +31,11 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
   ])
 
   await Promise.all([
-    ...prefs.map((p) => ctx.db.delete("userPreferences", p._id)),
-    ...editors.map((e) => ctx.db.delete("editor", e._id)),
+    ...prefs.map((p) => ctx.db.delete('userPreferences', p._id)),
+    ...editors.map((e) => ctx.db.delete('editor', e._id)),
     ...files.map(async (f) => {
       await ctx.storage.delete(f.storageId)
-      await ctx.db.delete("fileStorage", f._id)
+      await ctx.db.delete('fileStorage', f._id)
     }),
   ])
 
@@ -49,9 +49,9 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
 
     const campaignId = member.campaignId
 
-    const campaign = await ctx.db.get("campaigns", campaignId)
+    const campaign = await ctx.db.get('campaigns', campaignId)
     if (campaign && !campaign.deletionTime && campaign.dmUserId === profileId) {
-      await ctx.db.patch("campaigns", campaign._id, {
+      await ctx.db.patch('campaigns', campaign._id, {
         deletionTime: now,
         deletedBy: profileId,
         updatedTime: now,
@@ -84,11 +84,11 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
     }
 
     await Promise.all([
-      ...sidebarShares.map((s) => ctx.db.patch("sidebarItemShares", s._id, softDelete)),
-      ...blockShares.map((s) => ctx.db.patch("blockShares", s._id, softDelete)),
-      ctx.db.patch("campaignMembers", member._id, softDelete),
+      ...sidebarShares.map((s) => ctx.db.patch('sidebarItemShares', s._id, softDelete)),
+      ...blockShares.map((s) => ctx.db.patch('blockShares', s._id, softDelete)),
+      ctx.db.patch('campaignMembers', member._id, softDelete),
     ])
   }
 
-  await ctx.db.delete("userProfiles", profileId)
+  await ctx.db.delete('userProfiles', profileId)
 }

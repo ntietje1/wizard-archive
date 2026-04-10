@@ -1,17 +1,14 @@
-import { mutationGeneric, queryGeneric } from 'convex/server'
+import { customQuery, customMutation, customCtx } from 'convex-helpers/server/customFunctions'
+import { query, mutation } from './_generated/server'
+import { triggers } from './triggers'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
 import { ERROR_CODE, throwClientError } from './errors'
 import { getUserProfileById } from './users/functions/getUserProfile'
+import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
 import type { AuthUser } from './users/types'
 import type { CampaignFromDb, CampaignMember } from './campaigns/types'
-
-// --- Context types ---
-
-export type AuthQueryCtx = QueryCtx & { user: AuthUser }
-export type AuthMutationCtx = MutationCtx & { user: AuthUser }
 
 // --- Context enrichment ---
 
@@ -30,7 +27,7 @@ async function checkMembership(
   ctx: AuthQueryCtx | AuthMutationCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
-  const campaign = await ctx.db.get("campaigns", campaignId)
+  const campaign = await ctx.db.get('campaigns', campaignId)
   const member = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) =>
@@ -89,44 +86,25 @@ export async function requireDmRole(
   return result
 }
 
-// --- Config types ---
-
-type AuthConfig<TArgs extends PropertyValidators, TReturn> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: AuthQueryCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
-type AuthMutationConfig<TArgs extends PropertyValidators, TReturn> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: AuthMutationCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
 // --- Wrappers ---
 
-export function authQuery<TArgs extends PropertyValidators, TReturn>(
-  config: AuthConfig<TArgs, TReturn>,
-) {
-  return queryGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (ctx: QueryCtx, args: ObjectType<TArgs>) => {
-      const user = await authenticate(ctx)
-      return config.handler({ ...ctx, user }, args)
-    },
-  })
-}
+export const authQuery = customQuery(
+  query,
+  customCtx(async (ctx) => {
+    const user = await authenticate(ctx)
+    return { user }
+  }),
+)
 
-export function authMutation<TArgs extends PropertyValidators, TReturn>(
-  config: AuthMutationConfig<TArgs, TReturn>,
-) {
-  return mutationGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (ctx: MutationCtx, args: ObjectType<TArgs>) => {
-      const user = await authenticate(ctx)
-      return config.handler({ ...ctx, user }, args)
-    },
-  })
-}
+export const authMutation = customMutation(
+  mutation,
+  customCtx(async (ctx) => {
+    const user = await authenticate(ctx)
+    return { ...triggers.wrapDB(ctx), user }
+  }),
+)
+
+// --- Context types ---
+
+export type AuthQueryCtx = CustomCtx<typeof authQuery>
+export type AuthMutationCtx = CustomCtx<typeof authMutation>

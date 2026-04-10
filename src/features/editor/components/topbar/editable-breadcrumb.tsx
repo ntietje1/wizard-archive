@@ -21,7 +21,7 @@ interface EditableNameProps {
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   excludeId?: SidebarItemId
   disabled?: boolean
   showNotSharedTooltip?: boolean

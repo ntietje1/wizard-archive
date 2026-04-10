@@ -22,12 +22,12 @@ export async function createCanvas(
     campaignId,
   }: {
     name: string
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     campaignId: Id<'campaigns'>
   },
-): Promise<{ canvasId: Id<'canvases'>; slug: string }> {
+): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
   const trimmedName = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
@@ -44,7 +44,7 @@ export async function createCanvas(
 
   const profileId = ctx.user.profile._id
 
-  const canvasId = await ctx.db.insert('canvases', {
+  const canvasId = await ctx.db.insert('sidebarItems', {
     campaignId,
     name: trimmedName,
     slug: uniqueSlug,
@@ -65,7 +65,15 @@ export async function createCanvas(
     createdBy: profileId,
   })
 
-  // getMap calls create the named maps on the Y.Doc so they're included in the initial encoded state
+  await ctx.db.insert('canvases', {
+    sidebarItemId: canvasId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+
   const doc = new Y.Doc()
   doc.getMap('nodes')
   doc.getMap('edges')

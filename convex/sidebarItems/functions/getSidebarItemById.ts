@@ -8,6 +8,7 @@ import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
 import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
 import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
 import { enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
+import { loadSingleExtensionData } from './loadExtensionData'
 import { assertNever } from '../../common/types'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { SidebarItemId } from '../types/baseTypes'
@@ -28,9 +29,10 @@ export const getSidebarItemById = async (
   ctx: AuthQueryCtx,
   { id }: { id: SidebarItemId },
 ): Promise<AnySidebarItemWithContent | null> => {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const item = await ctx.db.get(id)
-  if (!item) return null
+  const raw = await ctx.db.get('sidebarItems', id)
+  if (!raw) return null
+
+  const item = await loadSingleExtensionData(ctx, raw)
 
   await requireCampaignMembership(ctx, item.campaignId)
 

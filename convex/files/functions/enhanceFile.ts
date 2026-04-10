@@ -21,7 +21,7 @@ export const enhanceFile = async (
   const [base, downloadUrl, storageMetadata] = await Promise.all([
     enhanceBase(ctx, { item: file, sharesMap, bookmarkIds }),
     file.storageId ? ctx.storage.getUrl(file.storageId) : null,
-    file.storageId ? ctx.db.system.get("_storage", file.storageId) : null,
+    file.storageId ? ctx.db.system.get('_storage', file.storageId) : null,
   ])
 
   return {

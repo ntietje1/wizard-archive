@@ -11,26 +11,26 @@ import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {
-  getSiblings: (parentId: Id<'folders'> | null) => Array<AnySidebarItem>
+  getSiblings: (parentId: Id<'sidebarItems'> | null) => Array<AnySidebarItem>
   validateName: (
     name: string,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     excludeId?: SidebarItemId,
   ) => ValidationResult
-  canMoveToParent: (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => boolean
-  getDefaultName: (type: SidebarItemType, parentId: Id<'folders'> | null) => string
+  canMoveToParent: (itemId: SidebarItemId, newParentId: Id<'sidebarItems'> | null) => boolean
+  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => string
 }
 
 export function useSidebarValidation(): SidebarValidation {
   const { itemsMap, parentItemsMap } = useActiveSidebarItems()
 
-  const getSiblings = (parentId: Id<'folders'> | null) => {
+  const getSiblings = (parentId: Id<'sidebarItems'> | null) => {
     return parentItemsMap.get(parentId) ?? []
   }
 
   const validateName = (
     name: string,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     excludeId?: SidebarItemId,
   ) => {
     const trimmed = name.trim()
@@ -39,11 +39,11 @@ export function useSidebarValidation(): SidebarValidation {
     return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
   }
 
-  const canMoveToParent = (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => {
+  const canMoveToParent = (itemId: SidebarItemId, newParentId: Id<'sidebarItems'> | null) => {
     return validateNoCircularParent(itemId, newParentId, (id) => itemsMap.get(id)).valid
   }
 
-  const getDefaultName = (type: SidebarItemType, parentId: Id<'folders'> | null) => {
+  const getDefaultName = (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => {
     return findUniqueDefaultName(type, getSiblings(parentId))
   }
 

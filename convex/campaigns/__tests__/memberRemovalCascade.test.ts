@@ -70,8 +70,8 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     const [share, bookmark] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("sidebarItemShares", shareId),
-      await dbCtx.db.get("bookmarks", bookmarkId),
+      await dbCtx.db.get('sidebarItemShares', shareId),
+      await dbCtx.db.get('bookmarks', bookmarkId),
     ])
     expect(share).not.toBeNull()
     expect(bookmark).not.toBeNull()
@@ -125,7 +125,7 @@ describe('multi-player share + membership removal cascade', () => {
 
     await expectPermissionDenied(p1.authed.query(api.notes.queries.getNote, { noteId }))
 
-    const blockShare = await t.run(async (dbCtx) => dbCtx.db.get("blockShares", blockShareId))
+    const blockShare = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
     expect(blockShare).not.toBeNull()
   })
 

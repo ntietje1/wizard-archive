@@ -30,7 +30,7 @@ export default defineConfig([
       '@convex-dev/no-old-registered-function-syntax': 'error',
       '@convex-dev/require-args-validator': 'error',
       '@convex-dev/import-wrong-runtime': 'error',
-      '@convex-dev/no-collect-in-query': 'warn',
+      '@convex-dev/no-collect-in-query': 'off',
       '@convex-dev/explicit-table-ids': 'error',
     },
   },

@@ -13,7 +13,7 @@ interface EditableNameProps {
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
   campaignId?: Id<'campaigns'>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   excludeId?: SidebarItemId
 }
 

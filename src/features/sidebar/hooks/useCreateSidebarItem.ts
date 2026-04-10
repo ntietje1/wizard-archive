@@ -10,7 +10,7 @@ import { assertNever } from '~/shared/utils/utils'
 interface CreateItemBase {
   campaignId: Id<'campaigns'>
   name: string
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   iconName?: string
   color?: string
 }

@@ -9,9 +9,9 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 function extractParentId(
   target: { data: Record<string, unknown> } | undefined,
-): Id<'folders'> | null {
+): Id<'sidebarItems'> | null {
   const rawParentId = target?.data?.parentId
-  return typeof rawParentId === 'string' ? (rawParentId as Id<'folders'>) : null
+  return typeof rawParentId === 'string' ? (rawParentId as Id<'sidebarItems'>) : null
 }
 
 export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {

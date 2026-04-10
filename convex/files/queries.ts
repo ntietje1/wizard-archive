@@ -6,7 +6,7 @@ import type { FileWithContent } from './types'
 
 export const getFile = authQuery({
   args: {
-    fileId: v.id('files'),
+    fileId: v.id('sidebarItems'),
   },
   returns: v.union(fileWithContentValidator, v.null()),
   handler: async (ctx, args): Promise<FileWithContent | null> => {

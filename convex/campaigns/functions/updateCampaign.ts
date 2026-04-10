@@ -55,7 +55,7 @@ export async function updateCampaign(
     return campaign._id
   }
 
-  await ctx.db.patch("campaigns", campaign._id, {
+  await ctx.db.patch('campaigns', campaign._id, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

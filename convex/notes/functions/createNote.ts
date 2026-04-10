@@ -28,13 +28,13 @@ export async function createNote(
     campaignId,
   }: {
     name: string
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
     campaignId: Id<'campaigns'>
   },
-): Promise<{ noteId: Id<'notes'>; slug: string }> {
+): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
@@ -51,7 +51,7 @@ export async function createNote(
 
   const profileId = ctx.user.profile._id
 
-  const noteId = await ctx.db.insert('notes', {
+  const noteId = await ctx.db.insert('sidebarItems', {
     name,
     slug: uniqueSlug,
     parentId,
@@ -65,6 +65,15 @@ export async function createNote(
     previewLockedUntil: null,
     previewClaimToken: null,
     previewUpdatedAt: null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+
+  await ctx.db.insert('notes', {
+    sidebarItemId: noteId,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

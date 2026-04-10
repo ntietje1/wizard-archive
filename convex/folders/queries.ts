@@ -30,7 +30,7 @@ const downloadItemValidator = v.union(
 
 export const getFolderContentsForDownload = authQuery({
   args: {
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
   },
   returns: v.object({
     folderName: v.string(),

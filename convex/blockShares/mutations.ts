@@ -16,7 +16,7 @@ const blockItemValidator = v.object({
 
 export const setBlocksShareStatus = authMutation({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blocks: v.array(blockItemValidator),
     status: blockShareStatusValidator,
   },
@@ -32,7 +32,7 @@ export const setBlocksShareStatus = authMutation({
 
 export const shareBlocks = authMutation({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blocks: v.array(blockItemValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
@@ -48,7 +48,7 @@ export const shareBlocks = authMutation({
 
 export const unshareBlocks = authMutation({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },

@@ -14,7 +14,7 @@ export function usePdfPreviewUpload() {
   const claimAndUpload = useClaimAndUploadPreview()
 
   const generatePdfPreviewIfNeeded = useCallback(
-    async (file: File, fileId: Id<'files'>) => {
+    async (file: File, fileId: Id<'sidebarItems'>) => {
       if (!isPdfFile(file)) return
       if (file.size > MAX_PDF_PREVIEW_SIZE) {
         logger.debug(

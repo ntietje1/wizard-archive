@@ -18,7 +18,7 @@ describe('buildSidebarItemMaps', () => {
 
   it('groups items by parentId in parentItemsMap', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_m1'),
+      _id: testId<'sidebarItems'>('folder_m1'),
       parentId: null,
     })
     const child1 = createNote({ parentId: folder._id })
@@ -31,7 +31,7 @@ describe('buildSidebarItemMaps', () => {
 
   it('reparents orphaned items to root', () => {
     const note = createNote({
-      parentId: testId<'folders'>('folder_nonexistent'),
+      parentId: testId<'sidebarItems'>('folder_nonexistent'),
     })
     const { parentItemsMap } = buildSidebarItemMaps([note])
     expect(parentItemsMap.get(null)).toContain(note)
@@ -39,12 +39,12 @@ describe('buildSidebarItemMaps', () => {
 
   it('getAncestorSidebarItems returns ancestor folders', () => {
     const gp = createFolder({
-      _id: testId<'folders'>('folder_a_gp'),
+      _id: testId<'sidebarItems'>('folder_a_gp'),
       name: 'GP',
       parentId: null,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_a_p'),
+      _id: testId<'sidebarItems'>('folder_a_p'),
       name: 'Parent',
       parentId: gp._id,
     })
@@ -62,7 +62,7 @@ describe('buildSidebarItemMaps', () => {
 
   it('returns empty for item not in map', () => {
     const { getAncestorSidebarItems } = buildSidebarItemMaps([])
-    expect(getAncestorSidebarItems(testId<'notes'>('nonexistent'))).toEqual([])
+    expect(getAncestorSidebarItems(testId<'sidebarItems'>('nonexistent'))).toEqual([])
   })
 
   it('handles empty items array', () => {
@@ -75,15 +75,15 @@ describe('buildSidebarItemMaps', () => {
 describe('collectDescendantIds', () => {
   it('collects all descendants of a folder', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_d1'),
+      _id: testId<'sidebarItems'>('folder_d1'),
       parentId: null,
     })
     const child1 = createNote({
-      _id: testId<'notes'>('note_d1'),
+      _id: testId<'sidebarItems'>('note_d1'),
       parentId: folder._id,
     })
     const child2 = createFile({
-      _id: testId<'files'>('file_d1'),
+      _id: testId<'sidebarItems'>('file_d1'),
       parentId: folder._id,
     })
     const result = collectDescendantIds(folder._id, [folder, child1, child2])
@@ -94,15 +94,15 @@ describe('collectDescendantIds', () => {
 
   it('collects nested descendants recursively', () => {
     const root = createFolder({
-      _id: testId<'folders'>('folder_r'),
+      _id: testId<'sidebarItems'>('folder_r'),
       parentId: null,
     })
     const subFolder = createFolder({
-      _id: testId<'folders'>('folder_sub'),
+      _id: testId<'sidebarItems'>('folder_sub'),
       parentId: root._id,
     })
     const deepNote = createNote({
-      _id: testId<'notes'>('note_deep'),
+      _id: testId<'sidebarItems'>('note_deep'),
       parentId: subFolder._id,
     })
     const result = collectDescendantIds(root._id, [root, subFolder, deepNote])
@@ -113,7 +113,7 @@ describe('collectDescendantIds', () => {
 
   it('returns empty set for folder with no children', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_empty'),
+      _id: testId<'sidebarItems'>('folder_empty'),
       parentId: null,
     })
     const result = collectDescendantIds(folder._id, [folder])
@@ -121,7 +121,7 @@ describe('collectDescendantIds', () => {
   })
 
   it('returns empty set for non-existent folder', () => {
-    const result = collectDescendantIds(testId<'folders'>('folder_nonexistent'), [])
+    const result = collectDescendantIds(testId<'sidebarItems'>('folder_nonexistent'), [])
     expect(result.size).toBe(0)
   })
 })

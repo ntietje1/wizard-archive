@@ -2,7 +2,7 @@ import type { SidebarItemId } from '../sidebarItems/types/baseTypes'
 import type { Id } from '../_generated/dataModel'
 
 export function validatePinTarget(
-  mapId: Id<'gameMaps'>,
+  mapId: Id<'sidebarItems'>,
   itemId: SidebarItemId,
   existingPinItemIds: ReadonlyArray<SidebarItemId>,
 ): string | null {

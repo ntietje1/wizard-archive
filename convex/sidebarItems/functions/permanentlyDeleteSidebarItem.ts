@@ -6,6 +6,7 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
 import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
+import { getSidebarItem } from './loadExtensionData'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -13,8 +14,7 @@ export async function permanentlyDeleteSidebarItem(
   ctx: AuthMutationCtx,
   { itemId }: { itemId: SidebarItemId },
 ): Promise<void> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const rawItem = await ctx.db.get(itemId)
+  const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }

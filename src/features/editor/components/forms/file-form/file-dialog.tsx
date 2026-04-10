@@ -6,9 +6,9 @@ import { FormDialog } from '~/shared/components/form-dialog'
 interface FileDialogProps {
   isOpen: boolean
   onClose: () => void
-  fileId?: Id<'files'>
+  fileId?: Id<'sidebarItems'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'> | null
+  parentId?: Id<'sidebarItems'> | null
   onSuccess?: (fileSlug?: string) => void
 }
 

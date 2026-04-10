@@ -7,7 +7,7 @@ import type { CustomBlock } from '../../notes/editorSpecs'
 export async function insertBlock(
   ctx: AuthMutationCtx,
   params: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
     blockId: string
     isTopLevel: boolean

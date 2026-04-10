@@ -22,7 +22,7 @@ function getNodeDimensions(node: Node): { w: number; h: number } {
   }
 }
 
-export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
+export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'sidebarItems'> }) {
   const { nodes, edges, isLoading, isError } = useReadOnlyYjsCanvas(canvasId)
 
   if (isLoading) {
@@ -217,7 +217,7 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
   return items
 }
 
-function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
+function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
   const [doc, setDoc] = useState<Y.Doc | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isError, setIsError] = useState(false)

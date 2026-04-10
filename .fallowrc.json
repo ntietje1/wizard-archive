@@ -1,14 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": [
-    "src/routes/**/*.{ts,tsx}",
-    "convex/**/*.ts",
-    "e2e/**/*.ts"
-  ],
-  "ignorePatterns": [
-    "src/features/shadcn/**",
-    "convex/_generated/**"
-  ],
+  "entry": ["src/routes/**/*.{ts,tsx}", "convex/**/*.ts", "e2e/**/*.ts"],
+  "ignorePatterns": ["src/features/shadcn/**", "convex/_generated/**"],
   "ignoreDependencies": [
     "@eslint/js",
     "@typescript-eslint/eslint-plugin",

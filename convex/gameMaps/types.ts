@@ -26,7 +26,7 @@ export type GameMapWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPE
 }
 
 export type MapPin = CommonValidatorFields<'mapPins'> & {
-  mapId: Id<'gameMaps'>
+  mapId: Id<'sidebarItems'>
   itemId: SidebarItemId
   x: number
   y: number

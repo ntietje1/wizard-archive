@@ -1,12 +1,12 @@
 import { internal } from '../../_generated/api'
 import { TRASH_RETENTION_DAYS } from '../../common/constants'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteItem } from './hardDeleteItem'
 import { applyToTree } from './applyToTree'
+import { loadExtensionData } from './loadExtensionData'
 import type { MutationCtx } from '../../_generated/server'
 
 const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
-
-const TRASHED_TABLES = ['folders', 'notes', 'gameMaps', 'files'] as const
 
 const BATCH_SIZE = 50
 
@@ -27,43 +27,36 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
     for (const campaign of page.page) {
       if (deleted >= BATCH_SIZE) break
 
-      const campaignId = campaign._id
+      const expired = await ctx.db
+        .query('sidebarItems')
+        .withIndex('by_campaign_deletionTime', (q) =>
+          q.eq('campaignId', campaign._id).gt('deletionTime', 0).lt('deletionTime', cutoff),
+        )
+        .collect()
 
-      const results = await Promise.all(
-        TRASHED_TABLES.map((table) =>
-          ctx.db
-            .query(table)
-            .withIndex('by_campaign_deletionTime', (q) =>
-              q.eq('campaignId', campaignId).gt('deletionTime', 0).lt('deletionTime', cutoff),
-            )
-            .collect(),
-        ),
-      )
-
-      const [expiredFolders, ...expiredLeafItems] = results
+      const expiredFolders = expired.filter((i) => i.type === SIDEBAR_ITEM_TYPES.folders)
+      const expiredLeaves = expired.filter((i) => i.type !== SIDEBAR_ITEM_TYPES.folders)
 
       for (const folder of expiredFolders) {
         if (deleted >= BATCH_SIZE) break
-        // eslint-disable-next-line @convex-dev/explicit-table-ids
-        const currentFolder = await ctx.db.get(folder._id)
+        const currentFolder = await ctx.db.get('sidebarItems', folder._id)
         if (!currentFolder) continue
         if (currentFolder.parentId) {
-          const parent = await ctx.db.get("folders", currentFolder.parentId)
+          const parent = await ctx.db.get('sidebarItems', currentFolder.parentId)
           if (parent?.deletionTime && parent.deletionTime < cutoff) continue
         }
-        const count = await applyToTree(ctx, currentFolder, hardDeleteItem)
+        const [enhanced] = await loadExtensionData(ctx, [currentFolder])
+        const count = await applyToTree(ctx, enhanced!, hardDeleteItem)
         deleted += count
       }
 
-      leafLoop: for (const items of expiredLeafItems) {
-        for (const item of items) {
-          if (deleted >= BATCH_SIZE) break leafLoop
-          // eslint-disable-next-line @convex-dev/explicit-table-ids
-          const current = await ctx.db.get(item._id)
-          if (!current) continue
-          await hardDeleteItem(ctx, current)
-          deleted++
-        }
+      for (const leaf of expiredLeaves) {
+        if (deleted >= BATCH_SIZE) break
+        const current = await ctx.db.get('sidebarItems', leaf._id)
+        if (!current) continue
+        const [enhanced] = await loadExtensionData(ctx, [current])
+        await hardDeleteItem(ctx, enhanced!)
+        deleted++
       }
     }
   }

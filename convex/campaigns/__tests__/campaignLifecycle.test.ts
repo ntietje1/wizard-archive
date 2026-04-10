@@ -82,41 +82,17 @@ describe('campaign lifecycle', () => {
     })
 
     const campaign = await t.run(async (ctx) => {
-      return await ctx.db.get("campaigns", campaignId)
+      return await ctx.db.get('campaigns', campaignId)
     })
     expect(campaign).toBeNull()
 
     const remainingNotes = await t.run(async (ctx) => {
       return await ctx.db
-        .query('notes')
+        .query('sidebarItems')
         .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
         .collect()
     })
     expect(remainingNotes).toHaveLength(0)
-
-    const remainingFolders = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('folders')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
-        .collect()
-    })
-    expect(remainingFolders).toHaveLength(0)
-
-    const remainingFiles = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('files')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
-        .collect()
-    })
-    expect(remainingFiles).toHaveLength(0)
-
-    const remainingGameMaps = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('gameMaps')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
-        .collect()
-    })
-    expect(remainingGameMaps).toHaveLength(0)
 
     const remainingMembers = await t.run(async (ctx) => {
       return await ctx.db

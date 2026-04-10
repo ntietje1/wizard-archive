@@ -224,7 +224,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   const noteQuery = useAuthQuery(
     api.notes.queries.getNote,
     context?.mode === 'heading' && context.resolvedItem?._id
-      ? { noteId: context.resolvedItem._id as Id<'notes'> }
+      ? { noteId: context.resolvedItem._id as Id<'sidebarItems'> }
       : 'skip',
   )
 

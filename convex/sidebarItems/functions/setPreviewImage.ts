@@ -4,6 +4,7 @@ import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { logger } from '../../common/logger'
+import { getSidebarItem } from './loadExtensionData'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemId } from '../types/baseTypes'
@@ -20,8 +21,7 @@ export async function setPreviewImage(
     claimToken: string
   },
 ): Promise<void> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const item = await ctx.db.get(itemId)
+  const item = await getSidebarItem(ctx, itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   await requireCampaignMembership(ctx, item.campaignId)
   await requireItemAccess(ctx, {
@@ -49,8 +49,7 @@ export async function setPreviewImage(
 
   const oldPreviewStorageId = item.previewStorageId
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  await ctx.db.patch(itemId, {
+  await ctx.db.patch('sidebarItems', itemId, {
     previewStorageId,
     previewUpdatedAt: Date.now(),
     previewLockedUntil: null,

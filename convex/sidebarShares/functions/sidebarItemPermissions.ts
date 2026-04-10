@@ -1,6 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { SharesMap } from './getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -22,7 +24,7 @@ export async function resolveInheritedPermissions(
     memberIds,
     sharesMap,
   }: {
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     campaignId: Id<'campaigns'>
     memberIds: Array<Id<'campaignMembers'>>
     sharesMap?: SharesMap
@@ -47,10 +49,11 @@ export async function resolveInheritedPermissions(
 
   let currentParentId = parentId
   while (currentParentId) {
-    const folder = await ctx.db.get("folders", currentParentId)
+    const folder = await getSidebarItem(ctx, currentParentId)
     if (!folder) break
 
-    if (!folder.inheritShares) {
+    const inheritShares = folder.type === SIDEBAR_ITEM_TYPES.folders ? folder.inheritShares : false
+    if (!inheritShares) {
       currentParentId = folder.parentId
       continue
     }
@@ -110,7 +113,7 @@ export async function resolveInheritedPermissions(
 
     if (allPlayersResolved && unresolvedMembers.size === 0) break
 
-    currentParentId = folder.parentId ?? null
+    currentParentId = folder.parentId
   }
 
   for (const memberId of unresolvedMembers) {

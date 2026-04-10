@@ -33,9 +33,9 @@ export interface MapFormValues {
 }
 
 interface MapFormProps {
-  mapId?: Id<'gameMaps'>
+  mapId?: Id<'sidebarItems'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'> | null
+  parentId?: Id<'sidebarItems'> | null
   onClose: () => void
   onSuccess?: (mapSlug?: string) => void
 }

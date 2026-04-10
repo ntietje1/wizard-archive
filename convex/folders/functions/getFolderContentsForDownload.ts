@@ -3,6 +3,7 @@ import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebar
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
@@ -35,7 +36,7 @@ async function collectItemsRecursively(
     currentPath,
   }: {
     campaignId: Id<'campaigns'>
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     currentPath: string
   },
 ): Promise<Array<DownloadItem>> {
@@ -115,12 +116,13 @@ async function collectItemsRecursively(
 
 export async function getFolderContentsForDownload(
   ctx: AuthQueryCtx,
-  folderId: Id<'folders'>,
+  folderId: Id<'sidebarItems'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
-  const folderFromDb = await ctx.db.get("folders", folderId)
-  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
-  const campaignId = folderFromDb.campaignId
+  const rawItem = await ctx.db.get('sidebarItems', folderId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
+  const campaignId = rawItem.campaignId
   await requireCampaignMembership(ctx, campaignId)
+  const folderFromDb = await loadSingleExtensionData(ctx, rawItem)
   const folder = await requireItemAccess(ctx, {
     rawItem: folderFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,

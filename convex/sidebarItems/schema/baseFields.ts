@@ -14,7 +14,7 @@ export const commonSidebarItemTableFields = {
   iconName: v.union(v.string(), v.null()),
   color: v.union(v.string(), v.null()),
   type: sidebarItemTypeValidator,
-  parentId: v.union(v.id('folders'), v.null()),
+  parentId: v.union(v.id('sidebarItems'), v.null()),
   allPermissionLevel: v.union(permissionLevelValidator, v.null()),
   location: sidebarItemLocationValidator,
   previewStorageId: v.union(v.id('_storage'), v.null()),

@@ -170,12 +170,11 @@ describe('rollback of game map pin with non-note itemId', () => {
 
       // Create a folder and pin it to the map (pins can reference any sidebar item)
       const { folderId } = await t.run(async (dbCtx) => {
-        const id = await dbCtx.db.insert('folders', {
+        const id = await dbCtx.db.insert('sidebarItems', {
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
           slug: 'pinned-folder',
           type: SIDEBAR_ITEM_TYPES.folders,
-          inheritShares: false,
           parentId: null,
           iconName: null,
           color: null,

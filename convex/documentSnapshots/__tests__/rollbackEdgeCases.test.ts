@@ -114,7 +114,7 @@ describe('rollback error handling', () => {
         metadata: null,
         hasSnapshot: false,
       })
-      await dbCtx.db.delete("editHistory", id)
+      await dbCtx.db.delete('editHistory', id)
       return id
     })
 
@@ -408,7 +408,7 @@ describe('rollback metadata integrity', () => {
       })
 
       const beforeRollback = await t.run(async (dbCtx) => {
-        return await dbCtx.db.get("notes", noteId)
+        return await dbCtx.db.get('sidebarItems', noteId)
       })
 
       vi.advanceTimersByTime(1000)
@@ -418,7 +418,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const afterRollback = await dbCtx.db.get("notes", noteId)
+        const afterRollback = await dbCtx.db.get('sidebarItems', noteId)
         expect(afterRollback!.updatedTime).toBeGreaterThan(beforeRollback!.updatedTime ?? 0)
         expect(afterRollback!.updatedBy).toBe(ctx.dm.profile._id)
       })
@@ -467,7 +467,7 @@ describe('map rollback with deleted pin targets', () => {
       })
 
       await t.run(async (dbCtx) => {
-        await dbCtx.db.delete("notes", n1)
+        await dbCtx.db.delete('sidebarItems', n1)
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
@@ -664,8 +664,11 @@ describe('map rollback restores image state', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const map = await dbCtx.db.get("gameMaps", mapId)
-        expect(map!.imageStorageId).not.toBe(snapshotData.imageStorageId ?? null)
+        const ext = await dbCtx.db
+          .query('gameMaps')
+          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+          .first()
+        expect(ext!.imageStorageId).not.toBe(snapshotData.imageStorageId ?? null)
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
@@ -673,8 +676,11 @@ describe('map rollback restores image state', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const map = await dbCtx.db.get("gameMaps", mapId)
-        expect(map!.imageStorageId).toBe(snapshotData.imageStorageId ?? null)
+        const ext = await dbCtx.db
+          .query('gameMaps')
+          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+          .first()
+        expect(ext!.imageStorageId).toBe(snapshotData.imageStorageId ?? null)
       })
     } finally {
       vi.useRealTimers()

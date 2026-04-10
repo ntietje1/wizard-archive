@@ -847,7 +847,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   )
 }
 
-function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
+function MapImageUpload({ mapId }: { mapId: Id<'sidebarItems'> }) {
   const updateMap = useAppMutation(api.gameMaps.mutations.updateMap)
 
   const fileUpload = useFileWithPreview({

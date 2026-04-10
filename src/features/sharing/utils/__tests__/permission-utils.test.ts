@@ -52,7 +52,7 @@ describe('resolvePermissionLevel', () => {
 
   it('walks parent chain to find inherited permission', () => {
     const parentFolder = createFolder({
-      _id: testId<'folders'>('folder_parent'),
+      _id: testId<'sidebarItems'>('folder_parent'),
       name: 'Parent',
       parentId: null,
       inheritShares: true,
@@ -71,14 +71,14 @@ describe('resolvePermissionLevel', () => {
 
   it('walks multiple levels of parent chain', () => {
     const grandparent = createFolder({
-      _id: testId<'folders'>('folder_gp'),
+      _id: testId<'sidebarItems'>('folder_gp'),
       name: 'Grandparent',
       parentId: null,
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_p'),
+      _id: testId<'sidebarItems'>('folder_p'),
       name: 'Parent',
       parentId: grandparent._id,
       inheritShares: true,
@@ -98,14 +98,14 @@ describe('resolvePermissionLevel', () => {
 
   it('respects inheritShares: false — skips that folder but continues walking', () => {
     const grandparent = createFolder({
-      _id: testId<'folders'>('folder_gp2'),
+      _id: testId<'sidebarItems'>('folder_gp2'),
       name: 'Grandparent',
       parentId: null,
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_p2'),
+      _id: testId<'sidebarItems'>('folder_p2'),
       name: 'Parent',
       parentId: grandparent._id,
       inheritShares: false,
@@ -139,7 +139,7 @@ describe('resolvePermissionLevel', () => {
       permissionLevel: PERMISSION_LEVEL.EDIT,
     })
     const parentFolder = createFolder({
-      _id: testId<'folders'>('folder_pref'),
+      _id: testId<'sidebarItems'>('folder_pref'),
       name: 'Parent',
       parentId: null,
       inheritShares: true,

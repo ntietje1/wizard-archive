@@ -21,15 +21,14 @@ export async function updateItemPin(
 ): Promise<Id<'mapPins'>> {
   const { pin, map } = await requirePinAccess(ctx, { mapPinId })
 
-  await ctx.db.patch("mapPins", mapPinId, {
+  await ctx.db.patch('mapPins', mapPinId, {
     x,
     y,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,
   })
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
-  const pinnedItem = await ctx.db.get(pin.itemId)
+  const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
   if (!pinnedItem) {
     logger.warn(`Pin ${mapPinId} references missing item ${pin.itemId}`)
   }

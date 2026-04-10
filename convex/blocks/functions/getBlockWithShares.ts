@@ -7,6 +7,7 @@ import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { requireDmRole } from '../../functions'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { Block } from '../types'
@@ -19,7 +20,7 @@ export const getBlockWithShares = async (
     noteId,
     blockId,
   }: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     blockId: string
   },
 ): Promise<{
@@ -28,7 +29,7 @@ export const getBlockWithShares = async (
   shares: Array<BlockShare>
   playerMembers: Array<CampaignMember>
 } | null> => {
-  const note = await ctx.db.get("notes", noteId)
+  const note = await getSidebarItem(ctx, noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   await requireDmRole(ctx, note.campaignId)
   await checkItemAccess(ctx, {

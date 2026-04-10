@@ -7,8 +7,7 @@ export async function getItemBookmark(
   ctx: AuthQueryCtx,
   { sidebarItemId }: { sidebarItemId: SidebarItemId },
 ): Promise<Bookmark | null> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- SidebarItemId is a union across multiple tables
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) return null
 
   const { membership } = await requireCampaignMembership(ctx, item.campaignId)

@@ -21,12 +21,12 @@ export async function createFile(
   }: {
     name: string
     storageId?: Id<'_storage'>
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     campaignId: Id<'campaigns'>
   },
-): Promise<{ fileId: Id<'files'>; slug: string }> {
+): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
   await validateSidebarCreateParent(ctx, { campaignId, parentId })
@@ -45,19 +45,18 @@ export async function createFile(
 
   let previewStorageId: Id<'_storage'> | null = null
   if (storageId) {
-    const metadata = await ctx.db.system.get("_storage", storageId)
+    const metadata = await ctx.db.system.get('_storage', storageId)
     if (metadata?.contentType?.toLowerCase().startsWith('image/')) {
       previewStorageId = storageId
     }
   }
 
-  const fileId = await ctx.db.insert('files', {
+  const fileId = await ctx.db.insert('sidebarItems', {
     campaignId,
     name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    storageId: storageId ?? null,
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
@@ -66,6 +65,16 @@ export async function createFile(
     previewLockedUntil: null,
     previewClaimToken: null,
     previewUpdatedAt: previewStorageId ? Date.now() : null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: profileId,
+  })
+
+  await ctx.db.insert('files', {
+    sidebarItemId: fileId,
+    storageId: storageId ?? null,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

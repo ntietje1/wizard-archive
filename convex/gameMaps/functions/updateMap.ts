@@ -1,4 +1,5 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { getGameMap } from '../../sidebarItems/functions/loadExtensionData'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
@@ -19,14 +20,14 @@ export async function updateMap(
     iconName,
     color,
   }: {
-    mapId: Id<'gameMaps'>
+    mapId: Id<'sidebarItems'>
     name?: string
     imageStorageId?: Id<'_storage'> | null
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ mapId: Id<'gameMaps'>; slug: string }> {
-  const mapFromDb = await ctx.db.get("gameMaps", mapId)
+): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
+  const mapFromDb = await getGameMap(ctx, mapId)
   if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireCampaignMembership(ctx, mapFromDb.campaignId)
   const map = await requireItemAccess(ctx, {
@@ -35,7 +36,7 @@ export async function updateMap(
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'gameMaps'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -54,7 +55,13 @@ export async function updateMap(
     }
   }
   if (imageStorageId !== undefined && imageStorageId !== map.imageStorageId) {
-    updates.imageStorageId = imageStorageId
+    const ext = await ctx.db
+      .query('gameMaps')
+      .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+      .unique()
+    if (ext) {
+      await ctx.db.patch('gameMaps', ext._id, { imageStorageId })
+    }
     updates.previewStorageId = imageStorageId
     changes.push({
       action:
@@ -83,7 +90,7 @@ export async function updateMap(
     return { mapId: map._id, slug: map.slug }
   }
 
-  await ctx.db.patch("gameMaps", mapId, {
+  await ctx.db.patch('sidebarItems', mapId, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.user.profile._id,

@@ -3,8 +3,8 @@ import { renderHook } from '@testing-library/react'
 import { useConvexYjsCollaboration } from '../useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 
-const DOCUMENT_ID = 'test-doc-id' as Id<'notes'>
-const OTHER_DOCUMENT_ID = 'other-doc-id' as Id<'notes'>
+const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>
+const OTHER_DOCUMENT_ID = 'other-doc-id' as Id<'sidebarItems'>
 const USER = { name: 'Test User', color: '#ff0000' }
 
 const {

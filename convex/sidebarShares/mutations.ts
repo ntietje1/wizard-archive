@@ -98,7 +98,7 @@ export const setAllPlayersPermission = authMutation({
  */
 export const setFolderInheritShares = authMutation({
   args: {
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     inheritShares: v.boolean(),
   },
   returns: v.null(),

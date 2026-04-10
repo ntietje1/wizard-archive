@@ -10,7 +10,7 @@ export function useExternalDropTarget({
   canAcceptFiles,
 }: {
   ref: RefObject<HTMLElement | null>
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   canAcceptFiles: boolean
 }) {
   const [isFileDropTarget, setIsFileDropTarget] = useState(false)

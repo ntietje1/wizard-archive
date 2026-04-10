@@ -52,7 +52,7 @@ function CreateNewButton({
 }
 
 interface CreateNewDashboardProps {
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   folderPath?: string
 }
 

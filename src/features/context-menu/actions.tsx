@@ -51,8 +51,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { parentItemsMap } = useActiveSidebarItems()
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(null)
-  const [editMapDialog, setEditMapDialog] = useState<Id<'gameMaps'> | null>(null)
-  const [editFileDialog, setEditFileDialog] = useState<Id<'files'> | null>(null)
+  const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
+  const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
   const [confirmPermanentDeleteItem, setConfirmPermanentDeleteItem] =
     useState<AnySidebarItem | null>(null)

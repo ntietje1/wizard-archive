@@ -3,6 +3,7 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { AuthMutationCtx } from '../../functions'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -17,16 +18,14 @@ export const setAllPlayersPermission = async (
     permissionLevel: PermissionLevel | null
   },
 ): Promise<null> => {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const itemFromDb = await ctx.db.get(sidebarItemId)
+  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
   const { membership } = await requireDmRole(ctx, item.campaignId)
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  await ctx.db.patch(sidebarItemId, {
+  await ctx.db.patch('sidebarItems', sidebarItemId, {
     allPermissionLevel: permissionLevel,
     updatedBy: membership.userId,
     updatedTime: Date.now(),

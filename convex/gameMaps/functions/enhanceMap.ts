@@ -8,6 +8,7 @@ import {
   getAllCampaignShares,
   getMemberShares,
 } from '../../sidebarShares/functions/getCampaignShares'
+import { getSidebarItem } from '../../sidebarItems/functions/loadExtensionData'
 import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
 import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
@@ -48,8 +49,7 @@ const enhanceMapPin = async (
     bookmarkIds: Set<SidebarItemId>
   },
 ): Promise<MapPinWithItem | null> => {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- pin.itemId is a polymorphic SidebarItemId
-  const item = await ctx.db.get(pin.itemId)
+  const item = await getSidebarItem(ctx, pin.itemId)
   if (item) {
     const enhancedItem = await enhanceSidebarItem(ctx, {
       item,

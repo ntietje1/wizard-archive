@@ -39,7 +39,7 @@ describe('getNote', () => {
 
     const { noteId: realNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("notes", realNoteId)
+      await dbCtx.db.delete('sidebarItems', realNoteId)
     })
 
     const result = await dmAuth.query(api.notes.queries.getNote, {
@@ -120,7 +120,7 @@ describe('updateNote', () => {
     expect(result.slug).toContain('renamed-note')
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get("notes", noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.name).toBe('Renamed Note')
     })
   })
@@ -137,7 +137,7 @@ describe('updateNote', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get("notes", noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.iconName).toBe('scroll')
     })
   })
@@ -154,7 +154,7 @@ describe('updateNote', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get("notes", noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.color).toBe('#ff0000')
     })
   })
@@ -201,7 +201,7 @@ describe('updateNote', () => {
     expect(result.noteId).toBe(noteId)
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get("notes", noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.name).toBe('Player Renamed')
     })
   })

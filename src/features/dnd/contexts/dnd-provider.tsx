@@ -30,13 +30,13 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
-  const setFolderOpen = (folderId: Id<'folders'>) => {
+  const setFolderOpen = (folderId: Id<'sidebarItems'>) => {
     if (campaignId) setFolderState(campaignId, folderId, true)
   }
 
   const hasSiblingNameConflict = (
     name: string,
-    parentId: Id<'folders'> | null,
+    parentId: Id<'sidebarItems'> | null,
     excludeId?: SidebarItemId,
   ): boolean => {
     const siblings = parentItemsMap.get(parentId) ?? []

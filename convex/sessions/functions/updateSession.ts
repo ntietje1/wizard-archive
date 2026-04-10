@@ -7,7 +7,7 @@ export async function updateSession(
   ctx: AuthMutationCtx,
   { sessionId, name }: { sessionId: Id<'sessions'>; name?: string },
 ): Promise<null> {
-  const session = await ctx.db.get("sessions", sessionId)
+  const session = await ctx.db.get('sessions', sessionId)
   if (!session) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Session not found')
   }
@@ -23,7 +23,7 @@ export async function updateSession(
     const now = Date.now()
     updates.updatedTime = now
     updates.updatedBy = ctx.user.profile._id
-    await ctx.db.patch("sessions", sessionId, updates)
+    await ctx.db.patch('sessions', sessionId, updates)
   }
 
   return null

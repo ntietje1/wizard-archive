@@ -8,7 +8,7 @@ import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlo
 
 export const getBlockWithShares = authQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blockId: blockNoteIdValidator,
   },
   returns: v.union(
@@ -37,7 +37,7 @@ const blockShareInfoValidator = v.object({
 
 export const getBlocksWithShares = authQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blockIds: v.array(blockNoteIdValidator),
   },
   returns: v.object({

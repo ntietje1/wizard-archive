@@ -5,11 +5,10 @@ const DELETE_BATCH_SIZE = 100
 
 export async function rollbackYjsDocument(
   ctx: AuthMutationCtx,
-  documentId: Id<'notes'> | Id<'canvases'>,
+  documentId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  // eslint-disable-next-line @convex-dev/explicit-table-ids
-  const doc = await ctx.db.get(documentId)
+  const doc = await ctx.db.get('sidebarItems', documentId)
   if (!doc) {
     throw new Error(`rollbackYjsDocument: document ${documentId} not found`)
   }
@@ -24,13 +23,13 @@ export async function rollbackYjsDocument(
     if (batch.length === 0) {
       hasMore = false
     } else {
-      await Promise.all(batch.map((row) => ctx.db.delete("yjsUpdates", row._id)))
+      await Promise.all(batch.map((row) => ctx.db.delete('yjsUpdates', row._id)))
       if (batch.length < DELETE_BATCH_SIZE) hasMore = false
     }
   }
 
   await ctx.db.insert('yjsUpdates', {
-    documentId,
+    documentId: documentId,
     update: snapshotData,
     seq: 0,
     isSnapshot: true,

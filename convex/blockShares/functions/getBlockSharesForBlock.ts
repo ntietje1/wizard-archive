@@ -8,7 +8,7 @@ export async function getBlockSharesDm(
   ctx: AuthQueryCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<Array<BlockShare>> {
-  const block = await ctx.db.get("blocks", blockId)
+  const block = await ctx.db.get('blocks', blockId)
   if (!block) throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   await requireDmRole(ctx, block.campaignId)
   return await getBlockSharesByBlock(ctx, { block })

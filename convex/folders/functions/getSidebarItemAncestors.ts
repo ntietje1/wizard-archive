@@ -1,4 +1,5 @@
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
+import { getFolder } from '../../sidebarItems/functions/loadExtensionData'
 import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { requireCampaignMembership } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
@@ -7,27 +8,29 @@ import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
   ctx: AuthQueryCtx,
-  { initialParentId, isTrashed }: { initialParentId: Id<'folders'> | null; isTrashed?: boolean },
+  {
+    initialParentId,
+    isTrashed,
+  }: { initialParentId: Id<'sidebarItems'> | null; isTrashed?: boolean },
 ): Promise<Array<Folder>> {
   const ancestors: Array<Folder> = []
-  let currentParentId: Id<'folders'> | null = initialParentId
+  let currentParentId: Id<'sidebarItems'> | null = initialParentId
 
-  const visited = new Set<Id<'folders'>>()
+  const visited = new Set<Id<'sidebarItems'>>()
   while (currentParentId) {
     if (visited.has(currentParentId)) {
       break
     }
     visited.add(currentParentId)
-    const rawFolder = await ctx.db.get("folders", currentParentId)
-    if (!rawFolder) {
+    const folderFromDb = await getFolder(ctx, currentParentId)
+    if (!folderFromDb) {
       break
     }
-    await requireCampaignMembership(ctx, rawFolder.campaignId)
-    // Trashed items only show trashed ancestors
-    if (isTrashed && rawFolder.location !== SIDEBAR_ITEM_LOCATION.trash) {
+    await requireCampaignMembership(ctx, folderFromDb.campaignId)
+    if (isTrashed && folderFromDb.location !== SIDEBAR_ITEM_LOCATION.trash) {
       break
     }
-    const folder = await enhanceSidebarItem(ctx, { item: rawFolder })
+    const folder = await enhanceSidebarItem(ctx, { item: folderFromDb })
 
     ancestors.unshift(folder)
     currentParentId = folder.parentId

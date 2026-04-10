@@ -23,7 +23,7 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: fileId,
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get("files", fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
     expect(file).toBeNull()
   })
 
@@ -43,7 +43,7 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: mapId,
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get("gameMaps", mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
     expect(map).toBeNull()
   })
 
@@ -59,8 +59,8 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     const [file, map] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("files", fileId),
-      await dbCtx.db.get("gameMaps", mapId),
+      await dbCtx.db.get('sidebarItems', fileId),
+      await dbCtx.db.get('sidebarItems', mapId),
     ])
     expect(file).toBeNull()
     expect(map).toBeNull()
@@ -89,8 +89,8 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     const [folder, file] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get("folders", folderId),
-      await dbCtx.db.get("files", fileId),
+      await dbCtx.db.get('sidebarItems', folderId),
+      await dbCtx.db.get('sidebarItems', fileId),
     ])
     expect(folder).toBeNull()
     expect(file).toBeNull()
@@ -113,7 +113,7 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: fileId,
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get("files", fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
     expect(file).toBeNull()
   })
 
@@ -134,7 +134,7 @@ describe('storage lifecycle with file/map deletion', () => {
       itemId: mapId,
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get("gameMaps", mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
     expect(map).toBeNull()
   })
 })

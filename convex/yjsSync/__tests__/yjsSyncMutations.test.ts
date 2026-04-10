@@ -149,7 +149,7 @@ describe('pushUpdate', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete("notes", noteId)
+      await dbCtx.db.delete('sidebarItems', noteId)
     })
 
     await expectNotFound(

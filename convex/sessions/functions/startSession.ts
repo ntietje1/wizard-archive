@@ -11,9 +11,9 @@ export async function startSession(
 
   const endPrevious = async () => {
     if (campaign.currentSessionId) {
-      const existingSession = await ctx.db.get("sessions", campaign.currentSessionId)
+      const existingSession = await ctx.db.get('sessions', campaign.currentSessionId)
       if (existingSession) {
-        await ctx.db.patch("sessions", campaign.currentSessionId, {
+        await ctx.db.patch('sessions', campaign.currentSessionId, {
           endedAt: now,
           updatedTime: now,
           updatedBy: ctx.user.profile._id,
@@ -37,7 +37,7 @@ export async function startSession(
 
   const [, sessionId] = await Promise.all([endPrevious(), insertNew()])
 
-  await ctx.db.patch("campaigns", campaignId, {
+  await ctx.db.patch('campaigns', campaignId, {
     currentSessionId: sessionId,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,

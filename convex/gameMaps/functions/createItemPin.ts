@@ -1,4 +1,5 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { loadSingleExtensionData } from '../../sidebarItems/functions/loadExtensionData'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -20,27 +21,27 @@ export async function createItemPin(
     y,
     itemId,
   }: {
-    mapId: Id<'gameMaps'>
+    mapId: Id<'sidebarItems'>
     x: number
     y: number
     itemId: SidebarItemId
   },
 ): Promise<Id<'mapPins'>> {
-  const mapFromDb = await ctx.db.get("gameMaps", mapId)
-  if (!mapFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  await requireCampaignMembership(ctx, mapFromDb.campaignId)
+  const rawItem = await ctx.db.get('sidebarItems', mapId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
+  await requireCampaignMembership(ctx, rawItem.campaignId)
+  const mapFromDb = await loadSingleExtensionData(ctx, rawItem)
   await requireItemAccess(ctx, {
     rawItem: mapFromDb,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  // eslint-disable-next-line @convex-dev/explicit-table-ids -- itemId is a polymorphic SidebarItemId
-  const item = await ctx.db.get(itemId)
+  const item = await ctx.db.get('sidebarItems', itemId)
   if (!item) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }
 
-  if (item.campaignId !== mapFromDb.campaignId) {
+  if (item.campaignId !== rawItem.campaignId) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
       'Item must belong to the same campaign as the map',
@@ -62,8 +63,8 @@ export async function createItemPin(
   const profileId = ctx.user.profile._id
 
   const pinId = await ctx.db.insert('mapPins', {
-    mapId,
-    itemId,
+    mapId: mapId,
+    itemId: itemId,
     x,
     y,
     visible: false,
@@ -74,7 +75,7 @@ export async function createItemPin(
     createdBy: profileId,
   })
 
-  await ctx.db.patch("gameMaps", mapId, {
+  await ctx.db.patch('sidebarItems', mapId, {
     updatedTime: Date.now(),
     updatedBy: profileId,
   })
@@ -84,7 +85,7 @@ export async function createItemPin(
     {
       itemId: mapId,
       itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-      campaignId: mapFromDb.campaignId,
+      campaignId: rawItem.campaignId,
       action: EDIT_HISTORY_ACTION.map_pin_added,
       metadata: { pinItemName: item.name },
     },
@@ -95,10 +96,10 @@ export async function createItemPin(
     await captureGameMapSnapshot(ctx, {
       mapId,
       editHistoryId,
-      campaignId: mapFromDb.campaignId,
+      campaignId: rawItem.campaignId,
       createdBy: profileId,
     })
-    await ctx.db.patch("editHistory", editHistoryId, { hasSnapshot: true })
+    await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
   } catch (error) {
     logger.warn(`createItemPin: failed to capture snapshot for map ${mapId}`, error)
   }

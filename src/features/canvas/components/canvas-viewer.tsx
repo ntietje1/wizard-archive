@@ -160,7 +160,7 @@ function CanvasFlow({
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  canvasId: Id<'canvases'>
+  canvasId: Id<'sidebarItems'>
   canEdit: boolean
   colorMode: 'light' | 'dark'
   provider: ConvexYjsProvider | null
