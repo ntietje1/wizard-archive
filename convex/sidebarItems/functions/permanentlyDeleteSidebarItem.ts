@@ -4,8 +4,7 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
-import { applyToTree } from './applyToTree'
-import { hardDeleteItem } from './hardDeleteItem'
+import { hardDeleteTree } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemId } from '../types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
@@ -49,5 +48,5 @@ export async function permanentlyDeleteSidebarItem(
     }
   }
 
-  await applyToTree(ctx, rawItem, hardDeleteItem)
+  await hardDeleteTree(ctx, rawItem)
 }

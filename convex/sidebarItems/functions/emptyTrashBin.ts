@@ -1,6 +1,6 @@
 import { requireDmRole } from '../../functions'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { applyToTree } from './applyToTree'
+import { hardDeleteTree } from './treeOperations'
 import { hardDeleteItem } from './hardDeleteItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItemFromDb } from '../types/types'
@@ -34,7 +34,7 @@ export async function emptyTrashBin(
   const rootNonFolders = enhanced.filter((i) => i.type !== SIDEBAR_ITEM_TYPES.folders && isRoot(i))
 
   for (const folder of rootFolders) {
-    await applyToTree(ctx, folder, hardDeleteItem)
+    await hardDeleteTree(ctx, folder)
   }
 
   for (const item of rootNonFolders) {

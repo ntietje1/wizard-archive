@@ -2,9 +2,7 @@ import { deleteYjsDocument } from '../yjsSync/functions/deleteYjsDocument'
 import type { SidebarItemTriggerHandlers } from '../sidebarItems/triggerTypes'
 
 export const canvasTriggers: SidebarItemTriggerHandlers = {
-  onSoftDelete: async (db, item) => {
-    await deleteYjsDocument({ db }, item.id)
-  },
+  onSoftDelete: async () => {},
 
   onRestore: async () => {},
 

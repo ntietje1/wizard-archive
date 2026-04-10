@@ -2,7 +2,7 @@ import { internal } from '../../_generated/api'
 import { TRASH_RETENTION_DAYS } from '../../common/constants'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteItem } from './hardDeleteItem'
-import { applyToTree } from './applyToTree'
+import { hardDeleteTree } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import type { MutationCtx } from '../../_generated/server'
 
@@ -47,7 +47,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
         }
         const enhanced = await getSidebarItem(ctx, currentFolder._id)
         if (!enhanced) continue
-        const count = await applyToTree(ctx, enhanced, hardDeleteItem)
+        const count = await hardDeleteTree(ctx, enhanced)
         deleted += count
       }
 

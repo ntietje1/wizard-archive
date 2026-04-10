@@ -13,7 +13,7 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
-import { applyToTree } from './applyToTree'
+import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
@@ -86,17 +86,9 @@ export async function moveSidebarItem(
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can trash folders')
     }
 
-    const now = Date.now()
-    const deletedBy = ctx.user.profile._id
-
-    await applyToTree(ctx, item, async (_, i) => {
-      const isRoot = i._id === item._id
-      await ctx.db.patch('sidebarItems', i._id, {
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: now,
-        deletedBy,
-        ...(isRoot ? { parentId: null } : {}),
-      })
+    await trashTree(ctx, item, {
+      deletionTime: Date.now(),
+      deletedBy: ctx.user.profile._id,
     })
 
     await logEditHistory(ctx, {
@@ -130,23 +122,8 @@ export async function moveSidebarItem(
       parentId: restoreParentId,
     })
 
-    // Restore all descendants if folder
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      await applyToTree(ctx, item, async (_, i) => {
-        if (i._id === item._id) return
-        if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
-
-        const descSlug = await findUniqueSidebarItemSlug(ctx, {
-          campaignId,
-          itemId: i._id,
-          name: i.name,
-        })
-        await ctx.db.patch('sidebarItems', i._id, {
-          ...clearDeletion,
-          location: location,
-          ...(descSlug !== i.slug ? { slug: descSlug } : {}),
-        })
-      })
+      await restoreTreeDescendants(ctx, item, location!)
     }
 
     await logEditHistory(ctx, {
