@@ -11,16 +11,16 @@ const sidebarItemTableFields = {
   name: v.string(),
   slug: v.string(),
   campaignId: v.id('campaigns'),
-  iconName: v.union(v.string(), v.null()),
-  color: v.union(v.string(), v.null()),
+  iconName: v.nullable(v.string()),
+  color: v.nullable(v.string()),
   type: sidebarItemTypeValidator,
-  parentId: v.union(v.id('sidebarItems'), v.null()),
-  allPermissionLevel: v.union(permissionLevelValidator, v.null()),
+  parentId: v.nullable(v.id('sidebarItems')),
+  allPermissionLevel: v.nullable(permissionLevelValidator),
   location: sidebarItemLocationValidator,
-  previewStorageId: v.union(v.id('_storage'), v.null()),
-  previewLockedUntil: v.union(v.number(), v.null()),
-  previewClaimToken: v.union(v.string(), v.null()),
-  previewUpdatedAt: v.union(v.number(), v.null()),
+  previewStorageId: v.nullable(v.id('_storage')),
+  previewLockedUntil: v.nullable(v.number()),
+  previewClaimToken: v.nullable(v.string()),
+  previewUpdatedAt: v.nullable(v.number()),
   ...commonTableFields,
 }
 
@@ -47,12 +47,12 @@ export const sidebarItemsTables = {
 
   gameMaps: defineTable({
     ...extensionBaseFields,
-    imageStorageId: v.union(v.id('_storage'), v.null()),
+    imageStorageId: v.nullable(v.id('_storage')),
   }).index('by_sidebarItemId', ['sidebarItemId']),
 
   files: defineTable({
     ...extensionBaseFields,
-    storageId: v.union(v.id('_storage'), v.null()),
+    storageId: v.nullable(v.id('_storage')),
   }).index('by_sidebarItemId', ['sidebarItemId']),
 
   canvases: defineTable({

@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { deleteYjsDocument } from '../yjsSync/functions/deleteYjsDocument'
 import type { SidebarItemTriggerHandlers, CascadeItem } from '../sidebarItems/triggerTypes'
 import type { DatabaseWriter } from '../_generated/server'
@@ -22,18 +23,14 @@ async function getBlocksAndShares(db: DatabaseWriter, item: CascadeItem) {
 export const noteTriggers: SidebarItemTriggerHandlers = {
   onSoftDelete: async (db, item, deletion) => {
     const [blocks, blockShares] = await getBlocksAndShares(db, item)
-    await Promise.all([
-      ...blocks.map((b) => db.patch('blocks', b._id, deletion)),
-      ...blockShares.map((bs) => db.patch('blockShares', bs._id, deletion)),
-    ])
+    await asyncMap(blocks, (b) => db.patch('blocks', b._id, deletion))
+    await asyncMap(blockShares, (bs) => db.patch('blockShares', bs._id, deletion))
   },
 
   onRestore: async (db, item, cleared) => {
     const [blocks, blockShares] = await getBlocksAndShares(db, item)
-    await Promise.all([
-      ...blocks.map((b) => db.patch('blocks', b._id, cleared)),
-      ...blockShares.map((bs) => db.patch('blockShares', bs._id, cleared)),
-    ])
+    await asyncMap(blocks, (b) => db.patch('blocks', b._id, cleared))
+    await asyncMap(blockShares, (bs) => db.patch('blockShares', bs._id, cleared))
   },
 
   onHardDelete: async (db, _storage, item) => {
@@ -55,12 +52,10 @@ export const noteTriggers: SidebarItemTriggerHandlers = {
         .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', item.id))
         .unique(),
     ])
-    await Promise.all([
-      ...blocks.map((b) => db.delete('blocks', b._id)),
-      ...blockShares.map((bs) => db.delete('blockShares', bs._id)),
-      ext ? db.delete('notes', ext._id) : Promise.resolve(),
-      deleteYjsDocument({ db }, item.id),
-    ])
+    await asyncMap(blocks, (b) => db.delete('blocks', b._id))
+    await asyncMap(blockShares, (bs) => db.delete('blockShares', bs._id))
+    if (ext) await db.delete('notes', ext._id)
+    await deleteYjsDocument({ db }, item.id)
     return null
   },
 }

@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { insertBlock } from '../../blocks/functions/insertBlock'
@@ -154,15 +155,13 @@ async function clearBlockShares(
 
   const now = Date.now()
   const profileId = ctx.user.profile._id
-  await Promise.all(
-    shares.map((share) =>
-      ctx.db.patch('blockShares', share._id, {
-        deletionTime: now,
-        deletedBy: profileId,
-        updatedTime: now,
-        updatedBy: profileId,
-      }),
-    ),
+  await asyncMap(shares, (share) =>
+    ctx.db.patch('blockShares', share._id, {
+      deletionTime: now,
+      deletedBy: profileId,
+      updatedTime: now,
+      updatedBy: profileId,
+    }),
   )
 }
 

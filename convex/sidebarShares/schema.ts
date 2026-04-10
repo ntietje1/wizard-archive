@@ -12,8 +12,8 @@ const sidebarItemShareTableFields = {
   sidebarItemId: sidebarItemIdValidator,
   sidebarItemType: sidebarItemTypeValidator,
   campaignMemberId: v.id('campaignMembers'),
-  sessionId: v.union(v.id('sessions'), v.null()),
-  permissionLevel: v.union(permissionLevelValidator, v.null()),
+  sessionId: v.nullable(v.id('sessions')),
+  permissionLevel: v.nullable(permissionLevelValidator),
   ...commonTableFields,
 }
 

@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import type { SidebarItemTriggerHandlers } from '../sidebarItems/triggerTypes'
 import type { Id } from '../_generated/dataModel'
 import type { DatabaseWriter } from '../_generated/server'
@@ -12,12 +13,12 @@ async function getPins(db: DatabaseWriter, mapId: Id<'sidebarItems'>) {
 export const gameMapTriggers: SidebarItemTriggerHandlers = {
   onSoftDelete: async (db, item, deletion) => {
     const pins = await getPins(db, item.id)
-    await Promise.all(pins.map((p) => db.patch('mapPins', p._id, deletion)))
+    await asyncMap(pins, (p) => db.patch('mapPins', p._id, deletion))
   },
 
   onRestore: async (db, item, cleared) => {
     const pins = await getPins(db, item.id)
-    await Promise.all(pins.map((p) => db.patch('mapPins', p._id, cleared)))
+    await asyncMap(pins, (p) => db.patch('mapPins', p._id, cleared))
   },
 
   onHardDelete: async (db, storage, item) => {
@@ -30,10 +31,8 @@ export const gameMapTriggers: SidebarItemTriggerHandlers = {
     ])
     const imageStorageId = ext?.imageStorageId ?? null
     if (imageStorageId) await storage.delete(imageStorageId)
-    await Promise.all([
-      ...pins.map((p) => db.delete('mapPins', p._id)),
-      ext ? db.delete('gameMaps', ext._id) : Promise.resolve(),
-    ])
+    await asyncMap(pins, (p) => db.delete('mapPins', p._id))
+    if (ext) await db.delete('gameMaps', ext._id)
     return imageStorageId
   },
 }

@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase, enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
@@ -51,7 +52,7 @@ export const enhanceGameMapWithContent = async (
       .collect(),
   ])
 
-  const pins = (await Promise.all(rawPins.map((pin) => enhanceMapPin(ctx, { pin })))).filter(
+  const pins = (await asyncMap(rawPins, (pin) => enhanceMapPin(ctx, { pin }))).filter(
     (pin) => pin !== null,
   )
 

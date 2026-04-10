@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { requireCampaignMembership } from '../../functions'
 import { logger } from '../../common/logger'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
@@ -16,28 +17,25 @@ export async function getCampaignMembers(
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
+  const activeMembers = members.filter((m) => m.deletionTime === null)
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
-  await Promise.all(
-    members.map(async (member) => {
-      const profile = await getUserProfileById(ctx, {
-        profileId: member.userId,
-      })
-      if (profile) profilesByUserId.set(member.userId, profile)
-    }),
-  )
-  return members
-    .filter((m) => m.deletionTime === null)
-    .flatMap((member) => {
-      const profile = profilesByUserId.get(member.userId)
-      if (!profile) {
-        logger.warn(`User profile not found for userId: ${member.userId}`)
-        return []
-      }
-      return [
-        {
-          ...member,
-          userProfile: profile,
-        },
-      ]
+  await asyncMap(activeMembers, async (member) => {
+    const profile = await getUserProfileById(ctx, {
+      profileId: member.userId,
     })
+    if (profile) profilesByUserId.set(member.userId, profile)
+  })
+  return activeMembers.flatMap((member) => {
+    const profile = profilesByUserId.get(member.userId)
+    if (!profile) {
+      logger.warn(`User profile not found for userId: ${member.userId}`)
+      return []
+    }
+    return [
+      {
+        ...member,
+        userProfile: profile,
+      },
+    ]
+  })
 }

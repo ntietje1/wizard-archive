@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
@@ -19,11 +20,10 @@ export const getSidebarItemsByParent = async (
     )
     .collect()
 
-  const items = await Promise.all(rawItems.map((raw) => getSidebarItem(ctx, raw._id)))
-
-  return await Promise.all(
-    items
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .map((item) => enhanceSidebarItem(ctx, { item })),
-  )
+  return (
+    await asyncMap(rawItems, async (raw) => {
+      const item = await getSidebarItem(ctx, raw._id)
+      return item ? enhanceSidebarItem(ctx, { item }) : null
+    })
+  ).filter((item): item is NonNullable<typeof item> => item !== null)
 }

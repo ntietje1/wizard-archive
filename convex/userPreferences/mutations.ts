@@ -1,11 +1,12 @@
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { authMutation } from '../functions'
 
 const VALID_PANEL_IDS = ['left-sidebar', 'editor-right-sidebar'] as const
 
 export const setUserPreferences = authMutation({
   args: {
-    theme: v.optional(v.union(v.literal('light'), v.literal('dark'), v.literal('system'))),
+    theme: v.optional(literals('light', 'dark', 'system')),
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {

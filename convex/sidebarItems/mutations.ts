@@ -11,7 +11,7 @@ import type { Id } from '../_generated/dataModel'
 export const moveSidebarItem = authMutation({
   args: {
     itemId: sidebarItemIdValidator,
-    parentId: v.optional(v.union(v.id('sidebarItems'), v.null())),
+    parentId: v.optional(v.nullable(v.id('sidebarItems'))),
     location: v.optional(sidebarItemLocationValidator),
   },
   returns: sidebarItemIdValidator,
@@ -52,7 +52,7 @@ export const claimPreviewGeneration = authMutation({
   },
   returns: v.object({
     claimed: v.boolean(),
-    claimToken: v.union(v.string(), v.null()),
+    claimToken: v.nullable(v.string()),
   }),
   handler: async (ctx, args): Promise<{ claimed: boolean; claimToken: string | null }> => {
     return await claimPreviewGenerationFn(ctx, { itemId: args.itemId })

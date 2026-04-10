@@ -7,7 +7,7 @@ export const getDownloadUrl = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
-  returns: v.union(v.null(), v.string()),
+  returns: v.nullable(v.string()),
   handler: async (ctx, args): Promise<string | null> => {
     return await getDownloadUrlFn(ctx, { storageId: args.storageId })
   },
@@ -17,12 +17,11 @@ export const getStorageMetadata = authQuery({
   args: {
     storageId: v.id('_storage'),
   },
-  returns: v.union(
-    v.null(),
+  returns: v.nullable(
     v.object({
-      contentType: v.union(v.string(), v.null()),
+      contentType: v.nullable(v.string()),
       size: v.number(),
-      originalFileName: v.union(v.string(), v.null()),
+      originalFileName: v.nullable(v.string()),
     }),
   ),
   handler: async (ctx, args) => {

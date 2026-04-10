@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
@@ -30,7 +31,7 @@ export async function collectDescendants(
     const childFolders = children.filter((c) => c.type === SIDEBAR_ITEM_TYPES.folders)
     const nonFolders = children.filter((c) => c.type !== SIDEBAR_ITEM_TYPES.folders)
 
-    const enhanced = await Promise.all(nonFolders.map((raw) => getSidebarItem(ctx, raw._id)))
+    const enhanced = await asyncMap(nonFolders, (raw) => getSidebarItem(ctx, raw._id))
     for (const item of enhanced) {
       if (item) result.push(item)
     }

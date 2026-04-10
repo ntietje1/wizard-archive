@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { insertBlock } from './insertBlock'
@@ -28,18 +29,17 @@ export async function saveTopLevelBlocksForNote(
   const positions = new Map<string, number>()
   content.forEach((block, index) => positions.set(block.id, index))
 
-  await Promise.all(
-    content.map((block) => {
-      const existingBlock = existingBlocksMap.get(block.id)
-      if (existingBlock) {
-        return updateBlock(ctx, {
-          blockDbId: existingBlock._id,
-          position: positions.get(block.id),
-          content: block,
-          isTopLevel: existingBlock.isTopLevel,
-        })
-      }
-      return insertBlock(ctx, {
+  await asyncMap(content, async (block) => {
+    const existingBlock = existingBlocksMap.get(block.id)
+    if (existingBlock) {
+      await updateBlock(ctx, {
+        blockDbId: existingBlock._id,
+        position: positions.get(block.id),
+        content: block,
+        isTopLevel: existingBlock.isTopLevel,
+      })
+    } else {
+      await insertBlock(ctx, {
         noteId,
         campaignId,
         blockId: block.id,
@@ -48,15 +48,13 @@ export async function saveTopLevelBlocksForNote(
         content: block,
         shareStatus: SHARE_STATUS.NOT_SHARED,
       })
-    }),
-  )
+    }
+  })
   const remainingBlocks = existingTopLevelBlocks.filter(
     (b) => !content.some((b2) => b2.id === b.blockId),
   )
-  await Promise.all(
-    remainingBlocks.map(async (block) => {
-      await ctx.db.patch('blocks', block._id, { isTopLevel: false })
-      await removeBlockIfNotNeeded(ctx, { blockId: block._id })
-    }),
-  )
+  await asyncMap(remainingBlocks, async (block) => {
+    await ctx.db.patch('blocks', block._id, { isTopLevel: false })
+    await removeBlockIfNotNeeded(ctx, { blockId: block._id })
+  })
 }

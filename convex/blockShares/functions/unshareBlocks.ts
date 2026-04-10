@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
@@ -32,14 +33,12 @@ export const unshareBlocks = async (
 
   await requireDmRole(ctx, note.campaignId)
 
-  await Promise.all(
-    blockNoteIds.map((blockNoteId) =>
-      unshareBlockFromMemberHelper(ctx, {
-        note,
-        blockNoteId,
-        campaignMemberId,
-      }),
-    ),
+  await asyncMap(blockNoteIds, (blockNoteId) =>
+    unshareBlockFromMemberHelper(ctx, {
+      note,
+      blockNoteId,
+      campaignMemberId,
+    }),
   )
 
   await logEditHistory(ctx, {

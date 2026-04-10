@@ -7,7 +7,7 @@ export const getSnapshotForHistoryEntry = authQuery({
   args: {
     editHistoryId: v.id('editHistory'),
   },
-  returns: v.union(documentSnapshotValidator, v.null()),
+  returns: v.nullable(documentSnapshotValidator),
   handler: async (ctx, { editHistoryId }) => {
     return await getSnapshotFn(ctx, { editHistoryId })
   },

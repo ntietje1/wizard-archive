@@ -25,7 +25,6 @@ export const shareSidebarItem = authMutation({
   handler: async (ctx, args) => {
     return await shareSidebarItemFn(ctx, {
       sidebarItemId: args.sidebarItemId,
-      sidebarItemType: args.sidebarItemType,
       campaignMemberId: args.campaignMemberId,
       permissionLevel: args.permissionLevel ?? null,
     })
@@ -65,7 +64,6 @@ export const updateSidebarItemSharePermission = authMutation({
   handler: async (ctx, args) => {
     await shareSidebarItemFn(ctx, {
       sidebarItemId: args.sidebarItemId,
-      sidebarItemType: args.sidebarItemType,
       campaignMemberId: args.campaignMemberId,
       permissionLevel: args.permissionLevel,
     })
@@ -81,7 +79,7 @@ export const updateSidebarItemSharePermission = authMutation({
 export const setAllPlayersPermission = authMutation({
   args: {
     sidebarItemId: sidebarItemIdValidator,
-    permissionLevel: v.union(permissionLevelValidator, v.null()),
+    permissionLevel: v.nullable(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

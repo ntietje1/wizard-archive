@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -23,7 +24,7 @@ export async function rollbackYjsDocument(
     if (batch.length === 0) {
       hasMore = false
     } else {
-      await Promise.all(batch.map((row) => ctx.db.delete('yjsUpdates', row._id)))
+      await asyncMap(batch, (row) => ctx.db.delete('yjsUpdates', row._id))
       if (batch.length < DELETE_BATCH_SIZE) hasMore = false
     }
   }

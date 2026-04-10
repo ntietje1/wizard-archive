@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -35,7 +36,7 @@ export async function captureGameMapSnapshot(
     throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
   }
 
-  const pinItems = await Promise.all(pins.map((pin) => ctx.db.get('sidebarItems', pin.itemId)))
+  const pinItems = await asyncMap(pins, (pin) => ctx.db.get('sidebarItems', pin.itemId))
 
   const validPins: Array<{
     pin: (typeof pins)[number]

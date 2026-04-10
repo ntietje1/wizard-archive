@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
@@ -29,24 +30,27 @@ export const enhanceNoteWithContent = async (
     getTopLevelBlocksByNote(ctx, { noteId: note._id }),
   ])
 
+  const blockMetaEntries = await asyncMap(topLevelBlocks, async (block) => {
+    const [result, blockShares] = await Promise.all([
+      enforceBlockSharePermissionsOrNull(ctx, { block }),
+      block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
+        ? getBlockSharesByBlock(ctx, { block })
+        : Promise.resolve([]),
+    ])
+    if (!result) return null
+    return {
+      blockId: block.blockId,
+      meta: {
+        myPermissionLevel: result.permissionLevel,
+        shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+        sharedWith: blockShares.map((s) => s.campaignMemberId),
+      } satisfies BlockMeta,
+    }
+  })
   const blockMeta: Record<string, BlockMeta> = {}
-  await Promise.all(
-    topLevelBlocks.map(async (block) => {
-      const [result, blockShares] = await Promise.all([
-        enforceBlockSharePermissionsOrNull(ctx, { block }),
-        block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-          ? getBlockSharesByBlock(ctx, { block })
-          : Promise.resolve([]),
-      ])
-      if (result) {
-        blockMeta[block.blockId] = {
-          myPermissionLevel: result.permissionLevel,
-          shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
-          sharedWith: blockShares.map((s) => s.campaignMemberId),
-        }
-      }
-    }),
-  )
+  for (const entry of blockMetaEntries) {
+    if (entry) blockMeta[entry.blockId] = entry.meta
+  }
 
   const content = topLevelBlocks.map((block) => block.content)
   return {

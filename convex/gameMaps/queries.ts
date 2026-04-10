@@ -8,7 +8,7 @@ export const getMap = authQuery({
   args: {
     mapId: v.id('sidebarItems'),
   },
-  returns: v.union(mapWithContentValidator, v.null()),
+  returns: v.nullable(mapWithContentValidator),
   handler: async (ctx, args): Promise<GameMapWithContent | null> => {
     return (await getSidebarItemWithContent(ctx, args.mapId)) as GameMapWithContent | null
   },

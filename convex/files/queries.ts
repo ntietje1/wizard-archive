@@ -8,7 +8,7 @@ export const getFile = authQuery({
   args: {
     fileId: v.id('sidebarItems'),
   },
-  returns: v.union(fileWithContentValidator, v.null()),
+  returns: v.nullable(fileWithContentValidator),
   handler: async (ctx, args): Promise<FileWithContent | null> => {
     return (await getSidebarItemWithContent(ctx, args.fileId)) as FileWithContent | null
   },

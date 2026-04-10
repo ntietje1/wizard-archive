@@ -32,7 +32,7 @@ export const getSidebarItemsByLocation = authQuery({
 export const getSidebarItemsByParent = authQuery({
   args: {
     campaignId: v.id('campaigns'),
-    parentId: v.union(v.id('sidebarItems'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
@@ -62,7 +62,7 @@ export const getSidebarItemBySlug = authQuery({
     campaignId: v.id('campaigns'),
     slug: v.string(),
   },
-  returns: v.union(anySidebarItemWithContentValidator, v.null()),
+  returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
     return await getSidebarItemBySlugFn(ctx, {
       slug: args.slug,

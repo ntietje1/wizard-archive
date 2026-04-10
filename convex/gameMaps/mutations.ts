@@ -14,7 +14,7 @@ export const createMap = authMutation({
     campaignId: v.id('campaigns'),
     name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
-    parentId: v.union(v.id('sidebarItems'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -38,9 +38,9 @@ export const updateMap = authMutation({
   args: {
     mapId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    imageStorageId: v.optional(v.union(v.id('_storage'), v.null())),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    imageStorageId: v.optional(v.nullable(v.id('_storage'))),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),

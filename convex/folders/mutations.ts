@@ -8,8 +8,8 @@ export const updateFolder = authMutation({
   args: {
     folderId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
     folderId: v.id('sidebarItems'),
@@ -29,7 +29,7 @@ export const createFolder = authMutation({
   args: {
     campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('sidebarItems'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },

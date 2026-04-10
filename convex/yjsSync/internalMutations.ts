@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { asyncMap } from 'convex-helpers'
 import { internalMutation } from '../_generated/server'
 import { EDIT_HISTORY_ACTION } from '../editHistory/types'
 import { captureNoteSnapshot } from '../notes/functions/captureNoteSnapshot'
@@ -25,7 +26,7 @@ export const cleanupStaleAwareness = internalMutation({
       .query('yjsAwareness')
       .withIndex('by_updatedAt', (q) => q.lt('updatedAt', staleThreshold))
       .collect()
-    await Promise.all(stale.map((row) => ctx.db.delete('yjsAwareness', row._id)))
+    await asyncMap(stale, (row) => ctx.db.delete('yjsAwareness', row._id))
   },
 })
 

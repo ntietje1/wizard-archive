@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
@@ -79,29 +80,18 @@ export async function rollbackGameMap(
   const now = Date.now()
   const profileId = ctx.user.profile._id
 
-  await Promise.all(
-    existingPins.map((pin) =>
-      ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: profileId }),
-    ),
+  await asyncMap(existingPins, (pin) =>
+    ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: profileId }),
   )
 
-  const pinTargetChecks = await Promise.all(
-    parsed.pins.map(async (pin) => {
-      try {
-        const item = await ctx.db.get('sidebarItems', pin.itemId)
-        return { pin, exists: item !== null && !item.deletionTime }
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e)
-        if (message.includes('Invalid ID') || message.includes('not found')) {
-          return { pin, exists: false }
-        }
-        logger.warn(
-          `rollbackGameMap: unexpected error checking pin target ${pin.itemId}: ${message}`,
-        )
-        throw e
-      }
-    }),
-  )
+  const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
+    try {
+      const item = await ctx.db.get('sidebarItems', pin.itemId)
+      return { pin, exists: item !== null && !item.deletionTime }
+    } catch {
+      return { pin, exists: false }
+    }
+  })
   const validPins = pinTargetChecks.filter((p) => p.exists).map((p) => p.pin)
   const skippedCount = pinTargetChecks.length - validPins.length
   if (skippedCount > 0) {
@@ -111,20 +101,18 @@ export async function rollbackGameMap(
     )
   }
 
-  await Promise.all(
-    validPins.map((pin) =>
-      ctx.db.insert('mapPins', {
-        mapId: map._id,
-        itemId: pin.itemId,
-        x: pin.x,
-        y: pin.y,
-        visible: pin.visible,
-        createdBy: profileId,
-        updatedTime: null,
-        updatedBy: null,
-        deletionTime: null,
-        deletedBy: null,
-      }),
-    ),
+  await asyncMap(validPins, (pin) =>
+    ctx.db.insert('mapPins', {
+      mapId: map._id,
+      itemId: pin.itemId,
+      x: pin.x,
+      y: pin.y,
+      visible: pin.visible,
+      createdBy: profileId,
+      updatedTime: null,
+      updatedBy: null,
+      deletionTime: null,
+      deletedBy: null,
+    }),
   )
 }

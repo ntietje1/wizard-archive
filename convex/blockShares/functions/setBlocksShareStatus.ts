@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
@@ -37,14 +38,12 @@ export const setBlocksShareStatus = async (
 
   await requireDmRole(ctx, note.campaignId)
 
-  await Promise.all(
-    blocks.map((blockItem) =>
-      setBlockShareStatusHelper(ctx, {
-        note,
-        blockItem,
-        status,
-      }),
-    ),
+  await asyncMap(blocks, (blockItem) =>
+    setBlockShareStatusHelper(ctx, {
+      note,
+      blockItem,
+      status,
+    }),
   )
 
   await logEditHistory(ctx, {

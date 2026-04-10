@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import type { MutationCtx } from '../../_generated/server'
 import type { YjsDocumentId } from './types'
 
@@ -14,7 +15,7 @@ export async function deleteYjsDocument(ctx: Pick<MutationCtx, 'db'>, documentId
   ])
 
   await Promise.all([
-    ...updates.map((row) => ctx.db.delete('yjsUpdates', row._id)),
-    ...awareness.map((row) => ctx.db.delete('yjsAwareness', row._id)),
+    asyncMap(updates, (row) => ctx.db.delete('yjsUpdates', row._id)),
+    asyncMap(awareness, (row) => ctx.db.delete('yjsAwareness', row._id)),
   ])
 }

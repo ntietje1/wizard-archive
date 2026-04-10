@@ -2,19 +2,16 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function shareSidebarItemWithMember(
   ctx: AuthMutationCtx,
   {
     sidebarItemId,
-    sidebarItemType,
     campaignMemberId,
     permissionLevel,
   }: {
     sidebarItemId: Id<'sidebarItems'>
-    sidebarItemType: SidebarItemType
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: PermissionLevel | null
   },
@@ -22,6 +19,7 @@ export async function shareSidebarItemWithMember(
   const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   const campaignId = item.campaignId
+  const sidebarItemType = item.type
 
   const member = await ctx.db.get('campaignMembers', campaignMemberId)
   if (!member || member.campaignId !== campaignId)

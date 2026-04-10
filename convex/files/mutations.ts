@@ -9,7 +9,7 @@ export const createFile = authMutation({
     campaignId: v.id('campaigns'),
     name: v.string(),
     storageId: v.optional(v.id('_storage')),
-    parentId: v.union(v.id('sidebarItems'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -33,9 +33,9 @@ export const updateFile = authMutation({
   args: {
     fileId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    storageId: v.optional(v.union(v.id('_storage'), v.null())),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    storageId: v.optional(v.nullable(v.id('_storage'))),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
     fileId: v.id('sidebarItems'),

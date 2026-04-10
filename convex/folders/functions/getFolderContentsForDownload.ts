@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
@@ -42,8 +43,8 @@ async function collectItemsRecursively(
 ): Promise<Array<DownloadItem>> {
   const children = await getSidebarItemsByParent(ctx, { campaignId, parentId })
   const items: Array<DownloadItem> = []
-  const permissionLevels = await Promise.all(
-    children.map((child) => getSidebarItemPermissionLevel(ctx, { item: child })),
+  const permissionLevels = await asyncMap(children, (child) =>
+    getSidebarItemPermissionLevel(ctx, { item: child }),
   )
   const buildPath = (name: string) => (currentPath ? `${currentPath}/${name}` : name)
 
@@ -68,8 +69,8 @@ async function collectItemsRecursively(
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
-        const results = await Promise.all(
-          topLevelBlocks.map((block) => enforceBlockSharePermissionsOrNull(ctx, { block })),
+        const results = await asyncMap(topLevelBlocks, (block) =>
+          enforceBlockSharePermissionsOrNull(ctx, { block }),
         )
         const content = results
           .filter((result): result is NonNullable<typeof result> => result !== null)
@@ -120,6 +121,8 @@ export async function getFolderContentsForDownload(
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
   const rawItem = await getSidebarItem(ctx, folderId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
+  if (rawItem.type !== SIDEBAR_ITEM_TYPES.folders)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item is not a folder')
   const campaignId = rawItem.campaignId
   await requireCampaignMembership(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {

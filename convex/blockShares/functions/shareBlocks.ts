@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireDmRole } from '../../functions'
@@ -32,14 +33,12 @@ export const shareBlocks = async (
 
   await requireDmRole(ctx, note.campaignId)
 
-  await Promise.all(
-    blocks.map((blockItem) =>
-      shareBlockWithMemberHelper(ctx, {
-        note,
-        blockItem,
-        campaignMemberId,
-      }),
-    ),
+  await asyncMap(blocks, (blockItem) =>
+    shareBlockWithMemberHelper(ctx, {
+      note,
+      blockItem,
+      campaignMemberId,
+    }),
   )
 
   await logEditHistory(ctx, {

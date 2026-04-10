@@ -2,20 +2,21 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
 
-const profileImageValidator = v.union(
-  v.object({ type: v.literal('external'), url: v.string() }),
-  v.object({ type: v.literal('storage'), storageId: v.id('_storage') }),
-  v.null(),
+const profileImageValidator = v.nullable(
+  v.union(
+    v.object({ type: v.literal('external'), url: v.string() }),
+    v.object({ type: v.literal('storage'), storageId: v.id('_storage') }),
+  ),
 )
 
 const userProfileTableFields = {
   authUserId: v.string(),
   username: v.string(),
-  email: v.union(v.string(), v.null()),
-  emailVerified: v.union(v.boolean(), v.null()),
-  name: v.union(v.string(), v.null()),
+  email: v.nullable(v.string()),
+  emailVerified: v.nullable(v.boolean()),
+  name: v.nullable(v.string()),
   profileImage: profileImageValidator,
-  twoFactorEnabled: v.union(v.boolean(), v.null()),
+  twoFactorEnabled: v.nullable(v.boolean()),
 }
 
 // does not include commonTableFields because profile needs to exist before tracking these
@@ -34,11 +35,11 @@ const userProfileValidatorFields = {
   ...convexValidatorFields('userProfiles'),
   authUserId: v.string(),
   username: v.string(),
-  email: v.union(v.string(), v.null()),
-  emailVerified: v.union(v.boolean(), v.null()),
-  name: v.union(v.string(), v.null()),
-  imageUrl: v.union(v.string(), v.null()),
-  twoFactorEnabled: v.union(v.boolean(), v.null()),
+  email: v.nullable(v.string()),
+  emailVerified: v.nullable(v.boolean()),
+  name: v.nullable(v.string()),
+  imageUrl: v.nullable(v.string()),
+  twoFactorEnabled: v.nullable(v.boolean()),
 }
 
 export const userProfileValidator = v.object(userProfileValidatorFields)

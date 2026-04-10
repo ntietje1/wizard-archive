@@ -11,10 +11,8 @@ export const canvasTriggers: SidebarItemTriggerHandlers = {
       .query('canvases')
       .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', item.id))
       .unique()
-    await Promise.all([
-      ext ? db.delete('canvases', ext._id) : Promise.resolve(),
-      deleteYjsDocument({ db }, item.id),
-    ])
+    if (ext) await db.delete('canvases', ext._id)
+    await deleteYjsDocument({ db }, item.id)
     return null
   },
 }

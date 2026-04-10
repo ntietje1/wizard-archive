@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -30,14 +31,12 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
       .collect(),
   ])
 
-  await Promise.all([
-    ...prefs.map((p) => ctx.db.delete('userPreferences', p._id)),
-    ...editors.map((e) => ctx.db.delete('editor', e._id)),
-    ...files.map(async (f) => {
-      await ctx.storage.delete(f.storageId)
-      await ctx.db.delete('fileStorage', f._id)
-    }),
-  ])
+  await asyncMap(prefs, (p) => ctx.db.delete('userPreferences', p._id))
+  await asyncMap(editors, (e) => ctx.db.delete('editor', e._id))
+  await asyncMap(files, async (f) => {
+    await ctx.storage.delete(f.storageId)
+    await ctx.db.delete('fileStorage', f._id)
+  })
 
   const memberships = await ctx.db
     .query('campaignMembers')
@@ -83,11 +82,9 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
       updatedBy: profileId,
     }
 
-    await Promise.all([
-      ...sidebarShares.map((s) => ctx.db.patch('sidebarItemShares', s._id, softDelete)),
-      ...blockShares.map((s) => ctx.db.patch('blockShares', s._id, softDelete)),
-      ctx.db.patch('campaignMembers', member._id, softDelete),
-    ])
+    await asyncMap(sidebarShares, (s) => ctx.db.patch('sidebarItemShares', s._id, softDelete))
+    await asyncMap(blockShares, (s) => ctx.db.patch('blockShares', s._id, softDelete))
+    await ctx.db.patch('campaignMembers', member._id, softDelete)
   }
 
   await ctx.db.delete('userProfiles', profileId)

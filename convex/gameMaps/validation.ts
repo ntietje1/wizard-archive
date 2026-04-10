@@ -5,7 +5,7 @@ export function validatePinTarget(
   itemId: Id<'sidebarItems'>,
   existingPinItemIds: ReadonlyArray<Id<'sidebarItems'>>,
 ): string | null {
-  if ((itemId as string) === (mapId as string)) {
+  if (itemId === mapId) {
     return 'Cannot pin a map to itself'
   }
   if (existingPinItemIds.includes(itemId)) {

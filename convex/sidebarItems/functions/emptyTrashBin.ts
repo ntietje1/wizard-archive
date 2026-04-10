@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { requireDmRole } from '../../functions'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteTree } from './treeOperations'
@@ -26,9 +27,9 @@ export async function emptyTrashBin(
   const isRoot = (item: AnySidebarItemFromDb) =>
     !item.parentId || !trashedFolderIds.has(item.parentId)
 
-  const enhanced = (
-    await Promise.all(allTrashed.map((raw) => getSidebarItem(ctx, raw._id)))
-  ).filter((item): item is NonNullable<typeof item> => item !== null)
+  const enhanced = (await asyncMap(allTrashed, (raw) => getSidebarItem(ctx, raw._id))).filter(
+    (item): item is NonNullable<typeof item> => item !== null,
+  )
 
   const rootFolders = enhanced.filter((i) => i.type === SIDEBAR_ITEM_TYPES.folders && isRoot(i))
   const rootNonFolders = enhanced.filter((i) => i.type !== SIDEBAR_ITEM_TYPES.folders && isRoot(i))

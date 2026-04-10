@@ -1,25 +1,22 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 export const blockNoteIdValidator = v.string()
 
 export const customBlockValidator = v.any() // BlockNote block content
 
-export const blockShareStatusValidator = v.union(
-  v.literal('all_shared'),
-  v.literal('not_shared'),
-  v.literal('individually_shared'),
-)
+export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'individually_shared')
 
 const blockTableFields = {
   noteId: v.id('sidebarItems'),
   blockId: v.string(),
-  position: v.union(v.number(), v.null()),
+  position: v.nullable(v.number()),
   content: customBlockValidator,
   isTopLevel: v.boolean(),
   campaignId: v.id('campaigns'),
-  shareStatus: v.union(blockShareStatusValidator, v.null()),
+  shareStatus: v.nullable(blockShareStatusValidator),
   ...commonTableFields,
 }
 

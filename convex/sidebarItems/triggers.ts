@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import { noteTriggers } from '../notes/triggers'
 import { gameMapTriggers } from '../gameMaps/triggers'
@@ -90,10 +91,8 @@ async function cascadeSharedDependents(
       .collect(),
   ])
 
-  await Promise.all([
-    ...shares.map((s) => operation(s._id, 'sidebarItemShares')),
-    ...bookmarks.map((b) => operation(b._id, 'bookmarks')),
-  ])
+  await asyncMap(shares, (s) => operation(s._id, 'sidebarItemShares'))
+  await asyncMap(bookmarks, (b) => operation(b._id, 'bookmarks'))
 }
 
 export function registerSidebarItemTriggers(triggers: Triggers<DataModel, MutationCtx>) {

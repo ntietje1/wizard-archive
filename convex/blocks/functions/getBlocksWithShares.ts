@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
@@ -54,34 +55,30 @@ export const getBlocksWithShares = async (
     else sharesByBlockId.set(share.blockId, [share.campaignMemberId])
   }
 
-  const blocks = await Promise.all(
-    blockIds.map(async (blockId): Promise<BlockShareInfo> => {
-      const block = await findBlockByBlockNoteId(ctx, { noteId, blockId })
+  const blocks = await asyncMap(blockIds, async (blockId): Promise<BlockShareInfo> => {
+    const block = await findBlockByBlockNoteId(ctx, { noteId, blockId })
 
-      if (!block) {
-        return {
-          blockNoteId: blockId,
-          shareStatus: SHARE_STATUS.NOT_SHARED,
-          sharedMemberIds: [],
-          isTopLevel: true,
-        }
-      }
-
-      const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
-
-      const sharedMemberIds =
-        shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-          ? (sharesByBlockId.get(block._id) ?? [])
-          : []
-
+    if (!block) {
       return {
         blockNoteId: blockId,
-        shareStatus,
-        sharedMemberIds,
-        isTopLevel: block.isTopLevel,
+        shareStatus: SHARE_STATUS.NOT_SHARED,
+        sharedMemberIds: [],
+        isTopLevel: true,
       }
-    }),
-  )
+    }
+
+    const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
+
+    const sharedMemberIds =
+      shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED ? (sharesByBlockId.get(block._id) ?? []) : []
+
+    return {
+      blockNoteId: blockId,
+      shareStatus,
+      sharedMemberIds,
+      isTopLevel: block.isTopLevel,
+    }
+  })
 
   return {
     blocks,

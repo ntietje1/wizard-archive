@@ -8,18 +8,14 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
-import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
-
 export const shareSidebarItem = async (
   ctx: AuthMutationCtx,
   {
     sidebarItemId,
-    sidebarItemType,
     campaignMemberId,
     permissionLevel,
   }: {
     sidebarItemId: Id<'sidebarItems'>
-    sidebarItemType: SidebarItemType
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: PermissionLevel | null
   },
@@ -45,7 +41,6 @@ export const shareSidebarItem = async (
 
   const result = await shareSidebarItemWithMember(ctx, {
     sidebarItemId,
-    sidebarItemType,
     campaignMemberId,
     permissionLevel,
   })

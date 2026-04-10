@@ -8,7 +8,7 @@ export const getNote = authQuery({
   args: {
     noteId: v.id('sidebarItems'),
   },
-  returns: v.union(noteWithContentValidator, v.null()),
+  returns: v.nullable(noteWithContentValidator),
   handler: async (ctx, args): Promise<NoteWithContent | null> => {
     return (await getSidebarItemWithContent(ctx, args.noteId)) as NoteWithContent | null
   },

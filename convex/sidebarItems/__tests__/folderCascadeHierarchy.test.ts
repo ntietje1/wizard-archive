@@ -120,10 +120,14 @@ describe('folder cascade hierarchy', () => {
 
       expect(afterRestore.folder!.location).toBe('sidebar')
       expect(afterRestore.folder!.deletionTime).toBeNull()
+      expect(afterRestore.note!.location).toBe('sidebar')
       expect(afterRestore.note!.deletionTime).toBeNull()
       expect(afterRestore.note!.parentId).toBe(folderId)
+      expect(afterRestore.canvas!.location).toBe('sidebar')
       expect(afterRestore.canvas!.deletionTime).toBeNull()
+      expect(afterRestore.map!.location).toBe('sidebar')
       expect(afterRestore.map!.deletionTime).toBeNull()
+      expect(afterRestore.file!.location).toBe('sidebar')
       expect(afterRestore.file!.deletionTime).toBeNull()
       expect(afterRestore.block!.deletionTime).toBeNull()
       expect(afterRestore.blockShare!.deletionTime).toBeNull()
@@ -365,6 +369,38 @@ describe('folder cascade hierarchy', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
+      const extIds = await t.run(async (dbCtx) => {
+        const [noteExt, mapExt, rootExt, childExt, grandchildExt] = await Promise.all([
+          dbCtx.db
+            .query('notes')
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafNote))
+            .unique(),
+          dbCtx.db
+            .query('gameMaps')
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafMap))
+            .unique(),
+          dbCtx.db
+            .query('folders')
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', root))
+            .unique(),
+          dbCtx.db
+            .query('folders')
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', child))
+            .unique(),
+          dbCtx.db
+            .query('folders')
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', grandchild))
+            .unique(),
+        ])
+        return {
+          noteExtId: noteExt!._id,
+          mapExtId: mapExt!._id,
+          rootExtId: rootExt!._id,
+          childExtId: childExt!._id,
+          grandchildExtId: grandchildExt!._id,
+        }
+      })
+
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         itemId: root,
         location: 'trash',
@@ -382,6 +418,11 @@ describe('folder cascade hierarchy', () => {
         block: await dbCtx.db.get('blocks', block.blockDbId),
         pin: await dbCtx.db.get('mapPins', pin.pinId),
         share: await dbCtx.db.get('sidebarItemShares', share.shareId),
+        noteExt: await dbCtx.db.get('notes', extIds.noteExtId),
+        mapExt: await dbCtx.db.get('gameMaps', extIds.mapExtId),
+        rootExt: await dbCtx.db.get('folders', extIds.rootExtId),
+        childExt: await dbCtx.db.get('folders', extIds.childExtId),
+        grandchildExt: await dbCtx.db.get('folders', extIds.grandchildExtId),
       }))
 
       expect(afterDelete.root).toBeNull()
@@ -392,6 +433,11 @@ describe('folder cascade hierarchy', () => {
       expect(afterDelete.block).toBeNull()
       expect(afterDelete.pin).toBeNull()
       expect(afterDelete.share).toBeNull()
+      expect(afterDelete.noteExt).toBeNull()
+      expect(afterDelete.mapExt).toBeNull()
+      expect(afterDelete.rootExt).toBeNull()
+      expect(afterDelete.childExt).toBeNull()
+      expect(afterDelete.grandchildExt).toBeNull()
     })
   })
 })

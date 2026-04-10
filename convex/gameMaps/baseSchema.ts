@@ -8,9 +8,9 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 const mapValidatorFields = {
   ...commonValidatorFields('sidebarItems'),
   ...commonSidebarItemValidatorFields,
-  imageStorageId: v.union(v.id('_storage'), v.null()),
+  imageStorageId: v.nullable(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
-  imageUrl: v.union(v.string(), v.null()),
+  imageUrl: v.nullable(v.string()),
 }
 
 export const mapValidator = v.object(mapValidatorFields)

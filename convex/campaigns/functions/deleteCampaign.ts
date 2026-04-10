@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { requireDmRole } from '../../functions'
@@ -15,7 +16,7 @@ export async function deleteCampaign(
     .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const items = await Promise.all(rawItems.map((raw) => getSidebarItem(ctx, raw._id)))
+  const items = await asyncMap(rawItems, (raw) => getSidebarItem(ctx, raw._id))
 
   for (const item of items) {
     if (item) await hardDeleteItem(ctx, item)
