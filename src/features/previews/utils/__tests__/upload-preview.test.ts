@@ -1,17 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { uploadPreviewBlob } from '../upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 
 const MOCK_UPLOAD_URL = 'https://upload.example.com/upload'
 const MOCK_STORAGE_ID = 'storage_abc123' as Id<'_storage'>
-const MOCK_ITEM_ID = 'note_123' as SidebarItemId
+const MOCK_ITEM_ID = 'note_123' as Id<'sidebarItems'>
 const MOCK_CLAIM_TOKEN = 'test-claim-token'
 
 describe('uploadPreviewBlob', () => {
   let mockGenerateUploadUrl: () => Promise<string>
   let mockSetPreviewImage: (args: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     previewStorageId: Id<'_storage'>
     claimToken: string
   }) => Promise<null>

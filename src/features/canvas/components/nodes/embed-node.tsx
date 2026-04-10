@@ -10,7 +10,7 @@ import { EmbedMapContent } from './embed-content/embed-map-content'
 import { EmbedFileContent } from './embed-content/embed-file-content'
 import { EmbedCanvasContent } from './embed-content/embed-canvas-content'
 import type { NodeProps } from '@xyflow/react'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -18,7 +18,7 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { assertNever } from '~/shared/utils/utils'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
-  const sidebarItemId = data.sidebarItemId as SidebarItemId | undefined
+  const sidebarItemId = data.sidebarItemId as Id<'sidebarItems'> | undefined
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 

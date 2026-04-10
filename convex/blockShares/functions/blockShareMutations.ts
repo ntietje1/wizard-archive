@@ -6,7 +6,6 @@ import { removeBlockIfNotNeeded } from '../../blocks/functions/removeBlockIfNotN
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { BlockItem, ShareStatus } from '../types'
@@ -58,7 +57,7 @@ async function addBlockShare(
     blockId,
     campaignMemberId,
   }: {
-    noteId: SidebarItemId
+    noteId: Id<'sidebarItems'>
     blockId: Id<'blocks'>
     campaignMemberId: Id<'campaignMembers'>
   },

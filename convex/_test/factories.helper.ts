@@ -5,11 +5,7 @@ import { slugify } from '../common/slug'
 import type { TestConvex } from 'convex-test'
 import type { Id } from '../_generated/dataModel'
 import type schema from '../schema'
-import type {
-  SidebarItemId,
-  SidebarItemLocation,
-  SidebarItemType,
-} from '../sidebarItems/types/baseTypes'
+import type { SidebarItemLocation, SidebarItemType } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 
@@ -376,7 +372,7 @@ export async function createSidebarShare(
   creatorProfileId: Id<'userProfiles'>,
   overrides: {
     campaignId: Id<'campaigns'>
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     sidebarItemType: SidebarItemType
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel?: PermissionLevel | null
@@ -429,7 +425,7 @@ export async function createBookmark(
   creatorProfileId: Id<'userProfiles'>,
   overrides: {
     campaignId: Id<'campaigns'>
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     campaignMemberId: Id<'campaignMembers'>
     deletionTime?: number | null
     deletedBy?: Id<'userProfiles'> | null
@@ -450,7 +446,7 @@ export async function createMapPin(
   mapId: Id<'sidebarItems'>,
   creatorProfileId: Id<'userProfiles'>,
   overrides: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     x?: number
     y?: number
     visible?: boolean

@@ -6,7 +6,7 @@ import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from '
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/claimPreviewGeneration'
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
-import type { SidebarItemId } from './types/baseTypes'
+import type { Id } from '../_generated/dataModel'
 
 export const moveSidebarItem = authMutation({
   args: {
@@ -15,7 +15,7 @@ export const moveSidebarItem = authMutation({
     location: v.optional(sidebarItemLocationValidator),
   },
   returns: sidebarItemIdValidator,
-  handler: async (ctx, args): Promise<SidebarItemId> => {
+  handler: async (ctx, args): Promise<Id<'sidebarItems'>> => {
     return await moveSidebarItemFn(ctx, {
       itemId: args.itemId,
       parentId: args.parentId,

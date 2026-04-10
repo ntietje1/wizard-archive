@@ -6,12 +6,11 @@ import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { api } from '../../_generated/api'
 import type { TestConvex } from 'convex-test'
 import type schema from '../../schema'
-import type { SidebarItemId } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
 
 async function trashItem(
   t: TestConvex<typeof schema>,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   deletedBy: Id<'userProfiles'>,
   patches?: Record<string, unknown>,
 ) {

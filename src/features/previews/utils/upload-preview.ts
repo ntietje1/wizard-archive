@@ -1,15 +1,14 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 
 export async function uploadPreviewBlob(
   blob: Blob,
   generateUploadUrl: () => Promise<string>,
   setPreviewImage: (args: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     previewStorageId: Id<'_storage'>
     claimToken: string
   }) => Promise<null>,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   claimToken: string,
 ): Promise<void> {
   const uploadUrl = await generateUploadUrl()

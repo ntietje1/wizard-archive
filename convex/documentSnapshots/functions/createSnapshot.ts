@@ -1,6 +1,6 @@
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId, SidebarItemType } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
 import type { SnapshotType } from '../types'
 
 export async function createSnapshot(
@@ -14,7 +14,7 @@ export async function createSnapshot(
     data,
     createdBy,
   }: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     itemType: SidebarItemType
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>

@@ -5,14 +5,14 @@ import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItem } from './getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
-import type { SidebarItemId } from '../types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 const LEASE_DURATION_MS = 60_000
 export const COOLDOWN_MS = 5 * 60_000
 
 export async function claimPreviewGeneration(
   ctx: AuthMutationCtx,
-  { itemId }: { itemId: SidebarItemId },
+  { itemId }: { itemId: Id<'sidebarItems'> },
 ): Promise<{ claimed: boolean; claimToken: string | null }> {
   const item = await getSidebarItem(ctx, itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')

@@ -1,5 +1,4 @@
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemId } from './types/baseTypes'
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
@@ -47,8 +46,8 @@ export function validateItemName(name: string): ValidationResult {
  */
 export function checkNameConflict(
   name: string,
-  siblings: Array<{ _id: SidebarItemId; name: string }>,
-  excludeId?: SidebarItemId,
+  siblings: Array<{ _id: Id<'sidebarItems'>; name: string }>,
+  excludeId?: Id<'sidebarItems'>,
 ): ValidationResult {
   const normalizedName = name.trim().toLowerCase()
   const conflict = siblings.find(
@@ -71,7 +70,7 @@ export function checkNameConflict(
  * @param getParent - Callback to look up a parent item by ID
  */
 export function validateNoCircularParent(
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   newParentId: Id<'sidebarItems'> | null,
   getParent: (id: Id<'sidebarItems'>) => { parentId: Id<'sidebarItems'> | null } | undefined,
 ): ValidationResult {

@@ -1,7 +1,7 @@
 import { List } from 'lucide-react'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 
-export function OutlinePanel({ itemId: _itemId }: { itemId: SidebarItemId }) {
+export function OutlinePanel({ itemId: _itemId }: { itemId: Id<'sidebarItems'> }) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 text-center">
       <List className="h-8 w-8 text-muted-foreground mb-2" />

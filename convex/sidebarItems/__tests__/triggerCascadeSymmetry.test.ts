@@ -15,7 +15,8 @@ import {
 } from '../../_test/factories.helper'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { api } from '../../_generated/api'
-import type { SidebarItemId, SidebarItemType } from '../types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemType } from '../types/baseTypes'
 
 describe('trigger cascade symmetry', () => {
   const t = createTestContext()
@@ -201,10 +202,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       const afterTrash = await t.run(async (dbCtx) =>
-        Promise.all([
-          dbCtx.db.get('mapPins', pin1.pinId),
-          dbCtx.db.get('mapPins', pin2.pinId),
-        ]),
+        Promise.all([dbCtx.db.get('mapPins', pin1.pinId), dbCtx.db.get('mapPins', pin2.pinId)]),
       )
       expect(afterTrash[0]!.deletionTime).not.toBeNull()
       expect(afterTrash[1]!.deletionTime).not.toBeNull()
@@ -215,10 +213,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       const afterRestore = await t.run(async (dbCtx) =>
-        Promise.all([
-          dbCtx.db.get('mapPins', pin1.pinId),
-          dbCtx.db.get('mapPins', pin2.pinId),
-        ]),
+        Promise.all([dbCtx.db.get('mapPins', pin1.pinId), dbCtx.db.get('mapPins', pin2.pinId)]),
       )
       expect(afterRestore[0]!.deletionTime).toBeNull()
       expect(afterRestore[1]!.deletionTime).toBeNull()
@@ -398,7 +393,7 @@ describe('trigger cascade symmetry', () => {
     type CampaignCtx = Awaited<ReturnType<typeof setupCampaignContext>>
 
     async function testShareBookmarkRoundTrip(
-      createItem: (ctx: CampaignCtx) => Promise<{ itemId: SidebarItemId }>,
+      createItem: (ctx: CampaignCtx) => Promise<{ itemId: Id<'sidebarItems'> }>,
       itemType: SidebarItemType,
     ) {
       const ctx = await setupCampaignContext(t)
@@ -451,7 +446,7 @@ describe('trigger cascade symmetry', () => {
     }
 
     async function testShareBookmarkHardDelete(
-      createItem: (ctx: CampaignCtx) => Promise<{ itemId: SidebarItemId }>,
+      createItem: (ctx: CampaignCtx) => Promise<{ itemId: Id<'sidebarItems'> }>,
       itemType: SidebarItemType,
     ) {
       const ctx = await setupCampaignContext(t)
@@ -493,103 +488,73 @@ describe('trigger cascade symmetry', () => {
     }
 
     it('note: shares and bookmarks survive trash round-trip', async () => {
-      await testShareBookmarkRoundTrip(
-        async (ctx) => {
-          const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: noteId }
-        },
-        'note',
-      )
+      await testShareBookmarkRoundTrip(async (ctx) => {
+        const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: noteId }
+      }, 'note')
     })
 
     it('canvas: shares and bookmarks survive trash round-trip', async () => {
-      await testShareBookmarkRoundTrip(
-        async (ctx) => {
-          const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: canvasId }
-        },
-        'canvas',
-      )
+      await testShareBookmarkRoundTrip(async (ctx) => {
+        const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: canvasId }
+      }, 'canvas')
     })
 
     it('gameMap: shares and bookmarks survive trash round-trip', async () => {
-      await testShareBookmarkRoundTrip(
-        async (ctx) => {
-          const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: mapId }
-        },
-        'gameMap',
-      )
+      await testShareBookmarkRoundTrip(async (ctx) => {
+        const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: mapId }
+      }, 'gameMap')
     })
 
     it('file: shares and bookmarks survive trash round-trip', async () => {
-      await testShareBookmarkRoundTrip(
-        async (ctx) => {
-          const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: fileId }
-        },
-        'file',
-      )
+      await testShareBookmarkRoundTrip(async (ctx) => {
+        const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: fileId }
+      }, 'file')
     })
 
     it('folder: shares and bookmarks survive trash round-trip', async () => {
-      await testShareBookmarkRoundTrip(
-        async (ctx) => {
-          const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: folderId }
-        },
-        'folder',
-      )
+      await testShareBookmarkRoundTrip(async (ctx) => {
+        const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: folderId }
+      }, 'folder')
     })
 
     it('note: hard-delete removes shares and bookmarks', async () => {
-      await testShareBookmarkHardDelete(
-        async (ctx) => {
-          const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: noteId }
-        },
-        'note',
-      )
+      await testShareBookmarkHardDelete(async (ctx) => {
+        const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: noteId }
+      }, 'note')
     })
 
     it('canvas: hard-delete removes shares and bookmarks', async () => {
-      await testShareBookmarkHardDelete(
-        async (ctx) => {
-          const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: canvasId }
-        },
-        'canvas',
-      )
+      await testShareBookmarkHardDelete(async (ctx) => {
+        const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: canvasId }
+      }, 'canvas')
     })
 
     it('gameMap: hard-delete removes shares and bookmarks', async () => {
-      await testShareBookmarkHardDelete(
-        async (ctx) => {
-          const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: mapId }
-        },
-        'gameMap',
-      )
+      await testShareBookmarkHardDelete(async (ctx) => {
+        const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: mapId }
+      }, 'gameMap')
     })
 
     it('file: hard-delete removes shares and bookmarks', async () => {
-      await testShareBookmarkHardDelete(
-        async (ctx) => {
-          const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: fileId }
-        },
-        'file',
-      )
+      await testShareBookmarkHardDelete(async (ctx) => {
+        const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: fileId }
+      }, 'file')
     })
 
     it('folder: hard-delete removes shares and bookmarks', async () => {
-      await testShareBookmarkHardDelete(
-        async (ctx) => {
-          const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-          return { itemId: folderId }
-        },
-        'folder',
-      )
+      await testShareBookmarkHardDelete(async (ctx) => {
+        const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+        return { itemId: folderId }
+      }, 'folder')
     })
   })
 })

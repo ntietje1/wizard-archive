@@ -1,11 +1,11 @@
 import { requireCampaignMembership } from '../../functions'
 import type { AuthQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 import type { Bookmark } from '../types'
 
 export async function getItemBookmark(
   ctx: AuthQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ): Promise<Bookmark | null> {
   const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) return null

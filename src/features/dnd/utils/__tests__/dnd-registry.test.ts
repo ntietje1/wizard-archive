@@ -11,7 +11,7 @@ import type {
   SidebarRootDropZoneData,
   TrashDropZoneData,
 } from '~/features/dnd/utils/dnd-registry'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   createFile,
   createFolder,
@@ -604,13 +604,13 @@ describe('getHighlightId', () => {
 
 // ─── resolveDropTarget ─────────────────────────────────────────────
 
-const emptyMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
+const emptyMap: ReadonlyMap<Id<'sidebarItems'>, never> = new Map<Id<'sidebarItems'>, never>()
 
 describe('resolveDropTarget', () => {
   it('resolves sidebar item from itemsMap', () => {
     const note = createNote()
-    const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([[note._id, note]])
-    const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map()
+    const itemsMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map([[note._id, note]])
+    const trashedMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map()
     const getAncestorIds = vi.fn(() => [testId<'sidebarItems'>('folder_1')])
 
     const result = resolveDropTarget(
@@ -626,8 +626,8 @@ describe('resolveDropTarget', () => {
 
   it('resolves sidebar item from trashedItemsMap', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-    const itemsMap: ReadonlyMap<SidebarItemId, typeof note> = new Map()
-    const trashedMap: ReadonlyMap<SidebarItemId, typeof note> = new Map([[note._id, note]])
+    const itemsMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map()
+    const trashedMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map([[note._id, note]])
     const getAncestorIds = vi.fn(() => [])
 
     const result = resolveDropTarget(
@@ -641,8 +641,8 @@ describe('resolveDropTarget', () => {
   })
 
   it('returns null for unknown sidebar item id', () => {
-    const itemsMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
-    const trashedMap: ReadonlyMap<SidebarItemId, never> = new Map<SidebarItemId, never>()
+    const itemsMap: ReadonlyMap<Id<'sidebarItems'>, never> = new Map<Id<'sidebarItems'>, never>()
+    const trashedMap: ReadonlyMap<Id<'sidebarItems'>, never> = new Map<Id<'sidebarItems'>, never>()
 
     const result = resolveDropTarget(
       { sidebarItemId: 'note_unknown' },

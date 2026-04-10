@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   getAncestorIds,
   validateNoCircularParent,
@@ -12,7 +12,7 @@ import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
 function buildMap(items: Array<AnySidebarItem>) {
-  const map = new Map<SidebarItemId, AnySidebarItem>()
+  const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
   for (const item of items) map.set(item._id, item)
   return map
 }

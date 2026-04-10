@@ -4,11 +4,11 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireCampaignMembership } from '../../functions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export async function toggleItemBookmark(
   ctx: AuthMutationCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ) {
   const item = await getSidebarItem(ctx, sidebarItemId)
   if (!item) {

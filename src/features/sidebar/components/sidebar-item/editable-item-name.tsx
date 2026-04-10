@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { handleError } from '~/shared/utils/logger'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
@@ -14,7 +13,7 @@ interface EditableNameProps {
   onCancelRename: () => void
   campaignId?: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
-  excludeId?: SidebarItemId
+  excludeId?: Id<'sidebarItems'>
 }
 
 export function EditableName({

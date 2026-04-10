@@ -9,14 +9,13 @@ import type { AuthQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const getSidebarItemWithShares = async (
   ctx: AuthQueryCtx,
   {
     sidebarItemId,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
   },
 ): Promise<{
   allPermissionLevel: PermissionLevel | null

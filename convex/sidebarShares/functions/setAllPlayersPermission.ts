@@ -6,7 +6,7 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { PermissionLevel } from '../../permissions/types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export const setAllPlayersPermission = async (
   ctx: AuthMutationCtx,
@@ -14,7 +14,7 @@ export const setAllPlayersPermission = async (
     sidebarItemId,
     permissionLevel,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     permissionLevel: PermissionLevel | null
   },
 ): Promise<null> => {

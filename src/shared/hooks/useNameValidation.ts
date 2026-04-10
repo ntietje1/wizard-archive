@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import debounce from 'lodash-es/debounce'
 import { validateItemName } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 export const NAME_VALIDATION_DEBOUNCE_MS = 300
@@ -13,7 +12,7 @@ interface UseNameValidationOptions {
   isActive: boolean
   campaignId?: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
-  excludeId?: SidebarItemId
+  excludeId?: Id<'sidebarItems'>
 }
 
 export function useNameValidation({

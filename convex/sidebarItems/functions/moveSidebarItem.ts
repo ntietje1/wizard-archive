@@ -15,7 +15,7 @@ import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
-import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
+import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -57,11 +57,11 @@ export async function moveSidebarItem(
     location,
     parentId,
   }: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     location?: SidebarItemLocation
     parentId?: Id<'sidebarItems'> | null
   },
-): Promise<SidebarItemId> {
+): Promise<Id<'sidebarItems'>> {
   const itemFromDb = await getSidebarItem(ctx, itemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,

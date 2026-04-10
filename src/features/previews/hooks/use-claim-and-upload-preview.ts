@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import { uploadPreviewBlob } from '../utils/upload-preview'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { logger } from '~/shared/utils/logger'
 
@@ -23,7 +23,10 @@ export function useClaimAndUploadPreview() {
   urlRef.current = generateUploadUrl
 
   const claimAndUpload = useCallback(
-    async (itemId: SidebarItemId, generate: () => Promise<Blob>): Promise<PreviewUploadResult> => {
+    async (
+      itemId: Id<'sidebarItems'>,
+      generate: () => Promise<Blob>,
+    ): Promise<PreviewUploadResult> => {
       try {
         const { claimed, claimToken } = await claimRef.current.mutateAsync({
           itemId,

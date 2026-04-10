@@ -8,10 +8,10 @@ import type {
   EditHistoryMetadataMap,
   LogEditHistoryArgs,
 } from './types'
-import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 type LogEditHistoryBase = {
-  itemId: SidebarItemId
+  itemId: Id<'sidebarItems'>
   itemType: SidebarItemType
   campaignId: Id<'campaigns'>
 }

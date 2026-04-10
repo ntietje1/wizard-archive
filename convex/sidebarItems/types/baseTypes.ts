@@ -21,8 +21,6 @@ export const SIDEBAR_ITEM_TYPES = {
 
 export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
 
-export type SidebarItemId = Id<'sidebarItems'>
-
 export type SidebarItemFromDb<T extends SidebarItemType> = {
   _id: Id<'sidebarItems'>
   _creationTime: number

@@ -9,7 +9,6 @@ import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
 import type { ValidationResult } from './sharedValidation'
-import type { SidebarItemId } from './types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { AuthQueryCtx } from '../functions'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -31,7 +30,7 @@ export async function checkUniqueNameUnderParent(
     campaignId: Id<'campaigns'>
     parentId: Id<'sidebarItems'> | null
     name: string
-    excludeId?: SidebarItemId
+    excludeId?: Id<'sidebarItems'>
   },
 ): Promise<ValidationResult> {
   await requireCampaignMembership(ctx, campaignId)
@@ -51,7 +50,7 @@ export async function validateNoCircularParent(
     newParentId,
   }: {
     campaignId: Id<'campaigns'>
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<ValidationResult> {
@@ -106,7 +105,7 @@ export async function validateSidebarItemName(
     campaignId: Id<'campaigns'>
     parentId: Id<'sidebarItems'> | null
     name: string
-    excludeId?: SidebarItemId
+    excludeId?: Id<'sidebarItems'>
   },
 ): Promise<{ siblings: Array<AnySidebarItem> }> {
   await requireCampaignMembership(ctx, campaignId)
@@ -284,7 +283,7 @@ async function checkSlugConflict(
   }: {
     campaignId: Id<'campaigns'>
     slug: string
-    excludeId?: SidebarItemId
+    excludeId?: Id<'sidebarItems'>
   },
 ): Promise<boolean> {
   const conflict = await ctx.db
@@ -303,7 +302,7 @@ export async function findUniqueSidebarItemSlug(
     name,
   }: {
     campaignId: Id<'campaigns'>
-    itemId?: SidebarItemId
+    itemId?: Id<'sidebarItems'>
     name: string
   },
 ): Promise<string> {

@@ -7,7 +7,6 @@ import { logger } from '../../common/logger'
 import { getSidebarItem } from './getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId } from '../types/baseTypes'
 
 export async function setPreviewImage(
   ctx: AuthMutationCtx,
@@ -16,7 +15,7 @@ export async function setPreviewImage(
     previewStorageId,
     claimToken,
   }: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     previewStorageId: Id<'_storage'>
     claimToken: string
   },

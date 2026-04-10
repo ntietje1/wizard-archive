@@ -5,11 +5,11 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { rollbackYjsDocument } from '../../yjsSync/functions/rollbackYjsDocument'
 import type { AuthMutationCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackCanvas(
   ctx: AuthMutationCtx,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
   const rawItem = await getSidebarItem(ctx, itemId)

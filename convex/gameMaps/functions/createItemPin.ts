@@ -11,7 +11,6 @@ import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export async function createItemPin(
   ctx: AuthMutationCtx,
@@ -24,7 +23,7 @@ export async function createItemPin(
     mapId: Id<'sidebarItems'>
     x: number
     y: number
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
   },
 ): Promise<Id<'mapPins'>> {
   const rawItem = await getSidebarItem(ctx, mapId)

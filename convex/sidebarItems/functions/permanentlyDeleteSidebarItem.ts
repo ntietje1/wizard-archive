@@ -6,12 +6,12 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { requireCampaignMembership } from '../../functions'
 import { hardDeleteTree } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
-import type { SidebarItemId } from '../types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
 export async function permanentlyDeleteSidebarItem(
   ctx: AuthMutationCtx,
-  { itemId }: { itemId: SidebarItemId },
+  { itemId }: { itemId: Id<'sidebarItems'> },
 ): Promise<void> {
   const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) {

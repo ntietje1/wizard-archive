@@ -4,14 +4,13 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logger } from '../../common/logger'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { GameMapSnapshotData } from '../types'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackGameMap(
   ctx: AuthMutationCtx,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
   let parsed: GameMapSnapshotData

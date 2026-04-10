@@ -9,7 +9,7 @@ import type { FolderHistoryMetadataMap } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
 import type { MapHistoryMetadataMap } from '../gameMaps/types'
 import type { NoteHistoryMetadataMap } from '../notes/types'
-import type { SidebarItemId, SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 export const SHARED_HISTORY_ACTION = {
   created: 'created',
@@ -83,7 +83,7 @@ export type EditHistoryEntry = {
   [K in EditHistoryAction]: {
     _id: Id<'editHistory'>
     _creationTime: number
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     itemType: SidebarItemType
     campaignId: Id<'campaigns'>
     campaignMemberId: Id<'campaignMembers'>
@@ -95,7 +95,7 @@ export type EditHistoryEntry = {
 
 export type LogEditHistoryArgs = {
   [K in EditHistoryAction]: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     itemType: SidebarItemType
     campaignId: Id<'campaigns'>
     action: K

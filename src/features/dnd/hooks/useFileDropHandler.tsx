@@ -4,7 +4,6 @@ import { api } from 'convex/_generated/api'
 import { isMediaFile, isTextFile, validateFileForUpload } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
@@ -34,7 +33,7 @@ interface UploadSingleFileOptions {
 }
 
 export interface UploadSingleFileResult {
-  id: SidebarItemId
+  id: Id<'sidebarItems'>
   slug: string
 }
 

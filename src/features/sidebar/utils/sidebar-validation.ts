@@ -5,7 +5,6 @@ import {
 } from 'convex/sidebarItems/sharedValidation'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 /**
@@ -13,9 +12,9 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
  * Client version using itemsMap for synchronous parent chain lookup.
  */
 export function validateNoCircularParent(
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   newParentId: Id<'sidebarItems'> | null,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): ValidationResult {
   return validateNoCircularParentShared(itemId, newParentId, (id) => itemsMap.get(id))
 }
@@ -25,9 +24,9 @@ export function validateNoCircularParent(
  * Handles potential cycles by tracking seen IDs.
  */
 export function getAncestorIds(
-  itemId: SidebarItemId,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
-): Array<SidebarItemId> {
+  itemId: Id<'sidebarItems'>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+): Array<Id<'sidebarItems'>> {
   const item = itemsMap.get(itemId)
   if (!item) return []
 
@@ -48,9 +47,9 @@ export function getAncestorIds(
 export interface SidebarItemValidationOptions {
   name: string
   parentId: Id<'sidebarItems'> | null
-  itemId?: SidebarItemId
+  itemId?: Id<'sidebarItems'>
   siblings?: Array<AnySidebarItem>
-  itemsMap?: Map<SidebarItemId, AnySidebarItem>
+  itemsMap?: Map<Id<'sidebarItems'>, AnySidebarItem>
   isMove?: boolean
 }
 

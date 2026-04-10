@@ -3,12 +3,12 @@ import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
 export async function rollbackNote(
   ctx: AuthMutationCtx,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
   const rawItem = await getSidebarItem(ctx, itemId)

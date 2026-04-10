@@ -4,7 +4,7 @@ import {
   validateNoCircularParent,
 } from 'convex/sidebarItems/sharedValidation'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
-import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
@@ -15,9 +15,9 @@ export interface SidebarValidation {
   validateName: (
     name: string,
     parentId: Id<'sidebarItems'> | null,
-    excludeId?: SidebarItemId,
+    excludeId?: Id<'sidebarItems'>,
   ) => ValidationResult
-  canMoveToParent: (itemId: SidebarItemId, newParentId: Id<'sidebarItems'> | null) => boolean
+  canMoveToParent: (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => boolean
   getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => string
 }
 
@@ -31,7 +31,7 @@ export function useSidebarValidation(): SidebarValidation {
   const validateName = (
     name: string,
     parentId: Id<'sidebarItems'> | null,
-    excludeId?: SidebarItemId,
+    excludeId?: Id<'sidebarItems'>,
   ) => {
     const trimmed = name.trim()
     const nameResult = validateItemName(trimmed)
@@ -39,7 +39,7 @@ export function useSidebarValidation(): SidebarValidation {
     return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
   }
 
-  const canMoveToParent = (itemId: SidebarItemId, newParentId: Id<'sidebarItems'> | null) => {
+  const canMoveToParent = (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => {
     return validateNoCircularParent(itemId, newParentId, (id) => itemsMap.get(id)).valid
   }
 

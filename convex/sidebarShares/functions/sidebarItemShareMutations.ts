@@ -2,7 +2,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId, SidebarItemType } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function shareSidebarItemWithMember(
@@ -13,7 +13,7 @@ export async function shareSidebarItemWithMember(
     campaignMemberId,
     permissionLevel,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     sidebarItemType: SidebarItemType
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: PermissionLevel | null
@@ -87,7 +87,7 @@ export async function unshareSidebarItemFromMember(
     sidebarItemId,
     campaignMemberId,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {

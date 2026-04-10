@@ -7,7 +7,6 @@ import { unshareSidebarItemFromMember } from './sidebarItemShareMutations'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const unshareSidebarItem = async (
   ctx: AuthMutationCtx,
@@ -15,7 +14,7 @@ export const unshareSidebarItem = async (
     sidebarItemId,
     campaignMemberId,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {

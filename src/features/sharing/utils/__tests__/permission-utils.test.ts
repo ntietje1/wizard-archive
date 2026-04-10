@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   effectiveHasAtLeastPermission,
@@ -15,7 +15,7 @@ const memberId = testId<'campaignMembers'>('member_test')
 const otherMemberId = testId<'campaignMembers'>('member_other')
 
 function buildMap(items: Array<AnySidebarItem>) {
-  const map = new Map<SidebarItemId, AnySidebarItem>()
+  const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
   for (const item of items) map.set(item._id, item)
   return map
 }

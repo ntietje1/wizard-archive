@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { validatePinTarget } from 'convex/gameMaps/validation'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -314,7 +313,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     position: PinPosition
   } | null>(null)
   const [pendingPinItem, setPendingPinItem] = useState<{
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
   } | null>(null)
   const [pendingPinMove, setPendingPinMove] = useState<{
     pinId: Id<'mapPins'>
@@ -387,7 +386,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   }, [pendingPinItem, pendingPinMove, draggingPin])
 
   useEffect(() => {
-    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: SidebarItemId }>) => {
+    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: Id<'sidebarItems'> }>) => {
       if (imageError) {
         toast.error('Cannot place pin: map image failed to load')
         return
@@ -487,7 +486,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     }
   }
 
-  const createPinAtPosition = async (itemId: SidebarItemId, position: PinPosition) => {
+  const createPinAtPosition = async (itemId: Id<'sidebarItems'>, position: PinPosition) => {
     try {
       await createItemPinMutation.mutateAsync({
         mapId: map._id,

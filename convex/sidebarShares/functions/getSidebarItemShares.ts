@@ -5,11 +5,11 @@ import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { AuthQueryCtx } from '../../functions'
 import type { SidebarItemShare } from '../types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemShares = async (
   ctx: AuthQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ): Promise<Array<SidebarItemShare>> => {
   const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   buildBreadcrumbs,
@@ -160,7 +160,7 @@ describe('validateHexColorOrDefault', () => {
 
 describe('buildBreadcrumbs', () => {
   function buildMap(items: Array<AnySidebarItem>) {
-    const map = new Map<SidebarItemId, AnySidebarItem>()
+    const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
     for (const item of items) map.set(item._id, item)
     return map
   }

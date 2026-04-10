@@ -1,7 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 
 export interface SidebarItemHandlers {
@@ -25,6 +24,6 @@ export interface SidebarItemButtonProps extends SidebarItemHandlers, SidebarItem
   onCancelRename: () => void
   campaignId?: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
-  excludeId?: SidebarItemId
+  excludeId?: Id<'sidebarItems'>
   shareButton?: ReactNode
 }
