@@ -1,10 +1,26 @@
 import * as Y from 'yjs'
-import { BlockNoteEditor } from '@blocknote/core'
-import { blocksToYDoc } from '@blocknote/core/yjs'
-import { editorSchema } from '../../notes/editorSpecs'
-import type { PartialBlock } from '@blocknote/core'
+import { blocksToYDoc } from '../../notes/blocknote'
+import type { CustomPartialBlock } from '../../notes/editorSpecs'
 
-type AnyPartialBlock = PartialBlock<any, any, any>
+export type TestInlineContent = {
+  type: string
+  text?: string
+  styles?: Record<string, boolean | string>
+}
+
+/**
+ * Simplified block type for tests. BlockNote's `PartialBlock` has an optional
+ * `type` discriminant which prevents TypeScript from narrowing per-variant in
+ * object literals. This type captures the shape tests actually use while
+ * keeping basic structural checking.
+ */
+export type TestBlock = {
+  id?: string
+  type: string
+  props?: Record<string, unknown>
+  content?: Array<TestInlineContent>
+  children?: Array<TestBlock>
+}
 
 export function makeYjsUpdate(): ArrayBuffer {
   const doc = new Y.Doc()
@@ -16,21 +32,15 @@ export function makeYjsUpdate(): ArrayBuffer {
   return ab as ArrayBuffer
 }
 
-export function makeYjsUpdateWithBlocks(blocks: Array<AnyPartialBlock>): ArrayBuffer {
-  const editor = BlockNoteEditor.create({
-    schema: editorSchema,
-    _headless: true,
-  })
-  let doc: Y.Doc | undefined
+export function makeYjsUpdateWithBlocks(blocks: Array<TestBlock>): ArrayBuffer {
+  const doc = blocksToYDoc(blocks as Array<CustomPartialBlock>, 'document')
   try {
-    doc = blocksToYDoc(editor, blocks, 'document')
     const update = Y.encodeStateAsUpdate(doc)
     return update.buffer.slice(
       update.byteOffset,
       update.byteOffset + update.byteLength,
     ) as ArrayBuffer
   } finally {
-    doc?.destroy()
-    editor._tiptapEditor.destroy()
+    doc.destroy()
   }
 }

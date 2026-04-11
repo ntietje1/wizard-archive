@@ -182,8 +182,8 @@ describe('note rollback data integrity', () => {
       const originalBlocks = [
         {
           id: 'block-1',
-          type: 'paragraph' as const,
-          content: [{ type: 'text' as const, text: 'Original content' }],
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Original content' }],
           props: {},
           children: [],
         },
@@ -210,8 +210,8 @@ describe('note rollback data integrity', () => {
       const modifiedBlocks = [
         {
           id: 'block-1',
-          type: 'paragraph' as const,
-          content: [{ type: 'text' as const, text: 'Modified content' }],
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Modified content' }],
           props: {},
           children: [],
         },
@@ -303,8 +303,8 @@ describe('canvas rollback data integrity', () => {
       const modifiedBlocks = [
         {
           id: 'block-1',
-          type: 'paragraph' as const,
-          content: [{ type: 'text' as const, text: 'Modified canvas content' }],
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Modified canvas content' }],
           props: {},
           children: [],
         },

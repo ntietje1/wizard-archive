@@ -1,6 +1,4 @@
 import { v } from 'convex/values'
-import { BlockNoteEditor } from '@blocknote/core'
-import { yDocToBlocks } from '@blocknote/core/yjs'
 import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
@@ -8,7 +6,7 @@ import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
 import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
-import { editorSchema } from './editorSpecs'
+import { yDocToBlocks } from './blocknote'
 import type { Id } from '../_generated/dataModel'
 
 export const updateNote = campaignMutation({
@@ -64,14 +62,8 @@ export const persistNoteBlocks = campaignMutation({
     await checkYjsWriteAccess(ctx, documentId)
 
     const { doc } = await reconstructYDoc(ctx, documentId)
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-    let editor: ReturnType<typeof BlockNoteEditor.create> | undefined
     try {
-      editor = BlockNoteEditor.create({
-        schema: editorSchema,
-        _headless: true,
-      })
-      const blocks = yDocToBlocks(editor, doc, 'document')
+      const blocks = yDocToBlocks(doc, 'document')
 
       await saveTopLevelBlocksForNote(ctx, {
         noteId: documentId,
@@ -79,7 +71,6 @@ export const persistNoteBlocks = campaignMutation({
       })
     } finally {
       doc.destroy()
-      editor?._tiptapEditor.destroy()
     }
 
     return null

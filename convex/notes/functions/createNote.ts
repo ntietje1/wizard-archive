@@ -1,6 +1,4 @@
 import * as Y from 'yjs'
-import { BlockNoteEditor } from '@blocknote/core'
-import { blocksToYDoc } from '@blocknote/core/yjs'
 import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
 import {
   findUniqueSidebarItemSlug,
@@ -10,7 +8,7 @@ import {
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
-import { editorSchema } from '../editorSpecs'
+import { blocksToYDoc } from '../blocknote'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -81,17 +79,11 @@ export async function createNote(
   if (content && content.length > 0) {
     await saveTopLevelBlocksForNote(ctx, { noteId, content })
 
-    const editor = BlockNoteEditor.create({
-      schema: editorSchema,
-      _headless: true,
-    })
-    let doc: Y.Doc | undefined
+    const doc = blocksToYDoc(content, 'document')
     try {
-      doc = blocksToYDoc(editor, content, 'document')
       initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
     } finally {
-      doc?.destroy()
-      editor._tiptapEditor.destroy()
+      doc.destroy()
     }
   }
 

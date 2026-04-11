@@ -65,7 +65,6 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
     expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
     expect(item.name).toBe('Session Log.md')
     expect(item.path).toBe('Session Log.md')
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
     if (item.type === SIDEBAR_ITEM_TYPES.notes) {
       expect(item.content.length).toBe(1)
     }

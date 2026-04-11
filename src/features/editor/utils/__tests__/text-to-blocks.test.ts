@@ -3,7 +3,6 @@ import {
   convertBlocksToMarkdown,
   convertTextContentToBlocks,
   convertTextToHTML,
-  extractMarkdownLinks,
   isMarkdownFile,
 } from '~/features/editor/utils/text-to-blocks'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
@@ -19,6 +18,12 @@ function getBlockText(block: CustomPartialBlock): string {
     .filter((ic) => ic.type === 'text')
     .map((ic) => ic.text ?? '')
     .join('')
+}
+
+type InlineContentItem = { type: string; text?: string; styles?: Record<string, boolean> }
+
+function getInlineContent(block: CustomPartialBlock): Array<InlineContentItem> {
+  return (block.content ?? []) as unknown as Array<InlineContentItem>
 }
 
 interface ExpectedBlock {
@@ -158,53 +163,6 @@ describe('isMarkdownFile', () => {
 
   it('returns false for hidden file with .md in middle', () => {
     expect(isMarkdownFile('.md.txt', 'text/plain')).toBe(false)
-  })
-})
-
-// ===========================================================================
-// extractMarkdownLinks
-// ===========================================================================
-
-describe('extractMarkdownLinks', () => {
-  it('replaces a regular markdown link with a placeholder', () => {
-    const { text, placeholders } = extractMarkdownLinks('[text](url)')
-    expect(placeholders.size).toBe(1)
-    expect(text).not.toContain('[text](url)')
-    // Placeholder should map back to original
-    const [, original] = [...placeholders.entries()][0]
-    expect(original).toBe('[text](url)')
-  })
-
-  it('replaces an image link with a placeholder', () => {
-    const { text, placeholders } = extractMarkdownLinks('![alt](url)')
-    expect(placeholders.size).toBe(1)
-    expect(text).not.toContain('![alt](url)')
-    const [, original] = [...placeholders.entries()][0]
-    expect(original).toBe('![alt](url)')
-  })
-
-  it('replaces multiple links on one line', () => {
-    const { placeholders } = extractMarkdownLinks('[a](b) and [c](d)')
-    expect(placeholders.size).toBe(2)
-  })
-
-  it('does not replace links inside code blocks', () => {
-    const input = '```\n[text](url)\n```'
-    const { text, placeholders } = extractMarkdownLinks(input)
-    expect(placeholders.size).toBe(0)
-    expect(text).toBe(input)
-  })
-
-  it('does not modify lines without links', () => {
-    const { text, placeholders } = extractMarkdownLinks('plain text')
-    expect(placeholders.size).toBe(0)
-    expect(text).toBe('plain text')
-  })
-
-  it('preserves wiki links [[name]]', () => {
-    const { text, placeholders } = extractMarkdownLinks('[[some note]]')
-    expect(placeholders.size).toBe(0)
-    expect(text).toBe('[[some note]]')
   })
 })
 
@@ -399,12 +357,7 @@ describe('convertTextContentToBlocks - markdown', () => {
     const blocks = md('**bold text**')
     const para = blocks.find((b) => b.type === 'paragraph')
     expect(para).toBeDefined()
-    const content = para!.content as unknown as Array<{
-      type: string
-      text?: string
-      styles?: Record<string, boolean>
-    }>
-    const boldItem = content.find((ic) => ic.styles?.bold)
+    const boldItem = getInlineContent(para!).find((ic) => ic.styles?.bold)
     expect(boldItem).toBeDefined()
     expect(boldItem!.text).toBe('bold text')
   })
@@ -413,12 +366,7 @@ describe('convertTextContentToBlocks - markdown', () => {
     const blocks = md('*italic text*')
     const para = blocks.find((b) => b.type === 'paragraph')
     expect(para).toBeDefined()
-    const content = para!.content as unknown as Array<{
-      type: string
-      text?: string
-      styles?: Record<string, boolean>
-    }>
-    const italicItem = content.find((ic) => ic.styles?.italic)
+    const italicItem = getInlineContent(para!).find((ic) => ic.styles?.italic)
     expect(italicItem).toBeDefined()
     expect(italicItem!.text).toBe('italic text')
   })
@@ -427,12 +375,7 @@ describe('convertTextContentToBlocks - markdown', () => {
     const blocks = md('~~struck~~')
     const para = blocks.find((b) => b.type === 'paragraph')
     expect(para).toBeDefined()
-    const content = para!.content as unknown as Array<{
-      type: string
-      text?: string
-      styles?: Record<string, boolean>
-    }>
-    const struckItem = content.find((ic) => ic.styles?.strike)
+    const struckItem = getInlineContent(para!).find((ic) => ic.styles?.strike)
     expect(struckItem).toBeDefined()
   })
 
@@ -440,12 +383,7 @@ describe('convertTextContentToBlocks - markdown', () => {
     const blocks = md('some `inline code` here')
     const para = blocks.find((b) => b.type === 'paragraph')
     expect(para).toBeDefined()
-    const content = para!.content as unknown as Array<{
-      type: string
-      text?: string
-      styles?: Record<string, boolean>
-    }>
-    const codeItem = content.find((ic) => ic.styles?.code)
+    const codeItem = getInlineContent(para!).find((ic) => ic.styles?.code)
     expect(codeItem).toBeDefined()
     expect(codeItem!.text).toBe('inline code')
   })
@@ -512,7 +450,7 @@ describe('convertTextContentToBlocks - plain text', () => {
 
   it('preserves empty lines as empty paragraphs', () => {
     const blocks = txt('A\n\nB')
-    // Should have at least 3 blocks: A, empty, B (or A, B with spacing)
+    // At least 2 blocks: A and B (parser may also insert an empty paragraph between them)
     expect(blocks.length).toBeGreaterThanOrEqual(2)
     const textsWithContent = blocks.filter((b) => getBlockText(b) !== '')
     expect(textsWithContent.length).toBe(2)

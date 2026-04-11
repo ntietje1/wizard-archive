@@ -30,8 +30,8 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const blocks = [
         {
           id: 'block-1',
-          type: 'paragraph' as const,
-          content: [{ type: 'text' as const, text: 'Hello world' }],
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Hello world' }],
           props: {},
           children: [],
         },

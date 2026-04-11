@@ -115,6 +115,7 @@ import type * as gameMaps_triggers from "../gameMaps/triggers.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
 import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
+import type * as notes_blocknote from "../notes/blocknote.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_functions_captureNoteSnapshot from "../notes/functions/captureNoteSnapshot.js";
 import type * as notes_functions_createNote from "../notes/functions/createNote.js";
@@ -326,6 +327,7 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/types": typeof gameMaps_types;
   "gameMaps/validation": typeof gameMaps_validation;
   http: typeof http;
+  "notes/blocknote": typeof notes_blocknote;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/functions/captureNoteSnapshot": typeof notes_functions_captureNoteSnapshot;
   "notes/functions/createNote": typeof notes_functions_createNote;

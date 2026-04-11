@@ -25,112 +25,68 @@ export function convertTextContentToBlocks(
   fileName: string,
   mimeType: string,
 ): Array<CustomPartialBlock> {
-  const editor = BlockNoteEditor.create({
-    schema: editorSchema,
-  })
-
   if (isMarkdownFile(fileName, mimeType)) {
-    // Our schema uses MdLinkExtension (ProseMirror decorations) instead of
-    // BlockNote's built-in link inline content, so [text](url) must remain
-    // as literal text in the block content rather than being parsed into a
-    // link node (which would be silently dropped by our schema).
-    //
-    // Strategy: replace link syntax with unique placeholders before parsing,
-    // then restore the original text in the resulting blocks. This also
-    // prevents URLs from being auto-linked by the GFM parser.
-    const { text: preprocessed, placeholders } = extractMarkdownLinks(textContent)
-    const blocks = editor.tryParseMarkdownToBlocks(preprocessed)
-    if (placeholders.size > 0) {
-      restorePlaceholders(blocks, placeholders)
-    }
-    return blocks
+    // parse links into link nodes, then convert back to md link syntax
+    const defaultEditor = BlockNoteEditor.create()
+    const blocks = defaultEditor.tryParseMarkdownToBlocks(textContent)
+    flattenLinksToText(blocks)
+    return blocks as unknown as Array<CustomPartialBlock>
   } else {
+    const editor = BlockNoteEditor.create({ schema: editorSchema })
     const html = convertTextToHTML(textContent)
     return editor.tryParseHTMLToBlocks(html)
   }
 }
 
 /**
- * Replaces markdown link syntax with unique placeholders so the markdown
- * parser doesn't interpret them. Returns the modified text and a map from
- * placeholder → original link text.
- *
- * This is needed because our editor schema doesn't include BlockNote's
- * built-in `link` inline content type — links are rendered via
- * MdLinkExtension which operates on literal `[text](url)` text.
- * Simply escaping brackets isn't enough because the parser also auto-links
- * bare URLs (e.g. `https://...`), which would create link nodes that get
- * silently dropped by our schema.
+ * Walks parsed blocks and converts link inline content nodes to plain text
+ * containing the original markdown syntax. Also converts image blocks to
+ * paragraphs with literal ![alt](url) text.
  */
-export function extractMarkdownLinks(markdown: string): {
-  text: string
-  placeholders: Map<string, string>
-} {
-  const placeholders = new Map<string, string>()
-  let counter = 0
-  const lines = markdown.split('\n')
-  let inCodeBlock = false
-  let fenceLength = 0
-  const result: Array<string> = []
+function flattenLinksToText(blocks: Array<Record<string, unknown>>): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
 
-  for (const line of lines) {
-    const trimmed = line.trimStart()
-    const fenceMatch = trimmed.match(/^(`{3,})/)
-    if (fenceMatch) {
-      if (!inCodeBlock) {
-        inCodeBlock = true
-        fenceLength = fenceMatch[1].length
-        result.push(line)
-        continue
-      } else if (fenceMatch[1].length >= fenceLength) {
-        inCodeBlock = false
-        fenceLength = 0
-        result.push(line)
-        continue
+    // Convert image blocks to paragraphs with literal markdown
+    if (block.type === 'image') {
+      const props = block.props as Record<string, string> | undefined
+      const url = props?.url ?? ''
+      const caption = props?.caption ?? props?.name ?? ''
+      blocks[i] = {
+        type: 'paragraph',
+        content: [{ type: 'text', text: `![${caption}](${url})` }],
       }
-    }
-
-    if (inCodeBlock) {
-      result.push(line)
       continue
     }
 
-    // Replace image links and regular links with placeholders
-    const processed = line.replace(/!?\[([^\]]*)\]\((?:[^()]*|\([^()]*\))*\)/g, (match) => {
-      const key = `\u200BLINK${counter++}\u200B`
-      placeholders.set(key, match)
-      return key
-    })
-    result.push(processed)
-  }
-
-  return { text: result.join('\n'), placeholders }
-}
-
-/**
- * Walks through parsed blocks and replaces placeholder tokens with the
- * original link text in all text inline content.
- */
-export function restorePlaceholders(
-  blocks: Array<CustomPartialBlock>,
-  placeholders: Map<string, string>,
-): void {
-  for (const block of blocks) {
     if (Array.isArray(block.content)) {
-      for (const ic of block.content as Array<{ type: string; text?: string }>) {
-        if (ic.type === 'text' && ic.text) {
-          for (const [key, original] of placeholders) {
-            if (ic.text.includes(key)) {
-              ic.text = ic.text.replaceAll(key, original)
-            }
+      const newContent: Array<Record<string, unknown>> = []
+      for (const ic of block.content as Array<Record<string, unknown>>) {
+        if (ic.type === 'link') {
+          const linkText = getLinkText(ic.content as Array<Record<string, unknown>> | undefined)
+          const href = (ic.href as string) ?? ''
+          if (linkText === href) {
+            // Bare URL that was auto-linked — restore as plain text
+            newContent.push({ type: 'text', text: href })
+          } else {
+            newContent.push({ type: 'text', text: `[${linkText}](${href})` })
           }
+        } else {
+          newContent.push(ic)
         }
       }
+      block.content = newContent
     }
+
     if (Array.isArray(block.children)) {
-      restorePlaceholders(block.children, placeholders)
+      flattenLinksToText(block.children as Array<Record<string, unknown>>)
     }
   }
+}
+
+function getLinkText(content: Array<Record<string, unknown>> | undefined): string {
+  if (!Array.isArray(content)) return ''
+  return content.map((c) => (c.text as string) ?? '').join('')
 }
 
 export async function convertTextToBlocks(file: File): Promise<Array<CustomPartialBlock>> {
