@@ -51,7 +51,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp run fallow audit --base origin/main
+      - name: Run Fallow (full scan on main, diff on PRs)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            vp run fallow audit --base origin/main
+          else
+            vp run fallow audit
+          fi
 
   react-compiler:
     name: React Compiler Health
