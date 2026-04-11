@@ -92,9 +92,7 @@ jobs:
       - name: Run React Doctor (main)
         id: doctor
         if: github.ref == 'refs/heads/main'
-        run: |
-          SCORE=$(GITHUB_OUTPUT=/dev/null npx -y react-doctor@latest . --verbose --fail-on error --score)
-          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+        run: npx -y react-doctor@latest . --verbose --fail-on error
 
   frontend-test:
     name: Frontend Tests
