@@ -1,21 +1,20 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { requireDmRole } from '../../functions'
 import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
-import type { AuthQueryCtx } from '../../functions'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import type { CampaignQueryCtx } from '../../functions'
 import type { SidebarItemShare } from '../types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export const getSidebarItemShares = async (
-  ctx: AuthQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  ctx: CampaignQueryCtx,
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ): Promise<Array<SidebarItemShare>> => {
-  const itemFromDb = await ctx.db.get(sidebarItemId)
-  const item = await requireItemAccess(ctx, {
+  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
+  await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-  await requireDmRole(ctx, item.campaignId)
   return await getSidebarItemSharesForItem(ctx, {
     sidebarItemId,
   })

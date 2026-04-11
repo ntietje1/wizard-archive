@@ -1,17 +1,16 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { SHARE_STATUS } from '../types'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../permissions/types'
 import type { Id } from '../../_generated/dataModel'
 
 async function getBlockPermissionLevel(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { block }: { block: Block },
 ): Promise<PermissionLevel> {
-  const { membership } = await requireCampaignMembership(ctx, block.campaignId)
+  const { membership } = ctx
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.EDIT
@@ -37,7 +36,7 @@ async function getBlockPermissionLevel(
 }
 
 export async function enforceBlockSharePermissionsOrNull(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { block }: { block: Block },
 ): Promise<{ block: Block; permissionLevel: PermissionLevel } | null> {
   const permissionLevel = await getBlockPermissionLevel(ctx, { block })
@@ -49,7 +48,7 @@ export async function enforceBlockSharePermissionsOrNull(
 }
 
 async function isBlockSharedWithMember(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
     blockId,
     campaignMemberId,

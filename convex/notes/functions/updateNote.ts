@@ -1,39 +1,38 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { EditHistoryChange } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateNote(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     noteId,
     name,
     iconName,
     color,
   }: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     name?: string
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ noteId: Id<'notes'>; slug: string }> {
-  const noteFromDb = await ctx.db.get(noteId)
-  if (!noteFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  await requireCampaignMembership(ctx, noteFromDb.campaignId)
+): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await getSidebarItem(ctx, noteId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const note = await requireItemAccess(ctx, {
-    rawItem: noteFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'notes'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -72,16 +71,15 @@ export async function updateNote(
     return { noteId: note._id, slug: note.slug }
   }
 
-  await ctx.db.patch(noteId, {
+  await ctx.db.patch('sidebarItems', noteId, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: note._id,
     itemType: SIDEBAR_ITEM_TYPES.notes,
-    campaignId: note.campaignId,
     changes,
   })
 

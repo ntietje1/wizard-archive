@@ -2,46 +2,33 @@ import { api } from 'convex/_generated/api'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Session } from 'convex/sessions/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 
 export type SessionContextValue = {
   currentSession: UseQueryResult<Session | null, Error>
   sessions: UseQueryResult<Array<Session>, Error>
-  startSession: UseMutationResult<
-    Id<'sessions'>,
-    Error,
-    { campaignId: Id<'campaigns'>; name?: string }
-  >
-  endCurrentSession: UseMutationResult<Id<'sessions'>, Error, { campaignId: Id<'campaigns'> }>
+  startSession: UseMutationResult<Id<'sessions'>, Error, { name?: string }>
+  endCurrentSession: UseMutationResult<Id<'sessions'>, Error, Record<string, never>>
   setCurrentSession: UseMutationResult<Id<'sessions'>, Error, { sessionId: Id<'sessions'> }>
   nextSessionNumber: number
 }
 
 export function useSession(): SessionContextValue {
-  const { campaignId } = useCampaign()
+  const currentSession = useCampaignQuery(api.sessions.queries.getCurrentSession, {})
 
-  const currentSession = useAuthQuery(
-    api.sessions.queries.getCurrentSession,
-    campaignId ? { campaignId } : 'skip',
-  )
+  const sessions = useCampaignQuery(api.sessions.queries.getSessionsByCampaign, {})
 
-  const sessions = useAuthQuery(
-    api.sessions.queries.getSessionsByCampaign,
-    campaignId ? { campaignId } : 'skip',
-  )
-
-  const startSession = useAppMutation(api.sessions.mutations.startSession, {
+  const startSession = useCampaignMutation(api.sessions.mutations.startSession, {
     onError: (error) => handleError(error, 'Failed to start session'),
   })
 
-  const endCurrentSession = useAppMutation(api.sessions.mutations.endCurrentSession, {
+  const endCurrentSession = useCampaignMutation(api.sessions.mutations.endCurrentSession, {
     onError: (error) => handleError(error, 'Failed to end session'),
   })
 
-  const setCurrentSession = useAppMutation(api.sessions.mutations.setCurrentSession, {
+  const setCurrentSession = useCampaignMutation(api.sessions.mutations.setCurrentSession, {
     onError: (error) => handleError(error, 'Failed to set session'),
   })
 

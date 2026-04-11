@@ -1,21 +1,21 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation, dmMutation } from '../functions'
 import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/claimPreviewGeneration'
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
-import type { SidebarItemId } from './types/baseTypes'
+import type { Id } from '../_generated/dataModel'
 
-export const moveSidebarItem = authMutation({
+export const moveSidebarItem = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
-    parentId: v.optional(v.union(v.id('folders'), v.null())),
+    parentId: v.optional(v.nullable(v.id('sidebarItems'))),
     location: v.optional(sidebarItemLocationValidator),
   },
   returns: sidebarItemIdValidator,
-  handler: async (ctx, args): Promise<SidebarItemId> => {
+  handler: async (ctx, args): Promise<Id<'sidebarItems'>> => {
     return await moveSidebarItemFn(ctx, {
       itemId: args.itemId,
       parentId: args.parentId,
@@ -24,7 +24,7 @@ export const moveSidebarItem = authMutation({
   },
 })
 
-export const permanentlyDeleteSidebarItem = authMutation({
+export const permanentlyDeleteSidebarItem = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
   },
@@ -35,31 +35,29 @@ export const permanentlyDeleteSidebarItem = authMutation({
   },
 })
 
-export const emptyTrashBin = authMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const emptyTrashBin = dmMutation({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    await emptyTrashBinFn(ctx, { campaignId: args.campaignId })
+  handler: async (ctx): Promise<null> => {
+    await emptyTrashBinFn(ctx)
     return null
   },
 })
 
-export const claimPreviewGeneration = authMutation({
+export const claimPreviewGeneration = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
   },
   returns: v.object({
     claimed: v.boolean(),
-    claimToken: v.union(v.string(), v.null()),
+    claimToken: v.nullable(v.string()),
   }),
   handler: async (ctx, args): Promise<{ claimed: boolean; claimToken: string | null }> => {
     return await claimPreviewGenerationFn(ctx, { itemId: args.itemId })
   },
 })
 
-export const setPreviewImage = authMutation({
+export const setPreviewImage = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
     previewStorageId: v.id('_storage'),

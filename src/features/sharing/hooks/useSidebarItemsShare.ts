@@ -9,9 +9,9 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { AggregateShareStatus, ShareItem } from '~/features/sharing/hooks/useBlocksShare'
 import { handleError } from '~/shared/utils/logger'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/hooks/useBlocksShare'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 
 export interface ShareItemWithPermission extends ShareItem {
@@ -22,7 +22,7 @@ export interface ShareItemWithPermission extends ShareItem {
 }
 
 interface SidebarItemShareInfo {
-  itemId: Id<'notes'> | Id<'folders'> | Id<'gameMaps'> | Id<'files'> | Id<'canvases'>
+  itemId: Id<'sidebarItems'>
   allPermissionLevel: PermissionLevel | null
   sharedMemberIds: Set<Id<'campaignMembers'>>
   memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
@@ -47,20 +47,20 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   // For now, we only support single item selection
   const singleItem = items.length === 1 ? items[0] : undefined
 
-  const query = useAuthQuery(
+  const query = useCampaignQuery(
     api.sidebarShares.queries.getSidebarItemWithShares,
     campaignData?._id && singleItem && isDm ? { sidebarItemId: singleItem._id } : 'skip',
   )
 
-  const shareSidebarItem = useAppMutation(api.sidebarShares.mutations.shareSidebarItem)
-  const unshareSidebarItem = useAppMutation(api.sidebarShares.mutations.unshareSidebarItem)
-  const updateSharePermission = useAppMutation(
+  const shareSidebarItem = useCampaignMutation(api.sidebarShares.mutations.shareSidebarItem)
+  const unshareSidebarItem = useCampaignMutation(api.sidebarShares.mutations.unshareSidebarItem)
+  const updateSharePermission = useCampaignMutation(
     api.sidebarShares.mutations.updateSidebarItemSharePermission,
   )
-  const setAllPlayersPermissionMutation = useAppMutation(
+  const setAllPlayersPermissionMutation = useCampaignMutation(
     api.sidebarShares.mutations.setAllPlayersPermission,
   )
-  const setFolderInheritSharesMutation = useAppMutation(
+  const setFolderInheritSharesMutation = useCampaignMutation(
     api.sidebarShares.mutations.setFolderInheritShares,
   )
   const isMutating =

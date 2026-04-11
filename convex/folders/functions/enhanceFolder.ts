@@ -1,28 +1,18 @@
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { getSidebarItemAncestors } from './getSidebarItemAncestors'
-import type { SharesMap } from '../../sidebarShares/functions/getCampaignShares'
-import type { AuthQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Folder, FolderFromDb, FolderWithContent } from '../types'
 
 export const enhanceFolder = async (
-  ctx: AuthQueryCtx,
-  {
-    folder,
-    sharesMap,
-    bookmarkIds,
-  }: {
-    folder: FolderFromDb
-    sharesMap?: SharesMap
-    bookmarkIds?: Set<SidebarItemId>
-  },
+  ctx: CampaignQueryCtx,
+  { folder }: { folder: FolderFromDb },
 ): Promise<Folder> => {
-  return await enhanceBase(ctx, { item: folder, sharesMap, bookmarkIds })
+  return await enhanceBase(ctx, { item: folder })
 }
 
 export const enhanceFolderWithContent = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { folder }: { folder: Folder },
 ): Promise<FolderWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {

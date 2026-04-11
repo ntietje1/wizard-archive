@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { getWikiLinkContext } from './wiki-link-utils'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { HeadingEntry } from '~/features/editor/utils/heading-utils'
@@ -10,7 +9,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import {
   getItemPath,
@@ -23,7 +22,7 @@ import './wiki-link-autocomplete.css'
 type AutocompleteMode = 'file' | 'heading' | 'display-name'
 
 interface FileItem {
-  key: SidebarItemId
+  key: Id<'sidebarItems'>
   title: string
   subtext: string
   badge: string
@@ -55,7 +54,7 @@ interface AutocompleteContext {
 function getAutocompleteContext(
   query: string,
   allItems: Array<AnySidebarItem>,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): AutocompleteContext {
   if (query.includes('|')) {
     return {
@@ -221,10 +220,10 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
 
   const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
 
-  const noteQuery = useAuthQuery(
+  const noteQuery = useCampaignQuery(
     api.notes.queries.getNote,
     context?.mode === 'heading' && context.resolvedItem?._id
-      ? { noteId: context.resolvedItem._id as Id<'notes'> }
+      ? { noteId: context.resolvedItem._id as Id<'sidebarItems'> }
       : 'skip',
   )
 

@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 
 interface CampaignState {
@@ -12,14 +11,14 @@ interface CampaignState {
 
 interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
-  renamingId: SidebarItemId | null
+  renamingId: Id<'sidebarItems'> | null
   pendingItemName: string
   selectedSlug: string | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
 interface SidebarUIActions {
-  setRenamingId: (id: SidebarItemId | null) => void
+  setRenamingId: (id: Id<'sidebarItems'> | null) => void
   setFolderState: (campaignId: string, folderId: string, isOpen: boolean) => void
   toggleFolderState: (campaignId: string, folderId: string) => void
   clearAllFolderStates: (campaignId: string) => void

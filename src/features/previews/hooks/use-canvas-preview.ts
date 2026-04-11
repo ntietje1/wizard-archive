@@ -12,7 +12,7 @@ export function useCanvasPreview({
   doc,
   containerRef,
 }: {
-  canvasId: Id<'canvases'>
+  canvasId: Id<'sidebarItems'>
   doc: Y.Doc
   containerRef: React.RefObject<HTMLElement | null>
 }) {

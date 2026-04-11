@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
 import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
@@ -11,10 +11,10 @@ export function useDeleteSidebarItem() {
   const { campaignId } = useCampaign()
   const cache = useSidebarItemsCache()
 
-  const permanentlyDeleteSidebarItemMutation = useAppMutation(
+  const permanentlyDeleteSidebarItemMutation = useCampaignMutation(
     api.sidebarItems.mutations.permanentlyDeleteSidebarItem,
   )
-  const emptyTrashBinMutation = useAppMutation(api.sidebarItems.mutations.emptyTrashBin)
+  const emptyTrashBinMutation = useCampaignMutation(api.sidebarItems.mutations.emptyTrashBin)
 
   const permanentlyDeleteItem = async (item: AnySidebarItem) => {
     if (!campaignId) return
@@ -42,7 +42,7 @@ export function useDeleteSidebarItem() {
     cache.update(SIDEBAR_ITEM_LOCATION.trash, () => [])
 
     try {
-      await emptyTrashBinMutation.mutateAsync({ campaignId })
+      await emptyTrashBinMutation.mutateAsync({})
     } catch (err) {
       cache.update(SIDEBAR_ITEM_LOCATION.trash, () => previousItems)
       throw err

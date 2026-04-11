@@ -1,9 +1,9 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { dmQuery } from '../functions'
 import { blockShareValidator } from './schema'
 import { getBlockSharesDm } from './functions/getBlockSharesForBlock'
 
-export const getBlockShares = authQuery({
+export const getBlockShares = dmQuery({
   args: {
     blockId: v.id('blocks'),
   },

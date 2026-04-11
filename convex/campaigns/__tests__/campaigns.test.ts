@@ -31,7 +31,7 @@ describe('createCampaign', () => {
     expect(campaignId).toBeDefined()
 
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get(campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignId)
       expect(campaign).not.toBeNull()
       expect(campaign!.name).toBe('My Campaign')
       expect(campaign!.slug).toBe('my-campaign')
@@ -193,7 +193,7 @@ describe('getUserCampaigns', () => {
     const user = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, user.profile)
     await t.run(async (ctx) => {
-      await ctx.db.patch(campaignId, {
+      await ctx.db.patch('campaigns', campaignId, {
         deletionTime: Date.now(),
         deletedBy: user.profile._id,
       })
@@ -232,7 +232,7 @@ describe('getCampaignBySlug', () => {
 
     let slug = ''
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       slug = campaign!.slug
     })
 
@@ -263,9 +263,9 @@ describe('getCampaignBySlug', () => {
 
     let slug = ''
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       slug = campaign!.slug
-      await dbCtx.db.patch(ctx.campaignId, {
+      await dbCtx.db.patch('campaigns', ctx.campaignId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })
@@ -303,7 +303,7 @@ describe('getPlayersByCampaign', () => {
     const dmAuth = asDm(ctx)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(ctx.player.memberId, {
+      await dbCtx.db.patch('campaignMembers', ctx.player.memberId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })
@@ -348,7 +348,7 @@ describe('joinCampaign', () => {
 
     let slug = ''
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get(campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignId)
       slug = campaign!.slug
     })
 
@@ -378,7 +378,7 @@ describe('joinCampaign', () => {
 
     let slug = ''
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       slug = campaign!.slug
     })
 
@@ -397,9 +397,9 @@ describe('joinCampaign', () => {
 
     let slug = ''
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get(campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignId)
       slug = campaign!.slug
-      await ctx.db.patch(campaignId, {
+      await ctx.db.patch('campaigns', campaignId, {
         deletionTime: Date.now(),
         deletedBy: dm.profile._id,
       })
@@ -423,7 +423,7 @@ describe('joinCampaign', () => {
 
     let slug = ''
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get(campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignId)
       slug = campaign!.slug
     })
 
@@ -455,7 +455,7 @@ describe('joinCampaign', () => {
 
     let slug = ''
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get(campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignId)
       slug = campaign!.slug
     })
 
@@ -499,13 +499,14 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     const result = await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Accepted',
     })
     expect(result).toBe(memberId)
 
     await t.run(async (ctx) => {
-      const member = await ctx.db.get(memberId)
+      const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Accepted')
     })
   })
@@ -519,12 +520,13 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Rejected',
     })
 
     await t.run(async (ctx) => {
-      const member = await ctx.db.get(memberId)
+      const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Rejected')
     })
   })
@@ -534,12 +536,13 @@ describe('updateCampaignMemberStatus', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId: ctx.campaignId,
       memberId: ctx.player.memberId,
       status: 'Removed',
     })
 
     await t.run(async (dbCtx) => {
-      const member = await dbCtx.db.get(ctx.player.memberId)
+      const member = await dbCtx.db.get('campaignMembers', ctx.player.memberId)
       expect(member!.status).toBe('Removed')
     })
   })
@@ -553,12 +556,13 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Accepted',
     })
 
     await t.run(async (ctx) => {
-      const member = await ctx.db.get(memberId)
+      const member = await ctx.db.get('campaignMembers', memberId)
       expect(member!.status).toBe('Accepted')
     })
   })
@@ -573,6 +577,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -585,6 +590,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.player.memberId,
         status: 'Accepted',
       }),
@@ -601,6 +607,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Removed',
       }),
@@ -618,6 +625,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -630,6 +638,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectPermissionDenied(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.dm.memberId,
         status: 'Removed',
       }),
@@ -645,7 +654,7 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await t.run(async (ctx) => {
-      await ctx.db.patch(memberId, {
+      await ctx.db.patch('campaignMembers', memberId, {
         deletionTime: Date.now(),
         deletedBy: dm.profile._id,
       })
@@ -653,6 +662,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectNotFound(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -663,6 +673,7 @@ describe('updateCampaignMemberStatus', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.player.memberId,
         status: 'Removed',
       }),
@@ -683,7 +694,7 @@ describe('updateCampaign', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.name).toBe('Updated Name')
     })
   })
@@ -698,7 +709,7 @@ describe('updateCampaign', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.description).toBe('New description')
     })
   })
@@ -713,7 +724,7 @@ describe('updateCampaign', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.slug).toBe('new-slug')
     })
   })
@@ -809,7 +820,7 @@ describe('deleteCampaign', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const campaign = await dbCtx.db.get(ctx.campaignId)
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign).toBeNull()
 
       const members = await dbCtx.db
@@ -818,17 +829,11 @@ describe('deleteCampaign', () => {
         .collect()
       expect(members).toHaveLength(0)
 
-      const notes = await dbCtx.db
-        .query('notes')
+      const sidebarItems = await dbCtx.db
+        .query('sidebarItems')
         .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', ctx.campaignId))
         .collect()
-      expect(notes).toHaveLength(0)
-
-      const folders = await dbCtx.db
-        .query('folders')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', ctx.campaignId))
-        .collect()
-      expect(folders).toHaveLength(0)
+      expect(sidebarItems).toHaveLength(0)
 
       const sessions = await dbCtx.db
         .query('sessions')

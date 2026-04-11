@@ -18,7 +18,7 @@ import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFold
 import { handleError } from '~/shared/utils/logger'
 
 interface NewItemCardProps {
-  parentId: Id<'folders'>
+  parentId: Id<'sidebarItems'>
 }
 
 export function NewItemCard({ parentId }: NewItemCardProps) {

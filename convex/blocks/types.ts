@@ -12,7 +12,7 @@ export type BlockShareInfo = {
 export type Block = {
   _id: Id<'blocks'>
   _creationTime: number
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
   blockId: string
   position: number | null
   content: CustomBlock

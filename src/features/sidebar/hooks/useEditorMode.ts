@@ -7,12 +7,12 @@ import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Editor, EditorMode } from 'convex/editors/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 
 export interface EditorModeContextType {
   editorMode: EditorMode
@@ -23,22 +23,18 @@ export interface EditorModeContextType {
 }
 
 export function useEditorMode(): EditorModeContextType {
-  const { isDm, campaign } = useCampaign()
-  const campaignData = campaign.data
+  const { isDm, campaignId } = useCampaign()
   const { item: currentItem } = useCurrentItem()
   const queryClient = useQueryClient()
 
-  const editorQuery = useAuthQuery(
-    api.editors.queries.getCurrentEditor,
-    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-  )
+  const editorQuery = useCampaignQuery(api.editors.queries.getCurrentEditor, {})
 
-  const setEditorMutation = useAppMutation(api.editors.mutations.setCurrentEditor, {
+  const setEditorMutation = useCampaignMutation(api.editors.mutations.setCurrentEditor, {
     onMutate: async ({ editorMode: newMode }) => {
-      if (!campaignData?._id || !newMode) return
+      if (!campaignId || !newMode) return
 
       const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
-        campaignId: campaignData._id,
+        campaignId,
       })
 
       await queryClient.cancelQueries({ queryKey: queryOptions.queryKey })
@@ -59,9 +55,9 @@ export function useEditorMode(): EditorModeContextType {
       handleError(err, 'Failed to update editor mode')
     },
     onSettled: () => {
-      if (!campaignData?._id) return
+      if (!campaignId) return
       const queryOptions = convexQuery(api.editors.queries.getCurrentEditor, {
-        campaignId: campaignData._id,
+        campaignId,
       })
       void queryClient.invalidateQueries({ queryKey: queryOptions.queryKey })
     },
@@ -83,11 +79,8 @@ export function useEditorMode(): EditorModeContextType {
   const mutate = setEditorMutation.mutate
 
   const setEditorMode = (mode: EditorMode) => {
-    if (!canEdit || !campaignData?._id) return
-    mutate({
-      campaignId: campaignData._id,
-      editorMode: mode,
-    })
+    if (!canEdit || !campaignId) return
+    mutate({ editorMode: mode })
   }
 
   const setViewAsPlayerId = (playerId: Id<'campaignMembers'> | undefined) => {

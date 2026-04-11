@@ -1,5 +1,4 @@
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemId } from './types/baseTypes'
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
@@ -47,8 +46,8 @@ export function validateItemName(name: string): ValidationResult {
  */
 export function checkNameConflict(
   name: string,
-  siblings: Array<{ _id: SidebarItemId; name: string }>,
-  excludeId?: SidebarItemId,
+  siblings: Array<{ _id: Id<'sidebarItems'>; name: string }>,
+  excludeId?: Id<'sidebarItems'>,
 ): ValidationResult {
   const normalizedName = name.trim().toLowerCase()
   const conflict = siblings.find(
@@ -71,9 +70,9 @@ export function checkNameConflict(
  * @param getParent - Callback to look up a parent item by ID
  */
 export function validateNoCircularParent(
-  itemId: SidebarItemId,
-  newParentId: Id<'folders'> | null,
-  getParent: (id: Id<'folders'>) => { parentId: Id<'folders'> | null } | undefined,
+  itemId: Id<'sidebarItems'>,
+  newParentId: Id<'sidebarItems'> | null,
+  getParent: (id: Id<'sidebarItems'>) => { parentId: Id<'sidebarItems'> | null } | undefined,
 ): ValidationResult {
   if (!newParentId) {
     return { valid: true }
@@ -86,8 +85,8 @@ export function validateNoCircularParent(
     }
   }
 
-  const seen = new Set<Id<'folders'>>()
-  let currentId: Id<'folders'> | null = newParentId
+  const seen = new Set<Id<'sidebarItems'>>()
+  let currentId: Id<'sidebarItems'> | null = newParentId
 
   while (currentId) {
     if (seen.has(currentId)) {

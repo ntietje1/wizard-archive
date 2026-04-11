@@ -13,52 +13,48 @@ import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { editorSchema } from '../editorSpecs'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
 
 export async function createNote(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     name,
     parentId,
     iconName,
     color,
     content,
-    campaignId,
   }: {
     name: string
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
-    campaignId: Id<'campaigns'>
   },
-): Promise<{ noteId: Id<'notes'>; slug: string }> {
+): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { campaignId, parentId })
+  await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {
-    campaignId,
     parentId,
     name,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
-    campaignId,
   })
 
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
-  const noteId = await ctx.db.insert('notes', {
+  const noteId = await ctx.db.insert('sidebarItems', {
     name,
     slug: uniqueSlug,
     parentId,
     iconName: iconName ?? null,
     color: color ?? null,
     allPermissionLevel: null,
-    campaignId,
+    campaignId: ctx.campaign._id,
     type: SIDEBAR_ITEM_TYPES.notes,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
     previewStorageId: null,
@@ -69,7 +65,16 @@ export async function createNote(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
+  })
+
+  await ctx.db.insert('notes', {
+    sidebarItemId: noteId,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: userId,
   })
 
   let initialState: ArrayBuffer | undefined
@@ -95,7 +100,6 @@ export async function createNote(
   await logEditHistory(ctx, {
     itemId: noteId,
     itemType: SIDEBAR_ITEM_TYPES.notes,
-    campaignId,
     action: EDIT_HISTORY_ACTION.created,
   })
 

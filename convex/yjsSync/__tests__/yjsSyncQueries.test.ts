@@ -19,7 +19,9 @@ describe('getUpdates', () => {
       parentId: null,
     })
 
-    await expectNotAuthenticated(t.query(api.yjsSync.queries.getUpdates, { documentId: noteId }))
+    await expectNotAuthenticated(
+      t.query(api.yjsSync.queries.getUpdates, { campaignId: ctx.campaignId, documentId: noteId }),
+    )
   })
 
   it('requires read access', async () => {
@@ -28,6 +30,7 @@ describe('getUpdates', () => {
 
     await expectPermissionDenied(
       asPlayer(ctx).query(api.yjsSync.queries.getUpdates, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
       }),
     )
@@ -44,15 +47,18 @@ describe('getUpdates', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -73,6 +79,7 @@ describe('getUpdates', () => {
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -93,6 +100,7 @@ describe('getUpdates', () => {
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -118,6 +126,7 @@ describe('getUpdates', () => {
     })
 
     const results = await asPlayer(ctx).query(api.yjsSync.queries.getUpdates, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -131,6 +140,7 @@ describe('getUpdates', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -151,7 +161,9 @@ describe('getAwareness', () => {
       parentId: null,
     })
 
-    await expectNotAuthenticated(t.query(api.yjsSync.queries.getAwareness, { documentId: noteId }))
+    await expectNotAuthenticated(
+      t.query(api.yjsSync.queries.getAwareness, { campaignId: ctx.campaignId, documentId: noteId }),
+    )
   })
 
   it('requires read access', async () => {
@@ -160,6 +172,7 @@ describe('getAwareness', () => {
 
     await expectPermissionDenied(
       asPlayer(ctx).query(api.yjsSync.queries.getAwareness, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
       }),
     )
@@ -176,6 +189,7 @@ describe('getAwareness', () => {
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -194,12 +208,14 @@ describe('getAwareness', () => {
 
     const state = new ArrayBuffer(4)
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 42,
       state,
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -220,12 +236,14 @@ describe('getAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 10,
       state: new ArrayBuffer(4),
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -254,12 +272,14 @@ describe('getAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 20,
       state: new ArrayBuffer(4),
     })
 
     const results = await asPlayer(ctx).query(api.yjsSync.queries.getAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -282,12 +302,14 @@ describe('getAwareness', () => {
 
     const state = new ArrayBuffer(4)
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 99,
       state,
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 

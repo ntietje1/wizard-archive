@@ -1,69 +1,25 @@
-import { requireCampaignMembership } from '../../functions'
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
-import { getCampaignBookmarks } from '../../bookmarks/functions/getCampaignBookmarks'
-import {
-  getAllCampaignShares,
-  getMemberShares,
-} from '../../sidebarShares/functions/getCampaignShares'
+import { asyncMap } from 'convex-helpers'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
+import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { AnySidebarItem, AnySidebarItemFromDb } from '../types/types'
-import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { AnySidebarItem } from '../types/types'
+import type { CampaignQueryCtx } from '../../functions'
 
 export const fetchCampaignSidebarItems = async (
-  ctx: AuthQueryCtx,
-  { campaignId, location }: { campaignId: Id<'campaigns'>; location: SidebarItemLocation },
+  ctx: CampaignQueryCtx,
+  { location }: { location: SidebarItemLocation },
 ): Promise<Array<AnySidebarItem>> => {
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
-  const hasFullAccess = membership.role === CAMPAIGN_MEMBER_ROLE.DM
+  const rawItems = await ctx.db
+    .query('sidebarItems')
+    .withIndex('by_campaign_location_parent_name', (q) =>
+      q.eq('campaignId', ctx.campaign._id).eq('location', location),
+    )
+    .collect()
 
-  const [folders, notes, maps, files, canvases, bookmarkIds, sharesMap] = await Promise.all([
-    ctx.db
-      .query('folders')
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('location', location),
-      )
-      .collect(),
-    ctx.db
-      .query('notes')
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('location', location),
-      )
-      .collect(),
-    ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('location', location),
-      )
-      .collect(),
-    ctx.db
-      .query('files')
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('location', location),
-      )
-      .collect(),
-    ctx.db
-      .query('canvases')
-      .withIndex('by_campaign_location_parent_name', (q) =>
-        q.eq('campaignId', campaignId).eq('location', location),
-      )
-      .collect(),
-    getCampaignBookmarks(ctx, campaignId, membership._id),
-    hasFullAccess
-      ? getAllCampaignShares(ctx, campaignId)
-      : getMemberShares(ctx, campaignId, membership._id),
-  ])
-
-  const allItems: Array<AnySidebarItemFromDb> = [
-    ...folders,
-    ...notes,
-    ...maps,
-    ...files,
-    ...canvases,
-  ]
-
-  return await Promise.all(
-    allItems.map((item) => enhanceSidebarItem(ctx, { item, sharesMap, bookmarkIds })),
-  )
+  return (
+    await asyncMap(rawItems, async (raw) => {
+      const item = await getSidebarItem(ctx, raw._id)
+      return item ? enhanceSidebarItem(ctx, { item }) : null
+    })
+  ).filter((item): item is NonNullable<typeof item> => item !== null)
 }

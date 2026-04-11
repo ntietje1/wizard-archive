@@ -1,10 +1,10 @@
 import { createContext, useContext } from 'react'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarDropData } from '~/features/dnd/utils/dnd-registry'
 
 export interface DndValue {
-  resolveItem: (id: SidebarItemId) => AnySidebarItem | null
+  resolveItem: (id: Id<'sidebarItems'>) => AnySidebarItem | null
   resolveDropTarget: (rawData: Record<string, unknown>) => SidebarDropData | null
 }
 

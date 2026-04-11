@@ -4,6 +4,7 @@ import { defineConfig } from 'vite-plus'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
+import { codecovVitePlugin } from '@codecov/vite-plugin'
 
 export default defineConfig({
   lint: {
@@ -83,6 +84,11 @@ export default defineConfig({
       viteEnvironment: {
         name: 'ssr',
       },
+    }),
+    codecovVitePlugin({
+      enableBundleAnalysis: !!process.env.CODECOV_TOKEN,
+      bundleName: 'wizard-archive',
+      uploadToken: process.env.CODECOV_TOKEN,
     }),
   ],
   resolve: {

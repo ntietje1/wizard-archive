@@ -12,7 +12,7 @@ import type { Folder } from 'convex/folders/types'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -68,11 +68,11 @@ export function useEditSidebarItem() {
   const queryClient = useQueryClient()
   const { navigateToItem } = useEditorNavigation()
 
-  const updateNoteMutation = useAppMutation(api.notes.mutations.updateNote)
-  const updateFolderMutation = useAppMutation(api.folders.mutations.updateFolder)
-  const updateMapMutation = useAppMutation(api.gameMaps.mutations.updateMap)
-  const updateFileMutation = useAppMutation(api.files.mutations.updateFile)
-  const updateCanvasMutation = useAppMutation(api.canvases.mutations.updateCanvas)
+  const updateNoteMutation = useCampaignMutation(api.notes.mutations.updateNote)
+  const updateFolderMutation = useCampaignMutation(api.folders.mutations.updateFolder)
+  const updateMapMutation = useCampaignMutation(api.gameMaps.mutations.updateMap)
+  const updateFileMutation = useCampaignMutation(api.files.mutations.updateFile)
+  const updateCanvasMutation = useCampaignMutation(api.canvases.mutations.updateCanvas)
 
   const optimisticUpdate = (updater: (prev: Array<AnySidebarItem>) => Array<AnySidebarItem>) => {
     if (!campaignId) return

@@ -6,17 +6,16 @@ import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 import { api } from '../../_generated/api'
 import type { TestConvex } from 'convex-test'
 import type schema from '../../schema'
-import type { SidebarItemId } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
 
 async function trashItem(
   t: TestConvex<typeof schema>,
-  itemId: SidebarItemId,
+  itemId: Id<'sidebarItems'>,
   deletedBy: Id<'userProfiles'>,
   patches?: Record<string, unknown>,
 ) {
   await t.run(async (dbCtx) => {
-    await dbCtx.db.patch(itemId, {
+    await dbCtx.db.patch('sidebarItems', itemId, {
       ...patches,
       location: SIDEBAR_ITEM_LOCATION.trash,
       deletionTime: Date.now(),
@@ -43,11 +42,12 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note).toBeNull()
 
       const url = await dbCtx.storage.getUrl(storageId)
@@ -68,17 +68,24 @@ describe('preview cleanup on hard delete', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
+    await t.run(async (dbCtx) => {
+      const ext = await dbCtx.db
+        .query('files')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .unique()
+      if (ext) await dbCtx.db.patch('files', ext._id, { storageId: fileBlob })
+    })
     await trashItem(t, fileId, ctx.dm.profile._id, {
-      storageId: fileBlob,
       previewStorageId: previewBlob,
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get(fileId)
+      const file = await dbCtx.db.get('sidebarItems', fileId)
       expect(file).toBeNull()
 
       const fileUrl = await dbCtx.storage.getUrl(fileBlob)
@@ -98,17 +105,24 @@ describe('preview cleanup on hard delete', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
+    await t.run(async (dbCtx) => {
+      const ext = await dbCtx.db
+        .query('gameMaps')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .unique()
+      if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: sharedBlob })
+    })
     await trashItem(t, mapId, ctx.dm.profile._id, {
-      imageStorageId: sharedBlob,
       previewStorageId: sharedBlob,
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get(mapId)
+      const map = await dbCtx.db.get('sidebarItems', mapId)
       expect(map).toBeNull()
 
       const url = await dbCtx.storage.getUrl(sharedBlob)
@@ -129,17 +143,24 @@ describe('preview cleanup on hard delete', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
+    await t.run(async (dbCtx) => {
+      const ext = await dbCtx.db
+        .query('gameMaps')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .unique()
+      if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: imageBlob })
+    })
     await trashItem(t, mapId, ctx.dm.profile._id, {
-      imageStorageId: imageBlob,
       previewStorageId: previewBlob,
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get(mapId)
+      const map = await dbCtx.db.get('sidebarItems', mapId)
       expect(map).toBeNull()
 
       const imageUrl = await dbCtx.storage.getUrl(imageBlob)
@@ -157,11 +178,12 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, noteId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note).toBeNull()
     })
   })
@@ -174,11 +196,12 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, folderId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
     })
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get(folderId)
+      const folder = await dbCtx.db.get('sidebarItems', folderId)
       expect(folder).toBeNull()
     })
   })

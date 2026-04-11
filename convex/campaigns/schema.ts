@@ -1,18 +1,14 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
 import { userProfileValidator } from '../users/schema'
 
-export const campaignStatusValidator = v.union(v.literal('Active'), v.literal('Inactive'))
+export const campaignStatusValidator = literals('Active', 'Inactive')
 
-export const campaignMemberRoleValidator = v.union(v.literal('DM'), v.literal('Player'))
+export const campaignMemberRoleValidator = literals('DM', 'Player')
 
-export const campaignMemberStatusValidator = v.union(
-  v.literal('Pending'),
-  v.literal('Accepted'),
-  v.literal('Rejected'),
-  v.literal('Removed'),
-)
+export const campaignMemberStatusValidator = literals('Pending', 'Accepted', 'Rejected', 'Removed')
 
 const campaignTableFields = {
   name: v.string(),
@@ -20,7 +16,7 @@ const campaignTableFields = {
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
-  currentSessionId: v.union(v.id('sessions'), v.null()),
+  currentSessionId: v.nullable(v.id('sessions')),
 }
 
 const campaignMemberTableFields = {
@@ -57,7 +53,7 @@ export const campaignMemberValidator = v.object({
 const campaignValidatorFields = {
   ...commonValidatorFields('campaigns'),
   dmUserProfile: userProfileValidator,
-  myMembership: v.union(campaignMemberValidator, v.null()),
+  myMembership: v.nullable(campaignMemberValidator),
   playerCount: v.number(),
   ...campaignTableFields,
 }

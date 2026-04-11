@@ -1,15 +1,15 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
-import { getNote as getNoteFn } from './functions/getNote'
+import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { NoteWithContent } from './types'
 
-export const getNote = authQuery({
+export const getNote = campaignQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
   },
-  returns: v.union(noteWithContentValidator, v.null()),
+  returns: v.nullable(noteWithContentValidator),
   handler: async (ctx, args): Promise<NoteWithContent | null> => {
-    return await getNoteFn(ctx, { noteId: args.noteId })
+    return (await getSidebarItemWithContent(ctx, args.noteId)) as NoteWithContent | null
   },
 })

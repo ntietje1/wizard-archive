@@ -21,7 +21,7 @@ describe('permanentDeleteDescription', () => {
 
   it('includes descendant count for folder with children', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_t1'),
+      _id: testId<'sidebarItems'>('folder_t1'),
       name: 'My Folder',
     })
     const child1 = createNote({ parentId: folder._id })
@@ -33,7 +33,7 @@ describe('permanentDeleteDescription', () => {
 
   it('uses singular "item" for single descendant', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_t2'),
+      _id: testId<'sidebarItems'>('folder_t2'),
       name: 'My Folder',
     })
     const child = createNote({ parentId: folder._id })

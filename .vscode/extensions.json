@@ -1,3 +1,7 @@
 {
-  "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+  "recommendations": [
+    "VoidZero.vite-plus-extension-pack",
+    "dbaeumer.vscode-eslint",
+    "fallow-rs.fallow-vscode"
+  ]
 }

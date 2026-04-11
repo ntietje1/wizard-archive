@@ -39,6 +39,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const yjsUpdate = makeYjsUpdateWithBlocks(blocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: yjsUpdate,
       })
@@ -90,6 +91,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
     // Add 3 pins in quick succession
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -98,6 +100,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 30,
       y: 40,
@@ -106,6 +109,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 50,
       y: 60,
@@ -135,6 +139,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
     // Add pin
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -144,6 +149,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
     // Add another pin
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 30,
       y: 40,
@@ -190,6 +196,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
     // Add pin
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -199,6 +206,7 @@ describe('game map operations are rollbackable after every operation', () => {
 
     // Move pin
     await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
       x: 50,
       y: 60,
@@ -228,6 +236,7 @@ describe('game map operations are rollbackable after every operation', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -236,6 +245,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -262,6 +272,7 @@ describe('game map operations are rollbackable after every operation', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -270,6 +281,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
       visible: true,
     })
@@ -308,6 +320,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -351,6 +364,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -369,7 +383,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
 
       const snapshot = await dmAuth.query(
         api.documentSnapshots.queries.getSnapshotForHistoryEntry,
-        { editHistoryId: historyEntry!._id },
+        { campaignId: ctx.campaignId, editHistoryId: historyEntry!._id },
       )
 
       expect(snapshot).not.toBeNull()
@@ -393,6 +407,7 @@ describe('rollback data integrity', () => {
 
       // Add pin at original position
       const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -411,6 +426,7 @@ describe('rollback data integrity', () => {
 
       // Move pin to new position
       await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
+        campaignId: ctx.campaignId,
         mapPinId: pinId,
         x: 99,
         y: 99,
@@ -419,6 +435,7 @@ describe('rollback data integrity', () => {
 
       // Rollback to the pin add snapshot
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: addEntry!._id,
       })
 
@@ -468,12 +485,13 @@ describe('rollback edge cases', () => {
         metadata: null,
         hasSnapshot: false,
       })
-      await dbCtx.db.delete(id)
+      await dbCtx.db.delete('editHistory', id)
       return id
     })
 
     await expectNotFound(
       dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: fakeId,
       }),
     )
@@ -497,6 +515,7 @@ describe('rollback edge cases', () => {
     expect(historyEntry!.hasSnapshot).toBe(false)
 
     const snapshot = await dmAuth.query(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
+      campaignId: ctx.campaignId,
       editHistoryId: historyEntry!._id,
     })
 
@@ -508,6 +527,7 @@ describe('rollback edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -524,13 +544,14 @@ describe('rollback edge cases', () => {
     expect(snapshotEntry!.hasSnapshot).toBe(true)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(mapId, {
+      await dbCtx.db.patch('sidebarItems', mapId, {
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })
     })
 
     const result = await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      campaignId: ctx.campaignId,
       editHistoryId: snapshotEntry!._id,
     })
 

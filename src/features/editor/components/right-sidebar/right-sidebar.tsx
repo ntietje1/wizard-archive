@@ -5,7 +5,7 @@ import { BackLinksPanel } from './back-links-panel'
 import { OutgoingLinksPanel } from './outgoing-links-panel'
 import { OutlinePanel } from './outline-panel'
 import type { RightSidebarContentId } from './constants'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -39,7 +39,7 @@ function PanelContent({
   itemId,
 }: {
   contentId: RightSidebarContentId
-  itemId: SidebarItemId
+  itemId: Id<'sidebarItems'>
 }) {
   switch (contentId) {
     case RIGHT_SIDEBAR_CONTENT.history:
@@ -63,7 +63,7 @@ export function RightSidebar({
   onContentChange,
   onClose,
 }: {
-  itemId: SidebarItemId
+  itemId: Id<'sidebarItems'>
   activeContentId: RightSidebarContentId
   onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void

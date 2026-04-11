@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
 import { StrokePreview } from '../stroke-node'
@@ -8,7 +8,7 @@ import { RectanglePreview } from '../rectangle-node'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type { StrokeNodeData } from '../stroke-node'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 const DEFAULT_NODE_WIDTH = 150
@@ -22,7 +22,7 @@ function getNodeDimensions(node: Node): { w: number; h: number } {
   }
 }
 
-export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'canvases'> }) {
+export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'sidebarItems'> }) {
   const { nodes, edges, isLoading, isError } = useReadOnlyYjsCanvas(canvasId)
 
   if (isLoading) {
@@ -217,46 +217,26 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
   return items
 }
 
-function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
-  const [doc, setDoc] = useState<Y.Doc | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isError, setIsError] = useState(false)
+function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
+  const [doc] = useState(() => new Y.Doc())
   const [nodes, setNodes] = useState<Array<Node>>([])
   const [edges, setEdges] = useState<Array<Edge>>([])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const lastAppliedSeqRef = useRef(-1)
-  const canvasIdRef = useRef(canvasId)
 
-  useEffect(() => {
-    setIsLoading(true)
-    setIsError(false)
-    setAfterSeq(undefined)
-    lastAppliedSeqRef.current = -1
-    canvasIdRef.current = canvasId
+  useEffect(() => () => doc.destroy(), [doc])
 
-    const d = new Y.Doc()
-    setDoc(d)
-
-    return () => {
-      d.destroy()
-      setDoc(null)
-    }
-  }, [canvasId])
-
-  const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
+  const updatesResult = useCampaignQuery(api.yjsSync.queries.getUpdates, {
     documentId: canvasId,
     afterSeq,
   })
 
+  const isError = updatesResult.isError
+  const isLoading = !initialLoadComplete && !isError
+
   useEffect(() => {
-    if (updatesResult.isError) {
-      setIsLoading(false)
-      setIsError(true)
-      return
-    }
-    if (!updatesResult.data || !doc) return
-    if (canvasIdRef.current !== canvasId) return
-    setIsError(false)
+    if (!updatesResult.data) return
 
     for (const entry of updatesResult.data) {
       if (entry.seq > lastAppliedSeqRef.current) {
@@ -268,18 +248,13 @@ function useReadOnlyYjsCanvas(canvasId: Id<'canvases'>) {
     if (updatesResult.data.length > 0) {
       setAfterSeq(lastAppliedSeqRef.current)
     } else {
-      setIsLoading(false)
+      setInitialLoadComplete(true)
     }
-  }, [updatesResult.data, updatesResult.isError, doc, canvasId])
+  }, [updatesResult.data, doc])
 
   useEffect(() => {
-    if (!doc) return
-
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-
-    setNodes(yMapToArray(nodesMap))
-    setEdges(yMapToArray(edgesMap))
 
     const onNodesChange = () => setNodes(yMapToArray(nodesMap))
     const onEdgesChange = () => setEdges(yMapToArray(edgesMap))

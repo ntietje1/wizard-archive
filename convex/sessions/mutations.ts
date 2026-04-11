@@ -1,31 +1,30 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { dmMutation } from '../functions'
 import { startSession as startSessionFn } from './functions/startSession'
 import { endCurrentSession as endCurrentSessionFn } from './functions/endCurrentSession'
 import { setCurrentSession as setCurrentSessionFn } from './functions/setCurrentSession'
 import { updateSession as updateSessionFn } from './functions/updateSession'
 import type { Id } from '../_generated/dataModel'
 
-export const startSession = authMutation({
+export const startSession = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
   },
   returns: v.id('sessions'),
   handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    return startSessionFn(ctx, { name: args.name, campaignId: args.campaignId })
+    return startSessionFn(ctx, { name: args.name })
   },
 })
 
-export const endCurrentSession = authMutation({
-  args: { campaignId: v.id('campaigns') },
+export const endCurrentSession = dmMutation({
+  args: {},
   returns: v.id('sessions'),
-  handler: async (ctx, args): Promise<Id<'sessions'>> => {
-    return endCurrentSessionFn(ctx, { campaignId: args.campaignId })
+  handler: async (ctx): Promise<Id<'sessions'>> => {
+    return endCurrentSessionFn(ctx)
   },
 })
 
-export const setCurrentSession = authMutation({
+export const setCurrentSession = dmMutation({
   args: {
     sessionId: v.id('sessions'),
   },
@@ -35,7 +34,7 @@ export const setCurrentSession = authMutation({
   },
 })
 
-export const updateSession = authMutation({
+export const updateSession = dmMutation({
   args: {
     sessionId: v.id('sessions'),
     name: v.optional(v.string()),

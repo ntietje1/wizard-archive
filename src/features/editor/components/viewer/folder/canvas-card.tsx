@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -33,8 +33,8 @@ function CanvasCardSkeleton() {
 
 function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
   const ref = useRef<HTMLDivElement>(null)
-  const [imageError, setImageError] = useState(false)
-  useEffect(() => setImageError(false), [canvas.previewUrl])
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
+  const imageError = erroredUrl === canvas.previewUrl
   const linkProps = useEditorLinkProps(canvas)
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(canvas.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
@@ -100,7 +100,7 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
                 alt={`Preview of ${canvas.name}`}
                 className="w-full h-full object-cover"
                 loading="lazy"
-                onError={() => setImageError(true)}
+                onError={() => setErroredUrl(canvas.previewUrl)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

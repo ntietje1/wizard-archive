@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ImageOff } from 'lucide-react'
 
 export function EmbedMapContent({ imageUrl }: { imageUrl: string | null }) {
-  const [imgError, setImgError] = useState(false)
-
-  useEffect(() => {
-    setImgError(false)
-  }, [imageUrl])
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
+  const imgError = erroredUrl === imageUrl
 
   if (!imageUrl || imgError) {
     return (
@@ -25,7 +22,7 @@ export function EmbedMapContent({ imageUrl }: { imageUrl: string | null }) {
         draggable={false}
         loading="lazy"
         referrerPolicy="no-referrer"
-        onError={() => setImgError(true)}
+        onError={() => setErroredUrl(imageUrl)}
       />
     </div>
   )

@@ -16,6 +16,7 @@ import type { GameMapSnapshotData } from '../../gameMaps/types'
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
   args: LogEditHistoryArgs & {
+    campaignId: Id<'campaigns'>
     campaignMemberId: Id<'campaignMembers'>
     hasSnapshot: boolean
   },
@@ -356,7 +357,7 @@ describe('captureGameMapSnapshot', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(mapId)
+      await dbCtx.db.delete('sidebarItems', mapId)
     })
 
     await expect(

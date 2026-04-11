@@ -11,7 +11,7 @@ export type FileDropOverride = (
 interface DndState {
   sidebarDragTargetId: string | null
   dragOutcome: DropOutcome | null
-  fileDragHoveredId: Id<'folders'> | null
+  fileDragHoveredId: Id<'sidebarItems'> | null
   isDraggingFiles: boolean
   isDraggingElement: boolean
   fileDropOverride: FileDropOverride | null
@@ -20,7 +20,7 @@ interface DndState {
 interface DndActions {
   setSidebarDragTargetId: (id: string | null) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
-  setFileDragHoveredId: (id: Id<'folders'> | null) => void
+  setFileDragHoveredId: (id: Id<'sidebarItems'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
   setFileDropOverride: (handler: FileDropOverride | null) => void

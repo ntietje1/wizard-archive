@@ -1,15 +1,16 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
 import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { assertNever } from '../../common/types'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
 
@@ -28,21 +29,19 @@ export type DownloadItem =
     }
 
 async function collectItemsRecursively(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
-    campaignId,
     parentId,
     currentPath,
   }: {
-    campaignId: Id<'campaigns'>
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     currentPath: string
   },
 ): Promise<Array<DownloadItem>> {
-  const children = await getSidebarItemsByParent(ctx, { campaignId, parentId })
+  const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
-  const permissionLevels = await Promise.all(
-    children.map((child) => getSidebarItemPermissionLevel(ctx, { item: child })),
+  const permissionLevels = await asyncMap(children, (child) =>
+    getSidebarItemPermissionLevel(ctx, { item: child }),
   )
   const buildPath = (name: string) => (currentPath ? `${currentPath}/${name}` : name)
 
@@ -67,8 +66,8 @@ async function collectItemsRecursively(
         const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
           noteId: child._id,
         })
-        const results = await Promise.all(
-          topLevelBlocks.map((block) => enforceBlockSharePermissionsOrNull(ctx, { block })),
+        const results = await asyncMap(topLevelBlocks, (block) =>
+          enforceBlockSharePermissionsOrNull(ctx, { block }),
         )
         const content = results
           .filter((result): result is NonNullable<typeof result> => result !== null)
@@ -95,7 +94,6 @@ async function collectItemsRecursively(
       }
       case SIDEBAR_ITEM_TYPES.folders: {
         const nestedItems = await collectItemsRecursively(ctx, {
-          campaignId,
           parentId: child._id,
           currentPath: buildPath(child.name),
         })
@@ -114,21 +112,20 @@ async function collectItemsRecursively(
 }
 
 export async function getFolderContentsForDownload(
-  ctx: AuthQueryCtx,
-  folderId: Id<'folders'>,
+  ctx: CampaignQueryCtx,
+  folderId: Id<'sidebarItems'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
-  const folderFromDb = await ctx.db.get(folderId)
-  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
-  const campaignId = folderFromDb.campaignId
-  await requireCampaignMembership(ctx, campaignId)
+  const rawItem = await getSidebarItem(ctx, folderId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
+  if (rawItem.type !== SIDEBAR_ITEM_TYPES.folders)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item is not a folder')
   const folder = await requireItemAccess(ctx, {
-    rawItem: folderFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
   const folderName = folder.name
   const items = await collectItemsRecursively(ctx, {
-    campaignId,
     parentId: folderId,
     currentPath: '',
   })
@@ -137,12 +134,9 @@ export async function getFolderContentsForDownload(
 }
 
 export async function getRootContentsForDownload(
-  ctx: AuthQueryCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
+  ctx: CampaignQueryCtx,
 ): Promise<{ items: Array<DownloadItem> }> {
-  await requireCampaignMembership(ctx, campaignId)
   const items = await collectItemsRecursively(ctx, {
-    campaignId,
     parentId: null,
     currentPath: '',
   })

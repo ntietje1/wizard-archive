@@ -1,16 +1,14 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireCampaignMembership } from '../../functions'
-import type { AuthQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { CampaignQueryCtx } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemShare } from '../types'
 
 export async function getSidebarItemSharesForItem(
-  ctx: AuthQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  ctx: CampaignQueryCtx,
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ): Promise<Array<SidebarItemShare>> {
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  await requireCampaignMembership(ctx, item.campaignId)
 
   return await ctx.db
     .query('sidebarItemShares')

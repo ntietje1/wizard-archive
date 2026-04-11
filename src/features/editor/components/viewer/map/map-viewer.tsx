@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { validatePinTarget } from 'convex/gameMaps/validation'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -25,7 +24,7 @@ import {
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
 import { handleError } from '~/shared/utils/logger'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -314,7 +313,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     position: PinPosition
   } | null>(null)
   const [pendingPinItem, setPendingPinItem] = useState<{
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
   } | null>(null)
   const [pendingPinMove, setPendingPinMove] = useState<{
     pinId: Id<'mapPins'>
@@ -333,9 +332,9 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const createItemPinMutation = useAppMutation(api.gameMaps.mutations.createItemPin)
+  const createItemPinMutation = useCampaignMutation(api.gameMaps.mutations.createItemPin)
 
-  const updateItemPinMutation = useAppMutation(api.gameMaps.mutations.updateItemPin)
+  const updateItemPinMutation = useCampaignMutation(api.gameMaps.mutations.updateItemPin)
 
   const handleTransformChange = (
     _: unknown,
@@ -387,7 +386,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   }, [pendingPinItem, pendingPinMove, draggingPin])
 
   useEffect(() => {
-    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: SidebarItemId }>) => {
+    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: Id<'sidebarItems'> }>) => {
       if (imageError) {
         toast.error('Cannot place pin: map image failed to load')
         return
@@ -487,7 +486,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     }
   }
 
-  const createPinAtPosition = async (itemId: SidebarItemId, position: PinPosition) => {
+  const createPinAtPosition = async (itemId: Id<'sidebarItems'>, position: PinPosition) => {
     try {
       await createItemPinMutation.mutateAsync({
         mapId: map._id,
@@ -847,8 +846,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   )
 }
 
-function MapImageUpload({ mapId }: { mapId: Id<'gameMaps'> }) {
-  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap)
+function MapImageUpload({ mapId }: { mapId: Id<'sidebarItems'> }) {
+  const updateMap = useCampaignMutation(api.gameMaps.mutations.updateMap)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

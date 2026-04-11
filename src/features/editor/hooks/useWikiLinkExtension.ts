@@ -4,7 +4,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -56,11 +56,11 @@ export function parseWikiLinkText(text: string): ParsedWikiLink {
 
 export function getItemPath(
   item: AnySidebarItem,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): Array<string> {
   const path: Array<string> = []
   let current: AnySidebarItem | undefined = item
-  const seen = new Set<SidebarItemId>()
+  const seen = new Set<Id<'sidebarItems'>>()
 
   while (current && !seen.has(current._id)) {
     seen.add(current._id)
@@ -74,7 +74,7 @@ export function getItemPath(
 export function resolveItemByPath(
   pathSegments: Array<string>,
   allItems: Array<AnySidebarItem>,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): AnySidebarItem | undefined {
   if (pathSegments.length === 0) return undefined
 
@@ -96,7 +96,7 @@ export function resolveItemByPath(
 function isPathUnique(
   pathSegments: Array<string>,
   allItems: Array<AnySidebarItem>,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): boolean {
   if (pathSegments.length === 0) return false
 
@@ -120,7 +120,7 @@ function isPathUnique(
 export function getMinDisambiguationPath(
   item: AnySidebarItem,
   allItems: Array<AnySidebarItem>,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): Array<string> {
   const fullPath = getItemPath(item, itemsMap)
   if (fullPath.length === 0) return []
@@ -154,7 +154,7 @@ export const WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]]
 export interface WikiLinkResolver {
   resolve: (pathSegments: Array<string>) => WikiLinkItemInfo | undefined
   allItems: Array<AnySidebarItem>
-  itemsMap: Map<SidebarItemId, AnySidebarItem>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
 }
 
 export function useWikiLinkExtension(editor: CustomBlockNoteEditor | undefined) {

@@ -1,21 +1,21 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import type { Id } from '../_generated/dataModel'
 
-export const updateFolder = authMutation({
+export const updateFolder = campaignMutation({
   args: {
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await updateFolderFn(ctx, {
       folderId: args.folderId,
       name: args.name,
@@ -25,25 +25,23 @@ export const updateFolder = authMutation({
   },
 })
 
-export const createFolder = authMutation({
+export const createFolder = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ folderId: Id<'folders'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await createFolderFn(ctx, {
       name: args.name,
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      campaignId: args.campaignId,
     })
   },
 })

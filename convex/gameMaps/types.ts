@@ -4,7 +4,6 @@ import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
   SidebarItemFromDb,
-  SidebarItemId,
   SidebarItemType,
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
@@ -26,8 +25,8 @@ export type GameMapWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPE
 }
 
 export type MapPin = CommonValidatorFields<'mapPins'> & {
-  mapId: Id<'gameMaps'>
-  itemId: SidebarItemId
+  mapId: Id<'sidebarItems'>
+  itemId: Id<'sidebarItems'>
   x: number
   y: number
   visible: boolean
@@ -40,7 +39,7 @@ export type MapPinWithItem = MapPin & {
 export const GAME_MAP_SNAPSHOT_TYPE = 'game_map' as const
 
 export type GameMapSnapshotPinData = {
-  itemId: SidebarItemId
+  itemId: Id<'sidebarItems'>
   x: number
   y: number
   visible: boolean

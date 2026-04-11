@@ -1,6 +1,6 @@
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -10,7 +10,7 @@ import { assertNever } from '~/shared/utils/utils'
 interface CreateItemBase {
   campaignId: Id<'campaigns'>
   name: string
-  parentId: Id<'folders'> | null
+  parentId: Id<'sidebarItems'> | null
   iconName?: string
   color?: string
 }
@@ -46,7 +46,7 @@ export type CreateItemArgs =
   | CreateCanvasArgs
 
 export type CreateItemResult = {
-  id: SidebarItemId
+  id: Id<'sidebarItems'>
   slug: string
   type: SidebarItemType
 }

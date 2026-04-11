@@ -86,8 +86,8 @@ describe('validateItemName', () => {
 
 describe('checkNameConflict', () => {
   const siblings = [
-    { _id: testId<'notes'>('id1'), name: 'Alpha' },
-    { _id: testId<'notes'>('id2'), name: 'Beta' },
+    { _id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
+    { _id: testId<'sidebarItems'>('id2'), name: 'Beta' },
   ]
 
   it('returns valid when no conflict', () => {
@@ -100,65 +100,65 @@ describe('checkNameConflict', () => {
   })
 
   it('excludes self from conflict check', () => {
-    const result = checkNameConflict('Alpha', siblings, testId<'notes'>('id1'))
+    const result = checkNameConflict('Alpha', siblings, testId<'sidebarItems'>('id1'))
     expect(result).toEqual({ valid: true })
   })
 })
 
 describe('validateNoCircularParent', () => {
   const folder = (_id: string, parentId: string | null) => ({
-    parentId: parentId ? testId<'folders'>(parentId) : null,
+    parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
   })
 
   it('returns valid for null parent', () => {
-    const result = validateNoCircularParent(testId<'folders'>('f1'), null, () => undefined)
+    const result = validateNoCircularParent(testId<'sidebarItems'>('f1'), null, () => undefined)
     expect(result).toEqual({ valid: true })
   })
 
   it('rejects item as its own parent', () => {
     const result = validateNoCircularParent(
-      testId<'folders'>('f1'),
-      testId<'folders'>('f1'),
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f1'),
       () => undefined,
     )
     expect(result.valid).toBe(false)
   })
 
   it('detects ancestor cycle', () => {
-    const tree: Record<string, { parentId: Id<'folders'> | null }> = {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f2', 'f3'),
       f3: folder('f3', 'f1'),
     }
     const result = validateNoCircularParent(
-      testId<'folders'>('f1'),
-      testId<'folders'>('f2'),
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f2'),
       (id) => tree[id],
     )
     expect(result.valid).toBe(false)
   })
 
   it('allows deep chain with no cycle', () => {
-    const tree: Record<string, { parentId: Id<'folders'> | null }> = {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f2', 'f3'),
       f3: folder('f3', 'f4'),
       f4: folder('f4', null),
     }
     const result = validateNoCircularParent(
-      testId<'folders'>('f1'),
-      testId<'folders'>('f2'),
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f2'),
       (id) => tree[id],
     )
     expect(result).toEqual({ valid: true })
   })
 
   it('breaks on circular data via seen set', () => {
-    const tree: Record<string, { parentId: Id<'folders'> | null }> = {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f2', 'f3'),
       f3: folder('f3', 'f2'),
     }
     const result = validateNoCircularParent(
-      testId<'folders'>('f1'),
-      testId<'folders'>('f2'),
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f2'),
       (id) => tree[id],
     )
     expect(result).toEqual({ valid: true })

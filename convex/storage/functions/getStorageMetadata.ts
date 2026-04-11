@@ -19,7 +19,7 @@ export async function getStorageMetadata(
     return null
   }
 
-  const metadata = await ctx.db.system.get(storageId)
+  const metadata = await ctx.db.system.get('_storage', storageId)
   if (!metadata) {
     return null
   }

@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -36,19 +38,26 @@ jobs:
       - run: vp check
       - run: vp run lint:convex # TODO: remove this once plugins exist for oxlint
 
-  knip:
-    name: Knip
+  fallow:
+    name: Fallow
     runs-on: ubuntu-latest
     needs: [setup]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      # TODO: remove --include flag once unused exports/types are cleaned up
-      - run: vp run knip --include dependencies,unlisted
+      - name: Run Fallow (full scan on main, diff on PRs)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            vp run fallow audit --base origin/main
+          else
+            vp run fallow audit
+          fi
 
   react-compiler:
     name: React Compiler Health
@@ -95,7 +104,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config vitest.config.ts --reporter=verbose
+      - run: vp test run --config vitest.config.ts --reporter=verbose --reporter=junit --outputFile=test-results/frontend.junit.xml --coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: frontend
+      - uses: codecov/test-results-action@v1
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: frontend
+          file: test-results/frontend.junit.xml
 
   backend-test:
     name: Backend Tests
@@ -108,12 +127,24 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config convex/vitest.config.mts --reporter=verbose
+      - run: vp test run --config convex/vitest.config.mts --reporter=verbose --reporter=junit --outputFile=test-results/backend.junit.xml --coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: backend
+      - uses: codecov/test-results-action@v1
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: backend
+          file: test-results/backend.junit.xml
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [check]
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1

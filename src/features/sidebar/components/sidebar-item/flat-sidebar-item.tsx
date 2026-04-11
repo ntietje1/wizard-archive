@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
@@ -15,8 +15,8 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 interface FlatSidebarItemProps {
   item: AnySidebarItem
   isExpanded: boolean
-  renamingId: SidebarItemId | null
-  setRenamingId: (id: SidebarItemId | null) => void
+  renamingId: Id<'sidebarItems'> | null
+  setRenamingId: (id: Id<'sidebarItems'> | null) => void
 }
 
 function FlatSidebarItemComponent({

@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
 import { api } from 'convex/_generated/api'
 import type { CampaignMember } from 'convex/campaigns/types'
+import type { Id } from 'convex/_generated/dataModel'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
@@ -18,10 +19,12 @@ import {
 
 export function RemovePlayerDialog({
   player,
+  campaignId,
   isOpen,
   onClose,
 }: {
   player: CampaignMember | undefined
+  campaignId: Id<'campaigns'>
   isOpen: boolean
   onClose: () => void
 }) {
@@ -33,6 +36,7 @@ export function RemovePlayerDialog({
     if (!player) return
     try {
       await updateMemberStatus.mutateAsync({
+        campaignId,
         memberId: player._id,
         status: CAMPAIGN_MEMBER_STATUS.Removed,
       })

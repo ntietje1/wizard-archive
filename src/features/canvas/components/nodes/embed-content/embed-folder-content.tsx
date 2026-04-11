@@ -2,7 +2,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 
-export function EmbedFolderContent({ folderId }: { folderId: Id<'folders'> }) {
+export function EmbedFolderContent({ folderId }: { folderId: Id<'sidebarItems'> }) {
   const { parentItemsMap } = useActiveSidebarItems()
   const children = parentItemsMap.get(folderId) ?? []
 

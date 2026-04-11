@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { dmMutation } from '../functions'
 import {
   permissionLevelValidator,
   sidebarItemIdValidator,
@@ -14,7 +14,7 @@ import { setFolderInheritShares as setFolderInheritSharesFn } from './functions/
  * Share a sidebar item with a specific member.
  * Creates or updates an individual share record.
  */
-export const shareSidebarItem = authMutation({
+export const shareSidebarItem = dmMutation({
   args: {
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
@@ -25,7 +25,6 @@ export const shareSidebarItem = authMutation({
   handler: async (ctx, args) => {
     return await shareSidebarItemFn(ctx, {
       sidebarItemId: args.sidebarItemId,
-      sidebarItemType: args.sidebarItemType,
       campaignMemberId: args.campaignMemberId,
       permissionLevel: args.permissionLevel ?? null,
     })
@@ -36,7 +35,7 @@ export const shareSidebarItem = authMutation({
  * Unshare a sidebar item from a specific member.
  * Deletes the individual share record.
  */
-export const unshareSidebarItem = authMutation({
+export const unshareSidebarItem = dmMutation({
   args: {
     sidebarItemId: sidebarItemIdValidator,
     campaignMemberId: v.id('campaignMembers'),
@@ -54,7 +53,7 @@ export const unshareSidebarItem = authMutation({
  * Update the permission level for a specific member's share on a sidebar item.
  * If level is 'none', removes the share. If no share exists for other levels, creates one.
  */
-export const updateSidebarItemSharePermission = authMutation({
+export const updateSidebarItemSharePermission = dmMutation({
   args: {
     sidebarItemId: sidebarItemIdValidator,
     sidebarItemType: sidebarItemTypeValidator,
@@ -65,7 +64,6 @@ export const updateSidebarItemSharePermission = authMutation({
   handler: async (ctx, args) => {
     await shareSidebarItemFn(ctx, {
       sidebarItemId: args.sidebarItemId,
-      sidebarItemType: args.sidebarItemType,
       campaignMemberId: args.campaignMemberId,
       permissionLevel: args.permissionLevel,
     })
@@ -78,10 +76,10 @@ export const updateSidebarItemSharePermission = authMutation({
  * Sets allPermissionLevel on the item directly.
  * Individual share overrides are preserved independently.
  */
-export const setAllPlayersPermission = authMutation({
+export const setAllPlayersPermission = dmMutation({
   args: {
     sidebarItemId: sidebarItemIdValidator,
-    permissionLevel: v.union(permissionLevelValidator, v.null()),
+    permissionLevel: v.nullable(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -96,9 +94,9 @@ export const setAllPlayersPermission = authMutation({
  * Toggle whether a folder passes its share settings to newly created child items.
  * When enabled, new items inherit the folder's allPermissionLevel and individual shares.
  */
-export const setFolderInheritShares = authMutation({
+export const setFolderInheritShares = dmMutation({
   args: {
-    folderId: v.id('folders'),
+    folderId: v.id('sidebarItems'),
     inheritShares: v.boolean(),
   },
   returns: v.null(),

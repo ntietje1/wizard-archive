@@ -8,16 +8,15 @@ import {
   validateSidebarMove,
   validateSidebarParentChange,
 } from '../validation'
-import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
-import { applyToTree } from './applyToTree'
-import { applyToDependents } from './applyToDependents'
-import type { SidebarItemId, SidebarItemLocation } from '../types/baseTypes'
+import { trashTree, restoreTreeDescendants } from './treeOperations'
+import { getSidebarItem } from './getSidebarItem'
+import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
@@ -27,19 +26,16 @@ const clearDeletion = { deletionTime: null, deletedBy: null }
  * Returns a patch object with the unique name/slug if they differ from current.
  */
 async function resolveRestoreConflicts(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   item: AnySidebarItemFromDb,
 ): Promise<{ name?: string; slug?: string }> {
-  const campaignId = item.campaignId
   const siblings = await getSidebarItemsByParent(ctx, {
-    campaignId,
     parentId: item.parentId,
   })
   const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
   const uniqueName = deduplicateName(item.name, otherNames)
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    campaignId,
     itemId: item._id,
     name: uniqueName,
   })
@@ -51,25 +47,22 @@ async function resolveRestoreConflicts(
 }
 
 export async function moveSidebarItem(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     itemId,
     location,
     parentId,
   }: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     location?: SidebarItemLocation
-    parentId?: Id<'folders'> | null
+    parentId?: Id<'sidebarItems'> | null
   },
-): Promise<SidebarItemId> {
-  const itemFromDb = await ctx.db.get(itemId)
+): Promise<Id<'sidebarItems'>> {
+  const itemFromDb = await getSidebarItem(ctx, itemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-
-  const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
 
   const isRelocating = location !== undefined && location !== item.location
   const isTrashing = isRelocating && location === SIDEBAR_ITEM_LOCATION.trash
@@ -82,39 +75,35 @@ export async function moveSidebarItem(
 
   // --- Relocate: entering trash ---
   if (isTrashing) {
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    if (
+      item.type === SIDEBAR_ITEM_TYPES.folders &&
+      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+    ) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can trash folders')
     }
 
-    const now = Date.now()
-    const deletedBy = ctx.user.profile._id
-
-    await applyToTree(ctx, item, async (_, i) => {
-      await applyToDependents(ctx, i, async (_, doc) => {
-        await ctx.db.patch(doc._id, { deletionTime: now, deletedBy })
-      })
-      const isRoot = i._id === item._id
-      await ctx.db.patch(i._id, {
-        location: SIDEBAR_ITEM_LOCATION.trash,
-        deletionTime: now,
-        deletedBy,
-        ...(isRoot ? { parentId: null } : {}),
-      })
+    await trashTree(ctx, item, {
+      deletionTime: Date.now(),
+      deletedBy: ctx.membership.userId,
     })
 
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.trashed,
     })
   }
 
   // --- Relocate: leaving trash ---
   if (isRestoring) {
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    if (
+      item.type === SIDEBAR_ITEM_TYPES.folders &&
+      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+    ) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can restore folders')
     }
+    if (location === undefined)
+      throw new Error('Invariant: location must be defined when restoring')
 
     const restoreParentId = parentId ?? null
 
@@ -126,44 +115,20 @@ export async function moveSidebarItem(
     const itemForRestore = { ...item, parentId: restoreParentId }
     const conflictPatch = await resolveRestoreConflicts(ctx, itemForRestore)
 
-    // Restore root item + its dependents
-    await applyToDependents(ctx, item, async (_, doc) => {
-      await ctx.db.patch(doc._id, clearDeletion)
-    })
-    await ctx.db.patch(itemId, {
+    await ctx.db.patch('sidebarItems', itemId, {
       ...clearDeletion,
       ...conflictPatch,
       location: location,
       parentId: restoreParentId,
     })
 
-    // Restore all descendants if folder
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      await applyToTree(ctx, item, async (_, i) => {
-        if (i._id === item._id) return
-        if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
-
-        await applyToDependents(ctx, i, async (_, doc) => {
-          await ctx.db.patch(doc._id, clearDeletion)
-        })
-
-        const descSlug = await findUniqueSidebarItemSlug(ctx, {
-          campaignId,
-          itemId: i._id,
-          name: i.name,
-        })
-        await ctx.db.patch(i._id, {
-          ...clearDeletion,
-          location: location,
-          ...(descSlug !== i.slug ? { slug: descSlug } : {}),
-        })
-      })
+      await restoreTreeDescendants(ctx, item, location)
     }
 
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.restored,
     })
   }
@@ -172,19 +137,18 @@ export async function moveSidebarItem(
   if (isMoving && !isRelocating) {
     await validateSidebarMove(ctx, { item, newParentId: parentId })
 
-    const oldParent = item.parentId ? await ctx.db.get(item.parentId) : null
-    const newParent = parentId ? await ctx.db.get(parentId) : null
+    const oldParent = item.parentId ? await ctx.db.get('sidebarItems', item.parentId) : null
+    const newParent = parentId ? await ctx.db.get('sidebarItems', parentId) : null
 
-    await ctx.db.patch(itemId, {
+    await ctx.db.patch('sidebarItems', itemId, {
       parentId: parentId,
       updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
 
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.moved,
       metadata: {
         from: oldParent?.name ?? null,

@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { PERSIST_INTERVAL_MS, useNoteYjsCollaboration } from '../useNoteYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 
-const NOTE_ID = 'test-note-id' as Id<'notes'>
+const NOTE_ID = 'test-note-id' as Id<'sidebarItems'>
 const USER = { name: 'Test User', color: '#ff0000' }
 
 const { mockMutation, mockConvexClient, mockUseAuthQuery } = vi.hoisted(() => {
@@ -37,8 +37,12 @@ vi.mock('@convex-dev/react-query', () => ({
   useConvex: () => mockConvexClient,
 }))
 
-vi.mock('~/shared/hooks/useAuthQuery', () => ({
-  useAuthQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
+vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
+  useCampaign: () => ({ campaignId: 'test-campaign-id' }),
+}))
+
+vi.mock('~/shared/hooks/useCampaignQuery', () => ({
+  useCampaignQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
 }))
 
 const mockProviderDestroy = vi.fn()
@@ -90,6 +94,7 @@ describe('useNoteYjsCollaboration', () => {
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
       expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+        campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
     })
@@ -126,6 +131,7 @@ describe('useNoteYjsCollaboration', () => {
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
       expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+        campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
 

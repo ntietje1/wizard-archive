@@ -140,8 +140,8 @@ describe('map predicates', () => {
   const mockPin: MapPinWithItem = {
     _id: testId<'mapPins'>('pin_1'),
     _creationTime: Date.now(),
-    mapId: testId<'gameMaps'>('map_1'),
-    itemId: testId<'notes'>('note_pinned'),
+    mapId: testId<'sidebarItems'>('map_1'),
+    itemId: testId<'sidebarItems'>('note_pinned'),
     x: 0,
     y: 0,
     visible: true,
@@ -154,7 +154,7 @@ describe('map predicates', () => {
   }
 
   const mockMap: GameMapWithContent = {
-    ...createGameMap({ _id: testId<'gameMaps'>('map_1') }),
+    ...createGameMap({ _id: testId<'sidebarItems'>('map_1') }),
     ancestors: [],
     pins: [mockPin],
   }
@@ -165,8 +165,8 @@ describe('map predicates', () => {
   })
 
   it('isPinnedOnActiveMap', () => {
-    const pinnedNote = createNote({ _id: testId<'notes'>('note_pinned') })
-    const unpinnedNote = createNote({ _id: testId<'notes'>('note_other') })
+    const pinnedNote = createNote({ _id: testId<'sidebarItems'>('note_pinned') })
+    const unpinnedNote = createNote({ _id: testId<'sidebarItems'>('note_other') })
     expect(p.isPinnedOnActiveMap(ctx({ item: pinnedNote, activeMap: mockMap }))).toBe(true)
     expect(p.isPinnedOnActiveMap(ctx({ item: unpinnedNote, activeMap: mockMap }))).toBe(false)
     expect(p.isPinnedOnActiveMap(ctx({ item: pinnedNote }))).toBe(false)

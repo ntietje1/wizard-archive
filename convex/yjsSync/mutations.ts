@@ -1,19 +1,19 @@
 import { v } from 'convex/values'
-import { authMutation, requireCampaignMembership } from '../functions'
+import { campaignMutation } from '../functions'
 import { internal } from '../_generated/api'
 import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess, checkYjsWriteAccess } from './functions/checkYjsAccess'
 import { shouldCompact } from './functions/compactUpdates'
 import { SNAPSHOT_IDLE_MS } from './constants'
 
-export const pushUpdate = authMutation({
+export const pushUpdate = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
     update: v.bytes(),
   },
   returns: v.object({ seq: v.number() }),
   handler: async (ctx, { documentId, update }) => {
-    const doc = await checkYjsWriteAccess(ctx, documentId)
+    await checkYjsWriteAccess(ctx, documentId)
 
     const latest = await ctx.db
       .query('yjsUpdates')
@@ -24,7 +24,7 @@ export const pushUpdate = authMutation({
     const seq = (latest?.seq ?? -1) + 1
 
     await ctx.db.insert('yjsUpdates', {
-      documentId,
+      documentId: documentId,
       update,
       seq,
       isSnapshot: false,
@@ -34,17 +34,15 @@ export const pushUpdate = authMutation({
       await ctx.scheduler.runAfter(0, internal.yjsSync.internalMutations.compact, { documentId })
     }
 
-    const { membership } = await requireCampaignMembership(ctx, doc.campaignId)
-
     await ctx.scheduler.runAfter(
       SNAPSHOT_IDLE_MS,
       internal.yjsSync.internalMutations.maybeCreateSnapshot,
       {
         documentId,
         triggerSeq: seq,
-        campaignId: doc.campaignId,
-        campaignMemberId: membership._id,
-        createdBy: ctx.user.profile._id,
+        campaignId: ctx.campaign._id,
+        campaignMemberId: ctx.membership._id,
+        createdBy: ctx.membership.userId,
       },
     )
 
@@ -52,7 +50,7 @@ export const pushUpdate = authMutation({
   },
 })
 
-export const pushAwareness = authMutation({
+export const pushAwareness = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
@@ -70,15 +68,15 @@ export const pushAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch('yjsAwareness', existing._id, {
         state,
         updatedAt: Date.now(),
       })
     } else {
       await ctx.db.insert('yjsAwareness', {
-        documentId,
+        documentId: documentId,
         clientId,
-        userId: ctx.user.profile._id,
+        userId: ctx.membership.userId,
         state,
         updatedAt: Date.now(),
       })
@@ -88,7 +86,7 @@ export const pushAwareness = authMutation({
   },
 })
 
-export const removeAwareness = authMutation({
+export const removeAwareness = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
@@ -105,7 +103,7 @@ export const removeAwareness = authMutation({
       .first()
 
     if (existing) {
-      await ctx.db.delete(existing._id)
+      await ctx.db.delete('yjsAwareness', existing._id)
     }
 
     return null

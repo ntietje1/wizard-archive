@@ -1,48 +1,22 @@
-import { requireCampaignMembership } from '../../functions'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { checkItemAccess } from '../validation'
-import { enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
-import { enhanceFolderWithContent } from '../../folders/functions/enhanceFolder'
-import { enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
-import { enhanceFileWithContent } from '../../files/functions/enhanceFile'
-import { enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
-import { assertNever } from '../../common/types'
+import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
+import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItemWithContent } from '../types/types'
-import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 
 export const getSidebarItemBySlug = async (
-  ctx: AuthQueryCtx,
-  { slug, campaignId }: { slug: string; campaignId: Id<'campaigns'> },
+  ctx: CampaignQueryCtx,
+  { slug }: { slug: string },
 ): Promise<AnySidebarItemWithContent | null> => {
-  await requireCampaignMembership(ctx, campaignId)
+  const raw = await ctx.db
+    .query('sidebarItems')
+    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', ctx.campaign._id).eq('slug', slug))
+    .unique()
 
-  // specifically don't filter out deleted items, as they are still viewable in this context
-  const [note, folder, map, file, canvas] = await Promise.all([
-    ctx.db
-      .query('notes')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-      .unique(),
-    ctx.db
-      .query('folders')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-      .unique(),
-    ctx.db
-      .query('gameMaps')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-      .unique(),
-    ctx.db
-      .query('files')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-      .unique(),
-    ctx.db
-      .query('canvases')
-      .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-      .unique(),
-  ])
+  if (!raw) return null
 
-  const item = note ?? folder ?? map ?? file ?? canvas
+  const item = await getSidebarItem(ctx, raw._id)
   if (!item) return null
 
   const enhanced = await checkItemAccess(ctx, {
@@ -51,18 +25,5 @@ export const getSidebarItemBySlug = async (
   })
   if (!enhanced) return null
 
-  switch (enhanced.type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return enhanceNoteWithContent(ctx, { note: enhanced })
-    case SIDEBAR_ITEM_TYPES.folders:
-      return enhanceFolderWithContent(ctx, { folder: enhanced })
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return enhanceGameMapWithContent(ctx, { gameMap: enhanced })
-    case SIDEBAR_ITEM_TYPES.files:
-      return enhanceFileWithContent(ctx, { file: enhanced })
-    case SIDEBAR_ITEM_TYPES.canvases:
-      return enhanceCanvasWithContent(ctx, { canvas: enhanced })
-    default:
-      return assertNever(enhanced)
-  }
+  return enhanceSidebarItemWithContent(ctx, { item: enhanced })
 }

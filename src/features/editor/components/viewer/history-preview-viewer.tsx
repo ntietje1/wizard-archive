@@ -15,6 +15,7 @@ import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Edge, Node } from '@xyflow/react'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -24,12 +25,12 @@ import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/vi
 import { logger } from '~/shared/utils/logger'
 
 export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
-  const snapshotQuery = useAuthQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
+  const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
     editHistoryId: entryId,
   })
   const { canEdit } = useEditorMode()
 
-  const historyEntry = useAuthQuery(api.editHistory.queries.getHistoryEntry, {
+  const historyEntry = useCampaignQuery(api.editHistory.queries.getHistoryEntry, {
     editHistoryId: entryId,
   })
 
@@ -39,6 +40,17 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (snapshotQuery.error || historyEntry.error) {
+    return (
+      <div className="flex flex-col h-full">
+        <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Failed to load history preview.</p>
+        </div>
       </div>
     )
   }

@@ -43,6 +43,6 @@ export async function onUpdateUser(
     updates.twoFactorEnabled = newUser.twoFactorEnabled ?? null
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.patch(profile._id, updates)
+    await ctx.db.patch('userProfiles', profile._id, updates)
   }
 }

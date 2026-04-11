@@ -11,7 +11,7 @@ import { PdfFileViewer } from './pdf-file-viewer'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'convex/files/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
@@ -44,8 +44,8 @@ function getFileType(
   }
 }
 
-function FileUpload({ fileId }: { fileId: Id<'files'> }) {
-  const updateFile = useAppMutation(api.files.mutations.updateFile)
+function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
+  const updateFile = useCampaignMutation(api.files.mutations.updateFile)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

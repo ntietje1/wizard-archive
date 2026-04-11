@@ -16,14 +16,14 @@ export async function captureYjsState(
     campaignId,
     createdBy,
   }: {
-    documentId: Id<'notes'> | Id<'canvases'>
+    documentId: Id<'sidebarItems'>
     snapshotType: SnapshotType
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
     createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
-  const doc = await ctx.db.get(documentId)
+  const doc = await ctx.db.get('sidebarItems', documentId)
   if (!doc) {
     logger.warn(`captureYjsState: document not found: ${documentId}`)
     return

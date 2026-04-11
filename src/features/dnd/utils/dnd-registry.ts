@@ -3,11 +3,7 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type {
-  SidebarItemId,
-  SidebarItemLocation,
-  SidebarItemType,
-} from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemLocation, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -23,36 +19,36 @@ export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 // ─── Types ───────────────────────────────────────────────────────────
 
 export type SidebarDragData = {
-  sidebarItemId: SidebarItemId
+  sidebarItemId: Id<'sidebarItems'>
 }
 
 /** Type-safe extraction of sidebarItemId from raw drag source data. */
-export function getDragItemId(sourceData: Record<string, unknown>): SidebarItemId | null {
+export function getDragItemId(sourceData: Record<string, unknown>): Id<'sidebarItems'> | null {
   const id = sourceData.sidebarItemId
-  return typeof id === 'string' ? (id as SidebarItemId) : null
+  return typeof id === 'string' ? (id as Id<'sidebarItems'>) : null
 }
 
 export type SidebarItemDropData = {
   type: AnySidebarItem['type']
-  sidebarItemId: SidebarItemId
+  sidebarItemId: Id<'sidebarItems'>
 }
 
 export type ResolvedSidebarItemDropData = AnySidebarItem & {
-  ancestorIds?: Array<Id<'folders'>>
+  ancestorIds?: Array<Id<'sidebarItems'>>
 }
 
 export interface CanvasDropZoneData {
   [key: string | symbol]: unknown
   type: typeof CANVAS_DROP_ZONE_TYPE
-  canvasId: Id<'canvases'>
+  canvasId: Id<'sidebarItems'>
 }
 
 export interface MapDropZoneData {
   [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
-  mapId: Id<'gameMaps'>
+  mapId: Id<'sidebarItems'>
   mapName: string
-  pinnedItemIds?: ReadonlyArray<SidebarItemId>
+  pinnedItemIds?: ReadonlyArray<Id<'sidebarItems'>>
 }
 
 export interface SidebarRootDropZoneData {
@@ -68,7 +64,7 @@ export interface EmptyEditorDropZoneData {
 export interface NoteEditorDropZoneData {
   [key: string | symbol]: unknown
   type: typeof NOTE_EDITOR_DROP_TYPE
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
 }
 
 export interface TrashDropZoneData {
@@ -134,7 +130,7 @@ export interface DndContext {
   moveItem: (
     item: AnySidebarItem,
     options: {
-      parentId?: Id<'folders'> | null
+      parentId?: Id<'sidebarItems'> | null
       location?: SidebarItemLocation
     },
   ) => Promise<unknown>
@@ -142,11 +138,11 @@ export interface DndContext {
   campaignId: Id<'campaigns'> | null
   campaignName: string | undefined
   isDm: boolean
-  setFolderOpen: (folderId: Id<'folders'>) => void
+  setFolderOpen: (folderId: Id<'sidebarItems'>) => void
   hasSiblingNameConflict: (
     name: string,
-    parentId: Id<'folders'> | null,
-    excludeId?: SidebarItemId,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
   ) => boolean
 }
 
@@ -279,7 +275,7 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       return rejection('no_permission')
     }
 
-    const folderId = t._id as Id<'folders'>
+    const folderId = t._id as Id<'sidebarItems'>
 
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
@@ -410,12 +406,12 @@ export function getHighlightId(target: SidebarDropData | null): string | null {
 
 export function resolveDropTarget(
   rawData: Record<string, unknown>,
-  itemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
-  trashedItemsMap: ReadonlyMap<SidebarItemId, AnySidebarItem>,
-  getAncestorIds: (id: SidebarItemId) => Array<Id<'folders'>>,
+  itemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
+  trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
+  getAncestorIds: (id: Id<'sidebarItems'>) => Array<Id<'sidebarItems'>>,
 ): SidebarDropData | null {
   if ('sidebarItemId' in rawData) {
-    const sid = rawData.sidebarItemId as SidebarItemId
+    const sid = rawData.sidebarItemId as Id<'sidebarItems'>
     const item = itemsMap.get(sid) ?? trashedItemsMap.get(sid)
     if (!item) return null
     return { ...item, ancestorIds: getAncestorIds(item._id) }

@@ -18,7 +18,7 @@ import {
 } from '~/features/editor/utils/patch-yundo-destroy'
 
 type NoteContentProps = {
-  noteId?: Id<'notes'>
+  noteId?: Id<'sidebarItems'>
   content: Array<CustomBlock>
   editable: boolean
   className?: string
@@ -61,7 +61,7 @@ function CollaborativeEditorLoader({
   children,
   onEditorChange,
 }: {
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void

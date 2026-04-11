@@ -1,3 +1,4 @@
+import { asyncMap } from 'convex-helpers'
 import { CAMPAIGN_MEMBER_STATUS } from '../types'
 import { getCampaign } from './getCampaign'
 import type { Campaign } from '../types'
@@ -17,10 +18,8 @@ export async function getUserCampaigns(ctx: AuthQueryCtx): Promise<Array<Campaig
       ),
     )
 
-  const results = await Promise.all(
-    campaignMemberships.map(async (membership) => {
-      return await getCampaign(ctx, { campaignId: membership.campaignId })
-    }),
+  const results = await asyncMap(campaignMemberships, (membership) =>
+    getCampaign(ctx, { campaignId: membership.campaignId }),
   )
 
   return results.filter((r) => r !== null)

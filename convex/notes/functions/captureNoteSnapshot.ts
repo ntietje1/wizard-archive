@@ -11,7 +11,7 @@ export async function captureNoteSnapshot(
     campaignId,
     createdBy,
   }: {
-    noteId: Id<'notes'>
+    noteId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
     createdBy: Id<'userProfiles'>

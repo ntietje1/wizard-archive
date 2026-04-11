@@ -27,6 +27,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
@@ -35,7 +36,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.previewLockedUntil).not.toBeNull()
       expect(note!.previewLockedUntil).toBeGreaterThan(now)
       expect(note!.previewClaimToken).toBe(result.claimToken)
@@ -49,6 +50,7 @@ describe('claimPreviewGeneration', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
     })
 
@@ -71,6 +73,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
@@ -94,6 +97,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
       }),
     )
@@ -107,6 +111,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
       }),
     )
@@ -118,11 +123,12 @@ describe('claimPreviewGeneration', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(noteId)
+      await dbCtx.db.delete('sidebarItems', noteId)
     })
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
       }),
     )
@@ -135,11 +141,13 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
     expect(first.claimed).toBe(true)
 
     const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
     expect(second.claimed).toBe(false)
@@ -153,12 +161,13 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch('sidebarItems', noteId, {
         previewLockedUntil: Date.now() - 1,
       })
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
     expect(result.claimed).toBe(true)
@@ -171,12 +180,13 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch('sidebarItems', noteId, {
         previewUpdatedAt: Date.now() - COOLDOWN_MS / 2,
       })
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
     expect(result.claimed).toBe(false)
@@ -190,12 +200,13 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, {
+      await dbCtx.db.patch('sidebarItems', noteId, {
         previewUpdatedAt: Date.now() - (COOLDOWN_MS + 1),
       })
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
     expect(result.claimed).toBe(true)
@@ -208,6 +219,7 @@ describe('claimPreviewGeneration', () => {
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: canvasId,
     })
 
@@ -216,7 +228,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
       expect(canvas!.previewLockedUntil).not.toBeNull()
       expect(canvas!.previewLockedUntil).toBeGreaterThan(now)
       expect(canvas!.previewClaimToken).toBe(result.claimToken)
@@ -238,6 +250,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: canvasId,
     })
 
@@ -260,6 +273,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
       }),
     )
@@ -273,6 +287,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
       }),
     )
@@ -284,6 +299,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
       }),
     )
@@ -305,10 +321,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
+      { campaignId: ctx.campaignId, itemId: noteId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       previewStorageId: storageId,
       claimToken: claimToken!,
@@ -316,7 +333,7 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.previewStorageId).toBe(storageId)
       expect(note!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(1000)
@@ -336,7 +353,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: oldStorageId })
     })
 
     const newStorageId = await t.run(async (dbCtx) => {
@@ -345,17 +362,18 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
+      { campaignId: ctx.campaignId, itemId: noteId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       previewStorageId: newStorageId,
       claimToken: claimToken!,
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -383,17 +401,18 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
+      { campaignId: ctx.campaignId, itemId: noteId },
     )
 
     await playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       previewStorageId: storageId,
       claimToken: claimToken!,
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteId)
       expect(note!.previewStorageId).toBe(storageId)
     })
   })
@@ -418,6 +437,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -437,6 +457,7 @@ describe('setPreviewImage', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -456,6 +477,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -469,7 +491,7 @@ describe('setPreviewImage', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(noteId)
+      await dbCtx.db.delete('sidebarItems', noteId)
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -478,6 +500,7 @@ describe('setPreviewImage', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -492,6 +515,7 @@ describe('setPreviewImage', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
@@ -501,6 +525,7 @@ describe('setPreviewImage', () => {
 
     await expectConflict(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: 'wrong-token',
@@ -516,11 +541,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
+      { campaignId: ctx.campaignId, itemId: noteId },
     )
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewLockedUntil: Date.now() - 1 })
+      await dbCtx.db.patch('sidebarItems', noteId, { previewLockedUntil: Date.now() - 1 })
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -529,6 +554,7 @@ describe('setPreviewImage', () => {
 
     await expectConflict(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: claimToken!,
@@ -548,10 +574,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: canvasId },
+      { campaignId: ctx.campaignId, itemId: canvasId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: canvasId,
       previewStorageId: storageId,
       claimToken: claimToken!,
@@ -559,7 +586,7 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
       expect(canvas!.previewStorageId).toBe(storageId)
       expect(canvas!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - canvas!.previewUpdatedAt!)).toBeLessThan(1000)
@@ -579,7 +606,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(canvasId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: oldStorageId })
     })
 
     const newStorageId = await t.run(async (dbCtx) => {
@@ -588,17 +615,18 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: canvasId },
+      { campaignId: ctx.campaignId, itemId: canvasId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: canvasId,
       previewStorageId: newStorageId,
       claimToken: claimToken!,
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
       expect(canvas!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -626,17 +654,18 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: canvasId },
+      { campaignId: ctx.campaignId, itemId: canvasId },
     )
 
     await playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+      campaignId: ctx.campaignId,
       itemId: canvasId,
       previewStorageId: storageId,
       claimToken: claimToken!,
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get(canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
       expect(canvas!.previewStorageId).toBe(storageId)
     })
   })
@@ -661,6 +690,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -680,6 +710,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -693,7 +724,7 @@ describe('setPreviewImage', () => {
 
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(canvasId)
+      await dbCtx.db.delete('sidebarItems', canvasId)
     })
 
     const storageId = await t.run(async (dbCtx) => {
@@ -702,6 +733,7 @@ describe('setPreviewImage', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -717,7 +749,7 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { itemId: noteId },
+      { campaignId: ctx.campaignId, itemId: noteId },
     )
 
     const deletedStorageId = await t.run(async (dbCtx) => {
@@ -728,6 +760,7 @@ describe('setPreviewImage', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: deletedStorageId,
         claimToken: claimToken!,
@@ -745,6 +778,7 @@ describe('setPreviewImage', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.sidebarItems.mutations.setPreviewImage, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         previewStorageId: storageId,
         claimToken: 'fake-token',
@@ -767,7 +801,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewStorageId: storageId })
+      await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: storageId })
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
@@ -792,7 +826,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(canvasId, { previewStorageId: storageId })
+      await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: storageId })
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {

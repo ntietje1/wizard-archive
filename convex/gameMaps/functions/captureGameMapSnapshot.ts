@@ -1,3 +1,5 @@
+import { asyncMap } from 'convex-helpers'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -15,14 +17,14 @@ export async function captureGameMapSnapshot(
     campaignId,
     createdBy,
   }: {
-    mapId: Id<'gameMaps'>
+    mapId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
     createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
   const [map, pins] = await Promise.all([
-    ctx.db.get(mapId),
+    getSidebarItem<'gameMaps'>(ctx, mapId),
     ctx.db
       .query('mapPins')
       .withIndex('by_map_deletionTime', (q) => q.eq('mapId', mapId).eq('deletionTime', null))
@@ -34,7 +36,7 @@ export async function captureGameMapSnapshot(
     throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
   }
 
-  const pinItems = await Promise.all(pins.map((pin) => ctx.db.get(pin.itemId)))
+  const pinItems = await asyncMap(pins, (pin) => ctx.db.get('sidebarItems', pin.itemId))
 
   const validPins: Array<{
     pin: (typeof pins)[number]

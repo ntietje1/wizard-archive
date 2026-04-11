@@ -1,25 +1,25 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { rollbackYjsDocument } from '../../yjsSync/functions/rollbackYjsDocument'
-import type { AuthMutationCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackCanvas(
-  ctx: AuthMutationCtx,
-  itemId: SidebarItemId,
+  ctx: CampaignMutationCtx,
+  itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  const canvas = await ctx.db.get(itemId)
-  if (!canvas || canvas.type !== SIDEBAR_ITEM_TYPES.canvases)
+  const rawItem = await getSidebarItem(ctx, itemId)
+  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.canvases)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
 
   await requireItemAccess(ctx, {
-    rawItem: canvas,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  await rollbackYjsDocument(ctx, itemId as Id<'canvases'>, snapshotData)
+  await rollbackYjsDocument(ctx, rawItem._id, snapshotData)
 }

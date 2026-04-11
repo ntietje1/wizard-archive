@@ -1,18 +1,17 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { createCanvas as createCanvasFn } from './functions/createCanvas'
 import { updateCanvas as updateCanvasFn } from './functions/updateCanvas'
 
-export const createCanvas = authMutation({
+export const createCanvas = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     slug: v.string(),
   }),
   handler: async (ctx, args) => {
@@ -21,20 +20,19 @@ export const createCanvas = authMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const updateCanvas = authMutation({
+export const updateCanvas = campaignMutation({
   args: {
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
-    canvasId: v.id('canvases'),
+    canvasId: v.id('sidebarItems'),
     slug: v.string(),
   }),
   handler: async (ctx, args) => {

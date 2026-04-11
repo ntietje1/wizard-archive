@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -21,8 +20,8 @@ interface EditableNameProps {
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
   campaignId?: Id<'campaigns'>
-  parentId: Id<'folders'> | null
-  excludeId?: SidebarItemId
+  parentId: Id<'sidebarItems'> | null
+  excludeId?: Id<'sidebarItems'>
   disabled?: boolean
   showNotSharedTooltip?: boolean
 }

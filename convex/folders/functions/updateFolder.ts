@@ -1,39 +1,38 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateFolder(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     folderId,
     name,
     iconName,
     color,
   }: {
-    folderId: Id<'folders'>
+    folderId: Id<'sidebarItems'>
     name?: string
     iconName?: string | null
     color?: string | null
   },
-): Promise<{ folderId: Id<'folders'>; slug: string }> {
-  const folderFromDb = await ctx.db.get(folderId)
-  if (!folderFromDb) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
-  await requireCampaignMembership(ctx, folderFromDb.campaignId)
+): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
+  const rawItem = await getSidebarItem(ctx, folderId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const folder = await requireItemAccess(ctx, {
-    rawItem: folderFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
   let newSlug: string | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'folders'>>> = {}
+  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
@@ -72,16 +71,15 @@ export async function updateFolder(
     return { folderId: folder._id, slug: folder.slug }
   }
 
-  await ctx.db.patch(folderId, {
+  await ctx.db.patch('sidebarItems', folderId, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: folder._id,
     itemType: SIDEBAR_ITEM_TYPES.folders,
-    campaignId: folder.campaignId,
     changes,
   })
 

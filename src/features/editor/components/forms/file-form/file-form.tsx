@@ -20,7 +20,7 @@ import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPrev
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/features/file-upload/components/generic-file-upload-section'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import {
   InputGroup,
   InputGroupAddon,
@@ -35,9 +35,9 @@ export interface FileFormValues {
 }
 
 interface FileFormProps {
-  fileId?: Id<'files'>
+  fileId?: Id<'sidebarItems'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'> | null
+  parentId?: Id<'sidebarItems'> | null
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
 }
@@ -54,7 +54,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
   const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
-  const file = useAuthQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip')
+  const file = useCampaignQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip')
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -173,7 +173,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           parentId: parentId ?? null,
         })
         if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'files'>).catch(
+          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'sidebarItems'>).catch(
             (err: unknown) => handleError(err, 'PDF preview generation failed'),
           )
         }

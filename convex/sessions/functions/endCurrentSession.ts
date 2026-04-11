@@ -1,16 +1,13 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireDmRole } from '../../functions'
 import { getCurrentSession } from './getCurrentSession'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { DmMutationCtx } from '../../functions'
 
-export async function endCurrentSession(
-  ctx: AuthMutationCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
-): Promise<Id<'sessions'>> {
-  await requireDmRole(ctx, campaignId)
+export async function endCurrentSession(ctx: DmMutationCtx): Promise<Id<'sessions'>> {
+  const campaignId = ctx.campaign._id
+  const userId = ctx.membership.userId
 
-  const currentSession = await getCurrentSession(ctx, { campaignId })
+  const currentSession = await getCurrentSession(ctx)
   if (!currentSession) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'No active session')
   }
@@ -18,15 +15,15 @@ export async function endCurrentSession(
   const now = Date.now()
 
   await Promise.all([
-    ctx.db.patch(currentSession._id, {
+    ctx.db.patch('sessions', currentSession._id, {
       endedAt: now,
       updatedTime: now,
-      updatedBy: ctx.user.profile._id,
+      updatedBy: userId,
     }),
-    ctx.db.patch(campaignId, {
+    ctx.db.patch('campaigns', campaignId, {
       currentSessionId: null,
       updatedTime: now,
-      updatedBy: ctx.user.profile._id,
+      updatedBy: userId,
     }),
   ])
   return currentSession._id

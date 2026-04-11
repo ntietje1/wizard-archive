@@ -1,23 +1,20 @@
-import { requireCampaignMembership } from '../../functions'
-import type { AuthQueryCtx } from '../../functions'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
+import type { CampaignQueryCtx } from '../../functions'
+import type { Id } from '../../_generated/dataModel'
 import type { Bookmark } from '../types'
 
 export async function getItemBookmark(
-  ctx: AuthQueryCtx,
-  { sidebarItemId }: { sidebarItemId: SidebarItemId },
+  ctx: CampaignQueryCtx,
+  { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ): Promise<Bookmark | null> {
-  const item = await ctx.db.get(sidebarItemId)
+  const item = await ctx.db.get('sidebarItems', sidebarItemId)
   if (!item) return null
-
-  const { membership } = await requireCampaignMembership(ctx, item.campaignId)
 
   return await ctx.db
     .query('bookmarks')
     .withIndex('by_campaign_member_item', (q) =>
       q
         .eq('campaignId', item.campaignId)
-        .eq('campaignMemberId', membership._id)
+        .eq('campaignMemberId', ctx.membership._id)
         .eq('sidebarItemId', sidebarItemId),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))

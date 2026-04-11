@@ -15,6 +15,7 @@ describe('toggleBookmark', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -28,10 +29,12 @@ describe('toggleBookmark', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
     const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -45,13 +48,16 @@ describe('toggleBookmark', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
     await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
     const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -65,6 +71,7 @@ describe('toggleBookmark', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await playerAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -86,6 +93,7 @@ describe('toggleBookmark', () => {
     })
 
     const result = await playerAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -98,11 +106,12 @@ describe('toggleBookmark', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(noteId)
+      await dbCtx.db.delete('sidebarItems', noteId)
     })
 
     await expectNotFound(
       dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+        campaignId: ctx.campaignId,
         sidebarItemId: noteId,
       }),
     )
@@ -115,6 +124,7 @@ describe('toggleBookmark', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.bookmarks.mutations.toggleBookmark, {
+      campaignId: ctx.campaignId,
       sidebarItemId: noteId,
     })
 
@@ -137,6 +147,7 @@ describe('toggleBookmark', () => {
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })
     expect(item.isBookmarked).toBe(false)

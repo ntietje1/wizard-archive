@@ -16,14 +16,16 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get(fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
     expect(file).toBeNull()
   })
 
@@ -36,14 +38,16 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get(mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
     expect(map).toBeNull()
   })
 
@@ -59,8 +63,8 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     const [file, map] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(fileId),
-      await dbCtx.db.get(mapId),
+      await dbCtx.db.get('sidebarItems', fileId),
+      await dbCtx.db.get('sidebarItems', mapId),
     ])
     expect(file).toBeNull()
     expect(map).toBeNull()
@@ -80,6 +84,7 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -89,8 +94,8 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     const [folder, file] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(folderId),
-      await dbCtx.db.get(fileId),
+      await dbCtx.db.get('sidebarItems', folderId),
+      await dbCtx.db.get('sidebarItems', fileId),
     ])
     expect(folder).toBeNull()
     expect(file).toBeNull()
@@ -106,14 +111,16 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get(fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
     expect(file).toBeNull()
   })
 
@@ -127,14 +134,16 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get(mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
     expect(map).toBeNull()
   })
 })

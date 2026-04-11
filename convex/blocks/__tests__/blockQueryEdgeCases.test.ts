@@ -20,6 +20,7 @@ describe('block query edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId: 'nonexistent-block',
     })
@@ -33,6 +34,7 @@ describe('block query edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockIds: ['unknown-1', 'unknown-2'],
     })
@@ -90,6 +92,7 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+      campaignId,
       noteId,
       blockIds: ['agg-1', 'agg-2', 'agg-3'],
     })
@@ -128,6 +131,7 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockIds: ['soft-del'],
     })
@@ -154,6 +158,7 @@ describe('block query edge cases', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.blocks.queries.getBlockWithShares, {
+        campaignId: ctx.campaignId,
         noteId,
         blockId: 'dm-only',
       }),
@@ -167,6 +172,7 @@ describe('block query edge cases', () => {
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+      campaignId,
       noteId,
       blockIds: [],
     })

@@ -1,35 +1,16 @@
 import { v } from 'convex/values'
-import { defineTable } from 'convex/server'
-import {
-  commonSidebarItemTableFields,
-  commonSidebarItemValidatorFields,
-} from '../sidebarItems/schema/baseFields'
+import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
 import { commonValidatorFields } from '../common/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { folderValidator } from '../folders/baseSchema'
 
-const fileTableFields = {
-  ...commonSidebarItemTableFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.files),
-  storageId: v.union(v.id('_storage'), v.null()),
-}
-
-export const filesTables = {
-  files: defineTable({
-    ...fileTableFields,
-  })
-    .index('by_campaign_location_parent_name', ['campaignId', 'location', 'parentId', 'name'])
-    .index('by_campaign_slug', ['campaignId', 'slug'])
-    .index('by_campaign_deletionTime', ['campaignId', 'deletionTime']),
-}
-
 const fileValidatorFields = {
-  ...commonValidatorFields('files'),
+  ...commonValidatorFields('sidebarItems'),
   ...commonSidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.files),
-  storageId: v.union(v.id('_storage'), v.null()),
-  downloadUrl: v.union(v.string(), v.null()),
-  contentType: v.union(v.string(), v.null()),
+  storageId: v.nullable(v.id('_storage')),
+  downloadUrl: v.nullable(v.string()),
+  contentType: v.nullable(v.string()),
 }
 
 export const fileValidator = v.object(fileValidatorFields)

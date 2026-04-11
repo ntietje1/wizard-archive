@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
-export const yjsDocumentIdValidator = v.union(v.id('notes'), v.id('canvases'))
+export const yjsDocumentIdValidator = v.id('sidebarItems')
 
 export const yjsSyncTables = {
   yjsUpdates: defineTable({

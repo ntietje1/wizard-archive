@@ -1,9 +1,11 @@
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { paginationOptsValidator } from 'convex/server'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { requireItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../permissions/types'
+import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
 
 const historyEntryValidator = v.object({
   _id: v.id('editHistory'),
@@ -13,20 +15,20 @@ const historyEntryValidator = v.object({
   campaignId: v.id('campaigns'),
   campaignMemberId: v.id('campaignMembers'),
   action: v.string(),
-  metadata: v.union(v.record(v.string(), v.any()), v.null()),
+  metadata: v.nullable(v.record(v.string(), v.any())),
   hasSnapshot: v.boolean(),
 })
 
-export const getHistoryEntry = authQuery({
+export const getHistoryEntry = campaignQuery({
   args: {
     editHistoryId: v.id('editHistory'),
   },
-  returns: v.union(historyEntryValidator, v.null()),
+  returns: v.nullable(historyEntryValidator),
   handler: async (ctx, { editHistoryId }) => {
-    const entry = await ctx.db.get(editHistoryId)
+    const entry = await ctx.db.get('editHistory', editHistoryId)
     if (!entry) return null
 
-    const item = await ctx.db.get(entry.itemId)
+    const item = await getSidebarItem(ctx, entry.itemId)
     await requireItemAccess(ctx, {
       rawItem: item,
       requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -36,7 +38,7 @@ export const getHistoryEntry = authQuery({
   },
 })
 
-export const getItemHistory = authQuery({
+export const getItemHistory = campaignQuery({
   args: {
     itemId: sidebarItemIdValidator,
     paginationOpts: paginationOptsValidator,
@@ -45,11 +47,11 @@ export const getItemHistory = authQuery({
     page: v.array(historyEntryValidator),
     isDone: v.boolean(),
     continueCursor: v.string(),
-    splitCursor: v.union(v.string(), v.null()),
-    pageStatus: v.union(v.literal('SplitRecommended'), v.literal('SplitRequired'), v.null()),
+    splitCursor: v.optional(v.nullable(v.string())),
+    pageStatus: v.optional(v.nullable(literals('SplitRecommended', 'SplitRequired'))),
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
-    const itemFromDb = await ctx.db.get(itemId)
+    const itemFromDb = await getSidebarItem(ctx, itemId)
     await requireItemAccess(ctx, {
       rawItem: itemFromDb,
       requiredLevel: PERMISSION_LEVEL.EDIT,

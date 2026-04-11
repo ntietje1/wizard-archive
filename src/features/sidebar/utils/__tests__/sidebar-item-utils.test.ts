@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   buildBreadcrumbs,
@@ -160,7 +160,7 @@ describe('validateHexColorOrDefault', () => {
 
 describe('buildBreadcrumbs', () => {
   function buildMap(items: Array<AnySidebarItem>) {
-    const map = new Map<SidebarItemId, AnySidebarItem>()
+    const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
     for (const item of items) map.set(item._id, item)
     return map
   }
@@ -172,7 +172,7 @@ describe('buildBreadcrumbs', () => {
 
   it('builds correct path for nested items', () => {
     const folder = createFolder({
-      _id: testId<'folders'>('folder_bc1'),
+      _id: testId<'sidebarItems'>('folder_bc1'),
       name: 'Parent',
       parentId: null,
     })
@@ -182,12 +182,12 @@ describe('buildBreadcrumbs', () => {
 
   it('builds correct path for deeply nested items', () => {
     const gp = createFolder({
-      _id: testId<'folders'>('folder_bc_gp'),
+      _id: testId<'sidebarItems'>('folder_bc_gp'),
       name: 'Grandparent',
       parentId: null,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_bc_p'),
+      _id: testId<'sidebarItems'>('folder_bc_p'),
       name: 'Parent',
       parentId: gp._id,
     })
@@ -197,7 +197,7 @@ describe('buildBreadcrumbs', () => {
 
   it('stops at missing parent (orphaned parentId)', () => {
     const note = createNote({
-      parentId: testId<'folders'>('folder_missing'),
+      parentId: testId<'sidebarItems'>('folder_missing'),
     })
     expect(buildBreadcrumbs(note, buildMap([note]))).toBe('')
   })

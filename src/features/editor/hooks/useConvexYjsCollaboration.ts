@@ -1,10 +1,11 @@
 import * as Y from 'yjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
 import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 
 type YjsState = {
   doc: Y.Doc
@@ -20,6 +21,9 @@ export function useConvexYjsCollaboration(
   canEdit: boolean,
 ) {
   const convex = useConvex()
+  const { campaignId } = useCampaign()
+  const campaignIdRef = useRef(campaignId)
+  campaignIdRef.current = campaignId
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
@@ -33,16 +37,19 @@ export function useConvexYjsCollaboration(
       pushUpdate: (args) =>
         convex.mutation(api.yjsSync.mutations.pushUpdate, {
           ...args,
+          campaignId: campaignIdRef.current!,
           documentId,
         }),
       pushAwareness: (args) =>
         convex.mutation(api.yjsSync.mutations.pushAwareness, {
           ...args,
+          campaignId: campaignIdRef.current!,
           documentId,
         }),
       removeAwareness: (args) =>
         convex.mutation(api.yjsSync.mutations.removeAwareness, {
           ...args,
+          campaignId: campaignIdRef.current!,
           documentId,
         }),
     })
@@ -67,7 +74,7 @@ export function useConvexYjsCollaboration(
 
   const [error, setError] = useState<Error | null>(null)
 
-  const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
+  const updatesResult = useCampaignQuery(api.yjsSync.queries.getUpdates, {
     documentId,
     afterSeq,
   })
@@ -89,7 +96,7 @@ export function useConvexYjsCollaboration(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatesResult.data, updatesResult.isError, updatesResult.error, state])
 
-  const awarenessResult = useAuthQuery(api.yjsSync.queries.getAwareness, {
+  const awarenessResult = useCampaignQuery(api.yjsSync.queries.getAwareness, {
     documentId,
   })
 

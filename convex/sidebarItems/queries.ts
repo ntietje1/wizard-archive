@@ -1,24 +1,23 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { SIDEBAR_ITEM_LOCATION } from './types/baseTypes'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
-import { requireSidebarItemById } from './functions/getSidebarItemById'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/schema'
 import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { anySidebarItemWithContentValidator } from './schema/contentSchema'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
+import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
+import { ERROR_CODE, throwClientError } from '../errors'
 
-export const getSidebarItemsByLocation = authQuery({
+export const getSidebarItemsByLocation = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
     location: sidebarItemLocationValidator,
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     const items = await fetchCampaignSidebarItems(ctx, {
-      campaignId: args.campaignId,
       location: args.location,
     })
     if (args.location === SIDEBAR_ITEM_LOCATION.trash) {
@@ -28,40 +27,40 @@ export const getSidebarItemsByLocation = authQuery({
   },
 })
 
-export const getSidebarItemsByParent = authQuery({
+export const getSidebarItemsByParent = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     return await getSidebarItemsByParentFn(ctx, {
-      campaignId: args.campaignId,
       parentId: args.parentId,
     })
   },
 })
 
-export const getSidebarItem = authQuery({
+export const getSidebarItem = campaignQuery({
   args: {
     id: sidebarItemIdValidator,
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
-    return await requireSidebarItemById(ctx, { id: args.id })
+    const res = await getSidebarItemWithContent(ctx, args.id)
+    if (!res) {
+      throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
+    }
+    return res
   },
 })
 
-export const getSidebarItemBySlug = authQuery({
+export const getSidebarItemBySlug = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
     slug: v.string(),
   },
-  returns: v.union(anySidebarItemWithContentValidator, v.null()),
+  returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
     return await getSidebarItemBySlugFn(ctx, {
       slug: args.slug,
-      campaignId: args.campaignId,
     })
   },
 })

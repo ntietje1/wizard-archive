@@ -20,7 +20,7 @@ export function useNoteEditorDropTarget({
 }: {
   ref: React.RefObject<HTMLElement | null>
   editor: CustomBlockNoteEditor | null
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
 }) {
   const dropData = { type: NOTE_EDITOR_DROP_TYPE, noteId }
   useDndDropTarget({

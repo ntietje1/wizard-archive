@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import { uploadPreviewBlob } from '../utils/upload-preview'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { logger } from '~/shared/utils/logger'
 
 export type PreviewUploadResult =
@@ -11,8 +12,8 @@ export type PreviewUploadResult =
   | { status: 'error'; error: unknown }
 
 export function useClaimAndUploadPreview() {
-  const claimPreview = useAppMutation(api.sidebarItems.mutations.claimPreviewGeneration)
-  const setPreviewImage = useAppMutation(api.sidebarItems.mutations.setPreviewImage)
+  const claimPreview = useCampaignMutation(api.sidebarItems.mutations.claimPreviewGeneration)
+  const setPreviewImage = useCampaignMutation(api.sidebarItems.mutations.setPreviewImage)
   const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)
 
   const claimRef = useRef(claimPreview)
@@ -23,7 +24,10 @@ export function useClaimAndUploadPreview() {
   urlRef.current = generateUploadUrl
 
   const claimAndUpload = useCallback(
-    async (itemId: SidebarItemId, generate: () => Promise<Blob>): Promise<PreviewUploadResult> => {
+    async (
+      itemId: Id<'sidebarItems'>,
+      generate: () => Promise<Blob>,
+    ): Promise<PreviewUploadResult> => {
       try {
         const { claimed, claimToken } = await claimRef.current.mutateAsync({
           itemId,

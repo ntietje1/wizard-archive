@@ -1,8 +1,7 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../types'
-import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { DmMutationCtx } from '../../functions'
 import type { CampaignMemberStatus } from '../types'
 
 const VALID_STATUS_TRANSITIONS: Record<
@@ -19,15 +18,17 @@ const VALID_STATUS_TRANSITIONS: Record<
 }
 
 export async function updateCampaignMemberStatus(
-  ctx: AuthMutationCtx,
+  ctx: DmMutationCtx,
   { memberId, status }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
-  const member = await ctx.db.get(memberId)
+  const member = await ctx.db.get('campaignMembers', memberId)
   if (!member || member.deletionTime !== null) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Member not found')
   }
 
-  await requireDmRole(ctx, member.campaignId)
+  if (member.campaignId !== ctx.campaign._id) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Member does not belong to this campaign')
+  }
 
   if (member.role !== CAMPAIGN_MEMBER_ROLE.Player) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only player membership status can be changed')
@@ -42,10 +43,10 @@ export async function updateCampaignMemberStatus(
   }
 
   const now = Date.now()
-  await ctx.db.patch(member._id, {
+  await ctx.db.patch('campaignMembers', member._id, {
     status,
     updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   return member._id

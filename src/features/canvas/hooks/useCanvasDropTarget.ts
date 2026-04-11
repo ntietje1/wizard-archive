@@ -21,7 +21,7 @@ const STACK_OFFSET = 20
 
 interface UseCanvasDropTargetOptions {
   nodesMap: Y.Map<Node>
-  canvasId: Id<'canvases'>
+  canvasId: Id<'sidebarItems'>
   canEdit: boolean
   isSelectMode: boolean
 }

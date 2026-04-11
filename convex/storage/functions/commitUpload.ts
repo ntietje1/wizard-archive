@@ -23,7 +23,7 @@ export async function commitUpload(
   }
 
   // Validate file before committing
-  const storageMetadata = await ctx.db.system.get(storageId)
+  const storageMetadata = await ctx.db.system.get('_storage', storageId)
   if (!storageMetadata) {
     throw new Error('Storage metadata not found')
   }
@@ -39,7 +39,7 @@ export async function commitUpload(
 
   const now = Date.now()
 
-  await ctx.db.patch(fileStorage._id, {
+  await ctx.db.patch('fileStorage', fileStorage._id, {
     status: FILE_STORAGE_STATUS.Committed,
     updatedTime: now,
     updatedBy: ctx.user.profile._id,

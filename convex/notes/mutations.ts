@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks } from '@blocknote/core/yjs'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
@@ -11,18 +11,18 @@ import { updateNote as updateNoteFn } from './functions/updateNote'
 import { editorSchema } from './editorSpecs'
 import type { Id } from '../_generated/dataModel'
 
-export const updateNote = authMutation({
+export const updateNote = campaignMutation({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     name: v.optional(v.string()),
-    iconName: v.optional(v.union(v.string(), v.null())),
-    color: v.optional(v.union(v.string(), v.null())),
+    iconName: v.optional(v.nullable(v.string())),
+    color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     return await updateNoteFn(ctx, {
       noteId: args.noteId,
       name: args.name,
@@ -32,34 +32,32 @@ export const updateNote = authMutation({
   },
 })
 
-export const createNote = authMutation({
+export const createNote = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
-    parentId: v.union(v.id('folders'), v.null()),
+    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
   },
   returns: v.object({
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     slug: v.string(),
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'notes'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     return await createNoteFn(ctx, {
       name: args.name,
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
       content: args.content,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const persistNoteBlocks = authMutation({
+export const persistNoteBlocks = campaignMutation({
   args: {
-    documentId: v.id('notes'),
+    documentId: v.id('sidebarItems'),
   },
   returns: v.null(),
   handler: async (ctx, { documentId }) => {

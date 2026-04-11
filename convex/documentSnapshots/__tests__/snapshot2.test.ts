@@ -27,6 +27,7 @@ describe('cross-action debounce independence on game maps', () => {
 
       // Change the image — property changes don't create snapshots
       await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+        campaignId: ctx.campaignId,
         mapId: result.mapId,
         imageStorageId: null,
       })
@@ -35,6 +36,7 @@ describe('cross-action debounce independence on game maps', () => {
       // Now add a pin — should get a snapshot
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId: result.mapId,
         x: 10,
         y: 20,
@@ -88,6 +90,7 @@ describe('updateMap creates correct number of history entries', () => {
 
     // Change image to null (remove)
     await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId: result.mapId,
       imageStorageId: null,
     })
@@ -131,6 +134,7 @@ describe('updateMap creates correct number of history entries', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId: result.mapId,
       name: 'Renamed Map',
       imageStorageId: null,
@@ -170,12 +174,11 @@ describe('rollback of game map pin with non-note itemId', () => {
 
       // Create a folder and pin it to the map (pins can reference any sidebar item)
       const { folderId } = await t.run(async (dbCtx) => {
-        const id = await dbCtx.db.insert('folders', {
+        const id = await dbCtx.db.insert('sidebarItems', {
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
           slug: 'pinned-folder',
           type: SIDEBAR_ITEM_TYPES.folders,
-          inheritShares: false,
           parentId: null,
           iconName: null,
           color: null,
@@ -196,6 +199,7 @@ describe('rollback of game map pin with non-note itemId', () => {
 
       // Add a pin for the folder
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 25,
         y: 75,
@@ -225,12 +229,14 @@ describe('rollback of game map pin with non-note itemId', () => {
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
+        campaignId: ctx.campaignId,
         mapPinId: pinId,
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Rollback to the state with the folder pin
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: addEntry!._id,
       })
 
@@ -268,6 +274,7 @@ describe('snapshot captures state at time of mutation', () => {
 
       // Add a pin at position (10, 20)
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -319,6 +326,7 @@ describe('canvas snapshot uses yjs_state format', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: canvasId,
         update: makeYjsUpdate(),
       })
@@ -356,6 +364,7 @@ describe('Note snapshots use yjs_state format', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -395,6 +404,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
 
       // Two rapid pin adds — both run before scheduled functions complete
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -402,6 +412,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       })
       // Don't run scheduled functions yet — simulate rapid second call
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 30,
         y: 40,

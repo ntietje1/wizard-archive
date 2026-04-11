@@ -43,6 +43,7 @@ describe('block sharing workflows', () => {
       }
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [
           { blockNoteId: block1.blockId, content: blockContent1 },
@@ -52,12 +53,14 @@ describe('block sharing workflows', () => {
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block1.blockId, content: blockContent1 }],
         campaignMemberId: p1.memberId,
       })
 
       const dmResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockIds: [block1.blockId, block2.blockId],
       })
@@ -72,6 +75,7 @@ describe('block sharing workflows', () => {
       expect(b2Info.sharedMemberIds).toHaveLength(0)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [
           { blockNoteId: block1.blockId, content: blockContent1 },
@@ -81,6 +85,7 @@ describe('block sharing workflows', () => {
       })
 
       const allSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockIds: [block1.blockId, block2.blockId],
       })
@@ -89,6 +94,7 @@ describe('block sharing workflows', () => {
       }
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [
           { blockNoteId: block1.blockId, content: blockContent1 },
@@ -98,6 +104,7 @@ describe('block sharing workflows', () => {
       })
 
       const notSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockIds: [block1.blockId, block2.blockId],
       })
@@ -131,12 +138,14 @@ describe('block sharing workflows', () => {
       }
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         campaignMemberId: p1.memberId,
@@ -157,6 +166,7 @@ describe('block sharing workflows', () => {
       expect(beforeUnshare!.deletionTime).toBeNull()
 
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockId],
         campaignMemberId: p1.memberId,
@@ -176,7 +186,7 @@ describe('block sharing workflows', () => {
       expect(afterUnshare).not.toBeNull()
       expect(afterUnshare!.deletionTime).not.toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get('blocks', block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -198,6 +208,7 @@ describe('block sharing workflows', () => {
       })
 
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockId],
         campaignMemberId: p1.memberId,
@@ -216,7 +227,7 @@ describe('block sharing workflows', () => {
       })
       expect(shareRow).toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get(block.blockDbId))
+      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get('blocks', block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -244,18 +255,21 @@ describe('block sharing workflows', () => {
       }
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         campaignMemberId: p1.memberId,
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         campaignMemberId: p1.memberId,
@@ -276,6 +290,7 @@ describe('block sharing workflows', () => {
       expect(activeShares).toHaveLength(1)
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockIds: [block.blockId],
       })
@@ -300,18 +315,21 @@ describe('block sharing workflows', () => {
       }
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blocks: [{ blockNoteId: block.blockId, content: blockContent }],
         campaignMemberId: p1.memberId,
       })
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
+        campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockIds: [block.blockId],
       })

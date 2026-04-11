@@ -7,17 +7,17 @@ import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { mapPinTableFields } from './baseSchema'
 
 const mapWithContentValidatorFields = {
-  ...commonValidatorFields('gameMaps'),
+  ...commonValidatorFields('sidebarItems'),
   ...commonSidebarItemValidatorFields,
-  imageStorageId: v.union(v.id('_storage'), v.null()),
+  imageStorageId: v.nullable(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
-  imageUrl: v.union(v.string(), v.null()),
+  imageUrl: v.nullable(v.string()),
 }
 
 const mapPinWithItemValidatorFields = {
   ...commonValidatorFields('mapPins'),
   ...mapPinTableFields,
-  item: v.union(anySidebarItemValidator, v.null()),
+  item: v.nullable(anySidebarItemValidator),
 }
 
 export const mapWithContentValidator = v.object({

@@ -6,58 +6,53 @@ import {
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createFile(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     name,
     storageId,
     parentId,
     iconName,
     color,
-    campaignId,
   }: {
     name: string
     storageId?: Id<'_storage'>
-    parentId: Id<'folders'> | null
+    parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
-    campaignId: Id<'campaigns'>
   },
-): Promise<{ fileId: Id<'files'>; slug: string }> {
+): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { campaignId, parentId })
+  await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {
-    campaignId,
     parentId,
     name,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
-    campaignId,
   })
 
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   let previewStorageId: Id<'_storage'> | null = null
   if (storageId) {
-    const metadata = await ctx.db.system.get(storageId)
+    const metadata = await ctx.db.system.get('_storage', storageId)
     if (metadata?.contentType?.toLowerCase().startsWith('image/')) {
       previewStorageId = storageId
     }
   }
 
-  const fileId = await ctx.db.insert('files', {
-    campaignId,
+  const fileId = await ctx.db.insert('sidebarItems', {
+    campaignId: ctx.campaign._id,
     name,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    storageId: storageId ?? null,
     parentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
@@ -70,13 +65,22 @@ export async function createFile(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
+  })
+
+  await ctx.db.insert('files', {
+    sidebarItemId: fileId,
+    storageId: storageId ?? null,
+    deletionTime: null,
+    deletedBy: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: userId,
   })
 
   await logEditHistory(ctx, {
     itemId: fileId,
     itemType: SIDEBAR_ITEM_TYPES.files,
-    campaignId,
     action: EDIT_HISTORY_ACTION.created,
   })
 

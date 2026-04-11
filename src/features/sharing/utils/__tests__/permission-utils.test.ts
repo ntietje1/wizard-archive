@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   effectiveHasAtLeastPermission,
@@ -15,7 +15,7 @@ const memberId = testId<'campaignMembers'>('member_test')
 const otherMemberId = testId<'campaignMembers'>('member_other')
 
 function buildMap(items: Array<AnySidebarItem>) {
-  const map = new Map<SidebarItemId, AnySidebarItem>()
+  const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
   for (const item of items) map.set(item._id, item)
   return map
 }
@@ -52,7 +52,7 @@ describe('resolvePermissionLevel', () => {
 
   it('walks parent chain to find inherited permission', () => {
     const parentFolder = createFolder({
-      _id: testId<'folders'>('folder_parent'),
+      _id: testId<'sidebarItems'>('folder_parent'),
       name: 'Parent',
       parentId: null,
       inheritShares: true,
@@ -71,14 +71,14 @@ describe('resolvePermissionLevel', () => {
 
   it('walks multiple levels of parent chain', () => {
     const grandparent = createFolder({
-      _id: testId<'folders'>('folder_gp'),
+      _id: testId<'sidebarItems'>('folder_gp'),
       name: 'Grandparent',
       parentId: null,
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_p'),
+      _id: testId<'sidebarItems'>('folder_p'),
       name: 'Parent',
       parentId: grandparent._id,
       inheritShares: true,
@@ -98,14 +98,14 @@ describe('resolvePermissionLevel', () => {
 
   it('respects inheritShares: false — skips that folder but continues walking', () => {
     const grandparent = createFolder({
-      _id: testId<'folders'>('folder_gp2'),
+      _id: testId<'sidebarItems'>('folder_gp2'),
       name: 'Grandparent',
       parentId: null,
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const parent = createFolder({
-      _id: testId<'folders'>('folder_p2'),
+      _id: testId<'sidebarItems'>('folder_p2'),
       name: 'Parent',
       parentId: grandparent._id,
       inheritShares: false,
@@ -139,7 +139,7 @@ describe('resolvePermissionLevel', () => {
       permissionLevel: PERMISSION_LEVEL.EDIT,
     })
     const parentFolder = createFolder({
-      _id: testId<'folders'>('folder_pref'),
+      _id: testId<'sidebarItems'>('folder_pref'),
       name: 'Parent',
       parentId: null,
       inheritShares: true,

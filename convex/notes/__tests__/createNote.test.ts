@@ -26,7 +26,7 @@ describe('createNote', () => {
     expect(result.slug).toContain('my-note')
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(result.noteId)
+      const note = await dbCtx.db.get('sidebarItems', result.noteId)
       expect(note).not.toBeNull()
       expect(note!.name).toBe('My Note')
       expect(note!.parentId).toBeNull()
@@ -50,7 +50,7 @@ describe('createNote', () => {
     expect(result.noteId).toBeDefined()
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(result.noteId)
+      const note = await dbCtx.db.get('sidebarItems', result.noteId)
       expect(note!.parentId).toBe(folderId)
     })
   })
@@ -68,7 +68,7 @@ describe('createNote', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(result.noteId)
+      const note = await dbCtx.db.get('sidebarItems', result.noteId)
       expect(note!.iconName).toBe('scroll')
       expect(note!.color).toBe('#ff0000')
     })
@@ -227,7 +227,7 @@ describe('createNote', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get(result.noteId)
+      const note = await dbCtx.db.get('sidebarItems', result.noteId)
       expect(note!.name).toBe('Padded Name')
     })
   })

@@ -1,28 +1,26 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireCampaignMembership } from '../../functions'
 import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { logger } from '../../common/logger'
-import type { AuthMutationCtx } from '../../functions'
+import { getSidebarItem } from './getSidebarItem'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemId } from '../types/baseTypes'
 
 export async function setPreviewImage(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     itemId,
     previewStorageId,
     claimToken,
   }: {
-    itemId: SidebarItemId
+    itemId: Id<'sidebarItems'>
     previewStorageId: Id<'_storage'>
     claimToken: string
   },
 ): Promise<void> {
-  const item = await ctx.db.get(itemId)
+  const item = await getSidebarItem(ctx, itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  await requireCampaignMembership(ctx, item.campaignId)
   await requireItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.EDIT,
@@ -48,7 +46,7 @@ export async function setPreviewImage(
 
   const oldPreviewStorageId = item.previewStorageId
 
-  await ctx.db.patch(itemId, {
+  await ctx.db.patch('sidebarItems', itemId, {
     previewStorageId,
     previewUpdatedAt: Date.now(),
     previewLockedUntil: null,

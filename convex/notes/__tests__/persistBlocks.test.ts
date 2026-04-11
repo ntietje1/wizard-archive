@@ -18,6 +18,7 @@ describe('persistBlocks', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.notes.mutations.persistNoteBlocks, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
       }),
     )
@@ -44,6 +45,7 @@ describe('persistBlocks', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
       }),
     )
@@ -60,6 +62,7 @@ describe('persistBlocks', () => {
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -86,11 +89,13 @@ describe('persistBlocks', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeYjsUpdate(),
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 
@@ -122,6 +127,7 @@ describe('persistBlocks', () => {
     }
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
@@ -142,6 +148,7 @@ describe('persistBlocks', () => {
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
     })
 

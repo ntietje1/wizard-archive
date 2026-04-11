@@ -1,17 +1,15 @@
-import { mutationGeneric, queryGeneric } from 'convex/server'
+import { customQuery, customMutation, customCtx } from 'convex-helpers/server/customFunctions'
+import { v } from 'convex/values'
+import { query, mutation } from './_generated/server'
+import { triggers } from './triggers'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
 import { ERROR_CODE, throwClientError } from './errors'
 import { getUserProfileById } from './users/functions/getUserProfile'
-import type { DatabaseReader, MutationCtx, QueryCtx } from './_generated/server'
+import type { CustomCtx } from 'convex-helpers/server/customFunctions'
+import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import type { ObjectType, PropertyValidators, Validator } from 'convex/values'
 import type { AuthUser } from './users/types'
 import type { CampaignFromDb, CampaignMember } from './campaigns/types'
-
-// --- Context types ---
-
-export type AuthQueryCtx = QueryCtx & { user: AuthUser }
-export type AuthMutationCtx = MutationCtx & { user: AuthUser }
 
 // --- Context enrichment ---
 
@@ -26,11 +24,23 @@ export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUse
   return { identity, profile }
 }
 
+// convex-helpers does not propagate enriched ctx types through chained
+// customQuery/customMutation, so input callbacks receive GenericQueryCtx /
+// GenericMutationCtx. This assertion narrows to the actual runtime shape
+// after authQuery/authMutation have run.
+type AuthenticatedCtx = QueryCtx & { user: AuthUser }
+
+function assertAuthenticatedCtx(ctx: Record<string, any>): asserts ctx is AuthenticatedCtx {
+  if (!('user' in ctx)) {
+    throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'Missing authentication context')
+  }
+}
+
 async function checkMembership(
-  ctx: AuthQueryCtx | AuthMutationCtx,
+  ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
-  const campaign = await ctx.db.get(campaignId)
+  const campaign = await ctx.db.get('campaigns', campaignId)
   const member = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) =>
@@ -55,77 +65,80 @@ async function checkMembership(
   }
 }
 
-// --- Cached campaign membership helpers ---
-
-const membershipCache = new WeakMap<
-  DatabaseReader,
-  Map<string, { campaign: CampaignFromDb; membership: CampaignMember }>
->()
-
-export async function requireCampaignMembership(
-  ctx: AuthQueryCtx | AuthMutationCtx,
+async function checkDmMembership(
+  ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
-  let cache = membershipCache.get(ctx.db)
-  if (!cache) {
-    cache = new Map()
-    membershipCache.set(ctx.db, cache)
-  }
-  if (!cache.has(campaignId)) {
-    cache.set(campaignId, await checkMembership(ctx, campaignId))
-  }
-  return cache.get(campaignId)!
-}
-
-export async function requireDmRole(
-  ctx: AuthQueryCtx | AuthMutationCtx,
-  campaignId: Id<'campaigns'>,
-): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
-  const result = await requireCampaignMembership(ctx, campaignId)
+  const result = await checkMembership(ctx, campaignId)
   if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
   }
   return result
 }
 
-// --- Config types ---
-
-type AuthConfig<TArgs extends PropertyValidators, TReturn> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: AuthQueryCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
-type AuthMutationConfig<TArgs extends PropertyValidators, TReturn> = {
-  args: TArgs
-  returns: Validator<unknown, 'required', string>
-  handler: (ctx: AuthMutationCtx, args: ObjectType<TArgs>) => Promise<TReturn>
-}
-
 // --- Wrappers ---
 
-export function authQuery<TArgs extends PropertyValidators, TReturn>(
-  config: AuthConfig<TArgs, TReturn>,
-) {
-  return queryGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (ctx: QueryCtx, args: ObjectType<TArgs>) => {
-      const user = await authenticate(ctx)
-      return config.handler({ ...ctx, user }, args)
-    },
-  })
-}
+export const authQuery = customQuery(
+  query,
+  customCtx(async (ctx) => {
+    const user = await authenticate(ctx)
+    return { user }
+  }),
+)
 
-export function authMutation<TArgs extends PropertyValidators, TReturn>(
-  config: AuthMutationConfig<TArgs, TReturn>,
-) {
-  return mutationGeneric({
-    args: config.args,
-    returns: config.returns,
-    handler: async (ctx: MutationCtx, args: ObjectType<TArgs>) => {
-      const user = await authenticate(ctx)
-      return config.handler({ ...ctx, user }, args)
-    },
-  })
-}
+export const authMutation = customMutation(
+  mutation,
+  customCtx(async (ctx) => {
+    const user = await authenticate(ctx)
+    return { ...triggers.wrapDB(ctx), user }
+  }),
+)
+
+// --- Campaign-scoped wrappers ---
+
+const campaignArgs = { campaignId: v.id('campaigns') } as const
+
+export const campaignQuery = customQuery(authQuery, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
+export const campaignMutation = customMutation(authMutation, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
+export const dmQuery = customQuery(authQuery, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkDmMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
+export const dmMutation = customMutation(authMutation, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkDmMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
+// --- Context types ---
+
+export type AuthQueryCtx = CustomCtx<typeof authQuery>
+export type AuthMutationCtx = CustomCtx<typeof authMutation>
+export type CampaignQueryCtx = CustomCtx<typeof campaignQuery>
+export type CampaignMutationCtx = CustomCtx<typeof campaignMutation>
+export type DmQueryCtx = CustomCtx<typeof dmQuery>
+export type DmMutationCtx = CustomCtx<typeof dmMutation>

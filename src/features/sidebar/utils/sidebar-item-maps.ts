@@ -1,22 +1,21 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export interface SidebarItemMaps {
-  itemsMap: Map<SidebarItemId, AnySidebarItem>
-  parentItemsMap: Map<Id<'folders'> | null, Array<AnySidebarItem>>
-  getAncestorSidebarItems: (itemId: SidebarItemId) => Array<Folder>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
+  parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
+  getAncestorSidebarItems: (itemId: Id<'sidebarItems'>) => Array<Folder>
 }
 
 export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMaps {
-  const itemsMap = new Map<SidebarItemId, AnySidebarItem>()
+  const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>()
   for (const item of data) {
     itemsMap.set(item._id, item)
   }
 
-  const parentItemsMap = new Map<Id<'folders'> | null, Array<AnySidebarItem>>()
+  const parentItemsMap = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()
   for (const item of data) {
     const effectiveParentId = item.parentId && !itemsMap.has(item.parentId) ? null : item.parentId
     const siblings = parentItemsMap.get(effectiveParentId)
@@ -27,11 +26,11 @@ export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMa
     }
   }
 
-  const getAncestorSidebarItems = (itemId: SidebarItemId): Array<Folder> => {
+  const getAncestorSidebarItems = (itemId: Id<'sidebarItems'>): Array<Folder> => {
     const item = itemsMap.get(itemId)
     if (!item) return []
     let currAncestorId = item.parentId
-    const seen = new Set<Id<'folders'>>()
+    const seen = new Set<Id<'sidebarItems'>>()
     const ancestors: Array<Folder> = []
     while (currAncestorId && !seen.has(currAncestorId)) {
       seen.add(currAncestorId)
@@ -48,10 +47,10 @@ export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMa
 }
 
 export function collectDescendantIds(
-  folderId: Id<'folders'>,
+  folderId: Id<'sidebarItems'>,
   items: Array<AnySidebarItem>,
-): Set<SidebarItemId> {
-  const childrenByParent = new Map<Id<'folders'>, Array<AnySidebarItem>>()
+): Set<Id<'sidebarItems'>> {
+  const childrenByParent = new Map<Id<'sidebarItems'>, Array<AnySidebarItem>>()
   for (const item of items) {
     if (!item.parentId) continue
     const siblings = childrenByParent.get(item.parentId)
@@ -62,8 +61,8 @@ export function collectDescendantIds(
     }
   }
 
-  const result = new Set<SidebarItemId>()
-  const stack: Array<Id<'folders'>> = [folderId]
+  const result = new Set<Id<'sidebarItems'>>()
+  const stack: Array<Id<'sidebarItems'>> = [folderId]
   while (stack.length > 0) {
     const currentId = stack.pop()!
     const children = childrenByParent.get(currentId)

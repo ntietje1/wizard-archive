@@ -4,34 +4,34 @@ import {
   validateNoCircularParent,
 } from 'convex/sidebarItems/sharedValidation'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
-import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {
-  getSiblings: (parentId: Id<'folders'> | null) => Array<AnySidebarItem>
+  getSiblings: (parentId: Id<'sidebarItems'> | null) => Array<AnySidebarItem>
   validateName: (
     name: string,
-    parentId: Id<'folders'> | null,
-    excludeId?: SidebarItemId,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
   ) => ValidationResult
-  canMoveToParent: (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => boolean
-  getDefaultName: (type: SidebarItemType, parentId: Id<'folders'> | null) => string
+  canMoveToParent: (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => boolean
+  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => string
 }
 
 export function useSidebarValidation(): SidebarValidation {
   const { itemsMap, parentItemsMap } = useActiveSidebarItems()
 
-  const getSiblings = (parentId: Id<'folders'> | null) => {
+  const getSiblings = (parentId: Id<'sidebarItems'> | null) => {
     return parentItemsMap.get(parentId) ?? []
   }
 
   const validateName = (
     name: string,
-    parentId: Id<'folders'> | null,
-    excludeId?: SidebarItemId,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
   ) => {
     const trimmed = name.trim()
     const nameResult = validateItemName(trimmed)
@@ -39,11 +39,11 @@ export function useSidebarValidation(): SidebarValidation {
     return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
   }
 
-  const canMoveToParent = (itemId: SidebarItemId, newParentId: Id<'folders'> | null) => {
+  const canMoveToParent = (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => {
     return validateNoCircularParent(itemId, newParentId, (id) => itemsMap.get(id)).valid
   }
 
-  const getDefaultName = (type: SidebarItemType, parentId: Id<'folders'> | null) => {
+  const getDefaultName = (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => {
     return findUniqueDefaultName(type, getSiblings(parentId))
   }
 

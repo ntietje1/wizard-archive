@@ -12,7 +12,7 @@ export function useNotePreview({
   doc,
   editorContainerRef,
 }: {
-  noteId: Id<'notes'>
+  noteId: Id<'sidebarItems'>
   doc: Y.Doc | null
   editorContainerRef: React.RefObject<HTMLElement | null>
 }) {

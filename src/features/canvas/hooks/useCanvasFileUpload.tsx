@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { isMediaFile, isTextFile, validateFileForUpload } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -20,7 +20,7 @@ export function useCanvasFileUpload() {
   const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
   const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
 
-  const uploadFileToSidebar = async (file: File): Promise<{ id: SidebarItemId } | null> => {
+  const uploadFileToSidebar = async (file: File): Promise<{ id: Id<'sidebarItems'> } | null> => {
     if (!campaignId) {
       toast.error('No campaign selected')
       return null

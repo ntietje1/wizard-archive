@@ -1,11 +1,11 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function updateBlock(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   params: {
     blockDbId: Id<'blocks'>
     position?: number
@@ -22,10 +22,10 @@ export async function updateBlock(
   if (fields.shareStatus !== undefined) updates.shareStatus = fields.shareStatus
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.patch(blockDbId, {
+    await ctx.db.patch('blocks', blockDbId, {
       ...updates,
       updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
   }
 }

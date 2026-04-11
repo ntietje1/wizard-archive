@@ -1,9 +1,9 @@
 import { api } from 'convex/_generated/api'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import type { Id } from 'convex/_generated/dataModel'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 
-export function useSidebarItemById(sidebarItemId: SidebarItemId | undefined) {
-  const result = useAuthQuery(
+export function useSidebarItemById(sidebarItemId: Id<'sidebarItems'> | undefined) {
+  const result = useCampaignQuery(
     api.sidebarItems.queries.getSidebarItem,
     sidebarItemId ? { id: sidebarItemId } : 'skip',
   )

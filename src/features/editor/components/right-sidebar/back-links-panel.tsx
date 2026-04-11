@@ -1,7 +1,7 @@
 import { ArrowUpLeft } from 'lucide-react'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 
-export function BackLinksPanel({ itemId: _itemId }: { itemId: SidebarItemId }) {
+export function BackLinksPanel({ itemId: _itemId }: { itemId: Id<'sidebarItems'> }) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-4 text-center">
       <ArrowUpLeft className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />

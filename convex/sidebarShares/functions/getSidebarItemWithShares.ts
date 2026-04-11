@@ -1,21 +1,20 @@
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireDmRole } from '../../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
-import type { AuthQueryCtx } from '../../functions'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 
 export const getSidebarItemWithShares = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
     sidebarItemId,
   }: {
-    sidebarItemId: SidebarItemId
+    sidebarItemId: Id<'sidebarItems'>
   },
 ): Promise<{
   allPermissionLevel: PermissionLevel | null
@@ -26,12 +25,11 @@ export const getSidebarItemWithShares = async (
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
 }> => {
-  const itemFromDb = await ctx.db.get(sidebarItemId)
+  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-  await requireDmRole(ctx, item.campaignId)
 
   const members = await ctx.db
     .query('campaignMembers')

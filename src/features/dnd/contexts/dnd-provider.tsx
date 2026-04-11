@@ -2,7 +2,6 @@ import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DndContext } from '~/features/dnd/utils/dnd-registry'
 import type { DndValue } from '~/features/dnd/hooks/useDnd'
@@ -30,14 +29,14 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
-  const setFolderOpen = (folderId: Id<'folders'>) => {
+  const setFolderOpen = (folderId: Id<'sidebarItems'>) => {
     if (campaignId) setFolderState(campaignId, folderId, true)
   }
 
   const hasSiblingNameConflict = (
     name: string,
-    parentId: Id<'folders'> | null,
-    excludeId?: SidebarItemId,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
   ): boolean => {
     const siblings = parentItemsMap.get(parentId) ?? []
     const normalized = name.trim().toLowerCase()
@@ -54,10 +53,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     hasSiblingNameConflict,
   }
 
-  const resolveItem = (id: SidebarItemId): AnySidebarItem | null =>
+  const resolveItem = (id: Id<'sidebarItems'>): AnySidebarItem | null =>
     itemsMap.get(id) ?? trashedItemsMap.get(id) ?? null
 
-  const getAncestorIds = (id: SidebarItemId) => getAncestorSidebarItems(id).map((a) => a._id)
+  const getAncestorIds = (id: Id<'sidebarItems'>) => getAncestorSidebarItems(id).map((a) => a._id)
 
   const resolveDropTargetWrapped = (rawData: Record<string, unknown>) =>
     resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds)

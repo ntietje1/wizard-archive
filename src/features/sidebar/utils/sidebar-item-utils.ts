@@ -1,5 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemId, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -109,7 +110,7 @@ export const validateHexColorOrDefault = (
 
 export function buildBreadcrumbs(
   item: AnySidebarItem,
-  itemsMap: Map<SidebarItemId, AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): string {
   const path: Array<string> = []
   let currentId = item.parentId

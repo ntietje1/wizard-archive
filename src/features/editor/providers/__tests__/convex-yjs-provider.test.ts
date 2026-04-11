@@ -5,7 +5,7 @@ import { ConvexYjsProvider } from '../convex-yjs-provider'
 import type { ConvexYjsProviderConfig } from '../convex-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
 
-const DOCUMENT_ID = 'test-doc-id' as Id<'notes'>
+const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>
 
 function createRemoteUpdate(seq = 0): { update: ArrayBuffer; seq: number } {
   const remoteDoc = new Y.Doc()

@@ -1,16 +1,17 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
 
 const panelPreferenceValidator = v.object({
-  size: v.union(v.number(), v.null()),
-  visible: v.union(v.boolean(), v.null()),
+  size: v.nullable(v.number()),
+  visible: v.nullable(v.boolean()),
 })
 
 const userPreferencesTableFields = {
   userId: v.id('userProfiles'),
-  theme: v.union(v.literal('light'), v.literal('dark'), v.literal('system'), v.null()),
-  panelPreferences: v.union(v.record(v.string(), panelPreferenceValidator), v.null()),
+  theme: v.nullable(literals('light', 'dark', 'system')),
+  panelPreferences: v.nullable(v.record(v.string(), panelPreferenceValidator)),
 }
 
 export { panelPreferenceValidator }

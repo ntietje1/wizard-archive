@@ -22,11 +22,11 @@ describe('session workflows', () => {
         name: 'Session 2',
       })
 
-      const s1 = await t.run(async (dbCtx) => dbCtx.db.get(s1Id))
+      const s1 = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s1Id))
       expect(s1).not.toBeNull()
       expect(s1!.endedAt).not.toBeNull()
 
-      const s2 = await t.run(async (dbCtx) => dbCtx.db.get(s2Id))
+      const s2 = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
       expect(s2).not.toBeNull()
       expect(s2!.endedAt).toBeNull()
     })
@@ -49,18 +49,20 @@ describe('session workflows', () => {
         campaignId: ctx.campaignId,
       })
 
-      const s2Ended = await t.run(async (dbCtx) => dbCtx.db.get(s2Id))
+      const s2Ended = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
       expect(s2Ended!.endedAt).not.toBeNull()
 
       await dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+        campaignId: ctx.campaignId,
         sessionId: s2Id,
       })
 
-      const s2Resumed = await t.run(async (dbCtx) => dbCtx.db.get(s2Id))
+      const s2Resumed = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
       expect(s2Resumed!.endedAt).toBeNull()
 
       await expectConflict(
         dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+          campaignId: ctx.campaignId,
           sessionId: s1Id,
         }),
       )
@@ -91,6 +93,7 @@ describe('session workflows', () => {
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.setCurrentSession, {
+          campaignId: ctx.campaignId,
           sessionId,
         }),
       )

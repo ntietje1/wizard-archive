@@ -6,9 +6,9 @@ import { FormDialog } from '~/shared/components/form-dialog'
 interface MapDialogProps {
   isOpen: boolean
   onClose: () => void
-  mapId?: Id<'gameMaps'>
+  mapId?: Id<'sidebarItems'>
   campaignId?: Id<'campaigns'>
-  parentId?: Id<'folders'> | null
+  parentId?: Id<'sidebarItems'> | null
   onSuccess?: (mapSlug?: string) => void
 }
 

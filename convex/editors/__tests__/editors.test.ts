@@ -8,9 +8,11 @@ import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../types'
 describe('getCurrentEditor', () => {
   const t = createTestContext()
 
-  it('returns null when no campaignId provided', async () => {
-    const { authed } = await setupUser(t)
-    const result = await authed.query(api.editors.queries.getCurrentEditor, {})
+  it('returns null when no editor set for new user', async () => {
+    const ctx = await setupCampaignContext(t)
+    const result = await asDm(ctx).query(api.editors.queries.getCurrentEditor, {
+      campaignId: ctx.campaignId,
+    })
     expect(result).toBeNull()
   })
 
@@ -189,7 +191,7 @@ describe('setCurrentEditor', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(id)
+      await dbCtx.db.delete('editor', id)
     })
 
     const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {

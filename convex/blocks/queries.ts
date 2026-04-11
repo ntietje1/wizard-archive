@@ -1,14 +1,14 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { dmQuery } from '../functions'
 import { blockShareValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
 import { blockNoteIdValidator, blockShareStatusValidator, blockValidator } from './schema'
 import { getBlockWithShares as getBlockWithSharesFn } from './functions/getBlockWithShares'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 
-export const getBlockWithShares = authQuery({
+export const getBlockWithShares = dmQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blockId: blockNoteIdValidator,
   },
   returns: v.union(
@@ -35,9 +35,9 @@ const blockShareInfoValidator = v.object({
   isTopLevel: v.boolean(),
 })
 
-export const getBlocksWithShares = authQuery({
+export const getBlocksWithShares = dmQuery({
   args: {
-    noteId: v.id('notes'),
+    noteId: v.id('sidebarItems'),
     blockIds: v.array(blockNoteIdValidator),
   },
   returns: v.object({

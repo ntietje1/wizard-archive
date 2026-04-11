@@ -1,8 +1,8 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { rollbackToSnapshot as rollbackFn } from './functions/rollbackToSnapshot'
 
-export const rollbackToSnapshot = authMutation({
+export const rollbackToSnapshot = campaignMutation({
   args: {
     editHistoryId: v.id('editHistory'),
   },

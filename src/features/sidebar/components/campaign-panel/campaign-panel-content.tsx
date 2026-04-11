@@ -13,7 +13,7 @@ function formatSessionDate(s: Session): string {
 }
 
 export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
-  const { campaign, campaignId, isDm } = useCampaign()
+  const { campaign, isDm } = useCampaign()
   const { currentSession, sessions, startSession, endCurrentSession, setCurrentSession } =
     useSession()
   const openSettings = useSettingsStore((s) => s.open)
@@ -27,17 +27,14 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
   const memberCount = campaign.data?.playerCount
 
   const handleStart = () => {
-    if (!campaignId) return
-    startSession.mutate({ campaignId })
+    startSession.mutate({})
   }
 
   const handleStop = () => {
-    if (!campaignId) return
-    endCurrentSession.mutate({ campaignId })
+    endCurrentSession.mutate({})
   }
 
   const handleResume = (sessionId: Session['_id']) => {
-    if (!campaignId) return
     setCurrentSession.mutate({ sessionId })
     setShowResume(false)
   }

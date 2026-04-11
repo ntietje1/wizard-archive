@@ -11,7 +11,7 @@ export async function captureCanvasSnapshot(
     campaignId,
     createdBy,
   }: {
-    canvasId: Id<'canvases'>
+    canvasId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
     createdBy: Id<'userProfiles'>

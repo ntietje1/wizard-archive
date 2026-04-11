@@ -12,8 +12,8 @@ import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 
 export interface MenuDialogState {
   deleteFolderDialog: Folder | null
-  editMapDialog: Id<'gameMaps'> | null
-  editFileDialog: Id<'files'> | null
+  editMapDialog: Id<'sidebarItems'> | null
+  editFileDialog: Id<'sidebarItems'> | null
   editSidebarItemDialog: AnySidebarItem | null
   confirmPermanentDeleteItem: AnySidebarItem | null
   confirmEmptyTrash: boolean

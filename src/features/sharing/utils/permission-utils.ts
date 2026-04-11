@@ -2,7 +2,6 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 
@@ -13,7 +12,7 @@ import type { Folder } from 'convex/folders/types'
 export function resolvePermissionLevel(
   item: AnySidebarItem,
   memberId: Id<'campaignMembers'>,
-  allItemsMap: Map<SidebarItemId, AnySidebarItem>,
+  allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): { level: PermissionLevel; source?: string } {
   const memberShare = item.shares.find((s) => s.campaignMemberId === memberId)
   if (memberShare) {
@@ -66,7 +65,7 @@ export function resolvePermissionLevel(
 export function memberHasAtLeastPermission(
   item: AnySidebarItem,
   memberId: Id<'campaignMembers'>,
-  allItemsMap: Map<SidebarItemId, AnySidebarItem>,
+  allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
   requiredLevel: PermissionLevel,
 ): boolean {
   const { level } = resolvePermissionLevel(item, memberId, allItemsMap)
@@ -85,7 +84,7 @@ export function effectiveHasAtLeastPermission(
   opts: {
     isDm: boolean | undefined
     viewAsPlayerId: Id<'campaignMembers'> | null | undefined
-    allItemsMap: Map<SidebarItemId, AnySidebarItem>
+    allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
   },
 ): boolean {
   if (opts.isDm && !opts.viewAsPlayerId) return true

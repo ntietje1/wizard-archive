@@ -5,7 +5,7 @@ import { resolveItemByPath } from './useWikiLinkExtension'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemId } from 'convex/sidebarItems/types/baseTypes'
+import type { Id } from 'convex/_generated/dataModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -83,7 +83,7 @@ export const MD_LINK_REGEX = /(?<!!)\[([^\]]+)\]\(([^)]+)\)/g
 export interface MdLinkResolver {
   resolve: (pathSegments: Array<string>) => MdLinkItemInfo | undefined
   allItems: Array<AnySidebarItem>
-  itemsMap: Map<SidebarItemId, AnySidebarItem>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
 }
 
 export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {

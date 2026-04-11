@@ -1,16 +1,17 @@
+import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess } from '../../sidebarItems/validation'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logger } from '../../common/logger'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { SidebarItemId } from '../../sidebarItems/types/baseTypes'
 import type { GameMapSnapshotData } from '../types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackGameMap(
-  ctx: AuthMutationCtx,
-  itemId: SidebarItemId,
+  ctx: CampaignMutationCtx,
+  itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
   let parsed: GameMapSnapshotData
@@ -46,18 +47,28 @@ export async function rollbackGameMap(
     }
   }
 
-  const mapFromDb = await ctx.db.get('gameMaps', itemId as Id<'gameMaps'>)
+  const rawItem = await getSidebarItem(ctx, itemId)
+  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   const map = await requireItemAccess(ctx, {
-    rawItem: mapFromDb,
+    rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
   if (map.type !== SIDEBAR_ITEM_TYPES.gameMaps) {
-    throw new Error(`rollbackMap: expected a note but got ${String(map.type)}`)
+    throw new Error(`rollbackMap: expected a map but got ${String(map.type)}`)
   }
 
-  await ctx.db.patch(map._id, {
-    imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+  const ext = await ctx.db
+    .query('gameMaps')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map._id))
+    .unique()
+  if (ext) {
+    await ctx.db.patch('gameMaps', ext._id, {
+      imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+    })
+  }
+
+  await ctx.db.patch('sidebarItems', map._id, {
     previewStorageId: null,
   })
 
@@ -67,29 +78,20 @@ export async function rollbackGameMap(
     .collect()
 
   const now = Date.now()
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
-  await Promise.all(
-    existingPins.map((pin) => ctx.db.patch(pin._id, { deletionTime: now, deletedBy: profileId })),
+  await asyncMap(existingPins, (pin) =>
+    ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: userId }),
   )
 
-  const pinTargetChecks = await Promise.all(
-    parsed.pins.map(async (pin) => {
-      try {
-        const item = await ctx.db.get(pin.itemId)
-        return { pin, exists: item !== null && !item.deletionTime }
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e)
-        if (message.includes('Invalid ID') || message.includes('not found')) {
-          return { pin, exists: false }
-        }
-        logger.warn(
-          `rollbackGameMap: unexpected error checking pin target ${pin.itemId}: ${message}`,
-        )
-        throw e
-      }
-    }),
-  )
+  const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
+    try {
+      const item = await ctx.db.get('sidebarItems', pin.itemId)
+      return { pin, exists: item !== null && !item.deletionTime }
+    } catch {
+      return { pin, exists: false }
+    }
+  })
   const validPins = pinTargetChecks.filter((p) => p.exists).map((p) => p.pin)
   const skippedCount = pinTargetChecks.length - validPins.length
   if (skippedCount > 0) {
@@ -99,20 +101,18 @@ export async function rollbackGameMap(
     )
   }
 
-  await Promise.all(
-    validPins.map((pin) =>
-      ctx.db.insert('mapPins', {
-        mapId: map._id,
-        itemId: pin.itemId,
-        x: pin.x,
-        y: pin.y,
-        visible: pin.visible,
-        createdBy: profileId,
-        updatedTime: null,
-        updatedBy: null,
-        deletionTime: null,
-        deletedBy: null,
-      }),
-    ),
+  await asyncMap(validPins, (pin) =>
+    ctx.db.insert('mapPins', {
+      mapId: map._id,
+      itemId: pin.itemId,
+      x: pin.x,
+      y: pin.y,
+      visible: pin.visible,
+      createdBy: userId,
+      updatedTime: null,
+      updatedBy: null,
+      deletionTime: null,
+      deletedBy: null,
+    }),
   )
 }

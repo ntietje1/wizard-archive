@@ -14,7 +14,6 @@ import {
   setupFolderTree,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import type { Id } from '../../_generated/dataModel'
 
 describe('bulk trash operations', () => {
   const t = createTestContext()
@@ -68,6 +67,7 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: root,
       location: 'trash',
     })
@@ -77,16 +77,16 @@ describe('bulk trash operations', () => {
     })
 
     const results = await t.run(async (dbCtx) => ({
-      root: await dbCtx.db.get(root),
-      sub1: await dbCtx.db.get(sub1),
-      sub2: await dbCtx.db.get(sub2),
-      note: await dbCtx.db.get(noteId),
-      file: await dbCtx.db.get(fileId),
-      map: await dbCtx.db.get(mapId),
-      block: await dbCtx.db.get(blockDbId),
-      share: await dbCtx.db.get(shareId),
-      bookmark: await dbCtx.db.get(bookmarkId),
-      pin: await dbCtx.db.get(pinId),
+      root: await dbCtx.db.get('sidebarItems', root),
+      sub1: await dbCtx.db.get('sidebarItems', sub1),
+      sub2: await dbCtx.db.get('sidebarItems', sub2),
+      note: await dbCtx.db.get('sidebarItems', noteId),
+      file: await dbCtx.db.get('sidebarItems', fileId),
+      map: await dbCtx.db.get('sidebarItems', mapId),
+      block: await dbCtx.db.get('blocks', blockDbId),
+      share: await dbCtx.db.get('sidebarItemShares', shareId),
+      bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
+      pin: await dbCtx.db.get('mapPins', pinId),
     }))
 
     for (const [key, value] of Object.entries(results)) {
@@ -115,6 +115,7 @@ describe('bulk trash operations', () => {
 
     for (const item of items) {
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: item.id as never,
         location: 'trash',
       })
@@ -125,6 +126,7 @@ describe('bulk trash operations', () => {
     })
 
     for (const item of items) {
+      // eslint-disable-next-line @convex-dev/explicit-table-ids
       const result = await t.run(async (dbCtx) => dbCtx.db.get(item.id as never))
       expect(result).toBeNull()
     }
@@ -146,10 +148,12 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: note1,
       location: 'trash',
     })
     await dm2.authed.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: campaign2Id,
       itemId: note2,
       location: 'trash',
     })
@@ -159,8 +163,8 @@ describe('bulk trash operations', () => {
     })
 
     const [r1, r2] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(note1),
-      await dbCtx.db.get(note2),
+      await dbCtx.db.get('sidebarItems', note1),
+      await dbCtx.db.get('sidebarItems', note2),
     ])
     expect(r1).toBeNull()
     expect(r2).not.toBeNull()
@@ -181,10 +185,12 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -194,8 +200,8 @@ describe('bulk trash operations', () => {
     })
 
     const [folder, note] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(folderId),
-      await dbCtx.db.get(noteId),
+      await dbCtx.db.get('sidebarItems', folderId),
+      await dbCtx.db.get('sidebarItems', noteId),
     ])
     expect(folder).toBeNull()
     expect(note).toBeNull()
@@ -210,19 +216,19 @@ describe('bulk trash operations', () => {
       depth: 5,
       leafType: 'note',
     })
-    const leaf = leafId as Id<'notes'>
 
-    const { blockDbId } = await createBlock(t, leaf, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, dmId, {
       blockId: 'deep-block',
     })
     const { shareId } = await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,
-      sidebarItemId: leaf,
+      sidebarItemId: leafId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folders[0],
       location: 'trash',
     })
@@ -232,13 +238,13 @@ describe('bulk trash operations', () => {
     })
 
     for (const fId of folders) {
-      const result = await t.run(async (dbCtx) => dbCtx.db.get(fId))
+      const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fId))
       expect(result).toBeNull()
     }
     const [leafResult, blockResult, shareResult] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get(leaf),
-      await dbCtx.db.get(blockDbId),
-      await dbCtx.db.get(shareId),
+      await dbCtx.db.get('sidebarItems', leafId),
+      await dbCtx.db.get('blocks', blockDbId),
+      await dbCtx.db.get('sidebarItemShares', shareId),
     ])
     expect(leafResult).toBeNull()
     expect(blockResult).toBeNull()
